@@ -15,7 +15,7 @@ This includes:
 - Defining the platform as a full academic control system (not just a content site)
 - Documenting the target audience segments: First Secondary, Second Secondary, First Baccalaureate, Second Baccalaureate, parents, assistants, and admin
 - Defining the teacher's brand style: youthful, simple, energetic, story-based explanation, maps/tables, motivating
-- Documenting the full content hierarchy: Package → Content Section (called "months" as content groups) → Lesson → Video/Summary/Quiz/Homework/Resources/MindMap/Revision
+- Documenting the full content hierarchy: Package → Content Section → Lesson → Video/Summary/Quiz/Homework/Resources/MindMap/Revision
 
 **Why this priority**: Without a locked product definition, the entire project risks scope creep, misalignment, and wasted development effort. Everything else depends on this.
 
@@ -85,6 +85,8 @@ Roles to document:
 - **Teacher (Nader George)**: content oversight, student analytics, performance review, package planning, exam visibility
 - **Assistant** (sub-roles): academic assistant, homework reviewer, follow-up assistant, support assistant — each with different permission scopes
 - **Admin**: full system management (users, packages, lessons, codes, questions/exams, analytics, settings, logs, assistant permissions)
+
+Role assignment model: **multi-role** — a single user can hold more than one role simultaneously (e.g., Nader George holds both Teacher and Admin). Roles remain separate in the permission model to support future team scaling.
 
 **Why this priority**: Roles directly impact the authorization layer and UI routing. Defining them clearly prevents permission gaps and security issues.
 
@@ -158,18 +160,26 @@ Explicit boundaries:
 - What happens if the code system rules conflict with each other (e.g., a term code and a lesson code unlocking the same content)?
   → The Business Rules Document must include a conflict resolution matrix for code type interactions.
 
+## Clarifications
+
+### Session 2026-03-21
+
+- Q: What format should the 8 Phase 0 deliverables be produced in? → A: All deliverables as Markdown files in the repository (version-controlled, PR-reviewable) under `specs/001-phase0-discovery-blueprint/`.
+- Q: What is the canonical term for the grouping layer between Package and Lesson? → A: "Content Section" is the canonical term for all contexts (API, UI, data models, documentation). The legacy term "months" may appear only as an internal alias in documentation with the note "(internally referred to as 'months')" — it MUST NOT appear in API names, UI labels, or data model identifiers.
+- Q: Should Teacher and Admin be separate roles or merged, given Nader George is both? → A: Separate roles with multi-role assignment. A single user (e.g., Nader George) can hold both Teacher and Admin roles simultaneously. This keeps the permission model clean for future team scaling.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The discovery process MUST produce a Product Requirements Document that defines the platform as a full academic control system, not a content-selling website.
+- **FR-001**: The discovery process MUST produce a Product Requirements Document (as a Markdown file in the repository) that defines the platform as a full academic control system, not a content-selling website.
 - **FR-002**: The Product Requirements Document MUST enumerate all target audience segments: First Secondary, Second Secondary, First Baccalaureate, Second Baccalaureate, parents, assistants, admin.
-- **FR-003**: The Content Blueprint MUST define the complete content hierarchy: Package → Content Section → Lesson → Video/Summary/Quiz/Homework/Resources/MindMap/Revision.
+- **FR-003**: The Content Blueprint MUST define the complete content hierarchy: Package → Content Section → Lesson → Video/Summary/Quiz/Homework/Resources/MindMap/Revision. The term "Content Section" is canonical; the internal alias "months" MUST NOT appear in API, UI, or data model identifiers.
 - **FR-004**: The Access Blueprint MUST document all code types (lesson, package, term, promotional, referral) with their activation rules, stacking behavior, expiration logic, and confirmation flow.
 - **FR-005**: The Data Blueprint MUST list all required student data fields: full name, phone number, parent number, grade, study track, governorate, city/district, school, engagement data, package history, code history.
 - **FR-006**: The Technical Architecture Document MUST specify the complete technology stack: Next.js frontend, .NET backend, PostgreSQL, Redis, BullMQ worker, and all supporting services.
 - **FR-007**: The Technical Architecture Document MUST define the Video Provider Abstraction Layer supporting: provider type, external video ID, title, duration, order, watch limits, replay limits, and provider metadata.
-- **FR-008**: The User Roles Matrix MUST define permissions for all roles: Student, Parent, Teacher, Assistant (with sub-roles: academic, homework reviewer, follow-up, support), and Admin.
+- **FR-008**: The User Roles Matrix MUST define permissions for all roles: Student, Parent, Teacher, Assistant (with sub-roles: academic, homework reviewer, follow-up, support), and Admin. The authorization model MUST support multi-role assignment (a single user can hold multiple roles simultaneously).
 - **FR-009**: The System Blueprint MUST define the deployment structure: frontend app, backend API, Node worker service, PostgreSQL, Redis, reverse proxy/gateway, and monitoring.
 - **FR-010**: The System Blueprint MUST require at least three environments: Development, Staging, and Production.
 - **FR-011**: The Sitemap MUST cover all major platform sections: public website, student portal, parent layer, teacher panel, assistant panel, and admin panel.
@@ -196,7 +206,7 @@ Explicit boundaries:
 
 ### Measurable Outcomes
 
-- **SC-001**: All 8 deliverables (PRD, System Blueprint, User Roles Matrix, Sitemap, Data Model Draft, Business Rules Document, Initial UI Wireframe Direction, Technical Architecture Document) are produced and approved by the project owner.
+- **SC-001**: All 8 deliverables (PRD, System Blueprint, User Roles Matrix, Sitemap, Data Model Draft, Business Rules Document, Initial UI Wireframe Direction, Technical Architecture Document) are produced as Markdown files in the repository and approved by the project owner.
 - **SC-002**: A new team member can read the Phase 0 deliverables and explain the platform's purpose, audience, content structure, and technical architecture within 30 minutes, without needing verbal clarification.
 - **SC-003**: The Business Rules Document covers 100% of the business rules mentioned in the plan (code system, watch control, exam logic, homework logic, student behavior, gamification).
 - **SC-004**: The User Roles Matrix has zero undefined permission entries — every role-feature combination has an explicit access level.

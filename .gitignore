@@ -1,0 +1,40 @@
+# .NET / C#
+bin/
+obj/
+*.user
+*.suo
+packages/
+*.log
+
+# Node.js / JavaScript / TypeScript
+node_modules/
+dist/
+build/
+.next/
+coverage/
+*.tsbuildinfo
+.npm/
+.yarn/
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Docker
+.dockerignore
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Tooling
+nginx/logs/
+pgdata/
+redisdata/
