@@ -12,11 +12,15 @@ public record LessonDetailDto(
     string Title, 
     string Summary, 
     Guid? ExamId,
+    LessonHomeworkDto? Homework,
     List<VideoDto> Videos,
     List<ResourceDto> Resources
 );
 
-public record VideoDto(Guid Id, string Title, string Provider, string EmbedUrl, int Order, int Limit, int Watched, bool IsLocked);
+public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, List<LessonHomeworkQuestionDto> Questions);
+public record LessonHomeworkQuestionDto(Guid Id, string Text, int Order, int MaxPoints);
+
+public record VideoDto(Guid Id, string Title, string Provider, int Order, int Limit, int Watched, bool IsLocked);
 public record ResourceDto(Guid Id, string Title, string FileUrl, string Type);
 
 public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery, ApiResponse<LessonDetailDto>>
@@ -52,14 +56,12 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var videoDtos = lesson.Videos.OrderBy(v => v.Order).Select(v => 
         {
-            var embedUrl = _video.GetEmbedUrl(v.ProviderVideoId);
             var watchEvent = watchEvents.FirstOrDefault(we => we.LessonVideoId == v.Id);
             
             return new VideoDto(
                 v.Id, 
                 v.Title, 
                 v.Provider, 
-                embedUrl, 
                 v.Order, 
                 v.MaxWatchCount, 
                 watchEvent?.WatchCount ?? 0, 
@@ -69,7 +71,21 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var resourceDtos = lesson.Resources.Select(r => new ResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType)).ToList();
 
-        var detail = new LessonDetailDto(lesson.Id, lesson.Title, lesson.Summary, lesson.ExamId, videoDtos, resourceDtos);
+        var hw = await _db.Homeworks
+            .Include(h => h.Questions)
+            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
+            
+        LessonHomeworkDto? homeworkDto = null;
+        if (hw != null)
+        {
+            var hwQuestions = hw.Questions.OrderBy(q => q.Order).Select(q => 
+                new LessonHomeworkQuestionDto(q.Id, q.BodyText, q.Order, q.PointsActive)
+            ).ToList();
+            
+            homeworkDto = new LessonHomeworkDto(hw.Id, hw.Title, hw.Description ?? "", hw.IsMandatory, hw.PassingScoreThreshold, hwQuestions);
+        }
+
+        var detail = new LessonDetailDto(lesson.Id, lesson.Title, lesson.Summary, lesson.ExamId, homeworkDto, videoDtos, resourceDtos);
         
         return ApiResponse<LessonDetailDto>.Ok(detail);
     }

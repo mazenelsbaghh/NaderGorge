@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 
+import {
+  clearStoredAuth,
+  persistAuthSession,
+  readStoredAuth,
+  updateStoredUser,
+} from '@/lib/auth-storage';
+
 interface User {
   id: string;
   fullName: string;
@@ -15,7 +22,12 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
 
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+  setAuth: (
+    user: User,
+    accessToken: string,
+    refreshToken: string,
+    rememberMe: boolean
+  ) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
   updateProfile: (profileComplete: boolean) => void;
@@ -29,17 +41,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
 
-  setAuth: (user, accessToken, refreshToken) => {
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    localStorage.setItem('user', JSON.stringify(user));
+  setAuth: (user, accessToken, refreshToken, rememberMe) => {
+    persistAuthSession({ user, accessToken, refreshToken }, rememberMe);
     set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false });
   },
 
   clearAuth: () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    clearStoredAuth();
     set({
       user: null,
       accessToken: null,
@@ -55,7 +63,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (user) {
       const updated = { ...user, profileComplete };
-      localStorage.setItem('user', JSON.stringify(updated));
+      updateStoredUser(updated);
       set({ user: updated });
     }
   },
@@ -65,19 +73,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
       return;
     }
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
-    const userStr = localStorage.getItem('user');
+    const storedAuth = readStoredAuth();
 
-    if (accessToken && refreshToken && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false });
-      } catch {
-        set({ isLoading: false });
-      }
-    } else {
+    if (!storedAuth) {
       set({ isLoading: false });
+      return;
     }
+
+    set({
+      user: storedAuth.user as User,
+      accessToken: storedAuth.accessToken,
+      refreshToken: storedAuth.refreshToken,
+      isAuthenticated: true,
+      isLoading: false,
+    });
   },
 }));

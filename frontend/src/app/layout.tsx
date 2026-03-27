@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Cairo } from "next/font/google";
 import "./globals.css";
+import { AuthBootstrap } from "@/components/layout/AuthBootstrap";
+import { GlobalNav } from "@/components/layout/GlobalNav";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const cairo = Cairo({
+  variable: "--font-cairo",
+  subsets: ["arabic", "latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "Nader George Academy",
-  description: "The complete platform for secondary education.",
+  title: "أكاديمية نادر جورج",
+  description: "المنصة المتكاملة للتعليم الثانوي",
 };
 
 import { Toaster } from "react-hot-toast";
@@ -26,12 +24,19 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="ar"
+      dir="rtl"
+      className={`${cairo.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body
+        className="min-h-full flex flex-col font-[family-name:var(--font-cairo)]"
+        suppressHydrationWarning
+      >
+        <AuthBootstrap />
+        <GlobalNav />
         {children}
-        <Toaster position="bottom-right" />
+        <Toaster position="bottom-left" />
       </body>
     </html>
   );

@@ -4,7 +4,20 @@
 
 @custom-variant dark (&:is(.dark *));
 
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
 @theme inline {
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -49,82 +62,332 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* === Pharaonic Theme - Sand, Gold, Papyrus === */
+  --background: #faf2e6;
+  --foreground: #2c1708;
+  --card: #fcf6ea;
+  --card-foreground: #2c1708;
+  --popover: #fcf6ea;
+  --popover-foreground: #2c1708;
+  --primary: #9a6933;
+  --primary-foreground: #fffaf1;
+  --secondary: #f2dfbc;
+  --secondary-foreground: #3d2510;
+  --muted: #f0e4ce;
+  --muted-foreground: #7a644d;
+  --accent: #f2dfbc;
+  --accent-foreground: #3d2510;
+  --destructive: #c4402a;
+  --border: rgba(149, 111, 62, 0.22);
+  --input: rgba(149, 111, 62, 0.18);
+  --ring: #9a6933;
+  --chart-1: #9a6933;
+  --chart-2: #c49454;
+  --chart-3: #7a644d;
+  --chart-4: #d4a762;
+  --chart-5: #5c3d1f;
+  --radius: 0.75rem;
+  --sidebar: #f7ecda;
+  --sidebar-foreground: #2c1708;
+  --sidebar-primary: #9a6933;
+  --sidebar-primary-foreground: #fffaf1;
+  --sidebar-accent: #f2dfbc;
+  --sidebar-accent-foreground: #3d2510;
+  --sidebar-border: rgba(149, 111, 62, 0.18);
+  --sidebar-ring: #9a6933;
+  /* Landing-specific tokens */
+  --landing-bg: #f7ecda;
+  --landing-bg-soft: #fbf4e8;
+  --landing-card: rgba(252, 246, 234, 0.86);
+  --landing-card-strong: #f2dfbc;
+  --landing-ink: #2c1708;
+  --landing-muted: #7a644d;
+  --landing-accent: #9a6933;
+  --landing-accent-strong: #7f5427;
+  --landing-accent-foreground: #fffaf1;
+  --landing-line: rgba(149, 111, 62, 0.22);
+  --landing-line-strong: rgba(255, 240, 215, 0.16);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* === Pharaonic Dark — Premium Calm with Gold Warmth === */
+  --background: oklch(0.16 0.015 70);          /* warm near-black */
+  --foreground: oklch(0.94 0.015 70);          /* warm cream */
+  --card: oklch(0.20 0.018 70);                /* warm dark card */
+  --card-foreground: oklch(0.94 0.015 70);     /* warm cream */
+  --popover: oklch(0.20 0.018 70);
+  --popover-foreground: oklch(0.94 0.015 70);
+  --primary: oklch(0.72 0.12 70);              /* gold primary */
+  --primary-foreground: oklch(0.16 0.015 70);  /* dark on gold */
+  --secondary: oklch(0.24 0.02 70);            /* warm dark surface */
+  --secondary-foreground: oklch(0.90 0.015 70);
+  --muted: oklch(0.24 0.02 70);
+  --muted-foreground: oklch(0.65 0.03 70);     /* warm muted text */
+  --accent: oklch(0.28 0.025 70);
+  --accent-foreground: oklch(0.90 0.015 70);
+  --destructive: oklch(0.65 0.2 25);           /* warm red */
+  --border: oklch(0.40 0.04 70 / 20%);         /* gold-tinted border */
+  --input: oklch(0.40 0.04 70 / 25%);
+  --ring: oklch(0.72 0.12 70);                 /* gold ring */
+  --chart-1: oklch(0.72 0.12 70);              /* gold */
+  --chart-2: oklch(0.60 0.10 70);              /* dark gold */
+  --chart-3: oklch(0.50 0.06 70);              /* bronze */
+  --chart-4: oklch(0.40 0.04 70);              /* deep bronze */
+  --chart-5: oklch(0.30 0.03 70);              /* shadow */
+  --sidebar: oklch(0.18 0.015 70);
+  --sidebar-foreground: oklch(0.90 0.015 70);
+  --sidebar-primary: oklch(0.72 0.12 70);      /* gold */
+  --sidebar-primary-foreground: oklch(0.94 0.015 70);
+  --sidebar-accent: oklch(0.24 0.02 70);
+  --sidebar-accent-foreground: oklch(0.90 0.015 70);
+  --sidebar-border: oklch(0.40 0.04 70 / 16%);
+  --sidebar-ring: oklch(0.72 0.12 70);
+  /* Landing dark tokens */
+  --landing-bg: oklch(0.16 0.015 70);
+  --landing-bg-soft: oklch(0.18 0.018 70);
+  --landing-card: oklch(0.20 0.018 70 / 86%);
+  --landing-card-strong: oklch(0.24 0.02 70);
+  --landing-ink: oklch(0.94 0.015 70);
+  --landing-muted: oklch(0.65 0.03 70);
+  --landing-accent: oklch(0.72 0.12 70);
+  --landing-accent-strong: oklch(0.60 0.10 70);
+  --landing-accent-foreground: oklch(0.16 0.015 70);
+  --landing-line: oklch(0.40 0.04 70 / 18%);
+  --landing-line-strong: oklch(0.50 0.06 70 / 12%);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+
   html {
     @apply font-sans;
+  }
+}
+
+/* ═══ Accessibility: Reduced Motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ═══ Accessibility: Focus Visible ═══ */
+:focus-visible {
+  outline: 2px solid var(--ring, var(--primary));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ═══ View Transitions (Direction C: Shared Element Morph) ═══ */
+@supports (view-transition-name: none) {
+  /* Default page crossfade */
+  ::view-transition-old(root) {
+    animation: vt-fade-out 0.3s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+  ::view-transition-new(root) {
+    animation: vt-fade-in 0.3s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+
+  /* Shared elements morph automatically — no extra keyframes needed.
+     The browser interpolates position, size, and opacity. */
+
+  @keyframes vt-fade-out {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(0.96); }
+  }
+  @keyframes vt-fade-in {
+    from { opacity: 0; transform: scale(1.04); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .landing-page {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--landing-accent) 18%, transparent), transparent 30%),
+      radial-gradient(circle at top right, color-mix(in srgb, var(--landing-accent) 12%, transparent), transparent 34%),
+      linear-gradient(180deg, var(--landing-bg-soft), var(--landing-bg));
+  }
+
+  .landing-page__backdrop {
+    position: absolute;
+    inset: 0;
+    background-image: url("/images/egyptian-wall.png");
+    background-position: center;
+    background-size: cover;
+    opacity: 0.12;
+    mix-blend-mode: multiply;
+  }
+
+  .landing-page__texture {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(color-mix(in srgb, var(--landing-accent) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--landing-accent) 5%, transparent) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 92%);
+    pointer-events: none;
+  }
+
+  .landing-panel {
+    border: 1px solid var(--landing-line);
+    background: var(--landing-card);
+    box-shadow: 0 10px 40px color-mix(in srgb, var(--landing-accent) 6%, transparent);
+    backdrop-filter: blur(14px);
+    border-radius: 20px;
+  }
+
+  .landing-chip {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--landing-line);
+    background: var(--landing-card);
+    padding: 0.625rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--landing-accent);
+    box-shadow: 0 8px 30px color-mix(in srgb, var(--landing-accent) 6%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  /* ═══════════════════════════════════════════
+     Admin Design System — Extracted Utilities
+     ═══════════════════════════════════════════ */
+
+  /* ─── Input / Select / Textarea ─── */
+  .admin-input {
+    width: 100%;
+    border-radius: 1rem;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-bg);
+    padding: 0.75rem 1rem;
+    color: var(--admin-text);
+    outline: none;
+    transition: box-shadow 0.15s, border-color 0.15s;
+  }
+  .admin-input::placeholder {
+    color: var(--admin-muted);
+  }
+  .admin-input:focus {
+    box-shadow: 0 0 0 2px var(--admin-primary);
+  }
+  .admin-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ─── Primary Button (Pill / Gold) ─── */
+  .admin-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 9999px;
+    background: var(--admin-primary);
+    padding: 0.5rem 2rem;
+    font-weight: 700;
+    color: var(--admin-primary-contrast);
+    transition: filter 0.15s, transform 0.15s;
+  }
+  .admin-btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  .admin-btn-primary:active {
+    transform: scale(0.97) translateY(0);
+  }
+  .admin-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ─── Ghost / Outline Button ─── */
+  .admin-btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    background: var(--admin-card);
+    border: 1px solid var(--admin-border);
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--admin-text);
+    transition: background-color 0.15s;
+  }
+  .admin-btn-ghost:hover {
+    background: var(--admin-hover);
+  }
+  .admin-btn-ghost:active {
+    transform: scale(0.97);
+  }
+
+  /* ─── Section Panel (Card with backdrop) ─── */
+  .admin-panel {
+    border-radius: 2rem;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-card);
+    padding: 2rem;
+    box-shadow: 0 12px 40px var(--admin-shadow);
+    backdrop-filter: blur(40px);
+  }
+
+  /* ─── Icon Badge (Primary 15% tint) ─── */
+  .admin-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    background: var(--admin-primary-15);
+    padding: 0.75rem;
+    color: var(--admin-primary);
+  }
+  .admin-badge--pill {
+    border-radius: 9999px;
+  }
+
+  /* ─── Soft Action Button (icon-only hover) ─── */
+  .admin-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    padding: 0.5rem;
+    color: var(--admin-muted);
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .admin-btn-icon:hover {
+    background: var(--admin-primary-15);
+    color: var(--admin-primary);
+  }
+  .admin-btn-icon:active {
+    transform: scale(0.9);
   }
 }

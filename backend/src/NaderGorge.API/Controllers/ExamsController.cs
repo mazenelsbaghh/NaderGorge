@@ -30,7 +30,7 @@ public class ExamsController : ControllerBase
         {
             if (response.Errors != null && response.Errors.Contains("You do not have access"))
                 return StatusCode(403, response);
-                
+
             return NotFound(response);
         }
 
@@ -53,10 +53,10 @@ public class ExamsController : ControllerBase
     public async Task<IActionResult> ManualUnlock(Guid lessonId, Guid studentId)
     {
         var response = await _mediator.Send(new ManualUnlockCommand(lessonId, studentId, GetUserId()));
-        
+
         if (!response.Success)
             return BadRequest(response);
-            
+
         return Ok(response);
     }
 }

@@ -1,5 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
+using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Entities.Assistant;
+using NaderGorge.Domain.Entities.Gamification;
+using NaderGorge.Domain.Entities.Homework;
+using NaderGorge.Domain.Entities.Notifications;
+using NaderGorge.Domain.Entities.Student;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Data;
@@ -26,10 +33,17 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonVideo> LessonVideos => Set<LessonVideo>();
     public DbSet<LessonResource> LessonResources => Set<LessonResource>();
+
+    // Phase 3: Term, Balance, Code extensions
+    public DbSet<Term> Terms => Set<Term>();
+    public DbSet<StudentBalance> StudentBalances => Set<StudentBalance>();
+    public DbSet<BalanceTransaction> BalanceTransactions => Set<BalanceTransaction>();
+    public DbSet<CodeVideoTarget> CodeVideoTargets => Set<CodeVideoTarget>();
     
     // Tracking
     public DbSet<VideoWatchEvent> VideoWatchEvents => Set<VideoWatchEvent>();
     public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
+    public DbSet<VideoPlaybackSession> VideoPlaybackSessions => Set<VideoPlaybackSession>();
     
     // Exams
     public DbSet<Exam> Exams => Set<Exam>();
@@ -38,6 +52,27 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();
     public DbSet<StudentExamAttempt> StudentExamAttempts => Set<StudentExamAttempt>();
     public DbSet<StudentAnswer> StudentAnswers => Set<StudentAnswer>();
+
+    // Phase 2: Homework & Academic Ops
+    public DbSet<Homework> Homeworks => Set<Homework>();
+    public DbSet<HomeworkQuestion> HomeworkQuestions => Set<HomeworkQuestion>();
+    public DbSet<HomeworkSubmission> HomeworkSubmissions => Set<HomeworkSubmission>();
+    public DbSet<HomeworkAnswer> HomeworkAnswers => Set<HomeworkAnswer>();
+
+    // Phase 2: Gamification
+    public DbSet<StudentGamification> StudentGamifications => Set<StudentGamification>();
+    public DbSet<GamificationActionLog> GamificationActionLogs => Set<GamificationActionLog>();
+    public DbSet<StudentBadge> StudentBadges => Set<StudentBadge>();
+
+    // Phase 2: Student Tracking
+    public DbSet<StudentStatusTracker> StudentStatusTrackers => Set<StudentStatusTracker>();
+    public DbSet<WarningEvent> WarningEvents => Set<WarningEvent>();
+
+    // Phase 2: Assistant Ops
+    public DbSet<AssistantTaskQueue> AssistantTasks => Set<AssistantTaskQueue>();
+
+    // Phase 2: Notifications
+    public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -94,6 +129,14 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(s => s.Id);
             e.HasIndex(s => s.UserId).IsUnique();
             e.HasOne(s => s.User).WithOne(u => u.StudentProfile).HasForeignKey<StudentProfile>(s => s.UserId);
+            e.Property(s => s.StudentCode).HasMaxLength(100).IsRequired();
+            e.Property(s => s.Governorate).HasMaxLength(100).IsRequired();
+            e.Property(s => s.Address).HasMaxLength(500).IsRequired();
+            e.Property(s => s.ParentPhone).HasMaxLength(20);
+            e.Property(s => s.EducationStage).HasConversion<int>();
+            e.Property(s => s.GradeLevel).HasConversion<int>();
+            e.Property(s => s.StudyTrack).HasConversion<int?>();
+            e.Property(s => s.Gender).HasConversion<int>();
         });
 
         // Device
@@ -120,6 +163,9 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("code_groups");
             e.HasKey(c => c.Id);
             e.Property(c => c.Name).HasMaxLength(200).IsRequired();
+            e.Property(c => c.CodeType).HasConversion<int>();
+            e.Property(c => c.DiscountPercentage).HasColumnType("decimal(18,2)");
+            e.Property(c => c.BalanceAmount).HasColumnType("decimal(18,2)");
             e.HasOne(c => c.CreatedByUser).WithMany().HasForeignKey(c => c.CreatedByUserId);
         });
 
@@ -139,6 +185,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("student_access_grants");
             e.HasKey(s => s.Id);
             e.HasIndex(s => new { s.UserId, s.PackageId });
+            e.Property(s => s.GrantType).HasConversion<int>();
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId);
             e.HasOne(s => s.AccessCode).WithMany().HasForeignKey(s => s.AccessCodeId);
         });
@@ -166,7 +213,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("content_sections");
             e.HasKey(c => c.Id);
             e.Property(c => c.Title).HasMaxLength(200).IsRequired();
-            e.HasOne(c => c.Package).WithMany(p => p.Sections).HasForeignKey(c => c.PackageId);
+            e.HasOne(c => c.Term).WithMany(t => t.Sections).HasForeignKey(c => c.TermId);
         });
 
         // Lesson
@@ -277,6 +324,134 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(sa => sa.ExamQuestion).WithMany().HasForeignKey(sa => sa.ExamQuestionId);
             e.HasOne(sa => sa.SelectedOption).WithMany().HasForeignKey(sa => sa.SelectedOptionId);
         });
+
+        // Phase 2
+        
+        modelBuilder.Entity<Homework>(e =>
+        {
+            e.ToTable("homeworks");
+            e.HasKey(h => h.Id);
+            e.Property(h => h.Title).HasMaxLength(255).IsRequired();
+            e.Property(h => h.PassingScoreThreshold).HasColumnType("decimal(18,2)");
+        });
+
+        modelBuilder.Entity<HomeworkQuestion>(e =>
+        {
+            e.ToTable("homework_questions");
+            e.HasKey(q => q.Id);
+            e.HasOne(q => q.Homework).WithMany(h => h.Questions).HasForeignKey(q => q.HomeworkId);
+        });
+
+        modelBuilder.Entity<HomeworkSubmission>(e =>
+        {
+            e.ToTable("homework_submissions");
+            e.HasKey(s => s.Id);
+            e.Property(s => s.OverallScore).HasColumnType("decimal(18,2)");
+            e.HasOne(s => s.Homework).WithMany(h => h.Submissions).HasForeignKey(s => s.HomeworkId);
+            e.HasOne(s => s.Student).WithMany().HasForeignKey(s => s.StudentId);
+            e.HasOne(s => s.AssistantReviewer).WithMany().HasForeignKey(s => s.AssistantReviewerId);
+        });
+
+        modelBuilder.Entity<HomeworkAnswer>(e =>
+        {
+            e.ToTable("homework_answers");
+            e.HasKey(a => a.Id);
+            e.HasOne(a => a.Submission).WithMany(s => s.Answers).HasForeignKey(a => a.HomeworkSubmissionId);
+            e.HasOne(a => a.Question).WithMany().HasForeignKey(a => a.QuestionId);
+        });
+
+        modelBuilder.Entity<StudentGamification>(e =>
+        {
+            e.ToTable("student_gamifications");
+            e.HasKey(s => s.StudentId); // PK is StudentId
+            e.HasOne(s => s.Student).WithOne().HasForeignKey<StudentGamification>(s => s.StudentId);
+        });
+
+        modelBuilder.Entity<GamificationActionLog>(e =>
+        {
+            e.ToTable("gamification_action_logs");
+            e.HasKey(l => l.Id);
+            e.HasOne(l => l.Student).WithMany().HasForeignKey(l => l.StudentId);
+        });
+
+        modelBuilder.Entity<StudentBadge>(e =>
+        {
+            e.ToTable("student_badges");
+            e.HasKey(b => b.Id);
+            e.HasOne(b => b.Student).WithMany().HasForeignKey(b => b.StudentId);
+        });
+
+        modelBuilder.Entity<StudentStatusTracker>(e =>
+        {
+            e.ToTable("student_status_trackers");
+            e.HasKey(t => t.StudentId); // PK is StudentId
+            e.HasOne(t => t.Student).WithOne().HasForeignKey<StudentStatusTracker>(t => t.StudentId);
+        });
+
+        modelBuilder.Entity<WarningEvent>(e =>
+        {
+            e.ToTable("warning_events");
+            e.HasKey(w => w.Id);
+            e.HasOne(w => w.Student).WithMany().HasForeignKey(w => w.StudentId);
+            e.HasOne(w => w.ResolvedByAssistant).WithMany().HasForeignKey(w => w.ResolvedByAssistantId);
+        });
+
+        modelBuilder.Entity<AssistantTaskQueue>(e =>
+        {
+            e.ToTable("assistant_tasks");
+            e.HasKey(t => t.Id);
+            e.HasOne(t => t.Student).WithMany().HasForeignKey(t => t.StudentId);
+            e.HasOne(t => t.AssignedAssistant).WithMany().HasForeignKey(t => t.AssignedAssistantId);
+        });
+
+        modelBuilder.Entity<NotificationEvent>(e =>
+        {
+            e.ToTable("notification_events");
+            e.HasKey(n => n.Id);
+            e.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId);
+        });
+
+        // Phase 3: Term
+        modelBuilder.Entity<Term>(e =>
+        {
+            e.ToTable("terms");
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Title).HasMaxLength(200).IsRequired();
+            e.HasOne(t => t.Package).WithMany(p => p.Terms).HasForeignKey(t => t.PackageId);
+        });
+
+        // Phase 3: StudentBalance
+        modelBuilder.Entity<StudentBalance>(e =>
+        {
+            e.ToTable("student_balances");
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => s.UserId).IsUnique();
+            e.Property(s => s.CurrentBalance).HasColumnType("decimal(18,2)");
+            e.HasOne(s => s.User).WithOne(u => u.StudentBalance).HasForeignKey<StudentBalance>(s => s.UserId);
+        });
+
+        // Phase 3: BalanceTransaction
+        modelBuilder.Entity<BalanceTransaction>(e =>
+        {
+            e.ToTable("balance_transactions");
+            e.HasKey(b => b.Id);
+            e.Property(b => b.Amount).HasColumnType("decimal(18,2)");
+            e.Property(b => b.BalanceAfter).HasColumnType("decimal(18,2)");
+            e.Property(b => b.TransactionType).HasMaxLength(50).IsRequired();
+            e.Property(b => b.Description).HasMaxLength(500).IsRequired();
+            e.HasOne(b => b.StudentBalance).WithMany(s => s.Transactions).HasForeignKey(b => b.StudentBalanceId);
+        });
+
+        // Phase 3: CodeVideoTarget
+        modelBuilder.Entity<CodeVideoTarget>(e =>
+        {
+            e.ToTable("code_video_targets");
+            e.HasKey(c => c.Id);
+            e.HasIndex(c => new { c.CodeGroupId, c.LessonVideoId }).IsUnique();
+            e.HasOne(c => c.CodeGroup).WithMany(g => g.CodeVideoTargets).HasForeignKey(c => c.CodeGroupId);
+            e.HasOne(c => c.LessonVideo).WithMany().HasForeignKey(c => c.LessonVideoId);
+        });
+
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

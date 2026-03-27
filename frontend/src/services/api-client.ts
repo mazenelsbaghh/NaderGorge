@@ -1,6 +1,13 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+import {
+  clearStoredAuth,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  replaceStoredTokens,
+} from '@/lib/auth-storage';
+
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
   headers: {
@@ -8,14 +15,14 @@ const apiClient = axios.create({
   },
 });
 
+const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
+
 // Request interceptor: attach JWT token
 apiClient.interceptors.request.use(
   (config) => {
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    const token = getStoredAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -27,12 +34,20 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || '';
+    const shouldBypassAuthRefresh = AUTH_BYPASS_PATHS.some((path) =>
+      requestUrl.includes(path)
+    );
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest?._retry &&
+      !shouldBypassAuthRefresh
+    ) {
       originalRequest._retry = true;
 
       try {
-        const refreshToken = localStorage.getItem('refreshToken');
+        const refreshToken = getStoredRefreshToken();
         if (!refreshToken) throw new Error('No refresh token');
 
         const { data } = await axios.post(
@@ -40,14 +55,12 @@ apiClient.interceptors.response.use(
           { refreshToken }
         );
 
-        localStorage.setItem('accessToken', data.data.accessToken);
-        localStorage.setItem('refreshToken', data.data.refreshToken);
+        replaceStoredTokens(data.data.accessToken, data.data.refreshToken);
 
         originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+        clearStoredAuth();
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }

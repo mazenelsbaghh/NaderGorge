@@ -6,7 +6,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CreatePackageCommand(string Name, string Description, decimal Price, Guid ProgramId) : IRequest<ApiResponse<Guid>>;
+public record CreatePackageCommand(string Name, string Description, decimal Price, Guid? ProgramId) : IRequest<ApiResponse<Guid>>;
 
 public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand, ApiResponse<Guid>>
 {
@@ -16,12 +16,25 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 
     public async Task<ApiResponse<Guid>> Handle(CreatePackageCommand request, CancellationToken ct)
     {
+        var pId = request.ProgramId ?? Guid.Empty;
+        if (pId == Guid.Empty)
+        {
+            var prog = await _db.Programs.FirstOrDefaultAsync(ct);
+            if (prog == null)
+            {
+                prog = new Program { Name = "General Program", Description = "Default Program", TargetGrade = "All grades" };
+                _db.Programs.Add(prog);
+                await _db.SaveChangesAsync(ct);
+            }
+            pId = prog.Id;
+        }
+
         var pkg = new Package
         {
             Name = request.Name,
             Description = request.Description,
             Price = request.Price,
-            ProgramId = request.ProgramId
+            ProgramId = pId
         };
         _db.Packages.Add(pkg);
         await _db.SaveChangesAsync(ct);
@@ -29,7 +42,70 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
     }
 }
 
-public record CreateSectionCommand(string Title, int Order, Guid PackageId) : IRequest<ApiResponse<Guid>>;
+// --- Terms ---
+public record CreateTermCommand(string Title, int Order, Guid PackageId) : IRequest<ApiResponse<Guid>>;
+
+public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiResponse<Guid>>
+{
+    private readonly IAppDbContext _db;
+    public CreateTermCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse<Guid>> Handle(CreateTermCommand request, CancellationToken ct)
+    {
+        var term = new Term
+        {
+            Title = request.Title,
+            Order = request.Order,
+            PackageId = request.PackageId
+        };
+        _db.Terms.Add(term);
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<Guid>.Ok(term.Id);
+    }
+}
+
+public record UpdateTermCommand(Guid Id, string Title, int Order) : IRequest<ApiResponse>;
+
+public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    public UpdateTermCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse> Handle(UpdateTermCommand request, CancellationToken ct)
+    {
+        var term = await _db.Terms.FindAsync(new object[] { request.Id }, ct);
+        if (term == null) return ApiResponse.Fail("Term not found");
+
+        term.Title = request.Title;
+        term.Order = request.Order;
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
+public record DeleteTermCommand(Guid Id) : IRequest<ApiResponse>;
+
+public class DeleteTermCommandHandler : IRequestHandler<DeleteTermCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    public DeleteTermCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse> Handle(DeleteTermCommand request, CancellationToken ct)
+    {
+        var term = await _db.Terms.Include(t => t.Sections).FirstOrDefaultAsync(t => t.Id == request.Id, ct);
+        if (term == null) return ApiResponse.Fail("Term not found");
+
+        if (term.Sections.Any())
+            return ApiResponse.Fail("Cannot delete term because it has sections. Remove sections first.");
+
+        _db.Terms.Remove(term);
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
+// --- Sections ---
+public record CreateSectionCommand(string Title, int Order, Guid TermId) : IRequest<ApiResponse<Guid>>;
 
 public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand, ApiResponse<Guid>>
 {
@@ -43,7 +119,7 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
         {
             Title = request.Title,
             Order = request.Order,
-            PackageId = request.PackageId
+            TermId = request.TermId
         };
         _db.ContentSections.Add(sec);
         await _db.SaveChangesAsync(ct);
@@ -97,5 +173,70 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
         _db.LessonVideos.Add(video);
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(video.Id);
+    }
+}
+
+public record AttachHomeworkCommand(
+    Guid LessonId,
+    string Title,
+    string Instructions,
+    bool IsMandatory,
+    int RequiredPointsToPass,
+    List<AttachHomeworkQuestionDto> Questions) : IRequest<ApiResponse<Guid>>;
+
+public record AttachHomeworkQuestionDto(string Text, int Order, int MaxPoints);
+
+public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkCommand, ApiResponse<Guid>>
+{
+    private readonly IAppDbContext _db;
+
+    public AttachHomeworkCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse<Guid>> Handle(AttachHomeworkCommand request, CancellationToken ct)
+    {
+        var lesson = await _db.Lessons
+            .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
+            
+        if (lesson == null) return ApiResponse<Guid>.Fail("Lesson not found");
+
+        var hw = await _db.Homeworks
+            .Include(h => h.Questions)
+            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
+            
+        if (hw == null)
+        {
+            hw = new NaderGorge.Domain.Entities.Homework.Homework
+            {
+                LessonId = lesson.Id,
+                Title = request.Title,
+                Description = request.Instructions,
+                IsMandatory = request.IsMandatory,
+                PassingScoreThreshold = request.RequiredPointsToPass
+            };
+            _db.Homeworks.Add(hw);
+        }
+        else
+        {
+            hw.Title = request.Title;
+            hw.Description = request.Instructions;
+            hw.IsMandatory = request.IsMandatory;
+            hw.PassingScoreThreshold = request.RequiredPointsToPass;
+            _db.HomeworkQuestions.RemoveRange(hw.Questions);
+            hw.Questions.Clear();
+        }
+
+        foreach (var q in request.Questions)
+        {
+            hw.Questions.Add(new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
+            {
+                HomeworkId = hw.Id,
+                BodyText = q.Text,
+                Order = q.Order,
+                PointsActive = q.MaxPoints
+            });
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<Guid>.Ok(hw.Id);
     }
 }

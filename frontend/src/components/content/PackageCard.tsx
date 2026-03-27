@@ -2,38 +2,62 @@
 
 import { PackageDto } from '@/services/content-service';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => void }) {
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -4 }}
-      transition={{ type: 'spring', stiffness: 300 }}
-      className={`relative overflow-hidden cursor-pointer rounded-2xl border px-6 py-8 shadow-xl transition-all ${
-        pkg.isEnrolled
-          ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 dark:border-green-900/50 dark:from-green-900/20 dark:to-emerald-900/10'
-          : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-      }`}
+      whileHover={{ y: -4 }}
+      className="group relative flex flex-col overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm transition-all hover:shadow-xl cursor-pointer"
       onClick={onClick}
     >
-      <div className="mb-4 flex items-center justify-between">
-        <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${pkg.isEnrolled ? 'bg-green-200/50 text-green-800 dark:bg-green-800/40 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}>
-          {pkg.isEnrolled ? 'Enrolled' : 'Available'}
-        </span>
-        <span className="text-lg font-black text-gray-900 dark:text-white">
-          ${pkg.price.toFixed(2)}
-        </span>
+      {/* Image Header */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--admin-card-strong)]">
+        <Image 
+          src={pkg.imageUrl || '/images/default-package.png'} 
+          alt={pkg.name} 
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+        {/* Status Badge */}
+        <div className="absolute top-4 right-4">
+           <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm backdrop-blur-md ${
+             pkg.isEnrolled 
+               ? 'bg-[#DCFCE7]/90 text-[#166534] border border-[#166534]/10' 
+               : 'bg-[#FEE2E2]/90 text-[#991B1B] border border-[#991B1B]/10'
+           }`}>
+             {pkg.isEnrolled ? 'مفعلة' : 'تحتاج كود'}
+           </span>
+        </div>
       </div>
 
-      <h3 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">{pkg.name}</h3>
-      <p className="text-sm leading-relaxed text-gray-600 dark:text-gray-400 line-clamp-3">
-        {pkg.description}
-      </p>
-
-      {!pkg.isEnrolled && (
-        <div className="mt-6 flex justify-end">
-          <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Requires Activation Code &rarr;</p>
+      {/* Body */}
+      <div className="flex flex-col flex-grow p-6">
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <h3 className="text-xl font-bold text-[var(--admin-text)] leading-tight line-clamp-2">
+            {pkg.name}
+          </h3>
+          <span className="shrink-0 text-lg font-black text-[var(--admin-primary)]">
+            {pkg.price.toFixed(0)} LE
+          </span>
         </div>
-      )}
+        
+        <p className="line-clamp-2 text-sm text-[var(--admin-muted)] leading-relaxed mb-6">
+          {pkg.description || 'باقة تعليمية متكاملة لضمان التفوق الأكاديمي. تتضمن الشرح والتدريبات اللازمة لاجتياز الاختبارات بامتياز.'}
+        </p>
+
+        {/* Footer / CTA */}
+        <div className="mt-auto pt-4 border-t border-[var(--admin-border)]">
+          <button className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition-colors ${
+            pkg.isEnrolled
+              ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-white'
+              : 'bg-[var(--admin-card-strong)] text-[var(--admin-text)] group-hover:bg-[var(--admin-card-strong)]'
+          }`}>
+            {pkg.isEnrolled ? 'دخول الباقة' : 'تفعيل بالكود'}
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }

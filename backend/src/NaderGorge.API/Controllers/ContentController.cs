@@ -25,14 +25,21 @@ public class ContentController : ControllerBase
     {
         var response = await _mediator.Send(new GetPackagesQuery(GetUserId()));
         if (!response.Success) return BadRequest(response); // Shouldn't happen for packages
-        
+
         return Ok(response);
     }
 
-    [HttpGet("packages/{packageId:guid}/sections")]
-    public async Task<IActionResult> GetSections(Guid packageId)
+    [HttpGet("packages/{packageId:guid}/terms")]
+    public async Task<IActionResult> GetTerms(Guid packageId)
     {
-        var response = await _mediator.Send(new GetSectionsQuery(packageId));
+        var response = await _mediator.Send(new GetTermsQuery(packageId));
+        return Ok(response);
+    }
+
+    [HttpGet("terms/{termId:guid}/sections")]
+    public async Task<IActionResult> GetSections(Guid termId)
+    {
+        var response = await _mediator.Send(new GetSectionsQuery(termId));
         return Ok(response);
     }
 
@@ -40,10 +47,10 @@ public class ContentController : ControllerBase
     public async Task<IActionResult> GetLessons(Guid sectionId)
     {
         var response = await _mediator.Send(new GetLessonsQuery(sectionId, GetUserId()));
-        
+
         if (!response.Success && response.Errors!.Contains("Section not found"))
             return NotFound(response);
-            
+
         return Ok(response);
     }
 
@@ -51,15 +58,15 @@ public class ContentController : ControllerBase
     public async Task<IActionResult> GetLessonDetail(Guid lessonId)
     {
         var response = await _mediator.Send(new GetLessonDetailQuery(lessonId, GetUserId()));
-        
+
         if (!response.Success)
         {
             if (response.Errors!.Contains("You do not have access"))
                 return StatusCode(403, response);
-                
+
             return NotFound(response);
         }
-            
+
         return Ok(response);
     }
 }

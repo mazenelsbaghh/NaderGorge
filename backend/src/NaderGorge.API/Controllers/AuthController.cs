@@ -20,7 +20,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterCommand command)
     {
         var result = await _mediator.Send(command);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return result.Success ? StatusCode(201, result) : BadRequest(result);
     }
 
     [HttpPost("login")]

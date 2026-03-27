@@ -1,51 +1,159 @@
 using MediatR;
 using NaderGorge.Application.Common;
-using StackExchange.Redis;
-using System.Text.Json;
+using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
+using NaderGorge.Domain.Interfaces;
+using System.Security.Cryptography;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record BulkGenerateCodesCommand(Guid PackageId, Guid? LessonId, int Count, int CodeLength, Guid AdminId) : IRequest<ApiResponse>;
+/// <summary>
+/// Phase 3: Expanded code generation supporting all 6 code types.
+/// </summary>
+public record BulkGenerateCodesCommand(
+    string GroupName,
+    CodeType CodeType,
+    int Count,
+    int CodeLength,
+    Guid AdminId,
+    // Target references (one required depending on CodeType)
+    Guid? PackageId = null,
+    Guid? TermId = null,
+    Guid? ContentSectionId = null,
+    Guid? LessonId = null,
+    Guid? ExamId = null,
+    // Video targets (for CodeType.Video)
+    List<Guid>? VideoTargetIds = null,
+    // Balance (for CodeType.Balance)
+    decimal? BalanceAmount = null,
+    // Optional
+    decimal? DiscountPercentage = null,
+    DateTime? ExpiresAt = null
+) : IRequest<ApiResponse<BulkGenerateCodesResponse>>;
 
-public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodesCommand, ApiResponse>
+public record BulkGenerateCodesResponse(Guid CodeGroupId, int CodesGenerated, List<string> Codes);
+
+public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodesCommand, ApiResponse<BulkGenerateCodesResponse>>
 {
-    private readonly IConnectionMultiplexer _redis;
+    private readonly IAppDbContext _db;
+    private readonly IAuditService _audit;
 
-    public BulkGenerateCodesCommandHandler(IConnectionMultiplexer redis)
+    public BulkGenerateCodesCommandHandler(IAppDbContext db, IAuditService audit)
     {
-        _redis = redis;
+        _db = db;
+        _audit = audit;
     }
 
-    public async Task<ApiResponse> Handle(BulkGenerateCodesCommand request, CancellationToken ct)
+    public async Task<ApiResponse<BulkGenerateCodesResponse>> Handle(BulkGenerateCodesCommand request, CancellationToken ct)
     {
-        if (request.Count <= 0 || request.Count > 100_000)
-            return ApiResponse.Fail("Count must be between 1 and 100,000");
+        if (request.Count <= 0 || request.Count > 10_000)
+            return ApiResponse<BulkGenerateCodesResponse>.Fail("Count must be between 1 and 10,000");
 
-        var db = _redis.GetDatabase();
+        if (request.CodeLength < 6 || request.CodeLength > 20)
+            return ApiResponse<BulkGenerateCodesResponse>.Fail("Code length must be between 6 and 20");
 
-        // For cross-platform BullMQ pushes without native libraries, 
-        // the simplest integration point if utilizing BullMQ v3/v4 is publishing 
-        // a basic JSON to a specific bridge standard, or if the worker simply listens to 
-        // a Redis LIST (LPUSH / BRPOP implementation):
-        
-        var payload = new
+        // Validate target based on CodeType
+        var validationError = ValidateTargets(request);
+        if (validationError != null)
+            return ApiResponse<BulkGenerateCodesResponse>.Fail(validationError);
+
+        // Create code group
+        var group = new CodeGroup
         {
-            packageId = request.PackageId,
-            lessonId = request.LessonId,
-            count = request.Count,
-            codeLength = request.CodeLength,
-            adminId = request.AdminId,
-            timestamp = DateTime.UtcNow
+            Id = Guid.NewGuid(),
+            Name = request.GroupName ?? $"Batch-{DateTime.UtcNow:yyyyMMdd-HHmmss}",
+            TotalCodes = request.Count,
+            CodeType = request.CodeType,
+            PackageId = request.PackageId,
+            TermId = request.TermId,
+            ContentSectionId = request.ContentSectionId,
+            LessonId = request.LessonId,
+            ExamId = request.ExamId,
+            BalanceAmount = request.BalanceAmount,
+            DiscountPercentage = request.DiscountPercentage,
+            ExpiresAt = request.ExpiresAt,
+            CreatedByUserId = request.AdminId,
         };
+        _db.CodeGroups.Add(group);
 
-        var json = JsonSerializer.Serialize(payload);
-        
-        // This acts as a standard list queue push. The Node worker can read via standard Redis list, 
-        // or if using BullMQ, it's better to implement the worker as pulling from this list 
-        // or constructing a valid BullMQ meta hash. 
-        // We'll LPUSH to 'code-generation-queue' to ensure the Node worker easily picks it up.
-        await db.ListLeftPushAsync("code-generation-queue", json);
+        // Add video targets if Video code type
+        if (request.CodeType == CodeType.Video && request.VideoTargetIds != null)
+        {
+            foreach (var videoId in request.VideoTargetIds)
+            {
+                _db.CodeVideoTargets.Add(new CodeVideoTarget
+                {
+                    CodeGroupId = group.Id,
+                    LessonVideoId = videoId
+                });
+            }
+        }
 
-        return ApiResponse.Ok("Job successfully pushed to the queue for asynchronous generation.");
+        // Generate codes
+        var codes = new List<AccessCode>(request.Count);
+        var plaintexts = new List<string>(request.Count);
+
+        for (int i = 0; i < request.Count; i++)
+        {
+            var plaintext = GenerateSecureCode(request.CodeLength);
+            var hash = HashCode(plaintext);
+
+            codes.Add(new AccessCode
+            {
+                Id = Guid.NewGuid(),
+                CodeHash = hash,
+                CodePlaintext = plaintext,
+                CodeGroupId = group.Id,
+                IsConsumed = false,
+                ExpiresAt = request.ExpiresAt
+            });
+
+            plaintexts.Add(plaintext);
+        }
+
+        _db.AccessCodes.AddRange(codes);
+        await _db.SaveChangesAsync(ct);
+
+        await _audit.LogAsync(
+            action: "BulkGenerateCodes",
+            entityType: "CodeGroup",
+            entityId: group.Id,
+            userId: request.AdminId,
+            newValues: new { Count = request.Count, CodeType = request.CodeType.ToString() }
+        );
+
+        return ApiResponse<BulkGenerateCodesResponse>.Ok(
+            new BulkGenerateCodesResponse(group.Id, request.Count, plaintexts));
+    }
+
+    private static string? ValidateTargets(BulkGenerateCodesCommand request)
+    {
+        return request.CodeType switch
+        {
+            CodeType.Package when request.PackageId == null => "PackageId is required for Package codes",
+            CodeType.Term when request.TermId == null => "TermId is required for Term codes",
+            CodeType.Month when request.ContentSectionId == null => "ContentSectionId is required for Month codes",
+            CodeType.Lesson when request.LessonId == null => "LessonId is required for Lesson codes",
+            CodeType.Exam when request.ExamId == null => "ExamId is required for Exam codes",
+            CodeType.Video when (request.VideoTargetIds == null || request.VideoTargetIds.Count == 0) => "VideoTargetIds are required for Video codes",
+            CodeType.Balance when (request.BalanceAmount == null || request.BalanceAmount <= 0) => "BalanceAmount must be > 0 for Balance codes",
+            _ => null
+        };
+    }
+
+    private static string GenerateSecureCode(int length)
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var bytes = RandomNumberGenerator.GetBytes(length);
+        var result = new char[length];
+        for (int i = 0; i < length; i++)
+            result[i] = chars[bytes[i] % chars.Length];
+        return new string(result);
+    }
+
+    private static string HashCode(string plaintext)
+    {
+        var hashBytes = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(plaintext));
+        return Convert.ToBase64String(hashBytes);
     }
 }

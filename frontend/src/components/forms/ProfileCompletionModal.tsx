@@ -32,23 +32,19 @@ export function ProfileCompletionModal({ isOpen, onClose, onComplete }: ProfileC
       updateProfile(true);
       onComplete();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to complete profile');
+      setError(err.response?.data?.message || 'فشل في استكمال الملف الشخصي');
     } finally {
       setLoading(false);
     }
   };
 
-  const inputClass =
-    'w-full rounded-xl border border-gray-200 bg-white/50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all dark:border-gray-700 dark:bg-gray-800/50 dark:text-white';
-  const labelClass = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5';
-
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-[color:rgba(28,28,22,0.5)] backdrop-blur-sm"
             onClick={onClose}
           />
           <motion.div
@@ -56,41 +52,66 @@ export function ProfileCompletionModal({ isOpen, onClose, onComplete }: ProfileC
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3 }}
-            className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-900"
+            className="auth-card relative z-10 w-full max-w-md p-6 sm:p-8"
           >
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Complete Your Profile</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">This is required to activate your access code.</p>
+            <h2 className="text-xl font-black text-[var(--admin-text)] mb-1">استكمال الملف الشخصي</h2>
+            <p className="text-sm font-medium text-[var(--admin-muted)] mb-5">مطلوب لتفعيل كود الوصول.</p>
 
             {error && (
-              <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-600 mb-4 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+              <div className="auth-error-banner mb-4">
                 {error}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className={labelClass}>Parent Phone Number</label>
-                <input type="tel" required className={inputClass} placeholder="Parent's phone" dir="ltr"
-                  value={formData.parentPhone} onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} />
+                <label className="auth-label">رقم ولي الأمر</label>
+                <div className="auth-input-wrap" dir="ltr">
+                  <input
+                    type="tel"
+                    required
+                    className="auth-input"
+                    placeholder="01XXXXXXXXX"
+                    value={formData.parentPhone}
+                    onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
+                  />
+                </div>
               </div>
               <div>
-                <label className={labelClass}>Governorate</label>
-                <input type="text" required className={inputClass} placeholder="e.g., Cairo"
-                  value={formData.governorate} onChange={(e) => setFormData({ ...formData, governorate: e.target.value })} />
+                <label className="auth-label">المحافظة</label>
+                <input
+                  type="text"
+                  required
+                  className="auth-input"
+                  placeholder="مثال: القاهرة"
+                  value={formData.governorate}
+                  onChange={(e) => setFormData({ ...formData, governorate: e.target.value })}
+                />
               </div>
               <div>
-                <label className={labelClass}>City</label>
-                <input type="text" required className={inputClass} placeholder="e.g., Nasr City"
-                  value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                <label className="auth-label">المدينة / الحي</label>
+                <input
+                  type="text"
+                  required
+                  className="auth-input"
+                  placeholder="مثال: مدينة نصر"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                />
               </div>
               <div>
-                <label className={labelClass}>School</label>
-                <input type="text" required className={inputClass} placeholder="School name"
-                  value={formData.school} onChange={(e) => setFormData({ ...formData, school: e.target.value })} />
+                <label className="auth-label">المدرسة</label>
+                <input
+                  type="text"
+                  required
+                  className="auth-input"
+                  placeholder="اسم المدرسة"
+                  value={formData.school}
+                  onChange={(e) => setFormData({ ...formData, school: e.target.value })}
+                />
               </div>
-              <button type="submit" disabled={loading}
-                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition-all">
-                {loading ? 'Saving...' : 'Save & Continue'}
+              <button type="submit" disabled={loading} className="auth-btn-primary mt-2">
+                {loading ? 'جاري الحفظ...' : 'حفظ ومتابعة'}
               </button>
             </form>
           </motion.div>

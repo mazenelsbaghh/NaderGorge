@@ -24,7 +24,6 @@
 - **Rationale**: Constitution Principle II mandates provider abstraction from day one. The frontend and backend must never "speak YouTube natively."
 - **Alternatives Considered**:
   - Direct YouTube embed in frontend: Violates constitution.
-  - Vimeo from day one: More costly; YouTube is sufficient for MVP with unlisted video links.
 
 ## R4: Exam Gating with Manual Override
 

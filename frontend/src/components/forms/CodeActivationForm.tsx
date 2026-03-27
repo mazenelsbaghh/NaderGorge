@@ -1,37 +1,41 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { authService } from '@/services/auth-service';
+import { useState } from "react";
+import type { FormEvent } from "react";
+
+import { AxiosError } from "axios";
+import { ArrowUpLeft, KeyRound } from "lucide-react";
+import { motion } from "framer-motion";
+
+import { authService } from "@/services/auth-service";
 
 interface CodeActivationFormProps {
-  onRequiresProfile: () => void;
   onSuccess: () => void;
 }
 
-export function CodeActivationForm({ onRequiresProfile, onSuccess }: CodeActivationFormProps) {
-  const [code, setCode] = useState('');
+export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setLoading(true);
 
     try {
       const { data } = await authService.activateCode(code);
-      if (data.data.requiresProfileCompletion) {
-        onRequiresProfile();
-      } else {
-        setSuccess(data.data.message);
-        setCode('');
-        onSuccess();
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to activate code');
+      setSuccess(data.data.message || "تم تفعيل الكود بنجاح.");
+      setCode("");
+      onSuccess();
+    } catch (err) {
+      const message =
+        err instanceof AxiosError
+          ? err.response?.data?.message
+          : "تعذر تفعيل الكود حاليًا";
+      setError(message || "تعذر تفعيل الكود حاليًا");
     } finally {
       setLoading(false);
     }
@@ -43,38 +47,60 @@ export function CodeActivationForm({ onRequiresProfile, onSuccess }: CodeActivat
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-4"
+      className="space-y-5"
     >
       {error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+        <div className="rounded-[22px] border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
           {error}
         </div>
       )}
       {success && (
-        <div className="rounded-xl bg-green-50 border border-green-200 p-3 text-sm text-green-600 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+        <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-700">
           {success}
         </div>
       )}
 
-      <div className="flex gap-3">
-        <input
-          type="text"
-          required
-          minLength={6}
-          placeholder="Enter your access code"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          className="flex-1 rounded-xl border border-gray-200 bg-white/50 px-4 py-3 text-sm font-mono tracking-widest text-gray-900 placeholder:text-gray-400 placeholder:tracking-normal placeholder:font-sans focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all dark:border-gray-700 dark:bg-gray-800/50 dark:text-white"
-          dir="ltr"
-        />
-        <button
-          type="submit"
-          disabled={loading || code.length < 6}
-          className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 transition-all whitespace-nowrap"
-        >
-          {loading ? 'Activating...' : 'Activate Code'}
-        </button>
+      <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-4 shadow-sm">
+        <label className="mb-3 flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
+          <KeyRound className="h-4 w-4 text-[var(--admin-primary)]" />
+          كود التفعيل
+        </label>
+        <div className="flex flex-col gap-3 md:flex-row">
+          <input
+            type="text"
+            required
+            minLength={6}
+            placeholder="مثال: NADER-2026"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            className="flex-1 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-3.5 text-sm font-mono tracking-[0.28em] text-[var(--admin-text)] placeholder:font-sans placeholder:tracking-normal placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(154,105,51,0.12)] transition-all"
+            dir="ltr"
+          />
+          <button
+            type="submit"
+            disabled={loading || code.length < 6}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-[0_12px_24px_rgba(145,95,42,0.24)] transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? "جارٍ التفعيل..." : "تفعيل الكود"}
+            <ArrowUpLeft className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <HintCard title="6 أحرف أو أكثر" description="اكتب الكود كما وصلك بدون مسافات زائدة." />
+        <HintCard title="ربط مباشر" description="عند النجاح تضاف الصلاحية إلى حسابك فورًا." />
+        <HintCard title="ملف شخصي" description="قد يُطلب استكمال البيانات قبل إتمام التفعيل." />
       </div>
     </motion.form>
+  );
+}
+
+function HintCard({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+      <p className="text-sm font-black text-[var(--admin-text)]">{title}</p>
+      <p className="mt-1 text-xs leading-6 text-[var(--admin-muted)]">{description}</p>
+    </div>
   );
 }

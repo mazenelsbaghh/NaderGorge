@@ -11,6 +11,8 @@ using NaderGorge.Application.Services;
 using NaderGorge.Infrastructure.Cache;
 using NaderGorge.Infrastructure.Data;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Interfaces;
+using NaderGorge.Infrastructure.Background;
 using NaderGorge.Infrastructure.Repositories;
 using NaderGorge.Infrastructure.Services;
 using NaderGorge.Infrastructure.Providers;
@@ -49,6 +51,10 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
 builder.Services.AddScoped<IVideoProvider, YouTubeVideoProvider>();
 builder.Services.AddScoped<IAccessCheckService, AccessCheckService>();
+builder.Services.AddScoped<IVideoEncryptionService, VideoEncryptionService>();
+builder.Services.AddScoped<IJobEnqueuer, RedisJobEnqueuer>();
+builder.Services.AddScoped<BalanceService>();
+builder.Services.AddScoped<AcademicValidationService>();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -68,7 +74,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
         };
     });
-builder.Services.AddAuthorization();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAssistantReviewer", policy =>
+        policy.RequireRole("Admin", "Assistant", "AssistantReviewer"));
+
+    options.AddPolicy("RequireAcademicAssistant", policy =>
+        policy.RequireRole("Admin", "Teacher", "AssistantAcademic"));
+});
 
 // ---------- Rate Limiting ----------
 builder.Services.AddRateLimitingPolicies();
@@ -108,12 +122,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// ---------- Database Migration & Seed ----------
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-    await Seeder.SeedAsync(db);
-}
 
 app.Run();

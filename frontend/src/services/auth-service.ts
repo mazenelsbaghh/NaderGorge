@@ -4,8 +4,17 @@ export interface RegisterData {
   fullName: string;
   phoneNumber: string;
   password: string;
-  grade?: string;
-  track?: string;
+  studentCode: string;
+  dateOfBirth: string;
+  gender: 'Male' | 'Female';
+  governorate: string;
+  address: string;
+  parentPhone: string;
+  isFatherAlive: boolean;
+  isMotherAlive: boolean;
+  educationStage: 'Secondary' | 'Baccalaureate';
+  gradeLevel: string;
+  studyTrack?: string;
 }
 
 export interface LoginData {

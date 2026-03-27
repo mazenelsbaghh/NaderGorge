@@ -1,0 +1,78 @@
+name: E2E Tests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nadergorge_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Install Frontend Dependencies
+      working-directory: frontend
+      run: npm ci
+      
+    - name: Install Playwright Browsers
+      working-directory: frontend
+      run: npx playwright install --with-deps chromium firefox webkit
+      
+    - name: Start Backend in E2E mode
+      working-directory: backend/src/NaderGorge.API
+      env:
+        ASPNETCORE_ENVIRONMENT: E2e
+      run: dotnet run &
+      
+    - name: Start Frontend
+      working-directory: frontend
+      run: npm run dev &
+      
+    - name: Wait for services to be ready
+      run: |
+        npx wait-on http://localhost:5245/api/health
+        npx wait-on http://localhost:3000
+        
+    - name: Run Playwright tests
+      working-directory: frontend
+      run: npm run test:e2e
+      
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: frontend/playwright-report/
+        retention-days: 30

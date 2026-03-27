@@ -35,9 +35,9 @@ export default function ExamPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl space-y-6 animate-pulse">
-        <div className="h-32 w-full rounded-2xl bg-gray-200 dark:bg-gray-800"></div>
+        <div className="h-32 w-full rounded-2xl bg-[var(--admin-card-soft)]"></div>
         <div className="space-y-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-40 w-full rounded-2xl bg-gray-200 dark:bg-gray-800"></div>)}
+          {[1, 2, 3].map(i => <div key={i} className="h-40 w-full rounded-2xl bg-[var(--admin-card-soft)]"></div>)}
         </div>
       </div>
     );

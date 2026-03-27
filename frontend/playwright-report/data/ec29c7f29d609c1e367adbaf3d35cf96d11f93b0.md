@@ -1,0 +1,87 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - img [ref=e8]
+        - generic [ref=e11]:
+          - paragraph [ref=e12]: STUDENT AREA
+          - heading "بوابة الطالب" [level=2] [ref=e13]
+      - navigation [ref=e14]:
+        - link "لوحة التحكم" [ref=e15] [cursor=pointer]:
+          - /url: /student
+          - img [ref=e17]
+          - generic [ref=e18]: لوحة التحكم
+        - link "باقاتي" [ref=e19] [cursor=pointer]:
+          - /url: /student/packages
+          - img [ref=e21]
+          - generic [ref=e24]: باقاتي
+        - link "تفعيل كود" [ref=e25] [cursor=pointer]:
+          - /url: /student/code-redemption
+          - img [ref=e27]
+          - generic [ref=e30]: تفعيل كود
+    - generic [ref=e32]:
+      - navigation [ref=e34]:
+        - link "الرئيسية" [ref=e35] [cursor=pointer]:
+          - /url: /
+          - img [ref=e36]
+          - generic [ref=e39]: الرئيسية
+        - generic [ref=e40]:
+          - img [ref=e41]
+          - link "الطالب" [ref=e43] [cursor=pointer]:
+            - /url: /student
+        - generic [ref=e44]:
+          - img [ref=e45]
+          - link "الباقات" [ref=e47] [cursor=pointer]:
+            - /url: /student/packages
+        - generic [ref=e48]:
+          - img [ref=e49]
+          - link "تفاصيل الباقة" [ref=e51] [cursor=pointer]:
+            - /url: /student/packages/34282b41-cdfd-4566-ba3e-6481e1dd51e5
+        - generic [ref=e52]:
+          - img [ref=e53]
+          - link "lessons" [ref=e55] [cursor=pointer]:
+            - /url: /student/packages/34282b41-cdfd-4566-ba3e-6481e1dd51e5/lessons
+        - generic [ref=e56]:
+          - img [ref=e57]
+          - generic [ref=e59]: الدرس
+      - main [ref=e60]:
+        - generic [ref=e61]:
+          - button "العودة إلى محتوى الباقة" [ref=e62]:
+            - img [ref=e63]
+            - generic [ref=e65]: العودة إلى محتوى الباقة
+          - generic [ref=e66]:
+            - generic [ref=e68]:
+              - img [ref=e70]
+              - generic [ref=e73]:
+                - heading "E2E Lesson" [level=1] [ref=e74]
+                - paragraph [ref=e75]: Consume me
+            - generic [ref=e76]:
+              - button "المحتوى التعليمي" [ref=e77]
+              - button "الواجب" [ref=e78]
+            - generic [ref=e79]:
+              - generic [ref=e80]:
+                - img [ref=e82]
+                - generic [ref=e87]:
+                  - heading "E2E Homework" [level=2] [ref=e88]
+                  - paragraph [ref=e89]: Upload your solution
+              - generic [ref=e90]:
+                - generic [ref=e91]:
+                  - heading "1. Write an essay about AI" [level=4] [ref=e92]
+                  - textbox "اكتب إجابتك هنا..." [ref=e93]: This is a test essay answering the E2E homework question.
+                - button "تسليم الواجب" [ref=e95]
+  - generic [ref=e100] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e101]:
+      - img [ref=e102]
+    - generic [ref=e105]:
+      - button "Open issues overlay" [ref=e106]:
+        - generic [ref=e107]:
+          - generic [ref=e108]: "0"
+          - generic [ref=e109]: "1"
+        - generic [ref=e110]: Issue
+      - button "Collapse issues badge" [ref=e111]:
+        - img [ref=e112]
+  - alert [ref=e114]
+```

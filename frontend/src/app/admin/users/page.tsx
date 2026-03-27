@@ -1,186 +1,465 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { adminService, AdminUserListDto, DeviceDto } from '@/services/admin-service';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import {
+  Download,
+  Eye,
+  Filter,
+  Monitor,
+  PencilLine,
+  Shield,
+  Sparkles,
+  Trash2,
+  UserPlus,
+  Users,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import {
+  AdminShellChrome,
+  AdminDataTable,
+  AdminColumn,
+  AdminStatCard,
+  AdminModal,
+  AdminSearchToolbar,
+} from '@/components/admin';
+import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
+import { AdminUserListDto, DeviceDto, adminService } from '@/services/admin-service';
+import toast from 'react-hot-toast';
+
+type UserRole = 'Admin' | 'Assistant' | 'Student';
+type RoleFilter = 'all' | UserRole;
+
+const ROLE_FILTERS: Array<{ value: RoleFilter; label: string }> = [
+  { value: 'all', label: 'الكل' },
+  { value: 'Admin', label: 'المديرين' },
+  { value: 'Assistant', label: 'المساعدين' },
+  { value: 'Student', label: 'الطلاب' },
+];
+
+function normalizeRole(user: AdminUserListDto): UserRole {
+  if (user.roles.includes('Admin')) return 'Admin';
+  if (user.roles.includes('Assistant')) return 'Assistant';
+  return 'Student';
+}
+
+function roleLabel(role: UserRole) {
+  if (role === 'Admin') return 'مدير النظام';
+  if (role === 'Assistant') return 'مساعد تعليمي';
+  return 'طالب';
+}
+
+function statusLabel(status: string) {
+  return status === 'Active' ? 'نشط' : 'معلق';
+}
+
+function getStatusClasses(status: string) {
+  if (status === 'Active') {
+    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400';
+  }
+
+  return 'bg-[var(--admin-card-strong)] text-[var(--admin-muted)]';
+}
 
 export default function AdminUsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<AdminUserListDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const [selectedUser, setSelectedUser] = useState<AdminUserListDto | null>(null);
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
+  const [deviceModalUser, setDeviceModalUser] = useState<AdminUserListDto | null>(null);
   const [devices, setDevices] = useState<DeviceDto[]>([]);
-  
-  useEffect(() => {
-    loadUsers();
-  }, [page, search]);
 
-  async function loadUsers() {
+  const [educationStageFilter, setEducationStageFilter] = useState('');
+  const [gradeLevelFilter, setGradeLevelFilter] = useState('');
+  const [studyTrackFilter, setStudyTrackFilter] = useState('');
+  const [genderFilter, setGenderFilter] = useState('');
+  const [governorateFilter, setGovernorateFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchUsers() {
+      try {
+        setLoading(true);
+        // Load all initially to manage client-side filtering if possible, or paginate properly
+        // AdminDataTable expects flat data, so we fetch an ample amount to demo, 
+        // normally we should hook up custom pagination logic to backend.
+        const data = await adminService.listUsers(
+          1, 
+          1000, 
+          search,
+          educationStageFilter || undefined,
+          gradeLevelFilter || undefined,
+          studyTrackFilter || undefined,
+          genderFilter || undefined,
+          governorateFilter || undefined
+        );
+        if (!isMounted) return;
+
+        setUsers(data.items);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [search, educationStageFilter, gradeLevelFilter, studyTrackFilter, genderFilter, governorateFilter]);
+
+  async function handleViewDevices(user: AdminUserListDto) {
+    setDeviceModalUser(user);
+
     try {
-      setLoading(true);
-      const data = await adminService.listUsers(page, 20, search);
-      setUsers(data.items);
-      setTotalPages(Math.ceil(data.totalCount / data.pageSize));
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
+      const data = await adminService.getUserDevices(user.id);
+      setDevices(data);
+    } catch (error) {
+      console.error(error);
+      toast.error('تعذر تحميل الأجهزة');
     }
   }
 
   async function handleToggleStatus(user: AdminUserListDto) {
-    const newStatus = user.status === 'Active' ? 'Disabled' : 'Active';
+    const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
+
     try {
-      await adminService.updateUserStatus(user.id, newStatus);
-      setUsers(users.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
-    } catch (e) {
-      alert('Failed to update status');
+      await adminService.updateUserStatus(user.id, nextStatus);
+      setUsers((currentUsers) =>
+        currentUsers.map((entry) =>
+          entry.id === user.id ? { ...entry, status: nextStatus } : entry,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error('تعذر تحديث حالة المستخدم');
     }
   }
 
-  async function handleViewDevices(user: AdminUserListDto) {
-    setSelectedUser(user);
-    try {
-      const data = await adminService.getUserDevices(user.id);
-      setDevices(data);
-    } catch (e) {
-      alert('Failed to load devices');
-    }
-  }
+  const filteredUsers =
+    roleFilter === 'all'
+      ? users
+      : users.filter((user) => normalizeRole(user) === roleFilter);
 
-  async function handleRemoveDevice(deviceId: string) {
-    if (!confirm('Are you sure you want to remove this device?')) return;
-    try {
-      await adminService.removeDevice(deviceId);
-      setDevices(devices.filter(d => d.id !== deviceId));
-    } catch (e) {
-      alert('Failed to remove device');
+  const activeCount = users.filter((user) => user.status === 'Active').length;
+  const pendingCount = users.filter((user) => user.status !== 'Active').length;
+
+  const columns: AdminColumn<AdminUserListDto>[] = [
+    {
+      key: 'user',
+      label: 'المستخدم',
+      render: (u) => (
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-primary-15)] font-bold text-[var(--admin-primary)] shadow-sm">
+            {getInitials(u.fullName)}
+          </div>
+          <div>
+            <div className="font-bold text-[var(--admin-text)]">{u.fullName}</div>
+            <div className="text-xs text-[var(--admin-muted)] mt-1 font-mono tracking-wider">{u.phoneNumber}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'role',
+      label: 'الدور والمرحلة',
+      render: (u) => (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm font-bold text-[var(--admin-text)]">
+            {roleLabel(normalizeRole(u))}
+          </span>
+          {normalizeRole(u) === 'Student' && (
+            <span className="text-xs text-[var(--admin-muted)]">
+              {u.grade} {u.track !== 'N/A' && `- ${u.track}`}
+            </span>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'status',
+      label: 'الحالة',
+      render: (u) => (
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${getStatusClasses(
+            u.status,
+          )}`}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          {statusLabel(u.status)}
+        </span>
+      )
+    },
+    {
+      key: 'lastActivity',
+      label: 'آخر نشاط',
+      render: (u) => (
+        <span className="text-sm text-[var(--admin-muted)] font-medium">
+          {formatRelativeDate(u.createdAt)}
+        </span>
+      )
+    },
+    {
+      key: 'actions',
+      label: 'الإجراءات',
+      align: 'left',
+      render: (u) => (
+        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => {
+               if (normalizeRole(u) === 'Student') {
+                   // Navigate to comprehensive student profile
+                   router.push(`/admin/users/${u.id}`);
+               } else {
+                   // Optional: legacy device modal handling for others, or just something else
+                   handleViewDevices(u);
+               }
+            }}
+            className="admin-btn-icon"
+            title="عرض التفاصيل"
+          >
+            <Eye className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => handleToggleStatus(u)}
+            className="admin-btn-icon"
+            title="تعديل الحالة"
+          >
+            <PencilLine className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => handleToggleStatus(u)}
+            className="rounded-full p-2 text-[var(--admin-muted)] transition-all hover:bg-rose-100 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-400"
+            title="إيقاف / تفعيل"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      )
     }
-  }
+  ];
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">User Management</h1>
-        <div className="relative w-64">
-          <input 
-            type="text" 
-            placeholder="Search phone or name..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1); }}
-            className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-          />
-        </div>
-      </div>
+    <AdminShellChrome
+      activePath="/admin/users"
+      sectionLabel="إدارة المستخدمين"
+      pageTitle="قائمة المستخدمين"
+      subtitle="إدارة وتدقيق الوصول إلى النظام والبيانات الأكاديمية."
+      action={
+        <button className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-8 py-4 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:brightness-110">
+          <UserPlus className="h-4 w-4" />
+          دعوة عضو جديد
+        </button>
+      }
+    >
+      <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <AdminStatCard
+          variant="light"
+          icon={Users}
+          label="الإجمالي"
+          value={users.length}
+          subtitle="إجمالي المستخدمين المسجلين"
+        />
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 backdrop-blur-md shadow-lg">
-        {loading && <div className="p-10 text-center animate-pulse">Loading users...</div>}
-        
-        {!loading && (
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Name / Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Grade / Track</th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-900">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">{u.fullName}</div>
-                    <div className="text-sm text-gray-500">{u.phoneNumber}</div>
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    {u.grade} - {u.track}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${u.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`}>
-                      {u.status}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium space-x-3">
-                    <button onClick={() => handleToggleStatus(u)} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">
-                      {u.status === 'Active' ? 'Disable' : 'Enable'}
-                    </button>
-                    <button onClick={() => handleViewDevices(u)} className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
-                      Devices
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <AdminStatCard
+          variant="accent"
+          icon={Sparkles}
+          label="اليوم"
+          value={activeCount}
+          subtitle="نشطون وموثقون"
+        />
 
-        <div className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-800">
-          <button 
-            disabled={page === 1}
-            onClick={() => setPage(p => p - 1)}
-            className="rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold border disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="text-sm">Page {page} of {totalPages}</span>
-          <button 
-            disabled={page >= totalPages}
-            onClick={() => setPage(p => p + 1)}
-            className="rounded-lg bg-white dark:bg-gray-700 px-4 py-2 text-sm font-semibold border disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+        <AdminStatCard
+          variant="muted"
+          icon={Shield}
+          label="قيد الانتظار"
+          value={pendingCount}
+          subtitle="حسابات تحتاج للمراجعة"
+        />
+      </section>
 
-      <AnimatePresence>
-        {selectedUser && (
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }} 
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.95 }} 
-              animate={{ scale: 1 }} 
-              exit={{ scale: 0.95 }} 
-              className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-2xl"
+      <div className="mb-8 flex justify-center">
+        <div className="inline-flex flex-wrap gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] p-1.5 shadow-sm backdrop-blur-xl">
+          {ROLE_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setRoleFilter(filter.value)}
+              className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${roleFilter === filter.value
+                ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+                }`}
             >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold">Devices for {selectedUser.fullName}</h3>
-                <button onClick={() => setSelectedUser(null)} className="text-gray-500 hover:text-gray-900 w-8 h-8 rounded-full hover:bg-gray-100">&times;</button>
-              </div>
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-              {devices.length === 0 ? (
-                <p className="text-center text-gray-500 my-8">No devices registered</p>
-              ) : (
-                <div className="space-y-4">
-                  {devices.map(d => (
-                    <div key={d.id} className="flex justify-between items-center rounded-xl border p-4 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-                      <div>
-                        <div className="font-semibold">{d.fingerprint}</div>
-                        <div className="text-sm text-gray-500">{d.browser} • {d.os}</div>
-                        <div className="text-xs text-gray-400 mt-1">Last seen: {new Date(d.lastUsedAt).toLocaleString()}</div>
-                      </div>
-                      <button 
-                         onClick={() => handleRemoveDevice(d.id)}
-                         className="rounded-lg bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-3 py-1.5 text-sm font-semibold hover:bg-red-200 dark:hover:bg-red-900/80 transition"
-                      >
-                         Revoke
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
+      <AdminSearchToolbar
+        value={search}
+        onChange={setSearch}
+        placeholder="البحث بتكويد الطالب، أو الاسم، أو الهاتف..."
+        actions={
+          <>
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-bold transition ${showFilters ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)] text-[var(--admin-primary)]' : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'}`}
+            >
+              <Filter className="h-4 w-4" />
+              تصفية
+            </button>
+            <button className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]">
+              <Download className="h-4 w-4" />
+              تصدير البيانات
+            </button>
+          </>
+        }
+      />
+
+      {showFilters && (
+        <div className="mb-8 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-[var(--admin-text)] text-right">المرحلة الدراسية</label>
+              <select 
+                value={educationStageFilter} 
+                onChange={(e) => setEducationStageFilter(e.target.value)}
+                className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
+              >
+                <option value="">الكل</option>
+                <option value="Secondary">ثانوية</option>
+                <option value="Baccalaureate">بكالوريا</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-[var(--admin-text)] text-right">الصف</label>
+              <select 
+                value={gradeLevelFilter} 
+                onChange={(e) => setGradeLevelFilter(e.target.value)}
+                className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
+              >
+                <option value="">الكل</option>
+                <option value="FirstSecondary">أولى ثانوي</option>
+                <option value="SecondSecondary">ثانية ثانوي</option>
+                <option value="FirstBaccalaureate">أولى بكالوريا</option>
+                <option value="SecondBaccalaureate">ثانية بكالوريا</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-[var(--admin-text)] text-right">التخصص (للسنة الثانية فقط)</label>
+              <select 
+                value={studyTrackFilter} 
+                onChange={(e) => setStudyTrackFilter(e.target.value)}
+                className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
+              >
+                <option value="">الكل</option>
+                <option value="Arts">أدبي</option>
+                <option value="Science">علمي</option>
+                <option value="MedicineAndLifeSciences">الطب وعلوم الحياة</option>
+                <option value="EngineeringAndComputerScience">الهندسة وعلوم الحاسب</option>
+                <option value="Business">قطاع الأعمال</option>
+                <option value="ArtsAndHumanities">الآداب والفنون</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-[var(--admin-text)] text-right">الجنس</label>
+              <select 
+                value={genderFilter} 
+                onChange={(e) => setGenderFilter(e.target.value)}
+                className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
+              >
+                <option value="">الكل</option>
+                <option value="Male">ذكر</option>
+                <option value="Female">أنثى</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AdminDataTable
+        data={filteredUsers}
+        columns={columns}
+        loading={loading}
+        rowKey={(u) => u.id}
+        emptyMessage="لا توجد نتائج مطابقة."
+        expandedRowRender={(u) => (
+          <div className="grid gap-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-6 md:grid-cols-2 lg:grid-cols-4 text-right">
+            <div>
+              <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">كود الطالب</p>
+              <p className="text-sm font-black text-[var(--admin-text)]">{u.studentCode || 'غير متوفر'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">تاريخ الميلاد</p>
+              <p className="text-sm font-bold text-[var(--admin-text)]">
+                {u.dateOfBirth ? new Date(u.dateOfBirth).toLocaleDateString('ar-EG') : 'غير متوفر'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">حالة الوالدين</p>
+              <div className="flex flex-col gap-1 mt-1 text-sm font-bold">
+                <span className={u.isFatherAlive === false ? 'text-red-500' : 'text-emerald-500'}>
+                  الأب: {u.isFatherAlive === false ? 'متوفي' : 'على قيد الحياة'}
+                </span>
+                <span className={u.isMotherAlive === false ? 'text-red-500' : 'text-emerald-500'}>
+                  الأم: {u.isMotherAlive === false ? 'متوفية' : 'على قيد الحياة'}
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">العنوان</p>
+              <p className="text-sm font-bold text-[var(--admin-text)]">
+                {u.governorate && u.governorate !== 'N/A' ? `${u.governorate} - ` : ''}
+                {u.address || 'غير متوفر'}
+              </p>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
-    </div>
+      />
+
+      <AdminModal
+        open={!!deviceModalUser}
+        onClose={() => { setDeviceModalUser(null); setDevices([]); }}
+        title="الأجهزة المسجلة"
+        subtitle={deviceModalUser?.fullName}
+      >
+        {devices.length === 0 ? (
+          <div className="rounded-[1.5rem] bg-[var(--admin-card-soft)] p-8 text-center text-[var(--admin-muted)] border border-[var(--admin-border)] mt-4">
+            لا توجد أجهزة مسجلة لهذا المستخدم.
+          </div>
+        ) : (
+          <div className="space-y-3 mt-4">
+            {devices.map((device) => (
+              <div
+                key={device.id}
+                className="flex flex-col gap-4 rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="rounded-2xl bg-[var(--admin-primary-15)] p-3 text-[var(--admin-primary)]">
+                    <Monitor className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-[var(--admin-text)]">
+                      {device.browser} <span className="text-[var(--admin-muted)] font-normal px-1">•</span> {device.os}
+                    </div>
+                    <div className="text-sm text-[var(--admin-muted)] mt-1 font-mono">{device.fingerprint}</div>
+                  </div>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ${device.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)]'}`}>
+                  {device.isActive ? 'مسجل الدخول' : 'يُمكن توثيقه'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </AdminModal>
+    </AdminShellChrome>
   );
 }

@@ -15,10 +15,12 @@ public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal Total
 public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiResponse<ExamResultDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IPublisher _publisher;
 
-    public SubmitExamCommandHandler(IAppDbContext db)
+    public SubmitExamCommandHandler(IAppDbContext db, IPublisher publisher)
     {
         _db = db;
+        _publisher = publisher;
     }
 
     public async Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
@@ -98,6 +100,13 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         }
 
         await _db.SaveChangesAsync(ct);
+
+        if (attempt.IsPassed)
+        {
+            int basePoints = (int)exam.TotalScore > 0 ? (int)exam.TotalScore : 50;
+            // Award points for passing an exam
+            await _publisher.Publish(new NaderGorge.Application.Features.Gamification.Commands.AcademicTaskCompletedEvent(request.UserId, NaderGorge.Domain.Entities.Gamification.GamificationEventType.PerfectExam, basePoints), ct);
+        }
 
         var result = new ExamResultDto(attempt.Id, attempt.ScoreAchieved, exam.TotalScore, attempt.IsPassed, blocksNextLesson);
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");

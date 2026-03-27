@@ -7,6 +7,13 @@ export interface PackageDto {
   price: number;
   programId: string;
   isEnrolled: boolean;
+  imageUrl?: string;
+}
+
+export interface TermDto {
+  id: string;
+  title: string;
+  order: number;
 }
 
 export interface ContentSectionDto {
@@ -28,7 +35,6 @@ export interface VideoDto {
   id: string;
   title: string;
   provider: string;
-  embedUrl: string;
   order: number;
   limit: number;
   watched: number;
@@ -42,6 +48,23 @@ export interface ResourceDto {
   type: string;
 }
 
+export interface HomeworkQuestionDto {
+  id: string;
+  text: string;
+  order: number;
+  maxPoints: number;
+  questionType?: string; // Currently missing from backend, default to 'Essay' in component
+}
+
+export interface HomeworkDto {
+  id: string;
+  title: string;
+  instructions: string;
+  isMandatory: boolean;
+  requiredPointsToPass: number;
+  questions: HomeworkQuestionDto[];
+}
+
 export interface LessonDetailDto {
   id: string;
   title: string;
@@ -49,11 +72,13 @@ export interface LessonDetailDto {
   examId?: string;
   videos: VideoDto[];
   resources: ResourceDto[];
+  homework?: HomeworkDto;
 }
 
 export const contentService = {
   getPackages: () => apiClient.get('/content/packages'),
-  getSections: (packageId: string) => apiClient.get(`/content/packages/${packageId}/sections`),
+  getTerms: (packageId: string) => apiClient.get(`/content/packages/${packageId}/terms`),
+  getSections: (termId: string) => apiClient.get(`/content/terms/${termId}/sections`),
   getLessons: (sectionId: string) => apiClient.get(`/content/sections/${sectionId}/lessons`),
   getLessonDetail: (lessonId: string) => apiClient.get(`/content/lessons/${lessonId}`),
   recordVideoEvent: (lessonVideoId: string, watchedSeconds: number) => 

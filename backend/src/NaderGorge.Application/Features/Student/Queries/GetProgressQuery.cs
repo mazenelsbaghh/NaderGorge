@@ -60,6 +60,17 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Distinct()
             .CountAsync(ct);
 
+        var allLessonIds = packages.SelectMany(p => p.Sections).SelectMany(s => s.Lessons).Select(l => l.Id).ToList();
+        
+        var mandatoryHomeworks = await _db.Homeworks
+            .Where(h => allLessonIds.Contains(h.LessonId) && h.IsMandatory)
+            .ToListAsync(ct);
+
+        var submittedHomeworkIds = await _db.HomeworkSubmissions
+            .Where(s => s.StudentId == request.UserId && s.Status != Domain.Entities.Homework.SubmissionStatus.InProgress)
+            .Select(s => s.HomeworkId)
+            .ToListAsync(ct);
+
         int totalLessons = 0;
         int completedLessons = 0;
 
@@ -82,11 +93,18 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
                 var examPassed = hasExam && passedExamIds.Contains(lesson.ExamId!.Value);
 
                 // Lesson is locked if previous lesson has an exam that wasn't passed (and not manually unlocked)
+                // OR if the previous lesson has mandatory homework that was not submitted.
                 bool isLocked = false;
                 if (i > 0)
                 {
                     var prevLesson = orderedLessons[i - 1];
-                    if (prevLesson.ExamId.HasValue && !passedExamIds.Contains(prevLesson.ExamId.Value) && !manuallyUnlockedIds.Contains(lesson.Id))
+                    bool blockedByExam = prevLesson.ExamId.HasValue && !passedExamIds.Contains(prevLesson.ExamId.Value);
+
+                    bool blockedByHomework = mandatoryHomeworks
+                        .Where(h => h.LessonId == prevLesson.Id)
+                        .Any(h => !submittedHomeworkIds.Contains(h.Id));
+
+                    if ((blockedByExam || blockedByHomework) && !manuallyUnlockedIds.Contains(lesson.Id))
                     {
                         isLocked = true;
                     }

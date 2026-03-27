@@ -7,6 +7,7 @@ export interface ActivePackageDto {
   lessonsCompleted: number;
   totalLessons: number;
   progressPercent: number;
+  imageUrl?: string;
 }
 
 export interface ResumePointDto {
@@ -59,14 +60,26 @@ export interface ProgressDto {
   examsFailed: number;
 }
 
+export interface QuickAccessItemDto {
+  title: string;
+  pathBreadcrumb: string;
+  url: string;
+  accessType: number; // 1 = Term, 2 = Month, 3 = Lesson
+}
+
 export const studentService = {
   getDashboard: async (): Promise<DashboardDto> => {
-    const res = await apiClient.get('/api/student/dashboard');
+    const res = await apiClient.get('/student/dashboard');
     return res.data?.data;
   },
 
+  getQuickAccess: async (): Promise<QuickAccessItemDto[]> => {
+    const res = await apiClient.get('/student/dashboard/quick-access');
+    return res.data?.data || [];
+  },
+
   getProgress: async (): Promise<ProgressDto> => {
-    const res = await apiClient.get('/api/student/progress');
+    const res = await apiClient.get('/student/progress');
     return res.data?.data;
   }
 };

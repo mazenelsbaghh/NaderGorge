@@ -1,189 +1,278 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { CircleCheck, Plus, Shield, Tags } from 'lucide-react';
+
+import {
+  AdminShellChrome,
+  AdminDataTable,
+  AdminColumn,
+  AdminStatCard,
+  AdminModal,
+  AdminSearchToolbar,
+} from '@/components/admin';
+import { formatCompactNumber } from '@/components/admin/admin-utils';
 import { adminService, QuestionBankItemDto, QuestionOptionDto } from '@/services/admin-service';
-import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<QuestionBankItemDto[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Form
   const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState('');
   const [qText, setQText] = useState('');
   const [qPoints, setQPoints] = useState(1);
   const [qTags, setQTags] = useState('');
+  const [saving, setSaving] = useState(false);
   const [options, setOptions] = useState<{ text: string; isCorrect: boolean }[]>([
     { text: '', isCorrect: true },
     { text: '', isCorrect: false },
     { text: '', isCorrect: false },
-    { text: '', isCorrect: false }
+    { text: '', isCorrect: false },
   ]);
 
   useEffect(() => {
-    loadQuestions();
+    void loadQuestions();
   }, []);
 
   async function loadQuestions() {
-    setLoading(true);
     try {
+      setLoading(true);
       const data = await adminService.listQuestions(1, 100, '');
       setQuestions(data.items);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (options.filter(o => o.text.trim().length > 0).length < 2) {
-      return alert('Provide at least 2 filled options.');
+  function updateOption(index: number, prop: keyof QuestionOptionDto, value: string | boolean) {
+    const next = [...options];
+    next[index] = { ...next[index], [prop]: value };
+
+    if (prop === 'isCorrect' && value === true) {
+      next.forEach((option, optionIndex) => {
+        if (optionIndex !== index) option.isCorrect = false;
+      });
     }
-    
+
+    setOptions(next);
+  }
+
+  async function handleSave(event: FormEvent) {
+    event.preventDefault();
+    if (options.filter((option) => option.text.trim()).length < 2) {
+      toast.error('أدخل على الأقل اختيارين');
+      return;
+    }
+
     try {
+      setSaving(true);
       await adminService.createQuestion({
         text: qText,
         defaultPoints: qPoints,
         tags: qTags,
-        options: options.filter(o => o.text.trim().length > 0)
+        options: options.filter((option) => option.text.trim()),
       });
       setShowModal(false);
-      
-      // Reset
       setQText('');
-      setQTags('');
       setQPoints(1);
+      setQTags('');
       setOptions([
         { text: '', isCorrect: true },
         { text: '', isCorrect: false },
         { text: '', isCorrect: false },
-        { text: '', isCorrect: false }
+        { text: '', isCorrect: false },
       ]);
-      loadQuestions();
-    } catch (e) {
-      alert('Failed to save question');
+      await loadQuestions();
+    } catch (error) {
+      console.error(error);
+      toast.error('تعذر حفظ السؤال');
+    } finally {
+      setSaving(false);
     }
   }
 
-  function updateOption(idx: number, prop: keyof QuestionOptionDto, val: any) {
-    const list = [...options];
-    list[idx] = { ...list[idx], [prop]: val };
-    
-    // Toggle others logic for MCQ if single select wanted (usually one correct)
-    if (prop === 'isCorrect' && val === true) {
-      list.forEach((o, i) => { if (i !== idx) o.isCorrect = false; });
-    }
-    setOptions(list);
-  }
+  const filteredQuestions = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return questions;
+
+    return questions.filter(
+      (question) =>
+        question.text.toLowerCase().includes(term) ||
+        question.tags.toLowerCase().includes(term),
+    );
+  }, [questions, search]);
+
+  const correctOptionsCount = questions.reduce(
+    (sum, question) => sum + question.options.filter((option) => option.isCorrect).length,
+    0,
+  );
+
+  const uniqueTagsCount = new Set(
+    questions.flatMap((question) => question.tags.split(',').map((tag) => tag.trim()).filter(Boolean))
+  ).size;
+
+  const columns: AdminColumn<QuestionBankItemDto>[] = [
+    {
+      key: 'text',
+      label: 'السؤال',
+      render: (q) => <div className="font-bold text-[var(--admin-text)]">{q.text}</div>,
+    },
+    {
+      key: 'tags',
+      label: 'التصنيف',
+      render: (q) => <div className="text-[var(--admin-muted)]">{q.tags || 'عام'}</div>,
+    },
+    {
+      key: 'points',
+      label: 'النقاط',
+      render: (q) => <div className="font-bold text-[var(--admin-primary)]">{q.defaultPoints}</div>,
+    },
+    {
+      key: 'options',
+      label: 'الإجابات',
+      render: (q) => (
+        <div className="flex flex-wrap gap-2">
+          {q.options.map((option, index) => (
+            <span
+              key={`${q.id}-${index}`}
+              className={`rounded-full px-3 py-1 text-xs font-bold ${
+                option.isCorrect
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                  : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)]'
+              }`}
+            >
+              {option.text}
+            </span>
+          ))}
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white">Question Bank</h1>
-          <p className="text-gray-500">Create global multiple-choice questions to attach dynamically to exams.</p>
-        </div>
-        <button 
+    <AdminShellChrome
+      activePath="/admin/questions"
+      sectionLabel="بنك الأسئلة"
+      pageTitle="إدارة الأسئلة"
+      subtitle="إنشاء الأسئلة ومراجعة التصنيفات والإجابات الصحيحة."
+      action={
+        <button
           onClick={() => setShowModal(true)}
-          className="rounded-full bg-blue-600 px-6 py-2.5 font-bold text-white hover:bg-blue-700 shadow-xl transition-all hover:scale-105"
+          className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-8 py-4 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:brightness-110"
         >
-          + Add Question
+          <Plus className="h-4 w-4" />
+          إضافة سؤال
         </button>
-      </div>
+      }
+    >
+      <button
+        onClick={() => setShowModal(true)}
+        className="fixed bottom-8 left-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-2xl transition hover:scale-110 md:hidden"
+      >
+        <Plus className="h-5 w-5" />
+      </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {loading && <div className="col-span-1 md:col-span-2 text-center p-10">Loading bank...</div>}
-        
-        {!loading && questions.map(q => (
-          <div key={q.id} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-lg transition">
-            <div className="flex justify-between items-start mb-4">
-              <span className="inline-block rounded-md bg-purple-100 text-purple-800 px-2 py-1 text-xs font-bold">{q.tags || 'General'}</span>
-              <span className="text-sm font-semibold text-gray-500">{q.defaultPoints} pts</span>
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">{q.text}</h3>
-            <div className="space-y-2">
-              {q.options.map((o, idx) => (
-                <div key={idx} className={`flex items-center p-3 rounded-lg border ${o.isCorrect ? 'border-green-400 bg-green-50' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className={`w-4 h-4 rounded-full flex-shrink-0 mr-3 ${o.isCorrect ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <span className="text-sm font-medium">{o.text}</span>
-                </div>
-              ))}
-            </div>
+      <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <AdminStatCard
+          variant="light"
+          icon={Shield}
+          label="إجمالي الأسئلة"
+          value={questions.length}
+        />
+        <AdminStatCard
+          variant="accent"
+          icon={Tags}
+          label="التصنيفات"
+          value={uniqueTagsCount}
+        />
+        <AdminStatCard
+          variant="muted"
+          icon={CircleCheck}
+          label="إجابات صحيحة"
+          value={correctOptionsCount}
+        />
+      </section>
+
+      <AdminSearchToolbar
+        value={search}
+        onChange={setSearch}
+        placeholder="ابحث في نص السؤال أو التصنيف..."
+      />
+
+      <AdminDataTable
+        data={filteredQuestions}
+        columns={columns}
+        loading={loading}
+        rowKey={(q) => q.id}
+        emptyMessage="لا توجد أسئلة مطابقة."
+      />
+
+      <AdminModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="إضافة سؤال جديد"
+        subtitle="أدخل نص السؤال والخيارات مع تحديد الإجابة الصحيحة."
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={handleSave} className="space-y-4">
+          <textarea
+            rows={3}
+            value={qText}
+            onChange={(event) => setQText(event.target.value)}
+            placeholder="نص السؤال"
+            className="admin-input"
+            required
+          />
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_140px]">
+            <input
+              type="text"
+              value={qTags}
+              onChange={(event) => setQTags(event.target.value)}
+              placeholder="التصنيفات (افصل بينها بفاصلة أو مسافة)"
+              className="admin-input"
+            />
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={qPoints}
+              onChange={(event) => setQPoints(Number(event.target.value))}
+              placeholder="النقاط"
+              className="admin-input"
+            />
           </div>
-        ))}
-        {!loading && questions.length === 0 && (
-          <div className="col-span-1 md:col-span-2 text-center py-12 border-2 border-dashed rounded-2xl">
-            Empty question bank. Add your first item!
+          <div className="space-y-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
+            {options.map((option, index) => (
+              <div key={index} className="flex items-center gap-3">
+                <input
+                  type="radio"
+                  name="correctOption"
+                  checked={option.isCorrect}
+                  onChange={(event) => updateOption(index, 'isCorrect', event.target.checked)}
+                  className="h-5 w-5 accent-[var(--admin-primary)]"
+                />
+                <input
+                  type="text"
+                  value={option.text}
+                  onChange={(event) => updateOption(index, 'text', event.target.value)}
+                  placeholder={`الاختيار ${index + 1}`}
+                  className="admin-input"
+                  required={index < 2}
+                />
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {showModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm overflow-y-auto">
-            <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-900 p-8 shadow-2xl my-8">
-              <h2 className="text-2xl font-bold mb-6">Create MCQ Item</h2>
-              
-              <form onSubmit={handleSave} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold mb-2">Question Text</label>
-                  <textarea 
-                    value={qText} onChange={e => setQText(e.target.value)} required rows={3}
-                    className="w-full rounded-xl border-gray-300 border p-4 shadow-inner" placeholder="E.g., What is the capital of France?"
-                  />
-                </div>
-                
-                <div className="flex gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold mb-2">Tags</label>
-                    <input type="text" value={qTags} onChange={e => setQTags(e.target.value)} placeholder="E.g., Geography, Unit1" className="w-full rounded-xl border p-3" />
-                  </div>
-                  <div className="w-32">
-                    <label className="block text-sm font-bold mb-2">Points</label>
-                    <input type="number" min="0" step="0.5" value={qPoints} onChange={e => setQPoints(parseFloat(e.target.value))} required className="w-full rounded-xl border p-3" />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <h3 className="font-bold mb-4 text-gray-700">Answer Options</h3>
-                  <div className="space-y-3">
-                    {options.map((o, i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <input 
-                          type="radio" 
-                          name="correctOption" 
-                          checked={o.isCorrect} 
-                          onChange={(e) => updateOption(i, 'isCorrect', e.target.checked)}
-                          className="w-5 h-5 text-green-600 focus:ring-green-500 cursor-pointer" 
-                        />
-                        <input 
-                          type="text" 
-                          value={o.text} 
-                          onChange={(e) => updateOption(i, 'text', e.target.value)} 
-                          placeholder={`Option ${i+1}`}
-                          required={i < 2} // first two are required minimum
-                          className={`flex-1 rounded-xl border p-3 shadow-sm ${o.isCorrect ? 'border-green-400 focus:border-green-500' : 'border-gray-200'}`} 
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-6">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-6 py-3 font-semibold text-gray-600 rounded-xl hover:bg-gray-100">Cancel</button>
-                  <button type="submit" className="rounded-xl bg-blue-600 px-8 py-3 font-bold text-white shadow-lg hover:bg-blue-700 hover:scale-105 transition-transform">
-                    Save to Bank
-                  </button>
-                </div>
-              </form>
-
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-    </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)] mt-4">
+            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 font-semibold text-[var(--admin-muted)] transition hover:text-[var(--admin-text)]">إلغاء</button>
+            <button type="submit" disabled={saving} className="admin-btn-primary">
+              {saving ? 'جارٍ الحفظ...' : 'حفظ'}
+            </button>
+          </div>
+        </form>
+      </AdminModal>
+    </AdminShellChrome>
   );
 }
