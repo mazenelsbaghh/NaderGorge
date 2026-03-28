@@ -1,0 +1,520 @@
+/*
+ * ========================================================
+ *  AUTH PAGES — Shared Styles
+ *  Pattern: Mirrored from AdminShellChrome.tsx + useAdminTheme.ts
+ *  Token source: src/components/admin/useAdminTheme.ts
+ *
+ *  Both login and register pages share the `.auth-shell` wrapper.
+ *  Theme toggling works the same as the Admin: the JS hook reads
+ *  localStorage("admin-theme-mode") and injects CSS custom properties
+ *  via inline `style`. No Tailwind dark: prefix needed.
+ * ========================================================
+ */
+
+/* ── Shell Container ─────────────────────────────────────
+   Full-viewport wrapper. Receives all --admin-* CSS vars from
+   useAdminTheme() injected inline, exactly like AdminShellChrome.
+   ───────────────────────────────────────────────────── */
+.auth-shell {
+  min-height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  font-family: var(--font-cairo, var(--font-sans, system-ui, sans-serif));
+  direction: rtl;
+
+  /* Background removed to allow RippleGrid behind content */
+  background-color: var(--admin-bg);
+  position: relative;
+
+  color: var(--admin-text);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ── Ambient Glow Orbs ───────────────────────────────────
+   Decorative blurred circles in background corners, same visual
+   rhythm as the Admin pages that use gradient orbs.
+   ───────────────────────────────────────────────────── */
+.auth-shell__glow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.auth-shell__glow-top {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 560px;
+  height: 560px;
+  border-radius: 9999px;
+  background: var(--admin-primary);
+  opacity: 0.07;
+  filter: blur(120px);
+}
+
+.auth-shell__glow-bottom {
+  position: absolute;
+  bottom: -10%;
+  left: -10%;
+  width: 480px;
+  height: 480px;
+  border-radius: 9999px;
+  background: var(--admin-primary-strong);
+  opacity: 0.07;
+  filter: blur(100px);
+}
+
+/* ── Theme Toggle Bar ────────────────────────────────────
+   Floats at top-left (same position as Admin sidebar moon icon).
+   Contains a MoonStar/Sun icon button.
+   ───────────────────────────────────────────────────── */
+.auth-theme-bar {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--admin-border);
+  background: color-mix(in srgb, var(--admin-card-soft) 85%, transparent);
+  padding: 0.4rem;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 4px 20px var(--admin-shadow);
+  transition: background 0.3s ease;
+}
+
+/* ── Auth Card ───────────────────────────────────────────
+   Glassmorphism card, exactly matching Admin's stat/table cards:
+   border + backdrop-blur + semi-transparent bg.
+   ───────────────────────────────────────────────────── */
+.auth-card {
+  border-radius: 1.25rem;
+  border: 1px solid var(--admin-border);
+  background: color-mix(in srgb, var(--admin-card) 90%, transparent);
+  backdrop-filter: blur(28px) saturate(180%);
+  box-shadow: 0 20px 60px var(--admin-shadow);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* ── Form Input ──────────────────────────────────────────
+   Pill-shaped input matching Admin's rounded-full search bar style.
+   ───────────────────────────────────────────────────── */
+.auth-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  border-radius: 9999px;
+  background: var(--admin-card-soft);
+  padding: 0.875rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--admin-text);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 0 0 1.5px transparent;
+}
+
+.auth-input::placeholder {
+  color: var(--admin-muted);
+  opacity: 0.6;
+}
+
+.auth-input:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--admin-primary) 40%, transparent);
+  background: var(--admin-card-soft);
+}
+
+/* Error state — thin red ring */
+.auth-input--error {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--admin-danger) 45%, transparent);
+}
+
+.auth-input-wrap {
+  position: relative;
+}
+
+.auth-input-icon {
+  pointer-events: none;
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 1rem;
+  color: var(--admin-muted);
+}
+
+.auth-input-action {
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding-right: 1rem;
+  border: none;
+  background: transparent;
+  color: var(--admin-muted);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.auth-input-action:hover {
+  color: var(--admin-primary);
+}
+
+.auth-input-action:focus-visible {
+  outline: none;
+  color: var(--admin-primary);
+}
+
+.auth-remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-inline: 0.25rem;
+}
+
+.auth-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--admin-muted);
+}
+
+.auth-checkbox__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.auth-checkbox__mark {
+  position: relative;
+  display: inline-flex;
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-card-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.auth-checkbox__mark::after {
+  content: '';
+  width: 0.32rem;
+  height: 0.62rem;
+  border: solid var(--admin-primary-contrast);
+  border-width: 0 0.14rem 0.14rem 0;
+  opacity: 0;
+  transform: rotate(45deg) scale(0.75);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.auth-checkbox__input:checked + .auth-checkbox__mark {
+  border-color: color-mix(in srgb, var(--admin-primary) 65%, transparent);
+  background: linear-gradient(
+    135deg,
+    var(--admin-primary-strong) 0%,
+    var(--admin-primary) 100%
+  );
+  box-shadow: 0 10px 22px rgba(119, 90, 25, 0.18);
+}
+
+.auth-checkbox__input:checked + .auth-checkbox__mark::after {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
+}
+
+.auth-checkbox__input:focus-visible + .auth-checkbox__mark {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--admin-primary) 35%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.auth-checkbox__label {
+  line-height: 1;
+}
+
+/* ── Form Label ──────────────────────────────────────────
+   Compact ALL-CAPS micro label above each input (Admin column label style).
+   ───────────────────────────────────────────────────── */
+.auth-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--admin-primary);
+}
+
+/* ── Submit Button ───────────────────────────────────────
+   Gold gradient pill — matches Admin's primary action buttons.
+   ───────────────────────────────────────────────────── */
+.auth-btn-primary {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: none;
+  border-radius: 9999px;
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(
+    135deg,
+    var(--admin-primary-strong) 0%,
+    var(--admin-primary) 100%
+  );
+  color: var(--admin-primary-contrast);
+  box-shadow: 0 10px 24px rgba(119, 90, 25, 0.2);
+  transition: box-shadow 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+}
+
+.auth-btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: -45%;
+  background:
+    radial-gradient(circle at center, rgba(255, 247, 224, 0.36), transparent 56%);
+  opacity: 0.5;
+  transform: translate3d(32%, 18%, 0);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+  z-index: 0;
+}
+
+.auth-btn-primary--sphinx {
+  --auth-sphinx-shell: color-mix(in srgb, var(--admin-primary-contrast) 12%, rgba(255, 255, 255, 0.18));
+  --auth-sphinx-shell-border: color-mix(in srgb, var(--admin-primary-contrast) 14%, transparent);
+  --auth-sphinx-primary: color-mix(in srgb, var(--admin-primary-contrast) 90%, var(--admin-primary) 10%);
+  --auth-sphinx-secondary: color-mix(in srgb, var(--admin-primary-contrast) 58%, var(--admin-primary) 42%);
+}
+
+.auth-btn-primary__ornament,
+.auth-btn-primary__label,
+.auth-btn-primary__trail {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-btn-primary__ornament {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.auth-btn-primary__crest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--auth-sphinx-shell) 85%, rgba(255, 255, 255, 0.3)) 0%,
+    color-mix(in srgb, var(--auth-sphinx-shell) 92%, rgba(0, 0, 0, 0.12)) 100%
+  );
+  border: 1px solid var(--auth-sphinx-shell-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 10px 22px rgba(44, 23, 8, 0.16);
+  backdrop-filter: blur(12px);
+}
+
+.auth-btn-primary__sphinx {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: block;
+}
+
+.auth-btn-primary__sphinx .sphinx-mark__primary {
+  fill: var(--auth-sphinx-primary);
+}
+
+.auth-btn-primary__sphinx .sphinx-mark__secondary {
+  fill: var(--auth-sphinx-secondary);
+}
+
+.auth-btn-primary__spark {
+  position: absolute;
+  top: -0.12rem;
+  left: -0.18rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  color: color-mix(in srgb, var(--admin-primary-contrast) 82%, white 18%);
+  background: color-mix(in srgb, var(--admin-primary-strong) 24%, transparent);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.auth-btn-primary__label {
+  flex: 1 1 auto;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.auth-btn-primary__trail {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--admin-primary-contrast) 88%, transparent);
+  opacity: 0.86;
+}
+
+.auth-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 14px 32px rgba(119, 90, 25, 0.3);
+  transform: translateY(-1px);
+}
+
+.auth-btn-primary:hover:not(:disabled)::before {
+  opacity: 0.75;
+  transform: translate3d(-14%, -8%, 0);
+}
+
+.auth-btn-primary:hover:not(:disabled) .auth-btn-primary__trail {
+  opacity: 1;
+}
+
+.auth-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.auth-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Error Banner ────────────────────────────────────────
+   Inline error feedback, same as Admin's warning states.
+   ───────────────────────────────────────────────────── */
+.auth-error-banner {
+  border-radius: 0.875rem;
+  border: 1px solid color-mix(in srgb, var(--admin-danger) 30%, transparent);
+  background: color-mix(in srgb, var(--admin-danger) 10%, transparent);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--admin-danger);
+  backdrop-filter: blur(8px);
+}
+
+/* ── Avatar / Logo Token ─────────────────────────────────
+   Round branded avatar at the top of the card, gradient matching
+   the Admin sidebar identity button.
+   ───────────────────────────────────────────────────── */
+.auth-avatar {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.25rem;
+  background: linear-gradient(
+    135deg,
+    var(--admin-primary-strong),
+    var(--admin-primary)
+  );
+  color: var(--admin-primary-contrast);
+  box-shadow: 0 8px 24px var(--admin-shadow);
+  margin: 0 auto 1.5rem;
+}
+
+/* ── Divider ─────────────────────────────────────────────
+   hairline separator same as Admin footer divider (gradient fade).
+   ───────────────────────────────────────────────────── */
+.auth-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--admin-border),
+    transparent
+  );
+  margin: 1.5rem 0;
+}
+
+/* ── Footer Caption ──────────────────────────────────────
+   Micro-text copyright / branding, same as Admin footer.
+   ───────────────────────────────────────────────────── */
+.auth-footer-caption {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--admin-primary);
+  opacity: 0.5;
+  text-align: center;
+}
+
+/* ── Field Error Text ────────────────────────────────────
+   Small red hint under invalid fields.
+   ───────────────────────────────────────────────────── */
+.auth-field-error {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--admin-danger);
+  padding-right: 0.5rem;
+}
+
+/* ── Select Override ─────────────────────────────────────
+   Ensures native <select> matches auth-input pill shape on all browsers.
+   ───────────────────────────────────────────────────── */
+.auth-input[data-select] {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c5a059' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 1rem center;
+  padding-left: 2.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-btn-primary,
+  .auth-btn-primary::before,
+  .auth-btn-primary__trail,
+  .auth-btn-primary__crest,
+  .auth-btn-primary__spark {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .auth-btn-primary::before {
+    opacity: 0.42;
+    transform: translate3d(18%, 12%, 0);
+  }
+}

@@ -1,0 +1,85 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Interfaces;
+
+namespace NaderGorge.Infrastructure.Services;
+
+public class TokenService : ITokenService
+{
+    private readonly IConfiguration _config;
+
+    public TokenService(IConfiguration config)
+    {
+        _config = config;
+    }
+
+    public string GenerateAccessToken(User user, IEnumerable<string> roles)
+    {
+        var secret = _config["JwtSettings:Secret"]
+            ?? throw new InvalidOperationException("JWT Secret not configured");
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Name, user.FullName),
+            new("phone", user.PhoneNumber),
+            new("profileComplete", user.IsProfileComplete.ToString().ToLower())
+        };
+
+        foreach (var role in roles)
+            claims.Add(new Claim(ClaimTypes.Role, role));
+
+        var expMinutes = int.Parse(_config["JwtSettings:ExpirationMinutes"] ?? "60");
+
+        var token = new JwtSecurityToken(
+            issuer: _config["JwtSettings:Issuer"],
+            audience: _config["JwtSettings:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(expMinutes),
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string GenerateRefreshToken()
+    {
+        var bytes = new byte[64];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+        return Convert.ToBase64String(bytes);
+    }
+
+    public ClaimsPrincipal? ValidateToken(string token)
+    {
+        var secret = _config["JwtSettings:Secret"]!;
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+
+        var validationParams = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = _config["JwtSettings:Issuer"],
+            ValidAudience = _config["JwtSettings:Audience"],
+            IssuerSigningKey = key
+        };
+
+        try
+        {
+            return new JwtSecurityTokenHandler().ValidateToken(token, validationParams, out _);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}

@@ -1,15 +1,15 @@
 <!--
   Sync Impact Report
   ───────────────────
-  Version change: 0.0.0 → 1.0.0 (initial ratification)
+  Version change: 2.0.0 → 2.1.0 (Added Assessment Integrity, Admin UI Consistency, and Pricing Rules)
 
-  Modified principles: N/A (first version)
+  Modified principles:
+    - V. Academic Content Integrity — Updated hierarchy to match strict nested model, added Video Pop Quizzes.
+    - VIII. Premium Editorial Design System — Added strict constraints on Admin UI Shared Components.
 
   Added sections:
-    - Core Principles (7 principles)
-    - Technology Stack & Constraints
-    - Development Workflow & Quality Gates
-    - Governance
+    - IX. Assessment & Time Integrity
+    - X. Pricing & Currency Localization
 
   Removed sections: N/A
 
@@ -36,7 +36,7 @@ The system MUST follow a layered, modular architecture at all times:
 - No circular dependencies between modules.
 - Database access MUST be confined to the Infrastructure Layer; Domain and Application layers MUST NOT reference ORM-specific types directly.
 
-**Rationale**: The platform spans 6+ phases and 14+ core modules. Without strict modularity, the codebase will become unmaintainable before Phase 3.
+**Rationale**: The platform spans 8 phases (0 through 7) and 14+ core modules. Without strict modularity, the codebase will become unmaintainable as features scale.
 
 ### II. Provider Abstraction First
 
@@ -45,7 +45,7 @@ Every external integration MUST be built behind an abstraction layer from day on
 - **Video providers**: YouTube initially, with a `VideoProviderAbstraction` supporting provider type, external video ID, title, duration, order, watch limits, replay limits, and provider metadata.
 - **Notification channels**: In-platform, SMS, future WhatsApp/Zoho — all behind a unified `NotificationProvider` interface.
 - **AI services**: All AI features MUST go through an `AIServiceProvider` abstraction, never directly coupled to a specific LLM vendor.
-- **Payment/code systems**: Code redemption and access grant logic MUST be separated from specific code type implementations.
+- **Payment/code systems**: Code redemption and access grant logic MUST be separated from specific code type implementations. The system supports 7 code types (year, term, month, lesson, video, exam, balance/credit) and MUST handle each through a unified code engine interface.
 
 **Rationale**: The plan explicitly warns against hard-coding YouTube behavior (Section 2.6) and mandates future migration paths. Abstraction from day one prevents costly rewrites.
 
@@ -68,7 +68,10 @@ Development MUST follow a strict phased approach:
 
 - **Phase 0**: Discovery, planning, and product blueprint — no code production.
 - **Phase 1**: Foundation and MVP launch — working auth, content, codes, exams, admin, student dashboard.
-- **Phase 2+**: Incremental feature delivery (homework, parent layer, gamification, AI, protection, analytics).
+- **Phase 2**: Structured learning and academic operations (homework, parent layer, gamification, notifications).
+- **Phase 2.5**: Video security and content protection (server-side embed, Shadow DOM, DOM shields).
+- **Phase 3**: Registration, code system, and content hierarchy overhaul.
+- **Phase 4–7**: Incremental feature delivery (question bank, AI, watch control, analytics).
 - Each phase MUST deliver independently usable, testable functionality.
 - Features from later phases MUST NOT leak into earlier phase implementations.
 - Schema fields for future features MAY be added early (e.g., watch limit fields in Phase 1), but business logic MUST NOT be implemented ahead of schedule.
@@ -81,24 +84,29 @@ Development MUST follow a strict phased approach:
 All academic features MUST respect the teacher's content authority:
 
 - **AI boundaries**: AI MUST stay tied to approved academic content (Section 9.6). No open-web generic assistant behavior. The controlled study assistant MUST answer only from approved platform content, teacher-uploaded material, and bounded lesson context.
-- **Content hierarchy**: Package → Content Section → Lesson → Video/Exam/Homework. This hierarchy is non-negotiable and MUST be preserved in all data models and UIs.
+- **Target Boundaries**: Exams can explicitly target either an entire `Lesson` (Lesson Final Exam) or a specific `Video` (Pop Quiz). This explicit targeting prevents overlapping scopes.
+- **Content Hierarchy**: Package → Term → Content Section (Month/Unit) → Lesson → Materials (Video, Resource, Homework, Exam). This hierarchy is non-negotiable and MUST be preserved in all data models and UIs.
 - **Question bank integrity**: Questions MUST be classified by grade, unit, lesson, difficulty, question type, exam year, idea repetition, academic tags, and error pattern tags.
 - **Progression rules**: When implemented, lesson unlock MUST respect code type, package structure, completion rules, exam score, and homework status.
 - **Gamification ethics**: Gamification MUST be motivating, not toxic (Section 4.7 of the plan).
 
 **Rationale**: This is an educational platform for a specific teacher's brand. Academic quality and content control are the core value proposition.
 
-### VI. Two-Step Registration & UX Simplicity
+### VI. Single-Flow Registration & UX Simplicity
 
 The platform experience MUST be simple, organized, motivating, and clear in its study path:
 
-- **Registration**: MUST use a two-step flow. Step 1: quick onboarding (name, phone, grade, track). Step 2: profile completion (parent phone, governorate, city, school). This reduces drop-off.
+- **Registration**: MUST collect all required data in a single registration flow:
+  - Personal data: full name (four-part), student phone (Dostab), student code (Dostab), date of birth, gender, governorate, address, parent phone, parent status (father alive/not, mother alive/not).
+  - Academic data with conditional logic: education stage (Secondary/Baccalaureate) → grade → track/branch (only for Second Secondary and Second Baccalaureate).
+  - Second Secondary tracks: Arts or Science.
+  - Second Baccalaureate tracks: Medicine and Life Sciences, Engineering and Computer Science, Business, Arts and Humanities.
 - **Student dashboard**: MUST surface available packages, latest lesson, upcoming exams, progress percentage, used codes, notifications, and quick resume-study access.
 - **Navigation**: Students MUST always know where they are in their study path and what comes next.
 - **Control balance**: The platform MUST guide and control students, not suffocate them (Section 9.5).
 - **Responsive design**: The platform MUST work well on both desktop and mobile browsers.
 
-**Rationale**: Student engagement is directly tied to UX quality. A confusing or overwhelming interface will cause drop-off regardless of content quality.
+**Rationale**: All student data is collected upfront to avoid incomplete profiles and enable proper academic tracking from the start. Conditional field logic keeps the form clean.
 
 ### VII. Observability & Operational Readiness
 
@@ -112,6 +120,40 @@ The system MUST be observable and operationally ready from Phase 1:
 - **Background job monitoring**: BullMQ worker jobs MUST be trackable with status, retry count, and failure logs.
 
 **Rationale**: A platform serving students during exam periods cannot afford unexplained downtime. Observability is the foundation of reliable operations.
+
+### VIII. Premium Editorial Design System (The "Curated Archive")
+
+The platform MUST adhere to the "Editorial Scholar" design system to maintain a high-end experience:
+
+- **No-Line Rule**: Borders (e.g., 1px solid defined lines) are strictly prohibited for defining layout sections. Instead, boundaries MUST be established using background tonal shifts (e.g., `surface-container-low` vs. `surface`) and negative space.
+- **Glass & Gradient**: Use glassmorphism (`surface_variant` at 60% opacity, 24px blur) for floating navigation/modals, and use signature gradients (e.g., `primary` to `primary_container` at 135°) for main CTAs to add "soul" and depth to the interface.
+- **Typography**: Complete reliance on **Manrope** for geometric clarity and modern humanist feel. Use specific semantic typography tiers (Display, Headline, Title, Body, Label) to convey hierarchy naturally.
+- **Elevation & Depth**: Rely on layering (stacking nested `surface-container` tiers from lowest to highest) rather than hard drop-shadows. Shadows should be warm and ambient (e.g., tinted with umber, never pure black). If you must use a border fall-back, use `outline_variant` at 15% opacity ("Ghost Border").
+- **Tonal Palette**: Employ heritage tones of rich creams (#fcf9ef), deep umbers (#1c1c16), and golds (#775a19). Never use pure black (#000000) for text or pure gray for borders.
+- **Admin Dashboard Consistency**: Internal dashboards MUST rely on centralized Shared Components (`AdminShellChrome`, `AdminStatCard`, `AdminDataTable`, `AdminBackButton`, `NumberField`). Writing ad-hoc HTML tables or custom layout structures for standard admin views is FORBIDDEN to prevent UI fragmentation.
+
+**Rationale**: The platform's visual identity rejects sterile SaaS aesthetics in favor of a curated, academic journal feel. This fosters a sense of prestige, focus, and trust among students. Centralized admin components ensure that back-office operations remain just as premium and predictable as student experiences.
+
+### IX. Assessment & Time Integrity
+
+The platform's examination module MUST be technically resilient against tampering and cheating:
+
+- **Server-Side Truth**: All assessment timers (per-exam and per-question) MUST compute elapsed time based on absolute server timestamps (`StartedAt` and offset limits).
+- **Client Resilience**: Client-side countdowns are strictly visual indicators. If a student refreshes, closes the browser, or disconnects, the server-side time continues. Client inputs MUST auto-forward or lock appropriately when the visual timer expires.
+- **Enforced Submissions**: Exams submitted beyond the calculated expiration threshold must be handled intelligently by the server (auto-scored or marked as expired/late), preventing local clock manipulations.
+
+**Rationale**: Accurate assessment is the core of academic accountability. Timers reliant on client `setTimeout` or local system clocks compromise the integrity of the educational evaluation.
+
+### X. Pricing & Currency Localization
+
+Billing and gamification MUST remain starkly demarcated:
+
+- **Fiat Realities vs Gamification**: Fiat currency (EGP) and Gamification Points MUST never be conflated in the database or the UI.
+- **Granular Content Pricing**: Pricing MUST be supported at every tier of the hierarchy (Package, Term, Section, Lesson). If a price is omitted, it MUST default to `0` (Free).
+- **Localized Display**: All monetary values presented to the user (student or admin) MUST use the localized Egyptian Pound suffix ("جنيها"). Legacy references (like "دك") are strictly prohibited.
+- **Negative Rejection**: The system MUST prevent negative pricing inputs via form validation.
+
+**Rationale**: Granular pricing supports flexible micro-transactions. Accurate localization prevents customer confusion and ensures trust in the platform's billing systems.
 
 ## Technology Stack & Constraints
 
@@ -185,4 +227,4 @@ A feature is considered "done" when:
 - **Conflict resolution**: When a technical decision conflicts with a constitution principle, the principle takes precedence unless an explicit exception is documented in the Complexity Tracking section of the relevant plan.md.
 - Use `.specify/memory/constitution.md` as the single source of truth for governance.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-19
+**Version**: 2.1.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-28

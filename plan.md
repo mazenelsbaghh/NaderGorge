@@ -393,31 +393,42 @@ Used later for:
 Access is primarily granted through codes.
 
 Code types
-	•	lesson code
-	•	package code
+	•	year code
 	•	term code
+	•	month code
+	•	lesson code
+	•	video code (one or more specific videos)
+	•	exam code
+	•	balance/credit code
 	•	promotional code later
 	•	referral code later
 
 Code behavior
 	•	single-use codes
 	•	code groups/batches
+	•	QR code purchase support
+	•	direct purchase support
 	•	content-based and/or duration-based logic
 	•	activation confirmation required
 	•	some codes can start on a selected date
 	•	some codes can expire before usage
 	•	stacking rules depend on code type
+	•	discount management
+	•	admin can modify any code at any time
 
 ⸻
 
 4.2 Package Logic
 
-A package can contain grouped internal units called “months”, but these are content bundles, not calendar months.
+A package follows a hierarchical content structure.
 
-That means:
-	•	a package contains structured content groups
-	•	each content group contains lessons
-	•	lessons contain videos, quiz, homework, and resources
+Hierarchy:
+	•	Package
+	•	Year (a package contains a year)
+	•	Term (a year contains any number of terms)
+	•	Content Section / Month (a term contains content groups — these are content bundles, not calendar months)
+	•	Lesson (each section contains lessons)
+	•	Lesson contains: videos, quiz, homework, and resources
 
 ⸻
 
@@ -544,7 +555,9 @@ Document the teacher style:
 
 Define the full content structure:
 	•	package
-	•	internal content sections
+	•	year (contains any number of terms)
+	•	term
+	•	internal content sections (months)
 	•	lessons
 	•	multiple videos
 	•	summary
@@ -564,19 +577,38 @@ Define:
 	•	type-based stacking
 	•	time-based activation
 	•	expiration rules
-	•	lesson/package/term access models
+	•	access scope: year, term, month, lesson, specific video(s), specific exam
+	•	balance/credit code model
+	•	QR code purchase support
+	•	direct purchase support
+	•	discount management
+	•	admin override and modification of any code at any time
 
 0.6 Data Blueprint
 
 Define all required student data:
-	•	full name
-	•	phone number
-	•	parent number
-	•	grade
-	•	study track
+
+Personal information:
+	•	full name (four-part name)
+	•	student phone number (Dostab)
+	•	student code (Dostab)
+	•	date of birth
+	•	gender
 	•	governorate
-	•	city/district
-	•	school
+	•	address
+	•	parent phone number
+	•	parent status (father alive/not, mother alive/not)
+
+Academic information:
+	•	education stage: Secondary or Baccalaureate
+	•	grade: depends on stage
+		◦	Secondary: First Secondary, Second Secondary
+		◦	Baccalaureate: First Baccalaureate, Second Baccalaureate
+	•	track/branch: only applies to certain grades
+		◦	Second Secondary: Arts or Science
+		◦	Second Baccalaureate: Medicine and Life Sciences, Engineering and Computer Science, Business, Arts and Humanities
+
+Tracking data:
 	•	engagement data
 	•	package history
 	•	code history
@@ -650,24 +682,32 @@ Recommended:
 	•	refresh tokens
 	•	secure session handling
 
-1.2 Two-Step Registration
+1.2 Student Registration
 
-Step 1
-Quick onboarding:
-	•	full name
-	•	phone number
-	•	grade
-	•	study track
+All required data is collected during registration in a single flow.
 
-Step 2
-Profile completion:
-	•	parent phone
+Personal data:
+	•	full name (four-part name)
+	•	student phone number (Dostab)
+	•	student code (Dostab)
+	•	date of birth
+	•	gender
 	•	governorate
-	•	city/district
-	•	school
-	•	optional additional metadata
+	•	address
+	•	parent phone number
+	•	parent status:
+		◦	is father alive (yes/no)
+		◦	is mother alive (yes/no)
 
-This reduces drop-off and keeps the funnel clean.
+Academic data with conditional logic:
+	•	education stage: Secondary or Baccalaureate
+	•	grade (depends on selected stage):
+		◦	if Secondary: First Secondary or Second Secondary
+		◦	if Baccalaureate: First Baccalaureate or Second Baccalaureate
+	•	track/branch (only shown for specific grades):
+		◦	Second Secondary: Arts or Science
+		◦	Second Baccalaureate: Medicine and Life Sciences, Engineering and Computer Science, Business, Arts and Humanities
+		◦	First Secondary and First Baccalaureate: no track selection needed
 
 1.3 Roles and Permissions
 
@@ -691,11 +731,13 @@ Build:
 
 1.5 Content Hierarchy
 
-Build the first content model:
+Build the full content model:
 	•	Package
-	•	Content Section
+	•	Year (a package contains a year, which holds any number of terms)
+	•	Term
+	•	Content Section / Month (content groups within a term)
 	•	Lesson
-	•	Video Item
+	•	Video Item (each video can have a type/tag set by admin)
 	•	Exam
 	•	Homework placeholder
 	•	Downloadable file placeholder
@@ -733,15 +775,28 @@ Support in MVP:
 
 1.9 Code Engine (MVP)
 
-Build:
-	•	code groups
-	•	bulk code generation
+Code types:
+	•	year code (access to a full year)
+	•	term code (access to a specific term)
+	•	month code (access to a specific content section/month)
+	•	lesson code (access to a specific lesson)
+	•	video code (access to one or more specific videos — admin selects which videos when creating the code type)
+	•	exam code (access to a specific exam)
+	•	balance/credit code (adds credit to student account for flexible access)
+
+Code purchase and distribution:
+	•	QR code — scannable for instant redemption
+	•	direct purchase — student buys directly
+
+Code management:
+	•	code groups with bulk generation
 	•	single-use codes
-	•	lesson/package/term code types
 	•	confirmation before redemption
 	•	activation logs
 	•	selected activation date support
-	•	basic expiration support
+	•	expiration and validity period
+	•	discount code support
+	•	admin can modify, extend, revoke, or adjust any code at any time
 	•	access assignment after redemption
 
 1.10 Student Dashboard (MVP)
@@ -928,7 +983,194 @@ Deliverables
 
 ⸻
 
-Phase 3 — Question Bank Expansion and Smart Academic Control
+Phase 2.5 — Video Security and Content Protection
+
+Goal
+
+Prevent students from easily extracting YouTube video URLs from the browser, protecting content from unauthorized redistribution.
+
+Objectives
+	•	hide YouTube video URLs from DevTools Elements panel
+	•	hide YouTube video URLs from DevTools Network source inspection
+	•	prevent casual right-click and copy of video sources
+	•	maintain full playback functionality and custom player controls
+	•	maintain watch count tracking and progress reporting
+
+Scope
+
+2.5.1 Legacy Player Cleanup
+
+Remove the old insecure VideoPlayer component that directly exposed iframe src attributes.
+	•	deleted VideoPlayer.tsx
+	•	verified no remaining imports reference the legacy component
+	•	all video playback now routes through SecureVideoPlayer
+
+2.5.2 Server-Side Video Embed Route
+
+Build a Next.js API route that decrypts the video session token server-side and returns a self-contained HTML page with YouTube embedded.
+
+The flow:
+	•	frontend creates encrypted video session via backend
+	•	frontend passes encrypted token + key to /api/video/embed as query params
+	•	API route decrypts using Node.js crypto (AES-256-GCM) — same algorithm as backend
+	•	API route returns HTML page with YouTube IFrame API embedded
+	•	the YouTube video ID never reaches the frontend JavaScript context
+
+Security headers on the embed response:
+	•	Cache-Control: no-store, no-cache
+	•	X-Frame-Options: SAMEORIGIN
+	•	Content-Security-Policy: frame-ancestors 'self'
+	•	X-Content-Type-Options: nosniff
+
+2.5.3 Closed Shadow DOM Inside Embed Page
+
+The embed HTML page creates the YouTube iframe inside a closed Shadow DOM.
+
+Even if someone drills into the embed iframe in DevTools, they see:
+	•	<div id="shell"> with #shadow-root (closed)
+	•	the YouTube iframe is not visible in the DOM tree
+
+Additional protections:
+	•	shadowRoot getter is overridden to return null
+	•	context menu is disabled
+	•	text selection and drag are disabled
+
+2.5.4 PostMessage Player Control Protocol
+
+Custom controls communicate with the embedded YouTube player via postMessage.
+
+Commands (parent → embed):
+	•	play, pause, seekTo, setVolume, mute, unmute
+	•	setPlaybackRate, setQuality, getState
+
+Events (embed → parent):
+	•	ready, stateChange, timeUpdate, error, stateResponse
+
+This maintains the full custom PlayerControls UI while keeping YouTube isolated.
+
+2.5.5 DOM Shield Guards
+
+The container element is protected by DOM mutation observers:
+	•	detects removal or tampering of the player container
+	•	triggers error state with arabic error message if tampering is detected
+	•	guardShadowHost() traps programmatic shadowRoot access with a console.warn
+
+2.5.6 Watch Tracking Integration
+
+Watch tracking continues to work through the postMessage bridge:
+	•	timeUpdate events every 500ms report currentTime and duration
+	•	parent component tracks actualWatchedSeconds
+	•	progress is synced to backend every 10 seconds
+	•	view is registered after 60 seconds of watching
+
+Deliverables
+	•	/api/video/embed API route with server-side decryption
+	•	SecureVideoPlayer rewritten with iframe + postMessage architecture
+	•	dom-shield.ts enhanced with guardShadowHost
+	•	legacy VideoPlayer.tsx deleted
+	•	full spec documentation at specs/013-video-url-protection/
+
+⸻
+
+Phase 3 — Registration, Code System & Content Hierarchy Overhaul
+
+Goal
+
+Rebuild the registration flow, expand the code system, and restructure the content hierarchy to match real business requirements.
+
+Objectives
+	•	collect all required student data in a single registration flow
+	•	support conditional academic fields (stage, grade, track)
+	•	expand code types to cover year, term, month, lesson, video, exam, and balance
+	•	add QR and direct purchase support for codes
+	•	restructure content hierarchy to include Year and Term levels
+
+Scope
+
+3.1 Registration Flow Overhaul
+
+Replace the two-step registration with a single-flow registration collecting all data.
+
+Personal data:
+	•	full name (four-part name)
+	•	student phone number (Dostab)
+	•	student code (Dostab)
+	•	date of birth
+	•	gender
+	•	governorate
+	•	address
+	•	parent phone number
+	•	parent status (father alive/not, mother alive/not)
+
+Academic data with conditional logic:
+	•	education stage: Secondary or Baccalaureate
+	•	grade (depends on stage):
+		◦	Secondary → First Secondary or Second Secondary
+		◦	Baccalaureate → First Baccalaureate or Second Baccalaureate
+	•	track/branch (only shown for specific grades):
+		◦	Second Secondary → Arts or Science
+		◦	Second Baccalaureate → Medicine and Life Sciences, Engineering and Computer Science, Business, Arts and Humanities
+		◦	First Secondary and First Baccalaureate → no track selection
+
+3.2 Code System Expansion
+
+Expand code types beyond lesson/package/term:
+	•	year code (access to a full year)
+	•	term code (access to a specific term)
+	•	month code (access to a specific content section/month)
+	•	lesson code (access to a specific lesson)
+	•	video code (access to one or more specific videos — admin selects which videos)
+	•	exam code (access to a specific exam)
+	•	balance/credit code (adds credit to student account)
+
+Code purchase and distribution:
+	•	QR code — scannable for instant redemption
+	•	direct purchase — student buys directly
+
+Code management enhancements:
+	•	discount code support
+	•	expiration and validity period
+	•	admin can modify, extend, revoke, or adjust any code at any time
+
+3.3 Content Hierarchy Restructure
+
+Add Year and Term levels to the content hierarchy:
+	•	Package
+	•	Year (a package contains a year)
+	•	Term (a year contains any number of terms)
+	•	Content Section / Month (content groups within a term)
+	•	Lesson
+	•	Video Item (each video can have a type/tag set by admin)
+
+3.4 Database and API Updates
+
+Update schema and API to support:
+	•	new student profile fields (DOB, gender, parent status, student code)
+	•	conditional grade/track relationships
+	•	year and term entities in content hierarchy
+	•	new code type entities and balance system
+	•	QR generation and scanning endpoints
+
+3.5 Admin Panel Updates
+
+Update admin interfaces for:
+	•	new student data fields visibility and filtering
+	•	year/term management in content structure
+	•	new code type creation (video codes, exam codes, balance codes)
+	•	QR code generation and printing
+	•	discount management
+
+Deliverables
+	•	rebuilt registration flow (single step, all fields)
+	•	expanded code engine with 7 code types
+	•	QR and direct purchase support
+	•	content hierarchy with Year/Term levels
+	•	updated database schema and API
+	•	updated admin panel
+
+⸻
+
+Phase 4 — Question Bank Expansion and Smart Academic Control
 
 Goal
 
@@ -943,7 +1185,7 @@ Objectives
 
 Scope
 
-3.1 Advanced Question Bank
+4.1 Advanced Question Bank
 
 Support classification by:
 	•	grade
@@ -956,7 +1198,7 @@ Support classification by:
 	•	academic tags
 	•	error pattern tags
 
-3.2 Exam Generator
+4.2 Exam Generator
 
 Allow admin/teacher to generate exams based on:
 	•	lesson
@@ -968,14 +1210,14 @@ Allow admin/teacher to generate exams based on:
 	•	pass threshold
 	•	timing
 
-3.3 Student-Specific Exam Logic
+4.3 Student-Specific Exam Logic
 
 Allow rules such as:
 	•	retry weak area exams
 	•	unlock targeted practice
 	•	suggest exams based on prior mistakes
 
-3.4 Lesson Intelligence
+4.4 Lesson Intelligence
 
 Link every lesson directly to:
 	•	post-lesson questions
@@ -983,7 +1225,7 @@ Link every lesson directly to:
 	•	homework
 	•	relevant question bank segments
 
-3.5 Progression Rules
+4.5 Progression Rules
 
 Support rules such as:
 	•	exam required before next item
@@ -991,7 +1233,7 @@ Support rules such as:
 	•	pass threshold required
 	•	path controlled by code type or package type
 
-3.6 Content Experience Enhancements
+4.6 Content Experience Enhancements
 
 Add:
 	•	mind map display
@@ -1010,7 +1252,7 @@ Deliverables
 
 ⸻
 
-Phase 4 — AI Layer
+Phase 5 — AI Layer
 
 Goal
 
@@ -1025,7 +1267,7 @@ Objectives
 
 Scope
 
-4.1 AI Question Generation
+5.1 AI Question Generation
 
 Allow AI-assisted generation based on:
 	•	lesson content
@@ -1082,7 +1324,7 @@ Deliverables
 
 ⸻
 
-Phase 5 — Watch Control, Protection, and Smart Access Control
+Phase 6 — Watch Control, Protection, and Smart Access Control
 
 Goal
 
@@ -1097,7 +1339,7 @@ Objectives
 
 Scope
 
-5.1 Video-Level Watch Rules
+6.1 Video-Level Watch Rules
 
 Each video can support:
 	•	max watch minutes
@@ -1106,7 +1348,7 @@ Each video can support:
 	•	partial skip allowance
 	•	allowed speed limits
 
-5.2 Admin / Assistant Overrides
+6.2 Admin / Assistant Overrides
 
 Allow authorized users to:
 	•	increase watch minutes
@@ -1114,7 +1356,7 @@ Allow authorized users to:
 	•	unlock video manually
 	•	reset lesson watch state if justified
 
-5.3 Account Protection
+6.3 Account Protection
 
 Implement:
 	•	device limit rules
@@ -1123,14 +1365,14 @@ Implement:
 	•	forced logout logic
 	•	session review
 
-5.4 Dynamic Watermark
+6.4 Dynamic Watermark
 
 Add watermark overlay later with:
 	•	student name
 	•	phone or student identifier
 	•	moving position logic
 
-5.5 Code Rule Expansion
+6.5 Code Rule Expansion
 
 Support more advanced code logic:
 	•	type-based stacking
@@ -1139,7 +1381,7 @@ Support more advanced code logic:
 	•	selective expiration
 	•	combined access + permission logic
 
-5.6 Access Path Logic
+6.6 Access Path Logic
 
 Allow lesson unlock based on:
 	•	code type
@@ -1157,7 +1399,7 @@ Deliverables
 
 ⸻
 
-Phase 6 — Revenue Optimization and Business Analytics
+Phase 7 — Revenue Optimization and Business Analytics
 
 Goal
 
@@ -1171,7 +1413,7 @@ Objectives
 
 Scope
 
-6.1 Sales Dashboard
+7.1 Sales Dashboard
 
 Build analytics for:
 	•	package sales
@@ -1180,7 +1422,7 @@ Build analytics for:
 	•	revenue by package
 	•	conversion by channel/source
 
-6.2 Source Tracking
+7.2 Source Tracking
 
 Track student acquisition via:
 	•	campaign
@@ -1191,7 +1433,7 @@ Track student acquisition via:
 	•	referral
 	•	organic source
 
-6.3 Promotions and Coupons
+7.3 Promotions and Coupons
 
 Support:
 	•	discount coupons
@@ -1199,7 +1441,7 @@ Support:
 	•	event offers
 	•	referral rewards
 
-6.4 Smart Upsell
+7.4 Smart Upsell
 
 Show offers such as:
 	•	unlock term package
@@ -1208,7 +1450,7 @@ Show offers such as:
 
 based on student behavior.
 
-6.5 Dropout and Friction Analytics
+7.5 Dropout and Friction Analytics
 
 Track:
 	•	lesson abandonment
@@ -1415,6 +1657,7 @@ Stage 1
 
 Stage 2
 	•	Phase 2
+	•	Phase 2.5
 	•	Phase 3
 
 Stage 3
@@ -1423,6 +1666,7 @@ Stage 3
 
 Stage 4
 	•	Phase 6
+	•	Phase 7
 
 ⸻
 

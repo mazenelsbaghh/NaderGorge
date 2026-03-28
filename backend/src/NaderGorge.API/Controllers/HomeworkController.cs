@@ -1,0 +1,35 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using NaderGorge.Application.Features.Homework.Commands;
+using NaderGorge.Application.Features.Homework.Queries;
+using System.Security.Claims;
+
+namespace NaderGorge.API.Controllers;
+
+[ApiController]
+[Route("api/homework")]
+[Authorize(Roles = "Student")] // Or base Authorize depending on how roles work.
+public class HomeworkController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public HomeworkController(IMediator mediator) => _mediator = mediator;
+
+    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+
+    [HttpGet("pending")]
+    public async Task<IActionResult> GetPendingHomework()
+    {
+        var result = await _mediator.Send(new GetPendingHomeworkQuery(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("{homeworkId}/submit")]
+    public async Task<IActionResult> SubmitHomework(Guid homeworkId, [FromBody] List<StudentAnswerInput> answers)
+    {
+        var command = new SubmitHomeworkCommand(homeworkId, GetUserId(), answers);
+        var result = await _mediator.Send(command);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+}
