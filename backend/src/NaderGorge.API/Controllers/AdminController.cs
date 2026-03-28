@@ -118,6 +118,17 @@ public class AdminController : ControllerBase
         return result.Success ? CreatedAtAction(nameof(CreatePackage), new { id = result.Data }, result) : BadRequest(result);
     }
 
+    [HttpGet("packages/{id:guid}")]
+    public async Task<IActionResult> GetPackageById(Guid id)
+        => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetPackageByIdQuery(id)));
+
+    [HttpPut("packages/{id:guid}")]
+    public async Task<IActionResult> UpdatePackage(Guid id, [FromBody] UpdatePackageDto dto)
+    {
+        var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("terms")]
     public async Task<IActionResult> CreateTerm(CreateTermCommand command)
     {
@@ -125,10 +136,14 @@ public class AdminController : ControllerBase
         return result.Success ? CreatedAtAction(nameof(CreateTerm), new { id = result.Data }, result) : BadRequest(result);
     }
 
+    [HttpGet("terms/{id:guid}")]
+    public async Task<IActionResult> GetTermById(Guid id)
+        => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetTermByIdQuery(id)));
+
     [HttpPut("terms/{id:guid}")]
     public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateTermDto dto)
     {
-        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order));
+        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -138,6 +153,10 @@ public class AdminController : ControllerBase
         var result = await _mediator.Send(new DeleteTermCommand(id));
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("sections/{id:guid}")]
+    public async Task<IActionResult> GetSectionById(Guid id)
+        => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetSectionByIdQuery(id)));
 
     [HttpPost("sections")]
     public async Task<IActionResult> CreateSection(CreateSectionCommand command)
@@ -153,11 +172,25 @@ public class AdminController : ControllerBase
         return result.Success ? CreatedAtAction(nameof(CreateLesson), new { id = result.Data }, result) : BadRequest(result);
     }
 
+    [HttpGet("lessons/{lessonId:guid}/cockpit")]
+    public async Task<IActionResult> GetLessonCockpit(Guid lessonId)
+    {
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetLessonCockpitQuery(lessonId));
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
     [HttpPost("videos")]
     public async Task<IActionResult> CreateVideo(CreateVideoCommand command)
     {
         var result = await _mediator.Send(command);
         return result.Success ? CreatedAtAction(nameof(CreateVideo), new { id = result.Data }, result) : BadRequest(result);
+    }
+
+    [HttpPost("resources")]
+    public async Task<IActionResult> CreateResource(CreateLessonResourceCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.Success ? CreatedAtAction(nameof(CreateResource), new { id = result.Data }, result) : BadRequest(result);
     }
 
     [HttpPost("content/lessons/{lessonId:guid}/homework")]
@@ -169,10 +202,39 @@ public class AdminController : ControllerBase
             dto.Instructions, 
             dto.IsMandatory, 
             dto.RequiredPointsToPass, 
+            dto.TotalScore,
             dto.Questions);
             
         var result = await _mediator.Send(cmd);
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("lessons/{lessonId:guid}/exam")]
+    public async Task<IActionResult> LinkExam(Guid lessonId, [FromBody] LinkLessonExamRequest dto)
+    {
+        var result = await _mediator.Send(new LinkLessonExamCommand(lessonId, dto.ExamId));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("exams/inline")]
+    public async Task<IActionResult> CreateInlineExam([FromBody] CreateInlineExamCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+    
+    [HttpPost("exams/{examId:guid}/questions")]
+    public async Task<IActionResult> AddQuestionsToExam(Guid examId, [FromBody] AddQuestionsToExamRequest dto)
+    {
+        var result = await _mediator.Send(new AddQuestionsToExamCommand { ExamId = examId, Questions = dto.Questions });
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+    
+    [HttpGet("exams/{examId:guid}/dashboard")]
+    public async Task<IActionResult> GetExamDashboard(Guid examId)
+    {
+        var result = await _mediator.Send(new GetExamDashboardQuery(examId));
+        return result.Success ? Ok(result) : NotFound(result);
     }
 
     // --- Questions ---
@@ -240,6 +302,9 @@ public record BulkGenerateRequest(
     decimal? DiscountPercentage = null,
     DateTime? ExpiresAt = null
 );
-public record AttachHomeworkRequest(string Title, string Instructions, bool IsMandatory, int RequiredPointsToPass, List<AttachHomeworkQuestionDto> Questions);
-public record UpdateTermDto(string Title, int Order);
+public record AttachHomeworkRequest(string Title, string Instructions, bool IsMandatory, int RequiredPointsToPass, decimal TotalScore, List<AttachHomeworkQuestionDto> Questions);
+public record LinkLessonExamRequest(Guid? ExamId);
+public record UpdateTermDto(string Title, int Order, decimal Price);
+public record UpdatePackageDto(string Name, string Description, decimal Price, bool IsActive);
+public record AddQuestionsToExamRequest(List<InlineExamQuestionDto> Questions);
 

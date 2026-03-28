@@ -1,14 +1,16 @@
 <!--
   Sync Impact Report
   ───────────────────
-  Version change: 1.1.0 → 2.0.0 (Registration overhaul + hierarchy + code expansion)
+  Version change: 2.0.0 → 2.1.0 (Added Assessment Integrity, Admin UI Consistency, and Pricing Rules)
 
   Modified principles:
-    - V. Academic Content Integrity — Updated content hierarchy to Package → Year → Term → Section → Lesson
-    - VI. Two-Step Registration & UX Simplicity → VI. Single-Flow Registration & UX Simplicity
-      (BREAKING: registration is now single-flow with expanded student data fields)
+    - V. Academic Content Integrity — Updated hierarchy to match strict nested model, added Video Pop Quizzes.
+    - VIII. Premium Editorial Design System — Added strict constraints on Admin UI Shared Components.
 
-  Added sections: N/A
+  Added sections:
+    - IX. Assessment & Time Integrity
+    - X. Pricing & Currency Localization
+
   Removed sections: N/A
 
   Templates requiring updates:
@@ -82,7 +84,8 @@ Development MUST follow a strict phased approach:
 All academic features MUST respect the teacher's content authority:
 
 - **AI boundaries**: AI MUST stay tied to approved academic content (Section 9.6). No open-web generic assistant behavior. The controlled study assistant MUST answer only from approved platform content, teacher-uploaded material, and bounded lesson context.
-- **Content hierarchy**: Package → Year → Term → Content Section (Month) → Lesson → Video/Exam/Homework. This hierarchy is non-negotiable and MUST be preserved in all data models and UIs.
+- **Target Boundaries**: Exams can explicitly target either an entire `Lesson` (Lesson Final Exam) or a specific `Video` (Pop Quiz). This explicit targeting prevents overlapping scopes.
+- **Content Hierarchy**: Package → Term → Content Section (Month/Unit) → Lesson → Materials (Video, Resource, Homework, Exam). This hierarchy is non-negotiable and MUST be preserved in all data models and UIs.
 - **Question bank integrity**: Questions MUST be classified by grade, unit, lesson, difficulty, question type, exam year, idea repetition, academic tags, and error pattern tags.
 - **Progression rules**: When implemented, lesson unlock MUST respect code type, package structure, completion rules, exam score, and homework status.
 - **Gamification ethics**: Gamification MUST be motivating, not toxic (Section 4.7 of the plan).
@@ -127,8 +130,30 @@ The platform MUST adhere to the "Editorial Scholar" design system to maintain a 
 - **Typography**: Complete reliance on **Manrope** for geometric clarity and modern humanist feel. Use specific semantic typography tiers (Display, Headline, Title, Body, Label) to convey hierarchy naturally.
 - **Elevation & Depth**: Rely on layering (stacking nested `surface-container` tiers from lowest to highest) rather than hard drop-shadows. Shadows should be warm and ambient (e.g., tinted with umber, never pure black). If you must use a border fall-back, use `outline_variant` at 15% opacity ("Ghost Border").
 - **Tonal Palette**: Employ heritage tones of rich creams (#fcf9ef), deep umbers (#1c1c16), and golds (#775a19). Never use pure black (#000000) for text or pure gray for borders.
+- **Admin Dashboard Consistency**: Internal dashboards MUST rely on centralized Shared Components (`AdminShellChrome`, `AdminStatCard`, `AdminDataTable`, `AdminBackButton`, `NumberField`). Writing ad-hoc HTML tables or custom layout structures for standard admin views is FORBIDDEN to prevent UI fragmentation.
 
-**Rationale**: The platform's visual identity rejects sterile SaaS aesthetics in favor of a curated, academic journal feel. This fosters a sense of prestige, focus, and trust among students.
+**Rationale**: The platform's visual identity rejects sterile SaaS aesthetics in favor of a curated, academic journal feel. This fosters a sense of prestige, focus, and trust among students. Centralized admin components ensure that back-office operations remain just as premium and predictable as student experiences.
+
+### IX. Assessment & Time Integrity
+
+The platform's examination module MUST be technically resilient against tampering and cheating:
+
+- **Server-Side Truth**: All assessment timers (per-exam and per-question) MUST compute elapsed time based on absolute server timestamps (`StartedAt` and offset limits).
+- **Client Resilience**: Client-side countdowns are strictly visual indicators. If a student refreshes, closes the browser, or disconnects, the server-side time continues. Client inputs MUST auto-forward or lock appropriately when the visual timer expires.
+- **Enforced Submissions**: Exams submitted beyond the calculated expiration threshold must be handled intelligently by the server (auto-scored or marked as expired/late), preventing local clock manipulations.
+
+**Rationale**: Accurate assessment is the core of academic accountability. Timers reliant on client `setTimeout` or local system clocks compromise the integrity of the educational evaluation.
+
+### X. Pricing & Currency Localization
+
+Billing and gamification MUST remain starkly demarcated:
+
+- **Fiat Realities vs Gamification**: Fiat currency (EGP) and Gamification Points MUST never be conflated in the database or the UI.
+- **Granular Content Pricing**: Pricing MUST be supported at every tier of the hierarchy (Package, Term, Section, Lesson). If a price is omitted, it MUST default to `0` (Free).
+- **Localized Display**: All monetary values presented to the user (student or admin) MUST use the localized Egyptian Pound suffix ("جنيها"). Legacy references (like "دك") are strictly prohibited.
+- **Negative Rejection**: The system MUST prevent negative pricing inputs via form validation.
+
+**Rationale**: Granular pricing supports flexible micro-transactions. Accurate localization prevents customer confusion and ensures trust in the platform's billing systems.
 
 ## Technology Stack & Constraints
 
@@ -202,4 +227,4 @@ A feature is considered "done" when:
 - **Conflict resolution**: When a technical decision conflicts with a constitution principle, the principle takes precedence unless an explicit exception is documented in the Complexity Tracking section of the relevant plan.md.
 - Use `.specify/memory/constitution.md` as the single source of truth for governance.
 
-**Version**: 2.0.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-27
+**Version**: 2.1.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-03-28

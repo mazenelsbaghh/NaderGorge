@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,6 +20,8 @@ import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { useAuthStore } from '@/stores/auth-store';
+import { RippleGrid } from '@/components/ui/ripple-grid';
+import { AdminBreadcrumbs } from './AdminBreadcrumbs';
 
 type AdminShellRoute =
   | '/admin'
@@ -46,12 +48,12 @@ const navItems: Array<{
   label: string;
   icon: typeof UserCog;
 }> = [
-  { href: '/admin/users', label: 'المستخدمين', icon: UserCog },
-  { href: '/admin/content', label: 'المحتوى', icon: BookOpenText },
-  { href: '/admin/codes', label: 'الأكواد', icon: KeyRound },
-  { href: '/admin/questions', label: 'الأسئلة', icon: Shield },
-  { href: '/admin/overrides', label: 'التعديلات', icon: Wrench },
-];
+    { href: '/admin/users', label: 'المستخدمين', icon: UserCog },
+    { href: '/admin/content', label: 'المحتوى', icon: BookOpenText },
+    { href: '/admin/codes', label: 'الأكواد', icon: KeyRound },
+    { href: '/admin/questions', label: 'الأسئلة', icon: Shield },
+    { href: '/admin/overrides', label: 'التعديلات', icon: Wrench },
+  ];
 
 export function AdminShellChrome({
   activePath,
@@ -67,8 +69,19 @@ export function AdminShellChrome({
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
+  const [showBackdrop, setShowBackdrop] = useState(false);
 
   useRootOverscrollBackground(themeVars);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowBackdrop(true);
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   const handleLogout = () => {
     clearAuth();
@@ -78,15 +91,27 @@ export function AdminShellChrome({
   return (
     <div
       dir="rtl"
-      className="h-dvh overflow-hidden text-[var(--admin-text)]"
+      className="h-dvh overflow-hidden text-[var(--admin-text)] relative"
       style={{
         ...themeVars,
-        backgroundImage:
-          'radial-gradient(circle at 2px 2px, var(--admin-dot) 1px, transparent 0), linear-gradient(var(--admin-bg-overlay), var(--admin-bg-overlay))',
-        backgroundSize: '40px 40px, 100% 100%',
         backgroundColor: 'var(--admin-bg)',
       }}
     >
+      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(212,167,98,0.12),transparent_48%),linear-gradient(180deg,transparent,rgba(212,167,98,0.04))]" />
+      <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}>
+        {showBackdrop ? (
+          <RippleGrid
+            gridColor={isDark ? '#c5a059' : '#d4a762'}
+            rippleIntensity={0.035}
+            gridSize={10}
+            gridThickness={isDark ? 14 : 11}
+            mouseInteraction={false}
+            mouseInteractionRadius={1.2}
+            opacity={isDark ? 0.52 : 0.24}
+            animationSpeed={0.22}
+          />
+        ) : null}
+      </div>
       <aside className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex" role="navigation" aria-label="القائمة الرئيسية">
         <div className="space-y-7">
           <div className="flex justify-center">
@@ -99,11 +124,11 @@ export function AdminShellChrome({
             <Link
               href="/admin"
               aria-label="الرئيسية"
-              className={`flex h-12 items-center justify-center rounded-full transition ${
-                activePath === '/admin'
-                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                  : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-              }`}
+              aria-current={activePath === '/admin' ? 'page' : undefined}
+              className={`flex h-12 items-center justify-center rounded-full transition ${activePath === '/admin'
+                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                }`}
             >
               <Home className="h-5 w-5" />
             </Link>
@@ -116,13 +141,13 @@ export function AdminShellChrome({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex h-12 items-center justify-center rounded-full transition ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                      : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-                  }`}
+                  className={`flex h-12 items-center justify-center rounded-full transition ${isActive
+                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                    : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                    }`}
                   title={item.label}
                   aria-label={item.label}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <Icon className="h-5 w-5" />
                 </Link>
@@ -147,7 +172,7 @@ export function AdminShellChrome({
           </button>
           <button
             onClick={handleLogout}
-            className="flex h-12 w-full items-center justify-center rounded-full text-[#cf6d5b] transition hover:bg-[var(--admin-hover)]"
+            className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
             title="تسجيل الخروج"
             aria-label="تسجيل الخروج"
           >
@@ -156,14 +181,10 @@ export function AdminShellChrome({
         </div>
       </aside>
 
-      <main className="h-dvh overflow-y-auto overscroll-none px-5 py-8 lg:mr-24 lg:px-8 lg:py-10">
+      <main className="relative z-10 h-dvh overflow-y-auto overscroll-none px-5 py-8 pb-32 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10">
         <header className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <nav className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-[var(--admin-muted)]">
-              <span>الباحث التحريري</span>
-              <ChevronLeft className="h-3 w-3" />
-              <span className="text-[var(--admin-primary-strong)]">{sectionLabel}</span>
-            </nav>
+          <AdminBreadcrumbs />
 
             <div className="flex flex-wrap items-center gap-4">
               <div>
@@ -193,10 +214,46 @@ export function AdminShellChrome({
             <Star className="h-9 w-9" />
           </div>
           <p className="mt-4 text-[10px] font-black uppercase tracking-[0.4em] text-[var(--admin-primary)]">
-            الأرشيف التحريري الملكي
+            شيخ المتحف
           </p>
         </footer>
       </main>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)]/90 px-3 py-3 backdrop-blur-xl lg:hidden" role="navigation" aria-label="القائمة السفلية">
+        <div className="flex w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <Link
+            href="/admin"
+            aria-current={activePath === '/admin' ? 'page' : undefined}
+            className={`flex shrink-0 w-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-[20px] p-2 text-center text-[10px] font-black transition-all ${activePath === '/admin'
+              ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
+              : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+              }`}
+          >
+            <Home className="h-5 w-5" />
+            <span className="truncate w-full" style={{ lineHeight: 1 }}>الرئيسية</span>
+          </Link>
+
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.href === activePath;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex shrink-0 w-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-[20px] p-2 text-center text-[10px] font-black transition-all ${isActive
+                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
+                  : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+                  }`}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="truncate w-full" style={{ lineHeight: 1 }}>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
       {floatingAction}
     </div>

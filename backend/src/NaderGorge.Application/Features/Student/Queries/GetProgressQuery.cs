@@ -35,7 +35,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
 
         var packages = await _db.Packages
             .Where(p => packageIds.Contains(p.Id))
-            .Include(p => p.Sections).ThenInclude(s => s.Lessons)
+            .Include(p => p.Terms).ThenInclude(t => t.Sections).ThenInclude(s => s.Lessons)
             .ToListAsync(ct);
 
         var completedLessonIds = await _db.LessonProgresses
@@ -60,7 +60,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Distinct()
             .CountAsync(ct);
 
-        var allLessonIds = packages.SelectMany(p => p.Sections).SelectMany(s => s.Lessons).Select(l => l.Id).ToList();
+        var allLessonIds = packages.SelectMany(p => p.Terms.SelectMany(t => t.Sections)).SelectMany(s => s.Lessons).Select(l => l.Id).ToList();
         
         var mandatoryHomeworks = await _db.Homeworks
             .Where(h => allLessonIds.Contains(h.LessonId) && h.IsMandatory)
@@ -79,7 +79,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
         foreach (var pkg in packages)
         {
             var lessonItems = new List<LessonProgressItemDto>();
-            var orderedLessons = pkg.Sections.SelectMany(s => s.Lessons).OrderBy(l => l.Order).ToList();
+            var orderedLessons = pkg.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).OrderBy(l => l.Order).ToList();
 
             for (int i = 0; i < orderedLessons.Count; i++)
             {

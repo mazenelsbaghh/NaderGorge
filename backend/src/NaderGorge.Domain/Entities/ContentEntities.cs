@@ -22,6 +22,7 @@ public class Package : BaseEntity
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public bool IsActive { get; set; } = true;
     
     public Guid ProgramId { get; set; }
     public Program Program { get; set; } = null!;
@@ -33,6 +34,7 @@ public class ContentSection : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
     public int Order { get; set; }
+    public decimal Price { get; set; }
 
     public Guid TermId { get; set; }
     public Term Term { get; set; } = null!;
@@ -45,6 +47,7 @@ public class Lesson : BaseEntity
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public int Order { get; set; }
+    public decimal Price { get; set; }
     
     public Guid ContentSectionId { get; set; }
     public ContentSection ContentSection { get; set; } = null!;
@@ -73,6 +76,10 @@ public class LessonVideo : BaseEntity
 
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;
+
+    // Optional Exam associated directly with this video specific
+    public Guid? ExamId { get; set; }
+    public Exam? Exam { get; set; }
 }
 
 public class LessonResource : BaseEntity

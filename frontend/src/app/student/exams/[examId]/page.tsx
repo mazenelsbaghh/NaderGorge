@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { examService, ExamDto } from '@/services/exam-service';
+import { examService, ActiveExamAttemptDto } from '@/services/exam-service';
 import { ExamViewer } from '@/components/exams/ExamViewer';
 
 export default function ExamPage() {
@@ -13,7 +13,7 @@ export default function ExamPage() {
   const examId = params.examId as string;
   const packageId = searchParams.get('packageId') || undefined;
   
-  const [exam, setExam] = useState<ExamDto | null>(null);
+  const [exam, setExam] = useState<ActiveExamAttemptDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -70,7 +70,7 @@ export default function ExamPage() {
         Cancel Exam
       </button>
 
-      <ExamViewer exam={exam} packageId={packageId} />
+      <ExamViewer examId={examId} examTitle={exam.title} examDescription={exam.description} attempt={exam} packageId={packageId} />
     </div>
   );
 }

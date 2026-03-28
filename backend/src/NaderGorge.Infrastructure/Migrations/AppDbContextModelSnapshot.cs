@@ -40,19 +40,25 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("ConsumedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("ConsumedByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsConsumed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("QrCodeUrl")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -76,10 +82,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("ReferenceEntityId")
                         .HasColumnType("uuid");
@@ -118,7 +124,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(64)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("EntityId")
                         .HasColumnType("uuid");
@@ -142,7 +148,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -157,17 +163,76 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.BalanceTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentBalanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TransactionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentBalanceId");
+
+                    b.ToTable("balance_transactions", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroup", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal?>("BalanceAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CodeType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ContentSectionId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("CreatedByUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal?>("DiscountPercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ExamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("LessonId")
                         .HasColumnType("uuid");
@@ -180,17 +245,51 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("PackageId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("QrDataGenerated")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("TermId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("TotalCodes")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
 
                     b.ToTable("code_groups", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeVideoTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CodeGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("LessonVideoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonVideoId");
+
+                    b.HasIndex("CodeGroupId", "LessonVideoId")
+                        .IsUnique();
+
+                    b.ToTable("code_video_targets", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
@@ -200,12 +299,15 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("PackageId")
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("TermId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Title")
@@ -214,11 +316,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PackageId");
+                    b.HasIndex("TermId");
 
                     b.ToTable("content_sections", (string)null);
                 });
@@ -230,7 +332,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("DeviceFingerprint")
                         .IsRequired()
@@ -246,10 +348,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTime>("LastUsedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -269,14 +371,20 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("PassingScore")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("TimePerQuestionSeconds")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -287,7 +395,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -301,7 +409,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uuid");
@@ -316,7 +427,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -335,7 +446,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("EventType")
                         .HasColumnType("integer");
@@ -367,7 +478,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("UnlockedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -385,7 +496,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("LastTaskCompletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("LevelName")
                         .IsRequired()
@@ -409,7 +520,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
@@ -428,8 +539,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
+                    b.Property<decimal>("TotalScore")
+                        .HasColumnType("numeric");
+
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -511,8 +625,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("AssistantReviewerId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Evaluation")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("GradedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("HomeworkId")
                         .HasColumnType("uuid");
@@ -521,7 +638,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -530,7 +647,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("SubmittedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -553,13 +670,16 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("ExamId")
                         .HasColumnType("uuid");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("Summary")
                         .IsRequired()
@@ -571,7 +691,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -587,7 +707,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("boolean");
@@ -599,7 +719,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -621,7 +741,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("FileUrl")
                         .IsRequired()
@@ -640,7 +760,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -656,7 +776,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ExamId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("LessonId")
                         .HasColumnType("uuid");
@@ -681,9 +804,14 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("VideoTag")
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
 
                     b.HasIndex("LessonId");
 
@@ -704,10 +832,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("ReadAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -733,11 +861,14 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -751,7 +882,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -767,7 +898,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -783,7 +914,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -797,7 +928,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<decimal>("DefaultPoints")
                         .HasColumnType("decimal(18,2)");
@@ -811,8 +942,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -826,7 +960,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");
@@ -839,7 +973,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -855,13 +989,13 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("DeviceFingerprint")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsRevoked")
                         .HasColumnType("boolean");
@@ -871,7 +1005,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -893,7 +1027,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -904,7 +1038,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -929,10 +1063,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("LastActiveAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("LastEvaluatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("StudentId");
 
@@ -946,7 +1080,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsResolved")
                         .HasColumnType("boolean");
@@ -982,17 +1116,26 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("AccessCodeId")
+                    b.Property<Guid?>("AccessCodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ContentSectionId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ExamId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("GrantType")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("GrantedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -1000,11 +1143,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("LessonId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("LessonVideoId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("PackageId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("TermId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1025,7 +1174,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("ExamQuestionId")
                         .HasColumnType("uuid");
@@ -1043,7 +1192,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -1057,6 +1206,32 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("student_answers", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.StudentBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("CurrentBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("student_balances", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentExamAttempt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1064,7 +1239,10 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Evaluation")
+                        .HasColumnType("text");
 
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uuid");
@@ -1072,11 +1250,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("IsPassed")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsTimeExpired")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal>("ScoreAchieved")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1096,29 +1280,62 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("City")
-                        .HasColumnType("text");
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("DateOfBirth")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("District")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("EducationStage")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Gender")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Governorate")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
-                    b.Property<string>("Grade")
-                        .HasColumnType("text");
+                    b.Property<int>("GradeLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsFatherAlive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsMotherAlive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("ParentPhone")
-                        .HasColumnType("text");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
-                    b.Property<string>("School")
-                        .HasColumnType("text");
+                    b.Property<string>("SecondaryParentPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
-                    b.Property<string>("Track")
-                        .HasColumnType("text");
+                    b.Property<string>("SecondaryPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("StudentCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("StudyTrack")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1131,6 +1348,39 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("student_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Term", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.ToTable("terms", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1138,7 +1388,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -1161,7 +1411,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
@@ -1193,14 +1443,14 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("EncryptionKey")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("IpAddress")
                         .HasColumnType("text");
@@ -1216,7 +1466,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1237,7 +1487,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsLocked")
                         .HasColumnType("boolean");
@@ -1249,7 +1499,7 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -1312,6 +1562,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("PerformedByUser");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.BalanceTransaction", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.StudentBalance", "StudentBalance")
+                        .WithMany("Transactions")
+                        .HasForeignKey("StudentBalanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("StudentBalance");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroup", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
@@ -1323,15 +1584,34 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("CreatedByUser");
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeVideoTarget", b =>
                 {
-                    b.HasOne("NaderGorge.Domain.Entities.Package", "Package")
-                        .WithMany("Sections")
-                        .HasForeignKey("PackageId")
+                    b.HasOne("NaderGorge.Domain.Entities.CodeGroup", "CodeGroup")
+                        .WithMany("CodeVideoTargets")
+                        .HasForeignKey("CodeGroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Package");
+                    b.HasOne("NaderGorge.Domain.Entities.LessonVideo", "LessonVideo")
+                        .WithMany()
+                        .HasForeignKey("LessonVideoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CodeGroup");
+
+                    b.Navigation("LessonVideo");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Term", "Term")
+                        .WithMany("Sections")
+                        .HasForeignKey("TermId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Term");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Device", b =>
@@ -1495,11 +1775,17 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonVideo", b =>
                 {
+                    b.HasOne("NaderGorge.Domain.Entities.Exam", "Exam")
+                        .WithMany()
+                        .HasForeignKey("ExamId");
+
                     b.HasOne("NaderGorge.Domain.Entities.Lesson", "Lesson")
                         .WithMany("Videos")
                         .HasForeignKey("LessonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Exam");
 
                     b.Navigation("Lesson");
                 });
@@ -1580,9 +1866,7 @@ namespace NaderGorge.Infrastructure.Migrations
                 {
                     b.HasOne("NaderGorge.Domain.Entities.AccessCode", "AccessCode")
                         .WithMany()
-                        .HasForeignKey("AccessCodeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("AccessCodeId");
 
                     b.HasOne("NaderGorge.Domain.Entities.User", "User")
                         .WithMany()
@@ -1622,6 +1906,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("SelectedOption");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.StudentBalance", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "User")
+                        .WithOne("StudentBalance")
+                        .HasForeignKey("NaderGorge.Domain.Entities.StudentBalance", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentExamAttempt", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Exam", "Exam")
@@ -1650,6 +1945,17 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Term", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Package", "Package")
+                        .WithMany("Terms")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.UserRole", b =>
@@ -1712,6 +2018,8 @@ namespace NaderGorge.Infrastructure.Migrations
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroup", b =>
                 {
                     b.Navigation("AccessCodes");
+
+                    b.Navigation("CodeVideoTargets");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
@@ -1747,7 +2055,7 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Package", b =>
                 {
-                    b.Navigation("Sections");
+                    b.Navigation("Terms");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Program", b =>
@@ -1765,9 +2073,19 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("UserRoles");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.StudentBalance", b =>
+                {
+                    b.Navigation("Transactions");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentExamAttempt", b =>
                 {
                     b.Navigation("Answers");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Term", b =>
+                {
+                    b.Navigation("Sections");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.User", b =>
@@ -1775,6 +2093,8 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Devices");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("StudentBalance");
 
                     b.Navigation("StudentProfile");
 

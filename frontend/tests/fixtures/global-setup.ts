@@ -14,23 +14,27 @@ async function globalSetup(config: FullConfig) {
         body: JSON.stringify({
           clearDatabase: true,
           seedAdmin: true,
-          seedStudents: true
-        })
+          seedStudents: true,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to seed E2E Database. Status: ${response.status} - ${await response.text()}`);
+        throw new Error(
+          `Failed to seed E2E Database. Status: ${response.status} - ${await response.text()}`
+        );
       }
-      
+
       console.log('✅ Successfully seeded NaderGorge E2E testing database.');
       return;
     } catch (e) {
       if (i === 2) {
-        console.error('❌ FATAL: Could not reach the API E2E seeding endpoint. Is ASPNETCORE_ENVIRONMENT=E2e running?');
+        console.error(
+          '❌ FATAL: Could not reach the API E2E seeding endpoint. Is ASPNETCORE_ENVIRONMENT=E2e running?'
+        );
         throw e;
       }
       console.warn('Backend not ready yet, retrying...');
-      await new Promise(r => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 2000));
     }
   }
 }

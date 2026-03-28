@@ -63,7 +63,7 @@ export default function PlayerControls({
         className="w-full h-1.5 cursor-pointer relative group/progress mb-2"
         onClick={handleProgressClick}
       >
-        <div className="absolute inset-0 bg-[#4a3d2e] rounded-full overflow-hidden">
+        <div className="absolute inset-0 bg-[var(--admin-primary-15)] rounded-full overflow-hidden">
           {/* Fill */}
           <div 
             className="absolute top-0 bottom-0 z-10 transition-all duration-100"
@@ -85,7 +85,7 @@ export default function PlayerControls({
         <div className="flex items-center gap-4">
           <button 
             onClick={onTogglePlay}
-            className="transition-colors focus:outline-none hover:text-[#C6A87C]"
+            className="transition-colors focus:outline-none hover:text-[var(--admin-primary)]"
           >
             {isPlaying ? <Pause className="w-6 h-6" fill="currentColor" /> : <Play className="w-6 h-6" fill="currentColor" />}
           </button>
@@ -93,7 +93,7 @@ export default function PlayerControls({
           <div className="flex items-center gap-2 group/volume relative">
             <button 
               onClick={onToggleMute}
-              className="transition-colors focus:outline-none hover:text-[#C6A87C]"
+              className="transition-colors focus:outline-none hover:text-[var(--admin-primary)]"
             >
               {isMuted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
@@ -120,13 +120,13 @@ export default function PlayerControls({
           <div className="relative" ref={settingsRef}>
             <button 
               onClick={() => setSettingsOpen(!settingsOpen)}
-              className={`transition-colors focus:outline-none ${settingsOpen ? 'text-[#C6A87C]' : 'hover:text-[#C6A87C]'}`}
+              className={`transition-colors focus:outline-none ${settingsOpen ? 'text-[var(--admin-primary)]' : 'hover:text-[var(--admin-primary)]'}`}
             >
               <Settings className={`w-5 h-5 transition-transform ${settingsOpen ? 'rotate-90' : ''}`} />
             </button>
             
             {settingsOpen && (
-              <div className="absolute bottom-full right-0 mb-4 bg-zinc-900 border border-[#C6A87C]/30 rounded-lg p-3 flex gap-6 shadow-xl z-50 origin-bottom-right w-max text-right">
+              <div className="absolute bottom-full right-0 mb-4 bg-zinc-900 border border-[var(--admin-primary)]/30 rounded-lg p-3 flex gap-6 shadow-xl z-50 origin-bottom-right w-max text-right">
                 
                 {/* Speed Menu */}
                 <div className="flex flex-col gap-1 w-28 text-right [direction:rtl]">
@@ -134,7 +134,7 @@ export default function PlayerControls({
                   {[0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map(speed => (
                     <button 
                       key={`speed-${speed}`}
-                      className="text-right px-3 py-1.5 text-sm text-white hover:bg-[#C6A87C]/20 hover:text-[#C6A87C] rounded transition-colors w-full"
+                      className="text-right px-3 py-1.5 text-sm text-white hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] rounded transition-colors w-full"
                       onClick={() => {
                         if (onPlaybackRateChange) onPlaybackRateChange(speed);
                         setSettingsOpen(false);
@@ -151,7 +151,7 @@ export default function PlayerControls({
                   {['highres', 'hd1080', 'hd720', 'large', 'medium', 'small', 'auto'].map(q => (
                     <button 
                       key={`qual-${q}`}
-                      className="text-right px-3 py-1.5 text-sm text-white hover:bg-[#C6A87C]/20 hover:text-[#C6A87C] rounded transition-colors w-full uppercase"
+                      className="text-right px-3 py-1.5 text-sm text-white hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] rounded transition-colors w-full uppercase"
                       onClick={() => {
                         if (onQualityChange) onQualityChange(q);
                         setSettingsOpen(false);
@@ -168,7 +168,7 @@ export default function PlayerControls({
           
           <button 
             onClick={onToggleFullscreen}
-            className="transition-colors focus:outline-none hover:text-[#C6A87C]"
+            className="transition-colors focus:outline-none hover:text-[var(--admin-primary)]"
           >
             <Maximize className="w-5 h-5" />
           </button>

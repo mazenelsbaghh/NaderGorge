@@ -43,7 +43,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         // Get packages with section/lesson counts
         var packages = await _db.Packages
             .Where(p => packageIds.Contains(p.Id))
-            .Include(p => p.Sections).ThenInclude(s => s.Lessons)
+            .Include(p => p.Terms).ThenInclude(t => t.Sections).ThenInclude(s => s.Lessons)
             .ToListAsync(ct);
 
         // Get all lesson progress for this user
@@ -64,7 +64,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         foreach (var pkg in packages)
         {
-            var allLessons = pkg.Sections.SelectMany(s => s.Lessons).ToList();
+            var allLessons = pkg.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).ToList();
             var completed = allLessons.Count(l => completedLessonIds.Contains(l.Id));
             var total = allLessons.Count;
             totalLessonsAll += total;
@@ -91,7 +91,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         // Upcoming exams: lessons with exams that haven't been passed yet
         var upcomingExams = new List<UpcomingExamDto>();
-        var allLessonIds = packages.SelectMany(p => p.Sections.SelectMany(s => s.Lessons.Select(l => l.Id))).ToList();
+        var allLessonIds = packages.SelectMany(p => p.Terms.SelectMany(t => t.Sections.SelectMany(s => s.Lessons.Select(l => l.Id)))).ToList();
         var lessonsWithExams = await _db.Lessons
             .Where(l => allLessonIds.Contains(l.Id) && l.ExamId != null)
             .ToListAsync(ct);

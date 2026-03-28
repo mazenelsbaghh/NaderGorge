@@ -26,6 +26,9 @@ public class HomeworkSubmission
     public Guid? AssistantReviewerId { get; set; }
     public string? AssistantNotes { get; set; }
     public decimal OverallScore { get; set; }
+    
+    // Auto-calculated evaluation string (e.g. "ممتاز")
+    public string? Evaluation { get; set; }
 
     public Homework Homework { get; set; } = null!;
     public User Student { get; set; } = null!;

@@ -14,6 +14,7 @@ import {
 import { formatCompactNumber } from '@/components/admin/admin-utils';
 import { adminService, QuestionBankItemDto, QuestionOptionDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
+import NeumorphButton from '@/components/ui/neumorph-button';
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<QuestionBankItemDto[]>([]);
@@ -159,21 +160,27 @@ export default function AdminQuestionsPage() {
       pageTitle="إدارة الأسئلة"
       subtitle="إنشاء الأسئلة ومراجعة التصنيفات والإجابات الصحيحة."
       action={
-        <button
+        <NeumorphButton
           onClick={() => setShowModal(true)}
-          className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-8 py-4 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:brightness-110"
+          intent="primary"
+          size="lg"
+          pill
         >
           <Plus className="h-4 w-4" />
           إضافة سؤال
-        </button>
+        </NeumorphButton>
       }
     >
-      <button
+      <NeumorphButton
+        type="button"
         onClick={() => setShowModal(true)}
-        className="fixed bottom-8 left-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-2xl transition hover:scale-110 md:hidden"
+        intent="primary"
+        size="icon"
+        pill
+        className="fixed bottom-24 left-8 z-40 !h-14 !w-14 shadow-2xl md:hidden"
       >
         <Plus className="h-5 w-5" />
-      </button>
+      </NeumorphButton>
 
       <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
         <AdminStatCard
@@ -266,10 +273,10 @@ export default function AdminQuestionsPage() {
             ))}
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)] mt-4">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 font-semibold text-[var(--admin-muted)] transition hover:text-[var(--admin-text)]">إلغاء</button>
-            <button type="submit" disabled={saving} className="admin-btn-primary">
-              {saving ? 'جارٍ الحفظ...' : 'حفظ'}
-            </button>
+            <NeumorphButton type="button" onClick={() => setShowModal(false)} intent="ghost" size="md">إلغاء</NeumorphButton>
+            <NeumorphButton type="submit" disabled={saving} loading={saving} intent="primary" size="md" pill>
+              حفظ
+            </NeumorphButton>
           </div>
         </form>
       </AdminModal>

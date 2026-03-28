@@ -14,15 +14,17 @@ public record RegisterCommand(
     // Personal data
     string FullName,
     string PhoneNumber,
+    string? SecondaryPhone,           // NEW: Student's optional 2nd phone
     string Password,
-    string StudentCode,
     DateTime DateOfBirth,
     Gender Gender,
     string Governorate,
+    string? District,                  // NEW: Neighborhood/area
     string Address,
 
     // Parent data
     string ParentPhone,
+    string? SecondaryParentPhone,      // NEW: Parent's optional 2nd phone
     bool IsFatherAlive,
     bool IsMotherAlive,
 
@@ -49,21 +51,30 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
             .Matches(@"^01[0125]\d{8}$")
             .WithMessage("Invalid Egyptian phone number");
 
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
+        RuleFor(x => x.SecondaryPhone)
+            .Matches(@"^01[0125]\d{8}$")
+            .When(x => !string.IsNullOrEmpty(x.SecondaryPhone))
+            .WithMessage("Invalid Egyptian phone number");
 
-        RuleFor(x => x.StudentCode).NotEmpty().WithMessage("Student code (Dostab) is required");
+        RuleFor(x => x.Password).NotEmpty().MinimumLength(8);
 
         RuleFor(x => x.DateOfBirth)
             .LessThan(DateTime.UtcNow)
             .WithMessage("Date of birth must be in the past");
 
         RuleFor(x => x.Governorate).NotEmpty();
+        RuleFor(x => x.District).MaximumLength(200);
         RuleFor(x => x.Address).NotEmpty();
 
         // Parent
         RuleFor(x => x.ParentPhone)
             .NotEmpty().MaximumLength(20)
             .Matches(@"^01[0125]\d{8}$")
+            .WithMessage("Invalid Egyptian parent phone number");
+
+        RuleFor(x => x.SecondaryParentPhone)
+            .Matches(@"^01[0125]\d{8}$")
+            .When(x => !string.IsNullOrEmpty(x.SecondaryParentPhone))
             .WithMessage("Invalid Egyptian parent phone number");
 
         // Academic — basic required fields
@@ -98,7 +109,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, ApiRespon
     {
         // Check duplicate phone
         if (await _db.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber, ct))
-            throw new InvalidOperationException("Phone number already registered");
+            throw new InvalidOperationException("رقم الهاتف الأساسي مسجل بالفعل. استخدم رقمًا آخر.");
 
         // Validate academic field matrix
         var academicErrors = _academicValidator.Validate(request.EducationStage, request.GradeLevel, request.StudyTrack);
@@ -118,12 +129,14 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, ApiRespon
         // Create StudentProfile with all fields
         user.StudentProfile = new StudentProfile
         {
-            StudentCode = request.StudentCode,
-            DateOfBirth = request.DateOfBirth,
+            DateOfBirth = request.DateOfBirth.ToUniversalTime(),
             Gender = request.Gender,
             Governorate = request.Governorate,
+            District = request.District,
             Address = request.Address,
+            SecondaryPhone = request.SecondaryPhone,
             ParentPhone = request.ParentPhone,
+            SecondaryParentPhone = request.SecondaryParentPhone,
             IsFatherAlive = request.IsFatherAlive,
             IsMotherAlive = request.IsMotherAlive,
             EducationStage = request.EducationStage,

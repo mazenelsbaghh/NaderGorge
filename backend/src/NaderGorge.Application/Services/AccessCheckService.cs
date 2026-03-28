@@ -46,12 +46,13 @@ public class AccessCheckService : IAccessCheckService
 
         var lesson = await _db.Lessons
             .Include(l => l.ContentSection)
+            .ThenInclude(cs => cs.Term)
             .FirstOrDefaultAsync(l => l.Id == lessonId, ct);
 
         if (lesson == null) return false;
 
         // Check if user explicitly has grant for this exact lesson, or the package
-        var packageId = lesson.ContentSection.PackageId;
+        var packageId = lesson.ContentSection.Term?.PackageId;
 
         var hasAccess = await _db.StudentAccessGrants
             .AnyAsync(g => g.UserId == userId &&

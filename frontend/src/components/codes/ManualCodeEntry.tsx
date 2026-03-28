@@ -10,7 +10,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gift, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Gift, CheckCircle, XCircle } from 'lucide-react';
+import { InlineLoader } from '@/components/ui/loading-indicator';
 import { codeService } from '@/services/code-service';
 
 export function ManualCodeEntry() {
@@ -78,7 +79,7 @@ export function ManualCodeEntry() {
         >
           {loading ? (
             <>
-              <Loader2 size={18} className="animate-spin" />
+              <InlineLoader />
               جاري التفعيل...
             </>
           ) : (

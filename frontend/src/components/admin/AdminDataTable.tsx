@@ -72,7 +72,7 @@ export function AdminDataTable<T>({
   };
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)] backdrop-blur-2xl">
+    <div className="overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 shadow-[var(--admin-shadow)] backdrop-blur-2xl">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[780px] border-collapse">
           <thead>
@@ -140,14 +140,18 @@ export function AdminDataTable<T>({
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
             className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
+            aria-label="الصفحة السابقة"
+            title="الصفحة السابقة"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
-          <span className="px-3 text-sm font-bold text-[var(--admin-primary)]">{formatCompactNumber(page)}</span>
+          <span className="px-3 text-sm font-bold text-[var(--admin-primary)]" aria-current="page" aria-label={`الصفحة ${page}`}>{formatCompactNumber(page)}</span>
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
             className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
+            aria-label="الصفحة التالية"
+            title="الصفحة التالية"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>

@@ -129,10 +129,13 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(s => s.Id);
             e.HasIndex(s => s.UserId).IsUnique();
             e.HasOne(s => s.User).WithOne(u => u.StudentProfile).HasForeignKey<StudentProfile>(s => s.UserId);
-            e.Property(s => s.StudentCode).HasMaxLength(100).IsRequired();
+            e.Property(s => s.StudentCode).HasMaxLength(100);    // No longer IsRequired()
             e.Property(s => s.Governorate).HasMaxLength(100).IsRequired();
+            e.Property(s => s.District).HasMaxLength(200);           // NEW
             e.Property(s => s.Address).HasMaxLength(500).IsRequired();
             e.Property(s => s.ParentPhone).HasMaxLength(20);
+            e.Property(s => s.SecondaryPhone).HasMaxLength(20);         // NEW
+            e.Property(s => s.SecondaryParentPhone).HasMaxLength(20);   // NEW
             e.Property(s => s.EducationStage).HasConversion<int>();
             e.Property(s => s.GradeLevel).HasConversion<int>();
             e.Property(s => s.StudyTrack).HasConversion<int?>();

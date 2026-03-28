@@ -28,6 +28,12 @@ public interface IAppDbContext
     DbSet<Lesson> Lessons { get; }
     DbSet<LessonVideo> LessonVideos { get; }
     DbSet<LessonResource> LessonResources { get; }
+
+    // Phase 3
+    DbSet<Term> Terms { get; }
+    DbSet<StudentBalance> StudentBalances { get; }
+    DbSet<BalanceTransaction> BalanceTransactions { get; }
+    DbSet<CodeVideoTarget> CodeVideoTargets { get; }
     
     // Tracking
     DbSet<VideoWatchEvent> VideoWatchEvents { get; }

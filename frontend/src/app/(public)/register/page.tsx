@@ -21,10 +21,12 @@ import Link from 'next/link';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
+import { RippleGrid } from '@/components/ui/ripple-grid';
 import { RegistrationForm } from '@/components/forms/RegistrationForm';
 
 export default function RegisterPage() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
+  const authThemeVars = themeVars as Record<string, string>;
 
   useRootOverscrollBackground(themeVars);
 
@@ -33,10 +35,30 @@ export default function RegisterPage() {
      * auth-shell: same background (dot pattern + bg-color) as AdminShellChrome.
      * All --admin-* vars are injected inline via themeVars.
      */
-    <div className="auth-shell" style={themeVars}>
+    <div 
+      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto" 
+      style={{ 
+        ...themeVars, 
+        backgroundColor: authThemeVars['--admin-bg'],
+        color: authThemeVars['--admin-text']
+      }}
+    >
+
+      {/* ── Ripple Interactive Background ── */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <RippleGrid
+          gridColor={isDark ? '#c5a059' : '#d4a762'}
+          rippleIntensity={0.05}
+          gridSize={10}
+          gridThickness={isDark ? 15 : 12}
+          mouseInteraction={true}
+          mouseInteractionRadius={1.2}
+          opacity={isDark ? 0.8 : 0.4}
+        />
+      </div>
 
       {/* ── Ambient Glow Orbs ── */}
-      <div className="auth-shell__glow">
+      <div className="auth-shell__glow pointer-events-none">
         <div className="auth-shell__glow-top" />
         <div className="auth-shell__glow-bottom" />
       </div>
@@ -53,7 +75,7 @@ export default function RegisterPage() {
       </div>
 
       {/* ── Main content ── */}
-      <main className="relative z-10 w-full max-w-7xl px-4 py-10 sm:px-5 sm:py-16">
+      <main className="relative z-10 w-full max-w-7xl px-4 py-10 sm:px-5 sm:py-16 m-auto">
 
         {/* Logo Avatar */}
         <div className="auth-avatar">𓂀</div>

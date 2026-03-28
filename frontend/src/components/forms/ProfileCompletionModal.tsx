@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/auth-store';
 import { authService } from '@/services/auth-service';
@@ -21,6 +21,17 @@ export function ProfileCompletionModal({ isOpen, onClose, onComplete }: ProfileC
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,9 +63,12 @@ export function ProfileCompletionModal({ isOpen, onClose, onComplete }: ProfileC
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.3 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-completion-title"
             className="auth-card relative z-10 w-full max-w-md p-6 sm:p-8"
           >
-            <h2 className="text-xl font-black text-[var(--admin-text)] mb-1">استكمال الملف الشخصي</h2>
+            <h2 id="profile-completion-title" className="text-xl font-black text-[var(--admin-text)] mb-1">استكمال الملف الشخصي</h2>
             <p className="text-sm font-medium text-[var(--admin-muted)] mb-5">مطلوب لتفعيل كود الوصول.</p>
 
             {error && (

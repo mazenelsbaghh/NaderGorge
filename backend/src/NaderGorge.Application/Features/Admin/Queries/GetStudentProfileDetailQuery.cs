@@ -103,8 +103,8 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             Email = string.Empty,
             Phone = user.PhoneNumber,
             ParentPhone = user.StudentProfile?.ParentPhone,
-            Grade = user.StudentProfile?.Grade,
-            SchoolName = user.StudentProfile?.School,
+            Grade = user.StudentProfile?.GradeLevel.ToString(),
+            SchoolName = string.Empty,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
             Gamification = gamification != null ? new GamificationSummaryDto

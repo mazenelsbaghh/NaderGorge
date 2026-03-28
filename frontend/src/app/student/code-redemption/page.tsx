@@ -14,7 +14,7 @@ export default function CodeRedemptionPage() {
       <CodeRedemptionShowcase />
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl rounded-[32px] p-6 md:p-8">
+        <section className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl rounded-[32px] p-6 md:p-8">
           <div className="mb-6">
             <p className="text-sm font-black tracking-[0.24em] text-[var(--admin-muted)]">
               ACTIVATE ACCESS
@@ -37,7 +37,7 @@ export default function CodeRedemptionPage() {
           </div>
         </section>
 
-        <aside className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl rounded-[32px] p-6 md:p-8">
+        <aside className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl rounded-[32px] p-6 md:p-8">
           <p className="text-sm font-black tracking-[0.24em] text-[var(--admin-muted)]">
             WHAT HAPPENS NEXT
           </p>
@@ -62,7 +62,7 @@ export default function CodeRedemptionPage() {
       </div>
 
       {recentGrants.length > 0 && (
-        <section className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl rounded-[30px] p-6">
+        <section className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl rounded-[30px] p-6">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <Sparkles className="h-5 w-5" />

@@ -8,14 +8,18 @@ export interface QuestionOptionDto {
 export interface ExamQuestionDto {
   id: string;
   text: string;
+  type?: string;
   points: number;
+  durationSeconds?: number;
   options: QuestionOptionDto[];
 }
 
-export interface ExamDto {
-  id: string;
+export interface ActiveExamAttemptDto {
+  attemptId: string;
   title: string;
   description: string;
+  startedAt: string;
+  durationMinutes?: number;
   totalScore: number;
   questions: ExamQuestionDto[];
 }
@@ -31,10 +35,12 @@ export interface ExamResultDto {
   totalScore: number;
   isPassed: boolean;
   blocksNextLesson: boolean;
+  evaluation: string;
+  isTimeExpired: boolean;
 }
 
 export const examService = {
-  startExam: (examId: string) => apiClient.get(`/exams/${examId}/start`),
-  submitExam: (examId: string, answers: AnswerSubmissionDto[]) => 
-    apiClient.post(`/exams/${examId}/submit`, answers),
+  startExam: (examId: string) => apiClient.post<{ data: ActiveExamAttemptDto }>(`/exams/${examId}/start`),
+  submitExam: (examId: string, attemptId: string, answers: AnswerSubmissionDto[]) => 
+    apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers),
 };

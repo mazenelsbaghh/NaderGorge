@@ -27,7 +27,7 @@ export function PackagesOverview({ packages }: PackagesOverviewProps) {
         </div>
 
         <div className="grid gap-4">
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 backdrop-blur">
+          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-bold text-[var(--admin-muted)]">إجمالي الباقات</p>
@@ -66,7 +66,7 @@ function InfoStat({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 backdrop-blur">
+    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-4 backdrop-blur">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-bold text-[var(--admin-muted)]">{label}</p>

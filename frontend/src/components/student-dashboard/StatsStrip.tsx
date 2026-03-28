@@ -51,7 +51,7 @@ export function StatsStrip({ data }: { data: DashboardDto }) {
             variants={cardVariant}
             initial="hidden"
             animate="show"
-            className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(88,55,18,0.12)]"
+            className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(88,55,18,0.12)]"
           >
             <div className="flex items-start justify-between gap-4">
               <div>

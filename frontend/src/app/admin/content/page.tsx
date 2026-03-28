@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   BookOpenText,
   Eye,
@@ -23,6 +24,7 @@ import {
   AdminSearchToolbar,
   AdminTabBar,
   AdminTab,
+  AdminPageSkeleton,
 } from '@/components/admin';
 import { formatCompactNumber, getInitials } from '@/components/admin/admin-utils';
 import { adminService } from '@/services/admin-service';
@@ -35,6 +37,7 @@ import {
   contentService,
 } from '@/services/content-service';
 import toast from 'react-hot-toast';
+import NeumorphButton from '@/components/ui/neumorph-button';
 
 type ActiveTab = 'packages' | 'terms' | 'sections' | 'lessons' | 'videos';
 type ModalType = 'package' | 'term' | 'section' | 'lesson' | 'video' | null;
@@ -120,6 +123,7 @@ export default function AdminContentPage() {
   const [entityTitle, setEntityTitle] = useState('');
   const [entitySummary, setEntitySummary] = useState('');
   const [entityOrder, setEntityOrder] = useState(1);
+  const [entityPrice, setEntityPrice] = useState(0);
   
   const [videoProvider, setVideoProvider] = useState<'YouTube' | 'Vimeo' | 'Custom'>('YouTube');
   const [videoCode, setVideoCode] = useState('');
@@ -276,6 +280,7 @@ export default function AdminContentPage() {
     setEntityTitle('');
     setEntitySummary('');
     setEntityOrder(1);
+    setEntityPrice(0);
     setVideoProvider('YouTube');
     setVideoCode('');
     setVideoLimit(3);
@@ -301,11 +306,11 @@ export default function AdminContentPage() {
       if (modalType === 'package') {
         await adminService.createPackage({ name: packageName, description: packageDescription, price: packagePrice });
       } else if (modalType === 'term') {
-        await adminService.createTerm({ title: entityTitle, order: entityOrder, packageId: selectedPackageId });
+        await adminService.createTerm({ title: entityTitle, order: entityOrder, packageId: selectedPackageId, price: entityPrice });
       } else if (modalType === 'section') {
-        await adminService.createSection({ title: entityTitle, order: entityOrder, termId: selectedTermId });
+        await adminService.createSection({ title: entityTitle, order: entityOrder, termId: selectedTermId, price: entityPrice });
       } else if (modalType === 'lesson') {
-        await adminService.createLesson({ title: entityTitle, summary: entitySummary, order: entityOrder, sectionId: selectedSectionId });
+        await adminService.createLesson({ title: entityTitle, summary: entitySummary, order: entityOrder, sectionId: selectedSectionId, price: entityPrice });
       } else if (modalType === 'video') {
         // Here selectedSectionId is used to store the lessonId for the video
         await adminService.createVideo({ title: entityTitle, provider: videoProvider, urlOrEmbedCode: videoCode, order: entityOrder, limit: videoLimit, lessonId: selectedSectionId });
@@ -313,10 +318,10 @@ export default function AdminContentPage() {
 
       setModalType(null);
       await loadContentData();
-      toast.success('تم الحفظ بنجاح');
+      toast.success('تم حفظ العنصر بنجاح.');
     } catch (error) {
       console.error(error);
-      toast.error('تعذر حفظ العنصر');
+      toast.error('حدث خطأ أثناء حفظ العنصر، يرجى المحاولة مرة أخرى.');
     } finally {
       setSaving(false);
     }
@@ -356,7 +361,7 @@ export default function AdminContentPage() {
         </div>
       ),
     },
-    { key: 'price', label: 'السعر', render: (pkg) => <div className="font-bold text-[var(--admin-primary)]">{pkg.price} دك</div> },
+    { key: 'price', label: 'السعر', render: (pkg) => <div className="font-bold text-[var(--admin-primary)]">{pkg.price} جنيهًا</div> },
     {
       key: 'status', label: 'الحالة', render: (pkg) => (
         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${statusClass(pkg.status)}`}>
@@ -365,10 +370,16 @@ export default function AdminContentPage() {
       ),
     },
     {
-      key: 'actions', label: 'إجراءات', align: 'left', render: () => (
+      key: 'actions', label: 'إجراءات', align: 'left', render: (pkg) => (
         <div className="flex items-center justify-end gap-2">
-          <button className="admin-btn-icon"><Eye className="h-4 w-4" /></button>
-          <button className="rounded-full p-2 text-[var(--admin-muted)] transition-all hover:bg-rose-100 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+          <Link href={`/admin/content/packages/${pkg.id}`}>
+            <NeumorphButton type="button" intent="icon" size="icon" title="عرض" className="pointer-events-none">
+              <Eye className="h-4 w-4" />
+            </NeumorphButton>
+          </Link>
+          <NeumorphButton type="button" intent="danger" size="icon">
+            <Trash2 className="h-4 w-4" />
+          </NeumorphButton>
         </div>
       ),
     },
@@ -390,7 +401,9 @@ export default function AdminContentPage() {
     { key: 'content', label: 'المحتويات', render: (term) => <span className="text-[var(--admin-text)]">{term.sectionCount} أقسام</span> },
     { key: 'actions', label: 'إجراءات', align: 'left', render: () => (
         <div className="flex items-center justify-end gap-2">
-          <button className="rounded-full p-2 text-[var(--admin-muted)] transition-all hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+          <NeumorphButton type="button" intent="danger" size="icon">
+            <Trash2 className="h-4 w-4" />
+          </NeumorphButton>
         </div>
       )
     },
@@ -417,7 +430,9 @@ export default function AdminContentPage() {
     { key: 'content', label: 'المحتويات', render: (sec) => <span className="text-[var(--admin-text)]">{sec.lessonCount} درس</span> },
     { key: 'actions', label: 'إجراءات', align: 'left', render: () => (
         <div className="flex items-center justify-end gap-2">
-          <button className="rounded-full p-2 text-[var(--admin-muted)] transition-all hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+          <NeumorphButton type="button" intent="danger" size="icon">
+            <Trash2 className="h-4 w-4" />
+          </NeumorphButton>
         </div>
       )
     },
@@ -445,7 +460,9 @@ export default function AdminContentPage() {
     )},
     { key: 'actions', label: 'إجراءات', align: 'left', render: () => (
         <div className="flex items-center justify-end gap-2">
-          <button className="rounded-full p-2 text-[var(--admin-muted)] transition-all hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+          <NeumorphButton type="button" intent="danger" size="icon">
+            <Trash2 className="h-4 w-4" />
+          </NeumorphButton>
         </div>
     )},
   ];
@@ -470,7 +487,9 @@ export default function AdminContentPage() {
     )},
     { key: 'actions', label: 'إجراءات', align: 'left', render: () => (
         <div className="flex items-center justify-end gap-2">
-          <button className="rounded-full p-2 text-[var(--admin-muted)] transition-all hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+          <NeumorphButton type="button" intent="danger" size="icon">
+            <Trash2 className="h-4 w-4" />
+          </NeumorphButton>
         </div>
     )},
   ];
@@ -491,16 +510,17 @@ export default function AdminContentPage() {
       pageTitle="إدارة الباقات"
       subtitle="تنظيم وترتيب الدروس والفيديوهات للمقررات الأكاديمية"
       action={
-        <button
-          onClick={() => openModal('package')}
-          className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-8 py-4 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:brightness-110"
-        >
+        <NeumorphButton onClick={() => openModal('package')} intent="primary" size="lg" pill>
           <Plus className="h-4 w-4" /> إضافة باقة جديدة
-        </button>
+        </NeumorphButton>
       }
     >
-      <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <AdminStatCard variant="light" icon={Sparkles} label="إجمالي المبيعات" value={metrics.totalValue} subtitle="+١٢٪ هذا الشهر" />
+      {loading ? (
+        <AdminPageSkeleton />
+      ) : (
+        <>
+          <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <AdminStatCard variant="light" icon={Sparkles} label="إجمالي المبيعات" value={metrics.totalValue} subtitle="+12% هذا الشهر" />
         <AdminStatCard variant="accent" icon={Video} label="الدروس المرفوعة" value={metrics.totalLessons} subtitle={`${formatCompactNumber(videos.length)} فيديو مرتبط`} />
         <AdminStatCard variant="muted" icon={BookOpenText} label="الباقات النشطة" value={metrics.activePackages} />
       </section>
@@ -508,12 +528,14 @@ export default function AdminContentPage() {
       <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <AdminTabBar tabs={TAB_OPTIONS} activeTab={activeTab} onSelect={setActiveTab} />
         {activeTab !== 'packages' && (
-          <button
+          <NeumorphButton
+            type="button"
             onClick={() => openModal(activeTab.slice(0, -1) as ModalType)}
-            className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-6 py-2.5 text-sm font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-primary)] hover:text-white"
+            intent="ghost"
+            size="sm"
           >
             <Plus className="h-4 w-4" /> إضافة {TAB_OPTIONS.find((t) => t.key === activeTab)?.label.replace('ال', '').slice(0, -2)}
-          </button>
+          </NeumorphButton>
         )}
       </div>
 
@@ -538,74 +560,79 @@ export default function AdminContentPage() {
         <form onSubmit={handleCreate} className="space-y-4">
           {modalType === 'package' && (
             <>
-              <input type="text" value={packageName} onChange={(e) => setPackageName(e.target.value)} required placeholder="اسم الباقة" className="admin-input" />
-              <textarea rows={3} value={packageDescription} onChange={(e) => setPackageDescription(e.target.value)} placeholder="وصف الباقة" className="admin-input" />
-              <input type="number" min={0} value={packagePrice} onChange={(e) => setPackagePrice(Number(e.target.value))} required placeholder="السعر" className="admin-input" />
+              <input type="text" value={packageName} onChange={(e) => setPackageName(e.target.value)} required placeholder="اسم الباقة، مثال: الباقة التأسيسية" className="admin-input" />
+              <textarea rows={3} value={packageDescription} onChange={(e) => setPackageDescription(e.target.value)} placeholder="اكتب وصفًا مفصلاً لتوضيح محتوى ومميزات الباقة..." className="admin-input" />
+              <input type="number" min={0} value={packagePrice} onChange={(e) => setPackagePrice(Number(e.target.value))} required placeholder="السعر الإجمالي (جنيه مصري)" className="admin-input" />
             </>
           )}
 
           {modalType === 'term' && (
             <>
               <select value={selectedPackageId} onChange={(e) => setSelectedPackageId(e.target.value)} required className="admin-input">
-                <option value="">اختر الباقة</option>
+                <option value="">اختر الباقة التابع لها هذا الترم...</option>
                 {packages.map((pkg) => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>)}
               </select>
-              <input type="text" value={entityTitle} onChange={(e) => setEntityTitle(e.target.value)} required placeholder="عنوان الترم (مثلا: الترم الأول)" className="admin-input" />
-              <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="الترتيب" className="admin-input" />
+              <input type="text" value={entityTitle} onChange={(e) => setEntityTitle(e.target.value)} required placeholder="عنوان الترم، مثال: الفصل الدراسي الأول" className="admin-input" />
+              <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="ترتيب العرض (مثال: 1)" className="admin-input" />
+              <input type="number" min={0} value={entityPrice} onChange={(e) => setEntityPrice(Number(e.target.value))} required placeholder="السعر (جنيه مصري)" className="admin-input" />
             </>
           )}
 
           {modalType === 'section' && (
             <>
               <select value={selectedTermId} onChange={(e) => setSelectedTermId(e.target.value)} required className="admin-input">
-                <option value="">اختر الترم</option>
+                <option value="">اختر الترم التابع له هذا القسم...</option>
                 {terms.map((t) => <option key={t.id} value={t.id}>{t.packageName} ▸ {t.title}</option>)}
               </select>
-              <input type="text" value={entityTitle} onChange={(e) => setEntityTitle(e.target.value)} required placeholder="عنوان القسم" className="admin-input" />
-              <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="الترتيب" className="admin-input" />
+              <input type="text" value={entityTitle} onChange={(e) => setEntityTitle(e.target.value)} required placeholder="عنوان القسم، مثال: الوحدة الأولى: التفاضل والتكامل" className="admin-input" />
+              <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="ترتيب العرض (مثال: 1)" className="admin-input" />
+              <input type="number" min={0} value={entityPrice} onChange={(e) => setEntityPrice(Number(e.target.value))} required placeholder="السعر (جنيه مصري)" className="admin-input" />
             </>
           )}
 
           {modalType === 'lesson' && (
              <>
               <select value={selectedSectionId} onChange={(e) => setSelectedSectionId(e.target.value)} required className="admin-input">
-                <option value="">اختر القسم</option>
+                <option value="">اختر القسم التابع له هذا الدرس...</option>
                 {sections.map((sec) => <option key={sec.id} value={sec.id}>{sec.termTitle} ▸ {sec.title}</option>)}
               </select>
-              <input type="text" value={entityTitle} onChange={(e) => setEntityTitle(e.target.value)} required placeholder="عنوان الدرس" className="admin-input" />
-              <textarea rows={2} value={entitySummary} onChange={(e) => setEntitySummary(e.target.value)} placeholder="الملخص" className="admin-input" />
-              <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="الترتيب" className="admin-input" />
+              <input type="text" value={entityTitle} onChange={(e) => setEntityTitle(e.target.value)} required placeholder="عنوان الدرس، مثال: مقدمة في البلاغة" className="admin-input" />
+              <textarea rows={2} value={entitySummary} onChange={(e) => setEntitySummary(e.target.value)} placeholder="نبذة مختصرة عما سيتعلمه الطالب من هذا الدرس..." className="admin-input" />
+              <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="ترتيب العرض (مثال: 1)" className="admin-input" />
+              <input type="number" min={0} value={entityPrice} onChange={(e) => setEntityPrice(Number(e.target.value))} required placeholder="السعر (جنيه مصري)" className="admin-input" />
              </>
           )}
 
           {modalType === 'video' && (
              <>
               <select value={selectedSectionId} onChange={(e) => setSelectedSectionId(e.target.value)} required className="admin-input">
-                <option value="">اختر الدرس</option>
+                <option value="">اختر الدرس التابع له هذا الفيديو...</option>
                 {lessons.map((les) => <option key={les.id} value={les.id}>{les.sectionTitle} ▸ {les.title}</option>)}
               </select>
               <input type="text" value={entityTitle} onChange={(e) => setEntityTitle(e.target.value)} required placeholder="عنوان الفيديو" className="admin-input" />
               <select value={videoProvider} onChange={(e) => setVideoProvider(e.target.value as 'YouTube' | 'Vimeo' | 'Custom')} required className="admin-input">
-                <option value="YouTube">YouTube</option>
-                <option value="Vimeo">Vimeo</option>
-                <option value="Custom">Custom</option>
+                <option value="YouTube">يوتيوب (YouTube)</option>
+                <option value="Vimeo">فيميو (Vimeo)</option>
+                <option value="Custom">تضمين مخصص (Custom Embed)</option>
               </select>
-              <input type="text" value={videoCode} onChange={(e) => setVideoCode(e.target.value)} required placeholder="معرف الفيديو أو الكود المشفر" className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 font-mono text-left text-[var(--admin-text)] outline-none focus:ring-2 focus:ring-[var(--admin-primary)]" />
+              <input type="text" value={videoCode} onChange={(e) => setVideoCode(e.target.value)} required placeholder="معرف الفيديو (ID) أو كود التضمين" className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 font-mono text-left text-[var(--admin-text)] outline-none focus:ring-2 focus:ring-[var(--admin-primary)]" />
               <div className="grid grid-cols-2 gap-3">
-                <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="الترتيب" className="admin-input" />
-                <input type="number" min={1} value={videoLimit} onChange={(e) => setVideoLimit(Number(e.target.value))} required placeholder="حد المشاهدة" className="admin-input" />
+                <input type="number" min={1} value={entityOrder} onChange={(e) => setEntityOrder(Number(e.target.value))} required placeholder="ترتيب العرض" className="admin-input" />
+                <input type="number" min={1} value={videoLimit} onChange={(e) => setVideoLimit(Number(e.target.value))} required placeholder="الحد الأقصى للمشاهدات" className="admin-input" />
               </div>
              </>
           )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)] mt-4">
-            <button type="button" onClick={() => setModalType(null)} className="px-4 py-2 font-semibold text-[var(--admin-muted)] transition hover:text-[var(--admin-text)]">إلغاء</button>
-            <button type="submit" disabled={saving} className="admin-btn-primary">
-              {saving ? 'جارٍ الحفظ...' : 'حفظ'}
-            </button>
+            <NeumorphButton type="button" onClick={() => setModalType(null)} intent="ghost" size="md">إلغاء</NeumorphButton>
+            <NeumorphButton type="submit" disabled={saving} loading={saving} intent="primary" size="md" pill>
+              إضافة العنصر
+            </NeumorphButton>
           </div>
         </form>
       </AdminModal>
+        </>
+      )}
     </AdminShellChrome>
   );
 }

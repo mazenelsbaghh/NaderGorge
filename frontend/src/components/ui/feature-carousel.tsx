@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type MouseEvent,
   type ComponentProps,
   type ComponentPropsWithoutRef,
@@ -22,8 +23,6 @@ import {
   type MotionValue,
   type Variants,
 } from "motion/react"
-import Balancer from "react-wrap-balancer"
-
 import { cn } from "@/lib/utils"
 
 // Types
@@ -33,8 +32,8 @@ type WrapperStyle = MotionStyle & {
 }
 
 interface CardProps {
-  title: string
-  description: string
+  title?: string
+  description?: string
   bgClass?: string
   children?: ReactNode
 }
@@ -62,7 +61,7 @@ interface FeatureCarouselProps extends CardProps {
   step2img2Class?: string
   step3imgClass?: string
   step4imgClass?: string
-  image: ImageSet
+  image?: ImageSet
   step?: number
   onStepChange?: (step: number) => void
   autoPlay?: boolean
@@ -202,9 +201,9 @@ function useNumberCycler(
 }
 
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
+  const getSnapshot = () => {
+    if (typeof window === "undefined") return false
 
-  useEffect(() => {
     const userAgent = navigator.userAgent
     const isSmall = window.matchMedia("(max-width: 768px)").matches
     const isMobileDevice = Boolean(
@@ -214,10 +213,27 @@ function useIsMobile() {
     )
 
     const isDev = process.env.NODE_ENV !== "production"
-    setIsMobile(isDev ? isSmall || isMobileDevice : isSmall && isMobileDevice)
-  }, [])
+    return isDev ? isSmall || isMobileDevice : isSmall && isMobileDevice
+  }
 
-  return isMobile
+  const subscribe = (onStoreChange: () => void) => {
+    if (typeof window === "undefined") {
+      return () => {}
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 768px)")
+    const handleChange = () => onStoreChange()
+
+    mediaQuery.addEventListener("change", handleChange)
+    window.addEventListener("resize", handleChange)
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange)
+      window.removeEventListener("resize", handleChange)
+    }
+  }
+
+  return useSyncExternalStore(subscribe, getSnapshot, () => false)
 }
 
 // Components
@@ -275,7 +291,7 @@ const StepImage = forwardRef<
 )
 StepImage.displayName = "StepImage"
 
-const MotionStepImage = motion(StepImage)
+const MotionStepImage = motion.create(StepImage)
 
 /**
  * Wrapper component for StepImage that applies animation presets.
@@ -348,11 +364,11 @@ function FeatureCard({
           bgClass || "bg-[var(--admin-card)]"
         )}
       >
-        <div className="m-10 min-h-[450px] w-[calc(100%-5rem)]">
+        <div className="p-5 md:p-10 min-h-[450px] w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
-              className="flex w-4/6 flex-col gap-3"
+              className="flex w-full md:w-[80%] lg:w-[70%] xl:w-[60%] flex-col gap-3 pr-4 md:pr-0"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -382,8 +398,8 @@ function FeatureCard({
                   ease: [0.23, 1, 0.32, 1],
                 }}
               >
-                <p className="text-sm leading-5 text-[var(--admin-muted)] sm:text-base sm:leading-5">
-                  <Balancer>{steps[step]?.description}</Balancer>
+                <p className="text-sm leading-5 text-[var(--admin-muted)] sm:text-base sm:leading-5 text-balance">
+                  {steps[step]?.description}
                 </p>
               </motion.div>
             </motion.div>
@@ -408,6 +424,8 @@ function Steps({
   current: number
   onChange: (index: number) => void
 }) {
+  if (steps.length <= 1) return null;
+
   return (
     <nav aria-label="Progress" className="flex justify-center px-4">
       <ol
@@ -447,10 +465,10 @@ function Steps({
                     className={cn(
                       "flex h-4 w-4 shrink-0 items-center justify-center rounded-full duration-300",
                       isCompleted &&
-                        "bg-brand-400 text-white dark:bg-brand-400",
+                        "bg-[var(--admin-primary)] text-white dark:bg-[var(--admin-primary)]",
                       isCurrent &&
-                        "bg-brand-300/80 text-neutral-400 dark:bg-neutral-500/50",
-                      isFuture && "bg-brand-300/10 dark:bg-neutral-500/20"
+                        "bg-emerald-200 text-emerald-800 dark:bg-lime-500/20 dark:text-lime-400 font-bold",
+                      isFuture && "bg-neutral-200 dark:bg-neutral-500/20"
                     )}
                   >
                     {isCompleted ? (
@@ -469,7 +487,8 @@ function Steps({
                       <span
                         className={cn(
                           "text-xs",
-                          !isCurrent && "text-[#C6EA7E]"
+                          !isCurrent && "text-neutral-500 dark:text-neutral-400",
+                          isCurrent && "text-emerald-800 dark:text-lime-400"
                         )}
                       >
                         {stepIdx + 1}
@@ -480,10 +499,10 @@ function Steps({
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     className={clsx(
-                      "text-sm font-medium duration-300",
-                      isCompleted && "text-muted-foreground",
-                      isCurrent && "text-lime-300 dark:text-lime-500",
-                      isFuture && "text-neutral-500"
+                      "hidden sm:block text-sm font-medium duration-300",
+                      isCompleted && "text-[var(--admin-muted)]",
+                      isCurrent && "text-emerald-700 dark:text-lime-400 font-bold",
+                      isFuture && "text-[var(--admin-muted)] opacity-60"
                     )}
                   >
                     {step.name}
@@ -574,6 +593,8 @@ export function FeatureCarousel({
 
   const renderStepContent = () => {
     const content = () => {
+      if (!image) return null;
+
       switch (step) {
         case 0:
           /**

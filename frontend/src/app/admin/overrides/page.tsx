@@ -10,6 +10,7 @@ import {
 } from '@/components/admin';
 import { adminService } from '@/services/admin-service';
 import { ContentSectionDto, LessonSummaryDto, PackageDto, VideoDto, contentService } from '@/services/content-service';
+import NeumorphButton from '@/components/ui/neumorph-button';
 
 interface UserItem {
   id: string;
@@ -256,9 +257,9 @@ export default function AdminOverridesPage() {
             </select>
 
             <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--admin-border)]">
-              <button type="submit" disabled={wLoading} className="admin-btn-primary py-3">
-                {wLoading ? 'جارٍ التنفيذ...' : 'تصفير الحد'}
-              </button>
+              <NeumorphButton type="submit" disabled={wLoading} loading={wLoading} intent="primary" size="lg" pill>
+                تصفير الحد
+              </NeumorphButton>
               {wResult ? <span className="text-sm font-semibold text-[var(--admin-primary)]">{wResult}</span> : null}
             </div>
           </form>
@@ -302,9 +303,9 @@ export default function AdminOverridesPage() {
             </select>
 
             <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--admin-border)]">
-              <button type="submit" disabled={uLoading} className="admin-btn-primary py-3">
-                {uLoading ? 'جارٍ التنفيذ...' : 'فتح الدرس'}
-              </button>
+              <NeumorphButton type="submit" disabled={uLoading} loading={uLoading} intent="primary" size="lg" pill>
+                فتح الدرس
+              </NeumorphButton>
               {uResult ? <span className="text-sm font-semibold text-[var(--admin-primary)]">{uResult}</span> : null}
             </div>
           </form>

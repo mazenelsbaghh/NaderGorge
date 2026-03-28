@@ -11,11 +11,17 @@
  * components into the public route group.
  */
 
-import { CSSProperties, useEffect, useMemo, useState } from 'react';
+import { CSSProperties, useEffect, useMemo, useSyncExternalStore } from 'react';
 
-const STORAGE_KEY = 'admin-theme-mode'; // shared with Admin shell intentionally
+import {
+  getAdminThemeModeServerSnapshot,
+  getStoredAdminThemeMode,
+  setStoredAdminThemeMode,
+  subscribeToAdminThemeMode,
+  type AdminThemeMode,
+} from '@/lib/admin-theme-mode';
 
-type ThemeMode = 'light' | 'dark';
+type ThemeMode = AdminThemeMode;
 
 function buildVars(mode: ThemeMode): CSSProperties {
   // ── DARK MODE — same values as useAdminTheme.ts dark branch ──────────
@@ -31,13 +37,14 @@ function buildVars(mode: ThemeMode): CSSProperties {
       ['--admin-primary-strong' as string]: '#8f6b2f',
       ['--admin-primary-contrast' as string]: '#0c0c0c',
       ['--admin-hover' as string]: '#2c261f',
-      ['--admin-card' as string]: 'rgba(30,30,30,0.45)',
-      ['--admin-card-soft' as string]: 'rgba(21,21,18,0.9)',
-      ['--admin-card-strong' as string]: 'rgba(40,40,36,0.9)',
+      ['--admin-card' as string]: 'rgba(30,30,30,0.85)',
+      ['--admin-card-soft' as string]: 'rgba(21,21,18,0.95)',
+      ['--admin-card-strong' as string]: 'rgba(40,40,36,0.95)',
       ['--admin-border' as string]: 'rgba(119,90,25,0.2)',
       ['--admin-search' as string]: 'rgba(12,12,12,0.85)',
       ['--admin-footer' as string]: '#c5a059',
       ['--admin-shadow' as string]: 'rgba(0,0,0,0.5)',
+      ['--admin-danger' as string]: '#ef4444',
     };
   }
 
@@ -53,28 +60,28 @@ function buildVars(mode: ThemeMode): CSSProperties {
     ['--admin-primary-strong' as string]: '#775a19',
     ['--admin-primary-contrast' as string]: '#fcd386',
     ['--admin-hover' as string]: '#e5e2d9',
-    ['--admin-card' as string]: 'rgba(241,238,228,0.65)',
-    ['--admin-card-soft' as string]: 'rgba(246,244,234,0.82)',
-    ['--admin-card-strong' as string]: 'rgba(235,232,222,0.82)',
+    ['--admin-card' as string]: 'rgba(241,238,228,0.95)',
+    ['--admin-card-soft' as string]: 'rgba(246,244,234,0.96)',
+    ['--admin-card-strong' as string]: 'rgba(235,232,222,0.96)',
     ['--admin-border' as string]: 'rgba(255,255,255,0.3)',
     ['--admin-search' as string]: 'rgba(255,255,255,0.7)',
     ['--admin-footer' as string]: '#e8c176',
     ['--admin-shadow' as string]: 'rgba(78,70,57,0.1)',
+    ['--admin-danger' as string]: '#ef4444',
   };
 }
 
 export function useAuthTheme() {
-  // SSR-safe initial state: default to 'light'; hydrate from localStorage on client
-  const [mode, setMode] = useState<ThemeMode>(() => {
-    if (typeof window === 'undefined') return 'light';
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    return saved === 'dark' ? 'dark' : 'light';
-  });
+  const mode = useSyncExternalStore(
+    subscribeToAdminThemeMode,
+    getStoredAdminThemeMode,
+    getAdminThemeModeServerSnapshot,
+  );
 
-  // Persist every change (same key as Admin shell)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(STORAGE_KEY, mode);
+    if (typeof document === 'undefined') return;
+    document.documentElement.classList.toggle('dark', mode === 'dark');
+    document.documentElement.dataset.themeMode = mode;
   }, [mode]);
 
   const themeVars = useMemo(() => buildVars(mode), [mode]);
@@ -83,6 +90,6 @@ export function useAuthTheme() {
     mode,
     isDark: mode === 'dark',
     themeVars,
-    toggleTheme: () => setMode((m) => (m === 'dark' ? 'light' : 'dark')),
+    toggleTheme: () => setStoredAdminThemeMode(mode === 'dark' ? 'light' : 'dark'),
   };
 }

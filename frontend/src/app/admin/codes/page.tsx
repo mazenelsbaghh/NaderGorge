@@ -1,6 +1,7 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { isAxiosError } from 'axios';
 import { Download, Eye, KeyRound, Plus, Sparkles, Printer, Layers } from 'lucide-react';
 
 import {
@@ -17,6 +18,7 @@ import { codeService } from '@/services/code-service';
 import { CodeTypeSelector, CodeTypeSelection } from '@/components/codes/CodeTypeSelector';
 import { QrDisplay } from '@/components/codes/QrDisplay';
 import toast from 'react-hot-toast';
+import NeumorphButton from '@/components/ui/neumorph-button';
 
 export default function AdminCodesPage() {
   const [groups, setGroups] = useState<CodeGroupDto[]>([]);
@@ -36,24 +38,43 @@ export default function AdminCodesPage() {
   const [showQrPrint, setShowQrPrint] = useState(false);
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
+  const loadDataInFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     void loadData();
   }, []);
 
-  async function loadData() {
+  async function loadData(options?: { force?: boolean }) {
+    if (loadDataInFlightRef.current && !options?.force) {
+      return loadDataInFlightRef.current;
+    }
+
+    const request = (async () => {
+      try {
+        setLoading(true);
+        const [groupsData, packagesResponse] = await Promise.all([
+          adminService.listCodeGroups({ force: options?.force }),
+          contentService.getPackages({ force: options?.force }),
+        ]);
+        setGroups(groupsData || []);
+        setPackages((packagesResponse.data?.data || []) as PackageDto[]);
+      } catch (error) {
+        if (!isAxiosError(error) || error.response?.status !== 429) {
+          console.error(error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    loadDataInFlightRef.current = request;
+
     try {
-      setLoading(true);
-      const [groupsData, packagesResponse] = await Promise.all([
-        adminService.listCodeGroups(),
-        contentService.getPackages(),
-      ]);
-      setGroups(groupsData);
-      setPackages((packagesResponse.data?.data || []) as PackageDto[]);
-    } catch (error) {
-      console.error(error);
+      await request;
     } finally {
-      setLoading(false);
+      if (loadDataInFlightRef.current === request) {
+        loadDataInFlightRef.current = null;
+      }
     }
   }
 
@@ -84,10 +105,12 @@ export default function AdminCodesPage() {
       setGenSelection({ codeType: 'Package' });
       setGenGroupName('');
       setGenCount(10);
-      await loadData();
-    } catch (error: any) {
+      await loadData({ force: true });
+    } catch (error: unknown) {
       console.error(error);
-      const msg = error.response?.data?.message || 'تعذر إنشاء الأكواد. تأكد من إدخال جميع الحقول المطلوبة.';
+      const msg = isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message || 'تعذر إنشاء الأكواد. تأكد من إدخال جميع الحقول المطلوبة.'
+        : 'تعذر إنشاء الأكواد. تأكد من إدخال جميع الحقول المطلوبة.';
       toast.error(msg);
     } finally {
       setGenLoading(false);
@@ -142,9 +165,9 @@ export default function AdminCodesPage() {
     {
       key: 'linking',
       label: 'الربط',
-      render: (g: any) => (
+      render: (g: CodeGroupDto) => (
         <div className="font-semibold text-[var(--admin-text)]">
-          <div>{g.codeType ? g.codeType : 'كود عام'}</div>
+          <div>{g.packageId ? 'Package' : g.lessonId ? 'Lesson' : 'عام'}</div>
           {g.packageId ? (
             <div className="mt-1 text-xs text-[var(--admin-muted)] font-normal">{packageNameMap[g.packageId] || g.packageId}</div>
           ) : null}
@@ -174,13 +197,15 @@ export default function AdminCodesPage() {
       align: 'left',
       render: (g) => (
         <div className="flex items-center justify-end gap-2">
-          <button
+          <NeumorphButton
+            type="button"
             onClick={() => openGroupDetails(g)}
-            className="admin-btn-icon"
+            intent="icon"
+            size="icon"
             title="عرض التفاصيل والطباعة"
           >
             <Eye className="h-5 w-5" />
-          </button>
+          </NeumorphButton>
         </div>
       ),
     },
@@ -231,22 +256,23 @@ export default function AdminCodesPage() {
       pageTitle="مجموعات أكواد الوصول"
       subtitle="إدارة التوليد والطباعة (QR) والاستخدام في شاشة واحدة."
       action={
-        <button
-          onClick={() => setShowGenModal(true)}
-          className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-8 py-4 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)] transition hover:brightness-110"
-        >
+        <NeumorphButton onClick={() => setShowGenModal(true)} intent="primary" size="lg" pill>
           <Plus className="h-4 w-4" />
           إنشاء دفعة جديدة
-        </button>
+        </NeumorphButton>
       }
     >
       {/* Mobile Fab */}
-      <button
+      <NeumorphButton
+        type="button"
         onClick={() => setShowGenModal(true)}
-        className="fixed bottom-8 left-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-2xl transition hover:scale-110 md:hidden"
+        intent="primary"
+        size="icon"
+        pill
+        className="fixed bottom-24 left-8 z-40 !h-14 !w-14 shadow-2xl md:hidden"
       >
         <Plus className="h-5 w-5" />
-      </button>
+      </NeumorphButton>
 
       {/* Stats */}
       <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -323,10 +349,10 @@ export default function AdminCodesPage() {
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)]">
-            <button type="button" onClick={() => setShowGenModal(false)} className="px-4 py-2 font-semibold text-[var(--admin-muted)] transition hover:text-[var(--admin-text)]">إلغاء</button>
-            <button type="submit" disabled={genLoading} className="admin-btn-primary">
-              {genLoading ? 'جارٍ التوليد...' : 'توليد الدفعة'}
-            </button>
+            <NeumorphButton type="button" onClick={() => setShowGenModal(false)} intent="ghost" size="md">إلغاء</NeumorphButton>
+            <NeumorphButton type="submit" disabled={genLoading} loading={genLoading} intent="primary" size="md" pill>
+              توليد الدفعة
+            </NeumorphButton>
           </div>
         </form>
       </AdminModal>
@@ -357,10 +383,10 @@ export default function AdminCodesPage() {
             </button>
           </div>
 
-          <button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-md bg-[var(--admin-card-strong)] border border-[var(--admin-border)] hover:border-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] transition-all">
+          <NeumorphButton type="button" onClick={exportCsv} intent="ghost" size="md">
             <Download className="h-4 w-4" />
             تصدير CSV
-          </button>
+          </NeumorphButton>
         </div>
 
         {showQrPrint ? (

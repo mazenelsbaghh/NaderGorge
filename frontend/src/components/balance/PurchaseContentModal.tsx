@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { Wallet, AlertTriangle, CheckCircle } from 'lucide-react';
+import { InlineLoader } from '@/components/ui/loading-indicator';
 import { balanceService, CodeType, StudentBalanceDto } from '@/services/balance-service';
 import { useRouter } from 'next/navigation';
 
@@ -97,7 +98,7 @@ export function PurchaseContentModal({
 
               {loading ? (
                 <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <InlineLoader className="text-primary" />
                 </div>
               ) : (
                 <div className="rounded-2xl border border-border p-4">
@@ -143,7 +144,7 @@ export function PurchaseContentModal({
                     disabled={purchasing || loading}
                     className="flex-[2] rounded-full bg-primary py-3 text-sm font-black text-primary-foreground shadow-lg transition hover:brightness-110 disabled:opacity-70 flex items-center justify-center gap-2"
                   >
-                    {purchasing && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {purchasing && <InlineLoader />}
                     <span>تأكيد الخصم والشراء</span>
                   </button>
                 ) : (

@@ -3,13 +3,15 @@ import apiClient from './api-client';
 export interface RegisterData {
   fullName: string;
   phoneNumber: string;
+  secondaryPhone?: string;           // NEW: Student's optional 2nd phone
   password: string;
-  studentCode: string;
   dateOfBirth: string;
   gender: 'Male' | 'Female';
   governorate: string;
+  district: string;                   // NEW: Neighborhood/area
   address: string;
   parentPhone: string;
+  secondaryParentPhone?: string;      // NEW: Parent's optional 2nd phone
   isFatherAlive: boolean;
   isMotherAlive: boolean;
   educationStage: 'Secondary' | 'Baccalaureate';

@@ -32,7 +32,10 @@ public record AdminUserListDto(
     bool IsFatherAlive,
     bool IsMotherAlive,
     string Governorate,
-    string Address
+    string? District,                    // NEW
+    string Address,
+    string? SecondaryPhone,              // NEW
+    string? SecondaryParentPhone         // NEW
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
@@ -58,7 +61,7 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
         {
              query = query.Where(u => u.PhoneNumber.Contains(request.Search) || 
                                       u.FullName.Contains(request.Search) ||
-                                      (u.StudentProfile != null && u.StudentProfile.StudentCode.Contains(request.Search)));
+                                      (u.StudentProfile != null && u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(request.Search)));
         }
         
         if (!string.IsNullOrWhiteSpace(request.EducationStage) && Enum.TryParse<NaderGorge.Domain.Enums.EducationStage>(request.EducationStage, true, out var stage))
@@ -110,7 +113,10 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.StudentProfile?.IsFatherAlive ?? true,
             u.StudentProfile?.IsMotherAlive ?? true,
             u.StudentProfile?.Governorate ?? "N/A",
-            u.StudentProfile?.Address ?? ""
+            u.StudentProfile?.District,
+            u.StudentProfile?.Address ?? "",
+            u.StudentProfile?.SecondaryPhone,
+            u.StudentProfile?.SecondaryParentPhone
         )).ToList();
 
         return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, request.Page, request.PageSize));

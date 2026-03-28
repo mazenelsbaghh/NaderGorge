@@ -45,7 +45,7 @@ export function StudentHero({ data }: StudentHeroProps) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 backdrop-blur sm:rounded-[28px] sm:p-5">
+            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-4 backdrop-blur sm:rounded-[28px] sm:p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
                   <BookOpen className="h-5 w-5" />
@@ -61,7 +61,7 @@ export function StudentHero({ data }: StudentHeroProps) {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 backdrop-blur sm:rounded-[28px] sm:p-5">
+            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-4 backdrop-blur sm:rounded-[28px] sm:p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
                   <CalendarClock className="h-5 w-5" />
@@ -77,7 +77,7 @@ export function StudentHero({ data }: StudentHeroProps) {
               </div>
             </div>
 
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 backdrop-blur sm:rounded-[28px] sm:p-5">
+            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-4 backdrop-blur sm:rounded-[28px] sm:p-5">
               <p className="text-sm font-bold text-[var(--admin-muted)]">
                 الباقات النشطة
               </p>

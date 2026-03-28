@@ -37,10 +37,10 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
   /* ── Success Screen ── */
   if (submitted) {
     return (
-      <div className="mx-auto max-w-2xl rounded-[28px] border border-[color:rgba(34,197,94,0.3)] bg-[color:rgba(34,197,94,0.06)] p-8 text-center shadow-[0_28px_70px_var(--admin-shadow)] sm:p-10">
+      <div className="mx-auto max-w-2xl rounded-[28px] border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] p-8 text-center shadow-[0_28px_70px_var(--admin-shadow)] sm:p-10">
         <div className="mb-5 flex justify-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[color:rgba(34,197,94,0.12)]">
-            <CheckCircle2 className="h-10 w-10 text-[#22c55e]" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--admin-success-10)]">
+            <CheckCircle2 className="h-10 w-10 text-[var(--admin-success)]" />
           </div>
         </div>
         <h2 className="text-3xl font-black text-[var(--admin-text)]">تم تسليم الواجب! 🎉</h2>
@@ -65,7 +65,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
   return (
     <div className="mx-auto max-w-4xl space-y-6 pb-12">
       {/* Header */}
-      <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 backdrop-blur-xl sm:rounded-[28px] sm:p-8">
+      <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 backdrop-blur-xl sm:rounded-[28px] sm:p-8">
         <div className="flex items-center gap-3 mb-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
             <BookOpen className="h-5 w-5" />
@@ -84,7 +84,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
 
       {/* Error */}
       {error && (
-        <div role="alert" className="rounded-2xl border border-[color:rgba(239,68,68,0.2)] bg-[color:rgba(239,68,68,0.06)] p-4 text-sm font-bold text-[#ef4444]">
+        <div role="alert" className="rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-sm font-bold text-[var(--admin-danger)]">
           {error}
         </div>
       )}
@@ -92,7 +92,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
       {/* Questions */}
       <div className="space-y-5">
         {homework.questions?.map((q, idx) => (
-          <div key={q.id} className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] overflow-hidden backdrop-blur-xl" role="group" aria-label={`السؤال ${idx + 1}: ${q.text}`}>
+          <div key={q.id} className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 overflow-hidden backdrop-blur-xl" role="group" aria-label={`السؤال ${idx + 1}: ${q.text}`}>
             <div className="bg-[var(--admin-card-strong)] p-5">
               <h3 className="text-lg font-black text-[var(--admin-text)]">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--admin-primary)] text-sm font-black text-[var(--admin-primary-contrast)] ml-3">
@@ -111,7 +111,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
                       key={opt.id}
                       className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition ${
                         answers[q.id] === opt.id
-                          ? 'border border-[var(--admin-primary)] bg-[color:rgba(154,105,51,0.08)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--admin-primary)_20%,transparent)]'
+                          ? 'border border-[var(--admin-primary)] bg-[var(--admin-primary-15)] shadow-[0_0_0_3px_var(--admin-primary-15)]'
                           : 'border border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-card-strong)]'
                       }`}
                     >
@@ -139,7 +139,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
               ) : (
                 /* Essay */
                 <textarea
-                  className="w-full min-h-[140px] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-sm font-medium text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(154,105,51,0.12)] transition"
+                  className="w-full min-h-[140px] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-sm font-medium text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-4 focus:ring-[var(--admin-primary-15)] transition"
                   placeholder="اكتب إجابتك هنا..."
                   value={answers[q.id] || ''}
                   onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
@@ -150,7 +150,7 @@ export function HomeworkView({ homework, packageId }: { homework: HomeworkDto; p
         ))}
 
         {!hasQuestions && (
-          <div className="rounded-[28px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)] p-10 text-center backdrop-blur-xl">
+          <div className="rounded-[28px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-10 text-center backdrop-blur-xl">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
               <PenTool className="h-7 w-7" />
             </div>

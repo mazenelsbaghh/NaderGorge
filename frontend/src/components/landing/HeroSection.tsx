@@ -1,78 +1,104 @@
-import Link from "next/link";
-import { ArrowUpLeft, BadgeCheck, PlayCircle } from "lucide-react";
-import Image from "next/image";
+'use client';
 
-import { heroStats } from "./data";
+import { ArrowUpLeft, BadgeCheck } from "lucide-react";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import { useAdminTheme } from "@/components/admin/useAdminTheme";
+import { FloatingLines } from "@/components/ui/floating-lines";
+import { MorphingText } from "@/components/ui/morphing-text";
+import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 
 export function HeroSection() {
-  return (
-    <section className="relative -mt-28 min-h-screen overflow-hidden px-4 pt-36 pb-16 md:-mt-32 md:px-0 md:pt-40 md:pb-24">
-      {/* Full-section Egyptian wall background */}
-      <div
-        className="absolute inset-0 bg-[url('/images/egyptian-wall.png')] bg-cover bg-center"
-        style={{ backgroundSize: "cover", backgroundPosition: "center" }}
-      />
-      {/* Soft overlay so text stays readable */}
-      <div className="absolute inset-0 bg-[var(--landing-bg)]/60" />
+  const { isDark } = useAdminTheme();
 
-      <div className="relative z-10 mx-auto grid w-[min(1280px,95vw)] items-center gap-8 lg:min-h-screen lg:[direction:ltr] lg:grid-cols-[1.08fr_0.92fr]">
-        <div className="order-2 flex justify-center lg:order-1 lg:justify-start">
-          <div className="relative aspect-[4/5] w-full max-w-[740px] overflow-visible">
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.1, delayChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] as const } }
+  };
+
+  const imageVariants = {
+    hidden: { opacity: 0, scale: 0.95, y: 20 },
+    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 1, 0.5, 1] as const } }
+  };
+
+  return (
+    <section className="relative -mt-28 min-h-screen overflow-hidden px-4 pt-36 pb-14 md:-mt-32 md:px-0 md:pt-40 md:pb-18 lg:pb-8">
+
+
+      {/* Floating lines background */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
+        <FloatingLines
+          enabledWaves={["top", "middle", "bottom"]}
+          lineCount={5}
+          lineDistance={5}
+          bendRadius={5}
+          bendStrength={-0.5}
+          interactive={true}
+          parallax={true}
+          animationSpeed={0.3}
+          linesGradient={
+            isDark
+              ? ["#c5a059", "#8f6b2f", "#f4f1e7"] // Dark mode: bright gold, strong gold, light text color
+              : ["#5d4300", "#775a19", "#e8c176"] // Light mode: dark gold, strong gold, footer gold
+          }
+        />
+      </div>
+
+      <div className="relative z-10 mx-auto grid w-[min(1320px,95vw)] items-center gap-8 lg:min-h-[calc(100vh-2rem)] lg:items-center lg:[direction:ltr] lg:grid-cols-[1.14fr_0.86fr]">
+        <div className="order-2 flex justify-center lg:order-1 lg:justify-start lg:self-end">
+          <motion.div 
+            initial="hidden" animate="visible" variants={imageVariants} 
+            className="relative aspect-[4/5] w-full max-w-[740px] overflow-visible sm:max-w-[780px] lg:max-w-[860px] lg:translate-y-8 xl:max-w-[900px]"
+          >
             <Image
               src="/images/hero-pharaoh.png"
               alt="الأستاذ نادر جورج بالزي الفرعوني"
               fill
+              sizes="(max-width: 768px) 100vw, 50vw"
               priority
-              className="scale-[1.06] object-contain object-bottom drop-shadow-[0_40px_90px_rgba(88,55,18,0.30)]"
+              className="scale-[1.1] object-contain object-bottom drop-shadow-[0_42px_100px_rgba(88,55,18,0.30)] lg:scale-[1.16] xl:scale-[1.18]"
             />
-          </div>
+          </motion.div>
         </div>
 
-        <div className="order-1 space-y-8 text-right lg:order-2 lg:[direction:rtl]">
-          <div className="landing-chip w-fit">
+        <motion.div 
+          initial="hidden" animate="visible" variants={containerVariants} 
+          className="order-1 space-y-8 text-right lg:order-2 lg:space-y-7 lg:[direction:rtl]"
+        >
+          <motion.div variants={itemVariants} className="landing-chip w-fit">
             <BadgeCheck className="h-4 w-4" />
             <span>منصة تعليمية بروح فرعونية معاصرة</span>
-          </div>
+          </motion.div>
 
-          <div className="space-y-5">
-            <h1 className="max-w-3xl text-4xl font-black leading-[1.04] tracking-tight text-[var(--landing-ink)] md:text-6xl lg:text-[6.2rem]">
-              تعلّم التاريخ
-              <span className="block text-[var(--landing-accent)]">بروح الحضارة</span>
+          <motion.div variants={itemVariants} className="space-y-4 lg:space-y-6">
+            <h1 className="max-w-3xl flex flex-col text-right font-black tracking-tight" dir="rtl">
+              <MorphingText texts={["شـــــيـــخ", "نـــــــــادر"]} className="text-[var(--landing-ink)] !w-full !max-w-none text-right lg:!h-[1.1em]" />
+              <MorphingText texts={["المـــتحف", "جـــــــورج"]} className="text-[var(--landing-accent)] !w-full !max-w-none text-right lg:!h-[1.1em]" />
             </h1>
             <p className="max-w-2xl text-base leading-8 text-[var(--landing-muted)] md:text-lg lg:text-[1.32rem] lg:leading-9">
-              منصة تعليمية بهوية مصرية أصيلة، مبنية بأيدي معلمين خبراء.
-              دروس فيديو، اختبارات تفاعلية، ومتابعة دقيقة لتقدمك الدراسي.
+              بيئة رقمية متكاملة لضمان التفوق وتتبع الأداء خطوة بخطوة عبر محتوى مشروح بعناية، تقييمات ذكية، ومتابعة مستمرة.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-start">
-            <Link
+          <motion.div variants={itemVariants} className="flex flex-col items-stretch sm:items-start pt-6">
+            <InteractiveHoverButton
               href="/register"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--landing-accent)] px-7 py-4 text-base font-extrabold text-[var(--landing-accent-foreground)] shadow-[0_16px_40px_rgba(145,95,42,0.28)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
+              tabIndex={-1}
+              className="h-[58px] px-8 text-base shadow-[0_16px_40px_rgba(145,95,42,0.15)]"
+              icon={<ArrowUpLeft className="h-5 w-5" />}
             >
               ابدأ الجلسة التجريبية
-              <ArrowUpLeft className="h-4 w-4" />
-            </Link>
-            <a
-              href="#features"
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--landing-line)] bg-[color:rgba(255,250,240,0.82)] px-7 py-4 text-base font-bold text-[var(--landing-ink)] backdrop-blur-sm transition hover:bg-[var(--landing-card)]"
-            >
-              شاهد المميزات
-              <PlayCircle className="h-5 w-5" />
-            </a>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            {heroStats.map((stat) => (
-              <div key={stat.label} className="landing-panel rounded-[28px] px-5 py-5">
-                <p className="text-3xl font-black text-[var(--landing-accent)]">{stat.value}</p>
-                <p className="mt-2 text-sm font-semibold text-[var(--landing-muted)]">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+            </InteractiveHoverButton>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
   );

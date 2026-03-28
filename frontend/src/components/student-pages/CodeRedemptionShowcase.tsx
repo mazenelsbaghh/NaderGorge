@@ -53,7 +53,7 @@ function GuideCard({
   description: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 backdrop-blur">
+    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur">
       <div className="flex items-start gap-4">
         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
           {icon}

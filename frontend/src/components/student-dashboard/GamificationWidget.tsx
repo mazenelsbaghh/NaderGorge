@@ -28,7 +28,7 @@ export function GamificationWidget() {
   if (!status) return null;
 
   return (
-    <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl mt-4 rounded-[28px] p-4 bg-gradient-to-br from-[var(--admin-primary)] to-[#b0702d] text-white shadow-lg overflow-hidden relative">
+    <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl mt-4 rounded-[28px] p-4 bg-gradient-to-br from-[var(--admin-primary)] to-[#b0702d] text-white shadow-lg overflow-hidden relative">
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
       
       <div className="flex items-center gap-3 relative z-10">

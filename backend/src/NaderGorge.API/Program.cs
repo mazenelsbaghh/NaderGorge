@@ -18,6 +18,7 @@ using NaderGorge.Infrastructure.Services;
 using NaderGorge.Infrastructure.Providers;
 using StackExchange.Redis;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
 // ----------// Redis cache configuration
@@ -88,7 +89,11 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddRateLimitingPolicies();
 
 // ---------- Controllers + Swagger ----------
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

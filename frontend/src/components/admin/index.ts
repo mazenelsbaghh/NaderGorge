@@ -13,15 +13,30 @@
  *   .admin-badge       — Icon badge with primary-15 tint
  *   .admin-badge--pill — Pill-shaped badge variant
  */
-// Shared Layout
+// Dashboard & Layout
 export * from './AdminShellChrome';
 export * from './useAdminTheme';
-
-// Utils
-export * from './admin-utils';
-
 export * from './AdminStatCard';
 export * from './AdminTabBar';
+export * from './AdminPageSkeleton';
+export * from './AdminBackButton';
+export * from './AdminBreadcrumbs';
 export * from './AdminSearchToolbar';
 export * from './AdminModal';
 export * from './AdminDataTable';
+export * from './TermListManager';
+export * from './AddTermForm';
+export * from './PackageDetailsForm';
+export * from './LessonVideoList';
+export * from './AddVideoForm';
+export * from './LessonResourceList';
+export * from './AddResourceForm';
+export * from './LessonHomeworkList';
+export * from './AddHomeworkForm';
+export * from './InlineExamEditor';
+export * from './LinkExamForm';
+export * from './SectionListManager';
+export * from './AddSectionForm';
+export * from './LessonListManager';
+export * from './AddLessonForm';
+export * from '../ui/confirm-dialog';

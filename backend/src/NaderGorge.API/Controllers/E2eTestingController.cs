@@ -122,9 +122,11 @@ public class E2eTestingController : ControllerBase
         var homeworkId = Guid.NewGuid();
         var hwQuestionId = Guid.NewGuid();
 
+        var termId = Guid.NewGuid();
         var program = new Domain.Entities.Program { Id = programId, Name = "E2E Program", Description = "Test Program", TargetGrade = "1st Secondary" };
         var package = new Package { Id = packageId, Name = "E2E Student Package", Description = "Test", Price = 100, ProgramId = programId };
-        var section = new ContentSection { Id = sectionId, PackageId = packageId, Title = "E2E Section", Order = 0 };
+        var term = new Term { Id = termId, PackageId = packageId, Title = "E2E Term" };
+        var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };
         var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "vimeo", ProviderVideoId = "12345", MaxWatchCount = 2, Order = 0 };
         var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5 };
@@ -159,6 +161,7 @@ public class E2eTestingController : ControllerBase
 
         _dbContext.Set<Domain.Entities.Program>().Add(program);
         _dbContext.Set<Package>().Add(package);
+        _dbContext.Set<Term>().Add(term);
         _dbContext.Set<ContentSection>().Add(section);
         _dbContext.Set<Exam>().Add(exam);
         _dbContext.Set<Lesson>().Add(lesson);

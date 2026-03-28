@@ -1,0 +1,2 @@
+Is Step 2 visible: true
+Errors after click: []

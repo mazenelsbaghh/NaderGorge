@@ -42,7 +42,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> CompleteProfile([FromBody] CompleteProfileRequest body)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var command = new CompleteProfileCommand(userId, body.ParentPhone, body.Governorate, body.City, body.School);
+        var command = new CompleteProfileCommand(userId, body.ParentPhone, body.Governorate);
         var result = await _mediator.Send(command);
         return result.Success ? Ok(result) : BadRequest(result);
     }

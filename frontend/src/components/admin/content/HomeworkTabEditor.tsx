@@ -5,6 +5,9 @@ import { adminService } from '@/services/admin-service';
 import { contentService } from '@/services/content-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { Checkbox, Label } from '@/components/ui/checkbox';
+import { NumberField } from '@/components/ui/number-field';
+import NeumorphButton from '@/components/ui/neumorph-button';
 
 interface HomeworkTabEditorProps {
   lessonId: string;
@@ -18,6 +21,7 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
   const [title, setTitle] = useState('');
   const [instructions, setInstructions] = useState('');
   const [isMandatory, setIsMandatory] = useState(true);
+  const [totalScore, setTotalScore] = useState(100);
   const [passPoints, setPassPoints] = useState(50);
   const [questions, setQuestions] = useState<{ id: string; text: string; order: number; maxPoints: number }[]>([]);
 
@@ -34,6 +38,7 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
         setTitle(detail.homework.title);
         setInstructions(detail.homework.instructions);
         setIsMandatory(detail.homework.isMandatory);
+        setTotalScore(detail.homework.totalScore || 100);
         setPassPoints(detail.homework.requiredPointsToPass);
         setQuestions(detail.homework.questions || []);
       } else {
@@ -74,6 +79,7 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
         title,
         instructions,
         isMandatory,
+        totalScore,
         requiredPointsToPass: passPoints,
         questions: questions.map((q, i) => ({
           text: q.text,
@@ -103,15 +109,27 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
               <div className="animate-pulse text-center py-10 text-[var(--admin-muted)]">جار التنزيل...</div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-[var(--admin-text)]">عنوان الواجب</label>
                     <input type="text" value={title} onChange={e => setTitle(e.target.value)} required className="admin-input text-right" dir="rtl" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-[var(--admin-text)]">درجة النجاح</label>
-                    <input type="number" value={passPoints} onChange={e => setPassPoints(Number(e.target.value))} min={0} className="admin-input" />
-                  </div>
+                  <NumberField value={totalScore} onChange={setTotalScore} minValue={1}>
+                    <NumberField.Label className="text-sm font-semibold text-[var(--admin-text)] text-right block w-full mb-2">الدرجة النهائية</NumberField.Label>
+                    <NumberField.Group className="h-[46px] w-full bg-[var(--admin-card)] hover:shadow-none">
+                      <NumberField.DecrementButton />
+                      <NumberField.Input className="bg-[var(--admin-card)]" />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                  </NumberField>
+                  <NumberField value={passPoints} onChange={setPassPoints} minValue={0} maxValue={totalScore}>
+                    <NumberField.Label className="text-sm font-semibold text-[var(--admin-text)] text-right block w-full mb-2">درجة النجاح</NumberField.Label>
+                    <NumberField.Group className="h-[46px] w-full bg-[var(--admin-card)] hover:shadow-none">
+                      <NumberField.DecrementButton />
+                      <NumberField.Input className="bg-[var(--admin-card)]" />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                  </NumberField>
                 </div>
 
                 <div className="space-y-2">
@@ -119,17 +137,21 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
                   <textarea value={instructions} onChange={e => setInstructions(e.target.value)} rows={3} className="admin-input text-right" dir="rtl" />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="isMandatory" checked={isMandatory} onChange={e => setIsMandatory(e.target.checked)} className="h-5 w-5 rounded accent-[var(--admin-primary)]" />
-                  <label htmlFor="isMandatory" className="text-sm font-semibold text-[var(--admin-text)]">اجباري لفتح الدرس التالي</label>
-                </div>
+                <Checkbox id="isMandatory" isSelected={isMandatory} onChange={setIsMandatory}>
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Content>
+                    <Label className="text-sm font-semibold text-[var(--admin-text)]">اجباري لفتح الدرس التالي</Label>
+                  </Checkbox.Content>
+                </Checkbox>
 
                 <div className="pt-4 border-t border-[var(--admin-border)]">
                   <div className="flex justify-between items-center mb-4">
                     <h4 className="font-bold text-lg text-[var(--admin-text)]">الأسئلة ({questions.length})</h4>
-                    <button type="button" onClick={addQuestion} className="bg-[var(--admin-primary-15)] text-[var(--admin-primary)] px-4 py-2 rounded-xl text-sm font-bold transition hover:bg-[var(--admin-primary)] hover:text-[var(--admin-primary-contrast)]">
+                    <NeumorphButton type="button" onClick={addQuestion} intent="ghost" size="sm">
                       + إضافة سؤال مقالي
-                    </button>
+                    </NeumorphButton>
                   </div>
 
                   <div className="space-y-4">
@@ -146,18 +168,19 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
                             dir="rtl"
                           />
                           <div className="flex items-center gap-3">
-                            <label className="text-sm text-[var(--admin-muted)]">الدرجة:</label>
-                            <input 
-                              type="number" 
-                              value={q.maxPoints} 
-                              onChange={e => updateQuestion(idx, 'maxPoints', Number(e.target.value))} 
-                              className="w-24 admin-input"
-                            />
+                            <NumberField value={q.maxPoints} onChange={val => updateQuestion(idx, 'maxPoints', val)} minValue={1} className="w-32">
+                              <NumberField.Group className="h-[42px] w-full bg-[var(--admin-card)] hover:shadow-none">
+                                <NumberField.DecrementButton className="w-8 flex-shrink-0" />
+                                <NumberField.Input className="bg-[var(--admin-card)] text-xs p-1" />
+                                <NumberField.IncrementButton className="w-8 flex-shrink-0" />
+                              </NumberField.Group>
+                            </NumberField>
+                            <label className="text-sm font-bold text-[var(--admin-muted)] mt-1 whitespace-nowrap">الدرجة:</label>
                           </div>
                         </div>
-                        <button type="button" onClick={() => removeQuestion(idx)} className="text-[#cf6d5b] hover:text-[#b5483a] p-2 transition">
-                          &times; حذف
-                        </button>
+                        <NeumorphButton type="button" onClick={() => removeQuestion(idx)} intent="danger" size="sm">
+                          × حذف
+                        </NeumorphButton>
                       </div>
                     ))}
                     {questions.length === 0 && (
@@ -170,10 +193,10 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
           </div>
 
           <div className="p-6 border-t border-[var(--admin-border)] flex justify-end gap-3 bg-[var(--admin-card-soft)] rounded-b-[24px]">
-            <button type="button" onClick={onClose} className="px-5 py-2 font-semibold text-[var(--admin-muted)] hover:text-[var(--admin-text)] transition">إلغاء</button>
-            <button type="submit" disabled={saving || loading} className="admin-btn-primary">
-              {saving ? 'جاري الحفظ...' : 'حفظ الواجب'}
-            </button>
+            <NeumorphButton type="button" onClick={onClose} intent="ghost" size="md">إلغاء</NeumorphButton>
+            <NeumorphButton type="submit" disabled={saving || loading} loading={saving} intent="primary" size="md" pill>
+              حفظ الواجب
+            </NeumorphButton>
           </div>
         </form>
       </motion.div>

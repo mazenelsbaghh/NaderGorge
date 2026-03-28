@@ -1,12 +1,12 @@
 export function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat('ar-EG').format(value);
+  return new Intl.NumberFormat('en-US').format(value);
 }
 
 export function formatDate(value: string | Date, options?: Intl.DateTimeFormatOptions) {
   const dateStr = value instanceof Date ? value.toISOString() : value;
   // If the string starts with a year but doesn't have a Z or offset, and looks like a raw DB string
   // It's safer to just let Date parse it, but we can default the options
-  return new Intl.DateTimeFormat('ar-EG', {
+  return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium',
     ...options
   }).format(new Date(dateStr));

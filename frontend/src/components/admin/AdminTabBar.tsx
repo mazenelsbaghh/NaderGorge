@@ -19,7 +19,7 @@ export function AdminTabBar<T extends string>({
   onSelect,
 }: AdminTabBarProps<T>) {
   return (
-    <div className="flex w-fit items-center gap-2 overflow-x-auto rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] p-2 backdrop-blur-md">
+    <div className="flex w-fit items-center gap-2 overflow-x-auto rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-2 backdrop-blur-md">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
         const Icon = tab.icon;

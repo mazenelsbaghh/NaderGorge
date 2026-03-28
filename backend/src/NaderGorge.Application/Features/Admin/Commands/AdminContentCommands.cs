@@ -43,7 +43,7 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 }
 
 // --- Terms ---
-public record CreateTermCommand(string Title, int Order, Guid PackageId) : IRequest<ApiResponse<Guid>>;
+public record CreateTermCommand(string Title, int Order, Guid PackageId, decimal Price) : IRequest<ApiResponse<Guid>>;
 
 public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiResponse<Guid>>
 {
@@ -56,7 +56,8 @@ public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiRe
         {
             Title = request.Title,
             Order = request.Order,
-            PackageId = request.PackageId
+            PackageId = request.PackageId,
+            Price = request.Price
         };
         _db.Terms.Add(term);
         await _db.SaveChangesAsync(ct);
@@ -64,7 +65,7 @@ public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiRe
     }
 }
 
-public record UpdateTermCommand(Guid Id, string Title, int Order) : IRequest<ApiResponse>;
+public record UpdateTermCommand(Guid Id, string Title, int Order, decimal Price) : IRequest<ApiResponse>;
 
 public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiResponse>
 {
@@ -78,6 +79,7 @@ public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiRe
 
         term.Title = request.Title;
         term.Order = request.Order;
+        term.Price = request.Price;
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }
@@ -105,7 +107,7 @@ public class DeleteTermCommandHandler : IRequestHandler<DeleteTermCommand, ApiRe
 }
 
 // --- Sections ---
-public record CreateSectionCommand(string Title, int Order, Guid TermId) : IRequest<ApiResponse<Guid>>;
+public record CreateSectionCommand(string Title, int Order, Guid TermId, decimal Price) : IRequest<ApiResponse<Guid>>;
 
 public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand, ApiResponse<Guid>>
 {
@@ -119,7 +121,8 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
         {
             Title = request.Title,
             Order = request.Order,
-            TermId = request.TermId
+            TermId = request.TermId,
+            Price = request.Price
         };
         _db.ContentSections.Add(sec);
         await _db.SaveChangesAsync(ct);
@@ -127,7 +130,7 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
     }
 }
 
-public record CreateLessonCommand(string Title, string Summary, int Order, Guid SectionId, Guid? ExamId) : IRequest<ApiResponse<Guid>>;
+public record CreateLessonCommand(string Title, string Summary, int Order, Guid SectionId, Guid? ExamId, decimal Price) : IRequest<ApiResponse<Guid>>;
 
 public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, ApiResponse<Guid>>
 {
@@ -143,7 +146,8 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
             Summary = request.Summary,
             Order = request.Order,
             ContentSectionId = request.SectionId,
-            ExamId = request.ExamId
+            ExamId = request.ExamId,
+            Price = request.Price
         };
         _db.Lessons.Add(lesson);
         await _db.SaveChangesAsync(ct);
@@ -182,6 +186,7 @@ public record AttachHomeworkCommand(
     string Instructions,
     bool IsMandatory,
     int RequiredPointsToPass,
+    decimal TotalScore,
     List<AttachHomeworkQuestionDto> Questions) : IRequest<ApiResponse<Guid>>;
 
 public record AttachHomeworkQuestionDto(string Text, int Order, int MaxPoints);
@@ -211,7 +216,8 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 Title = request.Title,
                 Description = request.Instructions,
                 IsMandatory = request.IsMandatory,
-                PassingScoreThreshold = request.RequiredPointsToPass
+                PassingScoreThreshold = request.RequiredPointsToPass,
+                TotalScore = request.TotalScore
             };
             _db.Homeworks.Add(hw);
         }
@@ -221,6 +227,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             hw.Description = request.Instructions;
             hw.IsMandatory = request.IsMandatory;
             hw.PassingScoreThreshold = request.RequiredPointsToPass;
+            hw.TotalScore = request.TotalScore;
             _db.HomeworkQuestions.RemoveRange(hw.Questions);
             hw.Questions.Clear();
         }
@@ -238,5 +245,49 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(hw.Id);
+    }
+}
+
+public record CreateLessonResourceCommand(Guid LessonId, string Title, string FileUrl, string ResourceType) : IRequest<ApiResponse<Guid>>;
+
+public class CreateLessonResourceCommandHandler : IRequestHandler<CreateLessonResourceCommand, ApiResponse<Guid>>
+{
+    private readonly IAppDbContext _db;
+
+    public CreateLessonResourceCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse<Guid>> Handle(CreateLessonResourceCommand request, CancellationToken ct)
+    {
+        var resource = new LessonResource
+        {
+            LessonId = request.LessonId,
+            Title = request.Title,
+            FileUrl = request.FileUrl,
+            ResourceType = request.ResourceType
+        };
+
+        _db.LessonResources.Add(resource);
+        await _db.SaveChangesAsync(ct);
+
+        return ApiResponse<Guid>.Ok(resource.Id);
+    }
+}
+
+public record LinkLessonExamCommand(Guid LessonId, Guid? ExamId) : IRequest<ApiResponse>;
+
+public class LinkLessonExamCommandHandler : IRequestHandler<LinkLessonExamCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+
+    public LinkLessonExamCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse> Handle(LinkLessonExamCommand request, CancellationToken ct)
+    {
+        var lesson = await _db.Lessons.FindAsync(new object[] { request.LessonId }, ct);
+        if (lesson == null) return ApiResponse.Fail("Lesson not found");
+
+        lesson.ExamId = request.ExamId;
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
     }
 }

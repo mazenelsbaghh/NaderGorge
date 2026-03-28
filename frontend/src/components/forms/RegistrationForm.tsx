@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
@@ -14,7 +13,6 @@ import {
   LockKeyhole,
   MapPinned,
   ShieldCheck,
-  Sparkles,
   UserRound,
   UsersRound,
 } from 'lucide-react';
@@ -23,7 +21,12 @@ import { z } from 'zod';
 import { AcademicFields, requiresTrack } from '@/components/registration/AcademicFields';
 import type { AcademicData } from '@/components/registration/AcademicFields';
 import { FeatureCarousel } from '@/components/ui/feature-carousel';
-import { authService } from '@/services/auth-service';
+import { Checkbox, Label } from '@/components/ui/checkbox';
+import { authService, getDeviceFingerprint } from '@/services/auth-service';
+
+import { useAuthStore } from '@/stores/auth-store';
+import { getDistrictsForGovernorate } from '@/data/governorate-districts';
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 const EGYPTIAN_GOVERNORATES = [
   'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'البحيرة', 'الفيوم',
@@ -33,23 +36,27 @@ const EGYPTIAN_GOVERNORATES = [
   'شمال سيناء', 'سوهاج', 'البحر الأحمر',
 ];
 
+const egyptianPhoneRegex = /^01[0125]\d{8}$/;
+
 const schema = z
   .object({
-    fullName: z.string().min(5, 'يرجى إدخال الاسم الرباعي')
-      .refine((n) => n.trim().split(/\s+/).length >= 4, 'الاسم لازم يكون رباعي على الأقل'),
-    phoneNumber: z.string().regex(/^01[0125]\d{8}$/, 'رقم هاتف مصري غير صالح'),
-    studentCode: z.string().min(1, 'كود الطالب (دوستاب) مطلوب'),
-    dateOfBirth: z.string().min(1, 'تاريخ الميلاد مطلوب'),
-    gender: z.enum(['Male', 'Female'], { message: 'اختر النوع' }),
-    governorate: z.string().min(1, 'اختر المحافظة'),
-    address: z.string().min(3, 'يرجى كتابة العنوان'),
-    parentPhone: z.string().regex(/^01[0125]\d{8}$/, 'رقم هاتف ولي الأمر غير صالح'),
+    fullName: z.string().min(5, 'يرجى إدخال اسمك رباعيًا')
+      .refine((n) => n.trim().split(/\s+/).length >= 4, 'يرجى إدخال اسمك رباعيًا (مثال: أحمد محمد محمود علي)'),
+    phoneNumber: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم الهاتف بشكل صحيح، مثال: 01012345678'),
+    secondaryPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم الهاتف بشكل صحيح').optional().or(z.literal('')),
+    dateOfBirth: z.string().min(1, 'يرجى تحديد تاريخ ميلادك'),
+    gender: z.enum(['Male', 'Female'], { message: 'يرجى تحديد النوع' }),
+    governorate: z.string().min(1, 'يرجى اختيار المحافظة'),
+    district: z.string().min(1, 'يرجى اختيار المنطقة / الحي'),
+    address: z.string().min(3, 'يرجى كتابة عنوانك بالتفصيل'),
+    parentPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم هاتف ولي الأمر بشكل صحيح'),
+    secondaryParentPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم الهاتف بشكل صحيح').optional().or(z.literal('')),
     isFatherAlive: z.boolean(),
     isMotherAlive: z.boolean(),
-    educationStage: z.enum(['Secondary', 'Baccalaureate'], { message: 'اختر المرحلة الدراسية' }),
-    gradeLevel: z.string().min(1, 'اختر الصف الدراسي'),
+    educationStage: z.enum(['Secondary', 'Baccalaureate'], { message: 'يرجى اختيار المرحلة الدراسية' }),
+    gradeLevel: z.string().min(1, 'يرجى اختيار الصف الدراسي'),
     studyTrack: z.string().optional(),
-    password: z.string().min(8, 'كلمة المرور 8 أحرف على الأقل'),
+    password: z.string().min(8, 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل'),
     confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, {
@@ -60,7 +67,7 @@ const schema = z
     if (requiresTrack(d.gradeLevel) && !d.studyTrack) return false;
     return true;
   }, {
-    message: 'اختر الشعبة / التخصص',
+    message: 'يرجى اختيار الشعبة / التخصص',
     path: ['studyTrack'],
   });
 
@@ -69,12 +76,14 @@ type FormError = { field?: string; message: string };
 const EMPTY_FORM = {
   fullName: '',
   phoneNumber: '',
-  studentCode: '',
+  secondaryPhone: '',
   dateOfBirth: '',
   gender: '' as 'Male' | 'Female' | '',
   governorate: '',
+  district: '',
   address: '',
   parentPhone: '',
+  secondaryParentPhone: '',
   isFatherAlive: true,
   isMotherAlive: true,
   educationStage: '' as 'Secondary' | 'Baccalaureate' | '',
@@ -84,59 +93,89 @@ const EMPTY_FORM = {
   confirmPassword: '',
 };
 
+type RegistrationFormState = typeof EMPTY_FORM;
+
+function normalizeFormData(data: Partial<RegistrationFormState>): RegistrationFormState {
+  return {
+    fullName: data.fullName ?? '',
+    phoneNumber: data.phoneNumber ?? '',
+    secondaryPhone: data.secondaryPhone ?? '',
+    dateOfBirth: data.dateOfBirth ?? '',
+    gender: data.gender ?? '',
+    governorate: data.governorate ?? '',
+    district: data.district ?? '',
+    address: data.address ?? '',
+    parentPhone: data.parentPhone ?? '',
+    secondaryParentPhone: data.secondaryParentPhone ?? '',
+    isFatherAlive: data.isFatherAlive ?? true,
+    isMotherAlive: data.isMotherAlive ?? true,
+    educationStage: data.educationStage ?? '',
+    gradeLevel: data.gradeLevel ?? '',
+    studyTrack: data.studyTrack ?? '',
+    password: data.password ?? '',
+    confirmPassword: data.confirmPassword ?? '',
+  };
+}
+
 const REGISTRATION_STEPS = [
   {
     id: 'identity',
     badge: 'المرحلة 01',
-    title: 'هويتك الأساسية',
-    description: 'نجمع بياناتك الشخصية كما ستظهر في النظام وفي المتابعة مع المدرس.',
-    hint: 'كل ما في هذه الخطوة يحدد بطاقتك داخل المنصة.',
+    title: 'بياناتك الشخصية',
+    description: 'اكتب بياناتك كما ترغب أن تظهر في ملفك الشخصي.',
+    hint: 'ستظهر هذه البيانات في ملفك الشخصي وللمدرسين.',
     icon: UserRound,
   },
   {
     id: 'guardian',
     badge: 'المرحلة 02',
     title: 'ولي الأمر والمتابعة',
-    description: 'نثبت وسيلة التواصل الرئيسية التي سنرجع لها عند المتابعة والتنبيه.',
-    hint: 'هذه الخطوة تجعل الحساب جاهزًا للمتابعة الأسرية والانضباط.',
+    description: 'أضف بيانات ولي الأمر للتواصل المستمر ولمتابعة مستوى الطالب.',
+    hint: 'سنستخدم هذا الرقم لإرسال تقارير المستوى والغياب.',
     icon: UsersRound,
   },
   {
     id: 'academic',
     badge: 'المرحلة 03',
     title: 'المسار الدراسي',
-    description: 'نضبط المرحلة والصف والتخصص حتى تكون الخطة والمحتوى مناسبين لك.',
-    hint: 'المحتوى والامتحانات سيتشكلان بناءً على هذه الخطوة.',
+    description: 'حدد مرحلتك الدراسية ليتم تخصيص المناهج والامتحانات بما يناسبك.',
+    hint: 'تأكد من صحة البيانات لضمان الوصول للمحتوى الصحيح.',
     icon: GraduationCap,
   },
   {
     id: 'security',
     badge: 'المرحلة 04',
-    title: 'تأمين الحساب',
-    description: 'آخر خطوة قبل تشغيل الحساب: كلمة مرور قوية تؤكد أنك جاهز للبدء.',
-    hint: 'بعد هذه الخطوة يصبح الحساب جاهزًا للدخول مباشرة.',
+    title: 'كلمة المرور',
+    description: 'قم بإنشاء كلمة مرور قوية لحماية حسابك والبدء في استخدام المنصة.',
+    hint: 'تأكد من حفظ كلمة المرور لتتمكن من تسجيل الدخول لاحقًا.',
     icon: ShieldCheck,
   },
 ] as const;
 
 const STEP_FIELDS = [
-  ['fullName', 'studentCode', 'phoneNumber', 'dateOfBirth', 'gender', 'governorate', 'address'],
-  ['parentPhone'],
+  ['fullName', 'phoneNumber', 'secondaryPhone', 'dateOfBirth', 'gender', 'governorate', 'district', 'address'],
+  ['parentPhone', 'secondaryParentPhone'],
   ['educationStage', 'gradeLevel', 'studyTrack'],
   ['password', 'confirmPassword'],
 ] as const;
 
 const PANEL_ANIMATION = {
-  initial: { opacity: 0, y: 14 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -14 },
-  transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const },
+  initial: { opacity: 0, scale: 0.85, y: 50 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 1.05, y: -30 },
+  transition: { 
+    type: "spring" as const, 
+    stiffness: 400, 
+    damping: 28, 
+    mass: 1 
+  },
 };
 
 export function RegistrationForm() {
   const router = useRouter();
+  const { setAuth } = useAuthStore();
 
-  const [formData, setFormData] = useState(EMPTY_FORM);
+  const [formData, setFormData] = useState<RegistrationFormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormError[]>([]);
   const [activeStep, setActiveStep] = useState(0);
@@ -160,14 +199,14 @@ export function RegistrationForm() {
   const passwordChecklist = useMemo(
     () => [
       { label: '8 أحرف على الأقل', valid: formData.password.length >= 8 },
-      { label: 'تأكيد مطابق', valid: !!formData.confirmPassword && formData.password === formData.confirmPassword },
-      { label: 'جاهز لتفعيل الحساب', valid: formData.password.length >= 8 && formData.password === formData.confirmPassword },
+      { label: 'كلمتا المرور متطابقتان', valid: !!formData.confirmPassword && formData.password === formData.confirmPassword },
+      { label: 'جاهز لإنشاء الحساب', valid: formData.password.length >= 8 && formData.password === formData.confirmPassword },
     ],
     [formData.confirmPassword, formData.password],
   );
 
   const updateFieldValue = (name: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => normalizeFormData({ ...prev, [name]: value }));
     setErrors((prev) => prev.filter((err) => err.field !== name));
   };
 
@@ -175,10 +214,15 @@ export function RegistrationForm() {
     const { name, value, type } = e.target;
     const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
     updateFieldValue(name, newValue);
+    // Reset district when governorate changes
+    if (name === 'governorate') {
+      setFormData((prev) => normalizeFormData({ ...prev, district: '' }));
+      setErrors((prev) => prev.filter((err) => err.field !== 'district'));
+    }
   };
 
   const handleAcademicChange = (academic: AcademicData) => {
-    setFormData((prev) => ({ ...prev, ...academic }));
+    setFormData((prev) => normalizeFormData({ ...prev, ...academic }));
     setErrors((prev) =>
       prev.filter((err) => !['educationStage', 'gradeLevel', 'studyTrack'].includes(err.field || '')),
     );
@@ -247,13 +291,15 @@ export function RegistrationForm() {
       await authService.register({
         fullName: formData.fullName,
         phoneNumber: formData.phoneNumber,
+        secondaryPhone: formData.secondaryPhone || undefined,
         password: formData.password,
-        studentCode: formData.studentCode,
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender as 'Male' | 'Female',
         governorate: formData.governorate,
+        district: formData.district,
         address: formData.address,
         parentPhone: formData.parentPhone,
+        secondaryParentPhone: formData.secondaryParentPhone || undefined,
         isFatherAlive: formData.isFatherAlive,
         isMotherAlive: formData.isMotherAlive,
         educationStage: formData.educationStage as 'Secondary' | 'Baccalaureate',
@@ -261,7 +307,31 @@ export function RegistrationForm() {
         studyTrack: formData.studyTrack || undefined,
       });
 
-      router.push('/login?registered=true');
+      // Auto login after successful registration
+      const loginRes = await authService.login({
+        phoneNumber: formData.phoneNumber,
+        password: formData.password,
+        deviceFingerprint: getDeviceFingerprint(),
+        deviceName: navigator.userAgent.slice(0, 100),
+      });
+
+      const { accessToken, refreshToken, user } = loginRes.data.data;
+
+      setAuth(
+        {
+          id: user.id,
+          fullName: user.fullName,
+          phone: user.phone,
+          roles: user.roles,
+          profileComplete: user.profileComplete,
+        },
+        accessToken,
+        refreshToken,
+        true // rememberMe: true ensures session persistence
+      );
+
+      // Redirect directly to the student dashboard
+      router.push('/student');
     } catch (err: unknown) {
       const message =
         typeof err === 'object' &&
@@ -269,7 +339,24 @@ export function RegistrationForm() {
         'response' in err &&
         typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
           ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message as string)
-          : 'فشل إنشاء الحساب. ربما رقم الهاتف مسجّل من قبل.';
+          : 'عذرًا، فشل إنشاء الحساب. يُرجى المحاولة مرة أخرى لاحقًا.';
+
+      const normalizedMessage = message.toLowerCase();
+      const isDuplicatePhoneError =
+        normalizedMessage.includes('phone number already registered') ||
+        normalizedMessage.includes('رقم الهاتف') ||
+        normalizedMessage.includes('مسجل بالفعل');
+
+      if (isDuplicatePhoneError) {
+        setActiveStep(0);
+        setErrors([
+          {
+            field: 'phoneNumber',
+            message: 'هذا الرقم مسجل مسبقًا. يمكنك تسجيل الدخول بدلاً من ذلك، أو تغيير الرقم.',
+          },
+        ]);
+        return;
+      }
 
       setErrors([
         {
@@ -281,55 +368,147 @@ export function RegistrationForm() {
     }
   };
 
+  const renderPreviewPanel = () => {
+    switch (activeStep) {
+      case 0:
+        return (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">بطاقة الطالب</p>
+              <h3 className="mt-4 text-2xl font-black text-[var(--admin-text)] leading-snug">
+                {formData.fullName || 'الاسم الرباعي'}
+              </h3>
+              <div className="mt-6 flex flex-wrap gap-2 text-xs font-bold text-[var(--admin-muted)]">
+                <span className="rounded-full bg-[var(--admin-bg)]/50 px-4 py-2">{formData.phoneNumber || 'رقم الهاتف'}</span>
+                <span className="rounded-full bg-[var(--admin-bg)]/50 px-4 py-2">{formData.governorate || 'المحافظة'}</span>
+              </div>
+            </div>
+            <div className="grid gap-4">
+              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                <p className="text-[0.65rem] font-bold text-[var(--admin-muted)] uppercase tracking-wider">المنطقة السكنية</p>
+                <p className="mt-2 text-xl font-black text-[var(--admin-text)]">{formData.district || 'اختر المنطقة السكنية'}</p>
+              </div>
+              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                <p className="text-[0.65rem] font-bold text-[var(--admin-muted)] uppercase tracking-wider">تاريخ الميلاد</p>
+                <p className="mt-2 text-xl font-black text-[var(--admin-text)]">{formData.dateOfBirth || 'اختر تاريخ الميلاد'}</p>
+              </div>
+            </div>
+          </div>
+        );
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جهة المتابعة</p>
+              <h3 className="mt-4 text-2xl font-black text-[var(--admin-text)] tracking-wider">{formData.parentPhone || 'رقم هاتف ولي الأمر'}</h3>
+              <p className="mt-2 text-sm text-[var(--admin-muted)] leading-7">هذا الرقم سيستخدم للتواصل والمتابعة عند الحاجة.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                <p className="text-xs font-bold text-[var(--admin-muted)]">الأب</p>
+                <p className="mt-2 text-lg font-black text-[var(--admin-text)]">{formData.isFatherAlive ? 'على قيد الحياة' : 'متوفى'}</p>
+              </div>
+              <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
+                <p className="text-xs font-bold text-[var(--admin-muted)]">الأم</p>
+                <p className="mt-2 text-lg font-black text-[var(--admin-text)]">{formData.isMotherAlive ? 'على قيد الحياة' : 'متوفاة'}</p>
+              </div>
+            </div>
+          </div>
+        );
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">المسار الحالي</p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
+                  {formData.educationStage === 'Secondary' ? 'ثانوية' : formData.educationStage === 'Baccalaureate' ? 'بكالوريا' : 'المرحلة الدراسية'}
+                </span>
+                <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
+                  {formData.gradeLevel || 'الصف الدراسي'}
+                </span>
+                {requiresTrack(formData.gradeLevel) ? (
+                  <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
+                    {formData.studyTrack || 'الشعبة / التخصص'}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-6 backdrop-blur-sm">
+              <p className="text-sm leading-7 text-[var(--admin-muted)] font-medium">
+                بمجرد تثبيت هذه الخطوة، النظام سيعرض لك الخطة والواجبات والاختبارات الملائمة تمامًا لمرحلتك.
+              </p>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="space-y-4">
+            <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جاهزية الحساب</p>
+              <div className="mt-5 space-y-3">
+                {passwordChecklist.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between rounded-[20px] bg-[var(--admin-bg)]/90 px-5 py-4 backdrop-blur-md">
+                    <span className="text-[0.85rem] font-bold text-[var(--admin-text)]">{item.label}</span>
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${item.valid ? 'bg-[var(--admin-primary)] text-[var(--admin-bg)]' : 'bg-[var(--admin-border)] text-[var(--admin-muted)]'}`}>
+                      {item.valid ? <Check className="h-4 w-4" /> : <LockKeyhole className="h-4 w-4" />}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
+
   const renderStepFields = () => {
     switch (activeStep) {
       case 0:
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="auth-label" htmlFor="reg-fullName">الاسم الرباعي</label>
-                <input
-                  id="reg-fullName"
-                  name="fullName"
-                  type="text"
-                  className={inputCls('fullName')}
-                  placeholder="أدخل اسمك الرباعي"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                />
-                {fieldError('fullName') && <p className="auth-field-error">{fieldError('fullName')}</p>}
-              </div>
-              <div>
-                <label className="auth-label" htmlFor="reg-studentCode">كود الطالب</label>
-                <input
-                  id="reg-studentCode"
-                  name="studentCode"
-                  type="text"
-                  dir="ltr"
-                  className={inputCls('studentCode')}
-                  placeholder="كود الطالب"
-                  value={formData.studentCode}
-                  onChange={handleChange}
-                />
-                {fieldError('studentCode') && <p className="auth-field-error">{fieldError('studentCode')}</p>}
-              </div>
+            <div>
+              <label className="auth-label" htmlFor="reg-fullName">الاسم الرباعي</label>
+              <input
+                id="reg-fullName"
+                name="fullName"
+                type="text"
+                className={inputCls('fullName')}
+                placeholder="مثال: أحمد محمد محمود علي"
+                value={formData.fullName ?? ''}
+                onChange={handleChange}
+              />
+              {fieldError('fullName') && <p className="auth-field-error">{fieldError('fullName')}</p>}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="auth-label" htmlFor="reg-phone">رقم الهاتف</label>
+                <label className="auth-label" htmlFor="reg-phone">رقم الهاتف الأساسي</label>
                 <input
                   id="reg-phone"
                   name="phoneNumber"
                   type="tel"
                   dir="ltr"
                   className={inputCls('phoneNumber')}
-                  placeholder="01XXXXXXXXX"
-                  value={formData.phoneNumber}
+                  placeholder="مثال: 01012345678"
+                  value={formData.phoneNumber ?? ''}
                   onChange={handleChange}
                 />
                 {fieldError('phoneNumber') && <p className="auth-field-error">{fieldError('phoneNumber')}</p>}
+              </div>
+              <div>
+                <label className="auth-label" htmlFor="reg-secondaryPhone">رقم هاتف إضافي <span className="text-[var(--admin-muted)] text-xs">(اختياري)</span></label>
+                <input
+                  id="reg-secondaryPhone"
+                  name="secondaryPhone"
+                  type="tel"
+                  dir="ltr"
+                  className={inputCls('secondaryPhone')}
+                  placeholder="مثال: 01112345678"
+                  value={formData.secondaryPhone ?? ''}
+                  onChange={handleChange}
+                />
+                {fieldError('secondaryPhone') && <p className="auth-field-error">{fieldError('secondaryPhone')}</p>}
               </div>
               <div>
                 <label className="auth-label" htmlFor="reg-dob">تاريخ الميلاد</label>
@@ -340,7 +519,7 @@ export function RegistrationForm() {
                   dir="ltr"
                   className={inputCls('dateOfBirth')}
                   style={selectStyle}
-                  value={formData.dateOfBirth}
+                  value={formData.dateOfBirth ?? ''}
                   onChange={handleChange}
                 />
                 {fieldError('dateOfBirth') && <p className="auth-field-error">{fieldError('dateOfBirth')}</p>}
@@ -355,13 +534,13 @@ export function RegistrationForm() {
                   name="gender"
                   data-select
                   className={inputCls('gender')}
-                  value={formData.gender}
+                  value={formData.gender ?? ''}
                   onChange={handleChange}
                   style={selectStyle}
                 >
-                  <option value="" disabled style={optionStyle}>اختر النوع...</option>
-                  <option value="Male" style={optionStyle}>ذكر</option>
-                  <option value="Female" style={optionStyle}>أنثى</option>
+                  <option key="gender-placeholder" value="" disabled style={optionStyle}>اختر النوع...</option>
+                  <option key="gender-male" value="Male" style={optionStyle}>ذكر</option>
+                  <option key="gender-female" value="Female" style={optionStyle}>أنثى</option>
                 </select>
                 {fieldError('gender') && <p className="auth-field-error">{fieldError('gender')}</p>}
               </div>
@@ -372,11 +551,11 @@ export function RegistrationForm() {
                   name="governorate"
                   data-select
                   className={inputCls('governorate')}
-                  value={formData.governorate}
+                  value={formData.governorate ?? ''}
                   onChange={handleChange}
                   style={selectStyle}
                 >
-                  <option value="" disabled style={optionStyle}>اختر المحافظة...</option>
+                  <option key="governorate-placeholder" value="" disabled style={optionStyle}>اختر المحافظة...</option>
                   {EGYPTIAN_GOVERNORATES.map((gov) => (
                     <option key={gov} value={gov} style={optionStyle}>{gov}</option>
                   ))}
@@ -386,14 +565,36 @@ export function RegistrationForm() {
             </div>
 
             <div>
-              <label className="auth-label" htmlFor="reg-address">العنوان</label>
+              <label className="auth-label" htmlFor="reg-district">المنطقة / الحي</label>
+              <select
+                id="reg-district"
+                name="district"
+                data-select
+                className={inputCls('district')}
+                value={formData.district ?? ''}
+                onChange={handleChange}
+                style={selectStyle}
+                disabled={!formData.governorate}
+              >
+                <option key="district-placeholder" value="" disabled style={optionStyle}>
+                  {formData.governorate ? 'اختر المنطقة / الحي...' : 'اختر المحافظة أولاً'}
+                </option>
+                {getDistrictsForGovernorate(formData.governorate ?? '').map((d) => (
+                  <option key={d} value={d} style={optionStyle}>{d}</option>
+                ))}
+              </select>
+              {fieldError('district') && <p className="auth-field-error">{fieldError('district')}</p>}
+            </div>
+
+            <div>
+              <label className="auth-label" htmlFor="reg-address">العنوان بالتفصيل</label>
               <input
                 id="reg-address"
                 name="address"
                 type="text"
                 className={inputCls('address')}
-                placeholder="العنوان بالتفصيل"
-                value={formData.address}
+                placeholder="مثال: 15 شارع المحطة، الدور الثاني، بجوار المسجد"
+                value={formData.address ?? ''}
                 onChange={handleChange}
               />
               {fieldError('address') && <p className="auth-field-error">{fieldError('address')}</p>}
@@ -404,43 +605,63 @@ export function RegistrationForm() {
         return (
           <div className="space-y-4">
             <div>
-              <label className="auth-label" htmlFor="reg-parentPhone">رقم ولي الأمر</label>
+              <label className="auth-label" htmlFor="reg-parentPhone">رقم هاتف ولي الأمر (للمتابعة)</label>
               <input
                 id="reg-parentPhone"
                 name="parentPhone"
                 type="tel"
                 dir="ltr"
                 className={inputCls('parentPhone')}
-                placeholder="01XXXXXXXXX"
-                value={formData.parentPhone}
+                placeholder="مثال: 01212345678"
+                value={formData.parentPhone ?? ''}
                 onChange={handleChange}
               />
               {fieldError('parentPhone') && <p className="auth-field-error">{fieldError('parentPhone')}</p>}
             </div>
 
+            <div>
+              <label className="auth-label" htmlFor="reg-secondaryParentPhone">رقم ولي أمر إضافي <span className="text-[var(--admin-muted)] text-xs">(اختياري)</span></label>
+              <input
+                id="reg-secondaryParentPhone"
+                name="secondaryParentPhone"
+                type="tel"
+                dir="ltr"
+                className={inputCls('secondaryParentPhone')}
+                placeholder="مثال: 01512345678"
+                value={formData.secondaryParentPhone ?? ''}
+                onChange={handleChange}
+              />
+              {fieldError('secondaryParentPhone') && <p className="auth-field-error">{fieldError('secondaryParentPhone')}</p>}
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="auth-checkbox rounded-[22px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4">
-                <input
-                  className="auth-checkbox__input"
-                  type="checkbox"
-                  name="isFatherAlive"
-                  checked={formData.isFatherAlive}
-                  onChange={handleChange}
-                />
-                <span className="auth-checkbox__mark" />
-                <span className="auth-checkbox__label">الأب على قيد الحياة</span>
-              </label>
-              <label className="auth-checkbox rounded-[22px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4">
-                <input
-                  className="auth-checkbox__input"
-                  type="checkbox"
-                  name="isMotherAlive"
-                  checked={formData.isMotherAlive}
-                  onChange={handleChange}
-                />
-                <span className="auth-checkbox__mark" />
-                <span className="auth-checkbox__label">الأم على قيد الحياة</span>
-              </label>
+              <Checkbox
+                name="isFatherAlive"
+                isSelected={formData.isFatherAlive}
+                onChange={(checked) => setFormData((p) => normalizeFormData({ ...p, isFatherAlive: checked }))}
+                className="w-full rounded-[22px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4"
+              >
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
+                <Checkbox.Content>
+                  <Label>الأب على قيد الحياة</Label>
+                </Checkbox.Content>
+              </Checkbox>
+              
+              <Checkbox
+                name="isMotherAlive"
+                isSelected={formData.isMotherAlive}
+                onChange={(checked) => setFormData((p) => normalizeFormData({ ...p, isMotherAlive: checked }))}
+                className="w-full rounded-[22px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4"
+              >
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
+                <Checkbox.Content>
+                  <Label>الأم على قيد الحياة</Label>
+                </Checkbox.Content>
+              </Checkbox>
             </div>
           </div>
         );
@@ -475,7 +696,7 @@ export function RegistrationForm() {
                     className={inputCls('password')}
                     placeholder="••••••••"
                     style={{ paddingRight: '2.75rem' }}
-                    value={formData.password}
+                    value={formData.password ?? ''}
                     onChange={handleChange}
                   />
                   <button
@@ -491,16 +712,16 @@ export function RegistrationForm() {
               </div>
 
               <div>
-                <label className="auth-label" htmlFor="reg-confirm">تأكيد المرور</label>
+                <label className="auth-label" htmlFor="reg-confirm">تأكيد كلمة المرور</label>
                 <div className="auth-input-wrap" dir="ltr">
                   <input
                     id="reg-confirm"
                     name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     className={inputCls('confirmPassword')}
-                    placeholder="أعد الكتابة"
+                    placeholder="••••••••"
                     style={{ paddingRight: '2.75rem' }}
-                    value={formData.confirmPassword}
+                    value={formData.confirmPassword ?? ''}
                     onChange={handleChange}
                   />
                   <button
@@ -517,7 +738,7 @@ export function RegistrationForm() {
             </div>
 
             <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
-              <p className="mb-3 text-sm font-bold text-[var(--admin-text)]">قبل التفعيل النهائي</p>
+              <p className="mb-3 text-sm font-bold text-[var(--admin-text)]">متطلبات إنشاء الحساب:</p>
               <div className="space-y-2">
                 {passwordChecklist.map((item) => (
                   <div key={item.label} className="flex items-center gap-3 text-sm">
@@ -533,8 +754,6 @@ export function RegistrationForm() {
         );
     }
   };
-
-  const StepIcon = currentStep.icon;
 
   return (
     <motion.form
@@ -569,55 +788,69 @@ export function RegistrationForm() {
           alt: 'مراحل إنشاء حساب جديد',
         }}
       >
-        <div className="relative z-10 mt-10 w-full lg:w-[70%] xl:w-[60%] pr-4 md:pr-0">
-          <AnimatePresence>
-            {errors.filter((e) => !e.field).map((err, index) => (
-              <motion.div
-                key={`${err.message}-${index}`}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="auth-error-banner mb-4"
-              >
-                {err.message}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+        <div className="relative z-10 mt-10 w-full pr-4 md:pr-0">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 lg:items-start w-full">
+            {/* Right Side: Form Inputs */}
+            <div className="w-full lg:w-[50%] xl:w-[50%] flex flex-col gap-5">
+              <AnimatePresence>
+                {errors.filter((e) => !e.field).map((err, index) => (
+                  <motion.div
+                    key={`${err.message}-${index}`}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="auth-error-banner mb-4"
+                  >
+                    {err.message}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
 
-          <AnimatePresence mode="wait">
-            <motion.div key={activeStep} {...PANEL_ANIMATION} className="space-y-5 max-w-[560px] rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/50 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
-              {renderStepFields()}
-            </motion.div>
-          </AnimatePresence>
+              <div className="min-h-[480px] sm:min-h-[560px] w-full">
+                <AnimatePresence mode="wait">
+                  <motion.div key={activeStep} {...PANEL_ANIMATION} className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
+                    {renderStepFields()}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start max-w-[560px]">
-            {activeStep > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveStep((prev) => Math.max(prev - 1, 0))}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-3 text-sm font-black text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
-              >
-                <ArrowRight className="h-4 w-4" />
-                رجوع
-              </button>
-            )}
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start max-w-[560px]">
+                {activeStep > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveStep((prev) => Math.max(prev - 1, 0))}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-3 text-sm font-black text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                    رجوع
+                  </button>
+                )}
 
-            {activeStep < REGISTRATION_STEPS.length - 1 ? (
-              <button type="button" onClick={goToNextStep} className="auth-btn-primary w-full sm:w-auto px-10">
-                التالي
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-            ) : (
-              <button type="submit" disabled={loading} className="auth-btn-primary w-full sm:w-auto px-8">
-                {loading ? 'جاري الإنشاء...' : 'تشغيل الحساب'}
-                <CheckCircle2 className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          
-          <div className="mt-6 flex items-start gap-2 text-[0.65rem] font-medium text-[var(--admin-muted)] max-w-[480px] leading-5">
-            <MapPinned className="h-3 w-3 mt-1 shrink-0" />
-            <span>نحفظ البيانات تدريجيًا داخل الفورم، ولن نرسلها للخادم إلا عند الضغط على تشغيل الحساب النهائي.</span>
+                {activeStep < REGISTRATION_STEPS.length - 1 ? (
+                  <InteractiveHoverButton type="button" onClick={goToNextStep} className="w-full sm:w-auto h-12 flex items-center justify-center px-10" style={{ '--btn-primary': 'var(--admin-primary)', '--btn-fg': 'var(--admin-primary-contrast)', '--btn-border': 'var(--admin-border)', '--btn-bg': 'var(--admin-card-soft)', '--btn-text': 'var(--admin-text)' } as React.CSSProperties}>
+                    التالي
+                  </InteractiveHoverButton>
+                ) : (
+                  <InteractiveHoverButton type="submit" disabled={loading} icon={<CheckCircle2 className="h-4 w-4" />} className="w-full sm:w-auto h-12 flex items-center justify-center px-10" style={{ '--btn-primary': 'var(--admin-primary)', '--btn-fg': 'var(--admin-primary-contrast)', '--btn-border': 'var(--admin-border)', '--btn-bg': 'var(--admin-card-soft)', '--btn-text': 'var(--admin-text)' } as React.CSSProperties}>
+                    {loading ? 'جاري إنشاء الحساب...' : 'إنشاء الحساب'}
+                  </InteractiveHoverButton>
+                )}
+              </div>
+
+              <div className="flex items-start gap-2 text-[0.65rem] font-medium text-[var(--admin-muted)] max-w-[480px] leading-5">
+                <MapPinned className="h-3 w-3 mt-1 shrink-0" />
+                <span>بياناتك محفوظة محليًا في هذه الصفحة، ولن يتم إرسالها أو حفظها بشكل نهائي إلا بعد الضغط على "إنشاء الحساب".</span>
+              </div>
+            </div>
+
+            {/* Left Side: Live Preview Panel */}
+            <div className="hidden lg:block lg:w-[50%] xl:w-[45%] relative">
+               <AnimatePresence mode="wait">
+                 <motion.div key={`preview-${activeStep}`} {...PANEL_ANIMATION} className="sticky top-10">
+                   {renderPreviewPanel()}
+                 </motion.div>
+               </AnimatePresence>
+            </div>
           </div>
         </div>
       </FeatureCarousel>

@@ -2,9 +2,9 @@
 
 # Run both frontend and backend together
 dev: stop
-	@echo "🚀 Starting Backend (E2e mode)..."
+	@echo "🚀 Starting Backend ..."
 	@cd backend/src/NaderGorge.API && \
-		ASPNETCORE_ENVIRONMENT=E2e /usr/local/share/dotnet/x64/dotnet run --environment E2e --urls "http://localhost:5245" &
+		ASPNETCORE_ENVIRONMENT=E2e /usr/local/share/dotnet/x64/dotnet run  --urls "http://localhost:5245" &
 	@echo "⏳ Waiting for backend to start..."
 	@sleep 8
 	@echo "🎨 Starting Frontend..."

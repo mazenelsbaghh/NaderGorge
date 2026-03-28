@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import type { AxiosResponse } from 'axios';
 
 export interface PackageDto {
   id: string;
@@ -14,12 +15,14 @@ export interface TermDto {
   id: string;
   title: string;
   order: number;
+  price?: number;
 }
 
 export interface ContentSectionDto {
   id: string;
   title: string;
   order: number;
+  price?: number;
 }
 
 export interface LessonSummaryDto {
@@ -29,6 +32,7 @@ export interface LessonSummaryDto {
   order: number;
   hasAccess: boolean;
   isCompleted: boolean;
+  price?: number;
 }
 
 export interface VideoDto {
@@ -75,8 +79,42 @@ export interface LessonDetailDto {
   homework?: HomeworkDto;
 }
 
+interface ContentApiResponse<T> {
+  success?: boolean;
+  message?: string;
+  data?: T;
+}
+
+const PACKAGES_CACHE_TTL_MS = 10_000;
+type PackagesResponse = AxiosResponse<ContentApiResponse<PackageDto[]>>;
+
+let packagesInFlight: Promise<PackagesResponse> | null = null;
+let packagesCache: PackagesResponse | null = null;
+let packagesCacheAt = 0;
+
 export const contentService = {
-  getPackages: () => apiClient.get('/content/packages'),
+  getPackages: (options?: { force?: boolean }) => {
+    const force = options?.force ?? false;
+    const isCacheFresh = !force && packagesCache && Date.now() - packagesCacheAt < PACKAGES_CACHE_TTL_MS;
+
+    if (isCacheFresh && packagesCache) {
+      return Promise.resolve(packagesCache);
+    }
+
+    if (!force && packagesInFlight) {
+      return packagesInFlight;
+    }
+
+    packagesInFlight = apiClient.get('/content/packages').then((response) => {
+      packagesCache = response;
+      packagesCacheAt = Date.now();
+      return response;
+    }).finally(() => {
+      packagesInFlight = null;
+    });
+
+    return packagesInFlight;
+  },
   getTerms: (packageId: string) => apiClient.get(`/content/packages/${packageId}/terms`),
   getSections: (termId: string) => apiClient.get(`/content/terms/${termId}/sections`),
   getLessons: (sectionId: string) => apiClient.get(`/content/sections/${sectionId}/lessons`),

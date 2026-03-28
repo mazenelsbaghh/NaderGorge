@@ -51,14 +51,20 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             throw new UnauthorizedAccessException("Invalid phone number or password");
 
         // --- Device limit enforcement ---
+        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
+        var isStaff = roles.Any(r => r is "Admin" or "Assistant" or "Teacher");
+
         var maxDevices = int.Parse(_config["DeviceLimits:MaxDevicesPerStudent"] ?? "2");
         var existingDevice = user.Devices.FirstOrDefault(d => d.DeviceFingerprint == request.DeviceFingerprint && d.IsActive);
 
         if (existingDevice == null)
         {
-            var activeDeviceCount = user.Devices.Count(d => d.IsActive);
-            if (activeDeviceCount >= maxDevices)
-                throw new InvalidOperationException($"Maximum device limit ({maxDevices}) reached. Contact admin to remove a device.");
+            if (!isStaff)
+            {
+                var activeDeviceCount = user.Devices.Count(d => d.IsActive);
+                if (activeDeviceCount >= maxDevices)
+                    throw new InvalidOperationException($"Maximum device limit ({maxDevices}) reached. Contact admin to remove a device.");
+            }
 
             var newDevice = new Device
             {
@@ -75,7 +81,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         }
 
         // --- Generate tokens ---
-        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
         var accessToken = _tokens.GenerateAccessToken(user, roles);
         var refreshToken = _tokens.GenerateRefreshToken();
 

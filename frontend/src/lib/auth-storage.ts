@@ -24,6 +24,13 @@ function clearStorage(storage: Storage | null) {
   storage.removeItem(AUTH_KEYS.user);
 }
 
+function hasAnyAuthKey(storage: Storage | null) {
+  if (!storage) return false;
+  return [AUTH_KEYS.accessToken, AUTH_KEYS.refreshToken, AUTH_KEYS.user].some((key) =>
+    storage.getItem(key) !== null
+  );
+}
+
 function readRawPayload(storage: Storage | null) {
   if (!storage) return null;
 
@@ -31,7 +38,13 @@ function readRawPayload(storage: Storage | null) {
   const refreshToken = storage.getItem(AUTH_KEYS.refreshToken);
   const user = storage.getItem(AUTH_KEYS.user);
 
-  if (!accessToken || !refreshToken || !user) return null;
+  if (!accessToken || !refreshToken || !user) {
+    // Self-heal partial auth state so stale access tokens do not keep triggering refresh attempts.
+    if (hasAnyAuthKey(storage)) {
+      clearStorage(storage);
+    }
+    return null;
+  }
 
   return { accessToken, refreshToken, user };
 }
@@ -94,19 +107,11 @@ export function readStoredAuth(): (PersistedAuthPayload & { storage: PersistedSt
 }
 
 export function getStoredAccessToken() {
-  return (
-    getStorage('local')?.getItem(AUTH_KEYS.accessToken) ??
-    getStorage('session')?.getItem(AUTH_KEYS.accessToken) ??
-    null
-  );
+  return readStoredAuth()?.accessToken ?? null;
 }
 
 export function getStoredRefreshToken() {
-  return (
-    getStorage('local')?.getItem(AUTH_KEYS.refreshToken) ??
-    getStorage('session')?.getItem(AUTH_KEYS.refreshToken) ??
-    null
-  );
+  return readStoredAuth()?.refreshToken ?? null;
 }
 
 export function replaceStoredTokens(accessToken: string, refreshToken: string) {

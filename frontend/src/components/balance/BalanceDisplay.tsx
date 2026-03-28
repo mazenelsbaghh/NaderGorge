@@ -41,7 +41,7 @@ export function BalanceDisplay() {
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-white/80 uppercase tracking-widest mb-1">الرصيد المتاح</p>
-            <h2 className="text-5xl font-black">{currentBalance.toLocaleString('ar-EG')} <span className="text-xl font-bold">ج.م</span></h2>
+            <h2 className="text-5xl font-black">{currentBalance.toLocaleString('en-US')} <span className="text-xl font-bold">ج.م</span></h2>
           </div>
           <div className="rounded-full bg-white/20 p-4 backdrop-blur-md">
             <Wallet className="h-8 w-8 text-white" />
@@ -78,7 +78,7 @@ export function BalanceDisplay() {
                   <div>
                     <h4 className="font-bold text-foreground">{tx.description}</h4>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(tx.createdAt).toLocaleDateString('ar-EG', {
+                      {new Date(tx.createdAt).toLocaleDateString('en-GB', {
                         year: 'numeric', month: 'short', day: 'numeric',
                         hour: 'numeric', minute: 'numeric'
                       })}

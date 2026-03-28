@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { BookOpen, CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Loader2 } from 'lucide-react';
+import { BookOpen, CheckCircle2, XCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { reportService, ParentReportDto } from '@/services/report-service';
+import { FullScreenLoader } from '@/components/ui/loading-indicator';
 
 export default function ParentReportPage() {
     const params = useParams();
@@ -32,8 +33,8 @@ export default function ParentReportPage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
-                <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
+            <div className="flex min-h-screen items-center justify-center bg-[var(--background)] text-[var(--primary)]">
+                <FullScreenLoader />
             </div>
         );
     }
@@ -41,12 +42,12 @@ export default function ParentReportPage() {
     if (error || !report) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--background)] p-4">
-                <div className="w-full max-w-md rounded-[28px] border border-[color:rgba(239,68,68,0.2)] bg-[var(--card)] p-8 text-center shadow-[0_20px_60px_rgba(78,70,57,0.08)]">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[color:rgba(239,68,68,0.1)]">
-                        <AlertTriangle className="h-8 w-8 text-[#ef4444]" />
+                <div className="w-full max-w-md rounded-[28px] border border-[var(--admin-danger-20)] bg-[var(--card)] p-8 text-center shadow-[0_20px_60px_rgba(78,70,57,0.08)]">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--admin-danger-10)]">
+                        <AlertTriangle className="h-8 w-8 text-[var(--admin-danger)]" />
                     </div>
                     <h2 className="text-2xl font-black text-[var(--foreground)]">تنبيه</h2>
-                    <p className="mt-2 text-sm font-bold text-[#ef4444]">{error || 'التقرير غير موجود'}</p>
+                    <p className="mt-2 text-sm font-bold text-[var(--admin-danger)]">{error || 'التقرير غير موجود'}</p>
                 </div>
             </div>
         );
@@ -65,8 +66,8 @@ export default function ParentReportPage() {
         switch (status) {
             case 'Excellent': return { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', label: 'ممتاز' };
             case 'Good': return { bg: 'rgba(34,197,94,0.08)', text: '#16a34a', label: 'جيد' };
-            case 'NeedsAttention': return { bg: 'rgba(234,179,8,0.1)', text: '#ca8a04', label: 'يحتاج متابعة' };
-            case 'AtRisk': return { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', label: 'في خطر' };
+            case 'NeedsAttention': return { bg: 'var(--admin-warning-10)', text: 'var(--admin-warning)', label: 'يحتاج متابعة' };
+            case 'AtRisk': return { bg: 'var(--admin-danger-10)', text: 'var(--admin-danger)', label: 'في خطر' };
             default: return { bg: 'var(--muted)', text: 'var(--muted-foreground)', label: status };
         }
     };
@@ -93,15 +94,15 @@ export default function ParentReportPage() {
             value: failedExamsCount,
             icon: XCircle,
             color: '#ef4444',
-            bg: 'rgba(239,68,68,0.1)',
+            bg: 'var(--admin-danger-10)',
         },
     ];
 
     const getSeverityStyle = (severity: string) => {
         switch (severity) {
-            case 'Critical': return { bg: 'rgba(239,68,68,0.1)', text: '#ef4444', label: 'حرج' };
-            case 'Medium': return { bg: 'rgba(234,179,8,0.1)', text: '#ca8a04', label: 'متوسط' };
-            default: return { bg: 'rgba(234,179,8,0.08)', text: '#eab308', label: 'تنبيه' };
+            case 'Critical': return { bg: 'var(--admin-danger-10)', text: 'var(--admin-danger)', label: 'حرج' };
+            case 'Medium': return { bg: 'var(--admin-warning-10)', text: 'var(--admin-warning)', label: 'متوسط' };
+            default: return { bg: 'var(--admin-warning-10)', text: 'var(--admin-warning)', label: 'تنبيه' };
         }
     };
 
@@ -163,7 +164,7 @@ export default function ParentReportPage() {
                 <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--card)] shadow-[0_12px_40px_rgba(78,70,57,0.06)]">
                     <div className="bg-[var(--secondary)] p-6">
                         <h2 className="flex items-center gap-3 text-xl font-black text-[var(--foreground)]">
-                            <AlertTriangle className="h-6 w-6 text-[#eab308]" />
+                            <AlertTriangle className="h-6 w-6 text-[var(--admin-warning)]" />
                             التنبيهات والإشعارات الأخيرة
                         </h2>
                     </div>
@@ -172,7 +173,7 @@ export default function ParentReportPage() {
                         {recentWarnings.length === 0 ? (
                             <div className="py-12 text-center">
                                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[color:rgba(34,197,94,0.1)]">
-                                    <ShieldCheck className="h-8 w-8 text-[#22c55e]" />
+                                    <ShieldCheck className="h-8 w-8 text-[var(--admin-success)]" />
                                 </div>
                                 <h3 className="text-lg font-black text-[var(--foreground)]">لا توجد تنبيهات</h3>
                                 <p className="mt-1 text-sm text-[var(--muted-foreground)]">السجل الأكاديمي للطالب نظيف حالياً.</p>
@@ -197,7 +198,7 @@ export default function ParentReportPage() {
                                                     {warning.reason}
                                                 </p>
                                                 <p className="mt-2 text-xs font-bold tracking-wider text-[var(--muted-foreground)] opacity-60">
-                                                    {new Date(warning.generatedAt).toLocaleDateString('ar-EG')}
+                                                    {new Date(warning.generatedAt).toLocaleDateString('en-GB')}
                                                 </p>
                                             </div>
                                         </div>

@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService } from '@/services/video-session-service';
-import { Loader2, AlertCircle, Play } from 'lucide-react';
+import { AlertCircle, Play } from 'lucide-react';
+import { InlineLoader } from '@/components/ui/loading-indicator';
 import PlayerControls from './PlayerControls';
 import { applyDomShields } from '@/utils/dom-shield';
 
@@ -376,7 +377,7 @@ export default function SecureVideoPlayer({
                </span>
              ) : (
                <div className="flex items-center gap-2 text-white text-sm font-medium bg-zinc-800 px-3 py-1.5 rounded-full border border-zinc-700">
-                 <Loader2 className="w-4 h-4 animate-spin text-pharaoh-gold" />
+                 <InlineLoader className="text-pharaoh-gold" />
                  <span>سيتم احتساب المشاهدة بعد 60 ثانية (شاهدت: {displayedWatched})</span>
                </div>
              )}
@@ -395,7 +396,7 @@ export default function SecureVideoPlayer({
         
          {status === 'loading' && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-20">
-            <Loader2 className="w-10 h-10 text-pharaoh-gold animate-spin" />
+            <InlineLoader className="text-pharaoh-gold scale-150" />
           </div>
         )}
 

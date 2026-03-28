@@ -44,7 +44,7 @@ export function LessonViewer({
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl p-4 sm:rounded-[28px] sm:p-6">
+      <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-4 sm:rounded-[28px] sm:p-6">
         <div className="flex items-start gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
             <BookOpenCheck className="h-6 w-6" />
@@ -92,14 +92,14 @@ export function LessonViewer({
               </div>
             ))}
             {lesson.videos.length === 0 && (
-              <div className="rounded-[24px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl p-8 text-center text-[var(--admin-muted)]">
+              <div className="rounded-[24px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-8 text-center text-[var(--admin-muted)]">
                 لا توجد فيديوهات متاحة لهذا الدرس حاليًا.
               </div>
             )}
           </div>
 
           <div className="space-y-6">
-            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl p-5 sm:p-6">
+            <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-5 sm:p-6">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
                   <FileText className="h-5 w-5" />
@@ -152,7 +152,7 @@ export function LessonViewer({
       )}
 
       {activeTab === 'homework' && lesson.homework && (
-        <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] backdrop-blur-xl p-6 lg:p-8">
+        <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-6 lg:p-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
               <PenTool className="h-6 w-6" />
@@ -164,11 +164,11 @@ export function LessonViewer({
           </div>
 
           {homeworkSubmitted ? (
-            <div className="rounded-2xl bg-[color:rgba(34,197,94,0.06)] border border-[color:rgba(34,197,94,0.2)] p-8 text-center">
-              <svg className="w-16 h-16 mx-auto mb-4 text-[#22c55e]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="rounded-2xl bg-[var(--admin-success-10)] border border-[var(--admin-success-20)] p-8 text-center">
+              <svg className="w-16 h-16 mx-auto mb-4 text-[var(--admin-success)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h3 className="text-2xl font-bold text-[#22c55e]">تم تسليم الواجب بنجاح</h3>
+              <h3 className="text-2xl font-bold text-[var(--admin-success)]">تم تسليم الواجب بنجاح</h3>
               <p className="mt-2 text-[var(--admin-muted)]">تم حفظ إجاباتك وإضافة النقاط إلى رصيدك.</p>
               <button onClick={() => setActiveTab('content')} className="mt-6 px-6 py-2 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] rounded-xl font-bold hover:brightness-110 transition">العودة للدرس</button>
             </div>

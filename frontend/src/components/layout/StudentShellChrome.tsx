@@ -35,6 +35,7 @@ import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { useAuthStore } from '@/stores/auth-store';
+import { RippleGrid } from '@/components/ui/ripple-grid';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
@@ -54,9 +55,9 @@ const navItems: Array<{
   label: string;
   icon: typeof ChartNoAxesColumn;
 }> = [
-  { href: '/student/packages',        label: 'باقاتي',       icon: BookMarked },
-  { href: '/student/code-redemption', label: 'تفعيل كود',    icon: KeyRound },
-];
+    { href: '/student/packages', label: 'باقاتي', icon: BookMarked },
+    { href: '/student/code-redemption', label: 'تفعيل كود', icon: KeyRound },
+  ];
 
 /* ── Component ──────────────────────────────────────────────────────── */
 
@@ -84,15 +85,24 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   return (
     <div
       dir="rtl"
-      className="h-dvh overflow-hidden text-[var(--admin-text)]"
+      className="h-dvh overflow-hidden text-[var(--admin-text)] relative"
       style={{
         ...themeVars,
-        backgroundImage:
-          'radial-gradient(circle at 2px 2px, var(--admin-dot) 1px, transparent 0), linear-gradient(var(--admin-bg-overlay), var(--admin-bg-overlay))',
-        backgroundSize: '40px 40px, 100% 100%',
         backgroundColor: 'var(--admin-bg)',
       }}
     >
+      {/* Ripple background replaces the CSS dot grid */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <RippleGrid
+          gridColor={isDark ? '#c5a059' : '#d4a762'}
+          rippleIntensity={0.05}
+          gridSize={10}
+          gridThickness={isDark ? 15 : 12}
+          mouseInteraction={true}
+          mouseInteractionRadius={1.2}
+          opacity={isDark ? 0.8 : 0.4}
+        />
+      </div>
       {/* ═══════════════════════════════════════════════════════════════
           SIDEBAR — desktop only, fixed right (RTL), exact clone of Admin
           ═══════════════════════════════════════════════════════════════ */}
@@ -111,11 +121,11 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             <Link
               href="/student"
               aria-label="لوحة التحكم"
-              className={`flex h-12 items-center justify-center rounded-full transition ${
-                activePath === '/student'
-                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                  : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-              }`}
+              aria-current={activePath === '/student' ? 'page' : undefined}
+              className={`flex h-12 items-center justify-center rounded-full transition ${activePath === '/student'
+                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                }`}
             >
               <Home className="h-5 w-5" />
             </Link>
@@ -128,13 +138,13 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex h-12 items-center justify-center rounded-full transition ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                      : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-                  }`}
+                  className={`flex h-12 items-center justify-center rounded-full transition ${isActive
+                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                    : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                    }`}
                   title={item.label}
                   aria-label={item.label}
+                  aria-current={isActive ? 'page' : undefined}
                 >
                   <Icon className="h-5 w-5" />
                 </Link>
@@ -159,7 +169,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
           </button>
           <button
             onClick={handleLogout}
-            className="flex h-12 w-full items-center justify-center rounded-full text-[#cf6d5b] transition hover:bg-[var(--admin-hover)]"
+            className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
             title="تسجيل الخروج"
             aria-label="تسجيل الخروج"
           >
@@ -171,11 +181,11 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       {/* ═══════════════════════════════════════════════════════════════
           MAIN CONTENT — offset for sidebar on desktop
           ═══════════════════════════════════════════════════════════════ */}
-      <main className="h-dvh overflow-y-auto overscroll-none px-5 py-8 pb-28 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10">
+      <main className="relative z-10 h-dvh overflow-y-auto overscroll-none px-5 py-8 pb-28 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10">
         {/* Header breadcrumb */}
         <header className="mb-10">
           <nav className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-[var(--admin-muted)]">
-            <span>الباحث التحريري</span>
+            <span> لوحة تحكم الطالب</span>
             <ChevronLeft className="h-3 w-3" />
             <span className="text-[var(--admin-primary-strong)]">بوابة الطالب</span>
           </nav>
@@ -194,7 +204,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             <Star className="h-9 w-9" />
           </div>
           <p className="mt-4 text-[10px] font-black uppercase tracking-[0.4em] text-[var(--admin-primary)]">
-            الأرشيف التحريري الملكي
+            شيخ المتحف
           </p>
         </footer>
       </main>
@@ -207,11 +217,11 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
           {/* Home */}
           <Link
             href="/student"
-            className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-[11px] font-black transition-all ${
-              activePath === '/student'
-                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)]'
-                : 'text-[var(--admin-muted)]'
-            }`}
+            aria-current={activePath === '/student' ? 'page' : undefined}
+            className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-[11px] font-black transition-all ${activePath === '/student'
+              ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)]'
+              : 'text-[var(--admin-muted)]'
+              }`}
           >
             <Home className="h-5 w-5" />
             <span className="truncate">لوحة التحكم</span>
@@ -225,11 +235,11 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-[11px] font-black transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)]'
-                    : 'text-[var(--admin-muted)]'
-                }`}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-[11px] font-black transition-all ${isActive
+                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)]'
+                  : 'text-[var(--admin-muted)]'
+                  }`}
               >
                 <Icon className="h-5 w-5" />
                 <span className="truncate">{item.label}</span>

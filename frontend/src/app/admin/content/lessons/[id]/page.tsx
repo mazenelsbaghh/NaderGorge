@@ -1,0 +1,183 @@
+'use client';
+
+import { useEffect, useState, use } from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck } from 'lucide-react';
+import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, AddHomeworkForm, LessonHomeworkList, LinkExamForm, InlineExamEditor, AdminPageSkeleton } from '@/components/admin';
+import { adminService } from '@/services/admin-service';
+import toast from 'react-hot-toast';
+
+type ActiveTab = 'overview' | 'videos' | 'resources' | 'homework' | 'exam';
+
+const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
+  { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
+  { key: 'videos', label: 'الفيديوهات', icon: PlaySquare },
+  { key: 'resources', label: 'المذكرات والملفات', icon: FileText },
+  { key: 'homework', label: 'الواجبات', icon: ClipboardList },
+  { key: 'exam', label: 'الامتحان المرفق', icon: BookCheck },
+];
+
+export default function LessonProfilePage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
+  const [lesson, setLesson] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  async function loadData() {
+    try {
+      const response = await adminService.getLessonCockpit(params.id);
+      setLesson(response.data?.data);
+    } catch (error) {
+      toast.error('تعذر تحميل تفاصيل الحصة');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <AdminShellChrome
+        activePath="/admin/content"
+        sectionLabel="إدارة المحتوى"
+        pageTitle="جاري التحميل..."
+        subtitle="الرجاء الانتظار"
+      >
+        <AdminPageSkeleton />
+      </AdminShellChrome>
+    );
+  }
+
+  if (!lesson) {
+     return (
+        <AdminShellChrome
+            activePath="/admin/content"
+            sectionLabel="إدارة المحتوى"
+            pageTitle="خطأ"
+            subtitle="الحصة غير موجودة"
+        >
+            <div className="p-8 text-center text-[var(--admin-muted)]">
+                لا يمكن العثور على الحصة المطلوبة
+            </div>
+        </AdminShellChrome>
+     )
+  }
+
+  return (
+    <AdminShellChrome
+      activePath="/admin/content"
+      sectionLabel="إدارة المحتوى ▸ الحصص"
+      pageTitle={lesson.title}
+      subtitle={lesson.summary || 'إدارة محتويات وإعدادات الحصة'}
+      action={
+        <button
+          onClick={() => router.back()}
+          className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)] transition hover:bg-[var(--admin-hover)]"
+        >
+          <ArrowRight className="h-4 w-4" /> عودة للقائمة
+        </button>
+      }
+    >
+      <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-4">
+        <AdminStatCard variant="accent" icon={BookOpenText} label="معرف الحصة" value={lesson.lessonId.split('-')[0]} />
+        <AdminStatCard variant="light" icon={PlaySquare} label="الفيديوهات" value={`${lesson.videos?.length || 0}`} />
+        <AdminStatCard variant="muted" icon={FileText} label="المرفقات" value={`${lesson.resources?.length || 0}`} />
+        <AdminStatCard variant="accent" icon={ClipboardList} label="الواجبات" value={`${lesson.homework?.length || 0}`} />
+      </section>
+
+      <div className="mb-8">
+        <AdminTabBar tabs={TAB_OPTIONS} activeTab={activeTab} onSelect={setActiveTab} />
+      </div>
+
+      {activeTab === 'overview' && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+           <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">نظرة عامة</h3>
+           <p className="text-[var(--admin-muted)] leading-relaxed">
+               {lesson.summary || 'لا يوجد وصف مضاف لهذه الحصة.'}
+           </p>
+        </div>
+      )}
+      
+      {activeTab === 'videos' && (
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+            <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة فيديو جديد</h3>
+            <AddVideoForm lessonId={lesson.lessonId} onSuccess={loadData} />
+          </div>
+          
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+            <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الفيديوهات المرفقة ({lesson.videos?.length || 0})</h3>
+            <LessonVideoList videos={lesson.videos || []} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'resources' && (
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+            <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة ملف أو مذكرة</h3>
+            <AddResourceForm lessonId={lesson.lessonId} onSuccess={loadData} />
+          </div>
+          
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+            <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الملفات المرفقة ({lesson.resources?.length || 0})</h3>
+            <LessonResourceList resources={lesson.resources || []} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'homework' && (
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+            <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة واجب جديد</h3>
+            <AddHomeworkForm lessonId={lesson.lessonId} onSuccess={loadData} />
+          </div>
+          
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+            <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الواجبات المرفقة ({lesson.homework?.length || 0})</h3>
+            <LessonHomeworkList homework={lesson.homework || []} />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'exam' && (
+        <div className="space-y-6">
+          {lesson.examId && (
+            <div className="rounded-3xl border border-primary/20 bg-primary/5 p-8 shadow-sm flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-primary mb-2">لوحة تحكم الامتحان</h3>
+                <p className="text-muted-foreground text-sm">متابعة إحصائيات الامتحان وإجابات الطلاب.</p>
+              </div>
+              <button
+                onClick={() => router.push(`/admin/content/exams/${lesson.examId}/dashboard`)}
+                className="bg-primary text-primary-foreground px-6 py-3 rounded-full font-bold shadow hover:bg-primary/90 transition"
+              >
+                فتح اللوحة
+              </button>
+            </div>
+          )}
+          
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+            <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
+              <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
+              إنشاء امتحان مدمج
+            </h3>
+            <InlineExamEditor lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} />
+          </div>
+
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+            <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
+              <BookCheck className="h-6 w-6 text-[var(--admin-muted)]" />
+              أو ربط امتحان موجود مسبقاً
+            </h3>
+            <LinkExamForm lessonId={lesson.lessonId} currentExamId={lesson.examId} onSuccess={loadData} />
+          </div>
+        </div>
+      )}
+    </AdminShellChrome>
+  );
+}

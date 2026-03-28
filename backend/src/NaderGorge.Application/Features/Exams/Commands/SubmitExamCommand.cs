@@ -3,14 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Services;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
 
-public record SubmitExamCommand(Guid ExamId, Guid UserId, List<AnswerSubmissionDto> Answers) : IRequest<ApiResponse<ExamResultDto>>;
+public record SubmitExamCommand(Guid ExamId, Guid AttemptId, Guid UserId, List<AnswerSubmissionDto> Answers) : IRequest<ApiResponse<ExamResultDto>>;
 
 public record AnswerSubmissionDto(Guid ExamQuestionId, Guid SelectedOptionId);
 
-public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson);
+public record ExamResultDto(Guid AttemptId, decimal ScoreAchieved, decimal TotalScore, bool IsPassed, bool BlocksNextLesson, string Evaluation, bool IsTimeExpired);
 
 public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiResponse<ExamResultDto>>
 {
@@ -34,15 +35,29 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
         if (exam == null) return ApiResponse<ExamResultDto>.Fail("Exam not found");
 
-        var attempt = new StudentExamAttempt
-        {
-            UserId = request.UserId,
-            ExamId = request.ExamId,
-            ScoreAchieved = 0,
-            Answers = new List<StudentAnswer>()
-        };
+        var attempt = await _db.StudentExamAttempts
+            .Include(a => a.Answers)
+            .FirstOrDefaultAsync(a => a.Id == request.AttemptId && a.UserId == request.UserId && a.ExamId == request.ExamId, ct);
+            
+        if (attempt == null) return ApiResponse<ExamResultDto>.Fail("Attempt not found or invalid.");
+        
+        if (attempt.Answers.Any()) return ApiResponse<ExamResultDto>.Fail("This attempt has already been submitted.");
 
-        decimal totalScoreScored = 0;
+        attempt.ScoreAchieved = 0;
+
+        // Calculate Time Expiry
+        if (exam.DurationMinutes.HasValue && attempt.StartedAt.HasValue)
+        {
+            var timeAllowed = TimeSpan.FromMinutes(exam.DurationMinutes.Value).Add(TimeSpan.FromSeconds(60)); // 60s grace period
+            var timeTaken = DateTime.UtcNow - attempt.StartedAt.Value;
+            if (timeTaken > timeAllowed)
+            {
+                attempt.IsTimeExpired = true;
+            }
+        }
+
+        decimal rawPointsEarned = 0;
+        decimal rawPointsPossible = exam.ExamQuestions.Sum(q => q.Points);
 
         foreach (var sub in request.Answers)
         {
@@ -53,7 +68,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             if (selectedOption == null) continue;
 
             var points = selectedOption.IsCorrect ? eq.Points : 0;
-            totalScoreScored += points;
+            rawPointsEarned += points;
 
             attempt.Answers.Add(new StudentAnswer
             {
@@ -64,10 +79,14 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             });
         }
 
-        attempt.ScoreAchieved = totalScoreScored;
-        attempt.IsPassed = totalScoreScored >= exam.PassingScore;
+        var scaledScore = GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
+        
+        attempt.ScoreAchieved = scaledScore;
+        attempt.IsPassed = scaledScore >= exam.PassingScore;
+        attempt.Evaluation = GradingEvaluationService.DetermineEvaluation(scaledScore, exam.PassingScore, exam.TotalScore);
 
-        _db.StudentExamAttempts.Add(attempt);
+        // We already have attempt tracked, no need to add, just update relationships
+        // _db.StudentExamAttempts.Update(attempt) is implicit since it's tracked
         
         // Find lesson tied to this exam to see if we block
         var lesson = await _db.Lessons.FirstOrDefaultAsync(l => l.ExamId == exam.Id, ct);
@@ -108,7 +127,7 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             await _publisher.Publish(new NaderGorge.Application.Features.Gamification.Commands.AcademicTaskCompletedEvent(request.UserId, NaderGorge.Domain.Entities.Gamification.GamificationEventType.PerfectExam, basePoints), ct);
         }
 
-        var result = new ExamResultDto(attempt.Id, attempt.ScoreAchieved, exam.TotalScore, attempt.IsPassed, blocksNextLesson);
+        var result = new ExamResultDto(attempt.Id, attempt.ScoreAchieved, exam.TotalScore, attempt.IsPassed, blocksNextLesson, attempt.Evaluation ?? "غير مقيم", attempt.IsTimeExpired);
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
     }
 }

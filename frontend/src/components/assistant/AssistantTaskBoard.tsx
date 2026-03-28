@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { easeQuart, exitScale, feedbackTransition } from '@/lib/motion';
 import { AssistantTaskDto, assistantService } from '@/services/assistant-service';
 import toast from 'react-hot-toast';
+import NeumorphButton from '@/components/ui/neumorph-button';
 
 export function AssistantTaskBoard() {
   const [tasks, setTasks] = useState<AssistantTaskDto[]>([]);
@@ -52,17 +53,26 @@ export function AssistantTaskBoard() {
   const getTaskTypeLabel = (typeNum: number) => {
       switch (typeNum) {
           case 0: return { label: 'Grade Essay', style: 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' };
-          case 1: return { label: 'Follow-Up At Risk', style: 'bg-[color:rgba(239,68,68,0.1)] text-[#ef4444]' };
-          case 2: return { label: 'Payment Issue', style: 'bg-[color:rgba(234,179,8,0.1)] text-[#ca8a04]' };
+          case 1: return { label: 'Follow-Up At Risk', style: 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)]' };
+          case 2: return { label: 'Payment Issue', style: 'bg-[var(--admin-warning-10)] text-[var(--admin-warning)]' };
           default: return { label: 'Unknown', style: 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)]' };
       }
   };
 
   if (loading && tasks.length === 0) {
       return (
-          <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--admin-primary)]"></div>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1,2,3,4,5,6].map(i => (
+                <div key={i} className="animate-pulse bg-[var(--admin-card)] rounded-[2rem] h-[200px] border border-[var(--admin-border)] shadow-sm">
+                   <div className="h-16 w-full border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] rounded-t-[2rem]" />
+                   <div className="p-4 space-y-4">
+                     <div className="h-4 w-3/4 rounded bg-[var(--admin-muted)] opacity-20" />
+                     <div className="h-4 w-1/2 rounded bg-[var(--admin-muted)] opacity-20" />
+                     <div className="h-10 w-full rounded-full bg-[var(--admin-card-strong)] opacity-50 mt-4" />
+                   </div>
+                </div>
+              ))}
+            </div>
       );
   }
 
@@ -91,7 +101,7 @@ export function AssistantTaskBoard() {
             </button>
             <button 
                 onClick={() => setTypeFilter(1)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${typeFilter === 1 ? 'bg-[color:rgba(239,68,68,0.15)] text-[#ef4444]' : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${typeFilter === 1 ? 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)]' : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}
             >
                 متابعة الطلاب
             </button>
@@ -99,7 +109,7 @@ export function AssistantTaskBoard() {
       </div>
 
       {error && (
-        <div role="alert" className="rounded-2xl border border-[color:rgba(239,68,68,0.2)] bg-[color:rgba(239,68,68,0.06)] p-4 text-sm font-bold text-[#ef4444]">
+        <div role="alert" className="rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-sm font-bold text-[var(--admin-danger)]">
             {error}
         </div>
       )}
@@ -175,29 +185,36 @@ export function AssistantTaskBoard() {
                       <div className="px-6 py-4 bg-[var(--admin-card-soft)] rounded-b-[24px] border-t border-[var(--admin-border)] flex justify-end gap-3">
                           {resolvingTaskId === task.id ? (
                               <>
-                                  <button
+                                  <NeumorphButton
+                                      type="button"
                                       onClick={() => {
                                           setResolvingTaskId(null);
                                           setResolutionNotes('');
                                       }}
-                                      className="rounded-xl px-4 py-2 text-sm font-medium text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover)] transition"
+                                      intent="ghost"
+                                      size="sm"
                                   >
                                       إلغاء
-                                  </button>
-                                  <button
+                                  </NeumorphButton>
+                                  <NeumorphButton
+                                      type="button"
                                       onClick={() => handleResolve(task.id)}
-                                      className="admin-btn-primary text-sm"
+                                      intent="primary"
+                                      size="sm"
+                                      pill
                                   >
                                       تأكيد الحل
-                                  </button>
+                                  </NeumorphButton>
                               </>
                           ) : (
-                              <button
+                              <NeumorphButton
+                                  type="button"
                                   onClick={() => setResolvingTaskId(task.id)}
-                                  className="admin-btn-ghost"
+                                  intent="ghost"
+                                  size="sm"
                               >
                                   حل المهمة
-                              </button>
+                              </NeumorphButton>
                           )}
                       </div>
                   </motion.div>

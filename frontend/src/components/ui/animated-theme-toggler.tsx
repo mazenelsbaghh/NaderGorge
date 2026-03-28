@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentPropsWithoutRef
 import { Moon, Sun } from 'lucide-react';
 import { flushSync } from 'react-dom';
 
+import { setStoredAdminThemeMode } from '@/lib/admin-theme-mode';
 import { cn } from '@/lib/utils';
 
 type ViewTransitionDocument = Document & {
@@ -65,6 +66,8 @@ export function AnimatedThemeToggler({
 
     const applyTheme = () => {
       if (isControlled && onToggle) {
+        // Toggle synchronously so View Transition captures the DOM change.
+        doc.documentElement.classList.toggle('dark', !checked);
         onToggle();
         return;
       }
@@ -72,7 +75,7 @@ export function AnimatedThemeToggler({
       const newTheme = !internalIsDark;
       setInternalIsDark(newTheme);
       doc.documentElement.classList.toggle('dark', newTheme);
-      localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+      setStoredAdminThemeMode(newTheme ? 'dark' : 'light');
     };
 
     if (typeof doc.startViewTransition !== 'function') {
@@ -80,6 +83,7 @@ export function AnimatedThemeToggler({
       return;
     }
 
+    doc.documentElement.classList.add('theme-switching');
     const transition = doc.startViewTransition(() => {
       flushSync(applyTheme);
     });
@@ -101,6 +105,14 @@ export function AnimatedThemeToggler({
           },
         );
       });
+    }
+
+    if (transition?.finished) {
+      transition.finished.finally(() => {
+        doc.documentElement.classList.remove('theme-switching');
+      });
+    } else {
+      doc.documentElement.classList.remove('theme-switching');
     }
   }, [duration, internalIsDark, isControlled, onToggle]);
 

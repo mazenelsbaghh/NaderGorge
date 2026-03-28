@@ -1,0 +1,112 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - button "التحويل إلى الوضع الداكن" [ref=e5]:
+      - img [ref=e6]
+      - generic [ref=e8]: Toggle theme
+    - main [ref=e9]:
+      - generic [ref=e10]: 𓂀
+      - generic [ref=e11]:
+        - heading "افتح حسابك خطوة بخطوة" [level=1] [ref=e12]
+        - paragraph [ref=e13]: "سجل بياناتك عبر أربع مراحل واضحة: هوية، متابعة، مسار دراسي، ثم تأمين الحساب."
+      - generic [ref=e14]:
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - heading "تأمين الحساب" [level=2] [ref=e20]
+            - paragraph [ref=e22]:
+              - generic [ref=e23]: بعد هذه الخطوة يصبح الحساب جاهزًا للدخول مباشرة.
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - generic [ref=e27]: فشل إنشاء الحساب. ربما رقم الهاتف مسجّل من قبل.
+              - generic [ref=e30]:
+                - generic [ref=e31]:
+                  - generic [ref=e32]:
+                    - generic [ref=e33]: كلمة المرور
+                    - generic [ref=e34]:
+                      - textbox "كلمة المرور" [ref=e35]:
+                        - /placeholder: ••••••••
+                        - text: TestPass123!
+                      - button "إظهار" [ref=e36] [cursor=pointer]:
+                        - img [ref=e37]
+                  - generic [ref=e40]:
+                    - generic [ref=e41]: تأكيد المرور
+                    - generic [ref=e42]:
+                      - textbox "تأكيد المرور" [ref=e43]:
+                        - /placeholder: أعد الكتابة
+                        - text: TestPass123!
+                      - button "إظهار" [ref=e44] [cursor=pointer]:
+                        - img [ref=e45]
+                - generic [ref=e48]:
+                  - paragraph [ref=e49]: قبل التفعيل النهائي
+                  - generic [ref=e50]:
+                    - generic [ref=e51]:
+                      - img [ref=e53]
+                      - generic [ref=e55]: 8 أحرف على الأقل
+                    - generic [ref=e56]:
+                      - img [ref=e58]
+                      - generic [ref=e60]: تأكيد مطابق
+                    - generic [ref=e61]:
+                      - img [ref=e63]
+                      - generic [ref=e65]: جاهز لتفعيل الحساب
+              - generic [ref=e66]:
+                - button "رجوع" [ref=e67]:
+                  - img [ref=e68]
+                  - text: رجوع
+                - button "تشغيل الحساب" [ref=e70] [cursor=pointer]:
+                  - text: تشغيل الحساب
+                  - img [ref=e71]
+              - generic [ref=e74]:
+                - img [ref=e75]
+                - generic [ref=e79]: نحفظ البيانات تدريجيًا داخل الفورم، ولن نرسلها للخادم إلا عند الضغط على تشغيل الحساب النهائي.
+            - generic [ref=e83]:
+              - paragraph [ref=e84]: جاهزية التأمين
+              - generic [ref=e85]:
+                - generic [ref=e86]:
+                  - generic [ref=e87]: 8 أحرف على الأقل
+                  - img [ref=e89]
+                - generic [ref=e91]:
+                  - generic [ref=e92]: تأكيد مطابق
+                  - img [ref=e94]
+                - generic [ref=e96]:
+                  - generic [ref=e97]: جاهز لتفعيل الحساب
+                  - img [ref=e99]
+          - navigation "Progress" [ref=e102]:
+            - list [ref=e103]:
+              - listitem [ref=e104]:
+                - generic [ref=e106] [cursor=pointer]:
+                  - img [ref=e109]
+                  - generic [ref=e111]: هويتك الأساسية
+              - listitem [ref=e112]:
+                - generic [ref=e114] [cursor=pointer]:
+                  - img [ref=e117]
+                  - generic [ref=e119]: ولي الأمر والمتابعة
+              - listitem [ref=e120]:
+                - generic [ref=e122] [cursor=pointer]:
+                  - img [ref=e125]
+                  - generic [ref=e127]: المسار الدراسي
+              - listitem [ref=e128]:
+                - generic [ref=e130] [cursor=pointer]:
+                  - generic [ref=e132]: "4"
+                  - generic [ref=e133]: تأمين الحساب
+        - paragraph [ref=e135]:
+          - text: لديك حساب بالفعل؟
+          - link "تسجيل الدخول" [ref=e136] [cursor=pointer]:
+            - /url: /login
+      - paragraph [ref=e137]: © 2026 THE EDITORIAL SCHOLAR ARCHIVE • ALL RIGHTS RESERVED
+  - generic [ref=e142] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e143]:
+      - img [ref=e144]
+    - generic [ref=e147]:
+      - button "Open issues overlay" [ref=e148]:
+        - generic [ref=e149]:
+          - generic [ref=e150]: "1"
+          - generic [ref=e151]: "2"
+        - generic [ref=e152]:
+          - text: Issue
+          - generic [ref=e153]: s
+      - button "Collapse issues badge" [ref=e154]:
+        - img [ref=e155]
+  - alert [ref=e157]
+```

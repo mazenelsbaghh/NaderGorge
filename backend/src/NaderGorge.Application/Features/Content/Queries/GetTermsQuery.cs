@@ -7,8 +7,6 @@ namespace NaderGorge.Application.Features.Content.Queries;
 
 public record GetTermsQuery(Guid PackageId) : IRequest<ApiResponse<List<TermDto>>>;
 
-public record TermDto(Guid Id, string Title, int Order);
-
 public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<List<TermDto>>>
 {
     private readonly IAppDbContext _db;
@@ -19,7 +17,7 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
         var terms = await _db.Terms
             .Where(t => t.PackageId == request.PackageId)
             .OrderBy(t => t.Order)
-            .Select(t => new TermDto(t.Id, t.Title, t.Order))
+            .Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price))
             .ToListAsync(ct);
 
         return ApiResponse<List<TermDto>>.Ok(terms);

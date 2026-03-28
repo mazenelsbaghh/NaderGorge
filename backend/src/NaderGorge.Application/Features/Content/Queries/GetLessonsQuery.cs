@@ -7,7 +7,7 @@ namespace NaderGorge.Application.Features.Content.Queries;
 
 public record GetLessonsQuery(Guid SectionId, Guid UserId) : IRequest<ApiResponse<List<LessonSummaryDto>>>;
 
-public record LessonSummaryDto(Guid Id, string Title, string Summary, int Order, bool HasAccess, bool IsCompleted);
+public record LessonSummaryDto(Guid Id, string Title, string Summary, int Order, bool HasAccess, bool IsCompleted, decimal Price);
 
 public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiResponse<List<LessonSummaryDto>>>
 {
@@ -39,7 +39,7 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, lesson.Id, ct);
             var isCompleted = progresses.Any(p => p.LessonId == lesson.Id && p.IsCompleted);
             
-            dtos.Add(new LessonSummaryDto(lesson.Id, lesson.Title, lesson.Summary, lesson.Order, hasAccess, isCompleted));
+            dtos.Add(new LessonSummaryDto(lesson.Id, lesson.Title, lesson.Summary, lesson.Order, hasAccess, isCompleted, lesson.Price));
         }
 
         return ApiResponse<List<LessonSummaryDto>>.Ok(dtos);

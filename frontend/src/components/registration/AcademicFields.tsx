@@ -111,7 +111,7 @@ export function AcademicFields({ data, onChange, errors, inputCls }: AcademicFie
   return (
     <div className="space-y-4">
       {/* ── Stage ── */}
-      <div>
+      <div key="stage-section">
         <label className="auth-label" htmlFor="reg-stage">
           المرحلة الدراسية
         </label>
@@ -124,11 +124,11 @@ export function AcademicFields({ data, onChange, errors, inputCls }: AcademicFie
           onChange={handleStageChange}
           style={selectStyle}
         >
-          <option value="" disabled style={optionStyle}>
-            اختر المرحلة...
+          <option key="stage-placeholder" value="" disabled style={optionStyle}>
+            اختر المرحلة الدراسية...
           </option>
-          <option value="Secondary" style={optionStyle}>ثانوية</option>
-          <option value="Baccalaureate" style={optionStyle}>بكالوريا</option>
+          <option key="stage-secondary" value="Secondary" style={optionStyle}>ثانوية</option>
+          <option key="stage-baccalaureate" value="Baccalaureate" style={optionStyle}>بكالوريا</option>
         </select>
         {errors.educationStage && (
           <p className="auth-field-error">{errors.educationStage}</p>
@@ -136,65 +136,69 @@ export function AcademicFields({ data, onChange, errors, inputCls }: AcademicFie
       </div>
 
       {/* ── Grade (appears after stage selection) ── */}
-      <AnimatePresence>
+      <AnimatePresence key="grade-presence">
         {data.educationStage && (
           <motion.div {...revealAnim} key="grade-field">
-            <label className="auth-label" htmlFor="reg-grade">
-              الصف الدراسي
-            </label>
-            <select
-              id="reg-grade"
-              name="gradeLevel"
-              data-select
-              className={inputCls('gradeLevel')}
-              value={data.gradeLevel}
-              onChange={handleGradeChange}
-              style={selectStyle}
-            >
-              <option value="" disabled style={optionStyle}>
-                اختر الصف...
-              </option>
-              {gradeOptions.map((g) => (
-                <option key={g.value} value={g.value} style={optionStyle}>
-                  {g.label}
+            <div className="space-y-2">
+              <label className="auth-label" htmlFor="reg-grade">
+                الصف الدراسي
+              </label>
+              <select
+                id="reg-grade"
+                name="gradeLevel"
+                data-select
+                className={inputCls('gradeLevel')}
+                value={data.gradeLevel}
+                onChange={handleGradeChange}
+                style={selectStyle}
+              >
+                <option key="grade-placeholder" value="" disabled style={optionStyle}>
+                  اختر الصف الدراسي...
                 </option>
-              ))}
-            </select>
-            {errors.gradeLevel && (
-              <p className="auth-field-error">{errors.gradeLevel}</p>
-            )}
+                {gradeOptions.map((g) => (
+                  <option key={g.value} value={g.value} style={optionStyle}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+              {errors.gradeLevel ? (
+                <p className="auth-field-error">{errors.gradeLevel}</p>
+              ) : null}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ── Track / Branch (appears only for 2nd-level grades) ── */}
-      <AnimatePresence>
+      <AnimatePresence key="track-presence">
         {showTrack && (
           <motion.div {...revealAnim} key="track-field">
-            <label className="auth-label" htmlFor="reg-track">
-              الشعبة / التخصص
-            </label>
-            <select
-              id="reg-track"
-              name="studyTrack"
-              data-select
-              className={inputCls('studyTrack')}
-              value={data.studyTrack}
-              onChange={handleTrackChange}
-              style={selectStyle}
-            >
-              <option value="" disabled style={optionStyle}>
-                اختر الشعبة...
-              </option>
-              {trackOptions.map((t) => (
-                <option key={t.value} value={t.value} style={optionStyle}>
-                  {t.label}
+            <div className="space-y-2">
+              <label className="auth-label" htmlFor="reg-track">
+                الشعبة / التخصص
+              </label>
+              <select
+                id="reg-track"
+                name="studyTrack"
+                data-select
+                className={inputCls('studyTrack')}
+                value={data.studyTrack}
+                onChange={handleTrackChange}
+                style={selectStyle}
+              >
+                <option key="track-placeholder" value="" disabled style={optionStyle}>
+                  اختر الشعبة أو التخصص...
                 </option>
-              ))}
-            </select>
-            {errors.studyTrack && (
-              <p className="auth-field-error">{errors.studyTrack}</p>
-            )}
+                {trackOptions.map((t) => (
+                  <option key={t.value} value={t.value} style={optionStyle}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+              {errors.studyTrack ? (
+                <p className="auth-field-error">{errors.studyTrack}</p>
+              ) : null}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

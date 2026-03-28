@@ -22,7 +22,10 @@ export interface AdminUserListDto {
   isFatherAlive?: boolean;
   isMotherAlive?: boolean;
   governorate?: string;
+  district?: string;                    // NEW
   address?: string;
+  secondaryPhone?: string;              // NEW
+  secondaryParentPhone?: string;        // NEW
 }
 
 export interface PagedResult<T> {
@@ -57,6 +60,11 @@ export interface CodeDetailDto {
   usedByUserId?: string;
 }
 
+const CODE_GROUPS_CACHE_TTL_MS = 10_000;
+let codeGroupsInFlight: Promise<CodeGroupDto[] | undefined> | null = null;
+let codeGroupsCache: CodeGroupDto[] | undefined;
+let codeGroupsCacheAt = 0;
+
 export interface QuestionOptionDto {
   id: string;
   text: string;
@@ -77,6 +85,9 @@ export interface StudentProfileExtendedDto {
   email: string;
   phone: string;
   parentPhone?: string;
+  secondaryPhone?: string;              // NEW
+  secondaryParentPhone?: string;        // NEW
+  district?: string;                    // NEW
   grade?: string;
   schoolName?: string;
   isActive: boolean;
@@ -93,6 +104,31 @@ export interface StudentProfileExtendedDto {
   overrides: any[];
   auditTrail: any[];
 }
+
+export interface StudentExamResultSummaryDto {
+  studentId: string;
+  studentName: string;
+  studentPhone: string;
+  startedAt?: string;
+  submittedAt?: string;
+  scoreAchieved: number;
+  evaluation: string;
+  isPassed: boolean;
+  isTimeExpired: boolean;
+}
+
+export interface ExamDashboardDto {
+  examId: string;
+  title: string;
+  description: string;
+  questionCount: number;
+  totalScore: number;
+  passingScore: number;
+  durationMinutes?: number;
+  timePerQuestionSeconds?: number;
+  attempts: StudentExamResultSummaryDto[];
+}
+
 
 export const adminService = {
   // Users
@@ -177,9 +213,33 @@ export const adminService = {
     return res.data?.data;
   },
 
-  listCodeGroups: async () => {
-    const res = await apiClient.get<ApiResponse<CodeGroupDto[]>>('/admin/codes/groups');
-    return res.data?.data;
+  listCodeGroups: async (options?: { force?: boolean }) => {
+    const force = options?.force ?? false;
+    const isCacheFresh =
+      !force &&
+      codeGroupsCache !== undefined &&
+      Date.now() - codeGroupsCacheAt < CODE_GROUPS_CACHE_TTL_MS;
+
+    if (isCacheFresh) {
+      return codeGroupsCache;
+    }
+
+    if (!force && codeGroupsInFlight) {
+      return codeGroupsInFlight;
+    }
+
+    codeGroupsInFlight = apiClient
+      .get<ApiResponse<CodeGroupDto[]>>('/admin/codes/groups')
+      .then((res) => {
+        codeGroupsCache = res.data?.data;
+        codeGroupsCacheAt = Date.now();
+        return codeGroupsCache;
+      })
+      .finally(() => {
+        codeGroupsInFlight = null;
+      });
+
+    return codeGroupsInFlight;
   },
 
   getCodeGroupDetails: async (id: string) => {
@@ -205,17 +265,33 @@ export const adminService = {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);
     return res.data?.data;
   },
-  createTerm: async (payload: { packageId: string; title: string; order: number }) => {
+  getPackageById: async (id: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/admin/packages/${id}`);
+    return res.data?.data;
+  },
+  updatePackage: async (id: string, payload: any) => {
+    const res = await apiClient.put<ApiResponse<any>>(`/admin/packages/${id}`, payload);
+    return res.data?.data;
+  },
+  createTerm: async (payload: { packageId: string; title: string; order: number; price: number }) => {
     const res = await apiClient.post<ApiResponse<string>>('/admin/terms', payload);
     return res.data?.data;
   },
-  updateTerm: async (id: string, payload: { title: string; order: number }) => {
+  updateTerm: async (id: string, payload: { title: string; order: number; price: number }) => {
     const res = await apiClient.put<ApiResponse>(`/admin/terms/${id}`, payload);
     return res.data;
   },
   deleteTerm: async (id: string) => {
     const res = await apiClient.delete<ApiResponse>(`/admin/terms/${id}`);
     return res.data;
+  },
+  getTermById: async (id: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/admin/terms/${id}`);
+    return res.data?.data;
+  },
+  getSectionById: async (id: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/admin/sections/${id}`);
+    return res.data?.data;
   },
   createSection: async (payload: any) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/sections', payload);
@@ -225,12 +301,37 @@ export const adminService = {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/lessons', payload);
     return res.data?.data;
   },
+  getLessonCockpit: async (id: string) => {
+    const res = await apiClient.get<ApiResponse<any>>(`/admin/lessons/${id}/cockpit`);
+    return res;
+  },
   createVideo: async (payload: any) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/videos', payload);
     return res.data?.data;
   },
-  attachHomework: async (lessonId: string, payload: { title: string; instructions: string; isMandatory: boolean; requiredPointsToPass: number; questions: { text: string; order: number; maxPoints: number }[] }) => {
+  createResource: async (payload: { lessonId: string; title: string; fileUrl: string; resourceType: string }) => {
+    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/resources', payload);
+    return res.data?.data;
+  },
+  attachHomework: async (lessonId: string, payload: { title: string; instructions: string; isMandatory: boolean; totalScore: number; requiredPointsToPass: number; questions: { text: string; order: number; maxPoints: number }[] }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>(`/admin/content/lessons/${lessonId}/homework`, payload);
+    return res.data?.data;
+  },
+  linkLessonExam: async (lessonId: string, examId: string | null) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/lessons/${lessonId}/exam`, { examId });
+    return res.data;
+  },
+  createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; durationMinutes?: number; timePerQuestionSeconds?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[] }[] }) => {
+    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/exams/inline', payload);
+    return res.data?.data;
+  },
+  addQuestionsToExam: async (examId: string, payload: { questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[] }[] }) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/exams/${examId}/questions`, payload);
+    return res.data;
+  },
+  
+  getExamDashboard: async (examId: string) => {
+    const res = await apiClient.get<ApiResponse<ExamDashboardDto>>(`/admin/exams/${examId}/dashboard`);
     return res.data?.data;
   },
 

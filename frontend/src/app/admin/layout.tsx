@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Shield, Users, BookOpen, KeyRound, Wrench } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -19,6 +20,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const usesStandaloneShell =
     pathname === "/admin" || pathname.startsWith("/admin/");
+
+  useEffect(() => {
+    document.documentElement.classList.add("admin-route-active");
+
+    return () => {
+      document.documentElement.classList.remove("admin-route-active");
+    };
+  }, []);
 
   return (
     <AdminGuard>

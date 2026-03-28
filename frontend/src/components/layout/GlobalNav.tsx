@@ -4,11 +4,70 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
+import { useState, type CSSProperties } from "react";
+import {
+  Navbar,
+  NavBody,
+  NavItems,
+  MobileNav,
+  NavbarLogo,
+  NavbarButton,
+  MobileNavHeader,
+  MobileNavToggle,
+  MobileNavMenu,
+} from "@/components/ui/resizable-navbar";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { useAdminTheme } from "@/components/admin/useAdminTheme";
+import { motion, useReducedMotion } from "framer-motion";
+import { ShinyButton } from "@/components/ui/shiny-button";
+import { SphinxMark } from "@/components/icons/SphinxMark";
+import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
+
+const sphinxNavVars: CSSProperties = {
+  ['--sphinx-primary' as string]: 'var(--landing-accent)',
+  ['--sphinx-secondary' as string]:
+    'color-mix(in srgb, var(--landing-ink) 66%, var(--landing-accent) 34%)',
+};
+
+function LoginNavButtonContent() {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <span
+      className="inline-flex items-center gap-2.5 whitespace-nowrap"
+      style={sphinxNavVars}
+    >
+      <motion.span
+        className="inline-flex h-4 w-4 shrink-0 origin-center text-[var(--landing-accent)] drop-shadow-[0_2px_10px_rgba(145,95,42,0.2)]"
+        animate={
+          shouldReduceMotion
+            ? undefined
+            : {
+                y: [0, -1.5, 0],
+                rotate: [0, -5, 0],
+                scale: [1, 1.06, 1],
+              }
+        }
+        transition={{
+          duration: 3.2,
+          ease: 'easeInOut',
+          repeat: Infinity,
+        }}
+      >
+        <SphinxMark className="h-4 w-4" />
+      </motion.span>
+      <span>تسجيل الدخول</span>
+    </span>
+  );
+}
 
 export function GlobalNav() {
   const pathname = usePathname();
   const { user, isAuthenticated, clearAuth } = useAuthStore();
   const router = useRouter();
+  const { isDark, toggleTheme } = useAdminTheme();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   const isLanding = pathname === "/";
   const isStudentArea = pathname.startsWith("/student");
   const isAdminArea = pathname.startsWith("/admin");
@@ -46,93 +105,129 @@ export function GlobalNav() {
       : [];
 
   return (
-    <header
-      className={`z-50 px-4 py-3 md:px-0 ${
-        isLanding ? "absolute inset-x-0 top-0" : "sticky top-0"
-      }`}
-    >
-      <div
-        className={`mx-auto flex w-[min(1180px,92vw)] items-center justify-between rounded-full px-4 py-3 backdrop-blur-xl md:px-6 ${
-          isLanding
-            ? "border border-white/30 bg-[color:rgba(255,248,236,0.34)] shadow-[0_18px_40px_rgba(88,55,18,0.10)]"
-            : "border border-[var(--landing-line)] bg-[color:rgba(250,242,226,0.84)] shadow-[0_18px_40px_rgba(88,55,18,0.08)]"
-        }`}
-      >
-        <Link href="/" className="flex items-center gap-3">
-          <div
-            className={`flex h-11 w-11 items-center justify-center rounded-full text-lg text-[var(--landing-accent)] shadow-inner ${
-              isLanding
-                ? "border border-white/35 bg-[color:rgba(255,248,236,0.28)]"
-                : "border border-[var(--landing-line)] bg-[var(--landing-card)]"
-            }`}
+    <div className={`z-50 w-full ${isLanding ? "absolute inset-x-0 top-0" : "sticky top-0"}`}>
+      <Navbar isLanding={isLanding}>
+        {/* Desktop Navigation */}
+        <NavBody isLanding={isLanding}>
+          <div className="flex items-center gap-3">
+            <NavbarLogo />
+          </div>
+          
+          <NavItems items={navLinks.map((link) => ({ name: link.label, link: link.href }))} />
+
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                <span className="hidden text-sm font-bold text-[var(--landing-muted)] md:inline">
+                  {user?.fullName}
+                </span>
+                <NavbarButton
+                  onClick={handleLogout}
+                  variant="danger"
+                  className="hidden md:inline-flex"
+                >
+                  خروج
+                </NavbarButton>
+              </>
+            ) : (
+              <>
+                <ShinyButton href="/login" className="hidden md:inline-flex text-[15px] h-[46px] items-center px-8">
+                  <LoginNavButtonContent />
+                </ShinyButton>
+                <InteractiveHoverButton href="/register" className="hidden md:inline-flex text-[15px] h-[46px] items-center px-6">
+                  احجز مكانك
+                </InteractiveHoverButton>
+              </>
+            )}
+
+            {/* Theme Toggler right after the main actions */}
+            <div className="flex h-10 items-center">
+              <AnimatedThemeToggler
+                checked={isDark}
+                onToggle={toggleTheme}
+                aria-label={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
+                title={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition border border-[var(--landing-line)] text-[var(--landing-ink)] hover:bg-[var(--landing-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--landing-accent)]"
+              />
+            </div>
+          </div>
+        </NavBody>
+
+        {/* Mobile Navigation */}
+        <MobileNav>
+          <MobileNavHeader>
+            <NavbarLogo />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 items-center">
+                <AnimatedThemeToggler
+                  checked={isDark}
+                  onToggle={toggleTheme}
+                  aria-label={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
+                  title={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition border border-[var(--landing-line)] text-[var(--landing-ink)] hover:bg-[var(--landing-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--landing-accent)]"
+                />
+              </div>
+              <MobileNavToggle
+                isOpen={isMobileMenuOpen}
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              />
+            </div>
+          </MobileNavHeader>
+
+          <MobileNavMenu
+            isOpen={isMobileMenuOpen}
+            onClose={() => setIsMobileMenuOpen(false)}
           >
-            ☥
-          </div>
-          <div>
-            <p className="text-xs font-semibold tracking-[0.3em] text-[var(--landing-muted)]">
-              NADER GORGE
-            </p>
-            <p className="text-base font-black text-[var(--landing-ink)] md:text-lg">
-              الأستاذ نادر جورج
-            </p>
-          </div>
-        </Link>
-
-        <nav className="hidden items-center gap-6 md:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm font-bold transition hover:text-[var(--landing-accent)] ${
-                pathname === link.href
-                  ? "text-[var(--landing-accent)]"
-                  : "text-[var(--landing-muted)]"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-3">
-          {isAuthenticated ? (
-            <>
-              <span className="hidden text-sm font-bold text-[var(--landing-muted)] md:inline">
-                {user?.fullName}
-              </span>
-              <button
-                onClick={handleLogout}
-                className={`rounded-full px-5 py-2.5 text-sm font-bold text-red-600 transition ${
-                  isLanding
-                    ? "border border-white/35 hover:bg-white/20"
-                    : "border border-[var(--landing-line)] hover:bg-red-50"
-                }`}
-              >
-                خروج
-              </button>
-            </>
-          ) : (
-            <>
+            {navLinks.map((link, idx) => (
               <Link
-                href="/login"
-                className={`hidden rounded-full px-5 py-2.5 text-sm font-bold text-[var(--landing-ink)] transition md:inline-flex ${
-                  isLanding
-                    ? "border border-white/35 bg-[color:rgba(255,248,236,0.18)] hover:bg-white/24"
-                    : "border border-[var(--landing-line)] hover:bg-[var(--landing-card)]"
-                }`}
+                key={`mobile-link-${idx}`}
+                href={link.href}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="relative w-full text-right text-lg font-bold text-[var(--landing-ink)]"
               >
-                تسجيل الدخول
+                <span className="block">{link.label}</span>
               </Link>
-              <Link
-                href="/register"
-                className="rounded-full bg-[var(--landing-accent)] px-5 py-2.5 text-sm font-extrabold text-[var(--landing-accent-foreground)] shadow-[0_10px_24px_rgba(145,95,42,0.28)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
-              >
-                احجز مكانك
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+            ))}
+            
+            <div className="mt-4 flex w-full flex-col gap-4 border-t border-[var(--landing-line)] pt-4">
+              {isAuthenticated ? (
+                <>
+                  <span className="text-right text-sm font-bold text-[var(--landing-muted)]">
+                    {user?.fullName}
+                  </span>
+                  <NavbarButton
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    variant="danger"
+                    className="w-full"
+                  >
+                    خروج
+                  </NavbarButton>
+                </>
+              ) : (
+                <>
+                  <ShinyButton 
+                    href="/login"
+                    onClick={() => { setIsMobileMenuOpen(false); }} 
+                    className="w-full text-base h-12 flex items-center justify-center"
+                  >
+                    <LoginNavButtonContent />
+                  </ShinyButton>
+                  <InteractiveHoverButton 
+                    href="/register"
+                    onClick={() => { setIsMobileMenuOpen(false); }} 
+                    className="w-full text-base h-12 flex items-center justify-center"
+                  >
+                    احجز مكانك
+                  </InteractiveHoverButton>
+                </>
+              )}
+            </div>
+          </MobileNavMenu>
+        </MobileNav>
+      </Navbar>
+    </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { adminService, AdminUserListDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
+import { Checkbox, Label } from '@/components/ui/checkbox';
 
 interface UserRoleDropdownProps {
   user: AdminUserListDto;
@@ -55,16 +56,21 @@ export function UserRoleDropdown({ user, onUpdate }: UserRoleDropdownProps) {
         <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-2xl shadow-[0_12px_32px_var(--admin-shadow)] bg-[var(--admin-card)] border border-[var(--admin-border)] z-10">
           <div className="py-1" role="menu" aria-orientation="vertical">
             {AVAILABLE_ROLES.map(role => (
-              <label key={role} className="flex leading-6 items-center px-4 py-2 hover:bg-[var(--admin-card-soft)] cursor-pointer transition">
-                <input
-                  type="checkbox"
-                  disabled={loading}
-                  checked={currentRoles.includes(role)}
-                  onChange={() => toggleRole(role)}
-                  className="mr-3 h-4 w-4 rounded accent-[var(--admin-primary)]"
-                />
-                <span className="text-sm font-medium text-[var(--admin-text)]">{role}</span>
-              </label>
+              <Checkbox
+                key={role}
+                id={`role-${role}`}
+                isDisabled={loading}
+                isSelected={currentRoles.includes(role)}
+                onChange={() => toggleRole(role)}
+                className="w-full justify-start px-4 py-2 hover:bg-[var(--admin-card-soft)] transition"
+              >
+                <Checkbox.Control>
+                  <Checkbox.Indicator />
+                </Checkbox.Control>
+                <Checkbox.Content>
+                  <Label className="text-sm font-medium text-[var(--admin-text)] cursor-pointer">{role}</Label>
+                </Checkbox.Content>
+              </Checkbox>
             ))}
           </div>
         </div>

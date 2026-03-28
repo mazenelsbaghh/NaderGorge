@@ -29,29 +29,11 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             case CodeType.Package:
                 var pkg = await _db.Packages.FirstOrDefaultAsync(p => p.Id == request.ContentId, ct);
                 if (pkg == null) return ApiResponse<bool>.Fail("الباقة غير موجودة");
-                price = pkg.Price ?? 0;
-                contentName = pkg.Title;
-                break;
-            case CodeType.Term:
-                var term = await _db.Terms.FirstOrDefaultAsync(t => t.Id == request.ContentId, ct);
-                if (term == null) return ApiResponse<bool>.Fail("الترم غير موجود");
-                price = term.Price ?? 0;
-                contentName = term.Title;
-                break;
-            case CodeType.Month:
-                var sec = await _db.ContentSections.FirstOrDefaultAsync(s => s.Id == request.ContentId, ct);
-                if (sec == null) return ApiResponse<bool>.Fail("القسم غير موجود");
-                price = sec.Price ?? 0;
-                contentName = sec.Title;
-                break;
-            case CodeType.Lesson:
-                var les = await _db.Lessons.FirstOrDefaultAsync(l => l.Id == request.ContentId, ct);
-                if (les == null) return ApiResponse<bool>.Fail("الدرس غير موجود");
-                price = les.Price ?? 0;
-                contentName = les.Title;
+                price = pkg.Price;
+                contentName = pkg.Name;
                 break;
             default:
-                return ApiResponse<bool>.Fail("نوع المحتوى غير مدعوم للشراء المباشر");
+                return ApiResponse<bool>.Fail("شراء الأجزاء الفردية غير متاح بالرصيد حالياً، يمكنك استخدام كود شحن مخصص.");
         }
 
         // 2. Check if already purchased

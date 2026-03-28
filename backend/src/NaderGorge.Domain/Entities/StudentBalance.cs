@@ -8,7 +8,6 @@ public class StudentBalance : BaseEntity
     public User User { get; set; } = null!;
 
     public decimal CurrentBalance { get; set; } = 0m;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation
     public ICollection<BalanceTransaction> Transactions { get; set; } = new List<BalanceTransaction>();

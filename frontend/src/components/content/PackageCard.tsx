@@ -24,8 +24,8 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
         <div className="absolute top-4 right-4">
            <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm backdrop-blur-md ${
              pkg.isEnrolled 
-               ? 'bg-[#DCFCE7]/90 text-[#166534] border border-[#166534]/10' 
-               : 'bg-[#FEE2E2]/90 text-[#991B1B] border border-[#991B1B]/10'
+               ? 'bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]' 
+               : 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)] border border-[var(--admin-danger-20)]'
            }`}>
              {pkg.isEnrolled ? 'مفعلة' : 'تحتاج كود'}
            </span>

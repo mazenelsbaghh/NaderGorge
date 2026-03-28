@@ -2,6 +2,12 @@ using NaderGorge.Domain.Common;
 
 namespace NaderGorge.Domain.Entities;
 
+public enum QuestionType
+{
+    MCQ = 0,
+    Essay = 1
+}
+
 public class Exam : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
@@ -13,6 +19,11 @@ public class Exam : BaseEntity
     // Total possible score
     public decimal TotalScore { get; set; }
     
+    // Timer properties
+    public int? DurationMinutes { get; set; }
+    public int? TimePerQuestionSeconds { get; set; }
+    
+    
     public ICollection<ExamQuestion> ExamQuestions { get; set; } = new List<ExamQuestion>();
     public ICollection<StudentExamAttempt> Attempts { get; set; } = new List<StudentExamAttempt>();
 }
@@ -20,6 +31,7 @@ public class Exam : BaseEntity
 public class QuestionBankItem : BaseEntity
 {
     public string Text { get; set; } = string.Empty;
+    public QuestionType Type { get; set; } = QuestionType.MCQ;
     public decimal DefaultPoints { get; set; } = 1.0m;
     
     // Tags for categorization
@@ -48,6 +60,9 @@ public class ExamQuestion : BaseEntity
 
     public int Order { get; set; }
     public decimal Points { get; set; } // Can override default points
+    
+    // Timer properties
+    public int? DurationSeconds { get; set; }
 }
 
 public class StudentExamAttempt : BaseEntity
@@ -60,6 +75,13 @@ public class StudentExamAttempt : BaseEntity
 
     public decimal ScoreAchieved { get; set; }
     public bool IsPassed { get; set; }
+    
+    // Auto-calculated evaluation string (e.g. "ممتاز")
+    public string? Evaluation { get; set; }
+    
+    // Timer enforcement
+    public DateTime? StartedAt { get; set; }
+    public bool IsTimeExpired { get; set; }
 
     public ICollection<StudentAnswer> Answers { get; set; } = new List<StudentAnswer>();
 }

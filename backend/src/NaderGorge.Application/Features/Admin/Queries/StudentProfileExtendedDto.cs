@@ -10,6 +10,9 @@ public class StudentProfileExtendedDto
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string? ParentPhone { get; set; }
+    public string? SecondaryPhone { get; set; }              // NEW
+    public string? SecondaryParentPhone { get; set; }        // NEW
+    public string? District { get; set; }                    // NEW
     public string? Grade { get; set; }
     public string? SchoolName { get; set; }
     public bool IsActive { get; set; }

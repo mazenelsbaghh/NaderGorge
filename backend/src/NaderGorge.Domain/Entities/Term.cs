@@ -6,6 +6,7 @@ public class Term : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
     public int Order { get; set; }
+    public decimal Price { get; set; }
 
     public Guid PackageId { get; set; }
     public Package Package { get; set; } = null!;

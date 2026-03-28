@@ -12,11 +12,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { Eye, EyeOff, Phone } from 'lucide-react';
+import { isAxiosError } from 'axios';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowUpLeft, Eye, EyeOff, Phone, Sparkles } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
+import { Checkbox, Label } from '@/components/ui/checkbox';
+import { SphinxMark } from '@/components/icons/SphinxMark';
+import { ShinyButton } from '@/components/ui/shiny-button';
 
 export function LoginForm() {
   const router = useRouter();
@@ -27,6 +31,7 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,10 +66,12 @@ export function LoginForm() {
         user.roles.includes(r)
       );
       router.push(isStaff ? '/admin' : '/student');
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || 'فشل تسجيل الدخول. تأكد من البيانات.'
-      );
+    } catch (error: unknown) {
+      const message = isAxiosError<{ message?: string }>(error)
+        ? error.response?.data?.message
+        : undefined;
+
+      setError(message || 'فشل تسجيل الدخول. تأكد من البيانات.');
     } finally {
       setLoading(false);
     }
@@ -138,16 +145,18 @@ export function LoginForm() {
 
       {/* ── Remember me / Forgot ── */}
       <div className="auth-remember-row">
-        <label className="auth-checkbox">
-          <input
-            type="checkbox"
-            className="auth-checkbox__input"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-          />
-          <span className="auth-checkbox__mark" aria-hidden="true" />
-          <span className="auth-checkbox__label">تذكرني</span>
-        </label>
+        <Checkbox
+          id="login-remember"
+          isSelected={rememberMe}
+          onChange={setRememberMe}
+        >
+          <Checkbox.Control>
+            <Checkbox.Indicator />
+          </Checkbox.Control>
+          <Checkbox.Content>
+            <Label className="text-[var(--admin-text)]">تذكرني</Label>
+          </Checkbox.Content>
+        </Checkbox>
         <a
           href="#"
           className="text-xs font-bold underline-offset-2 hover:underline"
@@ -158,9 +167,15 @@ export function LoginForm() {
       </div>
 
       {/* ── Submit Button ── */}
-      <button type="submit" disabled={loading} className="auth-btn-primary">
-        {loading ? 'جاري التحقق...' : 'تسجيل الدخول'}
-      </button>
+      <div style={{ '--landing-accent': 'var(--admin-primary)', '--landing-ink': 'var(--admin-text)' } as React.CSSProperties}>
+        <ShinyButton
+          type="submit"
+          disabled={loading}
+          className="w-full h-12 flex items-center justify-center mt-2 group"
+        >
+          {loading ? 'جاري التحقق...' : 'تسجيل الدخول'}
+        </ShinyButton>
+      </div>
     </motion.form>
   );
 }

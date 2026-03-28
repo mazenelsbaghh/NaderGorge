@@ -16,6 +16,8 @@ const apiClient = axios.create({
 });
 
 const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
+const RATE_LIMIT_TOAST_COOLDOWN_MS = 4_000;
+let lastRateLimitToastAt = 0;
 
 // Request interceptor: attach JWT token
 apiClient.interceptors.request.use(
@@ -46,10 +48,16 @@ apiClient.interceptors.response.use(
     ) {
       originalRequest._retry = true;
 
-      try {
-        const refreshToken = getStoredRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token');
+      const refreshToken = getStoredRefreshToken();
+      if (!refreshToken) {
+        clearStoredAuth();
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
 
+      try {
         const { data } = await axios.post(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/refresh`,
           { refreshToken }
@@ -59,17 +67,28 @@ apiClient.interceptors.response.use(
 
         originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
         return apiClient(originalRequest);
-      } catch (refreshError) {
+      } catch {
         clearStoredAuth();
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
-        return Promise.reject(refreshError);
+        return Promise.reject(error);
       }
     }
 
+    const status = error.response?.status;
     const errorMsg = error.response?.data?.message || error.message || 'An error occurred';
-    if (error.response?.status !== 401) {
+
+    if (status === 429) {
+      const now = Date.now();
+      if (now - lastRateLimitToastAt > RATE_LIMIT_TOAST_COOLDOWN_MS) {
+        lastRateLimitToastAt = now;
+        toast.error(error.response?.data?.message || 'طلبات كثيرة في وقت قصير. انتظر لحظات ثم حاول مرة أخرى.');
+      }
+      return Promise.reject(error);
+    }
+
+    if (status !== 401) {
       toast.error(errorMsg);
     }
     return Promise.reject(error);

@@ -63,7 +63,7 @@ export default function AdminRootPage() {
       pageTitle="الرئيسية"
       subtitle="بوابة الإدارة المركزية لكل أدوات النظام بدون أي تحويلات إلى صفحات الطالب أو المساعد."
       action={
-        <div className="flex flex-wrap items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2 shadow-sm backdrop-blur-xl">
+        <div className="flex flex-wrap items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-2 shadow-sm backdrop-blur-xl">
           {adminLinks.map((item) => (
             <Link
               key={item.href}
@@ -81,7 +81,7 @@ export default function AdminRootPage() {
           variant="light"
           icon={Layers3}
           label="الهيكلة"
-          value="٥"
+          value="5"
           subtitle="أقسام إدارة جاهزة ومتصلة ببعض"
         />
 
@@ -97,7 +97,7 @@ export default function AdminRootPage() {
           variant="muted"
           icon={ArrowLeft}
           label="المسار"
-          value="١"
+          value="1"
           subtitle="مسار رئيسي واضح يبدأ من /admin"
         />
       </section>
@@ -110,7 +110,7 @@ export default function AdminRootPage() {
             <Link
               key={item.href}
               href={item.href}
-              className="group overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl transition hover:bg-[var(--admin-hover)]"
+              className="group overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl transition hover:bg-[var(--admin-hover)]"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

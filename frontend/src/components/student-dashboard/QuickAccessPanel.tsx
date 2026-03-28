@@ -12,7 +12,7 @@ export function QuickAccessPanel({ items }: QuickAccessPanelProps) {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 sm:p-8 backdrop-blur-xl">
+    <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 sm:p-8 backdrop-blur-xl">
       <div className="mb-6 flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-yellow-500/10 text-yellow-600">
           <Zap className="h-6 w-6" />

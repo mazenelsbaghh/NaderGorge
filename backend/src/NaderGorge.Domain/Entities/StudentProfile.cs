@@ -9,14 +9,17 @@ public class StudentProfile : BaseEntity
     public User User { get; set; } = null!;
 
     // --- Personal data ---
-    public string StudentCode { get; set; } = string.Empty;   // Dostab student code
+    public string? StudentCode { get; set; }                   // Was required, now optional
     public DateTime DateOfBirth { get; set; }
     public Gender Gender { get; set; }
     public string Governorate { get; set; } = string.Empty;
+    public string? District { get; set; }                      // Neighborhood/area within governorate
     public string Address { get; set; } = string.Empty;
+    public string? SecondaryPhone { get; set; }                // Student's 2nd phone
 
     // --- Parent data ---
     public string? ParentPhone { get; set; }
+    public string? SecondaryParentPhone { get; set; }          // Parent's 2nd phone
     public bool IsFatherAlive { get; set; } = true;
     public bool IsMotherAlive { get; set; } = true;
 
