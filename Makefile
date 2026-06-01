@@ -184,3 +184,25 @@ stop: ## Kill all native processes running on known ports
 	-@pkill -f "next-server" 2>/dev/null || true
 	@sleep 2
 	@echo "   Done."
+
+# =============================================================================
+# 🚀 DEPLOYMENT
+# =============================================================================
+
+deploy: ## Stage, commit, merge current branch to main, push to origin, and checkout original branch
+	@CURRENT_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	echo "🚀 Deploying from branch: $$CURRENT_BRANCH"; \
+	echo "📦 Staging and committing changes..."; \
+	git add .; \
+	git commit -m "deploy: updates from $$CURRENT_BRANCH" || true; \
+	echo "🔄 Switching to main..."; \
+	git checkout main; \
+	echo "📥 Pulling latest main..."; \
+	git pull origin main; \
+	echo "🔀 Merging $$CURRENT_BRANCH into main..."; \
+	git merge $$CURRENT_BRANCH; \
+	echo "📤 Pushing to main..."; \
+	git push origin main; \
+	echo "↩️ Switching back to $$CURRENT_BRANCH..."; \
+	git checkout $$CURRENT_BRANCH; \
+	echo "✅ Deployment push completed!"
