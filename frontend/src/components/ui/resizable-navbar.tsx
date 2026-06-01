@@ -239,17 +239,17 @@ export const MobileNavToggle = ({
 
 export const NavbarLogo = () => {
   return (
-    <Link href="/" className="relative z-20 flex items-center gap-3 ml-4">
+    <Link href="/" className="relative z-20 flex items-center gap-2 sm:gap-3 ml-4">
       <div
-        className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-[var(--landing-accent)] shadow-[0_2px_10px_rgba(0,0,0,0.1)_inset] border border-[var(--landing-line)] bg-[var(--landing-card-strong)]"
+        className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full text-sm sm:text-lg text-[var(--landing-accent)] shadow-[0_2px_10px_rgba(0,0,0,0.1)_inset] border border-[var(--landing-line)] bg-[var(--landing-card-strong)]"
       >
         ☥
       </div>
       <div>
-        <p className="text-xs font-semibold tracking-[0.3em] text-[var(--landing-muted)]">
+        <p className="text-[10px] sm:text-xs font-semibold tracking-[0.2em] sm:tracking-[0.3em] text-[var(--landing-muted)] leading-tight">
           NADER GORGE
         </p>
-        <p className="text-base font-black text-[var(--landing-ink)] md:text-lg">
+        <p className="text-sm sm:text-base font-black text-[var(--landing-ink)] md:text-lg leading-none mt-0.5 sm:mt-1">
           الأستاذ نادر جورج
         </p>
       </div>
