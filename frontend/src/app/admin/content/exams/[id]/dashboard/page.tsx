@@ -3,27 +3,47 @@
 import { useEffect, useState, use } from 'react';
 import { adminService, ExamDashboardDto, StudentExamResultSummaryDto } from '@/services/admin-service';
 import { useRouter } from 'next/navigation';
-import { FileText, Clock, BookCheck, Users, AlertCircle } from 'lucide-react';
+import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus } from 'lucide-react';
 import { AdminShellChrome, AdminStatCard, AdminDataTable, AdminBackButton } from '@/components/admin';
+import toast from 'react-hot-toast';
 
 export default function ExamDashboardPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const examId = params.id;
+  const router = useRouter();
 
   const [dashboard, setDashboard] = useState<ExamDashboardDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadDashboard = () => {
     if (!examId) return;
-    
     adminService.getExamDashboard(examId)
       .then(data => {
-        setDashboard(data);
+        setDashboard(data ?? null);
       })
       .catch(() => setError(true))
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    loadDashboard();
   }, [examId]);
+
+  const handleDeleteQuestion = async (examQuestionId: string) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا السؤال نهائياً؟')) return;
+    setDeletingQuestionId(examQuestionId);
+    try {
+      await adminService.deleteExamQuestion(examId, examQuestionId);
+      toast.success('تم حذف السؤال بنجاح');
+      loadDashboard();
+    } catch {
+      toast.error('فشل في حذف السؤال');
+    } finally {
+      setDeletingQuestionId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -86,6 +106,76 @@ export default function ExamDashboardPage(props: { params: Promise<{ id: string 
             subtitle={dashboard.durationMinutes ? "دقيقة" : undefined}
             variant="light" 
           />
+        </div>
+
+        {/* Questions List */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-[var(--admin-primary-15)] p-3 text-[var(--admin-primary)]">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[var(--admin-text)]">أسئلة الامتحان</h2>
+                <p className="text-sm text-[var(--admin-muted)] font-mono mt-1">{dashboard.questions?.length ?? 0} سؤال</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
+            >
+              <Plus className="h-4 w-4" />
+              إضافة سؤال
+            </button>
+          </div>
+
+          {dashboard.questions?.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[var(--admin-border)] p-8 text-center text-[var(--admin-muted)] font-bold">
+              لا يوجد أسئلة في هذا الامتحان بعد.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {dashboard.questions?.map((q, idx) => (
+                <div key={q.examQuestionId} className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--admin-primary-15)] text-xs font-black text-[var(--admin-primary)]">
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-bold text-[var(--admin-text)] truncate" dangerouslySetInnerHTML={{ __html: q.text }} />
+                      <div className="mt-1 flex items-center gap-3 flex-wrap">
+                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                          q.type === 'FindTheMistake'
+                            ? 'bg-purple-500/10 text-purple-600'
+                            : q.type === 'Essay'
+                            ? 'bg-orange-500/10 text-orange-600'
+                            : 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]'
+                        }`}>
+                          {q.type === 'FindTheMistake' ? 'اكتشف الغلطة' : q.type === 'Essay' ? 'مقال' : 'اختيار'}
+                        </span>
+                        <span className="text-xs text-[var(--admin-muted)] font-mono">{q.points} نقطة</span>
+                        {q.type === 'FindTheMistake' && !q.baseText && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-0.5 text-[10px] font-black text-red-600">
+                            <AlertCircle className="h-3 w-3" /> baseText مفقود
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={deletingQuestionId === q.examQuestionId}
+                    onClick={() => handleDeleteQuestion(q.examQuestionId)}
+                    className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-500 transition hover:bg-red-100 disabled:opacity-50"
+                    title="حذف السؤال"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Attempts Table */}

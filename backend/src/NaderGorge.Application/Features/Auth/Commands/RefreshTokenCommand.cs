@@ -25,6 +25,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
     {
         var storedToken = await _db.RefreshTokens
             .Include(r => r.User).ThenInclude(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(r => r.User).ThenInclude(u => u.StudentProfile)
             .FirstOrDefaultAsync(r => r.Token == request.RefreshToken && !r.IsRevoked, ct)
             ?? throw new UnauthorizedAccessException("Invalid or expired refresh token");
 
@@ -54,7 +55,7 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
 
         await _db.SaveChangesAsync(ct);
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, user.IsProfileComplete);
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(newAccessToken, newRefreshToken, userDto));
     }
 }

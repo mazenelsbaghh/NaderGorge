@@ -6,9 +6,10 @@ import Image from 'next/image';
 
 export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => void }) {
   return (
-    <motion.div
+    <motion.button
+      type="button"
       whileHover={{ y: -4 }}
-      className="group relative flex flex-col overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm transition-all hover:shadow-xl cursor-pointer"
+      className="group relative flex flex-col overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-all hover:shadow-xl cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
       onClick={onClick}
     >
       {/* Image Header */}
@@ -39,7 +40,7 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
             {pkg.name}
           </h3>
           <span className="shrink-0 text-lg font-black text-[var(--admin-primary)]">
-            {pkg.price.toFixed(0)} LE
+            {pkg.price.toFixed(0)} ج.م
           </span>
         </div>
         
@@ -51,13 +52,13 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
         <div className="mt-auto pt-4 border-t border-[var(--admin-border)]">
           <button className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition-colors ${
             pkg.isEnrolled
-              ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-white'
+              ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-[var(--admin-primary-contrast)]'
               : 'bg-[var(--admin-card-strong)] text-[var(--admin-text)] group-hover:bg-[var(--admin-card-strong)]'
           }`}>
             {pkg.isEnrolled ? 'دخول الباقة' : 'تفعيل بالكود'}
           </button>
         </div>
       </div>
-    </motion.div>
+    </motion.button>
   );
 }

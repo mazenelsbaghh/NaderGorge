@@ -345,6 +345,7 @@ export default function AdminCodesPage() {
             <CodeTypeSelector
               value={genSelection}
               onChange={setGenSelection}
+              packages={packages}
             />
           </div>
 

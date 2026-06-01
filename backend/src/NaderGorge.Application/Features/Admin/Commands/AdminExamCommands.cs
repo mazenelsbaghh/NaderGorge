@@ -13,7 +13,9 @@ public class CreateInlineExamCommand : IRequest<ApiResponse<Guid>>
     public decimal PassingScore { get; set; }
     public decimal TotalScore { get; set; }
     public int? DurationMinutes { get; set; }
-    public int? TimePerQuestionSeconds { get; set; }
+    public bool IsMandatory { get; set; } = true;
+    public bool IsRandomized { get; set; } = false;
+    public int? DisplayQuestionCount { get; set; }
     public ExamTargetDto Target { get; set; } = new();
     public List<InlineExamQuestionDto> Questions { get; set; } = new();
 }
@@ -27,10 +29,16 @@ public class ExamTargetDto
 public class InlineExamQuestionDto
 {
     public string Text { get; set; } = string.Empty;
-    public string Type { get; set; } = "MCQ"; // "MCQ" or "Essay"
+    public string Type { get; set; } = "MCQ"; // "MCQ", "Essay", or "FindTheMistake"
     public decimal Points { get; set; }
     public int Order { get; set; }
     public List<InlineExamOptionDto> Options { get; set; } = new();
+    public string? AudioUrl { get; set; }
+    public string? WrittenCorrection { get; set; }
+    public string? HintText { get; set; }
+    public string? BaseText { get; set; }
+    public int? MistakeStartIndex { get; set; }
+    public int? MistakeEndIndex { get; set; }
 }
 
 public class InlineExamOptionDto
@@ -78,7 +86,9 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             PassingScore = request.PassingScore,
             TotalScore = request.TotalScore,
             DurationMinutes = request.DurationMinutes,
-            TimePerQuestionSeconds = request.TimePerQuestionSeconds
+            IsMandatory = request.IsMandatory,
+            IsRandomized = request.IsRandomized,
+            DisplayQuestionCount = request.DisplayQuestionCount
         };
 
         _db.Exams.Add(exam);
@@ -86,30 +96,75 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
         // 3. Process Questions
         foreach (var q in request.Questions)
         {
-            var qType = q.Type.Equals("Essay", StringComparison.OrdinalIgnoreCase) ? QuestionType.Essay : QuestionType.MCQ;
-
-            var qbItem = new QuestionBankItem
+            var qType = q.Type switch
             {
-                Text = q.Text,
-                Type = qType,
-                DefaultPoints = q.Points,
-                Tags = "Inline"
+                "Essay" => QuestionType.Essay,
+                "FindTheMistake" => QuestionType.FindTheMistake,
+                _ => QuestionType.MCQ
             };
+
+            QuestionBankItem qbItem;
+
+            if (qType == QuestionType.FindTheMistake)
+            {
+                qbItem = new FindTheMistakeQuestion
+                {
+                    Text = q.Text ?? "اكتشف الغلطة",
+                    Type = qType,
+                    DefaultPoints = q.Points,
+                    Tags = "Inline",
+                    AudioUrl = q.AudioUrl,
+                    WrittenCorrection = q.WrittenCorrection,
+                    HintText = q.HintText,
+                    BaseText = q.BaseText ?? string.Empty,
+                    MistakeStartIndex = q.MistakeStartIndex ?? 0,
+                    MistakeEndIndex = q.MistakeEndIndex ?? 0,
+                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>()
+                };
+            }
+            else
+            {
+                if (qType == QuestionType.Essay)
+                {
+                    qbItem = new EssayQuestion
+                    {
+                        Text = q.Text ?? string.Empty,
+                        Type = qType,
+                        DefaultPoints = q.Points,
+                        Tags = "Inline",
+                        AudioUrl = q.AudioUrl,
+                        WrittenCorrection = q.WrittenCorrection,
+                        HintText = q.HintText,
+                    };
+                }
+                else
+                {
+                    qbItem = new QuestionBankItem
+                    {
+                        Text = q.Text ?? string.Empty,
+                        Type = qType,
+                        DefaultPoints = q.Points,
+                        Tags = "Inline",
+                        AudioUrl = q.AudioUrl,
+                        WrittenCorrection = q.WrittenCorrection,
+                        HintText = q.HintText,
+                    };
+                }
+            }
 
             _db.QuestionBankItems.Add(qbItem);
 
             if (qType == QuestionType.MCQ)
             {
-                foreach (var opt in q.Options)
+                foreach (var opt in q.Options ?? new List<InlineExamOptionDto>())
                 {
-                    var optEntity = new QuestionOption
+                    _db.QuestionOptions.Add(new QuestionOption
                     {
                         Text = opt.Text,
                         IsCorrect = opt.IsCorrect,
                         QuestionBankItemId = qbItem.Id,
                         Question = qbItem
-                    };
-                    _db.QuestionOptions.Add(optEntity);
+                    });
                 }
             }
 
@@ -161,21 +216,67 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
 
         foreach (var q in request.Questions)
         {
-            var qType = q.Type.Equals("Essay", StringComparison.OrdinalIgnoreCase) ? QuestionType.Essay : QuestionType.MCQ;
-
-            var qbItem = new QuestionBankItem
+            var qType = q.Type switch
             {
-                Text = q.Text,
-                Type = qType,
-                DefaultPoints = q.Points,
-                Tags = "Added"
+                "Essay" => QuestionType.Essay,
+                "FindTheMistake" => QuestionType.FindTheMistake,
+                _ => QuestionType.MCQ
             };
+
+            QuestionBankItem qbItem;
+
+            if (qType == QuestionType.FindTheMistake)
+            {
+                qbItem = new FindTheMistakeQuestion
+                {
+                    Text = q.Text ?? "اكتشف الغلطة",
+                    Type = qType,
+                    DefaultPoints = q.Points,
+                    Tags = "Added",
+                    AudioUrl = q.AudioUrl,
+                    WrittenCorrection = q.WrittenCorrection,
+                    HintText = q.HintText,
+                    BaseText = q.BaseText ?? string.Empty,
+                    MistakeStartIndex = q.MistakeStartIndex ?? 0,
+                    MistakeEndIndex = q.MistakeEndIndex ?? 0,
+                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>()
+                };
+            }
+            else
+            {
+                if (qType == QuestionType.Essay)
+                {
+                    qbItem = new EssayQuestion
+                    {
+                        Text = q.Text ?? string.Empty,
+                        Type = qType,
+                        DefaultPoints = q.Points,
+                        Tags = "Added",
+                        AudioUrl = q.AudioUrl,
+                        WrittenCorrection = q.WrittenCorrection,
+                        HintText = q.HintText,
+                    };
+                }
+                else
+                {
+                    qbItem = new QuestionBankItem
+                    {
+                        Text = q.Text ?? string.Empty,
+                        Type = qType,
+                        DefaultPoints = q.Points,
+                        Tags = "Added",
+                        AudioUrl = q.AudioUrl,
+                        WrittenCorrection = q.WrittenCorrection,
+                        HintText = q.HintText,
+                    };
+                }
+            }
 
             _db.QuestionBankItems.Add(qbItem);
 
             if (qType == QuestionType.MCQ)
             {
-                foreach (var opt in q.Options)
+                foreach (var opt in q.Options ?? new List<InlineExamOptionDto>())
                 {
                     _db.QuestionOptions.Add(new QuestionOption
                     {
@@ -200,5 +301,32 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(exam.Id);
+    }
+}
+
+public record DeleteExamQuestionCommand(Guid ExamId, Guid ExamQuestionId) : IRequest<ApiResponse<bool>>;
+
+public class DeleteExamQuestionCommandHandler : IRequestHandler<DeleteExamQuestionCommand, ApiResponse<bool>>
+{
+    private readonly IAppDbContext _db;
+
+    public DeleteExamQuestionCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse<bool>> Handle(DeleteExamQuestionCommand request, CancellationToken ct)
+    {
+        var examQuestion = await _db.ExamQuestions
+            .Include(eq => eq.Question)
+            .FirstOrDefaultAsync(eq => eq.Id == request.ExamQuestionId && eq.ExamId == request.ExamId, ct);
+
+        if (examQuestion == null)
+            return ApiResponse<bool>.Fail("السؤال غير موجود في هذا الامتحان.");
+
+        var questionBankItem = examQuestion.Question;
+
+        _db.ExamQuestions.Remove(examQuestion);
+        _db.QuestionBankItems.Remove(questionBankItem);
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<bool>.Ok(true);
     }
 }

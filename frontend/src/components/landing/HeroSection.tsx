@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowUpLeft, BadgeCheck } from "lucide-react";
+import { ArrowUpLeft, BadgeCheck, Users } from "lucide-react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { useAdminTheme } from "@/components/admin/useAdminTheme";
@@ -8,8 +8,21 @@ import { FloatingLines } from "@/components/ui/floating-lines";
 import { MorphingText } from "@/components/ui/morphing-text";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 
-export function HeroSection() {
+type HeroSectionProps = {
+  registeredStudentsCount: number;
+  baselineStudentsCount: number;
+};
+
+function formatArabicNumber(value: number) {
+  return new Intl.NumberFormat("ar-EG").format(value);
+}
+
+export function HeroSection({
+  registeredStudentsCount,
+  baselineStudentsCount,
+}: HeroSectionProps) {
   const { isDark } = useAdminTheme();
+  const totalRegisteredStudents = baselineStudentsCount + registeredStudentsCount;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -97,6 +110,27 @@ export function HeroSection() {
             >
               ابدأ الجلسة التجريبية
             </InteractiveHoverButton>
+          </motion.div>
+
+          <motion.div
+            variants={itemVariants}
+            className="inline-flex w-full max-w-md items-center gap-4 rounded-[28px] border border-[var(--landing-line)] bg-[color:var(--landing-card)] px-5 py-4 shadow-[0_20px_50px_rgba(88,55,18,0.08)] backdrop-blur-sm"
+          >
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--landing-card-strong)] text-[var(--landing-accent)]">
+              <Users className="h-6 w-6" />
+            </div>
+
+            <div className="space-y-1 text-right">
+              <p className="text-xs font-bold tracking-[0.18em] text-[var(--landing-muted)]">
+                طلاب المنصة
+              </p>
+              <p className="text-2xl font-black text-[var(--landing-accent)] md:text-3xl">
+                +{formatArabicNumber(totalRegisteredStudents)}
+              </p>
+              <p className="text-sm text-[var(--landing-muted)]">
+                رقم تراكمي يجمع {formatArabicNumber(baselineStudentsCount)} طالبًا سابقًا مع {formatArabicNumber(registeredStudentsCount)} طالبًا مسجلًا حاليًا على المنصة
+              </p>
+            </div>
           </motion.div>
         </motion.div>
       </div>

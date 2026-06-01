@@ -5,7 +5,8 @@ namespace NaderGorge.Domain.Entities;
 public enum QuestionType
 {
     MCQ = 0,
-    Essay = 1
+    Essay = 1,
+    FindTheMistake = 2
 }
 
 public class Exam : BaseEntity
@@ -21,8 +22,11 @@ public class Exam : BaseEntity
     
     // Timer properties
     public int? DurationMinutes { get; set; }
-    public int? TimePerQuestionSeconds { get; set; }
     
+    // Config properties
+    public bool IsMandatory { get; set; } = true;
+    public bool IsRandomized { get; set; } = false;
+    public int? DisplayQuestionCount { get; set; }
     
     public ICollection<ExamQuestion> ExamQuestions { get; set; } = new List<ExamQuestion>();
     public ICollection<StudentExamAttempt> Attempts { get; set; } = new List<StudentExamAttempt>();
@@ -37,7 +41,18 @@ public class QuestionBankItem : BaseEntity
     // Tags for categorization
     public string Tags { get; set; } = string.Empty;
 
+    // Optional audio explanation
+    public string? AudioUrl { get; set; }
+    // Written correction for student review
+    public string? WrittenCorrection { get; set; }
+    // Optional hint to display without penalty
+    public string? HintText { get; set; }
+
     public ICollection<QuestionOption> Options { get; set; } = new List<QuestionOption>();
+}
+
+public class EssayQuestion : QuestionBankItem
+{
 }
 
 public class QuestionOption : BaseEntity
@@ -60,9 +75,6 @@ public class ExamQuestion : BaseEntity
 
     public int Order { get; set; }
     public decimal Points { get; set; } // Can override default points
-    
-    // Timer properties
-    public int? DurationSeconds { get; set; }
 }
 
 public class StudentExamAttempt : BaseEntity
@@ -94,9 +106,11 @@ public class StudentAnswer : BaseEntity
     public Guid ExamQuestionId { get; set; }
     public ExamQuestion ExamQuestion { get; set; } = null!;
 
-    public Guid SelectedOptionId { get; set; }
-    public QuestionOption SelectedOption { get; set; } = null!;
-    
+    public Guid? SelectedOptionId { get; set; }
+    public QuestionOption? SelectedOption { get; set; }
+    public string? SubmittedText { get; set; }
+
+    public bool HintUsed { get; set; }
     public bool IsCorrect { get; set; }
     public decimal PointsAwarded { get; set; }
 }

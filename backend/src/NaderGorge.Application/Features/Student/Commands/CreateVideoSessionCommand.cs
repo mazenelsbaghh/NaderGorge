@@ -15,10 +15,11 @@ public record VideoSessionDto(
     DateTime ExpiresAt,
     string Provider,
     WatchInfoDto WatchInfo,
-    string VideoTitle
+    string VideoTitle,
+    int ThresholdPercentage
 );
 
-public record WatchInfoDto(int CurrentCount, int MaxCount, bool IsLocked);
+public record WatchInfoDto(int CurrentCount, int MaxCount, bool IsLocked, int TotalTrackedSeconds);
 
 public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessionCommand, ApiResponse<VideoSessionDto>>
 {
@@ -72,6 +73,8 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         }
         else
         {
+            var user = await _db.Users.FindAsync(new object[] { request.UserId }, ct);
+            
             // Create new session
             session = new VideoPlaybackSession
             {
@@ -86,10 +89,20 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             };
             
             // Generate the encrypted token
-            session.SessionToken = _encryption.EncryptVideoInfo(video.Provider, video.ProviderVideoId, session.EncryptionKey);
+            string studentName = user?.FullName ?? "Unknown";
+            string studentPhone = user?.PhoneNumber ?? "Unknown";
+            session.SessionToken = _encryption.EncryptVideoInfo(video.Provider, video.ProviderVideoId, session.EncryptionKey, studentName, studentPhone);
 
             _db.VideoPlaybackSessions.Add(session);
             await _db.SaveChangesAsync(ct);
+        }
+
+        // 4. Fetch the global threshold percentage (default 30%)
+        var thresholdSetting = await _db.PlatformSettings.FirstOrDefaultAsync(s => s.Key == "VideoWatchThresholdPercentage", ct);
+        int thresholdPercentage = 30; // default
+        if (thresholdSetting != null && int.TryParse(thresholdSetting.Value, out int parsed))
+        {
+            thresholdPercentage = parsed;
         }
 
         var dto = new VideoSessionDto(
@@ -98,8 +111,9 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             session.EncryptionKey,
             session.ExpiresAt,
             video.Provider,
-            new WatchInfoDto(currentCount, video.MaxWatchCount, isLocked),
-            video.Title
+            new WatchInfoDto(currentCount, video.MaxWatchCount, isLocked, watchEvent?.TimeWatchedInSeconds ?? 0),
+            video.Title,
+            thresholdPercentage
         );
 
         return ApiResponse<VideoSessionDto>.Ok(dto);

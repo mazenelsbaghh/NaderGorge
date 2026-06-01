@@ -1,0 +1,247 @@
+openapi: 3.0.3
+info:
+  title: Critical Workflow Repair Contracts
+  version: 0.1.0
+  description: Contracts for comment moderation and exam grading status introduced by feature 061-fix-critical-workflows.
+paths:
+  /api/admin/community/comments/pending:
+    get:
+      summary: List pending community comments for moderation
+      tags: [Admin Community]
+      responses:
+        '200':
+          description: Pending comments returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingCommunityCommentsResponse'
+  /api/admin/community/comments/{commentId}/approve:
+    post:
+      summary: Approve a pending community comment
+      tags: [Admin Community]
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Comment approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerateCommunityCommentResponse'
+        '404':
+          description: Comment not found
+  /api/admin/community/comments/{commentId}/reject:
+    post:
+      summary: Reject a pending community comment
+      tags: [Admin Community]
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+      responses:
+        '200':
+          description: Comment rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModerateCommunityCommentResponse'
+        '404':
+          description: Comment not found
+  /api/exams/attempts/{attemptId}/grading-status:
+    get:
+      summary: Get aggregate grading progress for an exam attempt
+      tags: [Exams]
+      parameters:
+        - in: path
+          name: attemptId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Grading status returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamAttemptGradingStatusResponse'
+              examples:
+                partiallyGraded:
+                  summary: Essay attempt after AI scoring but before teacher completion
+                  value:
+                    success: true
+                    data:
+                      attemptId: 8f5df733-d69f-4201-a050-aa6c2166fb0a
+                      resultState: PartiallyGraded
+                      essays:
+                        - essaySubmissionId: 0733156d-0194-4dc9-b6bd-8ebdff9e8c95
+                          questionId: 7f3cb50b-6fe2-4efe-b2d9-e7b5d3c5ce74
+                          status: WaitTeacher
+                          aiInitialScore: 6.5
+                          teacherFinalScore: null
+        '404':
+          description: Attempt not found
+  /api/v1/internal/callbacks/essay-graded:
+    post:
+      summary: Persist AI essay grading result
+      tags: [Internal Callbacks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [essaySubmissionId, aiScore]
+              properties:
+                essaySubmissionId:
+                  type: string
+                  format: uuid
+                aiScore:
+                  type: number
+                  format: decimal
+                aiFeedback:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: AI grading stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalEssayGradedResponse'
+              examples:
+                aiScored:
+                  summary: Callback accepted and essay moved to AI-scored state
+                  value:
+                    success: true
+                    data:
+                      essaySubmissionId: 0733156d-0194-4dc9-b6bd-8ebdff9e8c95
+                      status: AIScored
+        '401':
+          description: Invalid internal token
+components:
+  schemas:
+    PendingCommunityCommentsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingCommunityComment'
+    PendingCommunityComment:
+      type: object
+      required: [id, postId, authorUserId, authorName, body, createdAt, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        postId:
+          type: string
+          format: uuid
+        authorUserId:
+          type: string
+          format: uuid
+        authorName:
+          type: string
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Pending]
+    ModerateCommunityCommentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [commentId, status]
+          properties:
+            commentId:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [Approved, Rejected]
+            rejectionReason:
+              type: string
+              nullable: true
+    ExamAttemptGradingStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [attemptId, resultState, essays]
+          properties:
+            attemptId:
+              type: string
+              format: uuid
+            resultState:
+              type: string
+              enum: [Pending, PartiallyGraded, Completed]
+            essays:
+              type: array
+              items:
+                $ref: '#/components/schemas/EssayGradingStatusItem'
+    EssayGradingStatusItem:
+      type: object
+      required: [essaySubmissionId, questionId, status]
+      properties:
+        essaySubmissionId:
+          type: string
+          format: uuid
+        questionId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [WaitAI, AIScored, WaitTeacher, TeacherGraded]
+        aiInitialScore:
+          type: number
+          format: decimal
+          nullable: true
+        teacherFinalScore:
+          type: number
+          format: decimal
+          nullable: true
+    InternalEssayGradedResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [essaySubmissionId, status]
+          properties:
+            essaySubmissionId:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum: [WaitAI, AIScored, WaitTeacher, TeacherGraded]

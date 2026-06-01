@@ -48,7 +48,7 @@ export default function AddExamQuestionPage(props: { params: Promise<{ id: strin
   }, [params.id]);
 
   const handleAddQuestionToList = () => {
-    if (!currentQuestion.text.trim()) {
+    if (currentQuestion.type !== 'FindTheMistake' && !currentQuestion.text.trim()) {
       toast.error('يرجى كتابة نص السؤال');
       return;
     }
@@ -59,6 +59,16 @@ export default function AddExamQuestionPage(props: { params: Promise<{ id: strin
       }
       if (!currentQuestion.options.some((o) => o.isCorrect)) {
         toast.error('السؤال يجب أن يحتوي على خيار واحد صحيح على الأقل');
+        return;
+      }
+    }
+    if (currentQuestion.type === 'FindTheMistake') {
+      if (!currentQuestion.baseText?.trim()) {
+        toast.error('يرجى إدخال النص لسؤال اكتشف الغلطة');
+        return;
+      }
+      if (currentQuestion.mistakeStartIndex === null || currentQuestion.mistakeStartIndex === undefined) {
+        toast.error('يرجى تحديد الغلطة في النص');
         return;
       }
     }
@@ -81,7 +91,8 @@ export default function AddExamQuestionPage(props: { params: Promise<{ id: strin
      
      try {
        setSaving(true);
-       await adminService.addQuestionsToExam(params.id, { questions });
+       const cleanQuestions = questions.map(({ audioFile: _af, ...rest }) => rest);
+       await adminService.addQuestionsToExam(params.id, { questions: cleanQuestions });
        toast.success('تم رفع الأسئلة وإضافتها للامتحان بنجاح!');
        router.back();
      } catch (err: any) {

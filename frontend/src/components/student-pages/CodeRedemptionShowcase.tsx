@@ -1,68 +1,43 @@
-import { BadgeCheck, KeyRound, ShieldCheck, Sparkles } from "lucide-react";
+import { KeyRound, ShieldCheck } from "lucide-react";
 
 export function CodeRedemptionShowcase() {
   return (
-    <section className="relative overflow-hidden rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-4 shadow-[0_24px_60px_var(--admin-shadow)] sm:rounded-[32px] sm:p-6 md:rounded-[36px] md:p-9">
-      {/* Ambient glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,var(--admin-primary),transparent_70%)] opacity-[0.04]" />
+    <section className="relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10">
+      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[100px]" />
+      <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[100px]" />
 
-      <div className="relative grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-        <div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)]">
-            <Sparkles className="h-4 w-4" />
-            <span>تفعيل أسرع وتجربة أوضح</span>
-          </span>
-          <h1 className="mt-5 text-2xl font-black text-[var(--admin-text)] sm:text-3xl md:text-5xl">
+      <div className="relative z-10 grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="max-w-xl">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-20)] bg-[var(--admin-primary-10)] px-3 py-1 text-xs font-bold text-[var(--admin-primary-strong)]">
+            <ShieldCheck className="h-4 w-4" />
+            <span>بوابة التفعيل</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-[var(--admin-text)] sm:text-5xl">
             فعّل كودك وافتح الباقات مباشرة
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--admin-muted)] sm:text-base md:text-lg">
-            صفحة التفعيل الآن أوضح: إدخال الكود، فهم ما سيحدث بعد التفعيل، ومراجعة
-            سريعة للخطوات المطلوبة لو الملف الشخصي ناقص.
+          <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)] sm:text-base">
+            أدخل الكود، وفي حال لزم الأمر أكمل بيانات حسابك للبدء الفوري بالدراسة ومتابعة تقدمك الأكاديمي.
           </p>
         </div>
 
-        <div className="grid gap-4">
-          <GuideCard
-            icon={<KeyRound className="h-5 w-5" />}
-            title="أدخل الكود"
-            description="اكتب الكود كما هو وسيتم التحقق منه فورًا."
-          />
-          <GuideCard
-            icon={<ShieldCheck className="h-5 w-5" />}
-            title="أكمل الملف إن لزم"
-            description="لو هناك بيانات ناقصة سيظهر لك النموذج مباشرة."
-          />
-          <GuideCard
-            icon={<BadgeCheck className="h-5 w-5" />}
-            title="ابدأ المحتوى"
-            description="بعد النجاح ستنتقل ذهنيًا للخطوة التالية بدون لبس."
-          />
+        <div className="flex shrink-0 flex-col gap-4 rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 shadow-inner backdrop-blur-xl lg:min-w-[400px]">
+          <h3 className="mb-2 text-sm font-bold text-[var(--admin-text)]">خطوات بسيطة:</h3>
+          <ol className="space-y-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
+            <li className="flex items-start gap-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-card-strong)] font-black text-[var(--admin-primary)] shadow-sm">1</span>
+              <span className="pt-1.5">اكتب الكود كما وصلك للتحقق الفوري.</span>
+            </li>
+            <li className="flex items-start gap-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-card-strong)] font-black text-[var(--admin-primary)] shadow-sm">2</span>
+              <span className="pt-1.5">أكمل بياناتك الشخصية إن زُم الأمر.</span>
+            </li>
+            <li className="flex items-start gap-4">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-card-strong)] font-black text-[var(--admin-primary)] shadow-sm">3</span>
+              <span className="pt-1.5">استمتع بفتح المسارات الدراسية المرتبطة.</span>
+            </li>
+          </ol>
         </div>
       </div>
     </section>
-  );
-}
-
-function GuideCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur">
-      <div className="flex items-start gap-4">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
-          {icon}
-        </div>
-        <div>
-          <h3 className="text-lg font-black text-[var(--admin-text)]">{title}</h3>
-          <p className="mt-1 text-sm leading-7 text-[var(--admin-muted)]">{description}</p>
-        </div>
-      </div>
-    </div>
   );
 }

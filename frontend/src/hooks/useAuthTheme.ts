@@ -11,7 +11,7 @@
  * components into the public route group.
  */
 
-import { CSSProperties, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { CSSProperties, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import {
   getAdminThemeModeServerSnapshot,
@@ -72,11 +72,18 @@ function buildVars(mode: ThemeMode): CSSProperties {
 }
 
 export function useAuthTheme() {
-  const mode = useSyncExternalStore(
+  const [isMounted, setIsMounted] = useState(false);
+  const rawMode = useSyncExternalStore(
     subscribeToAdminThemeMode,
     getStoredAdminThemeMode,
     getAdminThemeModeServerSnapshot,
   );
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const mode = isMounted ? rawMode : 'light';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;

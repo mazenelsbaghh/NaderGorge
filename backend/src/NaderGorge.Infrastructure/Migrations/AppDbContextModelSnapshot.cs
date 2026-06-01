@@ -17,7 +17,7 @@ namespace NaderGorge.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.11")
+                .HasAnnotation("ProductVersion", "9.0.6")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -292,6 +292,192 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("code_video_targets", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPost", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsPoll")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("community_posts", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("community_post_comments", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostLike", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PostId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("community_post_likes", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostPollOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.ToTable("community_post_poll_options", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostPollVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PollOptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PostId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PollOptionId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("PostId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("community_post_poll_votes", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
                 {
                     b.Property<Guid>("Id")
@@ -323,6 +509,48 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("TermId");
 
                     b.ToTable("content_sections", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CustomForm", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("FieldsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("custom_forms", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Device", b =>
@@ -364,6 +592,61 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("devices", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EssaySubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AiFeedback")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("AiInitialScore")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("AnswerText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AudioUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentExamAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TeacherFeedback")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("TeacherFinalScore")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("StudentExamAttemptId");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("essay_submissions", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Exam", b =>
                 {
                     b.Property<Guid>("Id")
@@ -377,14 +660,20 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("DisplayQuestionCount")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("DurationMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsMandatory")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRandomized")
+                        .HasColumnType("boolean");
+
                     b.Property<decimal>("PassingScore")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("TimePerQuestionSeconds")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -411,9 +700,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<int?>("DurationSeconds")
-                        .HasColumnType("integer");
-
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uuid");
 
@@ -437,6 +723,79 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("exam_questions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ExtraWatchRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("LessonVideoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonVideoId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ExtraWatchRequests", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FormSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AdminNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CustomFormId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("SubmittedDataJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomFormId");
+
+                    b.ToTable("form_submissions", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Gamification.GamificationActionLog", b =>
@@ -528,6 +887,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("IsMandatory")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsRandomized")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("LessonId")
                         .HasColumnType("uuid");
 
@@ -600,7 +962,7 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int>("PointsActive")
                         .HasColumnType("integer");
 
-                    b.Property<string[]>("PossibleAnswers")
+                    b.PrimitiveCollection<string[]>("PossibleAnswers")
                         .HasColumnType("text[]");
 
                     b.Property<int>("QuestionType")
@@ -700,6 +1062,53 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("lessons", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LessonComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("lesson_comments", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonProgress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -781,6 +1190,12 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("ExamId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsProcessingAI")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsProcessingMindmaps")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("LessonId")
                         .HasColumnType("uuid");
 
@@ -796,6 +1211,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<string>("ProviderVideoId")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SubtitleUrl")
                         .HasColumnType("text");
 
                     b.Property<string>("Title")
@@ -891,6 +1309,105 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("packages", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PackageCodePageProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActivationDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ActivationTitle")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("HeroDescription")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
+                    b.Property<string>("HeroEyebrow")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("HeroTitle")
+                        .HasMaxLength(140)
+                        .HasColumnType("character varying(140)");
+
+                    b.Property<string>("OfferDescription")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)");
+
+                    b.Property<string>("OfferTitle")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SupportDescription")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("SupportTitle")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("ThemeAccentKey")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.ToTable("package_code_page_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformSettings");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Program", b =>
                 {
                     b.Property<Guid>("Id")
@@ -927,11 +1444,17 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AudioUrl")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<decimal>("DefaultPoints")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("HintText")
+                        .HasColumnType("text");
 
                     b.Property<string>("Tags")
                         .IsRequired()
@@ -948,9 +1471,16 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<string>("WrittenCorrection")
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
 
                     b.ToTable("question_bank_items", (string)null);
+
+                    b.HasDiscriminator<int>("Type").IsComplete(false).HasValue(1);
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.QuestionOption", b =>
@@ -1179,17 +1709,24 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("ExamQuestionId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("HintUsed")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");
 
                     b.Property<decimal>("PointsAwarded")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("SelectedOptionId")
+                    b.Property<Guid?>("SelectedOptionId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("StudentExamAttemptId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("SubmittedText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -1285,8 +1822,22 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("AvatarSlug")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CurrentMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("light");
+
+                    b.Property<string>("DarkThemePaletteId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("timestamp without time zone");
@@ -1297,6 +1848,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<int>("EducationStage")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FatherDateOfBirth")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Gender")
                         .HasColumnType("integer");
@@ -1315,9 +1869,28 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("IsMotherAlive")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("LightThemePaletteId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("MotherDateOfBirth")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("MotherPhone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nationality")
+                        .HasColumnType("text");
+
                     b.Property<string>("ParentPhone")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("SchoolName")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("SchoolType")
+                        .HasColumnType("integer");
 
                     b.Property<string>("SecondaryParentPhone")
                         .HasMaxLength(20)
@@ -1346,6 +1919,39 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("student_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeacherId");
+
+                    b.ToTable("teacher_photos", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Term", b =>
@@ -1436,6 +2042,51 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.VideoChapter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EndTime")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("LessonVideoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MindmapImageUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StartTime")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SummaryText")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonVideoId");
+
+                    b.ToTable("video_chapters", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.VideoPlaybackSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1515,6 +2166,23 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("video_watch_events", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FindTheMistakeQuestion", b =>
+                {
+                    b.HasBaseType("NaderGorge.Domain.Entities.QuestionBankItem");
+
+                    b.Property<string>("BaseText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("MistakeEndIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MistakeStartIndex")
+                        .HasColumnType("integer");
+
+                    b.HasDiscriminator().HasValue(2);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.AccessCode", b =>
@@ -1603,6 +2271,107 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("LessonVideo");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPost", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "AuthorUser")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AuthorUser");
+
+                    b.Navigation("ReviewedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostComment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "AuthorUser")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.CommunityPost", "Post")
+                        .WithMany("Comments")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AuthorUser");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("ReviewedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostLike", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.CommunityPost", "Post")
+                        .WithMany("Likes")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostPollOption", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.CommunityPost", "Post")
+                        .WithMany("PollOptions")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostPollVote", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.CommunityPostPollOption", "PollOption")
+                        .WithMany()
+                        .HasForeignKey("PollOptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.CommunityPost", "Post")
+                        .WithMany("PollVotes")
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PollOption");
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Term", "Term")
@@ -1625,6 +2394,33 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EssaySubmission", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.QuestionBankItem", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.StudentExamAttempt", "Attempt")
+                        .WithMany()
+                        .HasForeignKey("StudentExamAttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attempt");
+
+                    b.Navigation("Question");
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ExamQuestion", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Exam", "Exam")
@@ -1642,6 +2438,36 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Exam");
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ExtraWatchRequest", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LessonVideo", "LessonVideo")
+                        .WithMany()
+                        .HasForeignKey("LessonVideoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LessonVideo");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FormSubmission", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.CustomForm", "CustomForm")
+                        .WithMany("Submissions")
+                        .HasForeignKey("CustomFormId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CustomForm");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Gamification.GamificationActionLog", b =>
@@ -1743,6 +2569,32 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("ContentSection");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LessonComment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "AuthorUser")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.Lesson", "Lesson")
+                        .WithMany("Comments")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AuthorUser");
+
+                    b.Navigation("Lesson");
+
+                    b.Navigation("ReviewedByUser");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.LessonProgress", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Lesson", "Lesson")
@@ -1810,6 +2662,24 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Program");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PackageCodePageProfile", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Package", "Package")
+                        .WithOne()
+                        .HasForeignKey("NaderGorge.Domain.Entities.PackageCodePageProfile", "PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Package");
+
+                    b.Navigation("UpdatedByUser");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.QuestionOption", b =>
@@ -1890,8 +2760,7 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.QuestionOption", "SelectedOption")
                         .WithMany()
                         .HasForeignKey("SelectedOptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("NaderGorge.Domain.Entities.StudentExamAttempt", "Attempt")
                         .WithMany("Answers")
@@ -1947,6 +2816,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPhoto", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Teacher");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Term", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Package", "Package")
@@ -1975,6 +2855,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Role");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.VideoChapter", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LessonVideo", "LessonVideo")
+                        .WithMany("VideoChapters")
+                        .HasForeignKey("LessonVideoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LessonVideo");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.VideoPlaybackSession", b =>
@@ -2022,9 +2913,25 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("CodeVideoTargets");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPost", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("Likes");
+
+                    b.Navigation("PollOptions");
+
+                    b.Navigation("PollVotes");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
                 {
                     b.Navigation("Lessons");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CustomForm", b =>
+                {
+                    b.Navigation("Submissions");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Exam", b =>
@@ -2048,9 +2955,16 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Lesson", b =>
                 {
+                    b.Navigation("Comments");
+
                     b.Navigation("Resources");
 
                     b.Navigation("Videos");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LessonVideo", b =>
+                {
+                    b.Navigation("VideoChapters");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Package", b =>

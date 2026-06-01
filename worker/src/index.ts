@@ -2,15 +2,20 @@ import { Redis } from 'ioredis';
 import { Pool } from 'pg';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import { Worker } from 'bullmq';
+import { Worker, Queue } from 'bullmq';
+import express from 'express';
+import cors from 'cors';
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
 import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
 
 dotenv.config();
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6382');
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/nadergorge?schema=public'
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5435/nadergorge?schema=public'
 });
 
 async function processJob(json: string) {
@@ -64,10 +69,10 @@ async function processJob(json: string) {
 
 // BullMQ Connection Shared config
 const connection = {
-  host: new URL(process.env.REDIS_URL || 'redis://localhost:6379').hostname,
-  port: parseInt(new URL(process.env.REDIS_URL || 'redis://localhost:6379').port) || 6379,
-  username: new URL(process.env.REDIS_URL || 'redis://localhost:6379').username || undefined,
-  password: new URL(process.env.REDIS_URL || 'redis://localhost:6379').password || undefined,
+  host: new URL(process.env.REDIS_URL || 'redis://localhost:6382').hostname,
+  port: parseInt(new URL(process.env.REDIS_URL || 'redis://localhost:6382').port) || 6382,
+  username: new URL(process.env.REDIS_URL || 'redis://localhost:6382').username || undefined,
+  password: new URL(process.env.REDIS_URL || 'redis://localhost:6382').password || undefined,
 };
 
 async function startNotificationWorker() {
@@ -86,6 +91,58 @@ async function startNotificationWorker() {
   console.log('[Worker] Notification BullMQ worker started on queue: notifications');
 }
 
+async function startAIWorker() {
+  const worker = new Worker('ai-video-chapters', async (job) => {
+    // Dynamic import to avoid loading heavy modules if not needed immediately
+    const processor = await import('./jobs/analyzeVideoChapters.js');
+    return await processor.default(job);
+  }, { connection });
+
+  worker.on('completed', job => {
+    console.log(`[AI Worker] Job ${job.id} has completed successfully!`);
+  });
+
+  worker.on('failed', (job, err) => {
+    console.error(`[AI Worker] Job ${job?.id} has failed with ${err.message}`);
+  });
+  
+  console.log('[Worker] AI Video Chapters BullMQ worker started on queue: ai-video-chapters');
+}
+
+async function startEssayWorker() {
+  const worker = new Worker('ai-essay-grading', async (job) => {
+    const processor = await import('./jobs/evaluateEssay.js');
+    return await processor.processEvaluateEssayJob(job);
+  }, { connection });
+
+  worker.on('completed', job => {
+    console.log(`[Essay Worker] Job ${job.id} has completed successfully!`);
+  });
+
+  worker.on('failed', (job, err) => {
+    console.error(`[Essay Worker] Job ${job?.id} has failed with ${err.message}`);
+  });
+  
+  console.log('[Worker] AI Essay Grading BullMQ worker started on queue: ai-essay-grading');
+}
+
+async function startMindmapsWorker() {
+  const worker = new Worker('generate-chapter-mindmaps', async (job) => {
+    const processor = await import('./jobs/generateChapterMindmaps.js');
+    return await processor.default(job);
+  }, { connection });
+
+  worker.on('completed', job => {
+    console.log(`[Mindmaps Worker] Job ${job.id} has completed successfully!`);
+  });
+
+  worker.on('failed', (job, err) => {
+    console.error(`[Mindmaps Worker] Job ${job?.id} has failed with ${err.message}`);
+  });
+  
+  console.log('[Worker] Mindmaps BullMQ worker started on queue: generate-chapter-mindmaps');
+}
+
 async function startCronJobs() {
     // Basic JS Interval as a mock Cron Job for MVP. 
     // Usually BullMQ repeated jobs can handle this, but an interval works fine.
@@ -101,21 +158,190 @@ async function startWorker() {
   console.log('Worker listening on code-generation-queue (Legacy BRPOP)...');
   
   startNotificationWorker();
+  startAIWorker();
+  startMindmapsWorker();
+  startEssayWorker();
   startCronJobs();
   
-  while (true) {
+  const aiQueue = new Queue('ai-video-chapters', { connection });
+  const mindmapsQueue = new Queue('generate-chapter-mindmaps', { connection });
+  const notifQueue = new Queue('notifications', { connection });
+  const essayQueue = new Queue('ai-essay-grading', { connection });
+
+  const app = express();
+  app.use(cors());
+  app.use(express.json());
+  
+  // Custom API endpoint to fetch Job Status directly for frontend
+  app.get('/api/status/:id', async (req, res) => {
     try {
-      // Blocking pop for Legacy
-      const result = await redis.brpop('code-generation-queue', 0);
-      if (result) {
-        console.log('Processing new legcy code-generation job...');
-        await processJob(result[1]);
+      let job = await aiQueue.getJob(req.params.id);
+      if (!job) {
+          job = await mindmapsQueue.getJob(req.params.id);
       }
-    } catch (e) {
-      console.error('Redis loop error', e);
-      await new Promise(r => setTimeout(r, 5000));
+      if (!job) {
+          return res.json({ id: req.params.id, state: 'not_found', progress: 0 });
+      }
+      const state = await job.getState();
+      let progress = typeof job.progress === 'object' && job.progress !== null 
+          ? job.progress 
+          : { percentage: Number(job.progress) || 0, stage: 'جاري التحضير ووضع المهمة في الطابور...' };
+      
+      const failedReason = job.failedReason || null;
+      
+      return res.json({ id: job.id, state, progress, failedReason });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
     }
-  }
+  });
+
+  // Cancel Job endpoint
+  app.delete('/api/status/:id', async (req, res) => {
+    try {
+      let job = await aiQueue.getJob(req.params.id);
+      if (!job) {
+          job = await mindmapsQueue.getJob(req.params.id);
+      }
+      if (job) {
+          await job.remove();
+          return res.json({ success: true, message: 'Job cancelled' });
+      }
+      return res.status(404).json({ success: false, message: 'Job not found' });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Retry failed Job endpoint
+  app.post('/api/status/:id/retry', async (req, res) => {
+    try {
+      let job = await aiQueue.getJob(req.params.id);
+      if (!job) {
+          job = await mindmapsQueue.getJob(req.params.id);
+      }
+      if (job && await job.getState() === 'failed') {
+          await job.retry();
+          return res.json({ success: true, message: 'Job retried' });
+      }
+      return res.status(400).json({ success: false, message: 'Job not found or not in failed state' });
+    } catch (e: any) {
+        return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Setup Bull Board
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath('/ui');
+  createBullBoard({
+    queues: [
+      new BullMQAdapter(aiQueue),
+      new BullMQAdapter(mindmapsQueue),
+      new BullMQAdapter(notifQueue),
+      new BullMQAdapter(essayQueue)
+    ],
+    serverAdapter: serverAdapter,
+  });
+
+  app.use('/ui', serverAdapter.getRouter());
+  app.listen(3001, () => {
+    console.log('[Worker] Bull Board Dashboard running on http://localhost:3001/ui');
+  });
+
+  // Dedicated loop for AI ingestion from .NET
+  (async () => {
+    console.log('Worker listening on ai-video-queue...');
+    while (true) {
+        try {
+            const result = await redis.brpop('ai-video-queue', 0);
+            if (result) {
+                console.log('Received raw AI video job from .NET, enqueueing to BullMQ...');
+                const wrapper = JSON.parse(result[1]);
+                const payload = wrapper.data || wrapper; // Fallback to raw if no wrapper
+                await aiQueue.add('analyze', payload, {
+                    jobId: payload.lessonVideoId,
+                    removeOnComplete: { count: 10, age: 3600 }, // keep last 10 for 1h so monitor can read status
+                    removeOnFail:     { count: 5 },
+                });
+            }
+        } catch (e) {
+            console.error('AI Redis loop error', e);
+            await new Promise(r => setTimeout(r, 5000));
+        }
+    }
+  })();
+
+  const mindmapsSubRedis = new Redis(process.env.REDIS_URL || 'redis://localhost:6382');
+  
+  // Dedicated loop for Mindmaps ingestion from .NET
+  (async () => {
+    console.log('Worker listening on ai-mindmaps-queue...');
+    while (true) {
+        try {
+            const result = await mindmapsSubRedis.brpop('ai-mindmaps-queue', 0);
+            console.log('\n\n--- [DEBUG] BRPOP RETURNED SOMETHING ---');
+            console.log('Raw result:', result);
+            if (result) {
+                console.log('Received raw AI Mindmaps job from .NET, enqueueing to BullMQ...');
+                console.log('Result[1] JSON:', result[1]);
+                let wrapper;
+                try {
+                    wrapper = JSON.parse(result[1]);
+                } catch(err) {
+                    console.error("JSON PARSE ERROR", err);
+                    continue;
+                }
+                const payload = wrapper.data || wrapper;
+                console.log('Parsed Payload:', payload);
+                const chapId = payload.chapterId || payload.ChapterId;
+                const vidId = payload.lessonVideoId || payload.LessonVideoId;
+                // Use chapterId-based jobId for single-chapter regen, videoId for batch
+                const jobId = chapId
+                    ? `${vidId}_mindmap_${chapId}`
+                    : `${vidId}_mindmaps`;
+                console.log('Generated BullMQ JobID:', jobId);
+                await mindmapsQueue.add('generate', payload, {
+                    jobId,
+                    removeOnComplete: { count: 10, age: 3600 }, // keep last 10 for 1h
+                    removeOnFail:     { count: 5 },
+                });
+            }
+        } catch (e) {
+            console.error('Mindmaps Redis loop error', e);
+            await new Promise(r => setTimeout(r, 5000));
+        }
+    }
+  })();
+
+  const essaySubRedis = new Redis(process.env.REDIS_URL || 'redis://localhost:6382');
+  
+  // Dedicated loop for Essay Ingestion from .NET
+  (async () => {
+    console.log('Worker listening on ai-essay-queue...');
+    while (true) {
+        try {
+            const result = await essaySubRedis.brpop('ai-essay-queue', 0);
+            if (result) {
+                console.log('Received raw AI Essay job from .NET, enqueueing to BullMQ...');
+                let wrapper;
+                try {
+                    wrapper = JSON.parse(result[1]);
+                } catch(err) {
+                    console.error("JSON PARSE ERROR", err);
+                    continue;
+                }
+                const payload = wrapper.data || wrapper;
+                await essayQueue.add('evaluate', payload, {
+                    jobId: payload.essaySubmissionId,
+                    removeOnComplete: { count: 10, age: 3600 },
+                    removeOnFail:     { count: 5 },
+                });
+            }
+        } catch (e) {
+            console.error('Essay Redis loop error', e);
+            await new Promise(r => setTimeout(r, 5000));
+        }
+    }
+  })();
 }
 
 startWorker();

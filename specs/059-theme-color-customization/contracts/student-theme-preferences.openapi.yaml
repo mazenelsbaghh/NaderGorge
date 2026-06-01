@@ -1,0 +1,125 @@
+openapi: 3.0.3
+info:
+  title: Student Theme Preferences API
+  version: 0.1.0
+  description: |
+    Authenticated student endpoints for retrieving and updating curated
+    theme palette preferences for light and dark mode.
+paths:
+  /api/student/theme-preferences:
+    get:
+      summary: Get the authenticated student's theme preferences
+      tags:
+        - Student Theme Preferences
+      responses:
+        '200':
+          description: Theme preferences returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetStudentThemePreferencesResponse'
+        '401':
+          description: Authentication required
+    put:
+      summary: Update the authenticated student's theme preferences
+      tags:
+        - Student Theme Preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentThemePreferencesRequest'
+      responses:
+        '200':
+          description: Theme preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetStudentThemePreferencesResponse'
+        '400':
+          description: Invalid palette selection
+        '401':
+          description: Authentication required
+components:
+  schemas:
+    ThemePaletteOption:
+      type: object
+      required:
+        - id
+        - name
+        - mode
+        - previewAccent
+      properties:
+        id:
+          type: string
+          description: Stable palette identifier
+        name:
+          type: string
+          description: Student-facing palette label
+        mode:
+          type: string
+          enum:
+            - light
+            - dark
+        previewAccent:
+          type: string
+          description: Representative preview value for the selection UI
+    StudentThemePreferencesData:
+      type: object
+      required:
+        - currentMode
+        - selectedLightPaletteId
+        - selectedDarkPaletteId
+        - defaultLightPaletteId
+        - defaultDarkPaletteId
+        - availableLightPalettes
+        - availableDarkPalettes
+      properties:
+        currentMode:
+          type: string
+          enum:
+            - light
+            - dark
+        selectedLightPaletteId:
+          type: string
+        selectedDarkPaletteId:
+          type: string
+        defaultLightPaletteId:
+          type: string
+        defaultDarkPaletteId:
+          type: string
+        availableLightPalettes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThemePaletteOption'
+        availableDarkPalettes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThemePaletteOption'
+    GetStudentThemePreferencesResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/StudentThemePreferencesData'
+        message:
+          type: string
+          nullable: true
+    UpdateStudentThemePreferencesRequest:
+      type: object
+      required:
+        - lightPaletteId
+        - darkPaletteId
+      properties:
+        lightPaletteId:
+          type: string
+          description: Approved palette identifier for light mode
+        darkPaletteId:
+          type: string
+          description: Approved palette identifier for dark mode

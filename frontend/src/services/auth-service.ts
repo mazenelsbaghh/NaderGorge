@@ -1,22 +1,36 @@
 import apiClient from './api-client';
 
 export interface RegisterData {
+  // ── Personal ───────────────────────────────────────────────────────────
   fullName: string;
   phoneNumber: string;
-  secondaryPhone?: string;           // NEW: Student's optional 2nd phone
+  secondaryPhone?: string;
   password: string;
   dateOfBirth: string;
   gender: 'Male' | 'Female';
+  nationality?: string;                    // NEW: Arab nationality
   governorate: string;
-  district: string;                   // NEW: Neighborhood/area
+  district: string;
   address: string;
-  parentPhone: string;
-  secondaryParentPhone?: string;      // NEW: Parent's optional 2nd phone
+
+  // ── Parent ─────────────────────────────────────────────────────────────
+  parentPhone?: string;                    // Father's phone — optional if father deceased
+  secondaryParentPhone?: string;
+  motherPhone?: string;                    // NEW: Mother's phone
   isFatherAlive: boolean;
   isMotherAlive: boolean;
-  educationStage: 'Secondary' | 'Baccalaureate';
+  fatherDateOfBirth?: string;              // NEW: Father's date of birth (ISO string)
+  motherDateOfBirth?: string;              // NEW: Mother's date of birth (ISO string)
+
+  // ── School ─────────────────────────────────────────────────────────────
+  schoolName?: string;                     // NEW: School name (free text)
+  schoolType?: string;                     // NEW: School type enum string
+
+  // ── Academic ───────────────────────────────────────────────────────────
+  educationStage: 'Secondary' | 'Baccalaureate' | 'Primary' | 'Preparatory' | 'Azhari' | 'American';
   gradeLevel: string;
   studyTrack?: string;
+  avatarSlug?: string;
 }
 
 export interface LoginData {

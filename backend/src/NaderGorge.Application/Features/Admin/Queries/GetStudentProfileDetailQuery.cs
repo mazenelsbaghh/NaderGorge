@@ -81,6 +81,29 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         // to avoid compiler error.
         var overrides = new List<VideoOverrideDto>(); // Placeholder for US2 when we build the entity.
 
+        var watchActivities = await _context.VideoWatchEvents
+            .Where(v => v.UserId == request.UserId)
+            .Include(v => v.LessonVideo)
+                .ThenInclude(video => video.Lesson)
+                    .ThenInclude(lesson => lesson.ContentSection)
+                        .ThenInclude(section => section.Term)
+                            .ThenInclude(term => term.Package)
+            .OrderByDescending(v => v.UpdatedAt)
+            .Select(v => new StudentVideoWatchActivityDto
+            {
+                LessonVideoId = v.LessonVideoId,
+                VideoTitle = v.LessonVideo.Title,
+                LessonId = v.LessonVideo.LessonId,
+                LessonTitle = v.LessonVideo.Lesson.Title,
+                PackageName = v.LessonVideo.Lesson.ContentSection.Term.Package.Name,
+                WatchCount = v.WatchCount,
+                MaxWatchCount = v.LessonVideo.MaxWatchCount,
+                WatchedSeconds = v.TimeWatchedInSeconds,
+                IsLocked = v.IsLocked,
+                LastWatchedAt = v.UpdatedAt ?? v.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
         var auditLogs = await _context.AuditLogs
             .Include(a => a.PerformedByUser)
             .Where(a => a.EntityType == "User" && a.EntityId == request.UserId)
@@ -103,10 +126,23 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             Email = string.Empty,
             Phone = user.PhoneNumber,
             ParentPhone = user.StudentProfile?.ParentPhone,
+            SecondaryPhone = user.StudentProfile?.SecondaryPhone,
+            SecondaryParentPhone = user.StudentProfile?.SecondaryParentPhone,
+            District = user.StudentProfile?.District,
             Grade = user.StudentProfile?.GradeLevel.ToString(),
-            SchoolName = string.Empty,
+            SchoolName = user.StudentProfile?.SchoolName,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
+
+            // ── Student Profile V2 fields ─────────────────────────────────
+            Nationality = user.StudentProfile?.Nationality,
+            MotherPhone = user.StudentProfile?.MotherPhone,
+            FatherDateOfBirth = user.StudentProfile?.FatherDateOfBirth,
+            MotherDateOfBirth = user.StudentProfile?.MotherDateOfBirth,
+            SchoolType = user.StudentProfile?.SchoolType?.ToString(),
+            IsFatherAlive = user.StudentProfile?.IsFatherAlive ?? true,
+            IsMotherAlive = user.StudentProfile?.IsMotherAlive ?? true,
+
             Gamification = gamification != null ? new GamificationSummaryDto
             {
                 TotalPoints = gamification.TotalPoints,
@@ -118,6 +154,12 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             Packages = packages,
             Devices = devices,
             Overrides = overrides,
+            WatchTracking = new WatchTrackingSummaryDto
+            {
+                TotalWatchedSeconds = watchActivities.Sum(activity => activity.WatchedSeconds),
+                WatchedVideosCount = watchActivities.Count,
+                Activities = watchActivities
+            },
             AuditTrail = auditLogs
         };
     }

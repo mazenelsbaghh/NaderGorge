@@ -21,6 +21,8 @@ using StackExchange.Redis;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddMemoryCache();
+
 // ----------// Redis cache configuration
 builder.Services.AddStackExchangeRedisCache(options =>
 {
@@ -29,7 +31,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 // Singleton ConnectionMultiplexer for raw queue pushing (BulkGenerateCodesCommand)
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
-    StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379")
+    StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6382,abortConnect=false")
 );
 
 // ---------- Database ----------
@@ -51,11 +53,14 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
 builder.Services.AddScoped<IVideoProvider, YouTubeVideoProvider>();
+builder.Services.AddScoped<IVideoProvider, VkVideoProvider>();
 builder.Services.AddScoped<IAccessCheckService, AccessCheckService>();
 builder.Services.AddScoped<IVideoEncryptionService, VideoEncryptionService>();
 builder.Services.AddScoped<IJobEnqueuer, RedisJobEnqueuer>();
+builder.Services.AddScoped<ICachedPlatformSettingsReader, CachedPlatformSettingsReader>();
 builder.Services.AddScoped<BalanceService>();
 builder.Services.AddScoped<AcademicValidationService>();
+builder.Services.AddHttpClient<WhatsAppVerificationService>();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -121,11 +126,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 app.UseCors("FrontendPolicy");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<NaderGorge.Infrastructure.Data.AppDbContext>();
+    await NaderGorge.Infrastructure.Data.Seeder.SeedAsync(db);
+}
 
 app.Run();

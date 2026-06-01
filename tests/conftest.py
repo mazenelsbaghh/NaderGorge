@@ -1,0 +1,71 @@
+import pytest
+import requests
+
+BASE_URL = "http://localhost:5245"
+INTERNAL_SECRET = "secretxyz"
+
+class NaderGorgeClient:
+    def __init__(self, fingerprint="e2e-test-device", device_name="E2E Test Agent"):
+        self.session = requests.Session()
+        self.fingerprint = fingerprint
+        self.device_name = device_name
+        self.token = None
+
+    def post(self, path, json=None, headers=None):
+        req_headers = {
+            "X-Device-Fingerprint": self.fingerprint,
+            "X-Device-Name": self.device_name
+        }
+        if self.token:
+            req_headers["Authorization"] = f"Bearer {self.token}"
+        if headers:
+            req_headers.update(headers)
+        return self.session.post(f"{BASE_URL}{path}", json=json, headers=req_headers)
+
+    def get(self, path, params=None, headers=None):
+        req_headers = {}
+        if self.token:
+            req_headers["Authorization"] = f"Bearer {self.token}"
+        if headers:
+            req_headers.update(headers)
+        return self.session.get(f"{BASE_URL}{path}", params=params, headers=req_headers)
+
+    def delete(self, path, headers=None):
+        req_headers = {}
+        if self.token:
+            req_headers["Authorization"] = f"Bearer {self.token}"
+        if headers:
+            req_headers.update(headers)
+        return self.session.delete(f"{BASE_URL}{path}", headers=req_headers)
+
+    def login(self, phone, password):
+        res = self.post("/api/auth/login", json={
+            "phoneNumber": phone,
+            "password": password,
+            "deviceFingerprint": self.fingerprint,
+            "deviceName": self.device_name
+        })
+        if res.status_code == 200:
+            data = res.json().get("data", {})
+            if data:
+                self.token = data.get("accessToken")
+        return res
+
+@pytest.fixture(scope="function")
+def clean_db():
+    # Reset and seed database in E2e mode
+    res = requests.post(f"{BASE_URL}/api/e2e/seed", json={
+        "clearDatabase": True,
+        "seedAdmin": True,
+        "seedStudents": True,
+        "seedAssistant": True
+    })
+    assert res.status_code == 200
+    return res.json()
+
+@pytest.fixture(scope="function")
+def mock_package(clean_db):
+    # Setup standard package, term, section, lesson, video, exam, and homework
+    res = requests.post(f"{BASE_URL}/api/e2e/setup-mock-package")
+    assert res.status_code == 200
+    return res.json()

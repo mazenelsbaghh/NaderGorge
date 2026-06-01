@@ -115,9 +115,12 @@ public class E2eTestingController : ControllerBase
         var packageId = Guid.NewGuid();
         var sectionId = Guid.NewGuid();
         var lessonId = Guid.NewGuid();
+        var lesson2Id = Guid.NewGuid();
         var videoId = Guid.NewGuid();
         var examId = Guid.NewGuid();
+        var essayExamId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
+        var essayQuestionId = Guid.NewGuid();
         var optionId = Guid.NewGuid();
         var homeworkId = Guid.NewGuid();
         var hwQuestionId = Guid.NewGuid();
@@ -128,11 +131,14 @@ public class E2eTestingController : ControllerBase
         var term = new Term { Id = termId, PackageId = packageId, Title = "E2E Term" };
         var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };
+        var lesson2 = new Lesson { Id = lesson2Id, ContentSectionId = sectionId, Title = "E2E Lesson 2", Summary = "Essay lesson", Order = 1 };
         var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "vimeo", ProviderVideoId = "12345", MaxWatchCount = 2, Order = 0 };
         var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5 };
+        var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5 };
 
         // Link exam to lesson
         lesson.ExamId = examId;
+        lesson2.ExamId = essayExamId;
         
         var homework = new NaderGorge.Domain.Entities.Homework.Homework
         {
@@ -154,28 +160,31 @@ public class E2eTestingController : ControllerBase
             Order = 1
         };
 
-        var questionItem = new QuestionBankItem { Id = questionId, Text = "1+1=?", DefaultPoints = 10, Tags = "math" };
+        var questionItem = new QuestionBankItem { Id = questionId, Text = "1+1=?", DefaultPoints = 10, Tags = "Inline" };
         var correctOption = new QuestionOption { Id = optionId, QuestionBankItemId = questionId, Text = "2", IsCorrect = true };
         var wrongOption = new QuestionOption { Id = Guid.NewGuid(), QuestionBankItemId = questionId, Text = "3", IsCorrect = false };
         var examQuestion = new ExamQuestion { ExamId = examId, QuestionBankItemId = questionId, Order = 0, Points = 10 };
+
+        var essayQuestion = new EssayQuestion { Id = essayQuestionId, Text = "Explain photosynthesis", Type = QuestionType.Essay, DefaultPoints = 10, Tags = "Inline", WrittenCorrection = "Plants use sunlight" };
+        var essayExamQuestion = new ExamQuestion { ExamId = essayExamId, QuestionBankItemId = essayQuestionId, Order = 0, Points = 10 };
 
         _dbContext.Set<Domain.Entities.Program>().Add(program);
         _dbContext.Set<Package>().Add(package);
         _dbContext.Set<Term>().Add(term);
         _dbContext.Set<ContentSection>().Add(section);
-        _dbContext.Set<Exam>().Add(exam);
-        _dbContext.Set<Lesson>().Add(lesson);
+        _dbContext.Set<Exam>().AddRange(exam, essayExam);
+        _dbContext.Set<Lesson>().AddRange(lesson, lesson2);
         _dbContext.Set<LessonVideo>().Add(video);
-        _dbContext.Set<QuestionBankItem>().Add(questionItem);
+        _dbContext.Set<QuestionBankItem>().AddRange(questionItem, essayQuestion);
         _dbContext.Set<QuestionOption>().AddRange(correctOption, wrongOption);
-        _dbContext.Set<ExamQuestion>().Add(examQuestion);
+        _dbContext.Set<ExamQuestion>().AddRange(examQuestion, essayExamQuestion);
         
         _dbContext.Set<NaderGorge.Domain.Entities.Homework.Homework>().Add(homework);
         _dbContext.Set<NaderGorge.Domain.Entities.Homework.HomeworkQuestion>().Add(hwQuestion);
 
         await _dbContext.SaveChangesAsync();
 
-        return Ok(new { PackageId = packageId, LessonId = lessonId, ExamId = examId, HomeworkId = homeworkId });
+        return Ok(new { PackageId = packageId, LessonId = lessonId, Lesson2Id = lesson2Id, ExamId = examId, EssayExamId = essayExamId, HomeworkId = homeworkId });
     }
 
     [HttpPost("grant-package")]
@@ -270,6 +279,17 @@ public class E2eTestingController : ControllerBase
         }
 
         return Ok(new { message = "Gamification reset" });
+    }
+
+    [HttpGet("notifications")]
+    public async Task<IActionResult> GetNotifications()
+    {
+        if (_env.EnvironmentName != "E2e") return NotFound();
+        var notifications = await _dbContext.Set<Domain.Entities.Notifications.NotificationEvent>()
+            .OrderByDescending(n => n.CreatedAt)
+            .Select(n => new { n.Id, n.UserId, n.ChannelType, n.Title, n.Body, n.Status, n.CreatedAt })
+            .ToListAsync();
+        return Ok(notifications);
     }
 
     private static string HashPassword(string password)

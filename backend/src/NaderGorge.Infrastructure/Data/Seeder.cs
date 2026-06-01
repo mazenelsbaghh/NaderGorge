@@ -32,6 +32,19 @@ public static class Seeder
         db.Users.Add(admin);
         db.UserRoles.Add(new UserRole { User = admin, Role = adminRole });
 
+        // Create default student user
+        var studentRole = roles[3];
+        var student = new User
+        {
+            FullName = "Student User",
+            PhoneNumber = "01234567890",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Student@123"),
+            IsActive = true,
+            IsProfileComplete = true
+        };
+        db.Users.Add(student);
+        db.UserRoles.Add(new UserRole { User = student, Role = studentRole });
+
         await db.SaveChangesAsync();
     }
 }

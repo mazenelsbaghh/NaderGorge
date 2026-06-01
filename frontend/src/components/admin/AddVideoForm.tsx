@@ -14,7 +14,7 @@ interface AddVideoFormProps {
 
 export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
   const [title, setTitle] = useState('');
-  const [provider, setProvider] = useState('YouTube');
+    const [provider, setProvider] = useState('YouTube');
   const [urlOrEmbedCode, setUrlOrEmbedCode] = useState('');
   const [order, setOrder] = useState(1);
   const [limit, setLimit] = useState(3);
@@ -61,8 +61,8 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
           >
             <option value="YouTube">YouTube</option>
-            <option value="Vimeo">Vimeo</option>
-            <option value="Custom">Other</option>
+            <option value="bunny">Bunny</option>
+            <option value="vk">VK (فيكونتاكتي)</option>
           </select>
         </div>
         <div className="flex-1 space-y-2 min-w-[200px]">
@@ -70,8 +70,18 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
           <input
             type="text"
             value={urlOrEmbedCode}
-            onChange={(e) => setUrlOrEmbedCode(e.target.value)}
-            placeholder="مثال: dQw4w9WgXcQ أو المرجع الخاص"
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val.includes('bunny.net') || val.includes('mediadelivery')) {
+                setProvider('bunny');
+              } else if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
+                setProvider('vk');
+              } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
+                setProvider('YouTube');
+              }
+              setUrlOrEmbedCode(val);
+            }}
+            placeholder={provider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : 'رابط الفيديو'}
             className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
             required
           />

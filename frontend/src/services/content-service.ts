@@ -33,6 +33,20 @@ export interface LessonSummaryDto {
   hasAccess: boolean;
   isCompleted: boolean;
   price?: number;
+  isLocked?: boolean;
+  lockedReason?: string;
+  blockingExamId?: string;
+  blockingHomeworkLessonId?: string;
+}
+
+export interface VideoChapterDto {
+  id: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  summaryText: string;
+  order: number;
+  mindmapImageUrl?: string;
 }
 
 export interface VideoDto {
@@ -43,6 +57,15 @@ export interface VideoDto {
   limit: number;
   watched: number;
   isLocked: boolean;
+  watchedSeconds: number;
+  lastWatchedAt?: string;
+  subtitleUrl?: string;
+  isProcessingAI?: boolean;
+  isProcessingMindmaps?: boolean;
+  examId?: string;
+  examPassed?: boolean;
+  isExamLocked?: boolean;
+  chapters?: VideoChapterDto[];
 }
 
 export interface ResourceDto {
@@ -73,10 +96,58 @@ export interface LessonDetailDto {
   id: string;
   title: string;
   summary: string;
+  packageId: string;
   examId?: string;
   videos: VideoDto[];
   resources: ResourceDto[];
   homework?: HomeworkDto;
+  isLocked?: boolean;
+  lockedReason?: string;
+  blockingExamId?: string;
+  blockingHomeworkLessonId?: string;
+}
+
+export interface LessonCommentDto {
+  id: string;
+  lessonId: string;
+  authorName: string;
+  body: string;
+  status: string;
+  createdAt: string;
+  isOwnComment: boolean;
+  authorAvatarSlug?: string | null;
+}
+
+export interface CreateLessonCommentResponse {
+  id: string;
+  status: string;
+  createdAt: string;
+  message: string;
+}
+
+export interface PackageCodePageHeroDto {
+  eyebrow: string;
+  title: string;
+  description: string;
+}
+
+export interface PackageCodePagePanelDto {
+  title: string;
+  description: string;
+}
+
+export interface PackageCodePageDto {
+  packageId: string;
+  packageName: string;
+  packageDescription: string;
+  packagePrice: number;
+  isPackageActive: boolean;
+  isUsingCustomProfile: boolean;
+  hero: PackageCodePageHeroDto;
+  offerPanel: PackageCodePagePanelDto;
+  activationPanel: PackageCodePagePanelDto;
+  supportPanel: PackageCodePagePanelDto;
+  themeAccentKey: string;
 }
 
 interface ContentApiResponse<T> {
@@ -91,6 +162,8 @@ type PackagesResponse = AxiosResponse<ContentApiResponse<PackageDto[]>>;
 let packagesInFlight: Promise<PackagesResponse> | null = null;
 let packagesCache: PackagesResponse | null = null;
 let packagesCacheAt = 0;
+
+const readPackagesFromCache = () => packagesCache?.data?.data ?? [];
 
 export const contentService = {
   getPackages: (options?: { force?: boolean }) => {
@@ -115,10 +188,19 @@ export const contentService = {
 
     return packagesInFlight;
   },
+  peekCachedPackageById: (packageId: string) => {
+    if (!packageId) return null;
+    return readPackagesFromCache().find((pkg) => pkg.id === packageId) ?? null;
+  },
   getTerms: (packageId: string) => apiClient.get(`/content/packages/${packageId}/terms`),
+  getPackageCodePage: (packageId: string) => apiClient.get<ContentApiResponse<PackageCodePageDto>>(`/content/packages/${packageId}/code-page`),
   getSections: (termId: string) => apiClient.get(`/content/terms/${termId}/sections`),
   getLessons: (sectionId: string) => apiClient.get(`/content/sections/${sectionId}/lessons`),
   getLessonDetail: (lessonId: string) => apiClient.get(`/content/lessons/${lessonId}`),
-  recordVideoEvent: (lessonVideoId: string, watchedSeconds: number) => 
-    apiClient.post('/tracking/video-event', { lessonVideoId, watchedSeconds }),
+  getLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments`),
+  getMyLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments/mine`),
+  createLessonComment: (lessonId: string, body: string) =>
+    apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body }),
+  recordVideoEvent: (lessonVideoId: string, watchedSeconds: number, totalDurationSeconds = 0) => 
+    apiClient.post('/tracking/video-event', { lessonVideoId, watchedSeconds, totalDurationSeconds }),
 };

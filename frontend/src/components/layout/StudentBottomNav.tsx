@@ -17,8 +17,8 @@ export function StudentBottomNav({ items }: { items: StudentBottomNavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--landing-line)] bg-[color:rgba(255,248,236,0.94)] px-2 py-2 backdrop-blur md:hidden">
-      <div className="mx-auto grid w-full max-w-xl grid-cols-3 gap-2 rounded-[26px] border border-[var(--landing-line)] bg-[var(--landing-card)] p-2 shadow-[0_-18px_40px_rgba(88,55,18,0.08)]">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--landing-line)] bg-[var(--landing-bg-soft)]/95 px-2 py-2 backdrop-blur md:hidden">
+      <div className="mx-auto grid w-full max-w-xl grid-cols-3 gap-2 rounded-[26px] border border-[var(--landing-line)] bg-[var(--landing-card)] p-2 shadow-[0_-18px_40px_var(--admin-shadow)]">
         {items.map((item) => {
           const isActive = pathname === item.href;
 
@@ -33,7 +33,7 @@ export function StudentBottomNav({ items }: { items: StudentBottomNavItem[] }) {
                   : "text-[var(--landing-muted)]",
               )}
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/80">
+              <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--landing-card-strong)]">
                 {item.icon}
               </span>
               <span className="truncate">{item.label}</span>

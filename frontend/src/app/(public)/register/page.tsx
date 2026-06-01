@@ -17,31 +17,23 @@
 import '../auth.css';
 
 import Link from 'next/link';
-
+import { useState } from 'react';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { RippleGrid } from '@/components/ui/ripple-grid';
 import { RegistrationForm } from '@/components/forms/RegistrationForm';
+import { RegistrationInstructionsModal } from '@/components/registration/RegistrationInstructionsModal';
+import { Info } from 'lucide-react';
 
 export default function RegisterPage() {
-  const { isDark, themeVars, toggleTheme } = useAuthTheme();
-  const authThemeVars = themeVars as Record<string, string>;
-
-  useRootOverscrollBackground(themeVars);
+  const { isDark, toggleTheme } = useAuthTheme();
+  useRootOverscrollBackground();
+  const [showInstructions, setShowInstructions] = useState(false);
 
   return (
-    /*
-     * auth-shell: same background (dot pattern + bg-color) as AdminShellChrome.
-     * All --admin-* vars are injected inline via themeVars.
-     */
     <div 
-      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto" 
-      style={{ 
-        ...themeVars, 
-        backgroundColor: authThemeVars['--admin-bg'],
-        color: authThemeVars['--admin-text']
-      }}
+      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]" 
     >
 
       {/* ── Ripple Interactive Background ── */}
@@ -71,6 +63,7 @@ export default function RegisterPage() {
           aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
           title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
           className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card-soft)]"
+          suppressHydrationWarning
         />
       </div>
 
@@ -81,7 +74,7 @@ export default function RegisterPage() {
         <div className="auth-avatar">𓂀</div>
 
         {/* Heading */}
-        <div className="mx-auto mb-8 max-w-3xl text-center">
+        <div className="mx-auto mb-8 max-w-3xl text-center flex flex-col items-center">
           <h1
             className="text-3xl font-extrabold tracking-tight sm:text-4xl"
             style={{ color: 'var(--admin-text)' }}
@@ -94,6 +87,13 @@ export default function RegisterPage() {
           >
             سجل بياناتك عبر أربع مراحل واضحة: هوية، متابعة، مسار دراسي، ثم تأمين الحساب.
           </p>
+          <button
+            onClick={() => setShowInstructions(true)}
+            className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-black text-amber-600 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
+          >
+            <Info className="h-3.5 w-3.5 shrink-0" />
+            <span>اضغط هنا لقراءة تعليمات هامة جداً قبل التسجيل</span>
+          </button>
         </div>
 
         {/* ── Glass Card ── */}
@@ -119,6 +119,8 @@ export default function RegisterPage() {
           © 2026 THE EDITORIAL SCHOLAR ARCHIVE • ALL RIGHTS RESERVED
         </p>
       </main>
+
+      <RegistrationInstructionsModal open={showInstructions} onClose={() => setShowInstructions(false)} />
     </div>
   );
 }

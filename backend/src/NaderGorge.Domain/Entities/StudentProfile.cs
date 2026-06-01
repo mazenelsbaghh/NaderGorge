@@ -8,29 +8,41 @@ public class StudentProfile : BaseEntity
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    // --- Personal data ---
+    // ── Personal data ────────────────────────────────────────────────────
     public string? StudentCode { get; set; }                   // Was required, now optional
     public DateTime DateOfBirth { get; set; }
     public Gender Gender { get; set; }
+    public string? Nationality { get; set; }                   // NEW: e.g. "مصري", "سعودي"
     public string Governorate { get; set; } = string.Empty;
     public string? District { get; set; }                      // Neighborhood/area within governorate
     public string Address { get; set; } = string.Empty;
     public string? SecondaryPhone { get; set; }                // Student's 2nd phone
 
-    // --- Parent data ---
-    public string? ParentPhone { get; set; }
+    // ── Parent data ──────────────────────────────────────────────────────
+    public string? ParentPhone { get; set; }                   // Father's phone (primary contact)
     public string? SecondaryParentPhone { get; set; }          // Parent's 2nd phone
+    public string? MotherPhone { get; set; }                   // NEW: Mother's phone (separate from ParentPhone)
     public bool IsFatherAlive { get; set; } = true;
     public bool IsMotherAlive { get; set; } = true;
+    public DateTime? FatherDateOfBirth { get; set; }           // NEW: Father's date of birth
+    public DateTime? MotherDateOfBirth { get; set; }           // NEW: Mother's date of birth
 
-    // --- Academic data (conditional) ---
+    // ── School data ──────────────────────────────────────────────────────
+    public string? SchoolName { get; set; }                    // NEW: School name (free text)
+    public SchoolType? SchoolType { get; set; }                // NEW: School type enum
+
+    // ── Academic data (conditional) ──────────────────────────────────────
     public EducationStage EducationStage { get; set; }
     public GradeLevel GradeLevel { get; set; }
+    public string? LightThemePaletteId { get; set; }
+    public string? DarkThemePaletteId { get; set; }
+    public string CurrentMode { get; set; } = "light";
 
     /// <summary>
     /// Required only for SecondSecondary (Arts/Science) and
     /// SecondBaccalaureate (Medicine/Engineering/Business/ArtsAndHumanities).
-    /// Null for FirstSecondary and FirstBaccalaureate.
+    /// Null for all other grade levels.
     /// </summary>
     public StudyTrack? StudyTrack { get; set; }
+    public string? AvatarSlug { get; set; }
 }

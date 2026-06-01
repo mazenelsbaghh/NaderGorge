@@ -2,21 +2,16 @@
 
 import { CSSProperties, useEffect } from 'react';
 
-export function useRootOverscrollBackground(themeVars: CSSProperties) {
+export function useRootOverscrollBackground() {
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
     const html = document.documentElement;
     const body = document.body;
-    const themeMap = themeVars as Record<string, string | number | undefined>;
-    const backgroundColor = String(themeMap['--admin-bg'] ?? '');
-    const backgroundOverlay = String(themeMap['--admin-bg-overlay'] ?? '');
-    const backgroundDot = String(themeMap['--admin-dot'] ?? '');
-    const backgroundImage =
-      backgroundDot && backgroundOverlay
-        ? `radial-gradient(circle at 2px 2px, ${backgroundDot} 1px, transparent 0), linear-gradient(${backgroundOverlay}, ${backgroundOverlay})`
-        : '';
-    const backgroundSize = backgroundImage ? '40px 40px, 100% 100%' : '';
+    
+    const backgroundColor = 'var(--admin-bg)';
+    const backgroundImage = 'none';
+    const backgroundSize = 'auto';
 
     const previousHtmlBackground = html.style.backgroundColor;
     const previousHtmlBackgroundImage = html.style.backgroundImage;
@@ -58,5 +53,5 @@ export function useRootOverscrollBackground(themeVars: CSSProperties) {
       body.style.overflow = previousBodyOverflow;
       body.style.overscrollBehavior = previousBodyOverscrollBehavior;
     };
-  }, [themeVars]);
+  }, []);
 }

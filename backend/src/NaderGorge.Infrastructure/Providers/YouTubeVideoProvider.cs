@@ -5,6 +5,8 @@ namespace NaderGorge.Infrastructure.Providers;
 
 public class YouTubeVideoProvider : IVideoProvider
 {
+    public string Name => "youtube";
+
     public string ExtractVideoId(string url)
     {
         if (string.IsNullOrWhiteSpace(url))

@@ -108,26 +108,34 @@ html.theme-switching *::after {
   --landing-line: rgba(149, 111, 62, 0.22);
   --landing-line-strong: rgba(255, 240, 215, 0.16);
 
-  /* Admin System Tokens */
-  --admin-background: #faf2e6;
-  --admin-card: #fcf6ea;
-  --admin-card-soft: #fffaf1;
-  --admin-card-strong: #f7ecda;
-  --admin-text: #2c1708;
-  --admin-muted: #7a644d;
-  --admin-border: rgba(149, 111, 62, 0.22);
-  --admin-primary: #9a6933;
-  --admin-primary-15: rgba(154, 105, 51, 0.15);
-  --admin-primary-strong: #7f5427;
-  --admin-primary-contrast: #fffaf1;
-  --admin-hover: rgba(154, 105, 51, 0.08);
-  --admin-shadow: rgba(154, 105, 51, 0.1);
+  /* Admin System Tokens (Migrated from useAdminTheme.ts) */
+  --admin-bg: #ffffff;
+  --admin-bg-overlay: rgba(255,255,255,0.9);
+  --admin-dot: rgba(209,197,180,0.8);
+  --admin-sidebar: #f7f7f7;
+  --admin-text: #1c1c16;
+  --admin-muted: #7f7667;
+  --admin-primary: #5d4300;
+  --admin-primary-strong: #775a19;
+  --admin-primary-contrast: #fcd386;
+  --admin-hover: #e5e2d9;
+  --admin-card: rgba(241,238,228,0.95);
+  --admin-card-soft: rgba(246,244,234,0.96);
+  --admin-card-strong: rgba(235,232,222,0.96);
+  --admin-border: rgba(255,255,255,0.3);
+  --admin-search: rgba(255,255,255,0.7);
+  --admin-footer: #e8c176;
+  --admin-shadow: rgba(78,70,57,0.1);
+  --admin-primary-15: rgba(93,67,0,0.12);
   --admin-success: #16a34a;
   --admin-success-10: rgba(22, 163, 74, 0.1);
-  --admin-danger: #dc2626;
+  --admin-success-20: rgba(22, 163, 74, 0.18);
+  --admin-danger: #ef4444; 
   --admin-danger-10: rgba(220, 38, 38, 0.1);
+  --admin-danger-20: rgba(220, 38, 38, 0.18);
   --admin-warning: #ea580c;
   --admin-warning-10: rgba(234, 88, 12, 0.1);
+  --admin-warning-20: rgba(234, 88, 12, 0.18);
 }
 
 .dark {
@@ -193,26 +201,47 @@ html.theme-switching *::after {
   --landing-line: oklch(0.40 0.04 70 / 18%);
   --landing-line-strong: oklch(0.50 0.06 70 / 12%);
 
-  /* Admin System Tokens - Dark */
-  --admin-background: oklch(0.16 0.015 70);
-  --admin-card: oklch(0.20 0.018 70);
-  --admin-card-soft: oklch(0.22 0.018 70);
-  --admin-card-strong: oklch(0.24 0.02 70);
-  --admin-text: oklch(0.94 0.015 70);
-  --admin-muted: oklch(0.65 0.03 70);
-  --admin-border: oklch(0.40 0.04 70 / 20%);
-  --admin-primary: oklch(0.72 0.12 70);
-  --admin-primary-15: oklch(0.72 0.12 70 / 15%);
-  --admin-primary-strong: oklch(0.60 0.10 70);
-  --admin-primary-contrast: oklch(0.16 0.015 70);
-  --admin-hover: oklch(0.72 0.12 70 / 8%);
-  --admin-shadow: rgba(0, 0, 0, 0.2);
+  /* Admin System Tokens - Dark (Migrated from useAdminTheme.ts) */
+  --admin-bg: #1a1a19;
+  --admin-bg-overlay: rgba(12,12,12,0.95);
+  --admin-dot: #775a19;
+  --admin-sidebar: rgba(26,26,24,0.82);
+  --admin-text: #f4f1e7;
+  --admin-muted: #d1c5b4;
+  --admin-primary: #c5a059;
+  --admin-primary-strong: #8f6b2f;
+  --admin-primary-contrast: #0c0c0c;
+  --admin-hover: #2c261f;
+  --admin-card: rgba(30,30,30,0.85);
+  --admin-card-soft: rgba(21,21,18,0.95);
+  --admin-card-strong: rgba(40,40,36,0.95);
+  --admin-border: rgba(119,90,25,0.2);
+  --admin-search: rgba(12,12,12,0.85);
+  --admin-footer: #c5a059;
+  --admin-shadow: rgba(0,0,0,0.5);
+  --admin-primary-15: rgba(197,160,89,0.15);
   --admin-success: oklch(0.62 0.15 145);
   --admin-success-10: oklch(0.62 0.15 145 / 10%);
-  --admin-danger: oklch(0.65 0.2 25);
+  --admin-success-20: oklch(0.62 0.15 145 / 20%);
+  --admin-danger: #ef4444;
   --admin-danger-10: oklch(0.65 0.2 25 / 10%);
+  --admin-danger-20: oklch(0.65 0.2 25 / 20%);
   --admin-warning: oklch(0.7 0.15 50);
   --admin-warning-10: oklch(0.7 0.15 50 / 10%);
+  --admin-warning-20: oklch(0.7 0.15 50 / 20%);
+}
+
+html[data-student-theme-surface="student"],
+html[data-student-theme-surface="student"] body {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+html[data-student-theme-surface="student"] [data-slot="sheet-content"] {
+  box-shadow: 0 24px 60px var(--admin-shadow);
+}
+
+html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
+  background: color-mix(in srgb, var(--admin-bg) 28%, black);
 }
 
 @layer base {
@@ -612,4 +641,44 @@ html.theme-switching *::after {
   .checkbox__content {
     @apply flex flex-col justify-center;
   }
+
+  /* ─── DaisyUI Countdown ─── */
+  .countdown {
+    display: inline-flex;
+    overflow: hidden;
+  }
+  .countdown > * {
+    height: 1em;
+    display: inline-block;
+    overflow-y: hidden;
+  }
+  .countdown > *::before {
+    position: relative;
+    content: "00\A 01\A 02\A 03\A 04\A 05\A 06\A 07\A 08\A 09\A 10\A 11\A 12\A 13\A 14\A 15\A 16\A 17\A 18\A 19\A 20\A 21\A 22\A 23\A 24\A 25\A 26\A 27\A 28\A 29\A 30\A 31\A 32\A 33\A 34\A 35\A 36\A 37\A 38\A 39\A 40\A 41\A 42\A 43\A 44\A 45\A 46\A 47\A 48\A 49\A 50\A 51\A 52\A 53\A 54\A 55\A 56\A 57\A 58\A 59\A 60\A 61\A 62\A 63\A 64\A 65\A 66\A 67\A 68\A 69\A 70\A 71\A 72\A 73\A 74\A 75\A 76\A 77\A 78\A 79\A 80\A 81\A 82\A 83\A 84\A 85\A 86\A 87\A 88\A 89\A 90\A 91\A 92\A 93\A 94\A 95\A 96\A 97\A 98\A 99\A";
+    white-space: pre;
+    top: 0;
+    left: 0;
+    display: inline-block;
+    transition: transform 0.2s cubic-bezier(0.87, 0, 0.13, 1);
+    transform: translateY(calc(var(--value) * -1em));
+  }
+}
+
+/* 🛡️ THE GLOBAL IDM ANNIHILATOR 🛡️ */
+/* IDM extensions usually inject elements with idm- prefix or class names */
+[id^="idm"], 
+[class^="idm"], 
+[id*="IDM"], 
+[class*="IDM"], 
+[class*="idm"],
+iframe[src*="idm"],
+div[style*="2147483647"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  z-index: -9999 !important;
 }

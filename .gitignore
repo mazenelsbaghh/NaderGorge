@@ -16,15 +16,18 @@ coverage/
 .npm/
 .yarn/
 
-# Environment
+# Environment — secrets (never commit)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+frontend/.env.local
+worker/.env
+# .env.example is intentionally NOT ignored (safe to commit as documentation)
 
 # Docker
-.dockerignore
+docker-compose.override.yml
 
 # OS specific
 .DS_Store
@@ -38,3 +41,4 @@ Thumbs.db
 nginx/logs/
 pgdata/
 redisdata/
+

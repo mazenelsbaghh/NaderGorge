@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Student.Commands;
+using NaderGorge.Application.Features.Student.Queries;
 
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -75,12 +76,42 @@ public class VideoSessionController : ControllerBase
     {
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
+        if (request.TotalDurationSeconds <= 0) return BadRequest(new { success = false, errors = new[] { "DURATION_REQUIRED" } });
 
-        var command = new TrackWatchProgressCommand(lessonVideoId, userId, request.SecondsWatched, request.RegisterView);
+        var command = new TrackWatchProgressCommand(
+            lessonVideoId,
+            userId,
+            request.SecondsWatched,
+            request.TotalDurationSeconds,
+            request.RegisterView
+        );
         var result = await _mediator.Send(command, ct);
 
         if (result.Success) return Ok(result);
         return BadRequest(result);
+    }
+
+    [HttpPost("{lessonVideoId}/request-extra")]
+    public async Task<IActionResult> RequestExtraWatch(Guid lessonVideoId, CancellationToken ct)
+    {
+        var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
+
+        var result = await _mediator.Send(new CreateExtraWatchRequestCommand(lessonVideoId, userId), ct);
+        if (result.Success) return Ok(result);
+        if (result.Errors?.Contains("REQUEST_LIMIT_REACHED") == true) return BadRequest(result);
+        if (result.Errors?.Contains("VIDEO_NOT_FOUND") == true) return NotFound(result);
+        return BadRequest(result);
+    }
+
+    [HttpGet("{lessonVideoId}/request-status")]
+    public async Task<IActionResult> GetExtraWatchStatus(Guid lessonVideoId, CancellationToken ct)
+    {
+        var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
+
+        var result = await _mediator.Send(new CheckExtraWatchStatusQuery(lessonVideoId, userId), ct);
+        return Ok(result);
     }
 
     private string? GetIpAddress()
@@ -95,6 +126,7 @@ public class VideoSessionController : ControllerBase
 public class TrackProgressRequest
 {
     public double SecondsWatched { get; set; }
+    public int TotalDurationSeconds { get; set; }
     public bool RegisterView { get; set; }
 }
 

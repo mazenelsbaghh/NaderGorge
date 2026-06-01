@@ -14,7 +14,7 @@
  */
 
 import { useEffect, useState, useId } from "react";
-import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate, useReducedMotion } from "framer-motion";
 import { easeQuart } from "@/lib/motion";
 
 type ProgressRingProps = {
@@ -34,6 +34,7 @@ export function ProgressRing({ percent, sizeClass = "h-52 w-52 sm:h-64 sm:w-64 m
   const id = useId();
   const filterId = `glow-${id}`;
   const gradientId = `ring-grad-${id}`;
+  const shouldReduceMotion = useReducedMotion();
 
   /* ── Animated progress ── */
   const progressVal = useMotionValue(0);
@@ -44,17 +45,20 @@ export function ProgressRing({ percent, sizeClass = "h-52 w-52 sm:h-64 sm:w-64 m
   const tipAngle = useTransform(progressVal, (v) => (v / 100) * 360 - 90); // -90 b/c SVG starts at top
 
   useEffect(() => {
-    /* Respect reduced-motion */
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const dur = prefersReduced ? 0.01 : 1.4;
+    if (shouldReduceMotion) {
+      progressVal.set(percent);
+      return;
+    }
 
     const ctrl = animate(progressVal, percent, {
-      duration: dur,
+      duration: 1.4,
       ease: easeQuart,
       onUpdate: (v) => setDisplayPercent(Math.round(v)),
     });
     return () => ctrl.stop();
-  }, [percent, progressVal]);
+  }, [percent, progressVal, shouldReduceMotion]);
+
+  const renderedPercent = shouldReduceMotion ? Math.round(percent) : displayPercent;
 
   return (
     <div className={`relative ${sizeClass} max-w-full`}>
@@ -65,8 +69,8 @@ export function ProgressRing({ percent, sizeClass = "h-52 w-52 sm:h-64 sm:w-64 m
           background: "radial-gradient(circle, var(--admin-primary) 0%, transparent 70%)",
           filter: "blur(30px)",
         }}
-        animate={{ opacity: [0.08, 0.18, 0.08] }}
-        transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+        animate={shouldReduceMotion ? { opacity: 0.1 } : { opacity: [0.08, 0.18, 0.08] }}
+        transition={shouldReduceMotion ? { duration: 0 } : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
       />
 
       {/* ── Outer ring container ── */}
@@ -148,20 +152,20 @@ export function ProgressRing({ percent, sizeClass = "h-52 w-52 sm:h-64 sm:w-64 m
             x: useTransform(tipAngle, (a) => Math.cos((a * Math.PI) / 180) * (RADIUS / 100) * 50 - 5 + "%"),
             y: useTransform(tipAngle, (a) => Math.sin((a * Math.PI) / 180) * (RADIUS / 100) * 50 - 5 + "%"),
           }}
-          animate={{
+          animate={shouldReduceMotion ? { scale: 1, opacity: 0.95 } : {
             scale: [1, 1.4, 1],
             opacity: [0.9, 1, 0.9],
           }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 2, repeat: Infinity, ease: "easeInOut" }}
         />
 
         {/* ── Center content ── */}
         <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full bg-[var(--admin-card-soft)] px-3 text-center shadow-inner sm:h-40 sm:w-40 md:h-44 md:w-44">
           <p className="text-[10px] font-bold tracking-[0.16em] text-[var(--admin-muted)] sm:text-sm sm:tracking-[0.22em]">
-            PROGRESS
+            التقدّم
           </p>
           <p className="mt-2 text-3xl font-black text-[var(--admin-text)] sm:mt-3 sm:text-4xl md:text-5xl">
-            {displayPercent}%
+            {renderedPercent}%
           </p>
           <p className="mt-1 text-center text-xs font-semibold leading-5 text-[var(--admin-muted)] sm:mt-2 sm:text-sm sm:leading-6">
             تقدمك الكلي في المحتوى

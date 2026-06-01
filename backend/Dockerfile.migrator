@@ -1,0 +1,28 @@
+# Dedicated EF Core migration runner.
+# Uses the full .NET SDK so `dotnet ef` is available.
+# Only invoked by `make migrate` (compose profile: migration).
+FROM mcr.microsoft.com/dotnet/sdk:9.0
+
+WORKDIR /src
+
+# Install EF Core CLI tool
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+# Restore dependencies
+COPY NaderGorge.sln ./
+COPY src/NaderGorge.API/NaderGorge.API.csproj                       src/NaderGorge.API/
+COPY src/NaderGorge.Application/NaderGorge.Application.csproj       src/NaderGorge.Application/
+COPY src/NaderGorge.Domain/NaderGorge.Domain.csproj                 src/NaderGorge.Domain/
+COPY src/NaderGorge.Infrastructure/NaderGorge.Infrastructure.csproj src/NaderGorge.Infrastructure/
+RUN dotnet restore src/NaderGorge.API/NaderGorge.API.csproj
+
+COPY . .
+
+# Pre-build to avoid restore conflicts during runtime command
+RUN dotnet build src/NaderGorge.API/NaderGorge.API.csproj
+
+CMD ["dotnet", "ef", "database", "update", \
+     "--project", "src/NaderGorge.Infrastructure", \
+     "--startup-project", "src/NaderGorge.API", \
+     "--no-build"]

@@ -27,9 +27,14 @@ export function AnimatedThemeToggler({
   ...props
 }: AnimatedThemeTogglerProps) {
   const [internalIsDark, setInternalIsDark] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const isControlled = typeof checked === 'boolean' && typeof onToggle === 'function';
   const isDark = isControlled ? checked : internalIsDark;
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     if (isControlled || typeof document === 'undefined') return;
@@ -122,9 +127,14 @@ export function AnimatedThemeToggler({
       ref={buttonRef}
       onClick={toggleTheme}
       className={cn(className)}
+      suppressHydrationWarning
       {...props}
     >
-      {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      {hydrated ? (
+        isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />
+      ) : (
+        <Moon className="h-5 w-5" />
+      )}
       <span className="sr-only">Toggle theme</span>
     </button>
   );

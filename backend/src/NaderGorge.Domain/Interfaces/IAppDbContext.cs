@@ -24,10 +24,21 @@ public interface IAppDbContext
     // Content
     DbSet<Program> Programs { get; }
     DbSet<Package> Packages { get; }
+    DbSet<PackageCodePageProfile> PackageCodePageProfiles { get; }
     DbSet<ContentSection> ContentSections { get; }
     DbSet<Lesson> Lessons { get; }
     DbSet<LessonVideo> LessonVideos { get; }
+    DbSet<VideoChapter> VideoChapters { get; }
     DbSet<LessonResource> LessonResources { get; }
+    DbSet<LessonComment> LessonComments { get; }
+    DbSet<CommunityPost> CommunityPosts { get; }
+    DbSet<CommunityPostComment> CommunityPostComments { get; }
+    DbSet<CommunityPostLike> CommunityPostLikes { get; }
+    DbSet<CommunityPostPollOption> CommunityPostPollOptions { get; }
+    DbSet<CommunityPostPollVote> CommunityPostPollVotes { get; }
+    DbSet<TeacherPhoto> TeacherPhotos { get; }
+    DbSet<CustomForm> CustomForms { get; }
+    DbSet<FormSubmission> FormSubmissions { get; }
 
     // Phase 3
     DbSet<Term> Terms { get; }
@@ -37,6 +48,7 @@ public interface IAppDbContext
     
     // Tracking
     DbSet<VideoWatchEvent> VideoWatchEvents { get; }
+    DbSet<ExtraWatchRequest> ExtraWatchRequests { get; }
     DbSet<LessonProgress> LessonProgresses { get; }
     DbSet<VideoPlaybackSession> VideoPlaybackSessions { get; }
     
@@ -47,6 +59,8 @@ public interface IAppDbContext
     DbSet<ExamQuestion> ExamQuestions { get; }
     DbSet<StudentExamAttempt> StudentExamAttempts { get; }
     DbSet<StudentAnswer> StudentAnswers { get; }
+    DbSet<EssaySubmission> EssaySubmissions { get; }
+    DbSet<PlatformSetting> PlatformSettings { get; }
     
     // Phase 2: Homework & Academic Ops
     DbSet<Homework> Homeworks { get; }
@@ -69,5 +83,7 @@ public interface IAppDbContext
     // Phase 2: Notifications
     DbSet<NotificationEvent> NotificationEvents { get; }
     
+    Task<StudentAnswer?> FindStudentAnswerAsync(Guid studentExamAttemptId, Guid examQuestionId, CancellationToken cancellationToken = default);
+    Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

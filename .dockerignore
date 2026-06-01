@@ -1,0 +1,47 @@
+# Root-level Docker build context exclusions
+# Each service also has its own .dockerignore for finer control.
+
+# Node.js artifacts
+node_modules/
+frontend/node_modules/
+worker/node_modules/
+
+# Build outputs
+frontend/.next/
+worker/dist/
+backend/bin/
+backend/obj/
+
+# Git
+.git/
+.github/
+
+# Secrets — NEVER send to Docker daemon
+.env
+.env.*
+frontend/.env
+frontend/.env.*
+frontend/.env.local
+worker/.env
+
+# Next.js / TypeScript
+*.tsbuildinfo
+coverage/
+
+# Test artifacts
+frontend/playwright-report/
+frontend/test-results/
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+
+# Spec/docs (not needed in images)
+specs/
+.specify/
+.agents/

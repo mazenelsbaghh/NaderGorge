@@ -5,7 +5,8 @@
  *
  * Structure:
  *  - Fixed vertical icon sidebar (desktop, right side for RTL)
- *  - Bottom nav bar (mobile)
+ *  - Compact bottom nav bar (mobile) — 3 primary + menu button
+ *  - Slide-out drawer for secondary items on mobile
  *  - Dot-grid background with ambient overlay
  *  - Theme toggle (light / dark) shared with admin via useAdminTheme
  *  - Breadcrumb + header section
@@ -14,50 +15,80 @@
  * Token source: useAdminTheme() → same --admin-* CSS vars as admin pages.
  */
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
+  Bug,
   BookMarked,
-  BookOpenText,
   ChartNoAxesColumn,
   ChevronLeft,
   GraduationCap,
   Home,
   KeyRound,
   LogOut,
+  Menu,
+  MessageSquareText,
   Settings,
-  Shield,
-  Star,
+  Wallet,
+  X,
 } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
-import { useAdminTheme } from '@/components/admin/useAdminTheme';
+import { StudentThemeSettingsPanel } from '@/components/student/StudentThemeSettingsPanel';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
+import { SidebarBalance } from '@/components/layout/SidebarBalance';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
+import { useStudentTheme } from '@/hooks/useStudentTheme';
 import { useAuthStore } from '@/stores/auth-store';
-import { RippleGrid } from '@/components/ui/ripple-grid';
+import { useLessonFocusStore } from '@/stores/lesson-focus-store';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
 type StudentShellRoute =
   | '/student'
   | '/student/packages'
-  | '/student/code-redemption';
+  | '/student/community'
+  | '/student/balance'
+  | '/student/code-redemption'
+  | '/student/mistakes';
 
 type StudentShellChromeProps = {
   children: ReactNode;
 };
 
-/* ── Nav items (icon sidebar) ───────────────────────────────────────── */
+/* ── Nav items ──────────────────────────────────────────────────────── */
 
-const navItems: Array<{
+/** Primary: always visible in bottom nav on mobile */
+const primaryNavItems: Array<{
   href: StudentShellRoute;
   label: string;
   icon: typeof ChartNoAxesColumn;
 }> = [
     { href: '/student/packages', label: 'باقاتي', icon: BookMarked },
-    { href: '/student/code-redemption', label: 'تفعيل كود', icon: KeyRound },
+    { href: '/student/community', label: 'المجتمع', icon: MessageSquareText },
   ];
+
+/** Secondary: visible only inside the drawer on mobile */
+const secondaryNavItems: Array<{
+  href: StudentShellRoute;
+  label: string;
+  icon: typeof ChartNoAxesColumn;
+}> = [
+    { href: '/student/mistakes', label: 'أخطائي', icon: Bug },
+    { href: '/student/code-redemption', label: 'تفعيل كود', icon: KeyRound },
+    { href: '/student/balance', label: 'الرصيد', icon: Wallet },
+  ];
+
+/** All items combined — used by the desktop sidebar */
+const allNavItems = [...primaryNavItems, ...secondaryNavItems.filter(i => i.href !== '/student/balance')];
+
+const LazyRippleGrid = dynamic(
+  () => import('@/components/ui/ripple-grid').then((mod) => mod.RippleGrid),
+  { ssr: false }
+);
 
 /* ── Component ──────────────────────────────────────────────────────── */
 
@@ -65,189 +96,443 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const router = useRouter();
   const pathname = usePathname();
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const { isDark, themeVars, toggleTheme } = useAdminTheme();
+  const user = useAuthStore((state) => state.user);
+  const {
+    mode,
+    isDark,
+    toggleTheme,
+    currentPaletteAccent,
+    isSavingPreferences,
+    selectedLightPaletteId,
+    selectedDarkPaletteId,
+    updatePalette,
+    updateAvatar,
+  } = useStudentTheme();
+  const isFocusMode = useLessonFocusStore((state) => state.isFocusMode);
+  const shouldReduceMotion = useReducedMotion();
+  const [supportsAmbientBackground, setSupportsAmbientBackground] = useState(false);
+  const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  useRootOverscrollBackground(themeVars);
+  useRootOverscrollBackground();
+
+  useEffect(() => {
+    const viewportQuery = window.matchMedia('(min-width: 1024px)');
+    const pointerQuery = window.matchMedia('(pointer: fine)');
+
+    const updateAmbientSupport = () => {
+      setSupportsAmbientBackground(viewportQuery.matches && pointerQuery.matches);
+    };
+
+    updateAmbientSupport();
+    viewportQuery.addEventListener('change', updateAmbientSupport);
+    pointerQuery.addEventListener('change', updateAmbientSupport);
+
+    return () => {
+      viewportQuery.removeEventListener('change', updateAmbientSupport);
+      pointerQuery.removeEventListener('change', updateAmbientSupport);
+    };
+  }, []);
+
+  // Close drawer on route change
+  useEffect(() => {
+    setIsDrawerOpen(false);
+  }, [pathname]);
 
   const handleLogout = () => {
     clearAuth();
     router.replace('/login');
   };
 
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
+
   /* Which top-level route is active? */
   const activePath: StudentShellRoute =
     pathname.startsWith('/student/packages')
       ? '/student/packages'
+      : pathname.startsWith('/student/community')
+        ? '/student/community'
+      : pathname.startsWith('/student/balance')
+        ? '/student/balance'
+      : pathname.startsWith('/student/mistakes')
+        ? '/student/mistakes'
       : pathname.startsWith('/student/code-redemption')
         ? '/student/code-redemption'
         : '/student';
+  const showAmbientBackground = !isFocusMode && !shouldReduceMotion && supportsAmbientBackground;
 
   return (
     <div
       dir="rtl"
-      className="h-dvh overflow-hidden text-[var(--admin-text)] relative"
-      style={{
-        ...themeVars,
-        backgroundColor: 'var(--admin-bg)',
-      }}
+      className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
     >
-      {/* Ripple background replaces the CSS dot grid */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <RippleGrid
-          gridColor={isDark ? '#c5a059' : '#d4a762'}
-          rippleIntensity={0.05}
-          gridSize={10}
-          gridThickness={isDark ? 15 : 12}
-          mouseInteraction={true}
-          mouseInteractionRadius={1.2}
-          opacity={isDark ? 0.8 : 0.4}
-        />
-      </div>
-      {/* ═══════════════════════════════════════════════════════════════
-          SIDEBAR — desktop only, fixed right (RTL), exact clone of Admin
-          ═══════════════════════════════════════════════════════════════ */}
-      <aside className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex" role="navigation" aria-label="القائمة الرئيسية">
-        <div className="space-y-7">
-          {/* Identity badge */}
-          <div className="flex justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-lg">
-              <GraduationCap className="h-5 w-5" />
-            </div>
-          </div>
+        {/* Background animation removed as requested */}
+      <AnimatePresence>
+        {!isFocusMode && (
+          <motion.aside
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex"
+            role="navigation"
+            aria-label="القائمة الرئيسية"
+          >
+            <div className="space-y-7">
+              <div className="flex justify-center cursor-pointer" onClick={() => setIsThemeSettingsOpen(true)}>
+                <UserAvatar
+                  avatarSlug={user?.avatarSlug}
+                  fullName={user?.fullName}
+                  size="sm"
+                  className="ring-offset-2 ring-offset-[var(--admin-sidebar)] hover:scale-105 transition duration-300"
+                />
+              </div>
 
-          {/* Nav icons */}
-          <nav className="space-y-3 px-3">
-            {/* Home */}
-            <Link
-              href="/student"
-              aria-label="لوحة التحكم"
-              aria-current={activePath === '/student' ? 'page' : undefined}
-              className={`flex h-12 items-center justify-center rounded-full transition ${activePath === '/student'
-                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-                }`}
-            >
-              <Home className="h-5 w-5" />
-            </Link>
-
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.href === activePath;
-
-              return (
+              <nav className="space-y-3 px-3">
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex h-12 items-center justify-center rounded-full transition ${isActive
-                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                  href="/student"
+                  aria-label="لوحة التحكم"
+                  aria-current={activePath === '/student' ? 'page' : undefined}
+                  className={`flex h-12 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
+                    ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                     : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                     }`}
-                  title={item.label}
-                  aria-label={item.label}
-                  aria-current={isActive ? 'page' : undefined}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Home className="h-5 w-5" />
                 </Link>
-              );
-            })}
-          </nav>
-        </div>
 
-        {/* Bottom toolbar: theme toggle + logout */}
-        <div className="space-y-3 px-3">
-          <div className="flex justify-center">
-            <AnimatedThemeToggler
-              checked={isDark}
-              onToggle={toggleTheme}
-              aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
-              title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
-              className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
-            />
-          </div>
-          <button className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
-            <Settings className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleLogout}
-            className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
-            title="تسجيل الخروج"
-            aria-label="تسجيل الخروج"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-        </div>
-      </aside>
+                {allNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = item.href === activePath;
 
-      {/* ═══════════════════════════════════════════════════════════════
-          MAIN CONTENT — offset for sidebar on desktop
-          ═══════════════════════════════════════════════════════════════ */}
-      <main className="relative z-10 h-dvh overflow-y-auto overscroll-none px-5 py-8 pb-28 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10">
-        {/* Header breadcrumb */}
-        <header className="mb-10">
-          <nav className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-[var(--admin-muted)]">
-            <span> لوحة تحكم الطالب</span>
-            <ChevronLeft className="h-3 w-3" />
-            <span className="text-[var(--admin-primary-strong)]">بوابة الطالب</span>
-          </nav>
-        </header>
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex h-12 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
+                        ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
+                        : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                        }`}
+                      title={item.label}
+                      aria-label={item.label}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="space-y-3 px-3">
+              <div className="flex justify-center">
+                <SidebarBalance />
+              </div>
+              <div className="flex justify-center">
+                <AnimatedThemeToggler
+                  checked={isDark}
+                  onToggle={toggleTheme}
+                  aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+                  title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsThemeSettingsOpen(true)}
+                className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                aria-label="إعدادات الثيم"
+                title="إعدادات الثيم"
+              >
+                <Settings className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                title="تسجيل الخروج"
+                aria-label="تسجيل الخروج"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      <main
+        className={`relative z-10 h-dvh overflow-y-auto overscroll-none ${
+          isFocusMode
+            ? 'px-0 py-0 pb-0 lg:mr-0 lg:px-0 lg:py-0 lg:pb-0'
+            : 'px-4 py-6 pb-20 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10'
+        }`}
+      >
+        <AnimatePresence>
+          {!isFocusMode && (
+            <motion.header
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mb-8 lg:mb-10"
+            >
+              <div className="flex items-center justify-between w-full">
+                <nav className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-[var(--admin-muted)]">
+                  <span>المساحة الدراسية</span>
+                  <ChevronLeft className="h-3 w-3" />
+                  <span className="text-[var(--admin-primary-strong)]">لوحة الطالب</span>
+                </nav>
+                {/* Desktop-only header actions */}
+                <div className="hidden lg:flex items-center gap-3">
+                  <SidebarBalance />
+                  <AnimatedThemeToggler
+                    checked={isDark}
+                    onToggle={toggleTheme}
+                    aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsThemeSettingsOpen(true)}
+                    className="hover:scale-105 transition duration-300"
+                    title="تخصيص الحساب"
+                  >
+                    <UserAvatar
+                      avatarSlug={user?.avatarSlug}
+                      fullName={user?.fullName}
+                      size="sm"
+                    />
+                  </button>
+                </div>
+              </div>
+            </motion.header>
+          )}
+        </AnimatePresence>
 
         {children}
 
-        {/* Footer — identical to Admin */}
-        <footer className="mt-20 flex flex-col items-center opacity-40 select-none">
-          <div className="mb-8 h-px w-full bg-gradient-to-r from-transparent via-[var(--admin-footer)] to-transparent" />
-          <div className="flex gap-8 text-[var(--admin-footer)]">
-            <Star className="h-9 w-9" />
-            <BookOpenText className="h-9 w-9" />
-            <Shield className="h-9 w-9" />
-            <KeyRound className="h-9 w-9" />
-            <Star className="h-9 w-9" />
-          </div>
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.4em] text-[var(--admin-primary)]">
-            شيخ المتحف
-          </p>
-        </footer>
+        <AnimatePresence>
+          {!isFocusMode && (
+            <motion.footer
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 0.6, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              className="mt-20 flex flex-col items-center select-none"
+            >
+              <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
+              <p className="text-[11px] font-black tracking-[0.26em] text-[var(--admin-footer)]">
+                أكاديمية نادر جورج
+              </p>
+            </motion.footer>
+          )}
+        </AnimatePresence>
       </main>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          BOTTOM NAV — mobile only, matches Admin styling
-          ═══════════════════════════════════════════════════════════════ */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-2 py-2 backdrop-blur lg:hidden" role="navigation" aria-label="القائمة السفلية">
-        <div className="mx-auto grid w-full max-w-xl grid-cols-3 gap-2 rounded-[26px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-2 shadow-[0_-18px_40px_var(--admin-shadow)]">
-          {/* Home */}
-          <Link
-            href="/student"
-            aria-current={activePath === '/student' ? 'page' : undefined}
-            className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-[11px] font-black transition-all ${activePath === '/student'
-              ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)]'
-              : 'text-[var(--admin-muted)]'
-              }`}
+      {/* ── Mobile Bottom Nav (compact: 3 primary + menu) ─────────────── */}
+      <AnimatePresence>
+        {!isFocusMode && (
+          <motion.nav
+            initial={shouldReduceMotion ? false : { y: '100%' }}
+            animate={{ y: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { y: '100%' }}
+            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed inset-x-0 bottom-0 z-40 bg-[var(--admin-sidebar)]/95 backdrop-blur-xl px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 lg:hidden"
+            role="navigation"
+            aria-label="القائمة السفلية"
           >
-            <Home className="h-5 w-5" />
-            <span className="truncate">لوحة التحكم</span>
-          </Link>
-
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.href === activePath;
-
-            return (
+            <div className="mx-auto flex w-full max-w-md items-center justify-around gap-1">
+              {/* Home */}
               <Link
-                key={item.href}
-                href={item.href}
-                aria-current={isActive ? 'page' : undefined}
-                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-[11px] font-black transition-all ${isActive
-                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)]'
+                href="/student"
+                aria-current={activePath === '/student' ? 'page' : undefined}
+                className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${activePath === '/student'
+                  ? 'text-[var(--admin-primary)]'
                   : 'text-[var(--admin-muted)]'
                   }`}
               >
-                <Icon className="h-5 w-5" />
-                <span className="truncate">{item.label}</span>
+                <Home className="h-[22px] w-[22px]" />
+                <span className="text-[10px] font-bold leading-none">الرئيسية</span>
               </Link>
-            );
-          })}
-        </div>
-      </nav>
+
+              {/* Primary nav items */}
+              {primaryNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.href === activePath;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isActive
+                      ? 'text-[var(--admin-primary)]'
+                      : 'text-[var(--admin-muted)]'
+                      }`}
+                  >
+                    <Icon className="h-[22px] w-[22px]" />
+                    <span className="text-[10px] font-bold leading-none">{item.label}</span>
+                  </Link>
+                );
+              })}
+
+              {/* Menu button — opens drawer */}
+              <button
+                type="button"
+                onClick={() => setIsDrawerOpen(true)}
+                className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isDrawerOpen
+                  ? 'text-[var(--admin-primary)]'
+                  : 'text-[var(--admin-muted)]'
+                  }`}
+                aria-label="القائمة"
+              >
+                <Menu className="h-[22px] w-[22px]" />
+                <span className="text-[10px] font-bold leading-none">القائمة</span>
+              </button>
+            </div>
+          </motion.nav>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mobile Drawer (slide from left for RTL) ────────────────────── */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden"
+              onClick={closeDrawer}
+              aria-hidden
+            />
+
+            {/* Drawer panel — slides from the right (RTL) */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+              className="fixed top-0 right-0 z-[70] h-full w-72 bg-[var(--admin-sidebar)] shadow-[-20px_0_60px_var(--admin-shadow)] lg:hidden"
+              role="dialog"
+              aria-modal="true"
+              aria-label="القائمة الجانبية"
+            >
+              <div className="flex h-full flex-col py-6 px-5">
+                {/* Drawer header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <UserAvatar
+                      avatarSlug={user?.avatarSlug}
+                      fullName={user?.fullName}
+                      size="sm"
+                    />
+                    <span className="text-sm font-black text-[var(--admin-text)]">
+                      أهلاً، {user?.fullName?.split(' ')[0] || 'طالب'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeDrawer}
+                    className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                    aria-label="إغلاق القائمة"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Balance card */}
+                <div className="mb-5 rounded-2xl bg-[var(--admin-card-soft)] p-4">
+                  <SidebarBalance />
+                </div>
+
+                {/* Secondary nav links */}
+                <nav className="flex-1 space-y-1">
+                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--admin-muted)]">
+                    صفحات تانية
+                  </p>
+                  {secondaryNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = item.href === activePath;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={closeDrawer}
+                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all ${isActive
+                          ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
+                          : 'text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                          }`}
+                      >
+                        <Icon className="h-5 w-5 shrink-0" />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </nav>
+
+                {/* Drawer footer actions */}
+                <div className="mt-auto space-y-1 border-t border-[var(--admin-border)] pt-4">
+                  {/* Theme toggle */}
+                  <div className="flex items-center justify-between rounded-2xl px-4 py-3">
+                    <span className="text-sm font-bold text-[var(--admin-text)]">الوضع الليلي</span>
+                    <AnimatedThemeToggler
+                      checked={isDark}
+                      onToggle={toggleTheme}
+                      aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+                      className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                    />
+                  </div>
+
+                  {/* Theme settings */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeDrawer();
+                      setIsThemeSettingsOpen(true);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+                  >
+                    <Settings className="h-5 w-5 shrink-0" />
+                    <span>إعدادات الألوان</span>
+                  </button>
+
+                  {/* Logout */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeDrawer();
+                      handleLogout();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
+                  >
+                    <LogOut className="h-5 w-5 shrink-0" />
+                    <span>تسجيل الخروج</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <StudentThemeSettingsPanel
+        open={isThemeSettingsOpen}
+        onOpenChange={setIsThemeSettingsOpen}
+        selectedLightPaletteId={selectedLightPaletteId}
+        selectedDarkPaletteId={selectedDarkPaletteId}
+        currentMode={mode === 'dark' ? 'dark' : 'light'}
+        isSaving={isSavingPreferences}
+        onSelectPalette={(paletteMode, paletteId) => {
+          void updatePalette(paletteMode, paletteId);
+        }}
+        selectedAvatarSlug={user?.avatarSlug}
+        onSelectAvatar={(slug) => {
+          void updateAvatar(slug);
+        }}
+      />
     </div>
   );
 }

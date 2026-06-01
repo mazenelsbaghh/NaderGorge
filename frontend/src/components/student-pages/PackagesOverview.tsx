@@ -1,6 +1,5 @@
-import { BookCopy, CheckCircle2, Layers3, LockKeyhole } from "lucide-react";
+import { BookCopy, LayoutGrid, PackageOpen } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 
 import type { PackageDto } from "@/services/content-service";
 
@@ -13,69 +12,44 @@ export function PackagesOverview({ packages }: PackagesOverviewProps) {
   const available = packages.length - enrolled.length;
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-4 shadow-[0_24px_60px_var(--admin-shadow)] sm:rounded-[32px] sm:p-6 md:rounded-[36px] md:p-9">
-      <div className="relative grid gap-5 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)]">YOUR LIBRARY</span>
-          <h1 className="mt-5 text-2xl font-black text-[var(--admin-text)] sm:text-3xl md:text-5xl">
-            باقاتك ومساراتك الدراسية
+    <section className="relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10">
+      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[100px]" />
+      
+      <div className="relative z-10 flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-xl">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-20)] bg-[var(--admin-primary-10)] px-3 py-1 text-xs font-bold text-[var(--admin-primary-strong)]">
+            <LayoutGrid className="h-3.5 w-3.5" />
+            <span>مكتبتك الشاملة</span>
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-[var(--admin-text)] sm:text-5xl">
+            الباقات والمسارات
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--admin-muted)] sm:text-base md:text-lg">
-            هنا ستجد كل الباقات المتاحة لك بشكل أوضح: الباقات المفعّلة، الباقات التي
-            تحتاج كود، ونظرة سريعة على حجم مكتبتك التعليمية.
+          <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)] sm:text-base">
+            تصفح مساراتك التعليمية الحالية أو اكتشف المزيد من الباقات المتوفرة لتعزيز رحلتك الأكاديمية معنا.
           </p>
         </div>
 
-        <div className="grid gap-4">
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold text-[var(--admin-muted)]">إجمالي الباقات</p>
-                <p className="mt-2 text-3xl font-black text-[var(--admin-text)]">
-                  {packages.length}
-                </p>
-              </div>
-              <Layers3 className="h-7 w-7 text-[var(--admin-primary)]" />
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
-            <InfoStat
-              label="مفعّلة"
-              value={enrolled.length}
-              icon={<CheckCircle2 className="h-5 w-5" />}
-            />
-            <InfoStat
-              label="تحتاج تفعيل"
-              value={available}
-              icon={<LockKeyhole className="h-5 w-5" />}
-            />
-          </div>
+        <div className="flex shrink-0 items-center gap-6 rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 shadow-inner backdrop-blur-xl sm:p-6 lg:min-w-[400px]">
+          <Metric label="الإجمالي" value={packages.length} />
+          <div className="h-10 w-px bg-[var(--admin-border)]" />
+          <Metric label="مفعّلة" value={enrolled.length} active />
+          <div className="h-10 w-px bg-[var(--admin-border)]" />
+          <Metric label="تحتاج تفعيل" value={available} />
         </div>
       </div>
     </section>
   );
 }
 
-function InfoStat({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-}) {
+function Metric({ label, value, active }: { label: string; value: number; active?: boolean }) {
   return (
-    <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-4 backdrop-blur">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-bold text-[var(--admin-muted)]">{label}</p>
-          <p className="mt-1 text-2xl font-black text-[var(--admin-text)]">{value}</p>
-        </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
-          {icon}
-        </div>
-      </div>
+    <div className="flex flex-1 flex-col items-center justify-center text-center">
+      <dt className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--admin-muted)]">
+        {label}
+      </dt>
+      <dd className={`text-3xl font-black ${active ? "text-[var(--admin-primary)] drop-shadow-md" : "text-[var(--admin-text)]"}`}>
+        {value}
+      </dd>
     </div>
   );
 }
@@ -99,82 +73,89 @@ export function PackagesGrid({
 }) {
   return (
     <section className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-3xl font-black text-[var(--admin-text)] leading-tight">{title}</h2>
-        <p className="max-w-3xl text-base leading-relaxed text-[var(--admin-muted)]">{description}</p>
+      <div className="border-b border-[var(--admin-border)] pb-4">
+        <h2 className="text-2xl font-black text-[var(--admin-text)]">{title}</h2>
+        <p className="mt-1 text-sm font-medium text-[var(--admin-muted)]">{description}</p>
       </div>
 
       {packages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[32px] border-2 border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-12 text-center">
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--admin-card)] shadow-sm text-[var(--admin-primary)] border border-[var(--admin-border)]">
-            <BookCopy className="h-10 w-10" />
+        <div className="mx-auto max-w-3xl">
+          <div className="group relative flex flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[linear-gradient(to_bottom,var(--admin-card),var(--admin-card-soft))] p-10 text-center shadow-sm">
+            <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay" />
+            <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-xl transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-3">
+              <PackageOpen className="h-10 w-10 text-[var(--admin-primary)] opacity-80" />
+              <div className="absolute inset-0 rounded-[2rem] shadow-[inset_0_0_20px_var(--admin-primary-15)]" />
+            </div>
+            <h3 className="relative text-xl font-bold text-[var(--admin-text)]">{emptyTitle}</h3>
+            <p className="relative mt-2 max-w-sm text-sm leading-relaxed text-[var(--admin-muted)]">
+              {emptyDescription}
+            </p>
           </div>
-          <h3 className="text-2xl font-bold text-[var(--admin-text)]">{emptyTitle}</h3>
-          <p className="mt-3 max-w-lg text-base leading-relaxed text-[var(--admin-muted)]">
-            {emptyDescription}
-          </p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg) => (
-            <Link
+            <button
+              type="button"
               key={pkg.id}
-              href={`/student/packages/${pkg.id}`}
-              className="group relative flex flex-col overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+              onClick={() => onAction(pkg.id)}
+              className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--admin-primary-10)] hover:border-[var(--admin-primary-30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
             >
-              {/* Image Header */}
-              <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--admin-card-strong)] border-b border-[var(--admin-border)]">
-                <Image 
-                  src={pkg.imageUrl || '/images/default-package.png'} 
-                  alt={pkg.name} 
+              {/* Image Frame */}
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--admin-bg)]">
+                <Image
+                  src={pkg.imageUrl || '/images/default-package.png'}
+                  alt={pkg.name}
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--admin-card)] to-transparent via-[var(--admin-card)]/20" />
                 
-                {/* Status Badge */}
-                <div className="absolute top-4 right-4">
+                {/* Badge */}
+                <div className="absolute left-4 top-4">
                   <span
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shadow-sm backdrop-blur-md border ${
+                    className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-black uppercase tracking-wider shadow-md backdrop-blur-md ${
                       pkg.isEnrolled
-                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                        : "bg-red-500/20 text-red-300 border-red-500/30"
+                        ? "bg-[var(--admin-success-20)] text-[var(--admin-success)] border border-[var(--admin-success-30)]"
+                        : "bg-[var(--admin-card-strong)] text-[var(--admin-text)] border border-[var(--admin-border)]"
                     }`}
                   >
-                    {pkg.isEnrolled ? "مفعّلة" : "تحتاج كود"}
+                    {pkg.isEnrolled ? "مفعّلة" : "مغلقة"}
                   </span>
                 </div>
               </div>
 
-              {/* Body */}
-              <div className="flex flex-col flex-grow p-6">
-                <div className="mb-3 flex items-start justify-between gap-4">
-                  <h3 className="text-xl font-bold text-[var(--admin-text)] leading-tight line-clamp-2">
+              {/* Content Body */}
+              <div className="relative z-10 flex flex-1 flex-col p-5 pt-0">
+                <div className="mb-4 flex items-end justify-between gap-3 border-b border-[var(--admin-border)] pb-4">
+                  <h3 className="line-clamp-2 text-lg font-black leading-snug text-[var(--admin-text)] transition-colors group-hover:text-[var(--admin-primary)]">
                     {pkg.name}
                   </h3>
-                  <span className="shrink-0 rounded-xl bg-[var(--admin-card-strong)] px-3 py-1 text-lg font-black text-[var(--admin-primary)] border border-[var(--admin-border)]">
-                    {pkg.price.toFixed(0)} LE
-                  </span>
                 </div>
                 
-                <p className="line-clamp-2 text-sm text-[var(--admin-muted)] leading-relaxed mb-6">
-                  {pkg.description || 'باقة تعليمية متكاملة لضمان التفوق الأكاديمي. تتضمن الشرح والتدريبات اللازمة لاجتياز الاختبارات بامتياز.'}
+                <p className="mb-6 line-clamp-2 text-xs font-medium leading-relaxed text-[var(--admin-muted)]">
+                  {pkg.description || 'باقة تعليمية متكاملة لضمان التفوق الأكاديمي. تتضمن كافة الشروحات الضرورية.'}
                 </p>
 
-                {/* Footer CTA */}
-                <div className="mt-auto pt-4 border-t border-[var(--admin-border)]">
-                  <span
-                    className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
-                      pkg.isEnrolled
-                        ? "bg-[var(--admin-card-strong)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-[var(--admin-primary-contrast)]"
-                        : "bg-[var(--admin-card-soft)] text-[var(--admin-text)] border border-[var(--admin-border)] group-hover:bg-[var(--admin-card-strong)]"
-                    }`}
-                  >
+                <div className="mt-auto flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-[var(--admin-muted)]">السعر</span>
+                    <span className="font-mono text-lg font-black text-[var(--admin-text)]">
+                      {pkg.price.toFixed(0)} <span className="text-[10px] font-sans">ج.م</span>
+                    </span>
+                  </div>
+                  
+                  <div className={`flex h-10 items-center justify-center rounded-xl border px-5 text-xs font-bold transition-all ${
+                    pkg.isEnrolled 
+                      ? "border-transparent bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-20)] group-hover:bg-[var(--admin-primary-strong)]"
+                      : "border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] group-hover:border-[var(--admin-text)] group-hover:bg-[var(--admin-text)] group-hover:text-[var(--admin-bg)]"
+                  }`}>
                     {actionLabel}
-                  </span>
+                  </div>
                 </div>
               </div>
-            </Link>
+            </button>
           ))}
         </div>
       )}

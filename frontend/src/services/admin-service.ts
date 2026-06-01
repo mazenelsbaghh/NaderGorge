@@ -74,8 +74,15 @@ export interface QuestionOptionDto {
 export interface QuestionBankItemDto {
   id: string;
   text: string;
+  type: number;
   defaultPoints: number;
   tags: string;
+  audioUrl?: string; // New: Optional audio
+  writtenCorrection?: string; // New: Text correction
+  hintText?: string; // New: Hint text available during practice
+  baseText?: string; // For FindTheMistake
+  mistakeStartIndex?: number; // For FindTheMistake
+  mistakeEndIndex?: number; // For FindTheMistake
   options: QuestionOptionDto[];
 }
 
@@ -102,6 +109,22 @@ export interface StudentProfileExtendedDto {
   packages: any[];
   devices: any[];
   overrides: any[];
+  watchTracking: {
+    totalWatchedSeconds: number;
+    watchedVideosCount: number;
+    activities: Array<{
+      lessonVideoId: string;
+      videoTitle: string;
+      lessonId: string;
+      lessonTitle: string;
+      packageName?: string;
+      watchCount: number;
+      maxWatchCount: number;
+      watchedSeconds: number;
+      isLocked: boolean;
+      lastWatchedAt: string;
+    }>;
+  };
   auditTrail: any[];
 }
 
@@ -117,6 +140,14 @@ export interface StudentExamResultSummaryDto {
   isTimeExpired: boolean;
 }
 
+export interface ExamQuestionSummaryDto {
+  examQuestionId: string;
+  text: string;
+  type: string;
+  points: number;
+  baseText?: string | null;
+}
+
 export interface ExamDashboardDto {
   examId: string;
   title: string;
@@ -127,15 +158,138 @@ export interface ExamDashboardDto {
   durationMinutes?: number;
   timePerQuestionSeconds?: number;
   attempts: StudentExamResultSummaryDto[];
+  questions: ExamQuestionSummaryDto[];
+}
+
+export interface ModerationLessonCommentDto {
+  id: string;
+  lessonId: string;
+  lessonTitle: string;
+  studentId: string;
+  studentName: string;
+  body: string;
+  status: string;
+  createdAt: string;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
+}
+
+export interface ModerateLessonCommentResponse {
+  id: string;
+  status: string;
+  reviewedAt?: string | null;
+  reviewedByUserId?: string | null;
+}
+
+export interface ModerationCommunityPostDto {
+  id: string;
+  studentId: string;
+  studentName: string;
+  body: string;
+  status: string;
+  createdAt: string;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
+  commentCount: number;
+  likeCount: number;
+}
+
+export interface ModerateCommunityPostResponse {
+  id: string;
+  status: string;
+  reviewedAt?: string | null;
+  reviewedByUserId?: string | null;
+}
+
+export interface ModerationCommunityCommentDto {
+  id: string;
+  postId: string;
+  studentId: string;
+  studentName: string;
+  body: string;
+  status: string;
+  createdAt: string;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
+  rejectionReason?: string | null;
+}
+
+export interface ModerateCommunityCommentResponse {
+  commentId: string;
+  status: string;
+  rejectionReason?: string | null;
+}
+
+export interface EssaySubmissionDto {
+  id: string;
+  studentId: string;
+  questionId: string;
+  answerText: string;
+  aiInitialScore?: number;
+  aiFeedback?: string;
+  status: string;
+}
+
+export interface LessonCockpitCommentSummaryDto {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface LessonCockpitDto {
+  lessonId: string;
+  title: string;
+  summary: string;
+  examId?: string | null;
+  videos: any[];
+  resources: any[];
+  homework: any[];
+  commentsSummary: LessonCockpitCommentSummaryDto;
+}
+
+export type PackageCodeProfileStatus = 'Draft' | 'Published' | 'Fallback';
+
+export interface PackageCodeProfileDto {
+  packageId: string;
+  packageName: string;
+  status: PackageCodeProfileStatus;
+  isUsingFallback: boolean;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroDescription: string;
+  offerTitle: string;
+  offerDescription: string;
+  activationTitle: string;
+  activationDescription: string;
+  supportTitle: string;
+  supportDescription: string;
+  themeAccentKey: string;
+  publishedAt?: string | null;
+  lastUpdatedAt?: string | null;
+}
+
+export interface PackageCodeProfilePayload {
+  status: PackageCodeProfileStatus;
+  heroEyebrow?: string;
+  heroTitle?: string;
+  heroDescription?: string;
+  offerTitle?: string;
+  offerDescription?: string;
+  activationTitle?: string;
+  activationDescription?: string;
+  supportTitle?: string;
+  supportDescription?: string;
+  themeAccentKey?: string;
 }
 
 
 export const adminService = {
   // Users
   listUsers: async (
-    page = 1, 
-    pageSize = 20, 
-    search = '', 
+    page = 1,
+    pageSize = 20,
+    search = '',
     educationStage?: string,
     gradeLevel?: string,
     studyTrack?: string,
@@ -143,9 +297,9 @@ export const adminService = {
     governorate?: string
   ) => {
     const res = await apiClient.get<ApiResponse<PagedResult<AdminUserListDto>>>('/admin/users', {
-      params: { 
-        page, 
-        pageSize, 
+      params: {
+        page,
+        pageSize,
         ...(search ? { search } : {}),
         ...(educationStage ? { educationStage } : {}),
         ...(gradeLevel ? { gradeLevel } : {}),
@@ -156,7 +310,7 @@ export const adminService = {
     });
     return res.data?.data;
   },
-  
+
   updateUserStatus: async (id: string, status: string) => {
     const res = await apiClient.put(`/admin/users/${id}/status`, { status });
     return res.data?.data;
@@ -165,6 +319,15 @@ export const adminService = {
   updateUserRoles: async (id: string, roles: string[]) => {
     const res = await apiClient.put(`/admin/users/${id}/roles`, { roles });
     return res.data?.data;
+  },
+
+  uploadTeacherPhoto: async (teacherId: string, base64Image: string, fileName: string) => {
+    const res = await apiClient.post<ApiResponse>('/admin/teacher-photos/upload', {
+      teacherId,
+      base64Image,
+      fileName
+    });
+    return res.data;
   },
 
   getStudentProfile: async (id: string) => {
@@ -255,8 +418,47 @@ export const adminService = {
     return res.data?.data;
   },
 
-  createQuestion: async (payload: { text: string; defaultPoints: number; tags: string; options: { text: string; isCorrect: boolean }[] }) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/questions', payload);
+  createQuestion: async (payload: {
+    text: string;
+    type?: number;
+    defaultPoints: number;
+    tags: string;
+    hintText?: string;
+    writtenCorrection?: string;
+    baseText?: string;
+    mistakeStartIndex?: number;
+    mistakeEndIndex?: number;
+    options: { text: string; isCorrect: boolean }[];
+  }) => {
+    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/questions', {
+      ...payload,
+      type: payload.type || 0 // Default to MCQ if omitted
+    });
+    return res.data?.data;
+  },
+
+  uploadQuestionAudio: async (questionId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('audio', file);
+    const res = await apiClient.post<ApiResponse<string>>(`/admin/questions/${questionId}/audio`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data?.data;
+  },
+
+  getPendingEssays: async () => {
+    const res = await apiClient.get<ApiResponse<EssaySubmissionDto[]>>('/admin/essays/pending');
+    return res.data?.data;
+  },
+
+  gradeEssay: async (essaySubmissionId: string, teacherScore: number, teacherFeedback?: string) => {
+    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/essays/${essaySubmissionId}/grade`, {
+      essaySubmissionId,
+      teacherScore,
+      teacherFeedback
+    });
     return res.data?.data;
   },
 
@@ -272,6 +474,18 @@ export const adminService = {
   updatePackage: async (id: string, payload: any) => {
     const res = await apiClient.put<ApiResponse<any>>(`/admin/packages/${id}`, payload);
     return res.data?.data;
+  },
+  getPackageCodeProfile: async (id: string) => {
+    const res = await apiClient.get<ApiResponse<PackageCodeProfileDto>>(`/admin/packages/${id}/code-profile`);
+    return res.data?.data;
+  },
+  upsertPackageCodeProfile: async (id: string, payload: PackageCodeProfilePayload) => {
+    const res = await apiClient.put<ApiResponse<any>>(`/admin/packages/${id}/code-profile`, payload);
+    return res.data?.data;
+  },
+  resetPackageCodeProfile: async (id: string) => {
+    const res = await apiClient.delete<ApiResponse>(`/admin/packages/${id}/code-profile`);
+    return res.data;
   },
   createTerm: async (payload: { packageId: string; title: string; order: number; price: number }) => {
     const res = await apiClient.post<ApiResponse<string>>('/admin/terms', payload);
@@ -302,12 +516,80 @@ export const adminService = {
     return res.data?.data;
   },
   getLessonCockpit: async (id: string) => {
-    const res = await apiClient.get<ApiResponse<any>>(`/admin/lessons/${id}/cockpit`);
+    const res = await apiClient.get<ApiResponse<LessonCockpitDto>>(`/admin/lessons/${id}/cockpit`);
     return res;
+  },
+  getCommunityPostsForModeration: async (status?: string) => {
+    const res = await apiClient.get<ApiResponse<ModerationCommunityPostDto[]>>('/admin/community/posts', {
+      params: status && status !== 'All' ? { status } : undefined,
+    });
+    return res.data?.data ?? [];
+  },
+  approveCommunityPost: async (postId: string) => {
+    const res = await apiClient.post<ApiResponse<ModerateCommunityPostResponse>>(`/admin/community/posts/${postId}/approve`, {});
+    return res.data?.data;
+  },
+  rejectCommunityPost: async (postId: string) => {
+    const res = await apiClient.post<ApiResponse<ModerateCommunityPostResponse>>(`/admin/community/posts/${postId}/reject`, {});
+    return res.data?.data;
+  },
+  getPendingCommunityComments: async () => {
+    const res = await apiClient.get<ApiResponse<ModerationCommunityCommentDto[]>>('/admin/community/comments/pending');
+    return res.data?.data ?? [];
+  },
+  approveCommunityComment: async (commentId: string) => {
+    const res = await apiClient.post<ApiResponse<ModerateCommunityCommentResponse>>(`/admin/community/comments/${commentId}/approve`, {});
+    return res.data?.data;
+  },
+  rejectCommunityComment: async (commentId: string, reason: string) => {
+    const res = await apiClient.post<ApiResponse<ModerateCommunityCommentResponse>>(`/admin/community/comments/${commentId}/reject`, { reason });
+    return res.data?.data;
+  },
+  getLessonCommentsForModeration: async (lessonId: string, status?: string) => {
+    const res = await apiClient.get<ApiResponse<ModerationLessonCommentDto[]>>(`/admin/lessons/${lessonId}/comments`, {
+      params: status && status !== 'All' ? { status } : undefined,
+    });
+    return res.data?.data ?? [];
+  },
+  approveLessonComment: async (commentId: string) => {
+    const res = await apiClient.post<ApiResponse<ModerateLessonCommentResponse>>(`/admin/comments/${commentId}/approve`, {});
+    return res.data?.data;
+  },
+  rejectLessonComment: async (commentId: string) => {
+    const res = await apiClient.post<ApiResponse<ModerateLessonCommentResponse>>(`/admin/comments/${commentId}/reject`, {});
+    return res.data?.data;
   },
   createVideo: async (payload: any) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/videos', payload);
     return res.data?.data;
+  },
+  updateVideo: async (videoId: string, payload: any) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/videos/${videoId}`, payload);
+    return res.data;
+  },
+  deleteVideo: async (videoId: string) => {
+    const res = await apiClient.delete<ApiResponse>(`/admin/videos/${videoId}`);
+    return res.data;
+  },
+  triggerVideoAiAnalysis: async (videoId: string) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/analyze-ai`);
+    return res.data;
+  },
+  generateVideoMindmaps: async (videoId: string) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/generate-mindmaps`);
+    return res.data;
+  },
+  cancelVideoAiAnalysis: async (videoId: string) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/cancel-ai`);
+    return res.data;
+  },
+  cancelMindmapGeneration: async (videoId: string) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/cancel-mindmap`);
+    return res.data;
+  },
+  regenerateChapterMindmap: async (chapterId: string) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/chapters/${chapterId}/regenerate-mindmap`);
+    return res.data;
   },
   createResource: async (payload: { lessonId: string; title: string; fileUrl: string; resourceType: string }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/resources', payload);
@@ -321,18 +603,23 @@ export const adminService = {
     const res = await apiClient.put<ApiResponse>(`/admin/lessons/${lessonId}/exam`, { examId });
     return res.data;
   },
-  createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; durationMinutes?: number; timePerQuestionSeconds?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[] }[] }) => {
+  createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; durationMinutes?: number; timePerQuestionSeconds?: number; displayQuestionCount?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/exams/inline', payload);
     return res.data?.data;
   },
-  addQuestionsToExam: async (examId: string, payload: { questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[] }[] }) => {
+  addQuestionsToExam: async (examId: string, payload: { questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
     const res = await apiClient.post<ApiResponse>(`/admin/exams/${examId}/questions`, payload);
     return res.data;
   },
-  
+
   getExamDashboard: async (examId: string) => {
     const res = await apiClient.get<ApiResponse<ExamDashboardDto>>(`/admin/exams/${examId}/dashboard`);
     return res.data?.data;
+  },
+
+  deleteExamQuestion: async (examId: string, examQuestionId: string) => {
+    const res = await apiClient.delete<ApiResponse>(`/admin/exams/${examId}/questions/${examQuestionId}`);
+    return res.data;
   },
 
   // Overrides
@@ -344,5 +631,20 @@ export const adminService = {
   resetWatchLimit: async (lessonVideoId: string, studentId: string) => {
     const res = await apiClient.post('/admin/overrides/reset-watch', { lessonVideoId, studentId });
     return res.data?.data;
+  },
+
+  getWatchRequests: async () => {
+    const res = await apiClient.get('/admin/watch-requests');
+    return res.data;
+  },
+
+  approveWatchRequest: async (id: string) => {
+    const res = await apiClient.post(`/admin/watch-requests/${id}/approve`, {});
+    return res.data;
+  },
+
+  rejectWatchRequest: async (id: string) => {
+    const res = await apiClient.post(`/admin/watch-requests/${id}/reject`, {});
+    return res.data;
   }
 };

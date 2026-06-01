@@ -19,7 +19,9 @@ public class ListQuestionsQueryHandler : IRequestHandler<ListQuestionsQuery, Api
 
     public async Task<ApiResponse<PagedResult<QuestionBankItemDto>>> Handle(ListQuestionsQuery request, CancellationToken ct)
     {
-        var query = _db.QuestionBankItems.Include(q => q.Options).AsQueryable();
+        var query = _db.QuestionBankItems.Include(q => q.Options)
+            .Where(q => q.Tags != "Inline" && q.Tags != "Added")
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {

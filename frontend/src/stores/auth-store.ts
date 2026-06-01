@@ -13,6 +13,7 @@ interface User {
   phone: string;
   roles: string[];
   profileComplete: boolean;
+  avatarSlug?: string | null;
 }
 
 interface AuthState {
@@ -31,6 +32,7 @@ interface AuthState {
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
   updateProfile: (profileComplete: boolean) => void;
+  updateAvatar: (avatarSlug: string | null) => void;
   loadFromStorage: () => void;
 }
 
@@ -63,6 +65,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (user) {
       const updated = { ...user, profileComplete };
+      updateStoredUser(updated);
+      set({ user: updated });
+    }
+  },
+
+  updateAvatar: (avatarSlug) => {
+    const { user } = get();
+    if (user) {
+      const updated = { ...user, avatarSlug };
       updateStoredUser(updated);
       set({ user: updated });
     }

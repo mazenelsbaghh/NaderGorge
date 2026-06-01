@@ -11,7 +11,7 @@ namespace NaderGorge.Application.Features.Auth.Commands;
 // ---- Login Command ----
 public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName) : IRequest<ApiResponse<LoginResponse>>;
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
-public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, bool ProfileComplete);
+public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, bool ProfileComplete, string? AvatarSlug);
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
@@ -41,6 +41,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         var user = await _db.Users
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .Include(u => u.Devices)
+            .Include(u => u.StudentProfile)
             .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber, ct)
             ?? throw new UnauthorizedAccessException("Invalid phone number or password");
 
@@ -95,7 +96,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
 
         await _db.SaveChangesAsync(ct);
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, user.IsProfileComplete);
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(accessToken, refreshToken, userDto));
     }
 }

@@ -2,15 +2,13 @@
 
 import { ArrowUpLeft, BookCopy } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 
 import type { ActivePackageDto } from "@/services/student-service";
-import { useViewTransition } from "@/lib/use-view-transition";
 
 type PackageGridProps = {
   packages: ActivePackageDto[];
   onOpenPackage: (packageId: string) => void;
-  onActivateCode: () => void;
+  onActivateCode: (packageId?: string) => void;
 };
 
 export function PackageGrid({
@@ -18,13 +16,12 @@ export function PackageGrid({
   onOpenPackage,
   onActivateCode,
 }: PackageGridProps) {
-  const navigateWithTransition = useViewTransition();
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-black tracking-[0.24em] text-[var(--admin-muted)]">
-            YOUR PACKAGES
+          <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
+            باقاتك
           </p>
           <h2 className="mt-2 text-2xl font-black text-[var(--admin-text)]">
             الباقات الدراسية
@@ -45,8 +42,8 @@ export function PackageGrid({
             وصلت لها.
           </p>
           <button
-            onClick={onActivateCode}
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)]"
+            onClick={() => onActivateCode()}
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
           >
             تفعيل كود
           </button>
@@ -54,10 +51,11 @@ export function PackageGrid({
       ) : (
         <div className="grid gap-5 xl:grid-cols-2">
           {packages.map((pkg) => (
-            <div
+            <button
+              type="button"
               key={pkg.id}
-              onClick={() => navigateWithTransition(`/student/packages/${pkg.id}`)}
-              className="group relative flex flex-col overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 cursor-pointer"
+              onClick={() => onOpenPackage(pkg.id)}
+              className="group relative flex flex-col overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] cursor-pointer"
             >
               {/* Image Header */}
               <div
@@ -104,8 +102,8 @@ export function PackageGrid({
                     </div>
                     <div className="h-2.5 w-full rounded-full bg-[var(--admin-card-strong)] overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-[var(--admin-primary)]"
-                        style={{ width: `${pkg.progressPercent}%`, transition: 'width 1s ease-in-out' }}
+                        className="h-full origin-right rounded-full bg-[var(--admin-primary)] transition-transform duration-700 ease-out transform-gpu"
+                        style={{ transform: `scaleX(${Math.max(0, Math.min(pkg.progressPercent, 100)) / 100})` }}
                       />
                     </div>
                   </div>
@@ -118,7 +116,7 @@ export function PackageGrid({
                   </span>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

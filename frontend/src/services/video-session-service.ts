@@ -4,6 +4,7 @@ export interface WatchInfo {
   currentCount: number;
   maxCount: number;
   isLocked: boolean;
+  totalTrackedSeconds: number;
 }
 
 export interface VideoSession {
@@ -14,6 +15,16 @@ export interface VideoSession {
   provider: string;
   watchInfo: WatchInfo;
   videoTitle: string;
+  thresholdPercentage: number;
+}
+
+export type ExtraWatchRequestStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface ExtraWatchStatusDto {
+  hasPendingRequest: boolean;
+  hasRejectedRequest: boolean;
+  requestStatus?: ExtraWatchRequestStatus | null;
+  rejectionReason?: string | null;
 }
 
 export const videoSessionService = {
@@ -27,9 +38,18 @@ export const videoSessionService = {
     return apiClient.post(`/student/video-session/${sessionId}/consume`, {});
   },
 
-  trackProgress: (lessonVideoId: string, secondsWatched: number, registerView: boolean = false) => {
+  requestExtraWatch: (lessonVideoId: string) => {
+    return apiClient.post(`/student/video-session/${lessonVideoId}/request-extra`, {});
+  },
+
+  getExtraWatchStatus: (lessonVideoId: string) => {
+    return apiClient.get<{ data: ExtraWatchStatusDto }>(`/student/video-session/${lessonVideoId}/request-status`);
+  },
+
+  trackProgress: (lessonVideoId: string, secondsWatched: number, totalDurationSeconds: number, registerView: boolean = false) => {
     return apiClient.post(`/student/video-session/${lessonVideoId}/track-progress`, {
       secondsWatched,
+      totalDurationSeconds,
       registerView
     });
   },
