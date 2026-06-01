@@ -23,16 +23,12 @@ export function middleware(request: NextRequest) {
     }
   } else {
     // 2. If accessing main domain bsma-academy.com
-    // If trying to access "/admin" on the main domain, redirect to the admin subdomain
+    // IF TRYING TO ACCESS "/admin" ON THE MAIN DOMAIN: SHOW 404 NOT FOUND (COMPLETELY HIDE THE ADMIN ROUTES)
     if (url.pathname.startsWith('/admin')) {
-      const proto = request.headers.get('x-forwarded-proto') || 'https';
-      
-      // Preserve hostname for local dev, redirect to admin. subdomain on production
       const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
-      const targetHost = isLocal ? hostname : `admin.${hostname}`;
-
-      if (targetHost !== hostname) {
-        return NextResponse.redirect(new URL(`${proto}://${targetHost}${url.pathname}${url.search}`, request.url));
+      if (!isLocal) {
+        url.pathname = '/_not-found';
+        return NextResponse.rewrite(url);
       }
     }
   }
