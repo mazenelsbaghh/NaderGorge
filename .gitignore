@@ -3,7 +3,7 @@ bin/
 obj/
 *.user
 *.suo
-packages/
+/packages/
 *.log
 
 # Node.js / JavaScript / TypeScript
