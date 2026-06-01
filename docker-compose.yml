@@ -114,9 +114,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Note: BROWSER needs to reach it at localhost, while SERVER uses backend
-        NEXT_PUBLIC_API_URL: "http://localhost:5245/api"
-        NEXT_PUBLIC_BACKEND_URL: "http://backend:5245"
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5245/api}
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://backend:5245}
     container_name: nadergorge_frontend
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:5245/api}

@@ -43,7 +43,7 @@ export function HeroSection({
   };
 
   return (
-    <section className="relative -mt-28 min-h-screen overflow-hidden px-4 pt-36 pb-14 md:-mt-32 md:px-0 md:pt-40 md:pb-18 lg:pb-8">
+    <section className="relative -mt-28 min-h-screen overflow-hidden px-4 pt-48 pb-14 md:-mt-32 md:px-0 md:pt-40 md:pb-18 lg:pb-8">
 
 
       {/* Floating lines background */}

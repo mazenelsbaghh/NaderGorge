@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Mesh,
   OrthographicCamera,
@@ -269,6 +269,17 @@ export function FloatingLines({
   parallaxStrength = 0.2,
   mixBlendMode = 'screen'
 }: FloatingLinesProps) {
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileDevice(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const targetMouseRef = useRef<Vector2>(new Vector2(-1000, -1000));
   const currentMouseRef = useRef<Vector2>(new Vector2(-1000, -1000));
@@ -300,6 +311,8 @@ export function FloatingLines({
   const bottomLineDistance = enabledWaves.includes('bottom') ? getLineDistance('bottom') * 0.01 : 0.01;
 
   useEffect(() => {
+    if (isMobileDevice) return;
+
     const container = containerRef.current;
     if (!container) return;
 
@@ -522,7 +535,14 @@ export function FloatingLines({
     bendStrength,
     mouseDamping,
     parallax,
-    parallaxStrength
+    parallaxStrength,
+    isMobileDevice,
+    topLineCount,
+    middleLineCount,
+    bottomLineCount,
+    topLineDistance,
+    middleLineDistance,
+    bottomLineDistance
   ]);
 
   return (
@@ -530,7 +550,11 @@ export function FloatingLines({
       ref={containerRef}
       className="relative w-full h-full overflow-hidden floating-lines-container"
       style={{
-        mixBlendMode: mixBlendMode
+        mixBlendMode: mixBlendMode,
+        ...(isMobileDevice ? {
+          background: `radial-gradient(circle at 80% 20%, ${linesGradient?.[0] || '#c5a059'}1A, transparent 50%),
+                       radial-gradient(circle at 20% 80%, ${linesGradient?.[1] || '#8f6b2f'}1A, transparent 50%)`
+        } : {})
       }}
     />
   );
