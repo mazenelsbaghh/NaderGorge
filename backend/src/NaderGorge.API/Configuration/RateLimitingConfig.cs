@@ -6,6 +6,8 @@ public static class RateLimitingConfig
 {
     public static IServiceCollection AddRateLimitingPolicies(this IServiceCollection services)
     {
+        var isE2e = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "E2e";
+
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = 429;
@@ -16,7 +18,7 @@ public static class RateLimitingConfig
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 10,
+                        PermitLimit = isE2e ? 100000 : 10,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));
@@ -27,7 +29,7 @@ public static class RateLimitingConfig
                     partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 5,
+                        PermitLimit = isE2e ? 100000 : 5,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));
@@ -38,18 +40,18 @@ public static class RateLimitingConfig
                     partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 10,
+                        PermitLimit = isE2e ? 100000 : 10,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));
 
-            // General API: 100 requests per minute per IP
+            // General API: 300 requests per minute per IP (increased for admin dashboard polling)
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 100,
+                        PermitLimit = isE2e ? 100000 : 300,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));

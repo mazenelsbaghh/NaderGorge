@@ -11,7 +11,7 @@ public class VideoEncryptionService : IVideoEncryptionService
     private const int IvSize = 12; // Required for GCM
     private const int TagSize = 16; // Authentication tag size
 
-    public string EncryptVideoInfo(string providerName, string providerVideoId, string sessionKey)
+    public string EncryptVideoInfo(string providerName, string providerVideoId, string sessionKey, string? studentName = null, string? studentPhone = null)
     {
         var keyBytes = Convert.FromBase64String(sessionKey);
         
@@ -21,7 +21,15 @@ public class VideoEncryptionService : IVideoEncryptionService
             throw new ArgumentException($"Session key must be {KeySize} bytes long", nameof(sessionKey));
         }
 
-        var payload = JsonSerializer.Serialize(new { Provider = providerName, VideoId = providerVideoId });
+        var payloadObj = new Dictionary<string, string> 
+        { 
+            { "Provider", providerName }, 
+            { "VideoId", providerVideoId } 
+        };
+        if (!string.IsNullOrEmpty(studentName)) payloadObj["StudentName"] = studentName;
+        if (!string.IsNullOrEmpty(studentPhone)) payloadObj["StudentPhone"] = studentPhone;
+        
+        var payload = JsonSerializer.Serialize(payloadObj);
         var payloadBytes = Encoding.UTF8.GetBytes(payload);
 
         using var aesAlg = new AesGcm(keyBytes, TagSize);
@@ -43,7 +51,7 @@ public class VideoEncryptionService : IVideoEncryptionService
         return Convert.ToBase64String(result);
     }
 
-    public (string ProviderName, string ProviderVideoId) DecryptVideoInfo(string encryptedToken, string sessionKey)
+    public (string ProviderName, string ProviderVideoId, string? StudentName, string? StudentPhone) DecryptVideoInfo(string encryptedToken, string sessionKey)
     {
         var keyBytes = Convert.FromBase64String(sessionKey);
         var encryptedData = Convert.FromBase64String(encryptedToken);
@@ -69,7 +77,12 @@ public class VideoEncryptionService : IVideoEncryptionService
         var plainText = Encoding.UTF8.GetString(plainTextBytes);
         var info = JsonSerializer.Deserialize<JsonElement>(plainText);
         
-        return (info.GetProperty("Provider").GetString()!, info.GetProperty("VideoId").GetString()!);
+        var provider = info.GetProperty("Provider").GetString()!;
+        var videoId = info.GetProperty("VideoId").GetString()!;
+        string? sName = info.TryGetProperty("StudentName", out var n) ? n.GetString() : null;
+        string? sPhone = info.TryGetProperty("StudentPhone", out var p) ? p.GetString() : null;
+        
+        return (provider, videoId, sName, sPhone);
     }
 
     public string GenerateSessionKey()

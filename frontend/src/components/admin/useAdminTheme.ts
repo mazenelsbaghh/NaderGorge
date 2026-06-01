@@ -1,6 +1,6 @@
 'use client';
 
-import { CSSProperties, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { CSSProperties, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 
 import {
   getAdminThemeModeServerSnapshot,
@@ -35,8 +35,8 @@ function getThemeVars(mode: AdminThemeMode): CSSProperties {
   }
 
   return {
-    ['--admin-bg' as string]: '#fcf9ef',
-    ['--admin-bg-overlay' as string]: 'rgba(252,249,239,0.9)',
+    ['--admin-bg' as string]: '#ffffff',
+    ['--admin-bg-overlay' as string]: 'rgba(255,255,255,0.9)',
     ['--admin-dot' as string]: 'rgba(209,197,180,0.8)',
     ['--admin-sidebar' as string]: '#f1eee4',
     ['--admin-text' as string]: '#1c1c16',
@@ -57,11 +57,18 @@ function getThemeVars(mode: AdminThemeMode): CSSProperties {
 }
 
 export function useAdminTheme() {
-  const mode = useSyncExternalStore(
+  const [isMounted, setIsMounted] = useState(false);
+  const rawMode = useSyncExternalStore(
     subscribeToAdminThemeMode,
     getStoredAdminThemeMode,
     getAdminThemeModeServerSnapshot,
   );
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const mode = isMounted ? rawMode : 'light';
 
   useEffect(() => {
     if (typeof document === 'undefined') return;

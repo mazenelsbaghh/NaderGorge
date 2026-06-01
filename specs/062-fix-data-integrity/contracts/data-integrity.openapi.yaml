@@ -1,0 +1,454 @@
+openapi: 3.0.3
+info:
+  title: Phase 2 Data Integrity Contracts
+  version: 0.1.0
+  description: Contract deltas for watch tracking, theme preferences, exam submission/results, and extra watch request visibility introduced by feature 062-fix-data-integrity.
+paths:
+  /api/Tracking/video-event:
+    post:
+      summary: Record watched time through the legacy tracking flow
+      tags: [Tracking]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoEventRequest'
+      responses:
+        '200':
+          description: Watch progress accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoTrackingContextResponse'
+        '400':
+          description: Validation failure, including missing or invalid duration data
+        '403':
+          description: Watch limit reached
+        '404':
+          description: Video not found
+  /api/student/video-session/{lessonVideoId}/track-progress:
+    post:
+      summary: Track watched time through the student video-session flow
+      tags: [Student Video Session]
+      parameters:
+        - in: path
+          name: lessonVideoId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackProgressRequest'
+      responses:
+        '200':
+          description: Watch progress accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackWatchProgressResponse'
+        '400':
+          description: Validation failure, including missing or invalid duration data
+  /api/Student/theme-preferences:
+    get:
+      summary: Read the student's persisted theme preferences
+      tags: [Student]
+      responses:
+        '200':
+          description: Theme preferences returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentThemePreferencesResponse'
+    put:
+      summary: Update the student's theme preferences
+      tags: [Student]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudentThemePreferencesRequest'
+      responses:
+        '200':
+          description: Theme preferences saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentThemePreferencesResponse'
+        '400':
+          description: Invalid palette or mode
+  /api/Exams/{examId}/submit/{attemptId}:
+    post:
+      summary: Submit exam answers including optional essay audio references
+      tags: [Exams]
+      parameters:
+        - in: path
+          name: examId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: attemptId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AnswerSubmission'
+      responses:
+        '200':
+          description: Exam submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamResultResponse'
+        '400':
+          description: Invalid attempt or payload
+  /api/Exams/{examId}/latest-passed-result:
+    get:
+      summary: Get the latest eligible exam result with written corrections when allowed
+      tags: [Exams]
+      parameters:
+        - in: path
+          name: examId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Exam result returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExamResultResponse'
+        '404':
+          description: Exam or eligible result not found
+  /api/admin/watch-requests/{requestId}/reject:
+    post:
+      summary: Reject an extra watch request and optionally store a student-visible reason
+      tags: [Admin Tracking]
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectWatchRequestRequest'
+      responses:
+        '200':
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationSuccessResponse'
+        '400':
+          description: Invalid request state or invalid rejection reason
+  /api/student/video-session/{lessonVideoId}/request-status:
+    get:
+      summary: Get the latest extra watch request status for the current student
+      tags: [Student Video Session]
+      parameters:
+        - in: path
+          name: lessonVideoId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExtraWatchStatusResponse'
+components:
+  schemas:
+    VideoEventRequest:
+      type: object
+      required: [lessonVideoId, watchedSeconds, totalDurationSeconds]
+      properties:
+        lessonVideoId:
+          type: string
+          format: uuid
+          example: 11111111-1111-1111-1111-111111111111
+        watchedSeconds:
+          type: integer
+          minimum: 1
+          example: 240
+        totalDurationSeconds:
+          type: integer
+          minimum: 1
+          description: Must be the real video duration. Zero or missing values are rejected.
+          example: 600
+    VideoTrackingContextResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [maxWatchCount, watchCount, isLocked, remainingSecondsForNextWatch]
+          properties:
+            maxWatchCount:
+              type: integer
+            watchCount:
+              type: integer
+            isLocked:
+              type: boolean
+            remainingSecondsForNextWatch:
+              type: integer
+              description: Seconds remaining before the next counted watch threshold is reached.
+    TrackProgressRequest:
+      type: object
+      required: [secondsWatched, totalDurationSeconds, registerView]
+      properties:
+        secondsWatched:
+          type: number
+          format: double
+          minimum: 0
+          example: 240
+        totalDurationSeconds:
+          type: integer
+          minimum: 1
+          description: Must be the real video duration. Zero or missing values are rejected.
+          example: 600
+        registerView:
+          type: boolean
+          example: true
+    TrackWatchProgressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [currentCount, maxCount, isLocked, viewRegistered, totalTrackedSeconds, thresholdSeconds]
+          properties:
+            currentCount:
+              type: integer
+            maxCount:
+              type: integer
+            isLocked:
+              type: boolean
+            viewRegistered:
+              type: boolean
+            totalTrackedSeconds:
+              type: integer
+            thresholdSeconds:
+              type: integer
+              description: Shared threshold seconds used by both tracking flows for the next counted watch.
+    UpdateStudentThemePreferencesRequest:
+      type: object
+      required: [lightPaletteId, darkPaletteId, currentMode]
+      properties:
+        lightPaletteId:
+          type: string
+          example: oasis-light
+        darkPaletteId:
+          type: string
+          example: midnight-dark
+        currentMode:
+          type: string
+          enum: [light, dark]
+          description: The mode currently active in the student's UI and persisted with the palette selections.
+          example: dark
+    StudentThemePreferencesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required:
+            [currentMode, selectedLightPaletteId, selectedDarkPaletteId, defaultLightPaletteId, defaultDarkPaletteId, availableLightPalettes, availableDarkPalettes]
+          properties:
+            currentMode:
+              type: string
+              enum: [light, dark]
+              description: The last mode explicitly saved by the student.
+            selectedLightPaletteId:
+              type: string
+              example: oasis-light
+            selectedDarkPaletteId:
+              type: string
+              example: midnight-dark
+            defaultLightPaletteId:
+              type: string
+            defaultDarkPaletteId:
+              type: string
+            availableLightPalettes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ThemePaletteOption'
+            availableDarkPalettes:
+              type: array
+              items:
+                $ref: '#/components/schemas/ThemePaletteOption'
+    ThemePaletteOption:
+      type: object
+      required: [id, name, mode, previewAccent]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mode:
+          type: string
+          enum: [light, dark]
+        previewAccent:
+          type: string
+    AnswerSubmission:
+      type: object
+      required: [examQuestionId]
+      properties:
+        examQuestionId:
+          type: string
+          format: uuid
+        selectedOptionId:
+          type: string
+          format: uuid
+          nullable: true
+        answerText:
+          type: string
+          nullable: true
+          description: Free-text answer for essay questions.
+        selectedText:
+          type: string
+          nullable: true
+          description: Selected text payload for find-the-mistake style questions.
+        audioUrl:
+          type: string
+          nullable: true
+          description: Optional retained essay audio reference stored alongside the written answer.
+          example: /uploads/audio/essay-feedback-123.mp3
+    ExamResultResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [attemptId, scoreAchieved, totalScore, isPassed, blocksNextLesson, evaluation, isTimeExpired, resultState, questions]
+          properties:
+            attemptId:
+              type: string
+              format: uuid
+            scoreAchieved:
+              type: number
+              format: decimal
+            totalScore:
+              type: number
+              format: decimal
+            isPassed:
+              type: boolean
+            blocksNextLesson:
+              type: boolean
+            evaluation:
+              type: string
+            isTimeExpired:
+              type: boolean
+            resultState:
+              type: string
+            lessonId:
+              type: string
+              format: uuid
+              nullable: true
+            packageId:
+              type: string
+              format: uuid
+              nullable: true
+            questions:
+              type: array
+              items:
+                $ref: '#/components/schemas/ExamQuestionReview'
+    ExamQuestionReview:
+      type: object
+      required: [examQuestionId, order, questionText, isAnswered, isCorrect, pointsAwarded]
+      properties:
+        examQuestionId:
+          type: string
+          format: uuid
+        order:
+          type: integer
+        questionText:
+          type: string
+        selectedOptionText:
+          type: string
+          nullable: true
+        isAnswered:
+          type: boolean
+        isCorrect:
+          type: boolean
+        pointsAwarded:
+          type: number
+          format: decimal
+        correctOptionText:
+          type: string
+          nullable: true
+          description: Returned only when correct-answer reveal rules allow it.
+        audioUrl:
+          type: string
+          nullable: true
+          description: Optional essay audio reference returned with completed result data.
+        writtenCorrection:
+          type: string
+          nullable: true
+          description: Returned only after the exam result is eligible for final review.
+    RejectWatchRequestRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Student-visible rejection reason recorded by the admin.
+          example: استنفدت كل مرات المشاهدة المتاحة لهذا الفيديو بالفعل.
+    MutationSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          oneOf:
+            - type: boolean
+            - type: object
+    ExtraWatchStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          required: [hasPendingRequest, hasRejectedRequest]
+          properties:
+            hasPendingRequest:
+              type: boolean
+            hasRejectedRequest:
+              type: boolean
+            requestStatus:
+              type: string
+              enum: [Pending, Approved, Rejected]
+              nullable: true
+            rejectionReason:
+              type: string
+              nullable: true
+              description: Present only when the latest request is rejected.

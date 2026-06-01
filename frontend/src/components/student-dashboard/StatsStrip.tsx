@@ -2,7 +2,6 @@ import {
   BadgeCheck,
   BookMarked,
   ChartColumnIncreasing,
-  Ticket,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { staggeredCard } from "@/lib/motion";
@@ -12,27 +11,21 @@ import type { DashboardDto } from "@/services/student-service";
 const statItems = [
   {
     key: "packages",
-    label: "الباقات النشطة",
+    label: "باقاتك الشغالة",
     icon: BookMarked,
     getValue: (data: DashboardDto) => data.activePackages.length,
   },
   {
     key: "lessons",
-    label: "الدروس المكتملة",
+    label: "دروس خلصتها",
     icon: BadgeCheck,
     getValue: (data: DashboardDto) => `${data.totalLessonsCompleted}/${data.totalLessons}`,
   },
   {
     key: "progress",
-    label: "نسبة التقدم",
+    label: "نسبة تقدمك",
     icon: ChartColumnIncreasing,
     getValue: (data: DashboardDto) => `${data.overallProgressPercent}%`,
-  },
-  {
-    key: "codes",
-    label: "الأكواد المفعّلة",
-    icon: Ticket,
-    getValue: (data: DashboardDto) => data.codesRedeemed,
   },
 ];
 
@@ -40,33 +33,43 @@ const cardVariant = staggeredCard(0.08);
 
 export function StatsStrip({ data }: { data: DashboardDto }) {
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
+      <div className="mb-5 flex flex-col gap-2">
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
+          إنت فين دلوقتي
+        </p>
+        <p className="text-sm leading-7 text-[var(--admin-muted)]">
+          أرقام سريعة توريك وضعك من غير ما تفتح صفحات تانية.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3 md:gap-0 md:divide-x md:divide-[var(--admin-border)]">
       {statItems.map((item, i) => {
         const Icon = item.icon;
 
         return (
-          <motion.article
+          <motion.div
             key={item.key}
             custom={i}
             variants={cardVariant}
             initial="hidden"
             animate="show"
-            className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-5 transition hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(88,55,18,0.12)]"
+            className="flex items-start justify-between gap-4 rounded-[24px] bg-[var(--admin-card-soft)] p-5 md:rounded-none md:bg-transparent md:px-6 md:py-4"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-bold text-[var(--admin-muted)]">{item.label}</p>
-                <p className="mt-3 text-3xl font-black text-[var(--admin-text)]">
-                  {item.getValue(data)}
-                </p>
-              </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
-                <Icon className="h-6 w-6" />
-              </div>
+            <div>
+              <p className="text-sm font-bold text-[var(--admin-muted)]">{item.label}</p>
+              <p className="mt-3 text-3xl font-black text-[var(--admin-text)]">
+                {item.getValue(data)}
+              </p>
             </div>
-          </motion.article>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
+              <Icon className="h-5 w-5" />
+            </div>
+          </motion.div>
         );
       })}
+      </div>
     </section>
   );
 }

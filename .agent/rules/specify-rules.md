@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-28
+Auto-generated from all feature plans. Last updated: 2026-04-04
 
 ## Active Technologies
 - C# (.NET 8), TypeScript 5.x (strict mode) + Next.js 14 (App Router), .NET Web API, Entity Framework Core, MediatR, React Query (TanStack Query v5), Zustand, Shadcn/UI, Tailwind CSS, Framer Motion, BullMQ (003-phase1-foundation-mvp)
@@ -32,6 +32,18 @@ Auto-generated from all feature plans. Last updated: 2026-03-28
 - PostgreSQL via EF Core (021-inline-lesson-exams)
 - C# (.NET 8), TypeScript (Next.js 14) + EF Core, React Query, Zustand (023-exam-dashboard-timers)
 - C# (.NET 8.0) Backend, TypeScript (Next.js 14) Frontend + `react-quill`, Entity Framework Core (024-exam-editor-enhancements)
+- Next.js 15 (React 19), TypeScrip + `framer-motion`, `@remix-run/react` (for routing/params if applicable), `lucide-react` (027-video-carousel-navigation)
+- N/A (State is managed locally + URL params) (027-video-carousel-navigation)
+- Next.js 15 (React 19), TypeScrip + `framer-motion`, `zustand` (028-lesson-focus-mode)
+- N/A (Client-only state via Zustand memory, resets on navigation) (028-lesson-focus-mode)
+- TypeScript / C# .NET 8 + Next.js App Router, React (framer-motion, lucide-react), Zustand, React Query (029-lesson-progression-stepper)
+- PostgreSQL via Prisma (Backend) (029-lesson-progression-stepper)
+- C# 12 (.NET 8.0) | TypeScript (React 18) + EF Core 8, Tailwind CSS, Framer Motion (030-exam-ui-refinements)
+- PostgreSQL (AppDbContext) (030-exam-ui-refinements)
+- C# 12 (.NET 8.0) & TypeScript (Next.js 14) + Entity Framework Core, React Hook Form, Framer Motion (031-unify-assessment-builder)
+- PostgreSQL (Ef Core Migrations) (031-unify-assessment-builder)
+- TypeScript (Next.js 14+), C# (.NET 8.0) + React, Tailwind CSS, Framer Motion, ASP.NET Core (032-assessment-ui-fixes)
+- PostgreSQL (Entity Framework Core) (032-assessment-ui-fixes)
 
 - Markdown (documentation-only phase — no application code) + N/A (no code dependencies) (001-phase0-discovery-blueprint)
 
@@ -51,9 +63,9 @@ tests/
 Markdown (documentation-only phase — no application code): Follow standard conventions
 
 ## Recent Changes
-- 024-exam-editor-enhancements: Added C# (.NET 8.0) Backend, TypeScript (Next.js 14) Frontend + `react-quill`, Entity Framework Core
-- 023-exam-dashboard-timers: Added C# (.NET 8), TypeScript (Next.js 14) + EF Core, React Query, Zustand
-- 022-assessment-grading: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 056-extra-watch-request: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 032-assessment-ui-fixes: Added TypeScript (Next.js 14+), C# (.NET 8.0) + React, Tailwind CSS, Framer Motion, ASP.NET Core
+- 031-unify-assessment-builder: Added C# 12 (.NET 8.0) & TypeScript (Next.js 14) + Entity Framework Core, React Hook Form, Framer Motion
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { AxiosError } from 'axios';
 import { useAuthStore } from '@/stores/auth-store';
 import { authService } from '@/services/auth-service';
 
@@ -12,6 +13,10 @@ interface ProfileCompletionModalProps {
 }
 
 export function ProfileCompletionModal({ isOpen, onClose, onComplete }: ProfileCompletionModalProps) {
+  const parentPhoneId = 'profile-completion-parent-phone';
+  const governorateId = 'profile-completion-governorate';
+  const cityId = 'profile-completion-city';
+  const schoolId = 'profile-completion-school';
   const { updateProfile } = useAuthStore();
   const [formData, setFormData] = useState({
     parentPhone: '',
@@ -42,8 +47,11 @@ export function ProfileCompletionModal({ isOpen, onClose, onComplete }: ProfileC
       await authService.completeProfile(formData);
       updateProfile(true);
       onComplete();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'فشل في استكمال الملف الشخصي');
+    } catch (err: unknown) {
+      const message = err instanceof AxiosError
+        ? err.response?.data?.message
+        : 'فشل في استكمال الملف الشخصي';
+      setError(message || 'فشل في استكمال الملف الشخصي');
     } finally {
       setLoading(false);
     }
@@ -79,48 +87,56 @@ export function ProfileCompletionModal({ isOpen, onClose, onComplete }: ProfileC
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="auth-label">رقم ولي الأمر</label>
+                <label htmlFor={parentPhoneId} className="auth-label">رقم ولي الأمر</label>
                 <div className="auth-input-wrap" dir="ltr">
                   <input
+                    id={parentPhoneId}
                     type="tel"
                     required
                     className="auth-input"
                     placeholder="01XXXXXXXXX"
                     value={formData.parentPhone}
+                    autoComplete="tel-national"
                     onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
                   />
                 </div>
               </div>
               <div>
-                <label className="auth-label">المحافظة</label>
+                <label htmlFor={governorateId} className="auth-label">المحافظة</label>
                 <input
+                  id={governorateId}
                   type="text"
                   required
                   className="auth-input"
                   placeholder="مثال: القاهرة"
                   value={formData.governorate}
+                  autoComplete="address-level1"
                   onChange={(e) => setFormData({ ...formData, governorate: e.target.value })}
                 />
               </div>
               <div>
-                <label className="auth-label">المدينة / الحي</label>
+                <label htmlFor={cityId} className="auth-label">المدينة / الحي</label>
                 <input
+                  id={cityId}
                   type="text"
                   required
                   className="auth-input"
                   placeholder="مثال: مدينة نصر"
                   value={formData.city}
+                  autoComplete="address-level2"
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 />
               </div>
               <div>
-                <label className="auth-label">المدرسة</label>
+                <label htmlFor={schoolId} className="auth-label">المدرسة</label>
                 <input
+                  id={schoolId}
                   type="text"
                   required
                   className="auth-input"
                   placeholder="اسم المدرسة"
                   value={formData.school}
+                  autoComplete="organization"
                   onChange={(e) => setFormData({ ...formData, school: e.target.value })}
                 />
               </div>

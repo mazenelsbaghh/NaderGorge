@@ -36,19 +36,12 @@ const LOGIN_STEPS = [
 ];
 
 export default function LoginPage() {
-  const { isDark, themeVars, toggleTheme } = useAuthTheme();
-  const authThemeVars = themeVars as Record<string, string>;
-
-  useRootOverscrollBackground(themeVars);
+  const { isDark, toggleTheme } = useAuthTheme();
+  useRootOverscrollBackground();
 
   return (
     <div 
-      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto" 
-      style={{ 
-        ...themeVars, 
-        backgroundColor: authThemeVars['--admin-bg'],
-        color: authThemeVars['--admin-text']
-      }}
+      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]" 
     >
       {/* ── Ripple Interactive Background ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">

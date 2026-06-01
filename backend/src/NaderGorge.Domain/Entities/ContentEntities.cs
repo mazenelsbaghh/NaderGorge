@@ -1,4 +1,5 @@
 using NaderGorge.Domain.Common;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Domain.Entities;
 
@@ -57,6 +58,7 @@ public class Lesson : BaseEntity
 
     public ICollection<LessonVideo> Videos { get; set; } = new List<LessonVideo>();
     public ICollection<LessonResource> Resources { get; set; } = new List<LessonResource>();
+    public ICollection<LessonComment> Comments { get; set; } = new List<LessonComment>();
 }
 
 public class LessonVideo : BaseEntity
@@ -74,12 +76,18 @@ public class LessonVideo : BaseEntity
     /// <summary>Admin-assigned type/tag for the video</summary>
     public string? VideoTag { get; set; }
 
+    public string? SubtitleUrl { get; set; }
+    public bool IsProcessingAI { get; set; } = false;
+    public bool IsProcessingMindmaps { get; set; } = false;
+
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;
 
     // Optional Exam associated directly with this video specific
     public Guid? ExamId { get; set; }
     public Exam? Exam { get; set; }
+
+    public ICollection<VideoChapter> VideoChapters { get; set; } = new List<VideoChapter>();
 }
 
 public class LessonResource : BaseEntity
@@ -94,4 +102,20 @@ public class LessonResource : BaseEntity
 
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;
+}
+
+public class LessonComment : BaseEntity
+{
+    public Guid LessonId { get; set; }
+    public Lesson Lesson { get; set; } = null!;
+
+    public Guid AuthorUserId { get; set; }
+    public User AuthorUser { get; set; } = null!;
+
+    public string Body { get; set; } = string.Empty;
+    public LessonCommentStatus Status { get; set; } = LessonCommentStatus.Pending;
+
+    public DateTime? ReviewedAt { get; set; }
+    public Guid? ReviewedByUserId { get; set; }
+    public User? ReviewedByUser { get; set; }
 }

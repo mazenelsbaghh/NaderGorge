@@ -160,16 +160,28 @@ public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbe
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly IEnumerable<IVideoProvider> _providers;
 
-    public CreateVideoCommandHandler(IAppDbContext db) => _db = db;
+    public CreateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers)
+    {
+        _db = db;
+        _providers = providers;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(CreateVideoCommand request, CancellationToken ct)
     {
+        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(request.Provider, StringComparison.OrdinalIgnoreCase));
+        string extractedId = request.UrlOrEmbedCode;
+        if (providerImpl != null)
+        {
+            extractedId = providerImpl.ExtractVideoId(request.UrlOrEmbedCode);
+        }
+
         var video = new LessonVideo
         {
             Title = request.Title,
             Provider = request.Provider,
-            ProviderVideoId = request.UrlOrEmbedCode,
+            ProviderVideoId = extractedId,
             Order = request.Order,
             MaxWatchCount = request.Limit,
             LessonId = request.LessonId
@@ -180,11 +192,67 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
     }
 }
 
+public record UpdateVideoCommand(Guid Id, string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit) : IRequest<ApiResponse>;
+
+public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    private readonly IEnumerable<IVideoProvider> _providers;
+
+    public UpdateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers)
+    {
+        _db = db;
+        _providers = providers;
+    }
+
+    public async Task<ApiResponse> Handle(UpdateVideoCommand request, CancellationToken ct)
+    {
+        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.Id, ct);
+        if (video == null) return ApiResponse.Fail("Video not found");
+
+        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(request.Provider, StringComparison.OrdinalIgnoreCase));
+        var extractedId = request.UrlOrEmbedCode;
+        if (providerImpl != null)
+        {
+            extractedId = providerImpl.ExtractVideoId(request.UrlOrEmbedCode);
+        }
+
+        video.Title = request.Title;
+        video.Provider = request.Provider;
+        video.ProviderVideoId = extractedId;
+        video.Order = request.Order;
+        video.MaxWatchCount = request.Limit;
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
+public record DeleteVideoCommand(Guid Id) : IRequest<ApiResponse>;
+
+public class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+
+    public DeleteVideoCommandHandler(IAppDbContext db) => _db = db;
+
+    public async Task<ApiResponse> Handle(DeleteVideoCommand request, CancellationToken ct)
+    {
+        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.Id, ct);
+        if (video == null) return ApiResponse.Fail("Video not found");
+
+        _db.LessonVideos.Remove(video);
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
 public record AttachHomeworkCommand(
     Guid LessonId,
     string Title,
     string Instructions,
     bool IsMandatory,
+    bool IsRandomized,
     int RequiredPointsToPass,
     decimal TotalScore,
     List<AttachHomeworkQuestionDto> Questions) : IRequest<ApiResponse<Guid>>;
@@ -216,6 +284,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 Title = request.Title,
                 Description = request.Instructions,
                 IsMandatory = request.IsMandatory,
+                IsRandomized = request.IsRandomized,
                 PassingScoreThreshold = request.RequiredPointsToPass,
                 TotalScore = request.TotalScore
             };
@@ -226,6 +295,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             hw.Title = request.Title;
             hw.Description = request.Instructions;
             hw.IsMandatory = request.IsMandatory;
+            hw.IsRandomized = request.IsRandomized;
             hw.PassingScoreThreshold = request.RequiredPointsToPass;
             hw.TotalScore = request.TotalScore;
             _db.HomeworkQuestions.RemoveRange(hw.Questions);

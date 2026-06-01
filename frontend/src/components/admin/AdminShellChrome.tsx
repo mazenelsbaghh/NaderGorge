@@ -6,11 +6,14 @@ import { useRouter } from 'next/navigation';
 import {
   BookOpenText,
   ChevronLeft,
+  ClipboardList,
   Home,
   KeyRound,
   LogOut,
+  MessageSquareText,
   Settings,
   Shield,
+  Sparkles,
   Star,
   UserCog,
   Wrench,
@@ -27,9 +30,13 @@ type AdminShellRoute =
   | '/admin'
   | '/admin/users'
   | '/admin/content'
+  | '/admin/ai-monitor'
   | '/admin/codes'
+  | '/admin/community'
   | '/admin/questions'
-  | '/admin/overrides';
+  | '/admin/overrides'
+  | '/admin/watch-requests'
+  | '/admin/forms';
 
 type AdminShellChromeProps = {
   activePath: AdminShellRoute;
@@ -50,9 +57,13 @@ const navItems: Array<{
 }> = [
     { href: '/admin/users', label: 'المستخدمين', icon: UserCog },
     { href: '/admin/content', label: 'المحتوى', icon: BookOpenText },
+    { href: '/admin/community', label: 'المجتمع', icon: MessageSquareText },
+    { href: '/admin/ai-monitor', label: 'تحليل AI', icon: Sparkles },
     { href: '/admin/codes', label: 'الأكواد', icon: KeyRound },
     { href: '/admin/questions', label: 'الأسئلة', icon: Shield },
     { href: '/admin/overrides', label: 'التعديلات', icon: Wrench },
+    { href: '/admin/watch-requests', label: 'طلبات المشاهدة', icon: Star },
+    { href: '/admin/forms', label: 'النماذج', icon: ClipboardList },
   ];
 
 export function AdminShellChrome({
@@ -71,7 +82,7 @@ export function AdminShellChrome({
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
   const [showBackdrop, setShowBackdrop] = useState(false);
 
-  useRootOverscrollBackground(themeVars);
+  useRootOverscrollBackground();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -91,11 +102,7 @@ export function AdminShellChrome({
   return (
     <div
       dir="rtl"
-      className="h-dvh overflow-hidden text-[var(--admin-text)] relative"
-      style={{
-        ...themeVars,
-        backgroundColor: 'var(--admin-bg)',
-      }}
+      className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
     >
       <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(212,167,98,0.12),transparent_48%),linear-gradient(180deg,transparent,rgba(212,167,98,0.04))]" />
       <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}>
@@ -167,9 +174,9 @@ export function AdminShellChrome({
               className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
             />
           </div>
-          <button className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
+          <Link href="/admin/settings" className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
             <Settings className="h-5 w-5" />
-          </button>
+          </Link>
           <button
             onClick={handleLogout}
             className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
@@ -182,9 +189,28 @@ export function AdminShellChrome({
       </aside>
 
       <main className="relative z-10 h-dvh overflow-y-auto overscroll-none px-5 py-8 pb-32 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10">
-        <header className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-          <AdminBreadcrumbs />
+        <header className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between w-full">
+          <div className="w-full">
+            <div className="flex items-center justify-end gap-2 mb-4 lg:hidden w-full">
+              <AnimatedThemeToggler
+                checked={isDark}
+                onToggle={toggleTheme}
+                aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+              />
+              <Link href="/admin/settings" className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
+                <Settings className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
+                title="تسجيل الخروج"
+                aria-label="تسجيل الخروج"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+            <AdminBreadcrumbs />
 
             <div className="flex flex-wrap items-center gap-4">
               <div>

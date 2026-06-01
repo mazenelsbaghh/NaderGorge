@@ -10,20 +10,31 @@ public class StudentProfileExtendedDto
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string? ParentPhone { get; set; }
-    public string? SecondaryPhone { get; set; }              // NEW
-    public string? SecondaryParentPhone { get; set; }        // NEW
-    public string? District { get; set; }                    // NEW
+    public string? SecondaryPhone { get; set; }
+    public string? SecondaryParentPhone { get; set; }
+    public string? District { get; set; }
     public string? Grade { get; set; }
     public string? SchoolName { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 
+    // ── New fields (Student Profile V2) ──────────────────────────────────
+    public string? Nationality { get; set; }                   // e.g. "مصري"
+    public string? MotherPhone { get; set; }                   // Mother's phone number
+    public DateTime? FatherDateOfBirth { get; set; }           // Father's date of birth
+    public DateTime? MotherDateOfBirth { get; set; }           // Mother's date of birth
+    public string? SchoolType { get; set; }                    // e.g. "Language" → mapped to label in query
+    public bool IsFatherAlive { get; set; }
+    public bool IsMotherAlive { get; set; }
+
     public GamificationSummaryDto? Gamification { get; set; }
     public List<StudentPackageDto> Packages { get; set; } = new();
     public List<StudentDeviceDto> Devices { get; set; } = new();
     public List<VideoOverrideDto> Overrides { get; set; } = new();
+    public WatchTrackingSummaryDto WatchTracking { get; set; } = new();
     public List<AuditLogDto> AuditTrail { get; set; } = new();
 }
+
 
 public class GamificationSummaryDto
 {
@@ -61,6 +72,27 @@ public class VideoOverrideDto
     public int CurrentViews { get; set; }
     public string OverrideBy { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+}
+
+public class WatchTrackingSummaryDto
+{
+    public int TotalWatchedSeconds { get; set; }
+    public int WatchedVideosCount { get; set; }
+    public List<StudentVideoWatchActivityDto> Activities { get; set; } = new();
+}
+
+public class StudentVideoWatchActivityDto
+{
+    public Guid LessonVideoId { get; set; }
+    public string VideoTitle { get; set; } = string.Empty;
+    public Guid LessonId { get; set; }
+    public string LessonTitle { get; set; } = string.Empty;
+    public string? PackageName { get; set; }
+    public int WatchCount { get; set; }
+    public int MaxWatchCount { get; set; }
+    public int WatchedSeconds { get; set; }
+    public bool IsLocked { get; set; }
+    public DateTime LastWatchedAt { get; set; }
 }
 
 public class AuditLogDto

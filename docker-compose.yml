@@ -1,0 +1,166 @@
+services:
+
+  # ─── Database ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: nadergorge_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-nadergorge}
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - nadergorge_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ─── Cache / Queue Broker ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nadergorge_redis
+    ports:
+      - "6382:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - nadergorge_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # ─── Backend (.NET 9 ASP.NET Core) ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nadergorge_backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Docker}
+      ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:5245}
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-nadergorge};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
+      JwtSettings__Secret: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER:-NaderGorgeAPI}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-NaderGorgeClients}
+      JwtSettings__ExpirationMinutes: ${JWT_EXPIRY_MINUTES:-60}
+      JwtSettings__RefreshExpirationDays: ${JWT_REFRESH_DAYS:-30}
+      DeviceLimits__MaxDevicesPerStudent: ${MAX_DEVICES_PER_STUDENT:-2}
+      EvolutionApi__BaseUrl: ${EVOLUTION_API_BASE_URL:-}
+      EvolutionApi__ApiKey: ${EVOLUTION_API_KEY:-}
+      EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Nader}
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:8738}
+      ApiCallbackSecret: ${API_CALLBACK_SECRET:-secretxyz}
+    ports:
+      - "5245:5245"
+    networks:
+      - nadergorge_net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5245/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── AI Worker (Node.js BullMQ) ───────────────────────────────────────────
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: nadergorge_worker
+    environment:
+      REDIS_URL: "redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
+      DB_CONNECTION_STRING: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-nadergorge};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:-secretxyz}
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    networks:
+      - nadergorge_net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3001/ui || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ─── Frontend (Next.js) ────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Note: BROWSER needs to reach it at localhost, while SERVER uses backend
+        NEXT_PUBLIC_API_URL: "http://localhost:5245/api"
+        NEXT_PUBLIC_BACKEND_URL: "http://backend:5245"
+    container_name: nadergorge_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:5245/api}
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://backend:5245}
+    ports:
+      - "8738:8738"
+    networks:
+      - nadergorge_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8738 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── EF Core Migration Runner (on-demand, not started by make up) ──────────
+  migrator:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.migrator
+    container_name: nadergorge_migrator
+    environment:
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-nadergorge};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
+    networks:
+      - nadergorge_net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - migration
+
+# ─── Networks ────────────────────────────────────────────────────────────────
+networks:
+  nadergorge_net:
+    driver: bridge
+
+# ─── Volumes ─────────────────────────────────────────────────────────────────
+volumes:
+  pgdata:
+  redisdata:

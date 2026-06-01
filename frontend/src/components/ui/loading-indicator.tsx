@@ -39,3 +39,18 @@ export function InlineLoader({ className = '' }: { className?: string }) {
     </div>
   );
 }
+
+/**
+ * SpinnerLoader: A sleek white spinning ring and pulse for major components like video players.
+ */
+export function SpinnerLoader({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
+      {/* Modern thin ring spinner */}
+      <div className="relative flex items-center justify-center">
+        <div className="h-10 w-10 md:h-14 md:w-14 animate-spin rounded-full border-2 border-white/20 border-t-white shadow-[0_0_15px_rgba(255,255,255,0.4)] transition-all duration-300 pointer-events-none" />
+        <div className="absolute h-6 w-6 md:h-8 md:w-8 animate-[ping_2s_ease-in-out_infinite] rounded-full bg-white/10 blur-sm mix-blend-screen pointer-events-none" />
+      </div>
+    </div>
+  );
+}

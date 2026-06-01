@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NaderGorge.Application.Features.Content.Commands;
 using NaderGorge.Application.Features.Content.Queries;
 using System.Security.Claims;
 
@@ -36,6 +37,13 @@ public class ContentController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("packages/{packageId:guid}/code-page")]
+    public async Task<IActionResult> GetPackageCodePage(Guid packageId)
+    {
+        var response = await _mediator.Send(new GetPackageCodePageQuery(packageId));
+        return response.Success ? Ok(response) : NotFound(response);
+    }
+
     [HttpGet("terms/{termId:guid}/sections")]
     public async Task<IActionResult> GetSections(Guid termId)
     {
@@ -48,7 +56,7 @@ public class ContentController : ControllerBase
     {
         var response = await _mediator.Send(new GetLessonsQuery(sectionId, GetUserId()));
 
-        if (!response.Success && response.Errors!.Contains("Section not found"))
+        if (!response.Success && (response.Errors?.Contains("Section not found") == true || response.Message?.Contains("Section not found") == true))
             return NotFound(response);
 
         return Ok(response);
@@ -61,7 +69,7 @@ public class ContentController : ControllerBase
 
         if (!response.Success)
         {
-            if (response.Errors!.Contains("You do not have access"))
+            if (response.Errors?.Contains("You do not have access") == true || response.Message?.Contains("You do not have access") == true)
                 return StatusCode(403, response);
 
             return NotFound(response);
@@ -69,4 +77,65 @@ public class ContentController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpGet("lessons/{lessonId:guid}/comments")]
+    public async Task<IActionResult> GetLessonComments(Guid lessonId)
+    {
+        var response = await _mediator.Send(new GetLessonCommentsQuery(lessonId, GetUserId()));
+
+        if (!response.Success)
+        {
+            if (response.Errors?.Contains("FORBIDDEN") == true)
+                return StatusCode(403, response);
+
+            if (response.Errors?.Contains("NOT_FOUND") == true)
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpGet("lessons/{lessonId:guid}/comments/mine")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> GetMyLessonComments(Guid lessonId)
+    {
+        var response = await _mediator.Send(new GetMyLessonCommentsQuery(lessonId, GetUserId()));
+
+        if (!response.Success)
+        {
+            if (response.Errors?.Contains("FORBIDDEN") == true)
+                return StatusCode(403, response);
+
+            if (response.Errors?.Contains("NOT_FOUND") == true)
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpPost("lessons/{lessonId:guid}/comments")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> CreateLessonComment(Guid lessonId, [FromBody] CreateLessonCommentRequest request)
+    {
+        var response = await _mediator.Send(new CreateLessonCommentCommand(lessonId, GetUserId(), request.Body));
+
+        if (!response.Success)
+        {
+            if (response.Errors?.Contains("FORBIDDEN") == true)
+                return StatusCode(403, response);
+
+            if (response.Errors?.Contains("NOT_FOUND") == true)
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
 }
+
+public record CreateLessonCommentRequest(string Body);

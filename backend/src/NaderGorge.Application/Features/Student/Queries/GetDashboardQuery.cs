@@ -15,7 +15,8 @@ public record DashboardDto(
     int OverallProgressPercent,
     int TotalLessonsCompleted,
     int TotalLessons,
-    int CodesRedeemed
+    int CodesRedeemed,
+    string? AvatarSlug
 );
 
 public record ActivePackageDto(Guid Id, string Name, string Description, int LessonsCompleted, int TotalLessons, int ProgressPercent);
@@ -30,7 +31,9 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
     public async Task<ApiResponse<DashboardDto>> Handle(GetDashboardQuery request, CancellationToken ct)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
+        var user = await _db.Users
+            .Include(u => u.StudentProfile)
+            .FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
         if (user == null) return ApiResponse<DashboardDto>.Fail("User not found");
 
         // Get all access grants for user
@@ -127,7 +130,8 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             overallPct,
             totalCompletedAll,
             totalLessonsAll,
-            codesRedeemed
+            codesRedeemed,
+            user.StudentProfile?.AvatarSlug
         ));
     }
 }

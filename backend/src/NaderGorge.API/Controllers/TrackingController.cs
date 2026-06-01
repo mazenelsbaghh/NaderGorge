@@ -20,17 +20,22 @@ public class TrackingController : ControllerBase
 
     private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-    public record VideoEventRequest(Guid LessonVideoId, int WatchedSeconds);
+    public record VideoEventRequest(Guid LessonVideoId, int WatchedSeconds, int TotalDurationSeconds = 0);
 
     [HttpPost("video-event")]
     public async Task<IActionResult> RecordVideoEvent([FromBody] VideoEventRequest req)
     {
         if (req.WatchedSeconds <= 0) return BadRequest("Invalid seconds");
+        if (req.TotalDurationSeconds <= 0)
+            return BadRequest(new { success = false, errors = new[] { "DURATION_REQUIRED" } });
 
-        var response = await _mediator.Send(new RecordVideoEventCommand(GetUserId(), req.LessonVideoId, req.WatchedSeconds));
+        var response = await _mediator.Send(new RecordVideoEventCommand(GetUserId(), req.LessonVideoId, req.WatchedSeconds, req.TotalDurationSeconds));
 
         if (!response.Success)
         {
+            if (response.Errors?.Contains("DURATION_REQUIRED") == true)
+                return BadRequest(response);
+
             if (response.Errors!.Contains("Maximum watch limit reached"))
                 return StatusCode(403, response);
 

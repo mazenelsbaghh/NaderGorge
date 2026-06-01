@@ -3,8 +3,8 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
-import { adminService } from '@/services/admin-service';
-import { Users, FileText, MonitorPlay, ShieldAlert, MonitorUp, Power, Video } from 'lucide-react';
+import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
+import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminStudentProfile({ params }: { params: Promise<{ id: string }> }) {
@@ -12,10 +12,27 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit'>('overview');
   const [loading, setLoading] = useState(true);
-  const [studentData, setStudentData] = useState<any>(null);
+  const [studentData, setStudentData] = useState<StudentProfileExtendedDto | null>(null);
   const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'>('none');
   const [overrideInput, setOverrideInput] = useState({ videoId: '', addedViews: 1, reason: '' });
   const [gamificationInput, setGamificationInput] = useState({ points: 10, reason: '' });
+
+  const formatDuration = (seconds: number) => {
+    if (!seconds) return '0 دقيقة';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}س ${minutes}د`;
+    }
+
+    if (minutes > 0) {
+      return `${minutes}د ${remainingSeconds}ث`;
+    }
+
+    return `${remainingSeconds}ث`;
+  };
 
   const TABS: AdminTab<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit'>[] = [
      { key: 'overview', label: 'نظرة عامة' },
@@ -237,6 +254,76 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                     rowKey={(row: any) => row.id}
                     emptyMessage="لا يوجد سجل نشاط"
                  />
+             </div>
+         )}
+
+         {activeTab === 'academic' && (
+             <div className="flex flex-col gap-6">
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <AdminStatCard
+                      variant="accent"
+                      icon={Video}
+                      label="فيديوهات تم تتبعها"
+                      value={studentData?.watchTracking?.watchedVideosCount || 0}
+                    />
+                    <AdminStatCard
+                      variant="light"
+                      icon={Clock3}
+                      label="إجمالي زمن المشاهدة"
+                      value={formatDuration(studentData?.watchTracking?.totalWatchedSeconds || 0)}
+                    />
+                    <AdminStatCard
+                      variant="muted"
+                      icon={MonitorPlay}
+                      label="جلسات محتسبة"
+                      value={studentData?.watchTracking?.activities?.reduce((sum, activity) => sum + activity.watchCount, 0) || 0}
+                    />
+                 </div>
+
+                 <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                    <div className="mb-5">
+                      <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل مشاهدة الفيديوهات</h3>
+                      <p className="text-[var(--admin-muted)]">آخر الفيديوهات التي شاهدها الطالب مع الزمن التراكمي الفعلي وآخر نشاط.</p>
+                    </div>
+
+                    <AdminDataTable<StudentProfileExtendedDto['watchTracking']['activities'][number]>
+                      columns={[
+                        {
+                          key: 'videoTitle',
+                          label: 'الفيديو',
+                          render: (row) => (
+                            <div className="flex flex-col">
+                              <span className="font-bold text-[var(--admin-text)]">{row.videoTitle}</span>
+                              <span className="text-xs text-[var(--admin-muted)]">{row.lessonTitle}{row.packageName ? ` • ${row.packageName}` : ''}</span>
+                            </div>
+                          )
+                        },
+                        {
+                          key: 'watchedSeconds',
+                          label: 'المدة المشاهدة',
+                          render: (row) => formatDuration(row.watchedSeconds)
+                        },
+                        {
+                          key: 'watchCount',
+                          label: 'المشاهدات',
+                          render: (row) => `${row.watchCount} / ${row.maxWatchCount === 0 ? '∞' : row.maxWatchCount}`
+                        },
+                        {
+                          key: 'isLocked',
+                          label: 'الحالة',
+                          render: (row) => row.isLocked ? 'مقفول' : 'نشط'
+                        },
+                        {
+                          key: 'lastWatchedAt',
+                          label: 'آخر مشاهدة',
+                          render: (row) => row.lastWatchedAt ? new Date(row.lastWatchedAt).toLocaleString() : 'غير متوفر'
+                        }
+                      ]}
+                      data={studentData?.watchTracking?.activities || []}
+                      rowKey={(row) => row.lessonVideoId}
+                      emptyMessage="لا توجد بيانات مشاهدة لهذا الطالب بعد"
+                    />
+                 </div>
              </div>
          )}
          

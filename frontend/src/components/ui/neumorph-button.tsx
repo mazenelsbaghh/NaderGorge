@@ -107,7 +107,7 @@ const NeumorphButton: React.FC<NeumorphButtonProps> = ({
       tabIndex?: number
     }
 
-    return React.cloneElement(child, {
+    return React.cloneElement(child as React.ReactElement<any>, {
       ...props,
       className: [classes, childProps.className].filter(Boolean).join(" "),
       "aria-disabled": disabled || loading || undefined,

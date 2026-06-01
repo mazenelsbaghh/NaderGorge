@@ -12,44 +12,54 @@ interface GamificationStatus {
 
 export function GamificationWidget() {
   const [status, setStatus] = useState<GamificationStatus | null>(null);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
         const res = await apiClient.get<{data: GamificationStatus}>('/gamification/status');
         setStatus(res.data.data);
-      } catch (err) {
-        console.error('Failed to load gamification status:', err);
+        setHasError(false);
+      } catch {
+        setHasError(true);
       }
     };
-    fetchStatus();
+    void fetchStatus();
   }, []);
 
-  if (!status) return null;
+  if (!status) {
+    if (hasError) {
+      return (
+        <div className="mt-4 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 text-sm font-bold text-[var(--admin-muted)] shadow-sm">
+          تعذر تحميل نقاطك الآن.
+        </div>
+      );
+    }
+
+    return null;
+  }
 
   return (
-    <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl mt-4 rounded-[28px] p-4 bg-gradient-to-br from-[var(--admin-primary)] to-[#b0702d] text-white shadow-lg overflow-hidden relative">
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-      
-      <div className="flex items-center gap-3 relative z-10">
-        <div className="flex shrink-0 h-10 w-10 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm text-yellow-300 shadow-inner">
-          <Star className="h-5 w-5 fill-yellow-300" />
+    <div className="mt-4 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+          <Star className="h-5 w-5 fill-current" />
         </div>
         <div>
-          <p className="text-[10px] font-black tracking-[0.2em] text-white/70 uppercase">{status.currentLevel}</p>
-          <div className="flex items-baseline gap-1 mt-0.5">
-            <span className="text-xl font-black">{status.totalPoints}</span>
-            <span className="text-xs font-semibold text-white/80">XP</span>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--admin-primary)]">{status.currentLevel}</p>
+          <div className="mt-0.5 flex items-baseline gap-1">
+            <span className="text-xl font-black text-[var(--admin-text)]">{status.totalPoints}</span>
+            <span className="text-xs font-semibold text-[var(--admin-muted)]">نقطة</span>
           </div>
         </div>
       </div>
 
       {status.earnedBadges.length > 0 && (
-         <div className="mt-4 pt-4 border-t border-white/20 relative z-10 flex flex-wrap gap-2">
+         <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--admin-border)] pt-4">
             {status.earnedBadges.map((badge, idx) => (
-                <div key={idx} className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 shadow-sm">
-                    <Award className="h-3.5 w-3.5 text-yellow-300" />
-                    <span className="text-xs font-bold whitespace-nowrap">{badge}</span>
+                <div key={idx} className="flex items-center gap-1.5 rounded-xl bg-[var(--admin-card-soft)] px-2.5 py-1">
+                    <Award className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
+                    <span className="whitespace-nowrap text-xs font-bold text-[var(--admin-text)]">{badge}</span>
                 </div>
             ))}
          </div>

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { examService, ActiveExamAttemptDto } from '@/services/exam-service';
-import { ExamViewer } from '@/components/exams/ExamViewer';
+import { examService, ActiveExamAttemptDto, ExamResultDto } from '@/services/exam-service';
+import { ExamViewer, ExamResultPanel } from '@/components/exams/ExamViewer';
 
 export default function ExamPage() {
   const params = useParams();
@@ -14,23 +14,66 @@ export default function ExamPage() {
   const packageId = searchParams.get('packageId') || undefined;
   
   const [exam, setExam] = useState<ActiveExamAttemptDto | null>(null);
+  const [passedResult, setPassedResult] = useState<ExamResultDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const loadExam = useCallback(async () => {
     if (!examId) return;
 
-    examService.startExam(examId)
-      .then(res => setExam(res.data.data))
-      .catch(err => {
-        if (err.response?.status === 403) {
-           setError('You do not have access to this exam, or its lesson is locked.');
-        } else {
-           setError('Exam not found or an error occurred loading it.');
+    setLoading(true);
+    setError('');
+    setPassedResult(null);
+
+    try {
+      try {
+        const passedResultResponse = await examService.getLatestPassedResult(examId);
+        setPassedResult(passedResultResponse.data.data);
+        setExam(null);
+        return;
+      } catch (err: unknown) {
+        const passedResultError = err as { response?: { status?: number } };
+        if (passedResultError.response?.status && passedResultError.response.status !== 404) {
+          if (passedResultError.response.status === 403) {
+            setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
+          } else {
+            setError('تعذر تحميل نتيجة الامتحان الحالية.');
+          }
+          setExam(null);
+          return;
         }
-      })
-      .finally(() => setLoading(false));
+      }
+
+      try {
+        const res = await examService.startExam(examId);
+        setExam(res.data.data);
+      } catch (err: unknown) {
+        const apiError = err as { response?: { status?: number; data?: { errors?: string[] } } };
+
+        if (apiError.response?.status === 403) {
+          setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
+        } else if (apiError.response?.data?.errors?.includes('لقد اجتزت هذا الامتحان بالفعل.')) {
+          try {
+            const passedResultResponse = await examService.getLatestPassedResult(examId);
+            setPassedResult(passedResultResponse.data.data);
+            setExam(null);
+            return;
+          } catch {
+            setError('لقد اجتزت هذا الامتحان بالفعل.');
+          }
+        } else {
+          setError('الامتحان غير موجود أو حدث خطأ أثناء تحميله.');
+        }
+        setExam(null);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [examId]);
+
+  useEffect(() => {
+    void loadExam();
+  }, [loadExam]);
 
   if (loading) {
     return (
@@ -44,15 +87,24 @@ export default function ExamPage() {
   }
 
   if (error || !exam) {
+    if (passedResult) {
+      return (
+        <div className="mx-auto max-w-5xl pb-16">
+          <ExamResultPanel result={passedResult} packageId={packageId} lessonId={passedResult.lessonId} onRestart={loadExam} />
+        </div>
+      );
+    }
+
     return (
-      <div className="mx-auto max-w-2xl rounded-2xl border border-red-200 bg-red-50 p-8 text-center dark:border-red-900/30 dark:bg-red-900/10">
-        <h2 className="mb-4 text-xl font-bold text-red-600 dark:text-red-400">Cannot Access Exam</h2>
-        <p className="text-gray-700 dark:text-gray-300 mb-6">{error}</p>
+      <div className="mx-auto max-w-2xl rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-8 text-center">
+        <h2 className="mb-4 text-xl font-bold text-[var(--admin-danger)]">الامتحان غير متاح</h2>
+        <p className="mb-6 text-[var(--admin-text)]">{error}</p>
         <button 
+          type="button"
           onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
-          className="rounded-xl bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-700 transition"
+          className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[var(--admin-danger)] px-6 py-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-danger-10)] sm:w-auto"
         >
-          Go Back
+          العودة
         </button>
       </div>
     );
@@ -60,17 +112,20 @@ export default function ExamPage() {
 
   return (
     <div className="mx-auto max-w-5xl pb-16">
-      <button 
-        onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
-        className="mb-8 flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-      >
-        <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Cancel Exam
-      </button>
+      {!passedResult && (
+        <button 
+          type="button"
+          onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
+          className="mb-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-text)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] sm:mb-8 sm:w-auto sm:justify-start sm:rounded-full sm:border-transparent sm:bg-transparent sm:px-3"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          إلغاء الامتحان
+        </button>
+      )}
 
-      <ExamViewer examId={examId} examTitle={exam.title} examDescription={exam.description} attempt={exam} packageId={packageId} />
+      <ExamViewer examId={examId} examTitle={exam.title} examDescription={exam.description} attempt={exam} packageId={packageId} onRestart={loadExam} />
     </div>
   );
 }

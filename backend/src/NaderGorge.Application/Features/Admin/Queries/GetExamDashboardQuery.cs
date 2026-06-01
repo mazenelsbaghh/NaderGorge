@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -17,6 +18,14 @@ public record StudentExamResultSummaryDto(
     bool IsTimeExpired
 );
 
+public record ExamQuestionSummaryDto(
+    Guid ExamQuestionId,
+    string Text,
+    string Type,
+    decimal Points,
+    string? BaseText
+);
+
 public record ExamDashboardDto(
     Guid ExamId,
     string Title,
@@ -25,8 +34,8 @@ public record ExamDashboardDto(
     decimal TotalScore,
     decimal PassingScore,
     int? DurationMinutes,
-    int? TimePerQuestionSeconds,
-    List<StudentExamResultSummaryDto> Attempts
+    List<StudentExamResultSummaryDto> Attempts,
+    List<ExamQuestionSummaryDto> Questions
 );
 
 public record GetExamDashboardQuery(Guid ExamId) : IRequest<ApiResponse<ExamDashboardDto>>;
@@ -44,6 +53,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
     {
         var exam = await _context.Exams
             .Include(e => e.ExamQuestions)
+                .ThenInclude(eq => eq.Question)
             .Include(e => e.Attempts)
                 .ThenInclude(a => a.User)
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
@@ -53,16 +63,46 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
         var attemptsDto = exam.Attempts
             .OrderByDescending(a => a.CreatedAt)
-            .Select(a => new StudentExamResultSummaryDto(
-                a.UserId,
-                a.User.FullName,
-                a.User.PhoneNumber,
-                a.StartedAt,
-                a.CreatedAt, // usually when attempt is inserted/finished, or a specific submitted time
-                a.ScoreAchieved,
-                a.Evaluation ?? "لم يقيّم",
-                a.IsPassed,
-                a.IsTimeExpired
+            .Select(a => {
+                var isExpired = a.IsTimeExpired;
+                var eval = a.Evaluation ?? "لم يقيّم";
+                var score = a.ScoreAchieved;
+                var isPassed = a.IsPassed;
+
+                if (a.Evaluation == null && exam.DurationMinutes.HasValue && a.StartedAt.HasValue)
+                {
+                    var timeAllowed = TimeSpan.FromMinutes(exam.DurationMinutes.Value).Add(TimeSpan.FromSeconds(60));
+                    var timeTaken = DateTime.UtcNow - a.StartedAt.Value;
+                    if (timeTaken > timeAllowed)
+                    {
+                        isExpired = true;
+                        eval = "انتهى الوقت";
+                        score = 0;
+                        isPassed = false;
+                    }
+                }
+
+                return new StudentExamResultSummaryDto(
+                    a.UserId,
+                    a.User.FullName,
+                    a.User.PhoneNumber,
+                    a.StartedAt,
+                    a.CreatedAt,
+                    score,
+                    eval,
+                    isPassed,
+                    isExpired
+                );
+            }).ToList();
+
+        var questionsDto = exam.ExamQuestions
+            .OrderBy(eq => eq.Order)
+            .Select(eq => new ExamQuestionSummaryDto(
+                eq.Id,
+                eq.Question.Text,
+                eq.Question.Type.ToString(),
+                eq.Points,
+                eq.Question is FindTheMistakeQuestion ftm ? ftm.BaseText : null
             )).ToList();
 
         var dto = new ExamDashboardDto(
@@ -73,8 +113,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
             exam.TotalScore,
             exam.PassingScore,
             exam.DurationMinutes,
-            exam.TimePerQuestionSeconds,
-            attemptsDto
+            attemptsDto,
+            questionsDto
         );
 
         return ApiResponse<ExamDashboardDto>.Ok(dto);

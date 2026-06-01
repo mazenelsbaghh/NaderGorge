@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react';
 import { Trash2, Plus, Check } from 'lucide-react';
 import { NumberField } from '@/components/ui/number-field';
 import dynamic from 'next/dynamic';
+import { FindTheMistakeBuilder } from './FindTheMistakeBuilder';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { 
@@ -18,10 +19,17 @@ export interface InlineExamOptionDto {
 
 export interface InlineExamQuestionDto {
   text: string;
-  type: 'MCQ' | 'Essay';
+  type: 'MCQ' | 'Essay' | 'FindTheMistake';
   points: number;
   order: number;
   options: InlineExamOptionDto[];
+  audioUrl?: string;
+  audioFile?: File | null;
+  writtenCorrection?: string;
+  hintText?: string;
+  baseText?: string;
+  mistakeStartIndex?: number | null;
+  mistakeEndIndex?: number | null;
 }
 
 interface QuestionEditorProps {
@@ -114,6 +122,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
               >
                 <option value="MCQ">اختيارات (MCQ)</option>
                 <option value="Essay">مقال (Essay)</option>
+                <option value="FindTheMistake">اكتشف الغلطة</option>
               </select>
             </div>
 
@@ -134,36 +143,87 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
           </div>
         </div>
 
-        {/* Editor Row */}
-        <div className="w-full flex-col flex space-y-2 relative">
-          <div 
-            className="rounded-xl overflow-hidden border border-[var(--admin-border)] focus-within:border-[var(--admin-primary)] focus-within:ring-1 focus-within:ring-[var(--admin-primary)] transition-all bg-[var(--admin-card)] text-[var(--admin-text)]"
-            style={{
-              // Custom lightweight dark/light fixes specifically for the editor
-              '--ql-toolbar-bg': 'var(--admin-background)',
-              '--ql-border': 'var(--admin-border)',
-              '--ql-text': 'var(--admin-text)',
-            } as CSSProperties}
-          >
-            <style>{`
-              .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid var(--ql-border) !important; background: var(--ql-toolbar-bg) !important; }
-              .ql-container.ql-snow { border: none !important; }
-              .ql-editor { min-height: 200px; font-size: 15px; color: var(--ql-text); }
-              .ql-snow .ql-stroke { stroke: var(--ql-text); }
-              .ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--ql-text); }
-              .ql-snow .ql-picker { color: var(--ql-text); }
-              .ql-snow .ql-picker-options { background-color: var(--ql-toolbar-bg); border-color: var(--ql-border); }
-            `}</style>
-            <ReactQuill 
-              theme="snow"
-              value={question.text}
-              onChange={(content) => handlePropChange('text', content)}
-              modules={modules}
-              formats={formats}
-              className="w-full"
-              placeholder="اكتب نص السؤال هنا..."
-            />
+        {question.type === 'FindTheMistake' ? (
+          <FindTheMistakeBuilder
+            baseText={question.baseText || ''}
+            startIndex={question.mistakeStartIndex ?? null}
+            endIndex={question.mistakeEndIndex ?? null}
+            onChange={(bt, st, ed) => {
+              onChange(index, {
+                ...question,
+                baseText: bt,
+                mistakeStartIndex: st,
+                mistakeEndIndex: ed,
+                text: 'اكتشف الغلطة: ' + bt,
+                options: st !== null && ed !== null
+                  ? [
+                      { text: bt.substring(st, ed), isCorrect: true },
+                      { text: '---', isCorrect: false },
+                    ]
+                  : question.options,
+              });
+            }}
+          />
+        ) : (
+          <div className="w-full flex-col flex space-y-2 relative">
+            <div
+              className="rounded-xl overflow-hidden border border-[var(--admin-border)] focus-within:border-[var(--admin-primary)] focus-within:ring-1 focus-within:ring-[var(--admin-primary)] transition-all bg-[var(--admin-card)] text-[var(--admin-text)]"
+              style={{
+                '--ql-toolbar-bg': 'var(--admin-background)',
+                '--ql-border': 'var(--admin-border)',
+                '--ql-text': 'var(--admin-text)',
+              } as CSSProperties}
+            >
+              <style>{`
+                .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid var(--ql-border) !important; background: var(--ql-toolbar-bg) !important; }
+                .ql-container.ql-snow { border: none !important; }
+                .ql-editor { min-height: 200px; font-size: 15px; color: var(--ql-text); }
+                .ql-snow .ql-stroke { stroke: var(--ql-text); }
+                .ql-snow .ql-fill, .ql-snow .ql-stroke.ql-fill { fill: var(--ql-text); }
+                .ql-snow .ql-picker { color: var(--ql-text); }
+                .ql-snow .ql-picker-options { background-color: var(--ql-toolbar-bg); border-color: var(--ql-border); }
+              `}</style>
+              <ReactQuill
+                theme="snow"
+                value={question.text}
+                onChange={(content) => handlePropChange('text', content)}
+                modules={modules}
+                formats={formats}
+                className="w-full"
+                placeholder="اكتب نص السؤال هنا..."
+              />
+            </div>
           </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 border-t border-[var(--admin-border)] pt-4">
+          <textarea
+            rows={2}
+            value={question.hintText || ''}
+            onChange={(e) => handlePropChange('hintText', e.target.value)}
+            placeholder="تلميح للمساعدة (يظهر للطالب بدون خصم درجات)"
+            className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
+          />
+          <textarea
+            rows={2}
+            value={question.writtenCorrection || ''}
+            onChange={(e) => handlePropChange('writtenCorrection', e.target.value)}
+            placeholder="تصحيح نصي (يظهر بعد الإجابة)"
+            className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
+          <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--admin-muted)] block">شرح صوتي (اختياري)</span>
+          <input
+            type="file"
+            accept="audio/*"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handlePropChange('audioFile', file);
+            }}
+            className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-all cursor-pointer"
+          />
         </div>
 
         {question.type === 'MCQ' && (
@@ -176,8 +236,8 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
                     type="button"
                     onClick={() => handleToggleCorrectOption(optIndex)}
                     className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center transition-colors border ${
-                      opt.isCorrect 
-                        ? 'bg-green-500/20 text-green-500 border-green-500/50' 
+                      opt.isCorrect
+                        ? 'bg-green-500/20 text-green-500 border-green-500/50'
                         : 'bg-[var(--admin-background)] text-[var(--admin-muted)] border-[var(--admin-border)] hover:bg-[var(--admin-border)]'
                     }`}
                     title={opt.isCorrect ? "إجابة صحيحة" : "إجابة خاطئة"}
@@ -203,7 +263,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
                   </button>
                 </div>
               ))}
-              
+
               <button
                 type="button"
                 onClick={handleAddOption}

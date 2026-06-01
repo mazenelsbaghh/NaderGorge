@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
-using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Assistant;
 using NaderGorge.Domain.Entities.Gamification;
 using NaderGorge.Domain.Entities.Homework;
@@ -29,10 +28,21 @@ public class AppDbContext : DbContext, IAppDbContext
     // Content
     public DbSet<Program> Programs => Set<Program>();
     public DbSet<Package> Packages => Set<Package>();
+    public DbSet<PackageCodePageProfile> PackageCodePageProfiles => Set<PackageCodePageProfile>();
     public DbSet<ContentSection> ContentSections => Set<ContentSection>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonVideo> LessonVideos => Set<LessonVideo>();
+    public DbSet<VideoChapter> VideoChapters => Set<VideoChapter>();
     public DbSet<LessonResource> LessonResources => Set<LessonResource>();
+    public DbSet<LessonComment> LessonComments => Set<LessonComment>();
+    public DbSet<CommunityPost> CommunityPosts => Set<CommunityPost>();
+    public DbSet<CommunityPostComment> CommunityPostComments => Set<CommunityPostComment>();
+    public DbSet<CommunityPostLike> CommunityPostLikes => Set<CommunityPostLike>();
+    public DbSet<CommunityPostPollOption> CommunityPostPollOptions => Set<CommunityPostPollOption>();
+    public DbSet<CommunityPostPollVote> CommunityPostPollVotes => Set<CommunityPostPollVote>();
+    public DbSet<TeacherPhoto> TeacherPhotos => Set<TeacherPhoto>();
+    public DbSet<CustomForm> CustomForms => Set<CustomForm>();
+    public DbSet<FormSubmission> FormSubmissions => Set<FormSubmission>();
 
     // Phase 3: Term, Balance, Code extensions
     public DbSet<Term> Terms => Set<Term>();
@@ -42,6 +52,7 @@ public class AppDbContext : DbContext, IAppDbContext
     
     // Tracking
     public DbSet<VideoWatchEvent> VideoWatchEvents => Set<VideoWatchEvent>();
+    public DbSet<ExtraWatchRequest> ExtraWatchRequests => Set<ExtraWatchRequest>();
     public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
     public DbSet<VideoPlaybackSession> VideoPlaybackSessions => Set<VideoPlaybackSession>();
     
@@ -52,6 +63,8 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();
     public DbSet<StudentExamAttempt> StudentExamAttempts => Set<StudentExamAttempt>();
     public DbSet<StudentAnswer> StudentAnswers => Set<StudentAnswer>();
+    public DbSet<EssaySubmission> EssaySubmissions => Set<EssaySubmission>();
+    public DbSet<PlatformSetting> PlatformSettings => Set<PlatformSetting>();
 
     // Phase 2: Homework & Academic Ops
     public DbSet<Homework> Homeworks => Set<Homework>();
@@ -73,6 +86,16 @@ public class AppDbContext : DbContext, IAppDbContext
 
     // Phase 2: Notifications
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
+
+    public Task<StudentAnswer?> FindStudentAnswerAsync(
+        Guid studentExamAttemptId,
+        Guid examQuestionId,
+        CancellationToken cancellationToken = default)
+    {
+        return StudentAnswers.FirstOrDefaultAsync(
+            answer => answer.StudentExamAttemptId == studentExamAttemptId && answer.ExamQuestionId == examQuestionId,
+            cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -140,6 +163,9 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(s => s.GradeLevel).HasConversion<int>();
             e.Property(s => s.StudyTrack).HasConversion<int?>();
             e.Property(s => s.Gender).HasConversion<int>();
+            e.Property(s => s.LightThemePaletteId).HasMaxLength(100);
+            e.Property(s => s.DarkThemePaletteId).HasMaxLength(100);
+            e.Property(s => s.CurrentMode).HasMaxLength(10).HasDefaultValue("light");
         });
 
         // Device
@@ -210,6 +236,32 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(p => p.Program).WithMany(pr => pr.Packages).HasForeignKey(p => p.ProgramId);
         });
 
+        modelBuilder.Entity<PackageCodePageProfile>(e =>
+        {
+            e.ToTable("package_code_page_profiles");
+            e.HasKey(p => p.Id);
+            e.HasIndex(p => p.PackageId).IsUnique();
+            e.Property(p => p.Status).HasConversion<int>();
+            e.Property(p => p.HeroEyebrow).HasMaxLength(80);
+            e.Property(p => p.HeroTitle).HasMaxLength(140);
+            e.Property(p => p.HeroDescription).HasMaxLength(600);
+            e.Property(p => p.OfferTitle).HasMaxLength(120);
+            e.Property(p => p.OfferDescription).HasMaxLength(600);
+            e.Property(p => p.ActivationTitle).HasMaxLength(120);
+            e.Property(p => p.ActivationDescription).HasMaxLength(500);
+            e.Property(p => p.SupportTitle).HasMaxLength(120);
+            e.Property(p => p.SupportDescription).HasMaxLength(400);
+            e.Property(p => p.ThemeAccentKey).HasMaxLength(60);
+            e.HasOne(p => p.Package)
+                .WithOne()
+                .HasForeignKey<PackageCodePageProfile>(p => p.PackageId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(p => p.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // ContentSection
         modelBuilder.Entity<ContentSection>(e =>
         {
@@ -237,6 +289,26 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(l => l.Lesson).WithMany(le => le.Videos).HasForeignKey(l => l.LessonId);
         });
 
+        // VideoChapter
+        modelBuilder.Entity<VideoChapter>(e =>
+        {
+            e.ToTable("video_chapters");
+            e.HasKey(v => v.Id);
+            e.Property(v => v.Title).HasMaxLength(200).IsRequired();
+            e.Property(v => v.SummaryText).HasMaxLength(2000);
+            e.Property(v => v.MindmapImageUrl).HasMaxLength(2000);
+            e.HasOne(v => v.LessonVideo).WithMany(le => le.VideoChapters).HasForeignKey(v => v.LessonVideoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // TeacherPhoto
+        modelBuilder.Entity<TeacherPhoto>(e =>
+        {
+            e.ToTable("teacher_photos");
+            e.HasKey(t => t.Id);
+            e.Property(t => t.FileUrl).HasMaxLength(2000).IsRequired();
+            e.HasOne(t => t.Teacher).WithMany().HasForeignKey(t => t.TeacherId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         // LessonResource
         modelBuilder.Entity<LessonResource>(e =>
         {
@@ -244,6 +316,124 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(l => l.Id);
             e.Property(l => l.Title).HasMaxLength(200).IsRequired();
             e.HasOne(l => l.Lesson).WithMany(le => le.Resources).HasForeignKey(l => l.LessonId);
+        });
+
+        // LessonComment
+        modelBuilder.Entity<LessonComment>(e =>
+        {
+            e.ToTable("lesson_comments");
+            e.HasKey(lc => lc.Id);
+            e.Property(lc => lc.Body).HasMaxLength(2000).IsRequired();
+            e.Property(lc => lc.Status).HasConversion<int>();
+            e.HasIndex(lc => lc.LessonId);
+            e.HasIndex(lc => lc.Status);
+            e.HasIndex(lc => lc.CreatedAt);
+            e.HasOne(lc => lc.Lesson)
+                .WithMany(l => l.Comments)
+                .HasForeignKey(lc => lc.LessonId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(lc => lc.AuthorUser)
+                .WithMany()
+                .HasForeignKey(lc => lc.AuthorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(lc => lc.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(lc => lc.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // CommunityPost
+        modelBuilder.Entity<CommunityPost>(e =>
+        {
+            e.ToTable("community_posts");
+            e.HasKey(cp => cp.Id);
+            e.Property(cp => cp.Body).HasMaxLength(4000).IsRequired();
+            e.Property(cp => cp.Status).HasConversion<int>();
+            e.HasIndex(cp => cp.AuthorUserId);
+            e.HasIndex(cp => cp.Status);
+            e.HasIndex(cp => cp.CreatedAt);
+            e.HasOne(cp => cp.AuthorUser)
+                .WithMany()
+                .HasForeignKey(cp => cp.AuthorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(cp => cp.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(cp => cp.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // CommunityPostComment
+        modelBuilder.Entity<CommunityPostComment>(e =>
+        {
+            e.ToTable("community_post_comments");
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Body).HasMaxLength(2000).IsRequired();
+            e.Property(c => c.Status).HasConversion<int>();
+            e.Property(c => c.RejectionReason).HasMaxLength(1000);
+            e.HasIndex(c => c.PostId);
+            e.HasIndex(c => c.Status);
+            e.HasIndex(c => c.CreatedAt);
+            e.HasOne(c => c.Post)
+                .WithMany(p => p.Comments)
+                .HasForeignKey(c => c.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.AuthorUser)
+                .WithMany()
+                .HasForeignKey(c => c.AuthorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(c => c.ReviewedByUser)
+                .WithMany()
+                .HasForeignKey(c => c.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // CommunityPostLike
+        modelBuilder.Entity<CommunityPostLike>(e =>
+        {
+            e.ToTable("community_post_likes");
+            e.HasKey(l => l.Id);
+            e.HasIndex(l => l.PostId);
+            e.HasIndex(l => new { l.PostId, l.UserId }).IsUnique();
+            e.HasOne(l => l.Post)
+                .WithMany(p => p.Likes)
+                .HasForeignKey(l => l.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.User)
+                .WithMany()
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // CommunityPostPollOption
+        modelBuilder.Entity<CommunityPostPollOption>(e =>
+        {
+            e.ToTable("community_post_poll_options");
+            e.HasKey(o => o.Id);
+            e.Property(o => o.Text).HasMaxLength(200).IsRequired();
+            e.HasOne(o => o.Post)
+                .WithMany(p => p.PollOptions)
+                .HasForeignKey(o => o.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // CommunityPostPollVote
+        modelBuilder.Entity<CommunityPostPollVote>(e =>
+        {
+            e.ToTable("community_post_poll_votes");
+            e.HasKey(v => v.Id);
+            e.HasIndex(v => new { v.PostId, v.UserId }).IsUnique(); // One vote per post per user
+            e.HasOne(v => v.Post)
+                .WithMany(p => p.PollVotes)
+                .HasForeignKey(v => v.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(v => v.PollOption)
+                .WithMany()
+                .HasForeignKey(v => v.PollOptionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         // VideoWatchEvent
@@ -254,6 +444,17 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(v => new { v.UserId, v.LessonVideoId }).IsUnique();
             e.HasOne(v => v.User).WithMany().HasForeignKey(v => v.UserId);
             e.HasOne(v => v.LessonVideo).WithMany().HasForeignKey(v => v.LessonVideoId);
+        });
+
+        modelBuilder.Entity<ExtraWatchRequest>(e =>
+        {
+            e.ToTable("ExtraWatchRequests");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.RejectionReason).HasMaxLength(1000);
+            e.HasIndex(x => x.UserId);
+            e.HasIndex(x => x.LessonVideoId);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasOne(x => x.LessonVideo).WithMany().HasForeignKey(x => x.LessonVideoId);
         });
 
         // LessonProgress
@@ -284,6 +485,12 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(q => q.Text).IsRequired();
             e.Property(q => q.DefaultPoints).HasColumnType("decimal(18,2)");
             e.Property(q => q.Tags).HasMaxLength(500);
+
+            e.HasDiscriminator(q => q.Type)
+             .HasValue<QuestionBankItem>(NaderGorge.Domain.Entities.QuestionType.MCQ)
+             .HasValue<EssayQuestion>(NaderGorge.Domain.Entities.QuestionType.Essay)
+             .HasValue<FindTheMistakeQuestion>(NaderGorge.Domain.Entities.QuestionType.FindTheMistake)
+             .IsComplete(false);
         });
 
         // QuestionOption
@@ -323,9 +530,27 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(sa => sa.Id);
             e.HasIndex(sa => new { sa.StudentExamAttemptId, sa.ExamQuestionId }).IsUnique();
             e.Property(sa => sa.PointsAwarded).HasColumnType("decimal(18,2)");
+            e.Property(sa => sa.SubmittedText).HasMaxLength(2000);
             e.HasOne(sa => sa.Attempt).WithMany(a => a.Answers).HasForeignKey(sa => sa.StudentExamAttemptId);
             e.HasOne(sa => sa.ExamQuestion).WithMany().HasForeignKey(sa => sa.ExamQuestionId);
-            e.HasOne(sa => sa.SelectedOption).WithMany().HasForeignKey(sa => sa.SelectedOptionId);
+            e.HasOne(sa => sa.SelectedOption)
+                .WithMany()
+                .HasForeignKey(sa => sa.SelectedOptionId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // EssaySubmission
+        modelBuilder.Entity<EssaySubmission>(e =>
+        {
+            e.ToTable("essay_submissions");
+            e.HasKey(es => es.Id);
+            e.Property(es => es.AiInitialScore).HasColumnType("decimal(18,2)");
+            e.Property(es => es.TeacherFinalScore).HasColumnType("decimal(18,2)");
+            e.Property(es => es.AudioUrl).HasMaxLength(2000);
+            e.Property(es => es.Status).HasConversion<int>();
+            e.HasOne(es => es.Student).WithMany().HasForeignKey(es => es.StudentId);
+            e.HasOne(es => es.Question).WithMany().HasForeignKey(es => es.QuestionId);
+            e.HasOne(es => es.Attempt).WithMany().HasForeignKey(es => es.StudentExamAttemptId);
         });
 
         // Phase 2
@@ -453,6 +678,31 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(c => new { c.CodeGroupId, c.LessonVideoId }).IsUnique();
             e.HasOne(c => c.CodeGroup).WithMany(g => g.CodeVideoTargets).HasForeignKey(c => c.CodeGroupId);
             e.HasOne(c => c.LessonVideo).WithMany().HasForeignKey(c => c.LessonVideoId);
+        });
+
+        // Custom Forms
+        modelBuilder.Entity<CustomForm>(e =>
+        {
+            e.ToTable("custom_forms");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Slug).IsUnique();
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Slug).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.FieldsJson).IsRequired();
+        });
+
+        modelBuilder.Entity<FormSubmission>(e =>
+        {
+            e.ToTable("form_submissions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AdminNotes).HasMaxLength(2000);
+            e.Property(x => x.SubmittedDataJson).IsRequired();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.HasOne(x => x.CustomForm)
+             .WithMany(f => f.Submissions)
+             .HasForeignKey(x => x.CustomFormId)
+             .OnDelete(DeleteBehavior.Cascade);
         });
 
     }

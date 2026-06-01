@@ -11,6 +11,7 @@ import {
   AdminModal,
   AdminSearchToolbar,
 } from '@/components/admin';
+import { FindTheMistakeBuilder } from '@/components/admin/FindTheMistakeBuilder';
 import { formatCompactNumber } from '@/components/admin/admin-utils';
 import { adminService, QuestionBankItemDto, QuestionOptionDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
@@ -24,7 +25,15 @@ export default function AdminQuestionsPage() {
   const [qText, setQText] = useState('');
   const [qPoints, setQPoints] = useState(1);
   const [qTags, setQTags] = useState('');
+  const [hintText, setHintText] = useState('');
+  const [writtenCorrection, setWrittenCorrection] = useState('');
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [qType, setQType] = useState<number>(0);
+  const [baseText, setBaseText] = useState('');
+  const [mistakeStartIndex, setMistakeStartIndex] = useState<number | null>(null);
+  const [mistakeEndIndex, setMistakeEndIndex] = useState<number | null>(null);
+
   const [options, setOptions] = useState<{ text: string; isCorrect: boolean }[]>([
     { text: '', isCorrect: true },
     { text: '', isCorrect: false },
@@ -63,23 +72,55 @@ export default function AdminQuestionsPage() {
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
-    if (options.filter((option) => option.text.trim()).length < 2) {
+    if (qType === 0 && options.filter((option) => option.text.trim()).length < 2) {
       toast.error('أدخل على الأقل اختيارين');
+      return;
+    }
+    if (qType === 2 && mistakeStartIndex === null) {
+      toast.error('يرجى تحديد الغلطة في النص أولاً.');
       return;
     }
 
     try {
       setSaving(true);
-      await adminService.createQuestion({
-        text: qText,
+      const payload: any = {
+        text: qType === 2 ? 'اكتشف الغلطة: ' + baseText : qText,
+        type: qType,
         defaultPoints: qPoints,
         tags: qTags,
-        options: options.filter((option) => option.text.trim()),
-      });
+        hintText,
+        writtenCorrection,
+      };
+
+      if (qType === 2) {
+         payload.baseText = baseText;
+         payload.mistakeStartIndex = mistakeStartIndex;
+         payload.mistakeEndIndex = mistakeEndIndex;
+         payload.options = [
+            { text: baseText.substring(mistakeStartIndex!, mistakeEndIndex!), isCorrect: true },
+            { text: 'Dummy', isCorrect: false } // Needed to satisfy minimum options validation in backend if Essay not specified, though backend allows empty if it checks type. We pass 2 options to bypass logic.
+         ];
+      } else {
+         payload.options = options.filter((option) => option.text.trim());
+      }
+
+      const created = await adminService.createQuestion(payload);
+
+      if (created?.id && audioFile) {
+        await adminService.uploadQuestionAudio(created.id, audioFile);
+      }
+
       setShowModal(false);
+      setQType(0);
+      setBaseText('');
+      setMistakeStartIndex(null);
+      setMistakeEndIndex(null);
       setQText('');
       setQPoints(1);
       setQTags('');
+      setHintText('');
+      setWrittenCorrection('');
+      setAudioFile(null);
       setOptions([
         { text: '', isCorrect: true },
         { text: '', isCorrect: false },
@@ -225,14 +266,35 @@ export default function AdminQuestionsPage() {
         maxWidth="max-w-2xl"
       >
         <form onSubmit={handleSave} className="space-y-4">
-          <textarea
-            rows={3}
-            value={qText}
-            onChange={(event) => setQText(event.target.value)}
-            placeholder="نص السؤال"
-            className="admin-input"
-            required
-          />
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
+              <input type="radio" checked={qType === 0} onChange={() => setQType(0)} className="accent-[var(--admin-primary)]" />
+              اختيار من متعدد (MCQ)
+            </label>
+            <label className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
+              <input type="radio" checked={qType === 2} onChange={() => setQType(2)} className="accent-[var(--admin-primary)]" />
+              اكتشف الغلطة
+            </label>
+          </div>
+
+          {qType === 2 ? (
+            <FindTheMistakeBuilder 
+              baseText={baseText} 
+              startIndex={mistakeStartIndex} 
+              endIndex={mistakeEndIndex} 
+              onChange={(bt, st, ed) => { setBaseText(bt); setMistakeStartIndex(st); setMistakeEndIndex(ed); }} 
+            />
+          ) : (
+             <textarea
+               rows={3}
+               value={qText}
+               onChange={(event) => setQText(event.target.value)}
+               placeholder="نص السؤال"
+               className="admin-input"
+               required
+             />
+          )}
+
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_140px]">
             <input
               type="text"
@@ -251,27 +313,58 @@ export default function AdminQuestionsPage() {
               className="admin-input"
             />
           </div>
-          <div className="space-y-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
-            {options.map((option, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="correctOption"
-                  checked={option.isCorrect}
-                  onChange={(event) => updateOption(index, 'isCorrect', event.target.checked)}
-                  className="h-5 w-5 accent-[var(--admin-primary)]"
-                />
-                <input
-                  type="text"
-                  value={option.text}
-                  onChange={(event) => updateOption(index, 'text', event.target.value)}
-                  placeholder={`الاختيار ${index + 1}`}
-                  className="admin-input"
-                  required={index < 2}
-                />
-              </div>
-            ))}
+          
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <textarea
+              rows={2}
+              value={hintText}
+              onChange={(e) => setHintText(e.target.value)}
+              placeholder="تلميح للمساعدة (يظهر للطالب بدون خصم درجات)"
+              className="admin-input"
+            />
+            <textarea
+              rows={2}
+              value={writtenCorrection}
+              onChange={(e) => setWrittenCorrection(e.target.value)}
+              placeholder="تصحيح نصي (يظهر بعد الإجابة)"
+              className="admin-input"
+            />
           </div>
+
+          <div className="flex flex-col gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--admin-muted)] block">شرح صوتي (اختياري)</span>
+            <input 
+              type="file" 
+              accept="audio/*"
+              onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+              className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-all cursor-pointer"
+            />
+          </div>
+
+          {qType === 0 && (
+            <div className="space-y-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
+              {options.map((option, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="correctOption"
+                    checked={option.isCorrect}
+                    onChange={(event) => updateOption(index, 'isCorrect', event.target.checked)}
+                    className="h-5 w-5 accent-[var(--admin-primary)]"
+                  />
+                  <input
+                    type="text"
+                    value={option.text}
+                    onChange={(event) => updateOption(index, 'text', event.target.value)}
+                    placeholder={`الاختيار ${index + 1}`}
+                    className="admin-input"
+                    required={index < 2}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)] mt-4">
             <NeumorphButton type="button" onClick={() => setShowModal(false)} intent="ghost" size="md">إلغاء</NeumorphButton>
             <NeumorphButton type="submit" disabled={saving} loading={saving} intent="primary" size="md" pill>

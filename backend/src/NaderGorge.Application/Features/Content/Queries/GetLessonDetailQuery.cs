@@ -11,29 +11,50 @@ public record LessonDetailDto(
     Guid Id, 
     string Title, 
     string Summary, 
+    Guid PackageId,
     Guid? ExamId,
     LessonHomeworkDto? Homework,
     List<VideoDto> Videos,
-    List<ResourceDto> Resources
+    List<ResourceDto> Resources,
+    bool IsLocked = false,
+    string? LockedReason = null,
+    Guid? BlockingExamId = null,
+    Guid? BlockingHomeworkLessonId = null
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, List<LessonHomeworkQuestionDto> Questions);
 public record LessonHomeworkQuestionDto(Guid Id, string Text, int Order, int MaxPoints);
 
-public record VideoDto(Guid Id, string Title, string Provider, int Order, int Limit, int Watched, bool IsLocked);
+public record VideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
+public record VideoDto(
+    Guid Id, 
+    string Title, 
+    string Provider, 
+    int Order, 
+    int Limit, 
+    int Watched, 
+    bool IsLocked, 
+    int WatchedSeconds, 
+    DateTime? LastWatchedAt, 
+    string? SubtitleUrl, 
+    bool IsProcessingAI, 
+    bool IsProcessingMindmaps, 
+    Guid? ExamId,
+    bool ExamPassed,
+    bool IsExamLocked,
+    List<VideoChapterDto> Chapters
+);
 public record ResourceDto(Guid Id, string Title, string FileUrl, string Type);
 
 public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery, ApiResponse<LessonDetailDto>>
 {
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
-    private readonly IVideoProvider _video;
 
-    public GetLessonDetailQueryHandler(IAppDbContext db, IAccessCheckService access, IVideoProvider video)
+    public GetLessonDetailQueryHandler(IAppDbContext db, IAccessCheckService access)
     {
         _db = db;
         _access = access;
-        _video = video;
     }
 
     public async Task<ApiResponse<LessonDetailDto>> Handle(GetLessonDetailQuery request, CancellationToken ct)
@@ -44,30 +65,149 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var lesson = await _db.Lessons
             .Include(l => l.Videos)
+                .ThenInclude(v => v.VideoChapters)
             .Include(l => l.Resources)
+            .Include(l => l.ContentSection)
+            .ThenInclude(cs => cs.Term)
             .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
 
         if (lesson == null)
             return ApiResponse<LessonDetailDto>.Fail("Lesson not found");
 
+        bool isLocked = false;
+        string? lockedReason = null;
+        Guid? blockingExamId = null;
+        Guid? blockingHomeworkLessonId = null;
+
+        // Find the previous lesson
+        var previousLesson = await _db.Lessons
+            .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order < lesson.Order)
+            .OrderByDescending(l => l.Order)
+            .FirstOrDefaultAsync(ct);
+
+        if (previousLesson == null)
+        {
+            var previousSection = await _db.ContentSections
+                .Where(s => s.TermId == lesson.ContentSection.TermId && s.Order < lesson.ContentSection.Order)
+                .OrderByDescending(s => s.Order)
+                .FirstOrDefaultAsync(ct);
+                
+            if (previousSection != null)
+            {
+                previousLesson = await _db.Lessons
+                    .Where(l => l.ContentSectionId == previousSection.Id)
+                    .OrderByDescending(l => l.Order)
+                    .FirstOrDefaultAsync(ct);
+            }
+        }
+
+        if (previousLesson != null)
+        {
+            // Check if previous lesson has homework and if it is passed
+            var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+            if (prevHomework != null && prevHomework.IsMandatory)
+            {
+                var submission = await _db.HomeworkSubmissions
+                    .Where(s => s.StudentId == request.UserId && s.HomeworkId == prevHomework.Id)
+                    .OrderByDescending(s => s.StartedAt)
+                    .FirstOrDefaultAsync(ct);
+
+                if (submission == null)
+                {
+                    isLocked = true;
+                    lockedReason = $"يجب إتمام واجب '{prevHomework.Title}' التابع للحصة '{previousLesson.Title}' أولاً.";
+                    blockingHomeworkLessonId = previousLesson.Id;
+                }
+                else if (submission.Status != NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded && 
+                         submission.OverallScore < (prevHomework.PassingScoreThreshold ?? 0))
+                {
+                    isLocked = true;
+                    lockedReason = $"يجب اجتياز واجب '{prevHomework.Title}' التابع للحصة '{previousLesson.Title}' بنجاح.";
+                    blockingHomeworkLessonId = previousLesson.Id;
+                }
+                else if (submission.OverallScore < (prevHomework.PassingScoreThreshold ?? 0))
+                {
+                    isLocked = true;
+                    lockedReason = $"يجب تحقيق درجة النجاح في واجب '{prevHomework.Title}' التابع للحصة '{previousLesson.Title}'.";
+                    blockingHomeworkLessonId = previousLesson.Id;
+                }
+            }
+
+            // Check if previous lesson has an exam and if it is mandatory and passed
+            if (!isLocked && previousLesson.ExamId.HasValue)
+            {
+                var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
+                
+                if (exam != null && exam.IsMandatory)
+                {
+                    var passedExam = await _db.StudentExamAttempts
+                        .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
+
+                    if (!passedExam)
+                    {
+                        isLocked = true;
+                        lockedReason = $"يجب اجتياز امتحان '{exam.Title}' التابع للحصة '{previousLesson.Title}' بنجاح.";
+                        blockingExamId = exam.Id;
+                    }
+                }
+            }
+        }
+
         var watchEvents = await _db.VideoWatchEvents
             .Where(v => v.UserId == request.UserId && lesson.Videos.Select(x => x.Id).Contains(v.LessonVideoId))
             .ToListAsync(ct);
 
-        var videoDtos = lesson.Videos.OrderBy(v => v.Order).Select(v => 
+        var videoExamIds = lesson.Videos
+            .Where(v => v.ExamId.HasValue)
+            .Select(v => v.ExamId!.Value)
+            .Distinct()
+            .ToList();
+
+        var passedExamIds = await _db.StudentExamAttempts
+            .Where(a => a.UserId == request.UserId && videoExamIds.Contains(a.ExamId) && a.IsPassed)
+            .Select(a => a.ExamId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var sortedVideos = lesson.Videos.OrderBy(v => v.Order).ToList();
+        var videoDtos = new List<VideoDto>();
+        bool anyPrecedingExamNotPassed = false;
+
+        foreach (var v in sortedVideos)
         {
             var watchEvent = watchEvents.FirstOrDefault(we => we.LessonVideoId == v.Id);
-            
-            return new VideoDto(
+            var chapters = v.VideoChapters
+                .OrderBy(c => c.Order)
+                .Select(c => new VideoChapterDto(c.Id, c.Title, c.StartTime, c.EndTime, c.SummaryText, c.MindmapImageUrl, c.Order))
+                .ToList();
+
+            bool examPassed = v.ExamId.HasValue && passedExamIds.Contains(v.ExamId.Value);
+            bool isExamLocked = anyPrecedingExamNotPassed;
+
+            videoDtos.Add(new VideoDto(
                 v.Id, 
                 v.Title, 
                 v.Provider, 
                 v.Order, 
                 v.MaxWatchCount, 
                 watchEvent?.WatchCount ?? 0, 
-                watchEvent?.IsLocked ?? false
-            );
-        }).ToList();
+                watchEvent?.IsLocked ?? false,
+                watchEvent?.TimeWatchedInSeconds ?? 0,
+                watchEvent?.UpdatedAt,
+                v.SubtitleUrl,
+                v.IsProcessingAI,
+                v.IsProcessingMindmaps,
+                v.ExamId,
+                examPassed,
+                isExamLocked,
+                chapters
+            ));
+
+            if (v.ExamId.HasValue && !examPassed)
+            {
+                anyPrecedingExamNotPassed = true;
+            }
+        }
 
         var resourceDtos = lesson.Resources.Select(r => new ResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType)).ToList();
 
@@ -78,15 +218,36 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         LessonHomeworkDto? homeworkDto = null;
         if (hw != null)
         {
-            var hwQuestions = hw.Questions.OrderBy(q => q.Order).Select(q => 
+            var baseQuery = hw.Questions.AsEnumerable();
+            if (hw.IsRandomized)
+            {
+                baseQuery = baseQuery.OrderBy(x => Guid.NewGuid());
+            }
+            else
+            {
+                baseQuery = baseQuery.OrderBy(q => q.Order);
+            }
+            
+            var hwQuestions = baseQuery.Select(q => 
                 new LessonHomeworkQuestionDto(q.Id, q.BodyText, q.Order, q.PointsActive)
             ).ToList();
             
             homeworkDto = new LessonHomeworkDto(hw.Id, hw.Title, hw.Description ?? "", hw.IsMandatory, hw.PassingScoreThreshold, hwQuestions);
         }
-
-        var detail = new LessonDetailDto(lesson.Id, lesson.Title, lesson.Summary, lesson.ExamId, homeworkDto, videoDtos, resourceDtos);
-        
+        var detail = new LessonDetailDto(
+            lesson.Id,
+            lesson.Title,
+            lesson.Summary,
+            lesson.ContentSection.Term.PackageId,
+            lesson.ExamId,
+            homeworkDto,
+            videoDtos,
+            resourceDtos,
+            isLocked,
+            lockedReason,
+            blockingExamId,
+            blockingHomeworkLessonId
+        );
         return ApiResponse<LessonDetailDto>.Ok(detail);
     }
 }

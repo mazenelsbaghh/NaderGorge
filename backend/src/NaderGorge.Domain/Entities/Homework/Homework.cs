@@ -10,6 +10,7 @@ public class Homework
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public bool IsMandatory { get; set; } = true;
+    public bool IsRandomized { get; set; } = false;
     public decimal? PassingScoreThreshold { get; set; }
     public decimal TotalScore { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

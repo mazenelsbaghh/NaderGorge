@@ -1,0 +1,14 @@
+# Frontend Docker build context — exclude dev artifacts
+node_modules/
+.next/
+.env
+.env.*
+*.log
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/

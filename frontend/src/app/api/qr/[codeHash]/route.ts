@@ -15,7 +15,11 @@ export async function GET(
   { params }: { params: Promise<{ codeHash: string }> }
 ) {
   const { codeHash } = await params;
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  let backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  if (backendUrl.includes('localhost:5245')) {
+    backendUrl = backendUrl.replace('localhost:5245', 'backend:5245');
+  }
+
 
   // Check if user has an auth token
   const authToken = request.cookies.get('token')?.value;

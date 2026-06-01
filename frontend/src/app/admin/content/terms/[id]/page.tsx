@@ -1,98 +1,133 @@
 'use client';
 
-import { useEffect, useState, useRef, use } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Calendar, Folder, Link2 } from 'lucide-react';
-import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, SectionListManager, AddSectionForm, SectionListManagerRef, AdminPageSkeleton } from '@/components/admin';
+import { Folder, ChevronRight, BookOpenText } from 'lucide-react';
+import { AdminShellChrome, AdminStatCard, AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from '@/components/admin';
+import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
+import { contentService, ContentSectionDto } from '@/services/content-service';
 import toast from 'react-hot-toast';
+import NeumorphButton from '@/components/ui/neumorph-button';
+
+type ActiveTab = 'overview' | 'sections';
+
+const TABS: AdminTab<ActiveTab>[] = [
+  { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
+  { key: 'sections', label: 'الشهور / الأقسام', icon: Folder },
+];
 
 export default function TermProfilePage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [term, setTerm] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const sectionListRef = useRef<SectionListManagerRef>(null);
+  const [termLoading, setTermLoading] = useState(true);
+  const [sections, setSections] = useState<ContentSectionDto[]>([]);
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [sectionsError, setSectionsError] = useState(false);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const response = await adminService.getTermById(params.id);
-        setTerm(response);
-      } catch (error) {
-        toast.error('تعذر تحميل تفاصيل الترم');
-      } finally {
-        setLoading(false);
-      }
+  const loadTerm = useCallback(async () => {
+    try {
+      const res = await adminService.getTermById(params.id);
+      setTerm(res);
+    } catch {
+      toast.error('تعذر تحميل تفاصيل الترم');
+    } finally {
+      setTermLoading(false);
     }
-    loadData();
   }, [params.id]);
 
-  if (loading) {
+  const loadSections = useCallback(async () => {
+    try {
+      setSectionsLoading(true);
+      setSectionsError(false);
+      const res = await contentService.getSections(params.id);
+      const items = (res.data?.data ?? []) as ContentSectionDto[];
+      setSections(items.sort((a, b) => a.order - b.order));
+    } catch {
+      setSectionsError(true);
+    } finally {
+      setSectionsLoading(false);
+    }
+  }, [params.id]);
+
+  useEffect(() => { void loadTerm(); }, [loadTerm]);
+  useEffect(() => { void loadSections(); }, [loadSections]);
+
+  if (termLoading) {
     return (
-      <AdminShellChrome
-        activePath="/admin/content"
-        sectionLabel="إدارة المحتوى"
-        pageTitle="جاري التحميل..."
-        subtitle="الرجاء الانتظار"
-      >
+      <AdminShellChrome activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
       </AdminShellChrome>
     );
   }
 
   if (!term) {
-     return (
-        <AdminShellChrome
-            activePath="/admin/content"
-            sectionLabel="إدارة المحتوى"
-            pageTitle="خطأ"
-            subtitle="الترم غير موجود"
-        >
-            <div className="p-8 text-center text-[var(--admin-muted)]">
-                لا يمكن العثور على الترم المطلوب
-            </div>
-            <div className="flex justify-center mt-4">
-                <button
-                    onClick={() => router.back()}
-                    className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)] transition hover:bg-[var(--admin-hover)]"
-                >
-                    <ArrowRight className="h-4 w-4" /> عودة للخلف
-                </button>
-            </div>
-        </AdminShellChrome>
-     )
+    return (
+      <AdminShellChrome activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الترم غير موجود">
+        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+          <p className="text-[var(--admin-muted)]">لا يمكن العثور على الترم المطلوب.</p>
+          <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
+            <ChevronRight className="h-4 w-4" /> عودة
+          </NeumorphButton>
+        </div>
+      </AdminShellChrome>
+    );
   }
+
+  const sectionItems: HierarchyItem[] = sections.map((s) => ({
+    id: s.id,
+    title: s.title,
+    order: s.order,
+    price: s.price,
+    href: `/admin/content/sections/${s.id}`,
+  }));
 
   return (
     <AdminShellChrome
       activePath="/admin/content"
       sectionLabel="إدارة المحتوى ▸ الباقات ▸ الأترام"
       pageTitle={term.title}
-      subtitle={`الترتيب: ${term.order}`}
+      subtitle={`ترتيب: ${term.order} — ${sections.length} قسم`}
       action={
-        <button
-          onClick={() => router.push(`/admin/content/packages/${term.packageId}`)}
-          className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)] transition hover:bg-[var(--admin-hover)]"
-        >
-          <ArrowRight className="h-4 w-4" /> عودة للباقة
-        </button>
+        <NeumorphButton onClick={() => router.push(`/admin/content/packages/${term.packageId}`)} intent="ghost" size="md" pill>
+          <ChevronRight className="h-4 w-4" />
+          الباقة
+        </NeumorphButton>
       }
     >
-
-      <div className="space-y-6 mt-6">
-        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
-          <h3 className="mb-4 flex items-center gap-2 text-xl font-bold text-[var(--admin-text)]">
-             <Folder className="h-5 w-5 text-[var(--admin-primary)]" /> إدارة الأقسام
-          </h3>
-          <SectionListManager termId={term.id} ref={sectionListRef} />
-        </div>
-        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
-          <h3 className="mb-4 text-lg font-bold text-[var(--admin-text)]">إضافة قسم جديد</h3>
-          <AddSectionForm termId={term.id} onSuccess={() => sectionListRef.current?.reload()} />
-        </div>
+      <div className="mb-8">
+        <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
 
+      {activeTab === 'overview' && (
+        <EntityOverviewDashboard 
+          entityType="ترم" 
+          details={{ title: term.title, price: term.price }} 
+          mockStats={true} 
+        />
+      )}
+
+      {activeTab === 'sections' && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <ContentHierarchyPanel
+            label="الأقسام / الشهور"
+            icon={<Folder className="h-5 w-5" />}
+            items={sectionItems}
+            loading={sectionsLoading}
+            loadError={sectionsError}
+            emptyDescription="القسم (الشهر) يجمع مجموعة من الحصص تحت عنوان واحد. أضف القسم الأول لهذا الترم."
+            addPlaceholder="اسم القسم، مثال: شهر أكتوبر..."
+            onCreate={async ({ title, order, price }) => {
+              await adminService.createSection({ termId: params.id, title, order, price });
+              toast.success('تمت إضافة القسم.');
+              await loadSections();
+            }}
+            onRetry={loadSections}
+          />
+        </div>
+      )}
     </AdminShellChrome>
   );
 }

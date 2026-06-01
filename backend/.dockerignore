@@ -1,0 +1,14 @@
+# Backend Docker build context — exclude build artifacts and secrets
+bin/
+obj/
+.env
+.env.*
+*.log
+tests/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/
