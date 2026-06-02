@@ -28,4 +28,8 @@ jobs:
         echo "⚙️ Running database migrations..."
         docker compose --profile migration run --rm migrator
         
+        echo "🧹 Cleaning up old/unused Docker images and containers..."
+        docker image prune -f
+        docker system prune -f
+        
         echo "✅ Deployment completed successfully!"
