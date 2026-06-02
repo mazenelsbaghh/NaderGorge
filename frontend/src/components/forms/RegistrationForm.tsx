@@ -573,6 +573,7 @@ export function RegistrationForm() {
                           fill
                           sizes="64px"
                           className="object-cover"
+                          unoptimized
                         />
                       </div>
                       <span className="text-[11px] font-black text-[var(--admin-text)] text-center truncate w-full">
@@ -598,6 +599,7 @@ export function RegistrationForm() {
                       fill
                       sizes="48px"
                       className="object-cover"
+                      unoptimized
                     />
                   </div>
                   <div className="space-y-0.5">
