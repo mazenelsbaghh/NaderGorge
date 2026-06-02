@@ -13,10 +13,14 @@ jobs:
     - name: Deploy locally on VPS
       run: |
         echo "🚀 Starting Local Deployment..."
-        cd /var/www/nadergorge
         
-        echo "📥 Pulling latest changes from GitHub..."
-        git pull origin main
+        echo "📥 Fetching latest changes from GitHub using token..."
+        git --git-dir=/var/www/nadergorge.git fetch https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/mazenelsbaghh/NaderGorge.git main
+        
+        echo "🔄 Checking out latest files to production directory..."
+        git --git-dir=/var/www/nadergorge.git --work-tree=/var/www/nadergorge checkout -f FETCH_HEAD
+        
+        cd /var/www/nadergorge
         
         echo "🔨 Building and restarting Docker containers..."
         docker compose up -d --build
