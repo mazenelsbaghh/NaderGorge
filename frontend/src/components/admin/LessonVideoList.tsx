@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<any>(null);
@@ -200,11 +201,11 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
             {ch.summaryText && <div className="text-[10px] text-[var(--admin-muted)] mt-0.5 line-clamp-2">{ch.summaryText}</div>}
             {ch.mindmapImageUrl && (
               <div className="mt-2">
-                <a href={ch.mindmapImageUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-teal-500 font-bold hover:underline mb-1">
+                <a href={resolveMediaUrl(ch.mindmapImageUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-teal-500 font-bold hover:underline mb-1">
                   <ImageIcon className="w-3 h-3" />
                   رؤية الخريطة الذهنية
                 </a>
-                <img src={ch.mindmapImageUrl} alt={ch.title} className="w-full max-w-[200px] h-auto rounded border border-[var(--admin-border)]" />
+                <img src={resolveMediaUrl(ch.mindmapImageUrl)} alt={ch.title} className="w-full max-w-[200px] h-auto rounded border border-[var(--admin-border)]" />
               </div>
             )}
           </div>

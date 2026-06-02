@@ -1,3 +1,5 @@
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
+
 export interface AvatarOption {
   slug: string;
   name: string;
@@ -6,7 +8,7 @@ export interface AvatarOption {
   info: string;
 }
 
-export const AVATAR_LIST: AvatarOption[] = [
+const RAW_AVATAR_LIST: AvatarOption[] = [
   {
     slug: 'einstein',
     name: 'أينشتاين',
@@ -134,3 +136,8 @@ export const AVATAR_LIST: AvatarOption[] = [
     info: 'أول كاتب عربي يفوز بنوبل للآداب، وصاحب الثلاثية وروايات الحارة المصرية.'
   }
 ];
+
+export const AVATAR_LIST: AvatarOption[] = RAW_AVATAR_LIST.map((avatar) => ({
+  ...avatar,
+  imageUrl: resolveMediaUrl(avatar.imageUrl),
+}));
