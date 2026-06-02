@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import { AVATAR_LIST } from '@/data/avatars';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 interface UserAvatarProps {
   avatarSlug?: string | null;
@@ -55,7 +56,7 @@ export function UserAvatar({
 
   // Render Image Avatar if available
   if (matchingAvatar || (avatarSlug && isUrl)) {
-    const src = matchingAvatar ? matchingAvatar.imageUrl : avatarSlug!;
+    const src = resolveMediaUrl(matchingAvatar ? matchingAvatar.imageUrl : avatarSlug!);
     const name = matchingAvatar ? matchingAvatar.name : fullName;
 
     return (

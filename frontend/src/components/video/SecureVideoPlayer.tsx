@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import PlayerControls from './PlayerControls';
 import SplitText from '@/components/ui/SplitText';
 import { applyDomShields } from '@/utils/dom-shield';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { useRouter, useParams } from 'next/navigation';
 
 export interface WatchStatus {
@@ -886,7 +887,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                     <div className="flex-grow w-full relative rounded-lg overflow-hidden border border-white/10 bg-black/50">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
-                          src={activeChapterDesktop.mindmapImageUrl} 
+                          src={resolveMediaUrl(activeChapterDesktop.mindmapImageUrl)} 
                           alt="Mindmap" 
                           className="w-full h-full object-contain absolute top-0 left-0"
                         />
