@@ -1,0 +1,33 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        port: 22
+        script: |
+          echo "🚀 Starting Deployment..."
+          cd /var/www/nadergorge
+          
+          echo "📥 Pulling latest changes from GitHub..."
+          git pull origin main
+          
+          echo "🔨 Building and restarting Docker containers..."
+          docker compose up -d --build
+          
+          echo "⚙️ Running database migrations..."
+          docker compose --profile migration run --rm migrator
+          
+          echo "✅ Deployment completed successfully!"
