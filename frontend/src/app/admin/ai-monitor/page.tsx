@@ -158,7 +158,7 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
     const poll = async () => {
       if (doneRef.current) return;
       try {
-        const res = await fetch(`http://localhost:3001/api/status/${jobId}`);
+        const res = await fetch(`/api/worker/status/${jobId}`);
         if (!res.ok) return;
         const data = await res.json();
         pollCountRef.current++;
@@ -536,7 +536,7 @@ function JobCard({
       {fetchError && (
         <div className="ai-card__error-banner">
           <WifiOff className="h-3.5 w-3.5 shrink-0" />
-          <span>تعذر الاتصال بخادم العمل (port 3001)</span>
+          <span>تعذر الاتصال بخادم العمل (worker)</span>
         </div>
       )}
 
@@ -728,7 +728,7 @@ export default function AIMonitorPage() {
             try {
               const idSuffix = item.video.isProcessingMindmaps ? '_mindmaps' : '';
               const res = await fetch(
-                `http://localhost:3001/api/status/${item.video.id}${idSuffix}`
+                `/api/worker/status/${item.video.id}${idSuffix}`
               );
               if (!res.ok) return { ...item, fetchError: true };
               const data: JobStatus = await res.json();
@@ -763,7 +763,7 @@ export default function AIMonitorPage() {
           try {
             const idSuffix = item.video.isProcessingMindmaps ? '_mindmaps' : '';
             const res = await fetch(
-              `http://localhost:3001/api/status/${item.video.id}${idSuffix}`
+              `/api/worker/status/${item.video.id}${idSuffix}`
             );
             if (!res.ok) return { ...item, fetchError: true };
             const data: JobStatus = await res.json();
@@ -789,7 +789,7 @@ export default function AIMonitorPage() {
   const handleCancel = async (videoId: string, isMindmap: boolean) => {
     try {
       const idSuffix = isMindmap ? '_mindmaps' : '';
-      await fetch(`http://localhost:3001/api/status/${videoId}${idSuffix}`, { method: 'DELETE' });
+      await fetch(`/api/worker/status/${videoId}${idSuffix}`, { method: 'DELETE' });
       await adminService.cancelVideoAiAnalysis(videoId); // Unlocks both states
       toast.success('تم إلغاء المهمة');
       await loadProcessingVideos();
@@ -801,7 +801,7 @@ export default function AIMonitorPage() {
   const handleRetry = async (videoId: string, isMindmap: boolean) => {
     try {
       const idSuffix = isMindmap ? '_mindmaps' : '';
-      await fetch(`http://localhost:3001/api/status/${videoId}${idSuffix}/retry`, { method: 'POST' });
+      await fetch(`/api/worker/status/${videoId}${idSuffix}/retry`, { method: 'POST' });
       toast.success('تمت إعادة المحاولة');
     } catch {
       toast.error('تعذر إعادة المحاولة');
@@ -1122,7 +1122,7 @@ export default function AIMonitorPage() {
         {workerReachable === false && items.length > 0 && (
           <div className="ai-worker-banner ai-worker-banner--err">
             <WifiOff className="h-4 w-4 shrink-0" />
-            خادم العمل على port 3001 غير متاح — تأكد من تشغيل الـ worker.
+            خادم العمل (worker) غير متاح — تأكد من تشغيل الـ worker.
           </div>
         )}
         {workerReachable === true && (

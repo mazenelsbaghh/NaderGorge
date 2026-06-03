@@ -10,7 +10,7 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/student/video-session")]
-[Authorize(Roles = "Student")]
+[Authorize(Roles = "Student,Admin")]
 [EnableRateLimiting("video-session")]
 public class VideoSessionController : ControllerBase
 {

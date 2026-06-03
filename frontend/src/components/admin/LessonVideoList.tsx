@@ -23,7 +23,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     const checkStatus = async () => {
       if (isCancelling || isFinishedRef.current) return;
       try {
-        const res = await fetch(`http://localhost:3001/api/status/${videoId}`);
+        const res = await fetch(`/api/worker/status/${videoId}`);
         if (!res.ok) return;
         const data = await res.json();
         setStatus(data);
@@ -52,7 +52,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     if (!confirm('هل أنت متأكد من إلغاء العملية؟')) return;
     setIsCancelling(true);
     try {
-      await fetch(`http://localhost:3001/api/status/${videoId}`, { method: 'DELETE' });
+      await fetch(`/api/worker/status/${videoId}`, { method: 'DELETE' });
       const realId = videoId.replace('_mindmaps', '');
       
       if (isMindmap) {
@@ -74,7 +74,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     try {
       // If there's an active job, retry it; otherwise re-trigger analysis
       if (status?.state === 'failed') {
-        await fetch(`http://localhost:3001/api/status/${videoId}/retry`, { method: 'POST' });
+        await fetch(`/api/worker/status/${videoId}/retry`, { method: 'POST' });
         toast.success('جاري إعادة المحاولة...');
         setStatus(null);
       } else {
