@@ -358,7 +358,7 @@ export function LessonVideoList({ videos, lessonId, onRefresh }: LessonVideoList
                   <h4 className="font-bold text-[var(--admin-text)]">{video.title}</h4>
                   <div className="mt-2 sm:mt-1 flex flex-wrap items-center gap-2 text-[11px] sm:text-xs font-mono text-[var(--admin-muted)]">
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
-                      {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'Bunny')}
+                      {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'YouTube')}
                     </span>
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
                       مشاهدة: {video.maxWatchCount === 0 ? 'غير محدود' : `${video.maxWatchCount}×`}

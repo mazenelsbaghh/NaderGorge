@@ -61,7 +61,6 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
           >
             <option value="YouTube">YouTube</option>
-            <option value="bunny">Bunny</option>
             <option value="vk">VK (فيكونتاكتي)</option>
           </select>
         </div>
@@ -72,9 +71,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             value={urlOrEmbedCode}
             onChange={(e) => {
               const val = e.target.value;
-              if (val.includes('bunny.net') || val.includes('mediadelivery')) {
-                setProvider('bunny');
-              } else if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
+              if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
                 setProvider('vk');
               } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
                 setProvider('YouTube');
