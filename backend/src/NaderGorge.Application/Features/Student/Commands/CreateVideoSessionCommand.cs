@@ -62,7 +62,11 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         int currentCount = watchEvent?.WatchCount ?? 0;
         bool isLocked = watchEvent?.IsLocked ?? false;
 
-        if (isLocked)
+        var isAdminOrTeacher = await _db.UserRoles
+            .Include(ur => ur.Role)
+            .AnyAsync(ur => ur.UserId == request.UserId && (ur.Role.Name == "Admin" || ur.Role.Name == "Teacher"), ct);
+
+        if (isLocked && !isAdminOrTeacher)
             return ApiResponse<VideoSessionDto>.Fail("Watch limit reached for this video", new List<string> { "WATCH_LIMIT_REACHED" });
 
         // 3. Prevent duplicate active sessions (optional, but good for security)

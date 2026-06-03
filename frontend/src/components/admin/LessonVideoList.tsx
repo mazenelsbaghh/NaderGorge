@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, ChevronDown, Image as ImageIcon } from 'lucide-react';
+import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, ChevronDown, Image as ImageIcon, Play, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
 
 function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<any>(null);
@@ -229,6 +230,7 @@ export function LessonVideoList({ videos, lessonId, onRefresh }: LessonVideoList
   const [expandedChapters, setExpandedChapters] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
 
   const toggleChapters = (videoId: string) =>
     setExpandedChapters(prev => prev === videoId ? null : videoId);
@@ -438,6 +440,17 @@ export function LessonVideoList({ videos, lessonId, onRefresh }: LessonVideoList
                   </div>
                 )}
 
+                <div className="relative group/preview">
+                  <button
+                    type="button"
+                    aria-label="معاينة الفيديو"
+                    onClick={() => setPreviewVideoId(video.id)}
+                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors"
+                    title="معاينة الفيديو كطالب"
+                  >
+                    <Play className="h-4 w-4" />
+                  </button>
+                </div>
                 <div className="relative group/edit">
                   <button
                     type="button"
@@ -470,6 +483,31 @@ export function LessonVideoList({ videos, lessonId, onRefresh }: LessonVideoList
           </div>
         );
       })}
+
+      {/* Video Preview Modal */}
+      {previewVideoId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-8" onClick={() => setPreviewVideoId(null)}>
+          <div className="bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-[var(--admin-border)] px-6 py-4 bg-[var(--admin-card)]" dir="rtl">
+              <h3 className="text-lg font-bold text-[var(--admin-text)] flex items-center gap-2">
+                <Play className="h-5 w-5 text-[var(--admin-primary)]" />
+                <span>معاينة الفيديو كطالب: {videos.find(v => v.id === previewVideoId)?.title}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPreviewVideoId(null)}
+                className="rounded-full p-1.5 text-[var(--admin-muted)] hover:bg-[var(--admin-bg)] hover:text-[var(--admin-text)] transition-colors"
+                aria-label="إغلاق المعاينة"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="relative aspect-video w-full bg-black">
+              <SecureVideoPlayer lessonVideoId={previewVideoId} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
