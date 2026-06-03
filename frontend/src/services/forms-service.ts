@@ -17,6 +17,7 @@ export interface CustomFormDto {
   description: string;
   slug: string;
   isActive: boolean;
+  visitCount: number;
   submissionCount: number;
   createdAt: string;
 }

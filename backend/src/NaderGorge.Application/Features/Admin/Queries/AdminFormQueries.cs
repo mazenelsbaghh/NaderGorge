@@ -17,6 +17,7 @@ public record AdminFormDto(
     string Description,
     string Slug,
     bool IsActive,
+    int VisitCount,
     int SubmissionCount,
     DateTime CreatedAt
 );
@@ -58,6 +59,7 @@ public class ListFormsQueryHandler : IRequestHandler<ListFormsQuery, ApiResponse
                 f.Description,
                 f.Slug,
                 f.IsActive,
+                f.VisitCount,
                 f.Submissions.Count,
                 f.CreatedAt
             ))

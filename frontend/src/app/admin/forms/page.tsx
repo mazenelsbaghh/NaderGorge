@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ClipboardList, Edit2, Inbox, Plus, Trash2 } from 'lucide-react';
+import { Clipboard, ClipboardList, Edit2, ExternalLink, Eye, Inbox, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import {
@@ -36,6 +36,23 @@ export default function AdminFormsPage() {
     fetchForms();
   }, []);
 
+  const getPublicFormUrl = (slug: string) => {
+    const path = `/forms/${slug}`;
+    if (typeof window === 'undefined') return path;
+    return `${window.location.origin}${path}`;
+  };
+
+  const handleCopyFormUrl = async (slug: string) => {
+    const formUrl = getPublicFormUrl(slug);
+    try {
+      await navigator.clipboard.writeText(formUrl);
+      toast.success('تم نسخ رابط النموذج الكامل');
+    } catch (error) {
+      console.error('Error copying form link:', error);
+      toast.error('تعذر نسخ الرابط');
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteFormId) return;
     try {
@@ -66,10 +83,42 @@ export default function AdminFormsPage() {
       key: 'slug',
       label: 'الرابط المختصر',
       render: (row) => (
-        <code className="rounded bg-[var(--admin-card-strong)] px-2 py-1 text-xs text-[var(--admin-primary)]">
-          /forms/{row.slug}
-        </code>
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="rounded bg-[var(--admin-card-strong)] px-2 py-1 text-xs text-[var(--admin-primary)]">
+            /forms/{row.slug}
+          </code>
+          <button
+            type="button"
+            onClick={() => handleCopyFormUrl(row.slug)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]"
+            title="نسخ الرابط الكامل"
+            aria-label={`نسخ الرابط الكامل لنموذج ${row.title}`}
+          >
+            <Clipboard className="h-4 w-4" />
+          </button>
+          <Link
+            href={`/forms/${row.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]"
+            title="فتح النموذج"
+            aria-label={`فتح نموذج ${row.title}`}
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+        </div>
       ),
+    },
+    {
+      key: 'visitCount',
+      label: 'الزوار',
+      render: (row) => (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--admin-card-strong)] px-3 py-1 text-xs font-bold text-[var(--admin-text)]">
+          <Eye className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
+          {row.visitCount}
+        </span>
+      ),
+      align: 'center',
     },
     {
       key: 'submissionCount',

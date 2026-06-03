@@ -689,6 +689,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Title).HasMaxLength(200).IsRequired();
             e.Property(x => x.Slug).HasMaxLength(100).IsRequired();
             e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.VisitCount).HasDefaultValue(0);
             e.Property(x => x.FieldsJson).IsRequired();
         });
 

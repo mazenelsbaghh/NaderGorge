@@ -27,18 +27,20 @@ public class GetPublicFormQueryHandler : IRequestHandler<GetPublicFormQuery, Api
     {
         var lowerSlug = request.Slug.ToLowerInvariant();
         var form = await _db.CustomForms
-            .AsNoTracking()
             .Where(f => f.Slug == lowerSlug && f.IsActive)
-            .Select(f => new PublicFormDto(
-                f.Id,
-                f.Title,
-                f.Description,
-                f.FieldsJson
-            ))
             .FirstOrDefaultAsync(ct);
 
         if (form == null) return ApiResponse<PublicFormDto>.Fail("النموذج المطلوب غير موجود أو غير مفعل حالياً.");
 
-        return ApiResponse<PublicFormDto>.Ok(form);
+        form.VisitCount += 1;
+        form.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+
+        return ApiResponse<PublicFormDto>.Ok(new PublicFormDto(
+            form.Id,
+            form.Title,
+            form.Description,
+            form.FieldsJson
+        ));
     }
 }
