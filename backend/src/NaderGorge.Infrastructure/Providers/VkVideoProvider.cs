@@ -12,11 +12,18 @@ public class VkVideoProvider : IVideoProvider
         if (string.IsNullOrWhiteSpace(url))
             return string.Empty;
 
-        // Ensure it has oid= and id=
-        var match = Regex.Match(url, @"oid=([^&]+)&id=([^&]+)", RegexOptions.IgnoreCase);
-        if (match.Success)
+        // Try standard embed format query parameters first
+        var embedMatch = Regex.Match(url, @"oid=([^&]+)&id=([^&]+)", RegexOptions.IgnoreCase);
+        if (embedMatch.Success)
         {
-            return $"oid={match.Groups[1].Value}&id={match.Groups[2].Value}";
+            return $"oid={embedMatch.Groups[1].Value}&id={embedMatch.Groups[2].Value}";
+        }
+
+        // Try standard VK video/clip URL format: vk.com/video-123456_7891011 or vk.com/clip-123456_7891011
+        var urlMatch = Regex.Match(url, @"(?:video|clip)(-?\d+)_(\d+)", RegexOptions.IgnoreCase);
+        if (urlMatch.Success)
+        {
+            return $"oid={urlMatch.Groups[1].Value}&id={urlMatch.Groups[2].Value}";
         }
         
         return url; // fallback mapping if what's passed is already an ID (though unlikely for VK as it requires both)
