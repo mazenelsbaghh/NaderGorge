@@ -170,6 +170,12 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
 
     public async Task<ApiResponse<Guid>> Handle(CreateVideoCommand request, CancellationToken ct)
     {
+        if (!string.Equals(request.Provider, "youtube", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(request.Provider, "vk", StringComparison.OrdinalIgnoreCase))
+        {
+            return ApiResponse<Guid>.Fail("Invalid provider. Supported: youtube, vk");
+        }
+
         var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(request.Provider, StringComparison.OrdinalIgnoreCase));
         string extractedId = request.UrlOrEmbedCode;
         if (providerImpl != null)
@@ -207,6 +213,12 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
 
     public async Task<ApiResponse> Handle(UpdateVideoCommand request, CancellationToken ct)
     {
+        if (!string.Equals(request.Provider, "youtube", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(request.Provider, "vk", StringComparison.OrdinalIgnoreCase))
+        {
+            return ApiResponse.Fail("Invalid provider. Supported: youtube, vk");
+        }
+
         var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.Id, ct);
         if (video == null) return ApiResponse.Fail("Video not found");
 

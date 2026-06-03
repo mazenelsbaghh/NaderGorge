@@ -148,7 +148,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [provider, setProvider] = useState<string>('youtube');
   const [qualityLevels, setQualityLevels] = useState<string[]>([]);
   const [currentQuality, setCurrentQuality] = useState<string>('auto');
-  const nativeVideoRef = useRef<HTMLVideoElement | null>(null);
   const { user } = useAuthStore();
   const onWatchProgressRef = useRef(onWatchProgress);
   useEffect(() => { onWatchProgressRef.current = onWatchProgress; }, [onWatchProgress]);
@@ -255,22 +254,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   // ── Send command to embedded player ──
   const sendCommand = useCallback((type: string, data?: any) => {
-    if (provider === 'telegram' && nativeVideoRef.current) {
-      const vid = nativeVideoRef.current;
-      if (type === 'play') vid.play().catch(() => {});
-      else if (type === 'pause') vid.pause();
-      else if (type === 'seekTo') vid.currentTime = data.time || data.seconds || 0;
-      else if (type === 'setVolume') vid.volume = data.volume / 100;
-      else if (type === 'mute') vid.muted = true;
-      else if (type === 'unmute') vid.muted = false;
-      else if (type === 'setPlaybackRate') vid.playbackRate = data.rate || 1;
-      return;
-    }
-
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage({ type, ...data }, '*');
     }
-  }, [provider]);
+  }, []);
 
   // ── Watch tracking ──
   const [viewTracked, setViewTracked] = useState(false);
@@ -455,83 +442,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       await videoSessionService.consumeSession(session.sessionId);
 
       // 3. Render appropriately based on provider
-      if (session.provider?.toLowerCase() === 'telegram') {
-        setProvider('telegram');
-        
-        if (containerRef.current) {
-          containerRef.current.innerHTML = '';
-          const video = document.createElement('video');
-          nativeVideoRef.current = video;
-          video.src = `/api/video/stream-proxy?t=${encodeURIComponent(session.token)}&k=${encodeURIComponent(session.key)}`;
-          video.style.position = 'absolute';
-          video.style.top = '0';
-          video.style.left = '0';
-          video.style.width = '100%';
-          video.style.height = '100%';
-          video.style.objectFit = 'contain';
-          video.style.backgroundColor = '#000';
-          video.setAttribute('playsinline', '');
-          // Do not set pointer-events:none because we want users to be able to right-click? No we don't.
-          // In YouTube iframe, the iframe takes clicks. For native video, we put an overlay in React.
-          
-          video.addEventListener('loadeddata', () => {
-            setStatus('ready');
-            setDuration(video.duration);
-            setVolume(video.volume * 100);
-            setIsMuted(video.muted);
-            video.play().catch(() => {}); 
-          });
-
-          video.addEventListener('timeupdate', () => {
-            if (Date.now() - (window as any).__lastSeekTime < 1200) return;
-            setCurrentTime(video.currentTime);
-            // Wait, we need to access the most recent duration here, but duration in closure might be 0.
-            // Better to use video.duration
-            if (video.duration > 0) {
-              setProgress((video.currentTime / video.duration) * 100);
-            }
-            if (onWatchProgressRef.current) {
-              onWatchProgressRef.current(video.currentTime);
-            }
-          });
-
-          video.addEventListener('playing', () => { setIsPlaying(true); setIsBuffering(false); });
-          video.addEventListener('pause', () => { setIsPlaying(false); void flushTrackedProgress(); });
-          video.addEventListener('waiting', () => setIsBuffering(true));
-          video.addEventListener('canplay', () => setIsBuffering(false));
-          video.addEventListener('seeked', () => setIsBuffering(false));
-          video.addEventListener('ended', () => { setIsPlaying(false); setIsBuffering(false); void flushTrackedProgress(); if (onEnded) onEnded(); });
-          video.addEventListener('error', () => {
-            setStatus('error');
-            setErrorMessage('عذراً، فشل تشغيل الفيديو. ربما انتهت صلاحية الرابط.');
-          });
-
-          containerRef.current.appendChild(video);
-
-          // Render watermark
-          const watermark = document.createElement('div');
-          // Grab from useAuthStore implicitly through closure
-          const sName = useAuthStore.getState().user?.fullName || '';
-          const sPhone = useAuthStore.getState().user?.phone || '';
-          watermark.innerHTML = `<span style="font-weight: 900; letter-spacing: 0.05em;">basma-acadmy</span>${sName ? `<br/><span style="font-size: 0.85em; font-weight: bold; opacity: 0.85;">${sName}</span>` : ''}${sPhone ? `<br/><span style="font-size: 0.8em; opacity: 0.75;">${sPhone}</span>` : ''}`;
-          watermark.style.cssText = 'position: absolute; top: 15%; left: 15%; z-index: 99; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.25rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: top 1.5s ease-in-out, left 1.5s ease-in-out; text-align: center; line-height: 1.3; white-space: pre-wrap;';
-          
-          setInterval(() => {
-            if (!watermark) return;
-            const topPos = Math.random() * 80 + 10;
-            const leftPos = Math.random() * 80 + 10;
-            watermark.style.top = topPos + '%';
-            watermark.style.left = leftPos + '%';
-          }, 12000);
-          
-          containerRef.current.appendChild(watermark);
-
-          applyDomShields(containerRef.current, () => {
-            setStatus('error');
-            setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
-          });
-        }
-      } else if (session.provider?.toLowerCase() === 'vk') {
+      if (session.provider?.toLowerCase() === 'vk') {
         setProvider('vk');
         // Build the embed URL pointing to our own API route for VK
         const embedUrl = `/api/video/embed?t=${encodeURIComponent(session.token)}&k=${encodeURIComponent(session.key)}`;

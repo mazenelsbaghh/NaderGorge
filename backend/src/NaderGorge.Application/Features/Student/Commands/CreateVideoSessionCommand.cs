@@ -43,6 +43,13 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         if (video == null)
             return ApiResponse<VideoSessionDto>.Fail("Video not found", new List<string> { "VIDEO_NOT_FOUND" });
 
+        // Validate provider
+        if (!string.Equals(video.Provider, "youtube", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(video.Provider, "vk", StringComparison.OrdinalIgnoreCase))
+        {
+            return ApiResponse<VideoSessionDto>.Fail("Invalid video provider", new List<string> { "INVALID_PROVIDER" });
+        }
+
         // 1. Verify access to the package
         var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, video.LessonId, ct);
         if (!hasAccess)
