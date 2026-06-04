@@ -404,6 +404,13 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPut("overrides/set-watch-count")]
+    public async Task<IActionResult> SetWatchCount([FromBody] SetWatchCountRequest dto)
+    {
+        var result = await _mediator.Send(new SetWatchCountCommand(dto.LessonVideoId, dto.StudentId, dto.NewWatchCount, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     // --- Codes ---
     [HttpPost("codes/bulk-generate")]
     public async Task<IActionResult> BulkGenerateCodes([FromBody] BulkGenerateRequest dto)
@@ -472,6 +479,7 @@ public class AdminController : ControllerBase
 public record UpdateUserStatusRequest(string Status);
 public record UpdateUserRolesRequest(string[] Roles);
 public record ResetWatchRequest(Guid LessonVideoId, Guid StudentId);
+public record SetWatchCountRequest(Guid LessonVideoId, Guid StudentId, int NewWatchCount);
 public record RejectWatchRequestBody(string Reason);
 public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);

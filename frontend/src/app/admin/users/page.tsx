@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   Download,
-  Eye,
+
   Filter,
   Monitor,
   PencilLine,
@@ -222,23 +222,10 @@ export default function AdminUsersPage() {
         <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
           <NeumorphButton
             type="button"
-            onClick={() => {
-              if (normalizeRole(u) === 'Student') {
-                router.push(`/admin/users/${u.id}`);
-              } else {
-                handleViewDevices(u);
-              }
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              setConfirmUser(u);
             }}
-            intent="icon"
-            size="icon"
-            title="عرض التفاصيل"
-          >
-            <Eye className="h-5 w-5" />
-          </NeumorphButton>
-
-          <NeumorphButton
-            type="button"
-            onClick={() => setConfirmUser(u)}
             intent={u.status === 'Active' ? 'danger' : 'primary'}
             size="icon"
             title={u.status === 'Active' ? 'تعليق المستخدم' : 'تنشيط المستخدم'}

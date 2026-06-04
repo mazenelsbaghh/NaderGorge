@@ -654,6 +654,11 @@ export const adminService = {
     return res.data?.data;
   },
 
+  setWatchCount: async (lessonVideoId: string, studentId: string, newWatchCount: number) => {
+    const res = await apiClient.put('/admin/overrides/set-watch-count', { lessonVideoId, studentId, newWatchCount });
+    return res.data?.data;
+  },
+
   getWatchRequests: async () => {
     const res = await apiClient.get('/admin/watch-requests');
     return res.data;

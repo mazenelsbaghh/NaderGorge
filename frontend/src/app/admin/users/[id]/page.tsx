@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
 import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
-import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound } from 'lucide-react';
+import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound, RotateCcw, Wallet, Package, PenLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminStudentProfile({ params }: { params: Promise<{ id: string }> }) {
@@ -13,9 +13,10 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
   const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit'>('overview');
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState<StudentProfileExtendedDto | null>(null);
-  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'>('none');
+  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'|'watchCount'>('none');
   const [overrideInput, setOverrideInput] = useState({ videoId: '', addedViews: 1, reason: '' });
   const [gamificationInput, setGamificationInput] = useState({ points: 10, reason: '' });
+  const [watchCountEdit, setWatchCountEdit] = useState({ lessonVideoId: '', videoTitle: '', currentCount: 0, newCount: 0 });
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '0 دقيقة';
@@ -356,6 +357,54 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                </div>
             </div>
          )}
+
+          {activeTab === 'financials' && (
+              <div className="flex flex-col gap-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                     <AdminStatCard
+                       variant="accent"
+                       icon={Package}
+                       label="باقات نشطة"
+                       value={studentData?.packages?.length || 0}
+                     />
+                     <AdminStatCard
+                       variant="light"
+                       icon={Wallet}
+                       label="إجمالي النقاط"
+                       value={studentData?.gamification?.totalPoints || 0}
+                     />
+                  </div>
+
+                  <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                     <div className="mb-5">
+                       <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">الباقات المسجلة</h3>
+                       <p className="text-[var(--admin-muted)]">قائمة بالباقات التي اشترك فيها الطالب مع تاريخ الاشتراك والانتهاء.</p>
+                     </div>
+
+                     <AdminDataTable<any>
+                       columns={[
+                         {key: 'name', label: 'اسم الباقة', render: (row: any) => (
+                           <span className="font-bold text-[var(--admin-text)]">{row.name}</span>
+                         )},
+                         {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row: any) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB') : 'غير محدد'},
+                         {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row: any) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB') : 'غير محدد'},
+                         {key: 'status', label: 'الحالة', render: (row: any) => {
+                           const isExpired = row.expiresAt && new Date(row.expiresAt) < new Date();
+                           return (
+                             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${isExpired ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
+                               <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                               {isExpired ? 'منتهية' : 'نشطة'}
+                             </span>
+                           );
+                         }}
+                       ]}
+                       data={studentData?.packages || []}
+                       rowKey={(row: any) => row.id || row.name}
+                       emptyMessage="لا توجد باقات مسجلة لهذا الطالب"
+                     />
+                  </div>
+              </div>
+          )}
          
          {activeTab === 'overrides' && (
              <div className="flex flex-col gap-6">
@@ -491,6 +540,30 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                           key: 'lastWatchedAt',
                           label: 'آخر مشاهدة',
                           render: (row) => row.lastWatchedAt ? new Date(row.lastWatchedAt).toLocaleString() : 'غير متوفر'
+                        },
+                        {
+                          key: 'actions',
+                          label: 'إجراء',
+                          align: 'left' as const,
+                          render: (row) => (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setWatchCountEdit({
+                                  lessonVideoId: row.lessonVideoId,
+                                  videoTitle: row.videoTitle,
+                                  currentCount: row.watchCount,
+                                  newCount: row.watchCount
+                                });
+                                setModalOpen('watchCount');
+                              }}
+                              className="flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors"
+                              title="تعديل عدد المشاهدات"
+                            >
+                              <PenLine size={14} />
+                              تعديل
+                            </button>
+                          )
                         }
                       ]}
                       data={studentData?.watchTracking?.activities || []}
@@ -542,7 +615,36 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ التجاوز</button>
                  </div>
              </form>
-         </AdminModal>
+          </AdminModal>
+
+          <AdminModal open={modalOpen === 'watchCount'} onClose={() => setModalOpen('none')} title={`تعديل مشاهدات: ${watchCountEdit.videoTitle}`}>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await adminService.setWatchCount(watchCountEdit.lessonVideoId, id, watchCountEdit.newCount);
+                  toast.success(`تم تعديل المشاهدات من ${watchCountEdit.currentCount} إلى ${watchCountEdit.newCount}`);
+                  setModalOpen('none');
+                  fetchStudent();
+                } catch { toast.error('فشل تعديل المشاهدات'); }
+              }} className="flex flex-col gap-4">
+                  <div className="text-center">
+                      <p className="text-sm text-[var(--admin-muted)] mb-3">العدد الحالي: <strong className="text-[var(--admin-text)]">{watchCountEdit.currentCount}</strong></p>
+                      <div className="flex items-center justify-center gap-4">
+                          <button type="button" onClick={() => setWatchCountEdit(p => ({...p, newCount: Math.max(0, p.newCount - 1)}))}
+                            className="h-12 w-12 rounded-xl bg-red-500/10 text-red-500 font-bold text-xl hover:bg-red-500/20 transition-colors">−</button>
+                          <input type="number" min="0" required
+                            className="w-24 text-center bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-2xl font-bold border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                            value={watchCountEdit.newCount} onChange={e => setWatchCountEdit(p => ({...p, newCount: Math.max(0, parseInt(e.target.value) || 0)}))} />
+                          <button type="button" onClick={() => setWatchCountEdit(p => ({...p, newCount: p.newCount + 1}))}
+                            className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-500 font-bold text-xl hover:bg-emerald-500/20 transition-colors">+</button>
+                      </div>
+                  </div>
+                  <div className="flex gap-4 mt-4">
+                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
+                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ</button>
+                  </div>
+              </form>
+          </AdminModal>
        </div>
     </AdminShellChrome>
   );
