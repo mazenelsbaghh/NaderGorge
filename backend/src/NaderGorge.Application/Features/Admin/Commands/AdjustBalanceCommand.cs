@@ -28,19 +28,21 @@ public class AdjustBalanceCommandHandler : IRequestHandler<AdjustBalanceCommand,
                 CurrentBalance = 0m
             };
             _db.StudentBalances.Add(balance);
-            await _db.SaveChangesAsync(ct);
         }
 
         var oldBalance = balance.CurrentBalance;
         balance.CurrentBalance += request.Amount;
+        balance.UpdatedAt = DateTime.UtcNow;
 
-        balance.Transactions.Add(new BalanceTransaction
+        var transaction = new BalanceTransaction
         {
+            StudentBalanceId = balance.Id,
             Amount = request.Amount,
             BalanceAfter = balance.CurrentBalance,
             TransactionType = "AdminAdjustment",
             Description = request.Reason
-        });
+        };
+        _db.BalanceTransactions.Add(transaction);
 
         _db.AuditLogs.Add(new AuditLog
         {
