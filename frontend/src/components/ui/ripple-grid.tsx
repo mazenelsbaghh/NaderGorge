@@ -23,7 +23,16 @@ type Props = {
 function canUseWebGL() {
   try {
     const canvas = document.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (!gl) return false;
+
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = debugInfo
+      ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL))
+      : '';
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+
+    return !/swiftshader|llvmpipe|software rasterizer/i.test(renderer);
   } catch {
     return false;
   }

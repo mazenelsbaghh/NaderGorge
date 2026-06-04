@@ -253,8 +253,8 @@ function IconCheck({ className, ...props }: ComponentProps<"svg">) {
 
 const stepVariants: Variants = {
   inactive: {
-    scale: 0.8,
-    opacity: 0.5,
+    scale: 1,
+    opacity: 0.72,
   },
   active: {
     scale: 1,
@@ -446,14 +446,14 @@ function Steps({
               variants={stepVariants}
               transition={{ duration: 0.3 }}
               className={cn(
-                "relative z-50 rounded-full px-3 py-1 transition-all duration-300 ease-in-out md:flex",
+                "relative z-50 rounded-full px-2 py-1 transition-all duration-300 ease-in-out sm:px-3 md:flex",
                 isCompleted ? "bg-[var(--admin-primary-15)]" : "bg-[var(--admin-card-soft)]"
               )}
             >
               <button
                 type="button"
                 className={cn(
-                  "group flex min-h-8 w-full cursor-pointer items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                  "group flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] sm:min-h-8 sm:min-w-0 sm:justify-start"
                 )}
                 onClick={() => onChange(stepIdx)}
               >
@@ -464,7 +464,7 @@ function Steps({
                       scale: isCurrent ? 1.2 : 1,
                     }}
                     className={cn(
-                      "flex h-4 w-4 shrink-0 items-center justify-center rounded-full duration-300",
+                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full duration-300 sm:h-4 sm:w-4",
                       isCompleted &&
                         "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]",
                       isCurrent &&

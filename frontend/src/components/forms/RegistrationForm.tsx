@@ -28,7 +28,6 @@ import { AVATAR_LIST } from '@/data/avatars';
 import { AcademicFields, requiresTrack } from '@/components/registration/AcademicFields';
 import type { AcademicData } from '@/components/registration/AcademicFields';
 import { FeatureCarousel } from '@/components/ui/feature-carousel';
-import { Checkbox, Label } from '@/components/ui/checkbox';
 import { RadioGroup, Radio } from '@/components/ui/radio-group';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 
@@ -573,7 +572,7 @@ export function RegistrationForm() {
                           fill
                           sizes="64px"
                           className="object-cover"
-                          loading={index === 0 ? 'eager' : 'lazy'}
+                          loading={index < 4 ? 'eager' : 'lazy'}
                           priority={index === 0}
                           unoptimized
                         />
