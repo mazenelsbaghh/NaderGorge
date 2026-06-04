@@ -41,7 +41,7 @@ def main():
             if out:
                 print(out.strip())
 
-    # List of 32 migrations up to 20260604174309_AddStudentNotes
+    # List of 31 migrations up to 20260603201648_AddCustomFormVisitCount (excluding unapplied ones)
     migrations = [
         "20260323154931_InitialCreate",
         "20260323155605_AddUS1CodeEntities",
@@ -73,8 +73,7 @@ def main():
         "20260601181311_AddStudentAvatarSlug",
         "20260601200420_AddCustomFormsAndSubmissions",
         "20260603181708_RemoveBunnyTelegramProviders",
-        "20260603201648_AddCustomFormVisitCount",
-        "20260604174309_AddStudentNotes"
+        "20260603201648_AddCustomFormVisitCount"
     ]
 
     # Construct the SQL query
@@ -106,7 +105,7 @@ def main():
         ssh.close()
         sys.exit(1)
     else:
-        print("✅ Successfully seeded 32 migrations in __EFMigrationsHistory table!")
+        print("✅ Successfully seeded 31 migrations in __EFMigrationsHistory table!")
         if out:
             print(out.strip())
 
