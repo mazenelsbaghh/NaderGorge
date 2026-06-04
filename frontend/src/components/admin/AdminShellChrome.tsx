@@ -127,7 +127,7 @@ export function AdminShellChrome({
       </div>
       <aside className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex group/sidebar transition-all duration-300 ease-in-out hover:w-64" role="navigation" aria-label="القائمة الرئيسية">
         <div className="space-y-7">
-          <div className="flex justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-5 transition-all duration-300">
+          <div className="flex justify-start pr-5 items-center transition-all duration-300">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-lg flex-shrink-0">
               <BookOpenText className="h-5 w-5" />
             </div>
@@ -141,7 +141,7 @@ export function AdminShellChrome({
               href="/admin"
               aria-label="الرئيسية"
               aria-current={activePath === '/admin' ? 'page' : undefined}
-              className={`flex h-12 items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full transition-all duration-300 gap-3 ${activePath === '/admin'
+              className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${activePath === '/admin'
                 ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
                 : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                 }`}
@@ -160,7 +160,7 @@ export function AdminShellChrome({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex h-12 items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full transition-all duration-300 gap-3 ${isActive
+                  className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${isActive
                     ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
                     : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                     }`}
@@ -180,7 +180,7 @@ export function AdminShellChrome({
         </div>
 
         <div className="space-y-3 px-3">
-          <div className="flex justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-3 transition-all duration-300">
+          <div className="flex justify-start px-1 items-center transition-all duration-300">
             <AnimatedThemeToggler
               checked={isDark}
               onToggle={toggleTheme}
@@ -192,7 +192,7 @@ export function AdminShellChrome({
               {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
             </span>
           </div>
-          <Link href="/admin/settings" className="flex h-12 w-full items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
+          <Link href="/admin/settings" className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
             <Settings className="h-5 w-5 flex-shrink-0" />
             <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
               الإعدادات
@@ -200,7 +200,7 @@ export function AdminShellChrome({
           </Link>
           <button
             onClick={handleLogout}
-            className="flex h-12 w-full items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]"
+            className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]"
             title="تسجيل الخروج"
             aria-label="تسجيل الخروج"
           >

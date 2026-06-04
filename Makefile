@@ -206,3 +206,13 @@ deploy: ## Stage, commit, merge current branch to main, push to origin, and chec
 	echo "↩️ Switching back to $$CURRENT_BRANCH..."; \
 	git checkout $$CURRENT_BRANCH; \
 	echo "✅ Deployment push completed!"
+
+deploy-production: deploy ## Push code to production server (VPS) and rebuild containers with migrations
+	@echo "📤 Pushing code to production server git repository..."
+	git push prod main
+	@echo "🔌 Running deployment and database migration fixes on production server..."
+	python3 scratch/fix_migrations_production.py
+
+migrate-production: ## Populate migration history and run pending migrations on the VPS production server without rebuild
+	@echo "🔌 Connecting and applying migrations to production database..."
+	python3 scratch/fix_migrations_production.py --skip-build

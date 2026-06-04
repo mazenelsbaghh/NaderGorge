@@ -162,7 +162,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             aria-label="القائمة الرئيسية"
           >
             <div className="space-y-7">
-              <div className="flex justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-5 transition-all duration-300 cursor-pointer items-center gap-3" onClick={() => setIsThemeSettingsOpen(true)}>
+              <div className="flex justify-start px-5 transition-all duration-300 cursor-pointer items-center gap-3" onClick={() => setIsThemeSettingsOpen(true)}>
                 <UserAvatar
                   avatarSlug={user?.avatarSlug}
                   fullName={user?.fullName}
@@ -179,7 +179,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   href="/student"
                   aria-label="لوحة التحكم"
                   aria-current={activePath === '/student' ? 'page' : undefined}
-                  className={`flex h-12 items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
+                  className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
                     ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                     : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                     }`}
@@ -198,7 +198,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex h-12 items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
+                      className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
                         ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                         : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                         }`}
@@ -217,10 +217,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             </div>
 
             <div className="space-y-3 px-3">
-              <div className="flex justify-center group-hover/sidebar:justify-start transition-all duration-300 w-full">
+              <div className="flex justify-start px-4 transition-all duration-300 w-full">
                 <SidebarBalance />
               </div>
-              <div className="flex justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-3 transition-all duration-300">
+              <div className="flex justify-start px-1 items-center transition-all duration-300">
                 <AnimatedThemeToggler
                   checked={isDark}
                   onToggle={toggleTheme}
@@ -235,7 +235,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               <button
                 type="button"
                 onClick={() => setIsThemeSettingsOpen(true)}
-                className="flex h-12 w-full items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
                 aria-label="إعدادات الثيم"
                 title="إعدادات الثيم"
               >
@@ -247,7 +247,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex h-12 w-full items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
                 title="تسجيل الخروج"
                 aria-label="تسجيل الخروج"
               >
