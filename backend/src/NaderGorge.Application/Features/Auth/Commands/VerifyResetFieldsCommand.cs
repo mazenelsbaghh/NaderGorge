@@ -10,7 +10,7 @@ namespace NaderGorge.Application.Features.Auth.Commands;
 
 public record VerifyResetFieldsCommand(
     string PhoneNumber,
-    string ParentPhone,
+    DateTime DateOfBirth,
     string Governorate,
     string District
 ) : IRequest<ApiResponse<VerifyResetFieldsResponse>>;
@@ -25,9 +25,8 @@ public class VerifyResetFieldsCommandValidator : AbstractValidator<VerifyResetFi
             .NotEmpty().Matches(@"^01[0125]\d{8}$")
             .WithMessage("تأكد من كتابة رقم الهاتف بشكل صحيح، مثال: 01012345678");
 
-        RuleFor(x => x.ParentPhone)
-            .NotEmpty().Matches(@"^01[0125]\d{8}$")
-            .WithMessage("تأكد من كتابة رقم ولي الأمر بشكل صحيح");
+        RuleFor(x => x.DateOfBirth)
+            .NotEmpty().WithMessage("يرجى تحديد تاريخ الميلاد");
 
         RuleFor(x => x.Governorate)
             .NotEmpty().WithMessage("يرجى اختيار المحافظة");
@@ -65,6 +64,11 @@ public class VerifyResetFieldsCommandHandler : IRequestHandler<VerifyResetFields
         if (!isStudent)
             throw new InvalidOperationException("عذرًا، البيانات المدخلة غير متطابقة مع أي حساب مسجل لدينا.");
 
+        // Match Date of Birth (ignoring time component)
+        bool dobMatch = user.StudentProfile.DateOfBirth.Date == request.DateOfBirth.Date;
+        if (!dobMatch)
+            throw new InvalidOperationException("عذرًا، البيانات المدخلة غير متطابقة مع أي حساب مسجل لدينا.");
+
         // Match Governorate and District
         var profileGov = user.StudentProfile.Governorate?.Trim() ?? string.Empty;
         var profileDist = user.StudentProfile.District?.Trim() ?? string.Empty;
@@ -75,20 +79,6 @@ public class VerifyResetFieldsCommandHandler : IRequestHandler<VerifyResetFields
         bool distMatch = string.Equals(profileDist, inputDist, StringComparison.OrdinalIgnoreCase);
 
         if (!govMatch || !distMatch)
-            throw new InvalidOperationException("عذرًا، البيانات المدخلة غير متطابقة مع أي حساب مسجل لدينا.");
-
-        // Match Parent Phone against Father, Mother, or Secondary Parent phone columns
-        var inputParentPhone = request.ParentPhone.Trim();
-        var profileFatherPhone = user.StudentProfile.ParentPhone?.Trim();
-        var profileMotherPhone = user.StudentProfile.MotherPhone?.Trim();
-        var profileSecParentPhone = user.StudentProfile.SecondaryParentPhone?.Trim();
-
-        bool parentMatch = 
-            (!string.IsNullOrEmpty(profileFatherPhone) && profileFatherPhone == inputParentPhone) ||
-            (!string.IsNullOrEmpty(profileMotherPhone) && profileMotherPhone == inputParentPhone) ||
-            (!string.IsNullOrEmpty(profileSecParentPhone) && profileSecParentPhone == inputParentPhone);
-
-        if (!parentMatch)
             throw new InvalidOperationException("عذرًا، البيانات المدخلة غير متطابقة مع أي حساب مسجل لدينا.");
 
         // Generate a temporary 10-minute JWT token with "PasswordReset" role/claim

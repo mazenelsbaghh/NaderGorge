@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Eye, EyeOff, LockKeyhole, Phone, Sparkles } from 'lucide-react';
+import { ArrowRight, Calendar, Check, Eye, EyeOff, LockKeyhole, Phone, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
 
   // Step 1: Verification fields
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [parentPhone, setParentPhone] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [governorate, setGovernorate] = useState('');
   const [district, setDistrict] = useState('');
   const [resetToken, setResetToken] = useState('');
@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (!phoneNumber || !parentPhone || !governorate || !district) {
+    if (!phoneNumber || !dateOfBirth || !governorate || !district) {
       setError('يرجى ملء جميع الحقول المطلوبة.');
       return;
     }
@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
     try {
       const response = await authService.verifyResetFields({
         phoneNumber,
-        parentPhone,
+        dateOfBirth,
         governorate,
         district,
       });
@@ -220,24 +220,26 @@ export default function ForgotPasswordPage() {
                 </div>
               </div>
 
-              {/* ── Parent Phone Number ── */}
+              {/* ── Date of Birth ── */}
               <div>
-                <label className="auth-label" htmlFor="reset-parentPhone">
-                  رقم هاتف ولي الأمر
+                <label className="auth-label" htmlFor="reset-dob">
+                  تاريخ الميلاد
                 </label>
                 <div className="auth-input-wrap" dir="ltr">
                   <input
-                    id="reset-parentPhone"
-                    type="tel"
+                    id="reset-dob"
+                    type="date"
                     required
                     className="auth-input"
-                    placeholder="01XXXXXXXXX"
-                    value={parentPhone}
-                    onChange={(e) => setParentPhone(e.target.value)}
-                    style={{ paddingRight: '2.75rem' }}
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    style={{ 
+                      paddingRight: '2.75rem',
+                      colorScheme: isDark ? 'dark' : 'light'
+                    }}
                   />
                   <span className="auth-input-icon">
-                    <Phone size={15} />
+                    <Calendar size={15} />
                   </span>
                 </div>
               </div>

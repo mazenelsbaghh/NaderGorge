@@ -49,7 +49,7 @@ export interface CompleteProfileData {
 
 export interface VerifyResetFieldsData {
   phoneNumber: string;
-  parentPhone: string;
+  dateOfBirth: string;
   governorate: string;
   district: string;
 }
