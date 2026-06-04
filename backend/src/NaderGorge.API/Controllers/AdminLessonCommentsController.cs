@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
-using System.Security.Claims;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
@@ -19,7 +19,7 @@ public class AdminLessonCommentsController : ControllerBase
         _mediator = mediator;
     }
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private Guid GetUserId() => User.RequireUserId();
 
     [HttpGet("lessons/{lessonId:guid}/comments")]
     public async Task<IActionResult> GetLessonCommentsForModeration(Guid lessonId, [FromQuery] string? status = null)

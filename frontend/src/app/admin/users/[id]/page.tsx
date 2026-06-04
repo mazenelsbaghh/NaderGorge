@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useCallback, useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
 import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
-import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound, RotateCcw, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin } from 'lucide-react';
+import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, MapPin, GraduationCap, UsersRound, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -59,7 +59,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
      { key: 'audit', label: 'سجل النشاط' }
   ];
 
-  const fetchStudent = () => {
+  const fetchStudent = useCallback(() => {
       setLoading(true);
       adminService.getStudentProfile(id).then(res => {
           setStudentData(res);
@@ -68,11 +68,11 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
           console.error("Failed to load student", err);
           setLoading(false);
       });
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchStudent();
-  }, [id]);
+  }, [fetchStudent]);
 
   const handleOverrideSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +83,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
         setModalOpen('none');
         toast.success('تمت الإضافة بنجاح');
         fetchStudent();
-    } catch(err) {
+    } catch {
         toast.error('فشل التجاوز');
     } finally {
         setSubmitting(false);
@@ -97,7 +97,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
         await adminService.disconnectAllDevices(id);
         toast.success('تم الفصل بنجاح');
         fetchStudent();
-    } catch(err) {
+    } catch {
         toast.error('فشل الفصل');
     } finally {
         setSubmitting(false);
@@ -113,7 +113,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
         setModalOpen('none');
         toast.success('تم التعديل بنجاح');
         fetchStudent();
-    } catch(err) {
+    } catch {
         toast.error('فشل تعديل النقاط');
     } finally {
         setSubmitting(false);
@@ -128,7 +128,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
         fetchStudent();
         setModalOpen('none');
         toast.success(isActive ? 'تم تفعيل الحساب بنجاح' : 'تم إيقاف الحساب بنجاح');
-    } catch(err) {
+    } catch {
         toast.error('فشل تغيير الحالة');
     } finally {
         setSubmitting(false);
@@ -637,7 +637,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                         {key: 'reason', label:'السبب', render: (row: any) => row.reason}
                     ]}
                     data={studentData?.overrides || []}
-                    rowKey={(row: any) => row.id || Math.random().toString()}
+                    rowKey={(row: any) => row.id || `${row.videoId}-${row.addedViews}-${row.reason || 'override'}`}
                     emptyMessage="لا توجد تجاوزات لهذا الطالب"
                  />
              </div>

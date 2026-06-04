@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const parsed = JSON.parse(decrypted) as { Provider: string; VideoId: string; StudentName?: string; StudentPhone?: string };
     const videoId = parsed.VideoId;
     const provider = parsed.Provider?.toLowerCase() || 'youtube';
-    const studentName = parsed.StudentName || 'basma-acadmy';
+    const studentName = parsed.StudentName || 'Nader George Academy';
     const studentPhone = parsed.StudentPhone || '';
 
     let html = '';
@@ -92,6 +92,9 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
   // ── Server-side: XOR-encode the video ID so it never appears as plain text ──
   const xorKey = Math.floor(Math.random() * 200) + 50;
   const encodedId = Array.from(videoId).map(c => c.charCodeAt(0) ^ xorKey);
+  const watermarkBrand = JSON.stringify('Nader George Academy');
+  const watermarkStudentName = JSON.stringify(studentName);
+  const watermarkStudentPhone = JSON.stringify(studentPhone);
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -149,8 +152,18 @@ coverShadow.style.cssText = 'position:absolute;inset:0;box-shadow:inset 0 0 40px
 
 var watermark = document.createElement('div');
 watermark.id = 'video-watermark';
-watermark.innerHTML = '<span style="font-weight: 900; letter-spacing: 0.05em;">basma-acadmy</span>' + ('${studentName}' ? '<br><span style="font-size: 0.85em; font-weight: bold; opacity: 0.85;">${studentName}</span>' : '') + ('${studentPhone}' ? '<br><span style="font-size: 0.8em; opacity: 0.75;">${studentPhone}</span>' : '');
 watermark.style.cssText = 'position: absolute; top: 15%; left: 15%; z-index: 99; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.25rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: top 1.5s ease-in-out, left 1.5s ease-in-out; text-align: center; line-height: 1.3; white-space: pre-wrap;';
+[
+  { text: ${watermarkBrand}, css: 'font-weight: 900; letter-spacing: 0.05em;' },
+  { text: ${watermarkStudentName}, css: 'font-size: 0.85em; font-weight: bold; opacity: 0.85;' },
+  { text: ${watermarkStudentPhone}, css: 'font-size: 0.8em; opacity: 0.75;' }
+].filter(function(line) { return line.text; }).forEach(function(line, index) {
+  if (index > 0) watermark.appendChild(document.createElement('br'));
+  var span = document.createElement('span');
+  span.style.cssText = line.css;
+  span.textContent = line.text;
+  watermark.appendChild(span);
+});
 
 setInterval(function() {
   if (!watermark) return;
@@ -341,6 +354,9 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
   const vkUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${videoId}&hd=2&js_api=1`;
   const xorKey = Math.floor(Math.random() * 200) + 50; // random key 50-249
   const encoded = Array.from(vkUrl).map(c => c.charCodeAt(0) ^ xorKey);
+  const watermarkBrand = JSON.stringify('Nader George Academy');
+  const watermarkStudentName = JSON.stringify(studentName);
+  const watermarkStudentPhone = JSON.stringify(studentPhone);
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -405,7 +421,17 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
     var watermark = document.createElement('div');
     watermark.id = 'video-watermark';
     watermark.style.cssText = 'position: absolute; top: 15%; left: 15%; z-index: 2147483646; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.25rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: top 1.5s ease-in-out, left 1.5s ease-in-out; text-align: center; line-height: 1.3; white-space: pre-wrap;';
-    watermark.innerHTML = '<span style="font-weight: 900; letter-spacing: 0.05em;">basma-acadmy</span>' + ('${studentName}' ? '<br><span style="font-size: 0.85em; font-weight: bold; opacity: 0.85;">${studentName}</span>' : '') + ('${studentPhone}' ? '<br><span style="font-size: 0.8em; opacity: 0.75;">${studentPhone}</span>' : '');
+    [
+      { text: ${watermarkBrand}, css: 'font-weight: 900; letter-spacing: 0.05em;' },
+      { text: ${watermarkStudentName}, css: 'font-size: 0.85em; font-weight: bold; opacity: 0.85;' },
+      { text: ${watermarkStudentPhone}, css: 'font-size: 0.8em; opacity: 0.75;' }
+    ].filter(function(line) { return line.text; }).forEach(function(line, index) {
+      if (index > 0) watermark.appendChild(document.createElement('br'));
+      var span = document.createElement('span');
+      span.style.cssText = line.css;
+      span.textContent = line.text;
+      watermark.appendChild(span);
+    });
 
     wrap.appendChild(iframe);
     wrap.appendChild(clickOverlay);
@@ -601,5 +627,3 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
 </body>
 </html>`;
 }
-
-

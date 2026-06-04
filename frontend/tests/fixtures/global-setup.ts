@@ -1,6 +1,4 @@
-import { FullConfig } from '@playwright/test';
-
-async function globalSetup(config: FullConfig) {
+async function globalSetup() {
   // Call the robust .NET backend hook specifically built for destroying/seeding E2e DB connections.
   const apiEndpoint = 'http://localhost:5245/api/e2e/seed';
 

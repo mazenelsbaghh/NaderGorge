@@ -9,13 +9,13 @@ import {
 } from '@/lib/auth-storage';
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh'];
+const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/parent/reports'];
 const RATE_LIMIT_TOAST_COOLDOWN_MS = 4_000;
 let lastRateLimitToastAt = 0;
 
@@ -59,7 +59,7 @@ apiClient.interceptors.response.use(
 
       try {
         const { data } = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/refresh`,
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api'}/auth/refresh`,
           { refreshToken }
         );
 

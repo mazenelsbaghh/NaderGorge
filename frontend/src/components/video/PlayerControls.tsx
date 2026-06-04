@@ -82,9 +82,12 @@ const CustomSlider = ({
     }
   };
 
-  const displayChapters = chapters && chapters.length > 0
-    ? chapters
-    : [{ id: '1', startPercent: 0, endPercent: 100 }];
+  const displayChapters = React.useMemo(
+    () => (chapters && chapters.length > 0
+      ? chapters
+      : [{ id: '1', startPercent: 0, endPercent: 100 }]),
+    [chapters]
+  );
 
   const hoveredChapter = React.useMemo(() => {
     if (hoverPercent === null || !displayChapters) return null;

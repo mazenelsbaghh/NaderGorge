@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
-using System.Security.Claims;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
@@ -19,7 +19,7 @@ public class AdminCommunityController : ControllerBase
         _mediator = mediator;
     }
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private Guid GetUserId() => User.RequireUserId();
 
     [HttpGet("posts")]
     public async Task<IActionResult> GetPostsForModeration([FromQuery] string? status = null)

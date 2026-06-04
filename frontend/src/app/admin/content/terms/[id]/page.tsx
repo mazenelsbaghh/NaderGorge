@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Folder, ChevronRight, BookOpenText } from 'lucide-react';
-import { AdminShellChrome, AdminStatCard, AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from '@/components/admin';
+import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
 import { contentService, ContentSectionDto } from '@/services/content-service';
@@ -105,7 +105,6 @@ export default function TermProfilePage(props: { params: Promise<{ id: string }>
         <EntityOverviewDashboard 
           entityType="ترم" 
           details={{ title: term.title, price: term.price }} 
-          mockStats={true} 
         />
       )}
 

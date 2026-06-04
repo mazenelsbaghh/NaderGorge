@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { BadgeCheck, GraduationCap, BookOpenText, Users, Award, ArrowUpLeft } from 'lucide-react';
+import { BadgeCheck, GraduationCap, Users, Award, ArrowUpLeft } from 'lucide-react';
 
 const stats = [
   { num: '+١٠', label: 'سنوات خبرة', icon: Award },

@@ -1,4 +1,7 @@
-# تقرير تدقيق عميق لمشروع Nader Gorge
+done
+
+
+<!-- # تقرير تدقيق عميق لمشروع Nader Gorge
 
 تاريخ التدقيق: 2026-06-04  
 النطاق: المشروع كله، Backend + Frontend + Worker + Docker + CI + UI/UX  
@@ -221,25 +224,6 @@
 - فرض CSP صارمة لتقليل XSS blast radius.
 - revoke refresh tokens بعد reset password أو device disconnect.
 
-### P1-4: Password reset يعتمد على بيانات شخصية ثابتة وJWT stateless
-
-الأدلة:
-
-- `backend/src/NaderGorge.Application/Features/Auth/Commands/VerifyResetFieldsCommand.cs:50-82` يتحقق من phone + DOB + governorate + district.
-- `VerifyResetFieldsCommand.cs:84-89` يصدر JWT reset token لمدة 10 دقائق.
-- `backend/src/NaderGorge.Application/Features/Auth/Commands/ResetPasswordCommand.cs:41-63` يغير كلمة المرور ولا يبطل refresh tokens القديمة.
-
-الأثر:
-
-- البيانات المطلوبة قد تكون معروفة أو قابلة للتخمين.
-- reset token غير one-time ولا يوجد سجل revocation.
-- بعد تغيير كلمة المرور، الجلسات القديمة قد تظل فعالة عبر refresh tokens.
-
-الإصلاح المطلوب:
-
-- reset token مخزن server-side، one-time، hashed، ومع attempts per account.
-- إرسال reset عبر قناة يملكها الطالب/ولي الأمر، وليس مجرد مطابقة بيانات.
-- عند reset password: revoke كل refresh tokens للطالب.
 
 ### P1-5: E2E controller يمكنه حذف وإعادة إنشاء database لو البيئة أخطأت
 
@@ -746,7 +730,7 @@
 ### خلال شهر
 
 1. فصل student shell عن admin shell.
-2. إزالة mock analytics أو ربطها ببيانات حقيقية.
+2. إزالة mock analytics و ربطها ببيانات حقيقية.
 3. تنظيف lint warnings إلى 0.
 4. إضافة integration/e2e tests للـ critical workflows: login, reset, admin roles, parent report, AI job cancel/retry.
 5. توحيد design tokens وتقليل borders/cards.
@@ -772,4 +756,4 @@
 
 المشروع ليس سيئا من حيث الحجم أو ambition، لكنه محتاج hardening حقيقي قبل production. ترتيب المخاطر واضح: أمان وsecrets وworker/callbacks أولا، ثم XSS/token storage، ثم CI/dependencies، ثم UI consistency والتجربة الموجهة للطالب.
 
-أهم قرار معماري الآن: لا تعتبر الـ frontend أو middleware أو hidden routes كحدود حماية. حدود الحماية يجب أن تكون في backend/worker/service-to-service auth، مع secrets قوية، no defaults، وسجلات لا تكشف بيانات.
+أهم قرار معماري الآن: لا تعتبر الـ frontend أو middleware أو hidden routes كحدود حماية. حدود الحماية يجب أن تكون في backend/worker/service-to-service auth، مع secrets قوية، no defaults، وسجلات لا تكشف بيانات. -->

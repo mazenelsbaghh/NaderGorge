@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useCallback, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Folder, Trash2, Edit2, GripVertical, Eye, RefreshCw } from 'lucide-react';
-import { InlineLoader } from '@/components/ui/loading-indicator';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { contentService, ContentSectionDto } from '@/services/content-service';
-import { adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -23,35 +21,34 @@ export const SectionListManager = forwardRef<SectionListManagerRef, SectionListM
     const [sections, setSections] = useState<ContentSectionDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
-    const [deleting, setDeleting] = useState<string | null>(null);
     const [confirmTarget, setConfirmTarget] = useState<ContentSectionDto | null>(null);
 
-    async function loadSections() {
+    const loadSections = useCallback(async () => {
       try {
         setLoading(true);
         setLoadError(false);
         const res = await contentService.getSections(termId);
         const items = (res.data?.data || []) as ContentSectionDto[];
         setSections(items.sort((a, b) => a.order - b.order));
-      } catch (error) {
+      } catch {
         setLoadError(true);
       } finally {
         setLoading(false);
       }
-    }
+    }, [termId]);
 
     useImperativeHandle(ref, () => ({
       reload: loadSections
-    }));
+    }), [loadSections]);
 
     useEffect(() => {
       if (termId) {
         loadSections();
       }
-    }, [termId]);
+    }, [termId, loadSections]);
 
     // Example placeholder, backend doesn't have deleteSection yet but we can prep it or just skip
-    async function handleDeleteConfirmed() {
+    function handleDeleteConfirmed() {
       setConfirmTarget(null);
       toast.error('ميزة حذف الأقسام غير متوفرة حالياً.');
     }

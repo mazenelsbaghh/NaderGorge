@@ -1,7 +1,6 @@
 'use client';
 
-import { ClipboardList, Trash2, Edit2, CheckCircle2, Circle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ClipboardList, Trash2, Edit2 } from 'lucide-react';
 
 interface LessonHomeworkListProps {
   homework: any[];

@@ -21,13 +21,21 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
 
     public async Task<ApiResponse> Handle(AnalyzeVideoAICommand request, CancellationToken ct)
     {
+        var lockRows = await _db.LessonVideos
+            .Where(v => v.Id == request.VideoId && !v.IsProcessingAI)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingAI, true), ct);
+
+        if (lockRows == 0)
+        {
+            var exists = await _db.LessonVideos.AnyAsync(v => v.Id == request.VideoId, ct);
+            return exists
+                ? ApiResponse.Fail("Video is already processing AI chapters.")
+                : ApiResponse.Fail("Video not found");
+        }
+
         var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
         if (video == null) 
             return ApiResponse.Fail("Video not found");
-
-
-        if (video.IsProcessingAI)
-            return ApiResponse.Fail("Video is already processing AI chapters.");
 
         // The URL extraction here assumes standard embed code implies the backend 
         // has access to the raw URL or the FFmpeg extractor can download the video.
@@ -36,21 +44,28 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
         string sourceUrl = video.ProviderVideoId ?? "https://example.com/mock.mp4"; 
         // In real life context, if this is a vimeo ID, we'd resolve it to a CDN link.
 
-        video.IsProcessingAI = true;
-        await _db.SaveChangesAsync(ct);
-
         var teacherPhotoUrl = await _db.TeacherPhotos
             .Where(tp => tp.IsActive)
             .OrderByDescending(tp => tp.UploadedAt)
             .Select(tp => tp.FileUrl)
             .FirstOrDefaultAsync(ct);
 
-        await _jobEnqueuer.EnqueueJobAsync("ai-video-queue", "analyze-chapters", new
+        try
         {
-            lessonVideoId = video.Id,
-            sourceUrl = sourceUrl,
-            teacherPhotoUrl = teacherPhotoUrl
-        });
+            await _jobEnqueuer.EnqueueJobAsync("ai-video-queue", "analyze-chapters", new
+            {
+                lessonVideoId = video.Id,
+                sourceUrl = sourceUrl,
+                teacherPhotoUrl = teacherPhotoUrl
+            });
+        }
+        catch
+        {
+            await _db.LessonVideos
+                .Where(v => v.Id == request.VideoId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingAI, false), ct);
+            throw;
+        }
 
         return ApiResponse.Ok("AI Analysis queued successfully");
     }

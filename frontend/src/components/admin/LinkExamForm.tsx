@@ -60,7 +60,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
       await adminService.linkLessonExam(lessonId, examId);
       toast.success('تم ربط الامتحان بنجاح.');
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ أثناء الربط، يرجى المحاولة مرة أخرى.');
     } finally {
       setSaving(false);
@@ -75,7 +75,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
       toast.success('تم إلغاء ربط الامتحان.');
       setExamId('');
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ.');
     } finally {
       setSaving(false);

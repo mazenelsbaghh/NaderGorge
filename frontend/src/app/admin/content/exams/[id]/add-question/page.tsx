@@ -91,7 +91,11 @@ export default function AddExamQuestionPage(props: { params: Promise<{ id: strin
      
      try {
        setSaving(true);
-       const cleanQuestions = questions.map(({ audioFile: _af, ...rest }) => rest);
+       const cleanQuestions = questions.map((question) => {
+         const cleanQuestion = { ...question };
+         delete cleanQuestion.audioFile;
+         return cleanQuestion;
+       });
        await adminService.addQuestionsToExam(params.id, { questions: cleanQuestions });
        toast.success('تم رفع الأسئلة وإضافتها للامتحان بنجاح!');
        router.back();

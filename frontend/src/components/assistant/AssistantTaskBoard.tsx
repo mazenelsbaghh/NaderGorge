@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { easeQuart, exitScale, feedbackTransition } from '@/lib/motion';
 import { AssistantTaskDto, assistantService } from '@/services/assistant-service';
@@ -16,7 +16,7 @@ export function AssistantTaskBoard() {
   const [resolvingTaskId, setResolvingTaskId] = useState<string | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -27,11 +27,11 @@ export function AssistantTaskBoard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [typeFilter]);
 
   useEffect(() => {
     fetchTasks();
-  }, [typeFilter]);
+  }, [fetchTasks]);
 
   const handleResolve = async (taskId: string) => {
     if (!resolutionNotes.trim()) {

@@ -2,8 +2,8 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpenText, ChevronLeft, ChevronRight } from 'lucide-react';
-import { AdminShellChrome, AdminStatCard, AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from '@/components/admin';
+import { BookOpenText, ChevronRight } from 'lucide-react';
+import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
 import { contentService, LessonSummaryDto } from '@/services/content-service';
@@ -106,7 +106,6 @@ export default function SectionProfilePage(props: { params: Promise<{ id: string
         <EntityOverviewDashboard 
           entityType="قسم" 
           details={{ title: section.title, price: section.price }} 
-          mockStats={true} 
         />
       )}
 

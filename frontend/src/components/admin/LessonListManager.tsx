@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useCallback, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { BookOpenText, Trash2, Edit2, GripVertical, Settings, RefreshCw } from 'lucide-react';
-import { InlineLoader } from '@/components/ui/loading-indicator';
 import { useRouter } from 'next/navigation';
 import { contentService, LessonSummaryDto } from '@/services/content-service';
-import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
 export interface LessonListManagerRef {
@@ -23,29 +21,29 @@ export const LessonListManager = forwardRef<LessonListManagerRef, LessonListMana
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
 
-    async function loadLessons() {
+    const loadLessons = useCallback(async () => {
       try {
         setLoading(true);
         setLoadError(false);
         const res = await contentService.getLessons(sectionId);
         const items = (res.data?.data || []) as LessonSummaryDto[];
         setLessons(items.sort((a, b) => a.order - b.order));
-      } catch (error) {
+      } catch {
         setLoadError(true);
       } finally {
         setLoading(false);
       }
-    }
+    }, [sectionId]);
 
     useImperativeHandle(ref, () => ({
       reload: loadLessons
-    }));
+    }), [loadLessons]);
 
     useEffect(() => {
       if (sectionId) {
         loadLessons();
       }
-    }, [sectionId]);
+    }, [sectionId, loadLessons]);
 
     // ── Error / Retry ────────────────────────────────────────────────────
     if (loadError) {

@@ -32,11 +32,12 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
         if (video.VideoChapters == null || !video.VideoChapters.Any())
             return ApiResponse.Fail("Video has no chapters to generate mind maps for. Please extract chapters first.");
 
-        if (video.IsProcessingMindmaps)
-            return ApiResponse.Fail("Video is already processing mind maps.");
+        var lockRows = await _db.LessonVideos
+            .Where(v => v.Id == request.VideoId && !v.IsProcessingMindmaps)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingMindmaps, true), ct);
 
-        video.IsProcessingMindmaps = true;
-        await _db.SaveChangesAsync(ct);
+        if (lockRows == 0)
+            return ApiResponse.Fail("Video is already processing mind maps.");
 
         var teacherPhotoUrl = await _db.TeacherPhotos
             .Where(tp => tp.IsActive)
@@ -51,12 +52,22 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
             order = c.Order
         }).ToList();
 
-        await _jobEnqueuer.EnqueueJobAsync("ai-mindmaps-queue", "generate-mindmaps", new
+        try
         {
-            lessonVideoId = video.Id,
-            teacherPhotoUrl = teacherPhotoUrl,
-            chapters = chaptersData
-        });
+            await _jobEnqueuer.EnqueueJobAsync("ai-mindmaps-queue", "generate-mindmaps", new
+            {
+                lessonVideoId = video.Id,
+                teacherPhotoUrl = teacherPhotoUrl,
+                chapters = chaptersData
+            });
+        }
+        catch
+        {
+            await _db.LessonVideos
+                .Where(v => v.Id == request.VideoId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.IsProcessingMindmaps, false), ct);
+            throw;
+        }
 
         return ApiResponse.Ok("Mindmap Generation queued successfully");
     }

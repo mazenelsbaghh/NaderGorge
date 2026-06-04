@@ -6,8 +6,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
-import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Check, Eye, EyeOff, LockKeyhole, Phone, Sparkles } from 'lucide-react';
+import { Calendar, Check, Eye, EyeOff, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';

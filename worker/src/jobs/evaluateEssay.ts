@@ -7,7 +7,7 @@ config();
 const apiKeyStr = process.env.GEMINI_API_KEY || '';
 const ai = new GoogleGenAI(apiKeyStr ? { apiKey: apiKeyStr } : {});
 const API_URL = process.env.BACKEND_API_URL || 'http://localhost:5245/api/v1'; // Standard backend URL used alongside AI Chaptering
-const API_CALLBACK_SECRET = process.env.AI_CALLBACK_SECRET || 'secretxyz';
+const API_CALLBACK_SECRET = process.env.AI_CALLBACK_SECRET || process.env.API_CALLBACK_SECRET;
 
 export interface EvaluateEssayJobData {
   essaySubmissionId: string;
@@ -78,7 +78,7 @@ Do not return any markdown code blocks, just raw JSON.`;
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Internal-Token': API_CALLBACK_SECRET
+        'X-Internal-Token': API_CALLBACK_SECRET || ''
       },
       body: JSON.stringify({
         essaySubmissionId,

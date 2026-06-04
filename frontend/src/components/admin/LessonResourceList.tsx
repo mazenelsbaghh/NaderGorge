@@ -1,7 +1,6 @@
 'use client';
 
 import { FileText, Trash2, Edit2, GripVertical, Download } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 interface LessonResourceListProps {
   resources: any[];

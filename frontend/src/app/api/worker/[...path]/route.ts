@@ -12,9 +12,29 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 
 const WORKER_URL = process.env.WORKER_URL || 'http://worker:3001';
+const WORKER_ADMIN_TOKEN = process.env.WORKER_ADMIN_TOKEN;
+
+function isAllowedWorkerRoute(method: string, path: string[]) {
+  if (path.length === 2 && path[0] === 'status' && method === 'GET') return true;
+  if (path.length === 2 && path[0] === 'status' && method === 'DELETE') return true;
+  if (path.length === 3 && path[0] === 'status' && path[2] === 'retry' && method === 'POST') return true;
+  return false;
+}
 
 async function proxyToWorker(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
+  if (!isAllowedWorkerRoute(request.method, path)) {
+    return NextResponse.json({ error: 'Worker route is not allowed' }, { status: 404 });
+  }
+
+  if (!request.headers.get('authorization')) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  if (!WORKER_ADMIN_TOKEN) {
+    return NextResponse.json({ error: 'Worker proxy is not configured' }, { status: 503 });
+  }
+
   const workerPath = path.join('/');
   const targetUrl = `${WORKER_URL}/api/${workerPath}`;
 
@@ -23,6 +43,7 @@ async function proxyToWorker(request: NextRequest, { params }: { params: Promise
       method: request.method,
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${WORKER_ADMIN_TOKEN}`,
       },
     };
 

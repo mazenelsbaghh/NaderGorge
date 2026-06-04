@@ -25,7 +25,7 @@ export async function GET(
   const authToken = request.cookies.get('token')?.value;
 
   // Resolve base URL dynamically to handle reverse proxy domains correctly
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || 'bsma-academy.com';
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || process.env.NEXT_PUBLIC_APP_DOMAIN || 'nadergeorge.academy';
   const proto = request.headers.get('x-forwarded-proto') || 'https';
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
 
@@ -64,4 +64,3 @@ export async function GET(
     );
   }
 }
-

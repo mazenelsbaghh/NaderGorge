@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Assuming VideoChapterDto definition here to avoid breaking if not imported properly

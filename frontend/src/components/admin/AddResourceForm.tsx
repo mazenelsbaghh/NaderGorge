@@ -27,7 +27,7 @@ export function AddResourceForm({ lessonId, onSuccess }: AddResourceFormProps) {
       setTitle('');
       setFileUrl('');
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ أثناء إضافة الملف، أعد المحاولة.');
     } finally {
       setSaving(false);

@@ -29,6 +29,7 @@ import {
 } from '@/services/exam-service';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
 import { shuffleArray } from '@/lib/utils';
+import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -278,15 +279,15 @@ export function ExamResultPanel({
                 </div>
                 <div
                   className="text-base font-bold leading-8 text-foreground"
-                  dangerouslySetInnerHTML={{ __html: q.questionText }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.questionText) }}
                 />
                 <p className="mt-3 text-sm font-bold text-muted-foreground">
                   إجابتك:{' '}
-                  <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: q.selectedOptionText || 'لم تُجب' }} />
+                  <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تُجب') }} />
                 </p>
                 {q.correctOptionText && (
                   <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                    الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: q.correctOptionText }} />
+                    الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.correctOptionText) }} />
                   </p>
                 )}
               </article>
@@ -337,13 +338,13 @@ export function ExamResultPanel({
 
                 <div
                   className="text-base font-bold leading-8 text-foreground"
-                  dangerouslySetInnerHTML={{ __html: q.questionText }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.questionText) }}
                 />
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-background/60 border border-border/40 p-4">
                     <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">إجابتك</p>
-                    <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: q.selectedOptionText || 'لم تختر إجابة.' }} />
+                    <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تختر إجابة.') }} />
                   </div>
 
                   {q.correctOptionText ? (
@@ -351,7 +352,7 @@ export function ExamResultPanel({
                       <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                         الإجابة الصحيحة
                       </p>
-                      <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: q.correctOptionText }} />
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.correctOptionText) }} />
                       {q.writtenCorrection && (
                         <div className="mt-3 border-t border-border/30 pt-3">
                           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
@@ -474,7 +475,7 @@ function QuestionCard({
           </div>
           <div
             className="text-xl font-black leading-8 text-foreground sm:text-2xl"
-            dangerouslySetInnerHTML={{ __html: q.text }}
+            dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }}
           />
         </div>
       </div>
@@ -617,7 +618,7 @@ function QuestionCard({
                   >
                     {String.fromCharCode(0x0627 + optIdx) /* أ ب ج د */}
                   </span>
-                  <span className="flex-1 text-base font-bold leading-7 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: opt.text }} />
+                  <span className="flex-1 text-base font-bold leading-7 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(opt.text) }} />
                   {isSelected && (
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-primary mt-1.5" />
                   )}

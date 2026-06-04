@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NaderGorge.API.Configuration;
 using NaderGorge.Application.Features.Internal.Commands;
 using NaderGorge.Application.Features.Webhooks.Commands;
 
@@ -21,11 +22,7 @@ public class InternalController : ControllerBase
     [HttpPost("ai-analysis-completed")]
     public async Task<IActionResult> AiAnalysisCompleted([FromBody] AiAnalysisCompletedWebhookRequest request)
     {
-        // Simple shared secret token check
-        var token = Request.Headers["X-Internal-Token"].FirstOrDefault();
-        var expectedSecret = _config["AI_CALLBACK_SECRET"] ?? "secretxyz";
-        
-        if (token != expectedSecret)
+        if (!IsAuthorizedCallback(_config["AI_CALLBACK_SECRET"], _config["API_CALLBACK_SECRET"]))
             return Unauthorized("Invalid webhook token");
 
         var cmd = new AiAnalysisCompletedCommand(request.VideoId, request.SubtitleUrl, request.Chapters);
@@ -36,10 +33,7 @@ public class InternalController : ControllerBase
     [HttpPost("mindmaps-completed")]
     public async Task<IActionResult> MindmapsCompleted([FromBody] MindmapsCompletedWebhookRequest request)
     {
-        var token = Request.Headers["X-Internal-Token"].FirstOrDefault();
-        var expectedSecret = _config["API_CALLBACK_SECRET"] ?? "secretxyz";
-        
-        if (token != expectedSecret)
+        if (!IsAuthorizedCallback(_config["API_CALLBACK_SECRET"]))
             return Unauthorized("Invalid webhook token");
 
         var cmd = new MindmapsCompletedCommand(request.VideoId, request.Mindmaps);
@@ -51,10 +45,7 @@ public class InternalController : ControllerBase
     [HttpPost("single-mindmap-completed")]
     public async Task<IActionResult> SingleMindmapCompleted([FromBody] SingleMindmapCompletedWebhookRequest request)
     {
-        var token = Request.Headers["X-Internal-Token"].FirstOrDefault();
-        var expectedSecret = _config["API_CALLBACK_SECRET"] ?? "secretxyz";
-
-        if (token != expectedSecret)
+        if (!IsAuthorizedCallback(_config["API_CALLBACK_SECRET"]))
             return Unauthorized("Invalid webhook token");
 
         var cmd = new SingleMindmapCompletedCommand(request.ChapterId, request.ImageUrl);
@@ -66,16 +57,19 @@ public class InternalController : ControllerBase
     [HttpPost("essay-graded")]
     public async Task<IActionResult> EssayGraded([FromBody] EssayGradedWebhookRequest request)
     {
-        var token = Request.Headers["X-Internal-Token"].FirstOrDefault();
-        var expectedSecret = _config["AI_CALLBACK_SECRET"] ?? "secretxyz";
-        
-        if (token != expectedSecret)
+        if (!IsAuthorizedCallback(_config["AI_CALLBACK_SECRET"], _config["API_CALLBACK_SECRET"]))
             return Unauthorized("Invalid webhook token");
 
         var cmd = new WebhookEssayGradedCommand(request.EssaySubmissionId, request.AiScore, request.AiFeedback);
         var result = await _mediator.Send(cmd);
         
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    private bool IsAuthorizedCallback(params string?[] configuredTokens)
+    {
+        var token = Request.Headers["X-Internal-Token"].FirstOrDefault();
+        return ServiceTokenValidator.IsValid(token, configuredTokens);
     }
 }
 

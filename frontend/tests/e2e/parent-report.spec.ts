@@ -3,9 +3,9 @@ import { test, expect } from '@playwright/test';
 test.describe('Parent Reporting Integration', () => {
   let mockStudentId = '00000000-0000-0000-0000-000000000001'; // Default valid E2e student Guid or similar
 
-  test.beforeEach(async ({ request, page }) => {
+  test.beforeEach(async ({ request }) => {
     // We assume the DB has the generic students
-    const seedRes = await request.post('http://localhost:5245/api/e2e/seed', {
+    await request.post('http://localhost:5245/api/e2e/seed', {
       data: {
         clearDatabase: false,
         seedAdmin: false,

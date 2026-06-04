@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useCallback, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Edit3, Eye, Trash2, Calendar, GripVertical, RefreshCw } from 'lucide-react';
-import { InlineLoader } from '@/components/ui/loading-indicator';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { contentService, TermDto } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
@@ -26,29 +25,29 @@ export const TermListManager = forwardRef<TermListManagerRef, TermListManagerPro
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [confirmTarget, setConfirmTarget] = useState<TermDto | null>(null);
 
-    async function loadTerms() {
+    const loadTerms = useCallback(async () => {
       try {
         setLoading(true);
         setLoadError(false);
         const res = await contentService.getTerms(packageId);
         const items = (res.data?.data || []) as TermDto[];
         setTerms(items.sort((a, b) => a.order - b.order));
-      } catch (error) {
+      } catch {
         setLoadError(true);
       } finally {
         setLoading(false);
       }
-    }
+    }, [packageId]);
 
     useImperativeHandle(ref, () => ({
       reload: loadTerms
-    }));
+    }), [loadTerms]);
 
     useEffect(() => {
       if (packageId) {
         loadTerms();
       }
-    }, [packageId]);
+    }, [packageId, loadTerms]);
 
     async function handleDeleteConfirmed() {
       if (!confirmTarget) return;
@@ -59,7 +58,7 @@ export const TermListManager = forwardRef<TermListManagerRef, TermListManagerPro
         await adminService.deleteTerm(termId);
         toast.success('تم حذف الترم وجميع محتوياته بنجاح.');
         loadTerms();
-      } catch (error) {
+      } catch {
         toast.error('لم نتمكن من حذف الترم. قد يكون مرتبطاً ببيانات أخرى.');
       } finally {
         setDeletingId(null);

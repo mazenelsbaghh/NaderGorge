@@ -6,10 +6,8 @@ import {
 
   Filter,
   Monitor,
-  PencilLine,
   Shield,
   Sparkles,
-  Trash2,
   UserPlus,
   Users,
   UserX,
@@ -81,7 +79,7 @@ export default function AdminUsersPage() {
   const [gradeLevelFilter, setGradeLevelFilter] = useState('');
   const [studyTrackFilter, setStudyTrackFilter] = useState('');
   const [genderFilter, setGenderFilter] = useState('');
-  const [governorateFilter, setGovernorateFilter] = useState('');
+  const [governorateFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [confirmUser, setConfirmUser] = useState<AdminUserListDto | null>(null);
 
@@ -105,7 +103,7 @@ export default function AdminUsersPage() {
         if (!isMounted) return;
 
         setUsers(data.items);
-      } catch (error) {
+      } catch {
         setLoadError(true);
       } finally {
         if (isMounted) {

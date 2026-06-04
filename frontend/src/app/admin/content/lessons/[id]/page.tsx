@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText } from 'lucide-react';
-import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, LessonHomeworkList, LinkExamForm, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer } from '@/components/admin';
+import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, LessonHomeworkList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
@@ -98,7 +98,6 @@ export default function LessonProfilePage(props: { params: Promise<{ id: string 
         <EntityOverviewDashboard 
           entityType="حصة" 
           details={{ title: lesson.title, description: lesson.summary }} 
-          mockStats={true} 
         />
       )}
       

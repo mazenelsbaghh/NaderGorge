@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
-using System.Security.Claims;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
@@ -24,7 +24,7 @@ public class StudentController : ControllerBase
         public string? AvatarSlug { get; set; }
     }
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private Guid GetUserId() => User.RequireUserId();
 
     [HttpGet("dashboard")]
     public async Task<IActionResult> GetDashboard()

@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState, use } from 'react';
+import { useCallback, useEffect, useState, use } from 'react';
 import { adminService, ExamDashboardDto, StudentExamResultSummaryDto } from '@/services/admin-service';
 import { useRouter } from 'next/navigation';
 import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus } from 'lucide-react';
 import { AdminShellChrome, AdminStatCard, AdminDataTable, AdminBackButton } from '@/components/admin';
 import toast from 'react-hot-toast';
+import { sanitizeRichHtml } from '@/lib/sanitize-html';
 
 export default function ExamDashboardPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
@@ -17,7 +18,7 @@ export default function ExamDashboardPage(props: { params: Promise<{ id: string 
   const [error, setError] = useState(false);
   const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
 
-  const loadDashboard = () => {
+  const loadDashboard = useCallback(() => {
     if (!examId) return;
     adminService.getExamDashboard(examId)
       .then(data => {
@@ -25,11 +26,11 @@ export default function ExamDashboardPage(props: { params: Promise<{ id: string 
       })
       .catch(() => setError(true))
       .finally(() => setIsLoading(false));
-  };
+  }, [examId]);
 
   useEffect(() => {
     loadDashboard();
-  }, [examId]);
+  }, [loadDashboard]);
 
   const handleDeleteQuestion = async (examQuestionId: string) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا السؤال نهائياً؟')) return;
@@ -143,7 +144,7 @@ export default function ExamDashboardPage(props: { params: Promise<{ id: string 
                       {idx + 1}
                     </span>
                     <div className="min-w-0">
-                      <p className="font-bold text-[var(--admin-text)] truncate" dangerouslySetInnerHTML={{ __html: q.text }} />
+                      <p className="font-bold text-[var(--admin-text)] truncate" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }} />
                       <div className="mt-1 flex items-center gap-3 flex-wrap">
                         <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
                           q.type === 'FindTheMistake'

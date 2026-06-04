@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import NextImage from 'next/image';
 import {
   AlertTriangle,
   BookOpen,
@@ -296,10 +297,13 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
                 </button>
               </div>
               <a href={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5245'}${ch.mindmapImageUrl}`} target="_blank" rel="noreferrer" title="تكبير الصورة">
-                <img
+                <NextImage
                   src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5245'}${ch.mindmapImageUrl}`}
                   alt={`خريطة ${ch.title}`}
-                  className="w-full max-w-[280px] h-auto opacity-90 transition-opacity hover:opacity-100"
+                  width={280}
+                  height={158}
+                  unoptimized
+                  className="h-auto w-full max-w-[280px] opacity-90 transition-opacity hover:opacity-100"
                 />
               </a>
             </div>
@@ -387,8 +391,6 @@ function JobCard({
 
   // Chapters from the video object (already fetched) or lazy-loaded
   const videoChapters = video.chapters ?? chapters ?? [];
-  const hasChapters = (video.chapters && video.chapters.length > 0) || (chapters && chapters.length > 0);
-
   async function loadChapters() {
     if (chapters !== null) return; // already loaded
     if (video.chapters && video.chapters.length > 0) return; // already in video
@@ -857,7 +859,7 @@ export default function AIMonitorPage() {
       <style>{`
         .ai-monitor { direction: rtl; }
 
-        /* ─── Worker Status Banner ─── */
+        /* ─── Processing Service Status Banner ─── */
         .ai-worker-banner {
           display: flex; align-items: center; gap: 0.5rem;
           padding: 0.625rem 1rem; border-radius: 0.75rem;
@@ -1118,17 +1120,17 @@ export default function AIMonitorPage() {
       `}</style>
 
       <div className="ai-monitor">
-        {/* Worker reachability banner */}
+        {/* Processing service reachability banner */}
         {workerReachable === false && items.length > 0 && (
           <div className="ai-worker-banner ai-worker-banner--err">
             <WifiOff className="h-4 w-4 shrink-0" />
-            خادم العمل (worker) غير متاح — تأكد من تشغيل الـ worker.
+            خدمة المعالجة غير متاحة. تأكد من تشغيل خدمة التحليل.
           </div>
         )}
         {workerReachable === true && (
           <div className="ai-worker-banner ai-worker-banner--ok">
             <Zap className="h-4 w-4 shrink-0" />
-            خادم العمل يعمل — يجري التحديث كل 3 ثوانٍ تلقائياً
+            خدمة المعالجة تعمل. يجري التحديث كل 3 ثوان تلقائيا
           </div>
         )}
 

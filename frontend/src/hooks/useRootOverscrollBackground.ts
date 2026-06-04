@@ -1,6 +1,6 @@
 'use client';
 
-import { CSSProperties, useEffect } from 'react';
+import { useEffect } from 'react';
 
 export function useRootOverscrollBackground() {
   useEffect(() => {

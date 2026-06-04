@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Homework.Commands;
 using NaderGorge.Application.Features.Homework.Queries;
-using System.Security.Claims;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
@@ -16,7 +16,7 @@ public class HomeworkController : ControllerBase
 
     public HomeworkController(IMediator mediator) => _mediator = mediator;
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private Guid GetUserId() => User.RequireUserId();
 
     [HttpGet("pending")]
     public async Task<IActionResult> GetPendingHomework()

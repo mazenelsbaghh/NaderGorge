@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { adminService } from '@/services/admin-service';
 import { contentService } from '@/services/content-service';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import { NumberField } from '@/components/ui/number-field';
@@ -25,11 +25,7 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
   const [passPoints, setPassPoints] = useState(50);
   const [questions, setQuestions] = useState<{ id: string; text: string; order: number; maxPoints: number }[]>([]);
 
-  useEffect(() => {
-    loadHomework();
-  }, [lessonId]);
-
-  async function loadHomework() {
+  const loadHomework = useCallback(async () => {
     try {
       setLoading(true);
       const res = await contentService.getLessonDetail(lessonId);
@@ -45,12 +41,16 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
         setTitle('Homework for Lesson');
         setQuestions([]);
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
+      toast.error('تعذر تحميل الواجب');
     } finally {
       setLoading(false);
     }
-  }
+  }, [lessonId]);
+
+  useEffect(() => {
+    loadHomework();
+  }, [loadHomework]);
 
   function addQuestion() {
     setQuestions([
@@ -88,7 +88,7 @@ export function HomeworkTabEditor({ lessonId, onClose }: HomeworkTabEditorProps)
         }))
       });
       onClose();
-    } catch (e) {
+    } catch {
       toast.error('فشل في حفظ الواجب');
     } finally {
       setSaving(false);

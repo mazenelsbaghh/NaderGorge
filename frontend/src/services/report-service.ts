@@ -17,8 +17,12 @@ export interface ParentReportDto {
 }
 
 export const reportService = {
-    getParentSummary: async (studentId: string) => {
-        // Doesn't require auth since it's anonymous for MVP
-        return apiClient.get<{ data: ParentReportDto }>(`/parent/reports/${studentId}/summary`);
-    }
+    getParentSummary: async (studentId: string, token: string) => {
+        return apiClient.get<{ data: ParentReportDto }>(`/parent/reports/${studentId}/summary`, {
+            params: { token },
+        });
+    },
+    createParentReportLink: async (studentId: string) => {
+        return apiClient.post<{ data: { token: string; expiresInDays: number } }>(`/parent/reports/${studentId}/links`);
+    },
 };

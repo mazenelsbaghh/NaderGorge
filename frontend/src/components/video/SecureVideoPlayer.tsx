@@ -2,10 +2,9 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService, type ExtraWatchRequestStatus } from '@/services/video-session-service';
-import { AlertCircle, Play, Info, X, Map, ImageIcon } from 'lucide-react';
+import { AlertCircle, Play, Info, X, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { InlineLoader, SpinnerLoader } from '@/components/ui/loading-indicator';
-import { useAuthStore } from '@/stores/auth-store';
+import { SpinnerLoader } from '@/components/ui/loading-indicator';
 import PlayerControls from './PlayerControls';
 import SplitText from '@/components/ui/SplitText';
 import { applyDomShields } from '@/utils/dom-shield';
@@ -65,6 +64,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const router = useRouter();
   const params = useParams();
   const packageId = params?.packageId as string;
+  const onEndedRef = useRef(onEnded);
+  const hasEndedRef = useRef(false);
+
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+  }, [onEnded]);
   
   React.useImperativeHandle(ref, () => ({
     seekTo: (seconds: number) => {
@@ -146,9 +151,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [provider, setProvider] = useState<string>('youtube');
-  const [qualityLevels, setQualityLevels] = useState<string[]>([]);
-  const [currentQuality, setCurrentQuality] = useState<string>('auto');
-  const { user } = useAuthStore();
   const onWatchProgressRef = useRef(onWatchProgress);
   useEffect(() => { onWatchProgressRef.current = onWatchProgress; }, [onWatchProgress]);
 
@@ -186,18 +188,19 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           if (msg.data.vkMethods) {
             console.log('[SecureVideoPlayer] VK Player methods:', msg.data.vkMethods);
           }
-          // Request quality levels for YouTube
-          if (msg.data.provider === 'youtube') {
-            setTimeout(() => sendCommand('getQualities'), 3000);
-          }
           break;
         case 'stateChange':
           setIsPlaying(msg.data.isPlaying);
           if (msg.data.isPlaying) {
+            hasEndedRef.current = false;
             clearTimeout((window as any).__playFallbackTimeout);
             setShowControls(false);
             setIsBuffering(false);
           } else {
+            if ((msg.data.state === 0 || msg.data.state === 'ended') && !hasEndedRef.current) {
+              hasEndedRef.current = true;
+              onEndedRef.current?.();
+            }
             // Check for actual buffering statuses (like YT state === 3 or VK string states)
             if (msg.data.state === 3 || msg.data.state === 'buffering') {
               setIsBuffering(true);
@@ -228,14 +231,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         case 'error':
           setStatus('error');
           setErrorMessage('حدث خطأ أثناء تشغيل الفيديو');
-          break;
-        case 'qualityLevels':
-          if (msg.data.levels && Array.isArray(msg.data.levels)) {
-            setQualityLevels(msg.data.levels.filter((l: string) => l !== 'auto'));
-          }
-          if (msg.data.current) {
-            setCurrentQuality(msg.data.current);
-          }
           break;
         case 'overlayClick':
           if (status === 'ready') {
@@ -579,11 +574,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const handlePlaybackRateChange = (rate: number) => {
     sendCommand('setPlaybackRate', { rate });
-  };
-
-  const handleQualityChange = (quality: string) => {
-    sendCommand('setQuality', { quality });
-    setCurrentQuality(quality);
   };
 
   const activeChapterDesktop = React.useMemo(() => {

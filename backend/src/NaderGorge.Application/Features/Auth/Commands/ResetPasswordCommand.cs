@@ -60,6 +60,16 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
 
         // Hash and update the password
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+        var activeRefreshTokens = await _db.RefreshTokens
+            .Where(rt => rt.UserId == user.Id && !rt.IsRevoked)
+            .ToListAsync(ct);
+
+        foreach (var refreshToken in activeRefreshTokens)
+        {
+            refreshToken.IsRevoked = true;
+        }
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse.Ok("تم تغيير كلمة المرور بنجاح. يمكنك تسجيل الدخول الآن.");

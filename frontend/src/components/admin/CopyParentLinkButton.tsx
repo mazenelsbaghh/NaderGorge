@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { Copy, CheckCircle2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+import { reportService } from '@/services/report-service';
 
 interface CopyParentLinkButtonProps {
   userId: string;
@@ -11,13 +14,16 @@ export function CopyParentLinkButton({ userId }: CopyParentLinkButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = async () => {
-    const parentLink = `${window.location.origin}/parent-report/${userId}`;
     try {
+      const response = await reportService.createParentReportLink(userId);
+      const token = response.data.data.token;
+      const parentLink = `${window.location.origin}/parent-report/${userId}?token=${encodeURIComponent(token)}`;
       await navigator.clipboard.writeText(parentLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
       console.error('Failed to copy', e);
+      toast.error('تعذر إنشاء رابط ولي الأمر الآمن.');
     }
   };
 

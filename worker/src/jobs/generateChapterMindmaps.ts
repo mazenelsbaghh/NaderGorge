@@ -89,7 +89,7 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
         await job.updateProgress({ percentage: 95, stage: 'جاري حفظ الخرائط في لوحة التحكم...' });
 
         const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
-        const apiKey = process.env.API_CALLBACK_SECRET || 'secretxyz';
+        const apiKey = process.env.API_CALLBACK_SECRET;
 
         if (isSingleChapter) {
             // ── Single-chapter regeneration: dedicated webhook ────────────────
@@ -100,7 +100,7 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
                     `${backendBaseUrl}/api/v1/internal/callbacks/single-mindmap-completed`,
                     {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Internal-Token': apiKey },
+                        headers: { 'Content-Type': 'application/json', 'X-Internal-Token': apiKey || '' },
                         body: JSON.stringify({ chapterId, imageUrl: singleResult.imageUrl })
                     }
                 );
@@ -118,7 +118,7 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
                 `${backendBaseUrl}/api/v1/internal/callbacks/mindmaps-completed`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Internal-Token': apiKey },
+                    headers: { 'Content-Type': 'application/json', 'X-Internal-Token': apiKey || '' },
                     body: JSON.stringify({ videoId: lessonVideoId, mindmaps: results })
                 }
             );

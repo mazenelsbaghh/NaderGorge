@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Save, BookOpen, Video, Shuffle, FileQuestion } from 'lucide-react';
+import { Save, BookOpen, Video, Shuffle } from 'lucide-react';
 import { adminService } from '@/services/admin-service';
 import { NumberField } from '@/components/ui/number-field';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import toast from 'react-hot-toast';
-import { QuestionEditor, InlineExamQuestionDto } from './QuestionEditor';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
 interface UnifiedAssessmentBuilderProps {

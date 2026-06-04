@@ -41,14 +41,14 @@ export interface VideoAIResult {
  * Splitting gives each task its own full token budget.
  */
 export async function analyzeVideoChapters(audioFilePath: string): Promise<VideoAIResult> {
-    console.log(`[Gemini] Uploading audio file to File API: ${audioFilePath}`);
+    console.log(`[Gemini] Uploading prepared audio file to File API.`);
 
     // ── 1. Upload once — reuse URI for both calls ────────────────────────────
     const uploadResult = await ai.files.upload({
         file: audioFilePath,
         config: { mimeType: 'audio/mp3', displayName: 'LessonAudioTrack' }
     });
-    console.log(`[Gemini] Upload complete. File URI: ${uploadResult.uri}`);
+    console.log(`[Gemini] Upload complete.`);
     await new Promise(resolve => setTimeout(resolve, 5000)); // brief processing wait
 
     const fileRef = { fileUri: uploadResult.uri!, mimeType: uploadResult.mimeType || 'audio/mp3' };

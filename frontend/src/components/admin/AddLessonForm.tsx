@@ -31,7 +31,7 @@ export function AddLessonForm({ sectionId, onSuccess }: AddLessonFormProps) {
       setPrice(0);
       setOrder((prev) => prev + 1);
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ أثناء إضافة الحصة، أعد المحاولة.');
     } finally {
       setSaving(false);

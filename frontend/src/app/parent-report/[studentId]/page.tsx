@@ -1,25 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { BookOpen, CheckCircle2, XCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { reportService, ParentReportDto } from '@/services/report-service';
 import { FullScreenLoader } from '@/components/ui/loading-indicator';
 
 export default function ParentReportPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const studentId = params.studentId as string;
+    const token = searchParams.get('token') || '';
 
     const [report, setReport] = useState<ParentReportDto | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!studentId) return;
+        if (!studentId || !token) {
+            setError('رابط التقرير غير صالح أو منتهي الصلاحية.');
+            setLoading(false);
+            return;
+        }
 
         const fetchReport = async () => {
             try {
-                const res = await reportService.getParentSummary(studentId);
+                const res = await reportService.getParentSummary(studentId, token);
                 setReport(res.data.data);
             } catch (err: any) {
                 setError(err.response?.data?.message || 'فشل في تحميل التقرير.');
@@ -29,7 +35,7 @@ export default function ParentReportPage() {
         };
 
         fetchReport();
-    }, [studentId]);
+    }, [studentId, token]);
 
     if (loading) {
         return (

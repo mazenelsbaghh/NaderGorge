@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ClipboardCheck, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -14,7 +13,6 @@ interface PublicFormPageProps {
 
 export default function PublicFormPage({ params }: PublicFormPageProps) {
   const { slug } = use(params);
-  const router = useRouter();
 
   const [form, setForm] = useState<PublicFormDto | null>(null);
   const [fields, setFields] = useState<FormFieldConfig[]>([]);

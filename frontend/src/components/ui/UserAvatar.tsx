@@ -43,7 +43,6 @@ export function UserAvatar({
   fullName = 'طالب',
   size = 'md',
   className = '',
-  role = 'student',
 }: UserAvatarProps) {
   // Resolve size
   const sizeClass = typeof size === 'string' ? sizeClasses[size] : '';

@@ -49,9 +49,9 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         console.log(`[Job ${job.id}] Starting Gemini processing...`);
         result = await analyzeVideoChapters(audioPath);
 
-        // Save SRT file to backend wwwroot/subtitles
+        // Save SRT file to configured shared storage.
         await job.updateProgress({ percentage: 85, stage: 'جاري بناء هيكل الفصول وإنشاء الترجمة...' });
-        const srtDir = path.join(workerRoot, '../backend/src/NaderGorge.API/wwwroot/subtitles');
+        const srtDir = process.env.SUBTITLE_STORAGE_PATH || path.join(workerRoot, '.tmp/subtitles');
         if (!fs.existsSync(srtDir)) {
             fs.mkdirSync(srtDir, { recursive: true });
         }
@@ -60,20 +60,21 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         const srtFilePath = path.join(srtDir, srtFileName);
         fs.writeFileSync(srtFilePath, result.srtContent, 'utf-8');
         
-        const subtitleUrl = `/subtitles/${srtFileName}`;
+        const subtitleBaseUrl = (process.env.PUBLIC_SUBTITLE_BASE_URL || '/subtitles').replace(/\/$/, '');
+        const subtitleUrl = `${subtitleBaseUrl}/${srtFileName}`;
         
         // Step 3: Webhook Callback to .NET API
         await job.updateProgress({ percentage: 95, stage: 'جاري حفظ الفصول والخرائط في واجهة النظام...' });
         console.log(`[Job ${job.id}] Pushing results to backend via Webhook...`);
         
         const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
-        const apiKey = process.env.API_CALLBACK_SECRET || 'secretxyz';
+        const apiKey = process.env.API_CALLBACK_SECRET;
         
         const webhookResponse = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-analysis-completed`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Internal-Token': apiKey
+                'X-Internal-Token': apiKey || ''
             },
             body: JSON.stringify({
                 videoId: lessonVideoId,

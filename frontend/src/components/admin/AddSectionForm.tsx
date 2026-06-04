@@ -29,7 +29,7 @@ export function AddSectionForm({ termId, onSuccess }: AddSectionFormProps) {
       setPrice(0);
       setOrder((prev) => prev + 1);
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ أثناء إضافة القسم، أعد المحاولة.');
     } finally {
       setSaving(false);

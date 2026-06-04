@@ -37,6 +37,9 @@ export function isValidEgyptianPhone(phone: string): boolean {
  * @param debounceMs - Debounce delay in milliseconds (default: 1000)
  */
 export function useWhatsAppCheck(phone: string, debounceMs = 1000): WhatsAppCheckState {
+  void phone;
+  void debounceMs;
+
   return {
     status: 'idle',
     label: '',

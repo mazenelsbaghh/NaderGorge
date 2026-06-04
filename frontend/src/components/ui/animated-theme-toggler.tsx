@@ -119,7 +119,7 @@ export function AnimatedThemeToggler({
     } else {
       doc.documentElement.classList.remove('theme-switching');
     }
-  }, [duration, internalIsDark, isControlled, onToggle]);
+  }, [checked, duration, internalIsDark, isControlled, onToggle]);
 
   return (
     <button

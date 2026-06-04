@@ -1,4 +1,4 @@
-import { BookCopy, LayoutGrid, PackageOpen } from "lucide-react";
+import { LayoutGrid, PackageOpen } from "lucide-react";
 import Image from "next/image";
 
 import type { PackageDto } from "@/services/content-service";

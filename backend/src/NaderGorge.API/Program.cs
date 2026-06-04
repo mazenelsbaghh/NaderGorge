@@ -2,6 +2,7 @@ using System.Text;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NaderGorge.API.Configuration;
@@ -21,18 +22,41 @@ using StackExchange.Redis;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
+SecurityConfigurationValidator.Validate(builder);
+
 builder.Services.AddMemoryCache();
+
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (string.IsNullOrWhiteSpace(redisConnectionString) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("Redis connection string is required outside Development.");
+}
 
 // ----------// Redis cache configuration
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    options.Configuration = redisConnectionString;
 });
 
 // Singleton ConnectionMultiplexer for raw queue pushing (BulkGenerateCodesCommand)
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
-    StackExchange.Redis.ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis") ?? "localhost:6382,abortConnect=false")
+    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString ?? "localhost:6382,abortConnect=false")
 );
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    var knownProxies = builder.Configuration["ForwardedHeaders:KnownProxies"]
+        ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        ?? Array.Empty<string>();
+    foreach (var proxy in knownProxies)
+    {
+        if (System.Net.IPAddress.TryParse(proxy, out var address))
+        {
+            options.KnownProxies.Add(address);
+        }
+    }
+});
 
 // ---------- Database ----------
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -88,6 +112,9 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("RequireAcademicAssistant", policy =>
         policy.RequireRole("Admin", "Teacher", "AssistantAcademic"));
+
+    options.AddPolicy("RequireStudent", policy =>
+        policy.RequireRole("Student"));
 });
 
 // ---------- Rate Limiting ----------
@@ -120,8 +147,17 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ---------- Middleware Pipeline ----------
+var requireHttps = app.Environment.IsProduction() || app.Configuration.GetValue<bool>("Security:RequireHttps");
+if (requireHttps)
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
+app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -139,7 +175,9 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<NaderGorge.Infrastructure.Data.AppDbContext>();
-    await NaderGorge.Infrastructure.Data.Seeder.SeedAsync(db);
+    var canSeedDefaults = app.Configuration.GetValue<bool>("SeedDefaults:Enabled") &&
+        (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "E2e");
+    await NaderGorge.Infrastructure.Data.Seeder.SeedAsync(db, canSeedDefaults);
 }
 
 app.Run();

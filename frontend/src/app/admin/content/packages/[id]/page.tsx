@@ -161,7 +161,6 @@ export default function PackageProfilePage(props: { params: Promise<{ id: string
           <EntityOverviewDashboard 
             entityType="باقة" 
             details={{ title: pkg.name, description: pkg.description, price: pkg.price }} 
-            mockStats={true} 
           />
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
             <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>

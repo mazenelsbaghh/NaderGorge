@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using NaderGorge.Application.Services;
 
 namespace NaderGorge.API.Controllers;
@@ -23,6 +24,7 @@ public class WhatsAppController : ControllerBase
     /// Public endpoint — used during registration (no auth required).
     /// </summary>
     [HttpPost("check")]
+    [EnableRateLimiting("public-whatsapp")]
     public async Task<IActionResult> CheckWhatsApp([FromBody] CheckRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.PhoneNumber))
@@ -37,9 +39,15 @@ public class WhatsAppController : ControllerBase
 
         if (result.Exists is null)
         {
-            return StatusCode(503, new CheckResponse(null, result.Number));
+            return StatusCode(503, new CheckResponse(null, MaskPhone(result.Number)));
         }
 
-        return Ok(new CheckResponse(result.Exists, result.Number));
+        return Ok(new CheckResponse(result.Exists, MaskPhone(result.Number)));
+    }
+
+    private static string MaskPhone(string number)
+    {
+        if (number.Length < 6) return "***";
+        return $"{number[..3]}****{number[^3..]}";
     }
 }

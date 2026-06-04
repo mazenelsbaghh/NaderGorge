@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
+using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Enums;
-using System.Security.Claims;
 
 namespace NaderGorge.API.Controllers;
 
@@ -17,7 +17,7 @@ public class BalanceController : ControllerBase
 
     public BalanceController(IMediator mediator) => _mediator = mediator;
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private Guid GetUserId() => User.RequireUserId();
 
     [HttpGet]
     public async Task<IActionResult> GetBalance()

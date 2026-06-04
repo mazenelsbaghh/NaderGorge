@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useCallback, useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Inbox, Eye, CheckCircle, RefreshCw, FileText, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -40,7 +40,7 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
   const [modalNotes, setModalNotes] = useState('');
   const [savingStatus, setSavingStatus] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const formData = await getAdminFormDetails(id);
@@ -56,11 +56,11 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
 
   useEffect(() => {
     loadData();
-  }, [id, router]);
+  }, [loadData]);
 
   const openDetailsModal = (sub: FormSubmissionDto) => {
     setSelectedSubmission(sub);
@@ -125,8 +125,8 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
         let answersMap: Record<string, string> = {};
         try {
           answersMap = JSON.parse(row.submittedDataJson || '{}');
-        } catch (e) {
-          console.error(e);
+        } catch {
+          answersMap = {};
         }
         const val = answersMap[field.id] || '';
         return (

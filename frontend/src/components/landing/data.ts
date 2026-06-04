@@ -1,14 +1,3 @@
-import {
-  BookOpenText,
-  GraduationCap,
-  LibraryBig,
-  Map,
-  ScrollText,
-  Sparkles,
-  Target,
-  Trophy,
-} from "lucide-react";
-
 export const navigationLinks = [
   { href: "#testimonials", label: "آراء الطلبة" },
 ];

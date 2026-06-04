@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
+using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Entities;
-using System.Security.Claims;
 
 namespace NaderGorge.API.Controllers;
 
@@ -18,7 +18,7 @@ public class AdminController : ControllerBase
 
     public AdminController(IMediator mediator) => _mediator = mediator;
 
-    private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+    private Guid GetUserId() => User.RequireUserId();
 
     // --- Users ---
     [HttpGet("users")]

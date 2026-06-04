@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import NextImage from 'next/image';
 import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, ChevronDown, Image as ImageIcon, Play, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
@@ -206,7 +207,14 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
                   <ImageIcon className="w-3 h-3" />
                   رؤية الخريطة الذهنية
                 </a>
-                <img src={resolveMediaUrl(ch.mindmapImageUrl)} alt={ch.title} className="w-full max-w-[200px] h-auto rounded border border-[var(--admin-border)]" />
+                <NextImage
+                  src={resolveMediaUrl(ch.mindmapImageUrl)}
+                  alt={ch.title}
+                  width={200}
+                  height={112}
+                  unoptimized
+                  className="h-auto w-full max-w-[200px] rounded border border-[var(--admin-border)]"
+                />
               </div>
             )}
           </div>
@@ -225,7 +233,7 @@ interface LessonVideoListProps {
   lessonId: string;
 }
 
-export function LessonVideoList({ videos, lessonId, onRefresh }: LessonVideoListProps) {
+export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);

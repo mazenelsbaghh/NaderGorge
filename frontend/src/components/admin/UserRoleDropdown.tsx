@@ -30,7 +30,7 @@ export function UserRoleDropdown({ user, onUpdate }: UserRoleDropdownProps) {
       await adminService.updateUserRoles(user.id, newRoles);
       setCurrentRoles(newRoles);
       onUpdate(user.id, newRoles);
-    } catch (e) {
+    } catch {
       toast.error('فشل في تحديث الصلاحية');
     } finally {
       setLoading(false);

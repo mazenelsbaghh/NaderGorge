@@ -25,7 +25,7 @@ export function CommunityPostComments({ postId, commentCount }: CommunityPostCom
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [body, setBody] = useState('');
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen] = useState(true);
   const user = useAuthStore((state) => state.user);
 
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
-import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, CheckCircle2, XCircle } from 'lucide-react';
+import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3 } from 'lucide-react';
 import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
@@ -94,14 +94,7 @@ export function AttachedExamViewer({ examId }: { examId: string }) {
 
         <div className="space-y-4">
           {data.questions && data.questions.length > 0 ? (
-            data.questions.map((q, idx) => {
-              // Mock stats since real backend doesn't provide them yet, to demonstrate UI requirements
-              const mockCorrect = Math.floor(Math.random() * 80) + 10;
-              const mockWrong = Math.floor(Math.random() * 20);
-              const totalMock = mockCorrect + mockWrong;
-              const correctRatio = Math.round((mockCorrect / totalMock) * 100);
-
-              return (
+            data.questions.map((q, idx) => (
                 <div 
                   key={q.examQuestionId} 
                   className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-5 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
@@ -131,31 +124,15 @@ export function AttachedExamViewer({ examId }: { examId: string }) {
 
                     {/* Statistics Container */}
                     <div className="xl:w-64 shrink-0 rounded-xl bg-[var(--admin-card)] border border-[var(--admin-border)] p-4">
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="text-xs font-bold text-[var(--admin-muted)]">إجابات الطلاب</span>
-                        <span className={`text-xs font-bold ${correctRatio > 60 ? 'text-green-500' : 'text-orange-500'}`}>{correctRatio}% صحيحة</span>
-                      </div>
-                      
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center bg-green-500/10 px-3 py-2 rounded-lg border border-green-500/20">
-                          <span className="flex items-center gap-1.5 text-xs text-green-700 dark:text-green-400 font-semibold">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> إجابة صحيحة
-                          </span>
-                          <span className="text-sm font-black text-green-700 dark:text-green-400">{mockCorrect}</span>
-                        </div>
-                        
-                        <div className="flex justify-between items-center bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20">
-                          <span className="flex items-center gap-1.5 text-xs text-red-700 dark:text-red-400 font-semibold">
-                            <XCircle className="w-3.5 h-3.5" /> إجابة خاطئة
-                          </span>
-                          <span className="text-sm font-black text-red-700 dark:text-red-400">{mockWrong}</span>
-                        </div>
-                      </div>
+                      <BarChart3 className="mb-3 h-5 w-5 text-[var(--admin-primary)]" />
+                      <p className="text-sm font-black text-[var(--admin-text)]">إحصائيات الإجابات غير متاحة</p>
+                      <p className="mt-2 text-xs leading-5 text-[var(--admin-muted)]">
+                        لن يتم عرض نسب صحيحة أو خاطئة إلا بعد توفير بيانات فعلية من نتائج الطلاب.
+                      </p>
                     </div>
                   </div>
                 </div>
-              );
-            })
+              ))
           ) : (
             <div className="text-center py-10 bg-[var(--admin-background)] rounded-xl border border-dashed border-[var(--admin-border)]">
               <p className="text-[var(--admin-muted)] font-bold text-sm mb-2">لا توجد أسئلة</p>

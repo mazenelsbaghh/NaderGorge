@@ -34,6 +34,38 @@ def main():
         print(f"❌ Failed to connect: {e}")
         sys.exit(1)
 
+    # 0. Apply missing tables/columns from docker/create_missing_tables.sql
+    print("🛠 Running docker/create_missing_tables.sql to ensure missing tables exist on production...")
+    try:
+        with open("docker/create_missing_tables.sql", "r") as f:
+            create_tables_sql = f.read()
+        
+        # Run the SQL on production db container
+        db_cmd = 'docker exec -i nadergorge_db psql -U postgres -d nadergorge'
+        stdin_db, stdout_db, stderr_db = ssh.exec_command(db_cmd)
+        stdin_db.write(create_tables_sql)
+        stdin_db.flush()
+        stdin_db.channel.shutdown_write()
+        
+        exit_status = stdout_db.channel.recv_exit_status()
+        out = stdout_db.read().decode('utf-8', errors='replace')
+        err = stderr_db.read().decode('utf-8', errors='replace')
+        
+        if exit_status != 0:
+            print(f"❌ Failed to run create_missing_tables.sql. Exit Code: {exit_status}")
+            print("STDOUT:", out)
+            print("STDERR:", err)
+            ssh.close()
+            sys.exit(1)
+        else:
+            print("✅ create_missing_tables.sql applied successfully on production database!")
+            if out:
+                print(out.strip())
+    except Exception as e:
+        print(f"❌ Error applying missing tables script: {e}")
+        ssh.close()
+        sys.exit(1)
+
     # 1. Build and run containers if not skipped
     if not skip_build:
         print("🔨 Rebuilding and starting docker containers on production server...")

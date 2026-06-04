@@ -41,11 +41,28 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: '9.0.x'
         
     - name: Install Frontend Dependencies
       working-directory: frontend
       run: npm ci
+
+    - name: Install Worker Dependencies
+      working-directory: worker
+      run: npm ci
+
+    - name: Build Worker
+      working-directory: worker
+      env:
+        API_CALLBACK_SECRET: ci_api_callback_secret_value_1234567890
+        WORKER_ADMIN_TOKEN: ci_worker_admin_token_value_1234567890
+      run: npm run build
+
+    - name: Build and lint Frontend
+      working-directory: frontend
+      run: |
+        npm run build
+        npm run lint
       
     - name: Install Playwright Browsers
       working-directory: frontend
@@ -55,6 +72,11 @@ jobs:
       working-directory: backend/src/NaderGorge.API
       env:
         ASPNETCORE_ENVIRONMENT: E2e
+        E2E_TEST_TOKEN: ci_e2e_test_token_value_1234567890
+        API_CALLBACK_SECRET: ci_api_callback_secret_value_1234567890
+        AI_CALLBACK_SECRET: ci_ai_callback_secret_value_1234567890
+        ParentReports__SigningSecret: ci_parent_report_secret_value_1234567890
+        ConnectionStrings__Redis: localhost:6379,abortConnect=false
       run: dotnet run &
       
     - name: Start Frontend
@@ -64,7 +86,7 @@ jobs:
     - name: Wait for services to be ready
       run: |
         npx wait-on http://localhost:5245/api/health
-        npx wait-on http://localhost:3000
+        npx wait-on http://localhost:8738
         
     - name: Run Playwright tests
       working-directory: frontend

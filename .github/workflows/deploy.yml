@@ -22,14 +22,17 @@ jobs:
         
         cd /var/www/nadergorge
         
-        echo "🔨 Building and restarting Docker containers..."
-        docker compose up -d --build
-        
         echo "⚙️ Running database migrations..."
         docker compose --profile migration run --rm migrator
+
+        echo "🔨 Building and restarting Docker containers..."
+        docker compose up -d --build
+
+        echo "🩺 Checking service health..."
+        docker compose ps
+        curl --fail --retry 10 --retry-delay 5 http://localhost:5245/api/health
         
         echo "🧹 Cleaning up old/unused Docker images and containers..."
         docker image prune -f
-        docker system prune -f
         
         echo "✅ Deployment completed successfully!"

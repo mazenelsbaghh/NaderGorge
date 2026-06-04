@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { Quote } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -85,7 +86,14 @@ function ReviewCard({ avatar, name, role, quote }: ReviewCardProps) {
       )}
     >
       <div className="flex items-center gap-4">
-        <img className="h-[56px] w-[56px] rounded-full object-cover ring-2 ring-[var(--landing-line)]" width="56" height="56" alt={name} src={avatar} loading="lazy" decoding="async" />
+        <Image
+          className="h-[56px] w-[56px] rounded-full object-cover ring-2 ring-[var(--landing-line)]"
+          width={56}
+          height={56}
+          alt={name}
+          src={avatar}
+          unoptimized
+        />
         <div className="min-w-0 flex-1">
           <figcaption className="truncate text-[1.15rem] font-black text-[var(--landing-ink)]">
             {name}

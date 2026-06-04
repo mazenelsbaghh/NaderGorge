@@ -34,7 +34,7 @@ export function QrScanner() {
           // If it's just the code string, we can try pushing directly
           router.push(`/api/qr/${encodeURIComponent(text)}`);
         }
-      } catch (e) {
+      } catch {
         // Not a valid URL, assume it's just the raw code
         router.push(`/api/qr/${encodeURIComponent(text)}`);
       }

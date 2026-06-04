@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowUpLeft, BookX, Bug, ChevronLeft, ShieldCheck } from "lucide-react";
 
+import { sanitizeRichHtml } from "@/lib/sanitize-html";
 import { studentService, type StudentMistakesDto } from "@/services/student-service";
 
 export default function StudentMistakesPage() {
@@ -137,7 +138,7 @@ export default function StudentMistakesPage() {
                         </div>
                         <div
                           className="mt-3 text-sm font-black leading-7 text-[var(--admin-text)]"
-                          dangerouslySetInnerHTML={{ __html: item.questionText }}
+                          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(item.questionText) }}
                         />
                         <p className="mt-3 text-sm font-bold text-[var(--admin-muted)]">
                           إجابتك الأخيرة: <span className="text-[var(--admin-text)]">{item.yourAnswer || "ماختارتش إجابة"}</span>

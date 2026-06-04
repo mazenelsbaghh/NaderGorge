@@ -40,7 +40,7 @@ export function PackageDetailsForm({ pkg, onSuccess }: PackageDetailsFormProps) 
       });
       toast.success('تم تحديث بيانات الباقة بنجاح.');
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ أثناء تحديث الباقة، يرجى المحاولة مرة أخرى.');
     } finally {
       setSaving(false);

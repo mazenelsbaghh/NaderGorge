@@ -29,7 +29,7 @@ export function AddTermForm({ packageId, onSuccess }: AddTermFormProps) {
       setPrice(0);
       setOrder((prev) => prev + 1);
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ أثناء إضافة الترم، أعد المحاولة.');
     } finally {
       setSaving(false);

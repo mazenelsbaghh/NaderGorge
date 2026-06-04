@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { PlaySquare } from 'lucide-react';
 import { adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import { NumberField } from '@/components/ui/number-field';
@@ -32,7 +31,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
       setUrlOrEmbedCode('');
       setOrder((prev) => prev + 1);
       onSuccess?.();
-    } catch (error) {
+    } catch {
       toast.error('حدث خطأ أثناء إضافة الفيديو، أعد المحاولة.');
     } finally {
       setSaving(false);

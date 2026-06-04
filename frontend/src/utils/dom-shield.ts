@@ -22,7 +22,7 @@ export const preventDrag = (element: HTMLElement) => {
 // YouTube Iframe API functionalities depending on how it's injected.
 // Using Shadow DOM is already our primary defense, so we'll just provide
 // a basic property clearing function instead that tries to hide the video ID.
-export const hideIframeSrcAttribute = (iframe: HTMLIFrameElement) => {
+export const hideIframeSrcAttribute = () => {
   // We can't actually change the src without reloading the iframe,
   // but we can try to obscure it in attributes panel by replacing it with a getter
   // This is a bit advanced and sometimes unstable.

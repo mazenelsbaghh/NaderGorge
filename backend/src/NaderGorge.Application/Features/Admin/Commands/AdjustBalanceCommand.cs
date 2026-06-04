@@ -16,6 +16,15 @@ public class AdjustBalanceCommandHandler : IRequestHandler<AdjustBalanceCommand,
 
     public async Task<ApiResponse> Handle(AdjustBalanceCommand request, CancellationToken ct)
     {
+        if (request.Amount == 0)
+            return ApiResponse.Fail("Adjustment amount must not be zero.");
+
+        if (string.IsNullOrWhiteSpace(request.Reason))
+            return ApiResponse.Fail("Adjustment reason is required.");
+
+        if (Math.Abs(request.Amount) > 100_000)
+            return ApiResponse.Fail("Adjustment amount exceeds the allowed limit.");
+
         var balance = await _db.StudentBalances
             .FirstOrDefaultAsync(b => b.UserId == request.StudentId, ct);
 
@@ -31,6 +40,9 @@ public class AdjustBalanceCommandHandler : IRequestHandler<AdjustBalanceCommand,
         }
 
         var oldBalance = balance.CurrentBalance;
+        if (oldBalance + request.Amount < 0)
+            return ApiResponse.Fail("Adjustment would make the student balance negative.");
+
         balance.CurrentBalance += request.Amount;
         balance.UpdatedAt = DateTime.UtcNow;
 

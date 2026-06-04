@@ -20,7 +20,7 @@ export function EssayGradingView() {
       setLoading(true);
       const data = await adminService.getPendingEssays();
       setEssays(data || []);
-    } catch (err) {
+    } catch {
       toast.error('Failed to fetch pending essays');
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ function EssayCard({ essay, onGraded, gradingId, setGradingId }: {
       await adminService.gradeEssay(essay.id, teacherScore, teacherFeedback);
       toast.success('Essay graded successfully');
       onGraded();
-    } catch (err) {
+    } catch {
       toast.error('Failed to submit grade');
     } finally {
       if (gradingId === essay.id) setGradingId(null);

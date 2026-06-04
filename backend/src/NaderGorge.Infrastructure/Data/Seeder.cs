@@ -6,44 +6,56 @@ namespace NaderGorge.Infrastructure.Data;
 
 public static class Seeder
 {
-    public static async Task SeedAsync(AppDbContext db)
+    public static async Task SeedAsync(AppDbContext db, bool seedDefaultUsers = false)
     {
-        if (await db.Roles.AnyAsync()) return;
-
-        var roles = new[]
+        var rolesByName = await db.Roles.ToDictionaryAsync(r => r.Name);
+        if (rolesByName.Count == 0)
         {
-            new Role { Name = "Admin", Type = RoleType.Admin },
-            new Role { Name = "Teacher", Type = RoleType.Teacher },
-            new Role { Name = "Assistant", Type = RoleType.Assistant },
-            new Role { Name = "Student", Type = RoleType.Student }
-        };
-        db.Roles.AddRange(roles);
+            var roles = new[]
+            {
+                new Role { Name = "Admin", Type = RoleType.Admin },
+                new Role { Name = "Teacher", Type = RoleType.Teacher },
+                new Role { Name = "Assistant", Type = RoleType.Assistant },
+                new Role { Name = "Student", Type = RoleType.Student }
+            };
+            db.Roles.AddRange(roles);
+            await db.SaveChangesAsync();
+            rolesByName = roles.ToDictionary(r => r.Name);
+        }
+
+        if (!seedDefaultUsers) return;
 
         // Create default admin user
-        var adminRole = roles[0];
-        var admin = new User
+        var adminRole = rolesByName["Admin"];
+        if (!await db.Users.AnyAsync(u => u.PhoneNumber == "01000000000"))
         {
-            FullName = "System Admin",
-            PhoneNumber = "01000000000",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
-            IsActive = true,
-            IsProfileComplete = true
-        };
-        db.Users.Add(admin);
-        db.UserRoles.Add(new UserRole { User = admin, Role = adminRole });
+            var admin = new User
+            {
+                FullName = "System Admin",
+                PhoneNumber = "01000000000",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+                IsActive = true,
+                IsProfileComplete = true
+            };
+            db.Users.Add(admin);
+            db.UserRoles.Add(new UserRole { User = admin, Role = adminRole });
+        }
 
         // Create default student user
-        var studentRole = roles[3];
-        var student = new User
+        var studentRole = rolesByName["Student"];
+        if (!await db.Users.AnyAsync(u => u.PhoneNumber == "01234567890"))
         {
-            FullName = "Student User",
-            PhoneNumber = "01234567890",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Student@123"),
-            IsActive = true,
-            IsProfileComplete = true
-        };
-        db.Users.Add(student);
-        db.UserRoles.Add(new UserRole { User = student, Role = studentRole });
+            var student = new User
+            {
+                FullName = "Student User",
+                PhoneNumber = "01234567890",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Student@123"),
+                IsActive = true,
+                IsProfileComplete = true
+            };
+            db.Users.Add(student);
+            db.UserRoles.Add(new UserRole { User = student, Role = studentRole });
+        }
 
         await db.SaveChangesAsync();
     }

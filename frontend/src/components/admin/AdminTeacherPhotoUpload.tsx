@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Upload, Image as ImageIcon, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
@@ -80,7 +81,7 @@ export function AdminTeacherPhotoUpload() {
           
           {preview ? (
             <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-[var(--admin-border)] shadow-md">
-              <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+              <Image src={preview} alt="Preview" fill unoptimized className="object-cover" />
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <Upload className="w-6 h-6 text-white" />
               </div>

@@ -12,7 +12,6 @@ import {
   AdminSearchToolbar,
 } from '@/components/admin';
 import { FindTheMistakeBuilder } from '@/components/admin/FindTheMistakeBuilder';
-import { formatCompactNumber } from '@/components/admin/admin-utils';
 import { adminService, QuestionBankItemDto, QuestionOptionDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
