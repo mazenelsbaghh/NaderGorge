@@ -157,18 +157,21 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex"
+            className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex group/sidebar transition-all duration-300 ease-in-out hover:w-64"
             role="navigation"
             aria-label="القائمة الرئيسية"
           >
             <div className="space-y-7">
-              <div className="flex justify-center cursor-pointer" onClick={() => setIsThemeSettingsOpen(true)}>
+              <div className="flex justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-5 transition-all duration-300 cursor-pointer items-center gap-3" onClick={() => setIsThemeSettingsOpen(true)}>
                 <UserAvatar
                   avatarSlug={user?.avatarSlug}
                   fullName={user?.fullName}
                   size="sm"
-                  className="ring-offset-2 ring-offset-[var(--admin-sidebar)] hover:scale-105 transition duration-300"
+                  className="ring-offset-2 ring-offset-[var(--admin-sidebar)] hover:scale-105 transition duration-300 flex-shrink-0"
                 />
+                <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-text)] truncate whitespace-nowrap">
+                  {user?.fullName || 'طالب'}
+                </span>
               </div>
 
               <nav className="space-y-3 px-3">
@@ -176,12 +179,15 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   href="/student"
                   aria-label="لوحة التحكم"
                   aria-current={activePath === '/student' ? 'page' : undefined}
-                  className={`flex h-12 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
+                  className={`flex h-12 items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
                     ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                     : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                     }`}
                 >
-                  <Home className="h-5 w-5" />
+                  <Home className="h-5 w-5 flex-shrink-0" />
+                  <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                    لوحة التحكم
+                  </span>
                 </Link>
 
                 {allNavItems.map((item) => {
@@ -192,7 +198,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className={`flex h-12 items-center justify-center rounded-full transition focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
+                      className={`flex h-12 items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
                         ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                         : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                         }`}
@@ -200,7 +206,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                       aria-label={item.label}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                        {item.label}
+                      </span>
                     </Link>
                   );
                 })}
@@ -208,35 +217,44 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             </div>
 
             <div className="space-y-3 px-3">
-              <div className="flex justify-center">
+              <div className="flex justify-center group-hover/sidebar:justify-start transition-all duration-300 w-full">
                 <SidebarBalance />
               </div>
-              <div className="flex justify-center">
+              <div className="flex justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-3 transition-all duration-300">
                 <AnimatedThemeToggler
                   checked={isDark}
                   onToggle={toggleTheme}
                   aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                   title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
-                  className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                  className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
                 />
+                <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-muted)] self-center mr-3 truncate whitespace-nowrap">
+                  {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
+                </span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsThemeSettingsOpen(true)}
-                className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                className="flex h-12 w-full items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
                 aria-label="إعدادات الثيم"
                 title="إعدادات الثيم"
               >
-                <Settings className="h-5 w-5" />
+                <Settings className="h-5 w-5 flex-shrink-0" />
+                <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                  تخصيص المظهر
+                </span>
               </button>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex h-12 w-full items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                className="flex h-12 w-full items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
                 title="تسجيل الخروج"
                 aria-label="تسجيل الخروج"
               >
-                <LogOut className="h-5 w-5" />
+                <LogOut className="h-5 w-5 flex-shrink-0" />
+                <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                  تسجيل الخروج
+                </span>
               </button>
             </div>
           </motion.aside>

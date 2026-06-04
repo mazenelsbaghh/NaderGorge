@@ -38,6 +38,37 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetStudentProfile(Guid userId)
         => Ok(await _mediator.Send(new GetStudentProfileDetailQuery(userId)));
 
+    [HttpPut("users/students/{userId:guid}/profile")]
+    public async Task<IActionResult> UpdateStudentProfile(Guid userId, [FromBody] UpdateStudentProfileRequest dto)
+    {
+        var result = await _mediator.Send(new UpdateStudentProfileCommand(
+            userId, dto.FullName, dto.Phone, dto.ParentPhone, dto.SecondaryPhone, dto.MotherPhone,
+            dto.Governorate, dto.District, dto.Address, dto.SchoolName, dto.DateOfBirth,
+            dto.Gender, dto.EducationStage, dto.GradeLevel, dto.StudyTrack, dto.SchoolType,
+            dto.IsFatherAlive, dto.IsMotherAlive, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("users/students/{userId:guid}/reset-password")]
+    public async Task<IActionResult> AdminResetPassword(Guid userId, [FromBody] AdminResetPasswordRequest dto)
+    {
+        var result = await _mediator.Send(new AdminResetPasswordCommand(userId, dto.NewPassword, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("users/students/{userId:guid}/notes")]
+    public async Task<IActionResult> AddStudentNote(Guid userId, [FromBody] AddStudentNoteRequest dto)
+    {
+        var result = await _mediator.Send(new AddStudentNoteCommand(userId, dto.Content, dto.IsPinned, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("users/students/{userId:guid}/notes/{noteId:guid}")]
+    public async Task<IActionResult> DeleteStudentNote(Guid userId, Guid noteId)
+    {
+        var result = await _mediator.Send(new DeleteStudentNoteCommand(noteId, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 
     [HttpPut("users/{id:guid}/status")]
     public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusRequest dto)
@@ -116,6 +147,13 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> AdjustBalance(Guid userId, [FromBody] BalanceAdjustmentRequest dto)
     {
         var result = await _mediator.Send(new AdjustBalanceCommand(userId, dto.Amount, dto.Reason, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("users/students/{userId:guid}/packages/{accessGrantId:guid}/cancel")]
+    public async Task<IActionResult> CancelPackage(Guid userId, Guid accessGrantId, [FromBody] CancelPackageRequest dto)
+    {
+        var result = await _mediator.Send(new CancelPackageGrantCommand(accessGrantId, dto.RefundBalance, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -492,6 +530,7 @@ public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);
 public record GamificationAdjustmentRequest(int Points, string Reason);
 public record BalanceAdjustmentRequest(decimal Amount, string Reason);
+public record CancelPackageRequest(bool RefundBalance);
 public record BulkGenerateRequest(
     string GroupName,
     Domain.Enums.CodeType CodeType,
@@ -528,3 +567,11 @@ public record UpsertPackageCodeProfileRequest(
 public record AddQuestionsToExamRequest(List<InlineExamQuestionDto> Questions);
 public record UploadTeacherPhotoRequest(Guid TeacherId, string Base64Image, string FileName);
 public record UpdateSettingsRequest(Dictionary<string, string> Settings);
+public record UpdateStudentProfileRequest(
+    string? FullName, string? Phone, string? ParentPhone, string? SecondaryPhone, string? MotherPhone,
+    string? Governorate, string? District, string? Address, string? SchoolName, string? DateOfBirth,
+    string? Gender, string? EducationStage, string? GradeLevel, string? StudyTrack, string? SchoolType,
+    bool? IsFatherAlive, bool? IsMotherAlive
+);
+public record AdminResetPasswordRequest(string NewPassword);
+public record AddStudentNoteRequest(string Content, bool IsPinned);

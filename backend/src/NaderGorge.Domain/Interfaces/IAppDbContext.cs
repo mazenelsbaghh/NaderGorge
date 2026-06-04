@@ -83,6 +83,9 @@ public interface IAppDbContext
     // Phase 2: Notifications
     DbSet<NotificationEvent> NotificationEvents { get; }
     
+    // Student Notes
+    DbSet<StudentNote> StudentNotes { get; }
+    
     Task<StudentAnswer?> FindStudentAnswerAsync(Guid studentExamAttemptId, Guid examQuestionId, CancellationToken cancellationToken = default);
     Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

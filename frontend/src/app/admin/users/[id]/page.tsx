@@ -4,20 +4,31 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
 import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
-import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound, RotateCcw, Wallet, Package, PenLine, DollarSign } from 'lucide-react';
+import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound, RotateCcw, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminStudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit' | 'notes'>('overview');
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState<StudentProfileExtendedDto | null>(null);
-  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'|'watchCount'|'balance'>('none');
+  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'|'watchCount'|'balance'|'editProfile'|'password'|'cancelPackage'>('none');
   const [overrideInput, setOverrideInput] = useState({ videoId: '', addedViews: 1, reason: '' });
   const [gamificationInput, setGamificationInput] = useState({ points: 10, reason: '' });
   const [watchCountEdit, setWatchCountEdit] = useState({ lessonVideoId: '', videoTitle: '', currentCount: 0, newCount: 0, maxCount: 0 });
   const [balanceInput, setBalanceInput] = useState({ amount: 0, reason: '' });
+  const [editFields, setEditFields] = useState<Record<string, string | boolean | null>>({});
+  const [passwordInput, setPasswordInput] = useState('');
+  const [noteInput, setNoteInput] = useState({ content: '', isPinned: false });
+  const [suspensionReasonInput, setSuspensionReasonInput] = useState('');
+  const [selectedPackageForCancel, setSelectedPackageForCancel] = useState<{
+    accessGrantId: string;
+    name: string;
+    purchaseMethod: string;
+    price: number;
+  } | null>(null);
+  const [refundBalanceOption, setRefundBalanceOption] = useState(false);
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '0 دقيقة';
@@ -36,12 +47,13 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
     return `${remainingSeconds}ث`;
   };
 
-  const TABS: AdminTab<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit'>[] = [
+  const TABS: AdminTab<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit' | 'notes'>[] = [
      { key: 'overview', label: 'نظرة عامة' },
      { key: 'academic', label: 'الأكاديمية' },
      { key: 'devices', label: 'الأجهزة والجلسات' },
      { key: 'overrides', label: 'التجاوزات' },
      { key: 'financials', label: 'الماليات' },
+     { key: 'notes', label: 'الملاحظات' },
      { key: 'audit', label: 'سجل النشاط' }
   ];
 
@@ -94,12 +106,51 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
     }
   };
 
-  const toggleStatus = async () => {
+  const toggleStatusDirect = async (isActive: boolean, reason: string) => {
     try {
-        await adminService.toggleStudentStatus(id, !(studentData?.isActive), "Admin Override Action");
+        await adminService.toggleStudentStatus(id, isActive, reason);
         fetchStudent();
+        setModalOpen('none');
+        toast.success(isActive ? 'تم تفعيل الحساب بنجاح' : 'تم إيقاف الحساب بنجاح');
     } catch(err) {
         toast.error('فشل تغيير الحالة');
+    }
+  };
+
+  const handleStatusToggleClick = () => {
+    if (studentData?.isActive) {
+      setSuspensionReasonInput('');
+      setModalOpen('status');
+    } else {
+      void toggleStatusDirect(true, '');
+    }
+  };
+
+  const handleOpenCancelPackageModal = (p: any) => {
+    setSelectedPackageForCancel({
+      accessGrantId: p.accessGrantId,
+      name: p.name,
+      purchaseMethod: p.purchaseMethod,
+      price: p.price
+    });
+    setRefundBalanceOption(p.purchaseMethod === 'Balance');
+    setModalOpen('cancelPackage');
+  };
+
+  const handleCancelPackageConfirm = async () => {
+    if (!selectedPackageForCancel) return;
+    try {
+      await adminService.cancelStudentPackage(
+        id,
+        selectedPackageForCancel.accessGrantId,
+        refundBalanceOption
+      );
+      toast.success('تم إلغاء الاشتراك في الباقة بنجاح');
+      setModalOpen('none');
+      setSelectedPackageForCancel(null);
+      fetchStudent();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'فشل إلغاء الاشتراك');
     }
   };
 
@@ -159,7 +210,42 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
        action={
           <div className="flex gap-4">
             <button 
-              onClick={toggleStatus}
+              onClick={() => {
+                setEditFields({
+                  fullName: studentData?.fullName || '',
+                  phone: studentData?.phone || '',
+                  parentPhone: studentData?.parentPhone || '',
+                  secondaryPhone: studentData?.secondaryPhone || '',
+                  motherPhone: studentData?.motherPhone || '',
+                  governorate: studentData?.governorate || '',
+                  district: studentData?.district || '',
+                  address: studentData?.address || '',
+                  schoolName: studentData?.schoolName || '',
+                  dateOfBirth: studentData?.dateOfBirth ? new Date(studentData.dateOfBirth).toISOString().split('T')[0] : '',
+                  gender: studentData?.gender || '',
+                  educationStage: studentData?.educationStage || '',
+                  gradeLevel: studentData?.grade || '',
+                  studyTrack: studentData?.studyTrack || '',
+                  schoolType: studentData?.schoolType || '',
+                  isFatherAlive: studentData?.isFatherAlive ?? true,
+                  isMotherAlive: studentData?.isMotherAlive ?? true,
+                });
+                setModalOpen('editProfile');
+              }}
+              className="flex items-center gap-2 rounded-2xl bg-[var(--admin-primary-15)] px-4 py-2 font-medium text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors"
+            >
+               <PenLine size={20} />
+               تعديل البيانات
+            </button>
+            <button 
+              onClick={() => { setPasswordInput(''); setModalOpen('password'); }}
+              className="flex items-center gap-2 rounded-2xl bg-amber-500/10 px-4 py-2 font-medium text-amber-600 hover:bg-amber-500/20 transition-colors"
+            >
+               <KeyRound size={20} />
+               تغيير الباسورد
+            </button>
+            <button 
+              onClick={handleStatusToggleClick}
               className={`flex items-center gap-2 rounded-2xl px-4 py-2 font-medium transition-colors 
                  ${studentData?.isActive ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'}`}
             >
@@ -374,21 +460,21 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                        label="إجمالي النقاط"
                        value={studentData?.gamification?.totalPoints || 0}
                      />
-                     <div className="relative">
-                       <AdminStatCard
-                         variant="muted"
-                         icon={DollarSign}
-                         label="الرصيد"
-                         value={`${studentData?.currentBalance ?? 0} ج.م`}
-                       />
-                       <button
-                         onClick={() => { setBalanceInput({ amount: 0, reason: '' }); setModalOpen('balance'); }}
-                         className="absolute top-4 left-4 rounded-xl bg-[var(--admin-primary-15)] p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors"
-                         title="تعديل الرصيد"
-                       >
-                         <PenLine size={16} />
-                       </button>
-                     </div>
+                     <AdminStatCard
+                        variant="muted"
+                        icon={DollarSign}
+                        label="الرصيد"
+                        value={`${studentData?.currentBalance ?? 0} ج.م`}
+                      >
+                        <button
+                          onClick={() => { setBalanceInput({ amount: 0, reason: '' }); setModalOpen('balance'); }}
+                          className="mt-4 flex items-center justify-center gap-2 w-full rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-all duration-300 shadow-sm"
+                          title="تعديل الرصيد"
+                        >
+                          <PenLine size={14} />
+                          <span>تعديل الرصيد</span>
+                        </button>
+                      </AdminStatCard>
                   </div>
 
                   <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
@@ -398,26 +484,46 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                      </div>
 
                      <AdminDataTable<any>
-                       columns={[
-                         {key: 'name', label: 'اسم الباقة', render: (row: any) => (
-                           <span className="font-bold text-[var(--admin-text)]">{row.name}</span>
-                         )},
-                         {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row: any) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB') : 'غير محدد'},
-                         {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row: any) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB') : 'غير محدد'},
-                         {key: 'status', label: 'الحالة', render: (row: any) => {
-                           const isExpired = row.expiresAt && new Date(row.expiresAt) < new Date();
-                           return (
-                             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${isExpired ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
-                               <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                               {isExpired ? 'منتهية' : 'نشطة'}
-                             </span>
-                           );
-                         }}
-                       ]}
-                       data={studentData?.packages || []}
-                       rowKey={(row: any) => row.id || row.name}
-                       emptyMessage="لا توجد باقات مسجلة لهذا الطالب"
-                     />
+                        columns={[
+                          {key: 'name', label: 'اسم الباقة', render: (row: any) => (
+                            <span className="font-bold text-[var(--admin-text)]">{row.name}</span>
+                          )},
+                          {key: 'price', label: 'السعر', render: (row: any) => (
+                            <span className="font-medium text-[var(--admin-text)]">{row.price} ج.م</span>
+                          )},
+                          {key: 'purchaseMethod', label: 'طريقة الشراء', render: (row: any) => (
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${row.purchaseMethod === 'Code' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
+                              {row.purchaseMethod === 'Code' ? 'كود شحن' : 'رصيد محفظة'}
+                            </span>
+                          )},
+                          {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row: any) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB') : 'غير محدد'},
+                          {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row: any) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB') : 'غير محدد'},
+                          {key: 'status', label: 'الحالة', render: (row: any) => {
+                            const isExpired = row.expiresAt && new Date(row.expiresAt) < new Date();
+                            const isGrantActive = row.isActive;
+                            return (
+                              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${!isGrantActive ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' : isExpired ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
+                                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                                {!isGrantActive ? 'ملغية من الإدارة' : isExpired ? 'منتهية' : 'نشطة'}
+                              </span>
+                            );
+                          }},
+                          {key: 'actions', label: 'إجراءات الإلغاء', render: (row: any) => {
+                            if (!row.isActive) return <span className="text-[var(--admin-muted)] text-xs">غير متاحة</span>;
+                            return (
+                              <button
+                                onClick={() => handleOpenCancelPackageModal(row)}
+                                className="flex items-center gap-1 px-2.5 py-1 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-lg text-xs font-bold transition-all duration-200"
+                              >
+                                إلغاء الباقة
+                              </button>
+                            );
+                          }}
+                        ]}
+                        data={studentData?.packages || []}
+                        rowKey={(row: any) => row.accessGrantId || row.id || row.name}
+                        emptyMessage="لا توجد باقات مسجلة لهذا الطالب"
+                      />
                   </div>
               </div>
           )}
@@ -507,7 +613,55 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                     emptyMessage="لا يوجد سجل نشاط"
                  />
              </div>
-         )}
+          )}
+
+          {activeTab === 'notes' && (
+              <div className="flex flex-col gap-6">
+                  <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                     <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-4">إضافة ملاحظة جديدة</h3>
+                     <form onSubmit={async (e) => {
+                       e.preventDefault();
+                       if (!noteInput.content.trim()) return;
+                       try {
+                         await adminService.addStudentNote(id, noteInput.content, noteInput.isPinned);
+                         toast.success('تم إضافة الملاحظة');
+                         setNoteInput({ content: '', isPinned: false });
+                         fetchStudent();
+                       } catch { toast.error('فشل إضافة الملاحظة'); }
+                     }} className="flex flex-col gap-3">
+                         <textarea required rows={3} placeholder="اكتب ملاحظتك هنا..."
+                           className="w-full bg-[var(--admin-surface)] p-4 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none resize-none"
+                           value={noteInput.content} onChange={e => setNoteInput(p => ({...p, content: e.target.value}))} />
+                         <div className="flex justify-between items-center">
+                           <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-muted)]">
+                             <input type="checkbox" checked={noteInput.isPinned} onChange={e => setNoteInput(p => ({...p, isPinned: e.target.checked}))} className="rounded" />
+                             <Pin size={14} /> تثبيت الملاحظة
+                           </label>
+                           <button type="submit" className="px-6 py-2 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110 transition-all">إضافة</button>
+                         </div>
+                     </form>
+                  </div>
+                  {(studentData?.notes?.length ?? 0) > 0 ? (
+                    <div className="flex flex-col gap-3">
+                      {studentData!.notes.map(note => (
+                        <div key={note.id} className={`bg-[var(--admin-bg)] p-5 rounded-2xl shadow-sm border-r-4 ${note.isPinned ? 'border-[var(--admin-accent)]' : 'border-transparent'}`}>
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              {note.isPinned && <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--admin-accent)] mb-2"><Pin size={12} /> مثبتة</span>}
+                              <p className="text-[var(--admin-text)] whitespace-pre-wrap">{note.content}</p>
+                              <p className="text-xs text-[var(--admin-muted)] mt-2">بواسطة <strong>{note.adminName}</strong> — {new Date(note.createdAt).toLocaleString('ar-EG')}</p>
+                            </div>
+                            <button onClick={async () => { try { await adminService.deleteStudentNote(id, note.id); toast.success('تم حذف الملاحظة'); fetchStudent(); } catch { toast.error('فشل حذف الملاحظة'); } }}
+                              className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors" title="حذف الملاحظة"><Trash2 size={16} /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-[var(--admin-muted)]"><StickyNote size={48} className="mx-auto mb-3 opacity-30" /><p>لا توجد ملاحظات على هذا الطالب</p></div>
+                  )}
+              </div>
+          )}
 
          {activeTab === 'academic' && (
              <div className="flex flex-col gap-6">
@@ -713,6 +867,166 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                       <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ</button>
                   </div>
               </form>
+          </AdminModal>
+
+          <AdminModal open={modalOpen === 'editProfile'} onClose={() => setModalOpen('none')} title="تعديل بيانات الطالب">
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await adminService.updateStudentProfile(id, editFields);
+                  toast.success('تم تحديث البيانات');
+                  setModalOpen('none');
+                  fetchStudent();
+                } catch { toast.error('فشل التحديث'); }
+              }} className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+                  {[
+                    { key: 'fullName', label: 'الاسم الكامل', type: 'text' },
+                    { key: 'phone', label: 'رقم الهاتف', type: 'text' },
+                    { key: 'parentPhone', label: 'هاتف ولي الأمر', type: 'text' },
+                    { key: 'secondaryPhone', label: 'هاتف إضافي', type: 'text' },
+                    { key: 'motherPhone', label: 'هاتف الأم', type: 'text' },
+                    { key: 'governorate', label: 'المحافظة', type: 'text' },
+                    { key: 'district', label: 'المنطقة / الحي', type: 'text' },
+                    { key: 'address', label: 'العنوان', type: 'text' },
+                    { key: 'schoolName', label: 'اسم المدرسة', type: 'text' },
+                    { key: 'dateOfBirth', label: 'تاريخ الميلاد', type: 'date' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">{f.label}</label>
+                      <input type={f.type} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none text-sm"
+                        value={String(editFields[f.key] ?? '')} onChange={e => setEditFields(p => ({...p, [f.key]: e.target.value}))} />
+                    </div>
+                  ))}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">النوع</label>
+                      <select className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] outline-none text-sm"
+                        value={String(editFields.gender ?? '')} onChange={e => setEditFields(p => ({...p, gender: e.target.value}))}>
+                        <option value="">---</option><option value="Male">ذكر</option><option value="Female">أنثى</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">نوع المدرسة</label>
+                      <select className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] outline-none text-sm"
+                        value={String(editFields.schoolType ?? '')} onChange={e => setEditFields(p => ({...p, schoolType: e.target.value}))}>
+                        <option value="">---</option><option value="Government">حكومية</option><option value="Language">لغات</option><option value="Experimental">تجريبية</option><option value="Private">خاصة</option><option value="Azhari">أزهرية</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)]">
+                      <input type="checkbox" checked={editFields.isFatherAlive === true} onChange={e => setEditFields(p => ({...p, isFatherAlive: e.target.checked}))} className="rounded" />
+                      الأب على قيد الحياة
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)]">
+                      <input type="checkbox" checked={editFields.isMotherAlive === true} onChange={e => setEditFields(p => ({...p, isMotherAlive: e.target.checked}))} className="rounded" />
+                      الأم على قيد الحياة
+                    </label>
+                  </div>
+                  <div className="flex gap-4 mt-4 sticky bottom-0 bg-[var(--admin-bg)] pt-3">
+                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
+                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ التعديلات</button>
+                  </div>
+              </form>
+          </AdminModal>
+
+          <AdminModal open={modalOpen === 'password'} onClose={() => setModalOpen('none')} title="تغيير كلمة المرور">
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (passwordInput.length < 4) { toast.error('كلمة المرور يجب أن تكون 4 أحرف على الأقل'); return; }
+                try {
+                  await adminService.adminResetPassword(id, passwordInput);
+                  toast.success('تم تغيير كلمة المرور');
+                  setModalOpen('none');
+                  setPasswordInput('');
+                } catch { toast.error('فشل تغيير كلمة المرور'); }
+              }} className="flex flex-col gap-4">
+                  <div>
+                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">كلمة المرور الجديدة</label>
+                      <input required type="text" minLength={4}
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-lg font-mono text-center border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                        placeholder="••••••"
+                        value={passwordInput} onChange={e => setPasswordInput(e.target.value)} />
+                      <p className="text-xs text-[var(--admin-muted)] mt-2 text-center">الحد الأدنى 4 أحرف</p>
+                  </div>
+                  <div className="flex gap-4 mt-2">
+                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
+                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-amber-500 hover:brightness-110">تغيير الباسورد</button>
+                  </div>
+              </form>
+          </AdminModal>
+
+          <AdminModal open={modalOpen === 'status'} onClose={() => setModalOpen('none')} title="إيقاف حساب الطالب">
+              <div className="space-y-4">
+                  <p className="text-sm text-[var(--admin-muted)] font-bold">يرجى كتابة سبب إيقاف الحساب. سيظهر هذا السبب للطالب عند محاولة تسجيل الدخول:</p>
+                  <div>
+                      <label className="block text-xs font-bold text-[var(--admin-muted)] mb-2">سبب الإيقاف</label>
+                      <input 
+                        type="text" 
+                        value={suspensionReasonInput}
+                        onChange={(e) => setSuspensionReasonInput(e.target.value)}
+                        placeholder="مثال: عدم دفع المصاريف أو مخالفة شروط الاستخدام"
+                        className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] placeholder-[var(--admin-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]"
+                      />
+                  </div>
+                  <div className="flex gap-3">
+                      <button 
+                        onClick={() => toggleStatusDirect(false, suspensionReasonInput)}
+                        className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                      >
+                         تأكيد الإيقاف
+                      </button>
+                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
+                  </div>
+              </div>
+          </AdminModal>
+
+          <AdminModal open={modalOpen === 'cancelPackage'} onClose={() => setModalOpen('none')} title="إلغاء اشتراك باقة طالب">
+              {selectedPackageForCancel && (
+                <div className="space-y-5">
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-sm font-bold leading-relaxed">
+                        ⚠️ تنبيه هام: أنت تقوم بإلغاء اشتراك الطالب في باقة: <span className="underline">{selectedPackageForCancel.name}</span>.
+                        <br />
+                        طريقة الشراء الأصلية: <span className="underline">{selectedPackageForCancel.purchaseMethod === 'Code' ? 'كود شحن' : 'رصيد محفظة'}</span>.
+                        {selectedPackageForCancel.purchaseMethod === 'Code' && (
+                          <div className="mt-2 text-xs font-semibold text-red-500 bg-red-500/20 p-2 rounded-lg">
+                             تحذير: تم تفعيل هذه الباقة بواسطة كود شحن. قد ترغب في عدم إرجاع قيمة الباقة نقدًا كـ رصيد ما لم يطلب الطالب ذلك.
+                          </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-3">
+                        <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)] transition-colors">
+                            <input 
+                              type="checkbox" 
+                              checked={refundBalanceOption} 
+                              onChange={(e) => setRefundBalanceOption(e.target.checked)} 
+                              className="w-4 h-4 text-[var(--admin-primary)] focus:ring-[var(--admin-primary)] border-gray-300 rounded" 
+                            />
+                            <div>
+                                <span className="block text-sm font-bold text-[var(--admin-text)]">إرجاع قيمة الباقة إلى محفظة الطالب</span>
+                                <span className="block text-xs text-[var(--admin-muted)]">سيتم إضافة مبلغ ({selectedPackageForCancel.price} ج.م) لرصيد الطالب بعد الإلغاء.</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button 
+                          onClick={handleCancelPackageConfirm}
+                          className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                        >
+                            تأكيد إلغاء الباقة
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => setModalOpen('none')} 
+                          className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110"
+                        >
+                            تراجع
+                        </button>
+                    </div>
+                </div>
+              )}
           </AdminModal>
        </div>
     </AdminShellChrome>

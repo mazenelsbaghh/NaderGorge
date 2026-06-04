@@ -46,7 +46,15 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             ?? throw new UnauthorizedAccessException("Invalid phone number or password");
 
         if (!user.IsActive)
-            throw new UnauthorizedAccessException("Account is disabled. Contact your administrator.");
+        {
+            var reason = user.SuspensionReason;
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                reason = "مخالفة شروط الاستخدام";
+            }
+            var reasonText = !string.IsNullOrWhiteSpace(reason) ? $" السبب: {reason}." : "";
+            throw new UnauthorizedAccessException($"تم تعطيل الحساب.{reasonText} برجاء التواصل مع الدعم الفني: 01272629122");
+        }
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAccessException("Invalid phone number or password");

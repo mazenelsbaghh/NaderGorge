@@ -16,7 +16,10 @@
 
 import '../auth.css';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth-store';
 
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
@@ -38,6 +41,35 @@ const LOGIN_STEPS = [
 export default function LoginPage() {
   const { isDark, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
+
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
+
+  useEffect(() => {
+    loadFromStorage();
+  }, [loadFromStorage]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (isAuthenticated) {
+      const hasAdmin = user?.roles?.some((role) =>
+        ['Admin', 'Teacher', 'Assistant'].includes(role)
+      );
+      if (hasAdmin) {
+        router.replace('/admin');
+      } else {
+        router.replace('/student');
+      }
+    }
+  }, [isAuthenticated, isLoading, user, router]);
+
+  if (isLoading || isAuthenticated) {
+    return (
+      <div className="auth-shell relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]">
+        <div className="text-center font-bold">جارٍ التحقق وإعادة التوجيه...</div>
+      </div>
+    );
+  }
 
   return (
     <div 

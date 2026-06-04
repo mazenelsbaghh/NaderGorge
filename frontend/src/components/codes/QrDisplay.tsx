@@ -19,7 +19,8 @@ interface QrDisplayProps {
 
 export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProps) {
   const printRef = useRef<HTMLDivElement>(null);
-  const effectiveBaseUrl = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://nadergeorge.com');
+  const effectiveBaseUrl = process.env.NEXT_PUBLIC_APP_URL || baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://nadergeorge.com');
+  const isLocalhost = effectiveBaseUrl.includes('localhost') || effectiveBaseUrl.includes('0.0.0.0') || effectiveBaseUrl.includes('127.0.0.1');
 
   const handlePrint = () => {
     window.print();
@@ -43,6 +44,15 @@ export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProp
           <span>اطبع الكروت</span>
         </button>
       </div>
+
+      {isLocalhost && (
+        <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 rounded-xl text-sm font-bold flex flex-col gap-1 print:hidden">
+          <span className="text-base flex items-center gap-1.5 font-bold">⚠️ تنبيه: عنوان الرابط الحالي محلي ({effectiveBaseUrl})</span>
+          <span className="font-normal text-xs opacity-90 leading-relaxed">
+            لن يتمكن الطلاب من مسح رمز QR بنجاح عبر هواتفهم لأنه يشير إلى خادم محلي. يرجى التأكد من ضبط متغير البيئة <code className="px-1.5 py-0.5 bg-yellow-500/20 rounded font-mono">NEXT_PUBLIC_APP_URL</code> بالرابط الفعلي للمنصة.
+          </span>
+        </div>
+      )}
 
       {/* ── Printable Area ── */}
       {/* 

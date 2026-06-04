@@ -45,6 +45,7 @@ public class StudentProfileExtendedDto
     public WatchTrackingSummaryDto WatchTracking { get; set; } = new();
     public decimal CurrentBalance { get; set; }
     public List<AuditLogDto> AuditTrail { get; set; } = new();
+    public List<StudentNoteDto> Notes { get; set; } = new();
 }
 
 
@@ -60,10 +61,14 @@ public class GamificationSummaryDto
 public class StudentPackageDto
 {
     public Guid Id { get; set; }
+    public Guid AccessGrantId { get; set; }
     public string Name { get; set; } = string.Empty;
     public DateTime EnrolledAt { get; set; }
     public DateTime? ExpiresAt { get; set; }
     public decimal Progress { get; set; }
+    public bool IsActive { get; set; }
+    public string PurchaseMethod { get; set; } = string.Empty;
+    public decimal Price { get; set; }
 }
 
 public class StudentDeviceDto
@@ -114,4 +119,13 @@ public class AuditLogDto
     public string Action { get; set; } = string.Empty;
     public DateTime Date { get; set; }
     public string Details { get; set; } = string.Empty;
+}
+
+public class StudentNoteDto
+{
+    public Guid Id { get; set; }
+    public string Content { get; set; } = string.Empty;
+    public string AdminName { get; set; } = string.Empty;
+    public bool IsPinned { get; set; }
+    public DateTime CreatedAt { get; set; }
 }

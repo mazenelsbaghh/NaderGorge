@@ -73,6 +73,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
-- [072-student-forgot-password](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/072-student-forgot-password/plan.md)
+- [074-misc-fixes-and-improvements](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/074-misc-fixes-and-improvements/plan.md)
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

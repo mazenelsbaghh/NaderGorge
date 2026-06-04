@@ -86,6 +86,7 @@ public class AppDbContext : DbContext, IAppDbContext
 
     // Phase 2: Notifications
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
+    public DbSet<StudentNote> StudentNotes => Set<StudentNote>();
 
     public Task<StudentAnswer?> FindStudentAnswerAsync(
         Guid studentExamAttemptId,

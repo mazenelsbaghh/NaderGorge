@@ -148,6 +148,13 @@ export interface StudentProfileExtendedDto {
   };
   currentBalance: number;
   auditTrail: any[];
+  notes: Array<{
+    id: string;
+    content: string;
+    adminName: string;
+    isPinned: boolean;
+    createdAt: string;
+  }>;
 }
 
 export interface StudentExamResultSummaryDto {
@@ -665,6 +672,26 @@ export const adminService = {
     return res.data?.data;
   },
 
+  updateStudentProfile: async (studentId: string, data: Record<string, unknown>) => {
+    const res = await apiClient.put(`/admin/users/students/${studentId}/profile`, data);
+    return res.data?.data;
+  },
+
+  adminResetPassword: async (studentId: string, newPassword: string) => {
+    const res = await apiClient.post(`/admin/users/students/${studentId}/reset-password`, { newPassword });
+    return res.data?.data;
+  },
+
+  addStudentNote: async (studentId: string, content: string, isPinned: boolean) => {
+    const res = await apiClient.post(`/admin/users/students/${studentId}/notes`, { content, isPinned });
+    return res.data?.data;
+  },
+
+  deleteStudentNote: async (studentId: string, noteId: string) => {
+    const res = await apiClient.delete(`/admin/users/students/${studentId}/notes/${noteId}`);
+    return res.data?.data;
+  },
+
   getWatchRequests: async () => {
     const res = await apiClient.get('/admin/watch-requests');
     return res.data;
@@ -677,6 +704,11 @@ export const adminService = {
 
   rejectWatchRequest: async (id: string) => {
     const res = await apiClient.post(`/admin/watch-requests/${id}/reject`, {});
+    return res.data;
+  },
+
+  cancelStudentPackage: async (userId: string, accessGrantId: string, refundBalance: boolean) => {
+    const res = await apiClient.post(`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`, { refundBalance });
     return res.data;
   }
 };

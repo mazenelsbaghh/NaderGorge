@@ -54,7 +54,7 @@ services:
       JwtSettings__Secret: ${JWT_SECRET}
       JwtSettings__Issuer: ${JWT_ISSUER:-NaderGorgeAPI}
       JwtSettings__Audience: ${JWT_AUDIENCE:-NaderGorgeClients}
-      JwtSettings__ExpirationMinutes: ${JWT_EXPIRY_MINUTES:-60}
+      JwtSettings__ExpirationMinutes: ${JWT_EXPIRY_MINUTES:-18000000}
       JwtSettings__RefreshExpirationDays: ${JWT_REFRESH_DAYS:-30}
       DeviceLimits__MaxDevicesPerStudent: ${MAX_DEVICES_PER_STUDENT:-2}
       EvolutionApi__BaseUrl: ${EVOLUTION_API_BASE_URL:-}

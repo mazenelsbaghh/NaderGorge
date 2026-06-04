@@ -42,6 +42,7 @@ public class ToggleStudentSystemAccessCommandHandler : IRequestHandler<ToggleStu
 
         bool wasActive = user.IsActive;
         user.IsActive = request.IsActive;
+        user.SuspensionReason = request.IsActive ? null : request.Reason;
 
         var audit = new AuditLog
         {

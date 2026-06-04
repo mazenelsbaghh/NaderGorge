@@ -48,22 +48,26 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var rankPosition = gamification != null ? await _context.StudentGamifications
             .CountAsync(g => g.TotalPoints > gamification.TotalPoints, cancellationToken) + 1 : 0;
 
-        var packageIds = await _context.StudentAccessGrants
+        var packageGrants = await _context.StudentAccessGrants
             .Where(g => g.UserId == request.UserId && g.PackageId.HasValue)
-            .Select(g => new { g.PackageId, g.CreatedAt, g.ExpiresAt })
+            .Select(g => new { g.Id, g.PackageId, g.CreatedAt, g.ExpiresAt, g.IsActive, g.AccessCodeId })
             .ToListAsync(cancellationToken);
 
         var packages = new List<StudentPackageDto>();
-        foreach (var grant in packageIds)
+        foreach (var grant in packageGrants)
         {
             var p = await _context.Packages.FindAsync(new object[] { grant.PackageId!.Value }, cancellationToken);
             packages.Add(new StudentPackageDto
             {
                 Id = grant.PackageId.Value,
+                AccessGrantId = grant.Id,
                 Name = p != null ? p.Name : "Unknown",
                 EnrolledAt = grant.CreatedAt,
                 ExpiresAt = grant.ExpiresAt,
-                Progress = 0
+                Progress = 0,
+                IsActive = grant.IsActive,
+                PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
+                Price = p != null ? p.Price : 0m
             });
         }
 
@@ -175,7 +179,21 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 Activities = watchActivities
             },
             CurrentBalance = balance?.CurrentBalance ?? 0m,
-            AuditTrail = auditLogs
+            AuditTrail = auditLogs,
+            Notes = await _context.StudentNotes
+                .Include(n => n.Admin)
+                .Where(n => n.StudentId == request.UserId)
+                .OrderByDescending(n => n.IsPinned)
+                .ThenByDescending(n => n.CreatedAt)
+                .Select(n => new StudentNoteDto
+                {
+                    Id = n.Id,
+                    Content = n.Content,
+                    AdminName = n.Admin.FullName,
+                    IsPinned = n.IsPinned,
+                    CreatedAt = n.CreatedAt
+                })
+                .ToListAsync(cancellationToken)
         };
     }
 }
