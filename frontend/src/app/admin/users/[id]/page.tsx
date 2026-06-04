@@ -953,59 +953,45 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
              </form>
           </AdminModal>
 
-          <AdminModal open={modalOpen === 'watchCount'} onClose={() => setModalOpen('none')} title={`تعديل مشاهدات: ${watchCountEdit.videoTitle}`}>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  await adminService.setWatchCount(watchCountEdit.lessonVideoId, id, watchCountEdit.newCount);
-                  toast.success(`تم تعديل المشاهدات من ${watchCountEdit.currentCount} إلى ${watchCountEdit.newCount}`);
-                  setModalOpen('none');
-                  fetchStudent();
-                } catch { toast.error('فشل تعديل المشاهدات'); }
-              }} className="flex flex-col gap-4">
+          <AdminModal open={modalOpen === 'watchCount'} onClose={() => !submitting && setModalOpen('none')} title={`تعديل مشاهدات: ${watchCountEdit.videoTitle}`}>
+              <form onSubmit={handleWatchCountSubmit} className="flex flex-col gap-4">
                   <div className="text-center">
                       <p className="text-sm text-[var(--admin-muted)] mb-1">العدد الحالي: <strong className="text-[var(--admin-text)] text-lg">{watchCountEdit.currentCount}</strong> / {watchCountEdit.maxCount === 0 ? '∞' : watchCountEdit.maxCount}</p>
                       <div className="flex items-center justify-center gap-4 mt-4">
-                          <button type="button" onClick={() => setWatchCountEdit(p => ({...p, newCount: Math.max(0, p.newCount - 1)}))}
-                            className="h-12 w-12 rounded-xl bg-red-500/10 text-red-500 font-bold text-xl hover:bg-red-500/20 transition-colors">−</button>
-                          <input type="number" min="0" required
-                            className="w-24 text-center bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-2xl font-bold border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                          <button type="button" disabled={submitting} onClick={() => setWatchCountEdit(p => ({...p, newCount: Math.max(0, p.newCount - 1)}))}
+                            className="h-12 w-12 rounded-xl bg-red-500/10 text-red-500 font-bold text-xl hover:bg-red-500/20 transition-colors disabled:opacity-50">−</button>
+                          <input type="number" min="0" required disabled={submitting}
+                            className="w-24 text-center bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-2xl font-bold border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                             value={watchCountEdit.newCount} onChange={e => setWatchCountEdit(p => ({...p, newCount: Math.max(0, parseInt(e.target.value) || 0)}))} />
-                          <button type="button" onClick={() => setWatchCountEdit(p => ({...p, newCount: p.newCount + 1}))}
-                            className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-500 font-bold text-xl hover:bg-emerald-500/20 transition-colors">+</button>
+                          <button type="button" disabled={submitting} onClick={() => setWatchCountEdit(p => ({...p, newCount: p.newCount + 1}))}
+                            className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-500 font-bold text-xl hover:bg-emerald-500/20 transition-colors disabled:opacity-50">+</button>
                       </div>
                   </div>
                   <div className="flex gap-4 mt-4">
-                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
-                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ</button>
+                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {submitting ? 'جاري الحفظ...' : 'حفظ'}
+                      </button>
                   </div>
               </form>
           </AdminModal>
 
-          <AdminModal open={modalOpen === 'balance'} onClose={() => setModalOpen('none')} title="تعديل الرصيد">
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  await adminService.adjustBalance(id, balanceInput.amount, balanceInput.reason);
-                  toast.success(`تم تعديل الرصيد بمقدار ${balanceInput.amount >= 0 ? '+' : ''}${balanceInput.amount} ج.م`);
-                  setModalOpen('none');
-                  fetchStudent();
-                } catch { toast.error('فشل تعديل الرصيد'); }
-              }} className="flex flex-col gap-4">
+          <AdminModal open={modalOpen === 'balance'} onClose={() => !submitting && setModalOpen('none')} title="تعديل الرصيد">
+              <form onSubmit={handleBalanceSubmit} className="flex flex-col gap-4">
                   <div className="text-center mb-2">
                       <p className="text-sm text-[var(--admin-muted)]">الرصيد الحالي</p>
                       <p className="text-3xl font-bold text-[var(--admin-text)]">{studentData?.currentBalance ?? 0} <span className="text-base font-normal text-[var(--admin-muted)]">ج.م</span></p>
                   </div>
                   <div>
                       <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">المبلغ (موجب للإضافة، سالب للخصم)</label>
-                      <input required type="number" step="0.01"
-                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-lg font-bold text-center border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                      <input required type="number" step="0.01" disabled={submitting}
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-lg font-bold text-center border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                         value={balanceInput.amount} onChange={e => setBalanceInput(p => ({...p, amount: parseFloat(e.target.value) || 0}))} />
                   </div>
                   <div>
                       <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">السبب</label>
-                      <input required type="text"
-                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                      <input required type="text" disabled={submitting}
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                         placeholder="مثال: تعديل إداري"
                         value={balanceInput.reason} onChange={e => setBalanceInput(p => ({...p, reason: e.target.value}))} />
                   </div>
@@ -1015,22 +1001,16 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                     </p>
                   )}
                   <div className="flex gap-4 mt-2">
-                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
-                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ</button>
+                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {submitting ? 'جاري الحفظ...' : 'حفظ'}
+                      </button>
                   </div>
               </form>
           </AdminModal>
 
-          <AdminModal open={modalOpen === 'editProfile'} onClose={() => setModalOpen('none')} title="تعديل بيانات الطالب">
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  await adminService.updateStudentProfile(id, editFields);
-                  toast.success('تم تحديث البيانات');
-                  setModalOpen('none');
-                  fetchStudent();
-                } catch { toast.error('فشل التحديث'); }
-              }} className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+          <AdminModal open={modalOpen === 'editProfile'} onClose={() => !submitting && setModalOpen('none')} title="تعديل بيانات الطالب">
+              <form onSubmit={handleEditProfileSubmit} className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
                   {[
                     { key: 'fullName', label: 'الاسم الكامل', type: 'text' },
                     { key: 'phone', label: 'رقم الهاتف', type: 'text' },
@@ -1045,95 +1025,92 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                   ].map(f => (
                     <div key={f.key}>
                       <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">{f.label}</label>
-                      <input type={f.type} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none text-sm"
+                      <input type={f.type} disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
                         value={String(editFields[f.key] ?? '')} onChange={e => setEditFields(p => ({...p, [f.key]: e.target.value}))} />
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">النوع</label>
-                      <select className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] outline-none text-sm"
+                      <select disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
                         value={String(editFields.gender ?? '')} onChange={e => setEditFields(p => ({...p, gender: e.target.value}))}>
                         <option value="">---</option><option value="Male">ذكر</option><option value="Female">أنثى</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">نوع المدرسة</label>
-                      <select className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] outline-none text-sm"
+                      <select disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
                         value={String(editFields.schoolType ?? '')} onChange={e => setEditFields(p => ({...p, schoolType: e.target.value}))}>
                         <option value="">---</option><option value="Government">حكومية</option><option value="Language">لغات</option><option value="Experimental">تجريبية</option><option value="Private">خاصة</option><option value="Azhari">أزهرية</option>
                       </select>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)]">
-                      <input type="checkbox" checked={editFields.isFatherAlive === true} onChange={e => setEditFields(p => ({...p, isFatherAlive: e.target.checked}))} className="rounded" />
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)] disabled:opacity-50">
+                      <input type="checkbox" disabled={submitting} checked={editFields.isFatherAlive === true} onChange={e => setEditFields(p => ({...p, isFatherAlive: e.target.checked}))} className="rounded" />
                       الأب على قيد الحياة
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)]">
-                      <input type="checkbox" checked={editFields.isMotherAlive === true} onChange={e => setEditFields(p => ({...p, isMotherAlive: e.target.checked}))} className="rounded" />
+                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)] disabled:opacity-50">
+                      <input type="checkbox" disabled={submitting} checked={editFields.isMotherAlive === true} onChange={e => setEditFields(p => ({...p, isMotherAlive: e.target.checked}))} className="rounded" />
                       الأم على قيد الحياة
                     </label>
                   </div>
                   <div className="flex gap-4 mt-4 sticky bottom-0 bg-[var(--admin-bg)] pt-3">
-                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
-                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ التعديلات</button>
+                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+                      </button>
                   </div>
               </form>
           </AdminModal>
 
-          <AdminModal open={modalOpen === 'password'} onClose={() => setModalOpen('none')} title="تغيير كلمة المرور">
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                if (passwordInput.length < 4) { toast.error('كلمة المرور يجب أن تكون 4 أحرف على الأقل'); return; }
-                try {
-                  await adminService.adminResetPassword(id, passwordInput);
-                  toast.success('تم تغيير كلمة المرور');
-                  setModalOpen('none');
-                  setPasswordInput('');
-                } catch { toast.error('فشل تغيير كلمة المرور'); }
-              }} className="flex flex-col gap-4">
+          <AdminModal open={modalOpen === 'password'} onClose={() => !submitting && setModalOpen('none')} title="تغيير كلمة المرور">
+              <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
                   <div>
                       <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">كلمة المرور الجديدة</label>
-                      <input required type="text" minLength={4}
-                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-lg font-mono text-center border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                      <input required type="text" minLength={4} disabled={submitting}
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-lg font-mono text-center border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                         placeholder="••••••"
                         value={passwordInput} onChange={e => setPasswordInput(e.target.value)} />
                       <p className="text-xs text-[var(--admin-muted)] mt-2 text-center">الحد الأدنى 4 أحرف</p>
                   </div>
                   <div className="flex gap-4 mt-2">
-                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
-                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-amber-500 hover:brightness-110">تغيير الباسورد</button>
+                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
+                      <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        {submitting ? 'جاري التغيير...' : 'تغيير كلمة المرور'}
+                      </button>
                   </div>
               </form>
           </AdminModal>
 
-          <AdminModal open={modalOpen === 'status'} onClose={() => setModalOpen('none')} title="إيقاف حساب الطالب">
+          <AdminModal open={modalOpen === 'status'} onClose={() => !submitting && setModalOpen('none')} title="إيقاف حساب الطالب">
               <div className="space-y-4">
                   <p className="text-sm text-[var(--admin-muted)] font-bold">يرجى كتابة سبب إيقاف الحساب. سيظهر هذا السبب للطالب عند محاولة تسجيل الدخول:</p>
                   <div>
                       <label className="block text-xs font-bold text-[var(--admin-muted)] mb-2">سبب الإيقاف</label>
                       <input 
                         type="text" 
+                        disabled={submitting}
                         value={suspensionReasonInput}
                         onChange={(e) => setSuspensionReasonInput(e.target.value)}
                         placeholder="مثال: عدم دفع المصاريف أو مخالفة شروط الاستخدام"
-                        className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] placeholder-[var(--admin-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]"
+                        className="w-full px-4 py-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] placeholder-[var(--admin-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)] disabled:opacity-50"
                       />
                   </div>
                   <div className="flex gap-3">
                       <button 
+                        disabled={submitting}
                         onClick={() => toggleStatusDirect(false, suspensionReasonInput)}
-                        className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                        className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                       >
-                         تأكيد الإيقاف
+                         {submitting ? 'جاري الإيقاف...' : 'تأكيد الإيقاف'}
                       </button>
-                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
+                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
                   </div>
               </div>
           </AdminModal>
 
-          <AdminModal open={modalOpen === 'cancelPackage'} onClose={() => setModalOpen('none')} title="إلغاء اشتراك باقة طالب">
+          <AdminModal open={modalOpen === 'cancelPackage'} onClose={() => !submitting && setModalOpen('none')} title="إلغاء اشتراك باقة طالب">
               {selectedPackageForCancel && (
                 <div className="space-y-5">
                     <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-sm font-bold leading-relaxed">
@@ -1151,9 +1128,10 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                         <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)] transition-colors">
                             <input 
                               type="checkbox" 
+                              disabled={submitting}
                               checked={refundBalanceOption} 
                               onChange={(e) => setRefundBalanceOption(e.target.checked)} 
-                              className="w-4 h-4 text-[var(--admin-primary)] focus:ring-[var(--admin-primary)] border-gray-300 rounded" 
+                              className="w-4 h-4 text-[var(--admin-primary)] focus:ring-[var(--admin-primary)] border-gray-300 rounded disabled:opacity-50" 
                             />
                             <div>
                                 <span className="block text-sm font-bold text-[var(--admin-text)]">إرجاع قيمة الباقة إلى محفظة الطالب</span>
@@ -1164,15 +1142,17 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
 
                     <div className="flex gap-4">
                         <button 
+                          disabled={submitting}
                           onClick={handleCancelPackageConfirm}
-                          className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                          className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         >
-                            تأكيد إلغاء الباقة
+                            {submitting ? 'جاري الإلغاء...' : 'تأكيد إلغاء الباقة'}
                         </button>
                         <button 
                           type="button" 
+                          disabled={submitting}
                           onClick={() => setModalOpen('none')} 
-                          className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110"
+                          className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50"
                         >
                             تراجع
                         </button>
