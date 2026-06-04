@@ -139,6 +139,7 @@ export function AdminShellChrome({
           <nav className="space-y-3 px-3">
             <Link
               href="/admin"
+              prefetch={false}
               aria-label="الرئيسية"
               aria-current={activePath === '/admin' ? 'page' : undefined}
               className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${activePath === '/admin'
@@ -160,6 +161,7 @@ export function AdminShellChrome({
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${isActive
                     ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
                     : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'

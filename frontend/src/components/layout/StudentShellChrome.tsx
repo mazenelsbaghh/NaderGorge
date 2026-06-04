@@ -177,6 +177,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               <nav className="space-y-3 px-3">
                 <Link
                   href="/student"
+                  prefetch={false}
                   aria-label="لوحة التحكم"
                   aria-current={activePath === '/student' ? 'page' : undefined}
                   className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
@@ -198,6 +199,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={false}
                       className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
                         ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                         : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
