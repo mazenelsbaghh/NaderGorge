@@ -3,14 +3,14 @@ import sys
 import re
 
 def check_table_exists(ssh, table_name):
-    query = f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{table_name.lower()}');"
+    query = f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{table_name}');"
     cmd = f'docker exec -i nadergorge_db psql -U postgres -d nadergorge -t -A -c "{query}"'
     stdin, stdout, stderr = ssh.exec_command(cmd)
     out = stdout.read().decode('utf-8').strip()
     return out == "t"
 
 def check_column_exists(ssh, table_name, column_name):
-    query = f"SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{table_name.lower()}' AND column_name = '{column_name.lower()}');"
+    query = f"SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{table_name}' AND column_name = '{column_name}');"
     cmd = f'docker exec -i nadergorge_db psql -U postgres -d nadergorge -t -A -c "{query}"'
     stdin, stdout, stderr = ssh.exec_command(cmd)
     out = stdout.read().decode('utf-8').strip()
