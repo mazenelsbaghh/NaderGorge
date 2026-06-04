@@ -28,7 +28,7 @@ def main():
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     
     try:
-        ssh.connect(hostname, username=username, password=password, timeout=30)
+        ssh.connect(hostname, username=username, password=password, timeout=30, look_for_keys=False, allow_agent=False)
         print("✅ Connected successfully to production server!")
     except Exception as e:
         print(f"❌ Failed to connect: {e}")
