@@ -1,5 +1,20 @@
 import paramiko
 import sys
+import re
+
+def check_table_exists(ssh, table_name):
+    query = f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{table_name.lower()}');"
+    cmd = f'docker exec -i nadergorge_db psql -U postgres -d nadergorge -t -A -c "{query}"'
+    stdin, stdout, stderr = ssh.exec_command(cmd)
+    out = stdout.read().decode('utf-8').strip()
+    return out == "t"
+
+def check_column_exists(ssh, table_name, column_name):
+    query = f"SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{table_name.lower()}' AND column_name = '{column_name.lower()}');"
+    cmd = f'docker exec -i nadergorge_db psql -U postgres -d nadergorge -t -A -c "{query}"'
+    stdin, stdout, stderr = ssh.exec_command(cmd)
+    out = stdout.read().decode('utf-8').strip()
+    return out == "t"
 
 def main():
     skip_build = "--skip-build" in sys.argv
@@ -41,75 +56,104 @@ def main():
             if out:
                 print(out.strip())
 
-    # List of 31 migrations up to 20260603201648_AddCustomFormVisitCount (excluding unapplied ones)
-    migrations = [
-        "20260323154931_InitialCreate",
-        "20260323155605_AddUS1CodeEntities",
-        "20260323160227_AddUS2ContentTrackingEntities",
-        "20260323161056_AddUS3ExamEntities",
-        "20260325211038_AddVideoPlaybackSession",
-        "20260326000830_AddPhase2AcademicOps",
-        "20260328000545_AddPhase3TermsAndCodes",
-        "20260328021623_AddRegistrationFieldUpdates",
-        "20260328034522_AddPackageIsActive",
-        "20260328041251_AddContentPricing",
-        "20260328045309_InlineExamsAndQuestions",
-        "20260328050813_AssessmentGradingUpdate",
-        "20260328052701_AddExamTimersAndDashboard",
-        "20260328061908_AddTimePerQuestionSecondsToExam",
-        "20260330040115_StudentProfileV2",
-        "20260331131211_UnifiedAssessmentBuilder",
-        "20260331173238_AddVideoChapters",
-        "20260401114742_AddChapterMindmapGeneration",
-        "20260401120228_AddMindmapImageUrlToVideoChapters",
-        "20260401121132_AddIsProcessingMindmapsToLessonVideo",
-        "20260408164959_AddLessonCommentsModeration",
-        "20260408171549_AddStudentCommunity",
-        "20260408175220_AddStudentThemePreferences",
-        "20260408190000_AddPackageCodePageProfiles",
-        "20260409141216_AddCommunityCommentModerationAndCriticalExamFixes",
-        "20260418174224_RemoveQuestionDuration",
-        "20260419214734_AddExamDisplayQuestionCount",
-        "20260601181311_AddStudentAvatarSlug",
-        "20260601200420_AddCustomFormsAndSubmissions",
-        "20260603181708_RemoveBunnyTelegramProviders",
-        "20260603201648_AddCustomFormVisitCount"
-    ]
-
-    # Construct the SQL query
-    sql_create_table = 'CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" ("MigrationId" character varying(150) NOT NULL, "ProductVersion" character varying(32) NOT NULL, CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId"));\n'
+    # 2. Open SFTP to dynamically scan migrations in the repository on VPS
+    sftp = ssh.open_sftp()
+    migrations_dir = "/var/www/nadergorge/backend/src/NaderGorge.Infrastructure/Migrations"
     
-    values_list = ", ".join([f"('{m}', '9.0.0')" for m in migrations])
-    sql_insert_values = f'INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion") VALUES {values_list} ON CONFLICT DO NOTHING;\n'
-    
-    # Combined SQL statement
-    combined_sql = f"{sql_create_table}{sql_insert_values}"
-    
-    # Run the SQL statement inside nadergorge_db container via stdin
-    print("🛠  Populating __EFMigrationsHistory on production database (using stdin)...")
-    db_cmd = 'docker exec -i nadergorge_db psql -U postgres -d nadergorge'
-    
-    stdin_db, stdout_db, stderr_db = ssh.exec_command(db_cmd)
-    stdin_db.write(combined_sql)
-    stdin_db.flush()
-    stdin_db.channel.shutdown_write()  # Signal EOF to psql
-    
-    exit_status = stdout_db.channel.recv_exit_status()
-    out = stdout_db.read().decode('utf-8', errors='replace')
-    err = stderr_db.read().decode('utf-8', errors='replace')
-    
-    if exit_status != 0:
-        print(f"❌ Failed to seed __EFMigrationsHistory. Exit Code: {exit_status}")
-        print("STDOUT:", out)
-        print("STDERR:", err)
+    try:
+        files = sftp.listdir(migrations_dir)
+    except Exception as e:
+        print(f"❌ Failed to list migrations directory: {e}")
+        sftp.close()
         ssh.close()
         sys.exit(1)
-    else:
-        print("✅ Successfully seeded 31 migrations in __EFMigrationsHistory table!")
-        if out:
-            print(out.strip())
+        
+    # Filter for migration files (*.cs, excluding .Designer.cs and snapshot)
+    migration_files = [f for f in files if f.endswith(".cs") and not f.endswith(".Designer.cs") and f != "AppDbContextModelSnapshot.cs"]
+    migration_files.sort()  # Sort chronologically by timestamp prefix
+    
+    print(f"📂 Found {len(migration_files)} migration files in codebase.")
+    
+    verified_applied = []
+    is_applied = True
+    
+    for filename in migration_files:
+        migration_name = filename[:-3]  # Strip ".cs"
+        
+        # Read the migration code
+        try:
+            with sftp.file(f"{migrations_dir}/{filename}", "r") as f:
+                content = f.read().decode('utf-8')
+        except Exception as e:
+            print(f"⚠️ Failed to read migration file {filename}: {e}. Skipping structural check.")
+            continue
+            
+        # Parse table creations: CreateTable(name: "TableName"
+        tables = re.findall(r'CreateTable\s*\(\s*name\s*:\s*"([^"]+)"', content, re.IGNORECASE)
+        
+        # Parse column additions: AddColumn<Type>(name: "ColumnName", table: "TableName"
+        columns = re.findall(r'AddColumn\s*<[^>]+>\s*\(\s*name\s*:\s*"([^"]+)"\s*,\s*table\s*:\s*"([^"]+)"', content, re.IGNORECASE)
+        
+        # Check if the tables and columns exist in database schema
+        for tbl in tables:
+            if not check_table_exists(ssh, tbl):
+                print(f"🔎 Migration '{migration_name}' creates table '{tbl}' which DOES NOT exist in DB.")
+                is_applied = False
+                break
+                
+        if not is_applied:
+            break
+            
+        for col, tbl in columns:
+            if not check_column_exists(ssh, tbl, col):
+                print(f"🔎 Migration '{migration_name}' adds column '{col}' to '{tbl}' which DOES NOT exist in DB.")
+                is_applied = False
+                break
+                
+        if not is_applied:
+            break
+            
+        # If we reached here, all structural changes in this migration are verified present
+        verified_applied.append(migration_name)
+        
+    sftp.close()
+    
+    print(f"✅ Verified {len(verified_applied)} / {len(migration_files)} migrations as already structurally present in the database.")
+    
+    if len(verified_applied) > 0:
+        # Construct the SQL query to seed verified migrations
+        sql_create_table = 'CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" ("MigrationId" character varying(150) NOT NULL, "ProductVersion" character varying(32) NOT NULL, CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId"));\n'
+        
+        values_list = ", ".join([f"('{m}', '9.0.6')" for m in verified_applied])
+        sql_insert_values = f'INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion") VALUES {values_list} ON CONFLICT DO NOTHING;\n'
+        
+        combined_sql = f"{sql_create_table}{sql_insert_values}"
+        
+        # Seed the DB via stdin
+        print("🛠  Populating __EFMigrationsHistory on production database (using stdin)...")
+        db_cmd = 'docker exec -i nadergorge_db psql -U postgres -d nadergorge'
+        
+        stdin_db, stdout_db, stderr_db = ssh.exec_command(db_cmd)
+        stdin_db.write(combined_sql)
+        stdin_db.flush()
+        stdin_db.channel.shutdown_write()
+        
+        exit_status = stdout_db.channel.recv_exit_status()
+        out = stdout_db.read().decode('utf-8', errors='replace')
+        err = stderr_db.read().decode('utf-8', errors='replace')
+        
+        if exit_status != 0:
+            print(f"❌ Failed to seed __EFMigrationsHistory. Exit Code: {exit_status}")
+            print("STDOUT:", out)
+            print("STDERR:", err)
+            ssh.close()
+            sys.exit(1)
+        else:
+            print(f"✅ Seeding completed!")
+            if out:
+                print(out.strip())
 
-    # Now run the migrator container on VPS to apply any pending migrations
+    # 3. Run the EF Core migrator to apply whatever hasn't been structurally verified
     print("⚙️  Running pending migrations on production server...")
     migrator_cmd = "cd /var/www/nadergorge && docker compose --profile migration run --rm migrator"
     
