@@ -6,6 +6,7 @@ import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, Adm
 import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
 import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound, RotateCcw, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function AdminStudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -617,8 +618,8 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
 
           {activeTab === 'notes' && (
               <div className="flex flex-col gap-6">
-                  <div className="bg-[var(--admin-card)] border border-[var(--admin-border)] p-6 rounded-3xl shadow-sm">
-                     <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-4 text-[var(--admin-text)]">إضافة ملاحظة جديدة</h3>
+                  <div className="bg-[var(--admin-card)] p-8 rounded-3xl shadow-sm">
+                     <h3 className="text-xl font-extrabold text-[var(--admin-text)] mb-5">إضافة ملاحظة جديدة</h3>
                      <form onSubmit={async (e) => {
                        e.preventDefault();
                        if (!noteInput.content.trim()) return;
@@ -628,75 +629,95 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                          setNoteInput({ content: '', isPinned: false });
                          fetchStudent();
                        } catch { toast.error('فشل إضافة الملاحظة'); }
-                     }} className="flex flex-col gap-3">
-                         <textarea 
-                           required 
-                           rows={3} 
-                           placeholder="اكتب ملاحظتك هنا عن الطالب..."
-                           className="w-full bg-[var(--admin-surface)] p-4 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] outline-none resize-none transition-all placeholder:text-[var(--admin-muted)]"
-                           value={noteInput.content} 
-                           onChange={e => setNoteInput(p => ({...p, content: e.target.value}))} 
-                         />
-                         <div className="flex justify-between items-center mt-2">
-                           <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-[var(--admin-muted)] hover:text-[var(--admin-text)] transition-colors select-none">
-                             <input 
-                               type="checkbox" 
-                               checked={noteInput.isPinned} 
-                               onChange={e => setNoteInput(p => ({...p, isPinned: e.target.checked}))} 
-                               className="rounded border-[var(--admin-border)] text-[var(--admin-primary)] focus:ring-[var(--admin-primary)]" 
-                             />
-                             <Pin size={14} className={noteInput.isPinned ? "text-[var(--admin-primary)] animate-pulse" : ""} /> 
-                             تثبيت الملاحظة في الأعلى
-                           </label>
-                           <button 
-                             type="submit" 
-                             className="flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-6 py-2.5 font-bold text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] transition-all shadow-[0_4px_12px_rgba(212,167,98,0.25)] hover:scale-[1.02] active:scale-[0.98]"
-                           >
-                             <PenLine size={18} />
-                             إضافة ملاحظة
-                           </button>
-                         </div>
+                     }} className="flex flex-col gap-4">
+                          <textarea 
+                            required 
+                            rows={4} 
+                            placeholder="اكتب ملاحظتك هنا عن الطالب..."
+                            className="w-full bg-[var(--admin-bg)] p-4 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)]/40 focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] outline-none resize-none transition-all duration-200 placeholder:text-[var(--admin-muted)]/70 text-sm shadow-[inset_0_2px_4px_rgba(78,70,57,0.03)]"
+                            value={noteInput.content} 
+                            onChange={e => setNoteInput(p => ({...p, content: e.target.value}))} 
+                          />
+                          <div className="flex flex-wrap gap-4 justify-between items-center mt-1">
+                            <Checkbox
+                              isSelected={noteInput.isPinned}
+                              onChange={(checked) => setNoteInput(p => ({...p, isPinned: checked}))}
+                              className="group"
+                            >
+                              <Checkbox.Control>
+                                <Checkbox.Indicator />
+                              </Checkbox.Control>
+                              <Checkbox.Content>
+                                <span className="flex items-center gap-1.5 text-sm font-bold text-[var(--admin-muted)] group-hover:text-[var(--admin-text)] transition-colors select-none">
+                                  <Pin size={14} className={noteInput.isPinned ? "text-[var(--admin-primary)] fill-[var(--admin-primary)] animate-pulse" : "text-[var(--admin-muted)]"} />
+                                  تثبيت الملاحظة في الأعلى
+                                </span>
+                              </Checkbox.Content>
+                            </Checkbox>
+
+                            <button 
+                              type="submit" 
+                              className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-6 py-2.5 font-bold text-xs text-[var(--admin-primary-contrast)] cursor-pointer hover:filter hover:brightness-110 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_12px_var(--admin-primary-15)]"
+                            >
+                              <PenLine size={16} />
+                              <span>إضافة ملاحظة</span>
+                            </button>
+                          </div>
                      </form>
                   </div>
                   {(studentData?.notes?.length ?? 0) > 0 ? (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-4">
                       {studentData!.notes.map(note => (
-                        <div key={note.id} className={`bg-[var(--admin-card)] border border-[var(--admin-border)] p-5 rounded-2xl shadow-sm border-r-4 ${note.isPinned ? 'border-r-[var(--admin-primary)]' : 'border-r-[var(--admin-muted)]'}`}>
-                          <div className="flex justify-between items-start">
+                        <div 
+                          key={note.id} 
+                          className={note.isPinned 
+                            ? "bg-gradient-to-br from-[var(--admin-primary-15)] to-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.005]"
+                            : "bg-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.005] hover:bg-[var(--admin-card-strong)]"
+                          }
+                        >
+                          <div className="flex flex-col justify-between h-full min-h-[90px]">
                             <div className="flex-1">
                               {note.isPinned && (
-                                <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--admin-primary)] mb-2">
-                                  <Pin size={12} /> مثبتة في الأعلى
+                                <span className="inline-flex items-center gap-1 text-[11px] font-black tracking-wider text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-3 py-1 rounded-full mb-3 self-start">
+                                  <Pin size={10} className="fill-[var(--admin-primary)]" /> مثبتة في الأعلى
                                 </span>
                               )}
-                              <p className="text-[var(--admin-text)] whitespace-pre-wrap leading-relaxed">{note.content}</p>
-                              <p className="text-xs text-[var(--admin-muted)] mt-3">
-                                بواسطة <strong className="text-[var(--admin-text)]">{note.adminName}</strong> — {new Date(note.createdAt).toLocaleString('ar-EG')}
-                              </p>
+                              <p className="text-[var(--admin-text)] whitespace-pre-wrap leading-relaxed text-sm mb-5">{note.content}</p>
                             </div>
-                            <button 
-                              onClick={async () => { 
-                                try { 
-                                  await adminService.deleteStudentNote(id, note.id); 
-                                  toast.success('تم حذف الملاحظة'); 
-                                  fetchStudent(); 
-                                } catch { 
-                                  toast.error('فشل حذف الملاحظة'); 
-                                } 
-                              }}
-                              className="p-2 rounded-xl text-red-400 hover:bg-red-500/10 hover:text-red-500 transition-colors" 
-                              title="حذف الملاحظة"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <div className="flex justify-between items-center text-xs text-[var(--admin-muted)] border-t border-[var(--admin-border)]/30 pt-3">
+                              <div className="flex items-center gap-1.5">
+                                <span className="h-5 w-5 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] flex items-center justify-center font-bold text-[10px]">
+                                  {note.adminName.substring(0, 1).toUpperCase()}
+                                </span>
+                                <span>بواسطة <strong className="text-[var(--admin-text)] font-semibold">{note.adminName}</strong></span>
+                                <span>•</span>
+                                <span>{new Date(note.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                              </div>
+                              <button 
+                                onClick={async () => { 
+                                  try { 
+                                    await adminService.deleteStudentNote(id, note.id); 
+                                    toast.success('تم حذف الملاحظة'); 
+                                    fetchStudent(); 
+                                  } catch { 
+                                    toast.error('فشل حذف الملاحظة'); 
+                                  } 
+                                }}
+                                className="flex items-center justify-center p-2 rounded-xl text-[var(--admin-muted)] hover:bg-[var(--admin-danger-10)] hover:text-[var(--admin-danger)] transition-colors duration-200" 
+                                title="حذف الملاحظة"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-16 text-[var(--admin-muted)] bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-3xl shadow-sm">
-                      <StickyNote size={48} className="mb-4 opacity-25 text-[var(--admin-primary)]" />
-                      <p className="font-medium">لا توجد ملاحظات على هذا الطالب حالياً</p>
+                    <div className="flex flex-col items-center justify-center py-16 text-[var(--admin-muted)] bg-[var(--admin-card-soft)] rounded-3xl shadow-sm">
+                      <StickyNote size={64} className="mb-6 opacity-20 text-[var(--admin-primary)] stroke-[1.5]" />
+                      <h4 className="text-lg font-bold text-[var(--admin-text)] mb-2">لا توجد ملاحظات بعد</h4>
+                      <p className="text-sm max-w-sm text-center leading-relaxed">أضف ملاحظة أو تنبيهًا لتتبع حالة الطالب وتفاصيل متابعته مع المساعدين.</p>
                     </div>
                   )}
               </div>
