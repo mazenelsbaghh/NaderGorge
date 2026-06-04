@@ -42,7 +42,6 @@ export function ConfirmDialog({
 
   const isD = variant === 'danger';
   const isP = variant === 'primary';
-  const isW = variant === 'warning';
 
   return (
     <div
@@ -61,62 +60,63 @@ export function ConfirmDialog({
       />
 
       {/* Dialog Card */}
-      <div className="relative z-10 w-full max-w-md rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-2xl animate-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 p-6 pb-4">
-          <div className="flex items-center gap-3">
-            <div
-              className={`rounded-full p-2.5 ${
-                isD
-                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                  : isP
-                  ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]'
-                  : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-              }`}
-            >
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <h2
-              id="confirm-dialog-title"
-              className="text-lg font-extrabold text-[var(--admin-text)]"
-            >
-              {title}
-            </h2>
-          </div>
-          <button
-            onClick={onCancel}
-            aria-label="إغلاق"
-            className="rounded-xl p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+      <div className="relative z-10 w-full max-w-[440px] rounded-[2.2rem] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+        
+        {/* Close button at absolute top-left */}
+        <button
+          onClick={onCancel}
+          aria-label="إغلاق"
+          className="absolute top-5 left-5 rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
+        {/* Centered Header with Warning Icon */}
+        <div className="flex flex-col items-center gap-3 pb-4">
+          <div
+            className={`rounded-full p-2.5 flex items-center justify-center ${
+              isD
+                ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                : isP
+                ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]'
+                : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+            }`}
           >
-            <X className="h-4 w-4" />
-          </button>
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+          <h2
+            id="confirm-dialog-title"
+            className="text-xl font-black text-[var(--admin-text)] text-center mt-1"
+          >
+            {title}
+          </h2>
         </div>
 
-        {/* Body */}
+        {/* Centered Body Description */}
         <p
           id="confirm-dialog-desc"
-          className="px-6 pb-6 text-sm leading-relaxed text-[var(--admin-muted)]"
+          className="px-6 pb-6 text-sm leading-relaxed text-[var(--admin-muted)] text-center font-medium"
         >
           {description}
         </p>
 
-        {/* Actions */}
-        <div className="flex flex-col-reverse gap-3 border-t border-[var(--admin-border)] px-6 py-4 sm:flex-row sm:justify-end">
+        {/* Centered Rounded-full Actions */}
+        <div className="flex items-center justify-center gap-3">
           <button
             ref={cancelBtnRef}
             onClick={onCancel}
-            className="h-11 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-6 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+            className="h-11 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-hover)] px-8 text-sm font-bold text-[var(--admin-text)] shadow-sm transition-all"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            className={`h-11 rounded-xl px-6 text-sm font-bold text-white transition-all active:scale-95 ${
+            className={`h-11 rounded-full px-8 text-sm font-bold text-white shadow-md transition-all active:scale-95 ${
               isD
-                ? 'bg-red-600 hover:bg-red-700 active:bg-red-800'
+                ? 'bg-red-600 hover:bg-red-700'
                 : isP
-                ? 'bg-[var(--admin-primary)] hover:brightness-110'
-                : 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800'
+                ? 'bg-[var(--admin-primary-strong)] hover:brightness-110'
+                : 'bg-amber-600 hover:bg-amber-700'
             }`}
           >
             {confirmLabel}

@@ -30,6 +30,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
     price: number;
   } | null>(null);
   const [refundBalanceOption, setRefundBalanceOption] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '0 دقيقة';
@@ -75,6 +76,8 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
 
   const handleOverrideSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     try {
         await adminService.overrideVideoLimit(id, overrideInput.videoId, overrideInput.addedViews, overrideInput.reason);
         setModalOpen('none');
@@ -82,21 +85,29 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
         fetchStudent();
     } catch(err) {
         toast.error('فشل التجاوز');
+    } finally {
+        setSubmitting(false);
     }
   };
 
   const handleDisconnectAll = async () => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
         await adminService.disconnectAllDevices(id);
         toast.success('تم الفصل بنجاح');
         fetchStudent();
     } catch(err) {
         toast.error('فشل الفصل');
+    } finally {
+        setSubmitting(false);
     }
   };
 
   const handleGamificationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     try {
         await adminService.adjustGamification(id, gamificationInput.points, gamificationInput.reason);
         setModalOpen('none');
@@ -104,10 +115,14 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
         fetchStudent();
     } catch(err) {
         toast.error('فشل تعديل النقاط');
+    } finally {
+        setSubmitting(false);
     }
   };
 
   const toggleStatusDirect = async (isActive: boolean, reason: string) => {
+    if (submitting) return;
+    setSubmitting(true);
     try {
         await adminService.toggleStudentStatus(id, isActive, reason);
         fetchStudent();
@@ -115,6 +130,8 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
         toast.success(isActive ? 'تم تفعيل الحساب بنجاح' : 'تم إيقاف الحساب بنجاح');
     } catch(err) {
         toast.error('فشل تغيير الحالة');
+    } finally {
+        setSubmitting(false);
     }
   };
 
@@ -139,7 +156,8 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
   };
 
   const handleCancelPackageConfirm = async () => {
-    if (!selectedPackageForCancel) return;
+    if (!selectedPackageForCancel || submitting) return;
+    setSubmitting(true);
     try {
       await adminService.cancelStudentPackage(
         id,
@@ -152,6 +170,76 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
       fetchStudent();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'فشل إلغاء الاشتراك');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleWatchCountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await adminService.setWatchCount(watchCountEdit.lessonVideoId, id, watchCountEdit.newCount);
+      toast.success(`تم تعديل المشاهدات من ${watchCountEdit.currentCount} إلى ${watchCountEdit.newCount}`);
+      setModalOpen('none');
+      fetchStudent();
+    } catch {
+      toast.error('فشل تعديل المشاهدات');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleBalanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await adminService.adjustBalance(id, balanceInput.amount, balanceInput.reason);
+      toast.success(`تم تعديل الرصيد بمقدار ${balanceInput.amount >= 0 ? '+' : ''}${balanceInput.amount} ج.م`);
+      setModalOpen('none');
+      fetchStudent();
+    } catch {
+      toast.error('فشل تعديل الرصيد');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await adminService.updateStudentProfile(id, editFields);
+      toast.success('تم تحديث البيانات');
+      setModalOpen('none');
+      fetchStudent();
+    } catch {
+      toast.error('فشل التحديث');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput.length < 4) {
+      toast.error('كلمة المرور يجب أن تكون 4 أحرف على الأقل');
+      return;
+    }
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      await adminService.adminResetPassword(id, passwordInput);
+      toast.success('تم تغيير كلمة المرور');
+      setModalOpen('none');
+      setPasswordInput('');
+    } catch {
+      toast.error('فشل تغيير كلمة المرور');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -818,45 +906,49 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
              </div>
          )}
          
-         <AdminModal open={modalOpen === 'gamification'} onClose={() => setModalOpen('none')} title="تعديل القاء نقاط الطالب">
+         <AdminModal open={modalOpen === 'gamification'} onClose={() => !submitting && setModalOpen('none')} title="تعديل نقاط الطالب">
              <form onSubmit={handleGamificationSubmit} className="flex flex-col gap-4">
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">إضافة / خصم نقاط (يمكن استخدام قيم سالبة)</label>
-                     <input required type="number" className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none" 
-                            value={gamificationInput.points} onChange={e => setGamificationInput({...gamificationInput, points: parseInt(e.target.value)})} />
+                     <input required type="number" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
+                            value={gamificationInput.points} onChange={e => setGamificationInput({...gamificationInput, points: parseInt(e.target.value) || 0})} />
                  </div>
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">السبب</label>
-                     <input required type="text" className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none" 
+                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
                             value={gamificationInput.reason} onChange={e => setGamificationInput({...gamificationInput, reason: e.target.value})} />
                  </div>
                  <div className="flex gap-4 mt-4">
-                     <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
-                     <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ وحفظ</button>
+                     <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
+                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                       {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+                     </button>
                  </div>
              </form>
          </AdminModal>
 
-         <AdminModal open={modalOpen === 'override'} onClose={() => setModalOpen('none')} title="إضافة مشاهدات فيديو">
+         <AdminModal open={modalOpen === 'override'} onClose={() => !submitting && setModalOpen('none')} title="إضافة مشاهدات فيديو">
              <form onSubmit={handleOverrideSubmit} className="flex flex-col gap-4">
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">رقم الفيديو المتجاوز (UUID)</label>
-                     <input required type="text" className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none" 
+                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
                             value={overrideInput.videoId} onChange={e => setOverrideInput({...overrideInput, videoId: e.target.value})} />
                  </div>
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">عدد المشاهدات الإضافية</label>
-                     <input required type="number" min="1" className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none" 
-                            value={overrideInput.addedViews} onChange={e => setOverrideInput({...overrideInput, addedViews: parseInt(e.target.value)})} />
+                     <input required type="number" min="1" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
+                            value={overrideInput.addedViews} onChange={e => setOverrideInput({...overrideInput, addedViews: parseInt(e.target.value) || 1})} />
                  </div>
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">السبب (يظهر للآدمنز)</label>
-                     <input required type="text" className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none" 
+                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
                             value={overrideInput.reason} onChange={e => setOverrideInput({...overrideInput, reason: e.target.value})} />
                  </div>
                  <div className="flex gap-4 mt-4">
-                     <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
-                     <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ التجاوز</button>
+                     <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
+                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                       {submitting ? 'جاري الحفظ...' : 'حفظ التجاوز'}
+                     </button>
                  </div>
              </form>
           </AdminModal>
