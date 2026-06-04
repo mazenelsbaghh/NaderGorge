@@ -920,7 +920,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                  </div>
                  <div className="flex gap-4 mt-4">
                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                        {submitting ? 'جاري الحفظ...' : 'حفظ التعديلات'}
                      </button>
                  </div>
@@ -946,7 +946,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                  </div>
                  <div className="flex gap-4 mt-4">
                      <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
-                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                     <button type="submit" disabled={submitting} className="flex-1 px-4 py-3 rounded-xl font-bold bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                        {submitting ? 'جاري الحفظ...' : 'حفظ التجاوز'}
                      </button>
                  </div>
