@@ -123,7 +123,6 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         {
             Id = user.Id,
             FullName = user.FullName,
-            Email = string.Empty,
             Phone = user.PhoneNumber,
             ParentPhone = user.StudentProfile?.ParentPhone,
             SecondaryPhone = user.StudentProfile?.SecondaryPhone,
@@ -133,6 +132,18 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             SchoolName = user.StudentProfile?.SchoolName,
             IsActive = user.IsActive,
             CreatedAt = user.CreatedAt,
+
+            // ── Personal fields ─────────────────────────────────────────
+            DateOfBirth = user.StudentProfile?.DateOfBirth,
+            Gender = user.StudentProfile?.Gender.ToString(),
+            Governorate = user.StudentProfile?.Governorate,
+            Address = user.StudentProfile?.Address,
+            StudentCode = user.StudentProfile?.StudentCode,
+            IsProfileComplete = user.IsProfileComplete,
+
+            // ── Academic fields ──────────────────────────────────────────
+            EducationStage = user.StudentProfile?.EducationStage.ToString(),
+            StudyTrack = user.StudentProfile?.StudyTrack?.ToString(),
 
             // ── Student Profile V2 fields ─────────────────────────────────
             Nationality = user.StudentProfile?.Nationality,

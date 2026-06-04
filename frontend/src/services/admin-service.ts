@@ -89,16 +89,37 @@ export interface QuestionBankItemDto {
 export interface StudentProfileExtendedDto {
   id: string;
   fullName: string;
-  email: string;
   phone: string;
   parentPhone?: string;
-  secondaryPhone?: string;              // NEW
-  secondaryParentPhone?: string;        // NEW
-  district?: string;                    // NEW
+  secondaryPhone?: string;
+  secondaryParentPhone?: string;
+  district?: string;
   grade?: string;
   schoolName?: string;
   isActive: boolean;
   createdAt: string;
+
+  // Personal fields
+  dateOfBirth?: string;
+  gender?: string;
+  governorate?: string;
+  address?: string;
+  studentCode?: string;
+  isProfileComplete?: boolean;
+
+  // Academic fields
+  educationStage?: string;
+  studyTrack?: string;
+
+  // Parent/Family fields (V2)
+  nationality?: string;
+  motherPhone?: string;
+  fatherDateOfBirth?: string;
+  motherDateOfBirth?: string;
+  schoolType?: string;
+  isFatherAlive?: boolean;
+  isMotherAlive?: boolean;
+
   gamification?: {
     totalPoints: number;
     globalRank: number;

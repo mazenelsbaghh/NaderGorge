@@ -429,48 +429,13 @@ export default function AdminUsersPage() {
             loading={loading}
             rowKey={(u) => u.id}
             emptyMessage="لا توجد نتائج مطابقة."
-            expandedRowRender={(u) => (
-              <div className="grid gap-6 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-6 md:grid-cols-2 lg:grid-cols-4 text-right">
-                <div>
-                  <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">المنطقة / الحي</p>
-                  <p className="text-sm font-black text-[var(--admin-text)]">{u.district || 'غير متوفر'}</p>
-                  {u.studentCode && (
-                    <p className="text-xs text-[var(--admin-muted)] mt-1">كود الطالب: {u.studentCode}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">تاريخ الميلاد</p>
-                  <p className="text-sm font-bold text-[var(--admin-text)]">
-                    {u.dateOfBirth ? new Date(u.dateOfBirth).toLocaleDateString('en-GB') : 'غير متوفر'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">حالة الوالدين</p>
-                  <div className="flex flex-col gap-1 mt-1 text-sm font-bold">
-                    <span className={u.isFatherAlive === false ? 'text-red-500' : 'text-emerald-500'}>
-                      الأب: {u.isFatherAlive === false ? 'متوفى' : 'على قيد الحياة'}
-                    </span>
-                    <span className={u.isMotherAlive === false ? 'text-red-500' : 'text-emerald-500'}>
-                      الأم: {u.isMotherAlive === false ? 'متوفاة' : 'على قيد الحياة'}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">العنوان</p>
-                  <p className="text-sm font-bold text-[var(--admin-text)]">
-                    {u.governorate && u.governorate !== 'N/A' ? `${u.governorate}` : ''}
-                    {u.district ? ` - ${u.district}` : ''}
-                    {u.address ? ` - ${u.address}` : ' - غير متوفر'}
-                  </p>
-                  {(u.secondaryPhone || u.secondaryParentPhone) && (
-                    <div className="mt-2 text-xs text-[var(--admin-muted)]">
-                      {u.secondaryPhone && <p>هاتف إضافي: {u.secondaryPhone}</p>}
-                      {u.secondaryParentPhone && <p>هاتف ولي أمر إضافي: {u.secondaryParentPhone}</p>}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            onRowClick={(u) => {
+              if (normalizeRole(u) === 'Student') {
+                router.push(`/admin/users/${u.id}`);
+              } else {
+                handleViewDevices(u);
+              }
+            }}
           />
 
           <AdminModal

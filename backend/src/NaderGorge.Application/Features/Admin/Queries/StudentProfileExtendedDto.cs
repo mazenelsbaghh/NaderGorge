@@ -7,7 +7,6 @@ public class StudentProfileExtendedDto
 {
     public Guid Id { get; set; }
     public string FullName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string? ParentPhone { get; set; }
     public string? SecondaryPhone { get; set; }
@@ -18,7 +17,19 @@ public class StudentProfileExtendedDto
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 
-    // ── New fields (Student Profile V2) ──────────────────────────────────
+    // ── Personal fields ─────────────────────────────────────────────────
+    public DateTime? DateOfBirth { get; set; }
+    public string? Gender { get; set; }
+    public string? Governorate { get; set; }
+    public string? Address { get; set; }
+    public string? StudentCode { get; set; }
+    public bool IsProfileComplete { get; set; }
+
+    // ── Academic fields ─────────────────────────────────────────────────
+    public string? EducationStage { get; set; }
+    public string? StudyTrack { get; set; }
+
+    // ── Parent/Family fields (Student Profile V2) ─────────────────────
     public string? Nationality { get; set; }                   // e.g. "مصري"
     public string? MotherPhone { get; set; }                   // Mother's phone number
     public DateTime? FatherDateOfBirth { get; set; }           // Father's date of birth

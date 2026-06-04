@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
 import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
-import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3 } from 'lucide-react';
+import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminStudentProfile({ params }: { params: Promise<{ id: string }> }) {
@@ -101,6 +101,53 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
     }
   };
 
+  // ── Arabic enum label mappers ─────────────────────────────────────
+  const mapGender = (g?: string) => {
+    if (!g) return 'غير متوفر';
+    const m: Record<string, string> = { Male: 'ذكر', Female: 'أنثى' };
+    return m[g] || g;
+  };
+
+  const mapSchoolType = (t?: string) => {
+    if (!t) return 'غير متوفر';
+    const m: Record<string, string> = {
+      Government: 'حكومية', Language: 'لغات', Experimental: 'تجريبية',
+      Private: 'خاصة', Azhari: 'أزهرية', American: 'أمريكية',
+    };
+    return m[t] || t;
+  };
+
+  const mapEducationStage = (s?: string) => {
+    if (!s) return 'غير متوفر';
+    const m: Record<string, string> = { Secondary: 'ثانوية', Baccalaureate: 'بكالوريا' };
+    return m[s] || s;
+  };
+
+  const mapGradeLevel = (g?: string) => {
+    if (!g) return 'غير متوفر';
+    const m: Record<string, string> = {
+      FirstSecondary: 'أولى ثانوي', SecondSecondary: 'ثانية ثانوي',
+      FirstBaccalaureate: 'أولى بكالوريا', SecondBaccalaureate: 'ثانية بكالوريا',
+    };
+    return m[g] || g;
+  };
+
+  const mapStudyTrack = (t?: string) => {
+    if (!t) return 'لا ينطبق';
+    const m: Record<string, string> = {
+      Science: 'علمي', Arts: 'أدبي',
+      MedicineAndLifeSciences: 'الطب وعلوم الحياة',
+      EngineeringAndComputerScience: 'الهندسة وعلوم الحاسب',
+      Business: 'قطاع الأعمال', ArtsAndHumanities: 'الآداب والفنون',
+    };
+    return m[t] || t;
+  };
+
+  const formatDate = (d?: string | null) => {
+    if (!d) return 'غير متوفر';
+    return new Date(d).toLocaleDateString('en-GB');
+  };
+
   return (
     <AdminShellChrome
        activePath="/admin/users"
@@ -145,40 +192,167 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                   <AdminStatCard variant="accent" icon={MonitorPlay} label="تجاوزات نشطة" value={studentData?.overrides?.length || 0} />
                </div>
                
+               {/* ── Section 1: البيانات الشخصية ── */}
                <div className="rounded-3xl bg-[var(--admin-bg)] p-8 shadow-sm">
-                   <h3 className="mb-4 text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
-                      البيانات الشخصية
-                   </h3>
+                   <div className="flex items-center gap-3 mb-5">
+                     <div className="rounded-2xl bg-[var(--admin-primary-15)] p-2.5 text-[var(--admin-primary)]">
+                       <Users size={20} />
+                     </div>
+                     <h3 className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
+                       البيانات الشخصية
+                     </h3>
+                   </div>
                    {loading ? (
                        <div className="text-[var(--admin-muted)]">جاري التحميل...</div>
                    ) : (
-                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                            <div>
                                <p className="text-[var(--admin-muted)] text-sm mb-1">الاسم بالكامل</p>
                                <p className="text-[var(--admin-text)] font-semibold">{studentData?.fullName || 'غير متوفر'}</p>
                            </div>
                            <div>
-                               <p className="text-[var(--admin-muted)] text-sm mb-1">البريد الإلكتروني</p>
-                               <p className="text-[var(--admin-text)] font-semibold">{studentData?.email || 'غير متوفر'}</p>
-                           </div>
-                           <div>
                                <p className="text-[var(--admin-muted)] text-sm mb-1">رقم الهاتف</p>
-                               <p className="text-[var(--admin-text)] font-semibold">{studentData?.phone || 'غير متوفر'}</p>
+                               <p className="text-[var(--admin-text)] font-semibold font-mono">{studentData?.phone || 'غير متوفر'}</p>
                            </div>
                            <div>
-                               <p className="text-[var(--admin-muted)] text-sm mb-1">ولي الأمر</p>
-                               <p className="text-[var(--admin-text)] font-semibold">{studentData?.parentPhone || 'غير متوفر'}</p>
+                               <p className="text-[var(--admin-muted)] text-sm mb-1">هاتف إضافي</p>
+                               <p className="text-[var(--admin-text)] font-semibold font-mono">{studentData?.secondaryPhone || 'غير متوفر'}</p>
                            </div>
                            <div>
-                               <p className="text-[var(--admin-muted)] text-sm mb-1">الصف الدراسي</p>
-                               <p className="text-[var(--admin-text)] font-semibold">{studentData?.grade || 'غير متوفر'}</p>
+                               <p className="text-[var(--admin-muted)] text-sm mb-1">تاريخ الميلاد</p>
+                               <p className="text-[var(--admin-text)] font-semibold">{formatDate(studentData?.dateOfBirth)}</p>
+                           </div>
+                           <div>
+                               <p className="text-[var(--admin-muted)] text-sm mb-1">النوع</p>
+                               <p className="text-[var(--admin-text)] font-semibold">{mapGender(studentData?.gender)}</p>
+                           </div>
+                           <div>
+                               <p className="text-[var(--admin-muted)] text-sm mb-1">الجنسية</p>
+                               <p className="text-[var(--admin-text)] font-semibold">{studentData?.nationality || 'غير متوفر'}</p>
+                           </div>
+                           <div>
+                               <p className="text-[var(--admin-muted)] text-sm mb-1">كود الطالب</p>
+                               <p className="text-[var(--admin-text)] font-semibold font-mono">{studentData?.studentCode || 'غير متوفر'}</p>
+                           </div>
+                           <div>
+                               <p className="text-[var(--admin-muted)] text-sm mb-1">حالة الملف</p>
+                               <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${studentData?.isProfileComplete ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
+                                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                                 {studentData?.isProfileComplete ? 'مكتمل' : 'غير مكتمل'}
+                               </span>
                            </div>
                            <div>
                                <p className="text-[var(--admin-muted)] text-sm mb-1">تاريخ الإنضمام</p>
-                               <p className="text-[var(--admin-text)] font-semibold">{studentData?.createdAt ? new Date(studentData.createdAt).toLocaleDateString() : 'غير متوفر'}</p>
+                               <p className="text-[var(--admin-text)] font-semibold">{formatDate(studentData?.createdAt)}</p>
                            </div>
                        </div>
                    )}
+               </div>
+
+               {/* ── Section 2: بيانات الوالدين ── */}
+               <div className="rounded-3xl bg-[var(--admin-bg)] p-8 shadow-sm">
+                   <div className="flex items-center gap-3 mb-5">
+                     <div className="rounded-2xl bg-[var(--admin-primary-15)] p-2.5 text-[var(--admin-primary)]">
+                       <UsersRound size={20} />
+                     </div>
+                     <h3 className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
+                       بيانات الوالدين
+                     </h3>
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">هاتف ولي الأمر (أب)</p>
+                           <p className="text-[var(--admin-text)] font-semibold font-mono">{studentData?.parentPhone || 'غير متوفر'}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">هاتف الأم</p>
+                           <p className="text-[var(--admin-text)] font-semibold font-mono">{studentData?.motherPhone || 'غير متوفر'}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">هاتف ولي أمر إضافي</p>
+                           <p className="text-[var(--admin-text)] font-semibold font-mono">{studentData?.secondaryParentPhone || 'غير متوفر'}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">حالة الأب</p>
+                           <span className={`text-sm font-bold ${studentData?.isFatherAlive === false ? 'text-red-500' : 'text-emerald-500'}`}>
+                             {studentData?.isFatherAlive === false ? 'متوفى' : 'على قيد الحياة'}
+                           </span>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">حالة الأم</p>
+                           <span className={`text-sm font-bold ${studentData?.isMotherAlive === false ? 'text-red-500' : 'text-emerald-500'}`}>
+                             {studentData?.isMotherAlive === false ? 'متوفاة' : 'على قيد الحياة'}
+                           </span>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">تاريخ ميلاد الأب</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{formatDate(studentData?.fatherDateOfBirth)}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">تاريخ ميلاد الأم</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{formatDate(studentData?.motherDateOfBirth)}</p>
+                       </div>
+                   </div>
+               </div>
+
+               {/* ── Section 3: البيانات الأكاديمية ── */}
+               <div className="rounded-3xl bg-[var(--admin-bg)] p-8 shadow-sm">
+                   <div className="flex items-center gap-3 mb-5">
+                     <div className="rounded-2xl bg-[var(--admin-primary-15)] p-2.5 text-[var(--admin-primary)]">
+                       <GraduationCap size={20} />
+                     </div>
+                     <h3 className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
+                       البيانات الأكاديمية
+                     </h3>
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">المرحلة الدراسية</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{mapEducationStage(studentData?.educationStage)}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">الصف الدراسي</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{mapGradeLevel(studentData?.grade)}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">الشعبة / التخصص</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{mapStudyTrack(studentData?.studyTrack)}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">اسم المدرسة</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{studentData?.schoolName || 'غير متوفر'}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">نوع المدرسة</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{mapSchoolType(studentData?.schoolType)}</p>
+                       </div>
+                   </div>
+               </div>
+
+               {/* ── Section 4: العنوان ── */}
+               <div className="rounded-3xl bg-[var(--admin-bg)] p-8 shadow-sm">
+                   <div className="flex items-center gap-3 mb-5">
+                     <div className="rounded-2xl bg-[var(--admin-primary-15)] p-2.5 text-[var(--admin-primary)]">
+                       <MapPin size={20} />
+                     </div>
+                     <h3 className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">
+                       العنوان ومعلومات الاتصال
+                     </h3>
+                   </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">المحافظة</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{studentData?.governorate || 'غير متوفر'}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">المنطقة / الحي</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{studentData?.district || 'غير متوفر'}</p>
+                       </div>
+                       <div>
+                           <p className="text-[var(--admin-muted)] text-sm mb-1">العنوان التفصيلي</p>
+                           <p className="text-[var(--admin-text)] font-semibold">{studentData?.address || 'غير متوفر'}</p>
+                       </div>
+                   </div>
                </div>
             </div>
          )}

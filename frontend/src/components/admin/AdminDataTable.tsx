@@ -22,6 +22,7 @@ export interface AdminDataTableProps<T> {
   emptyMessage?: string;
   pageSize?: number;
   expandedRowRender?: (record: T) => React.ReactNode;
+  onRowClick?: (record: T) => void;
 }
 
 /**
@@ -39,6 +40,7 @@ export function AdminDataTable<T>({
   emptyMessage = 'لا توجد نتائج.',
   rowKey,
   expandedRowRender,
+  onRowClick,
 }: AdminDataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [expandedKeys, setExpandedKeys] = useState<Set<string | number>>(new Set());
@@ -103,8 +105,14 @@ export function AdminDataTable<T>({
                 return (
                   <React.Fragment key={key}>
                     <tr 
-                      className={`transition-colors hover:bg-[var(--admin-hover)] ${expandedRowRender ? 'cursor-pointer' : ''}`}
-                      onClick={() => expandedRowRender && toggleExpand(key)}
+                      className={`transition-colors hover:bg-[var(--admin-hover)] ${(expandedRowRender || onRowClick) ? 'cursor-pointer' : ''}`}
+                      onClick={() => {
+                        if (onRowClick) {
+                          onRowClick(row);
+                        } else if (expandedRowRender) {
+                          toggleExpand(key);
+                        }
+                      }}
                     >
                       {columns.map((col) => (
                         <td
