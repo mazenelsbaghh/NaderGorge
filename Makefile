@@ -211,8 +211,8 @@ deploy-production: deploy ## Push code to production server (VPS) and rebuild co
 	@echo "📤 Pushing code to production server git repository..."
 	git push prod main
 	@echo "🔌 Running deployment and database migration fixes on production server..."
-	python3 scratch/fix_migrations_production.py
+	ssh -o StrictHostKeyChecking=no root@72.62.27.189 "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py"
 
 migrate-production: ## Populate migration history and run pending migrations on the VPS production server without rebuild
 	@echo "🔌 Connecting and applying migrations to production database..."
-	python3 scratch/fix_migrations_production.py --skip-build
+	ssh -o StrictHostKeyChecking=no root@72.62.27.189 "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py --skip-build"
