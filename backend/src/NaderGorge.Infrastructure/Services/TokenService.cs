@@ -20,6 +20,12 @@ public class TokenService : ITokenService
 
     public string GenerateAccessToken(User user, IEnumerable<string> roles)
     {
+        var expMinutes = int.Parse(_config["JwtSettings:ExpirationMinutes"] ?? "60");
+        return GenerateAccessToken(user, roles, TimeSpan.FromMinutes(expMinutes));
+    }
+
+    public string GenerateAccessToken(User user, IEnumerable<string> roles, TimeSpan lifetime)
+    {
         var secret = _config["JwtSettings:Secret"]
             ?? throw new InvalidOperationException("JWT Secret not configured");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
@@ -36,13 +42,11 @@ public class TokenService : ITokenService
         foreach (var role in roles)
             claims.Add(new Claim(ClaimTypes.Role, role));
 
-        var expMinutes = int.Parse(_config["JwtSettings:ExpirationMinutes"] ?? "60");
-
         var token = new JwtSecurityToken(
             issuer: _config["JwtSettings:Issuer"],
             audience: _config["JwtSettings:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(expMinutes),
+            expires: DateTime.UtcNow.Add(lifetime),
             signingCredentials: creds
         );
 

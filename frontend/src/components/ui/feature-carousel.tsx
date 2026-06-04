@@ -360,11 +360,11 @@ function FeatureCard({
     >
       <div
         className={clsx(
-          "group relative w-full overflow-hidden rounded-[28px] sm:rounded-[36px] border border-[var(--admin-border)] transition duration-300",
+          "group relative w-full overflow-hidden rounded-[28px] sm:rounded-[36px] bg-clip-padding transition duration-300 ring-1 ring-[var(--admin-border)]",
           bgClass || "bg-[var(--admin-card)]"
         )}
       >
-        <div className="p-5 md:p-10 min-h-[450px] w-full">
+        <div className="min-h-[450px] w-full p-4 pt-16 sm:p-6 sm:pt-16 md:p-10">
           <AnimatePresence mode="wait">
             <motion.div
               key={step}
@@ -447,12 +447,13 @@ function Steps({
               transition={{ duration: 0.3 }}
               className={cn(
                 "relative z-50 rounded-full px-3 py-1 transition-all duration-300 ease-in-out md:flex",
-                isCompleted ? "bg-neutral-500/20" : "bg-neutral-500/10"
+                isCompleted ? "bg-[var(--admin-primary-15)]" : "bg-[var(--admin-card-soft)]"
               )}
             >
-              <div
+              <button
+                type="button"
                 className={cn(
-                  "group flex w-full cursor-pointer items-center focus:outline-none focus-visible:ring-2"
+                  "group flex min-h-8 w-full cursor-pointer items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
                 )}
                 onClick={() => onChange(stepIdx)}
               >
@@ -465,10 +466,10 @@ function Steps({
                     className={cn(
                       "flex h-4 w-4 shrink-0 items-center justify-center rounded-full duration-300",
                       isCompleted &&
-                        "bg-[var(--admin-primary)] text-white dark:bg-[var(--admin-primary)]",
+                        "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]",
                       isCurrent &&
-                        "bg-emerald-200 text-emerald-800 dark:bg-lime-500/20 dark:text-lime-400 font-bold",
-                      isFuture && "bg-neutral-200 dark:bg-neutral-500/20"
+                        "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] font-bold",
+                      isFuture && "bg-[var(--admin-bg)] text-[var(--admin-muted)]"
                     )}
                   >
                     {isCompleted ? (
@@ -481,14 +482,14 @@ function Steps({
                           damping: 20,
                         }}
                       >
-                        <IconCheck className="h-3 w-3 stroke-white stroke-[3] text-white dark:stroke-black" />
+                        <IconCheck className="h-3 w-3 stroke-[var(--admin-primary-contrast)] stroke-[3] text-[var(--admin-primary-contrast)]" />
                       </motion.div>
                     ) : (
                       <span
                         className={cn(
                           "text-xs",
-                          !isCurrent && "text-neutral-500 dark:text-neutral-400",
-                          isCurrent && "text-emerald-800 dark:text-lime-400"
+                          !isCurrent && "text-[var(--admin-muted)]",
+                          isCurrent && "text-[var(--admin-primary-contrast)]"
                         )}
                       >
                         {stepIdx + 1}
@@ -501,14 +502,14 @@ function Steps({
                     className={clsx(
                       "hidden sm:block text-sm font-medium duration-300",
                       isCompleted && "text-[var(--admin-muted)]",
-                      isCurrent && "text-emerald-700 dark:text-lime-400 font-bold",
+                      isCurrent && "text-[var(--admin-primary)] font-bold",
                       isFuture && "text-[var(--admin-muted)] opacity-60"
                     )}
                   >
                     {step.name}
                   </motion.span>
                 </span>
-              </div>
+              </button>
             </motion.li>
           )
         })}
@@ -729,7 +730,7 @@ export function FeatureCarousel({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="absolute left-[12rem] top-5 z-50 md:left-0 w-full"
+        className="absolute inset-x-0 top-4 z-50 w-full"
       >
         <Steps current={step} onChange={handleStepChange} steps={steps} />
       </motion.div>

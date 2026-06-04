@@ -47,12 +47,26 @@ export interface CompleteProfileData {
   school: string;
 }
 
+export interface VerifyResetFieldsData {
+  phoneNumber: string;
+  parentPhone: string;
+  governorate: string;
+  district: string;
+}
+
+export interface ResetPasswordData {
+  token: string;
+  newPassword: string;
+}
+
 export const authService = {
   register: (data: RegisterData) => apiClient.post('/auth/register', data),
   login: (data: LoginData) => apiClient.post('/auth/login', data),
   refresh: (refreshToken: string) => apiClient.post('/auth/refresh', { refreshToken }),
   completeProfile: (data: CompleteProfileData) => apiClient.post('/auth/complete-profile', data),
   activateCode: (code: string) => apiClient.post('/codes/activate', { code }),
+  verifyResetFields: (data: VerifyResetFieldsData) => apiClient.post('/auth/verify-reset-fields', data),
+  resetPassword: (data: ResetPasswordData) => apiClient.post('/auth/reset-password', data),
 };
 
 export function getDeviceFingerprint(): string {

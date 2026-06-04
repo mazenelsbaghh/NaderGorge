@@ -85,14 +85,14 @@ export default function RegisterPage() {
             className="mt-2 text-sm font-light"
             style={{ color: 'var(--admin-muted)' }}
           >
-            سجل بياناتك عبر أربع مراحل واضحة: هوية، متابعة، مسار دراسي، ثم تأمين الحساب.
+            اكتب البيانات المطلوبة فقط ليظهر لك المسار الدراسي الصحيح.
           </p>
           <button
             onClick={() => setShowInstructions(true)}
-            className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs font-black text-amber-600 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-xs font-black text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-hover)] active:scale-[0.98] cursor-pointer shadow-sm"
           >
             <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>اضغط هنا لقراءة تعليمات هامة جداً قبل التسجيل</span>
+            <span>تعليمات التسجيل</span>
           </button>
         </div>
 
@@ -116,7 +116,7 @@ export default function RegisterPage() {
 
         {/* Footer branding */}
         <p className="auth-footer-caption mt-10">
-          © 2026 THE EDITORIAL SCHOLAR ARCHIVE • ALL RIGHTS RESERVED
+          © 2026 أكاديمية نادر جورج
         </p>
       </main>
 

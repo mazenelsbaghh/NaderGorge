@@ -43,7 +43,7 @@ function buildVars(mode: ThemeMode): CSSProperties {
       ['--admin-border' as string]: 'rgba(119,90,25,0.2)',
       ['--admin-search' as string]: 'rgba(12,12,12,0.85)',
       ['--admin-footer' as string]: '#c5a059',
-      ['--admin-shadow' as string]: 'rgba(0,0,0,0.5)',
+      ['--admin-shadow' as string]: 'rgba(6,5,3,0.5)',
       ['--admin-danger' as string]: '#ef4444',
     };
   }
@@ -63,8 +63,8 @@ function buildVars(mode: ThemeMode): CSSProperties {
     ['--admin-card' as string]: 'rgba(241,238,228,0.95)',
     ['--admin-card-soft' as string]: 'rgba(246,244,234,0.96)',
     ['--admin-card-strong' as string]: 'rgba(235,232,222,0.96)',
-    ['--admin-border' as string]: 'rgba(255,255,255,0.3)',
-    ['--admin-search' as string]: 'rgba(255,255,255,0.7)',
+    ['--admin-border' as string]: 'rgba(149,111,62,0.16)',
+    ['--admin-search' as string]: 'rgba(252,249,239,0.78)',
     ['--admin-footer' as string]: '#e8c176',
     ['--admin-shadow' as string]: 'rgba(78,70,57,0.1)',
     ['--admin-danger' as string]: '#ef4444',

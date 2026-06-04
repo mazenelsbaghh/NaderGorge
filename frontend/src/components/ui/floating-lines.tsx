@@ -204,6 +204,15 @@ void main() {
 
 const MAX_GRADIENT_STOPS = 8;
 
+function canUseWebGL() {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
 type WavePosition = {
   x: number;
   y: number;
@@ -270,6 +279,7 @@ export function FloatingLines({
   mixBlendMode = 'screen'
 }: FloatingLinesProps) {
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -316,6 +326,11 @@ export function FloatingLines({
     const container = containerRef.current;
     if (!container) return;
 
+    if (!canUseWebGL()) {
+      setUseFallback(true);
+      return;
+    }
+
     let active = true;
 
     const scene = new Scene();
@@ -323,7 +338,13 @@ export function FloatingLines({
     const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
     camera.position.z = 1;
 
-    const renderer = new WebGLRenderer({ antialias: true, alpha: true });
+    let renderer: WebGLRenderer;
+    try {
+      renderer = new WebGLRenderer({ antialias: true, alpha: true });
+    } catch {
+      setUseFallback(true);
+      return;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setClearColor(0x000000, 0); // make background transparent
     renderer.domElement.style.width = '100%';
@@ -429,28 +450,7 @@ export function FloatingLines({
 
     if (ro) ro.observe(container);
 
-    const handlePointerMove = (event: PointerEvent) => {
-      // Must attach event to window to get events outside and across overlay layouts easily.
-      // Doing this via window helps track interactive state globally.
-      const rect = renderer.domElement.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      const dpr = renderer.getPixelRatio();
-
-      targetMouseRef.current.set(x * dpr, (rect.height - y) * dpr);
-      targetInfluenceRef.current = 1.0;
-
-      if (parallax) {
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const offsetX = (x - centerX) / rect.width;
-        const offsetY = -(y - centerY) / rect.height;
-        targetParallaxRef.current.set(offsetX * parallaxStrength, offsetY * parallaxStrength);
-      }
-    };
-
     const handleWindowPointerMove = (event: PointerEvent) => {
-      // Alternate approach to track global mouse
       const rect = renderer.domElement.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
@@ -551,9 +551,12 @@ export function FloatingLines({
       className="relative w-full h-full overflow-hidden floating-lines-container"
       style={{
         mixBlendMode: mixBlendMode,
-        ...(isMobileDevice ? {
-          background: `radial-gradient(circle at 80% 20%, ${linesGradient?.[0] || '#c5a059'}1A, transparent 50%),
-                       radial-gradient(circle at 20% 80%, ${linesGradient?.[1] || '#8f6b2f'}1A, transparent 50%)`
+        ...(isMobileDevice || useFallback ? {
+          background: `
+            radial-gradient(circle at 82% 20%, ${linesGradient?.[0] || '#c5a059'}24, transparent 48%),
+            radial-gradient(circle at 18% 80%, ${linesGradient?.[1] || '#8f6b2f'}1F, transparent 46%),
+            linear-gradient(115deg, transparent 0 42%, ${linesGradient?.[2] || '#f4f1e7'}18 42% 43%, transparent 43% 100%)
+          `
         } : {})
       }}
     />

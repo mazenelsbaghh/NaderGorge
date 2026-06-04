@@ -553,7 +553,7 @@ export function RegistrationForm() {
             <div>
               <label className="auth-label">اختر الأفاتار الخاص بك (شخصيات تاريخية وعلماء)</label>
               <div className="flex gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[var(--admin-border)] scrollbar-track-transparent">
-                {AVATAR_LIST.map((avatar) => {
+                {AVATAR_LIST.map((avatar, index) => {
                   const isSelected = formData.avatarSlug === avatar.slug;
                   return (
                     <button
@@ -573,6 +573,8 @@ export function RegistrationForm() {
                           fill
                           sizes="64px"
                           className="object-cover"
+                          loading={index === 0 ? 'eager' : 'lazy'}
+                          priority={index === 0}
                           unoptimized
                         />
                       </div>
@@ -999,7 +1001,7 @@ export function RegistrationForm() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32 }}
-      className="w-full relative min-h-[650px] flex"
+      className="relative flex min-h-[560px] w-full lg:min-h-[650px]"
     >
       <FeatureCarousel
         title={currentStep.title}
@@ -1009,13 +1011,13 @@ export function RegistrationForm() {
         onStepChange={goToStep}
         autoPlay={false}
         clickToAdvance={false}
-        bgClass="!border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[650px] shadow-[0_28px_70px_var(--admin-shadow)]"
-        step1img1Class="pointer-events-none w-[38%] rounded-2xl left-[8%] top-[24%] border border-white/10 shadow-[0_22px_60px_rgba(0,0,0,0.24)]"
-        step1img2Class="pointer-events-none w-[44%] rounded-2xl left-[34%] top-[38%] border border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.28)]"
-        step2img1Class="pointer-events-none w-[42%] rounded-2xl left-[8%] top-[24%] border border-white/10 shadow-[0_22px_60px_rgba(0,0,0,0.24)]"
-        step2img2Class="pointer-events-none w-[36%] rounded-2xl left-[44%] top-[38%] border border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.28)]"
-        step3imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] border border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.28)]"
-        step4imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] border border-white/10 shadow-[0_24px_64px_rgba(0,0,0,0.28)]"
+        bgClass="bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[560px] lg:min-h-[650px] shadow-[0_28px_70px_var(--admin-shadow)]"
+        step1img1Class="pointer-events-none w-[38%] rounded-2xl left-[8%] top-[24%] shadow-[0_22px_60px_var(--admin-shadow)]"
+        step1img2Class="pointer-events-none w-[44%] rounded-2xl left-[34%] top-[38%] shadow-[0_24px_64px_var(--admin-shadow)]"
+        step2img1Class="pointer-events-none w-[42%] rounded-2xl left-[8%] top-[24%] shadow-[0_22px_60px_var(--admin-shadow)]"
+        step2img2Class="pointer-events-none w-[36%] rounded-2xl left-[44%] top-[38%] shadow-[0_24px_64px_var(--admin-shadow)]"
+        step3imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-[0_24px_64px_var(--admin-shadow)]"
+        step4imgClass="pointer-events-none w-[56%] rounded-2xl left-[14%] top-[24%] shadow-[0_24px_64px_var(--admin-shadow)]"
         image={{
           step1light1: '/images/register-stage-1a.svg',
           step1light2: '/images/register-stage-1b.svg',
@@ -1026,7 +1028,7 @@ export function RegistrationForm() {
           alt: 'مراحل إنشاء حساب جديد',
         }}
       >
-        <div className="relative z-10 mt-10 w-full pr-4 md:pr-0">
+        <div className="relative z-10 mt-4 w-full md:mt-10 md:pr-0">
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 lg:items-start w-full">
             {/* Right Side: Form Inputs */}
             <div className="w-full lg:w-[50%] xl:w-[50%] flex flex-col gap-5">
@@ -1044,7 +1046,7 @@ export function RegistrationForm() {
                 ))}
               </AnimatePresence>
 
-              <div className="min-h-[480px] sm:min-h-[560px] w-full">
+              <div className="min-h-[420px] w-full sm:min-h-[520px]">
                 <AnimatePresence mode="wait">
                   <motion.div key={activeStep} {...PANEL_ANIMATION} className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
                     {renderStepFields()}

@@ -29,14 +29,14 @@ function getThemeVars(mode: AdminThemeMode): CSSProperties {
       ['--admin-border' as string]: 'rgba(119,90,25,0.2)',
       ['--admin-search' as string]: 'rgba(12,12,12,0.85)',
       ['--admin-footer' as string]: '#c5a059',
-      ['--admin-shadow' as string]: 'rgba(0,0,0,0.5)',
+      ['--admin-shadow' as string]: 'rgba(6,5,3,0.5)',
       ['--admin-primary-15' as string]: 'rgba(197,160,89,0.15)',
     };
   }
 
   return {
-    ['--admin-bg' as string]: '#ffffff',
-    ['--admin-bg-overlay' as string]: 'rgba(255,255,255,0.9)',
+    ['--admin-bg' as string]: '#fcf9ef',
+    ['--admin-bg-overlay' as string]: 'rgba(252,249,239,0.9)',
     ['--admin-dot' as string]: 'rgba(209,197,180,0.8)',
     ['--admin-sidebar' as string]: '#f1eee4',
     ['--admin-text' as string]: '#1c1c16',
@@ -48,8 +48,8 @@ function getThemeVars(mode: AdminThemeMode): CSSProperties {
     ['--admin-card' as string]: 'rgba(241,238,228,0.95)',
     ['--admin-card-soft' as string]: 'rgba(246,244,234,0.96)',
     ['--admin-card-strong' as string]: 'rgba(235,232,222,0.96)',
-    ['--admin-border' as string]: 'rgba(255,255,255,0.3)',
-    ['--admin-search' as string]: 'rgba(255,255,255,0.7)',
+    ['--admin-border' as string]: 'rgba(149,111,62,0.16)',
+    ['--admin-search' as string]: 'rgba(252,249,239,0.78)',
     ['--admin-footer' as string]: '#e8c176',
     ['--admin-shadow' as string]: 'rgba(78,70,57,0.1)',
     ['--admin-primary-15' as string]: 'rgba(93,67,0,0.12)',

@@ -46,6 +46,20 @@ public class AuthController : ControllerBase
         var result = await _mediator.Send(command);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpPost("verify-reset-fields")]
+    public async Task<IActionResult> VerifyResetFields([FromBody] VerifyResetFieldsCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }
 
 public record CompleteProfileRequest(string ParentPhone, string Governorate, string City, string School);

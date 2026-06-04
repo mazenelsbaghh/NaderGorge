@@ -10,16 +10,16 @@
  * On success: redirects Admin/Teacher to /admin, Students to /student.
  */
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
-import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowUpLeft, Eye, EyeOff, Phone, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Eye, EyeOff, Phone } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 import { Checkbox, Label } from '@/components/ui/checkbox';
-import { SphinxMark } from '@/components/icons/SphinxMark';
 import { ShinyButton } from '@/components/ui/shiny-button';
 
 export function LoginForm() {
@@ -31,7 +31,6 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const shouldReduceMotion = useReducedMotion();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,13 +156,13 @@ export function LoginForm() {
             <Label className="text-[var(--admin-text)]">تذكرني</Label>
           </Checkbox.Content>
         </Checkbox>
-        <a
-          href="#"
+        <Link
+          href="/forgot-password"
           className="text-xs font-bold underline-offset-2 hover:underline"
           style={{ color: 'var(--admin-primary)' }}
         >
           نسيت كلمة المرور؟
-        </a>
+        </Link>
       </div>
 
       {/* ── Submit Button ── */}

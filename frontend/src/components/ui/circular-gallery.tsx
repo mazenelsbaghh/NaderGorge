@@ -1,9 +1,19 @@
 'use client';
 
 import { Camera, Mesh, Plane, Program, Renderer, Texture, Transform } from 'ogl';
-import { useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 
 type GL = Renderer['gl'];
+
+function canUseWebGL() {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
 function debounce<T extends (...args: unknown[]) => void>(func: T, wait: number) {
   let timeout: number;
@@ -311,7 +321,7 @@ class Media {
       },
       transparent: true
     });
-    const img = new Image();
+    const img = new window.Image();
     img.crossOrigin = 'anonymous';
     img.src = this.image;
     img.onload = () => {
@@ -734,25 +744,66 @@ export default function CircularGallery({
   autoPlaySpeed = 0.5
 }: CircularGalleryProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const app = new App(containerRef.current, {
-      items,
-      bend,
-      textColor,
-      borderRadius,
-      font,
-      scrollSpeed,
-      scrollEase,
-      autoPlay,
-      autoPlaySpeed,
-    });
+    if (!canUseWebGL()) {
+      setUseFallback(true);
+      return;
+    }
+
+    let app: App | null = null;
+    try {
+      app = new App(containerRef.current, {
+        items,
+        bend,
+        textColor,
+        borderRadius,
+        font,
+        scrollSpeed,
+        scrollEase,
+        autoPlay,
+        autoPlaySpeed,
+      });
+    } catch {
+      setUseFallback(true);
+      return;
+    }
 
     return () => {
-      app.destroy();
+      app?.destroy();
     };
   }, [items, bend, textColor, borderRadius, font, scrollSpeed, scrollEase, autoPlay, autoPlaySpeed]);
+
+  if (useFallback) {
+    const fallbackItems = items?.length ? items : [];
+
+    return (
+      <div className="flex h-full w-full items-center overflow-hidden px-4">
+        <div className="flex min-w-full gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {fallbackItems.map((item, index) => (
+            <figure
+              key={`${item.image}-${index}`}
+              className="min-w-[72vw] overflow-hidden rounded-[28px] bg-[var(--landing-card)] shadow-[0_18px_42px_rgba(88,55,18,0.10)] sm:min-w-[340px]"
+            >
+              <Image
+                src={item.image}
+                alt={item.text.replace(/\n/g, ' ')}
+                width={640}
+                height={480}
+                className="aspect-[4/3] w-full object-cover"
+              />
+              <figcaption className="whitespace-pre-line px-5 py-4 text-right text-xl font-black leading-8 text-[var(--landing-accent)]">
+                {item.text}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return <div className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing" ref={containerRef} />;
 }

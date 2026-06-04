@@ -109,8 +109,8 @@ html.theme-switching *::after {
   --landing-line-strong: rgba(255, 240, 215, 0.16);
 
   /* Admin System Tokens (Migrated from useAdminTheme.ts) */
-  --admin-bg: #ffffff;
-  --admin-bg-overlay: rgba(255,255,255,0.9);
+  --admin-bg: #fcf9ef;
+  --admin-bg-overlay: rgba(252,249,239,0.9);
   --admin-dot: rgba(209,197,180,0.8);
   --admin-sidebar: #f7f7f7;
   --admin-text: #1c1c16;
@@ -122,8 +122,8 @@ html.theme-switching *::after {
   --admin-card: rgba(241,238,228,0.95);
   --admin-card-soft: rgba(246,244,234,0.96);
   --admin-card-strong: rgba(235,232,222,0.96);
-  --admin-border: rgba(255,255,255,0.3);
-  --admin-search: rgba(255,255,255,0.7);
+  --admin-border: rgba(149,111,62,0.16);
+  --admin-search: rgba(252,249,239,0.78);
   --admin-footer: #e8c176;
   --admin-shadow: rgba(78,70,57,0.1);
   --admin-primary-15: rgba(93,67,0,0.12);
@@ -218,7 +218,7 @@ html.theme-switching *::after {
   --admin-border: rgba(119,90,25,0.2);
   --admin-search: rgba(12,12,12,0.85);
   --admin-footer: #c5a059;
-  --admin-shadow: rgba(0,0,0,0.5);
+  --admin-shadow: rgba(6,5,3,0.5);
   --admin-primary-15: rgba(197,160,89,0.15);
   --admin-success: oklch(0.62 0.15 145);
   --admin-success-10: oklch(0.62 0.15 145 / 10%);

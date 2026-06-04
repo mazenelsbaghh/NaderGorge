@@ -31,7 +31,7 @@ const LOGIN_STEPS = [
     step: 1,
     name: 'تسجيل الدخول',
     title: 'مرحباً بعودتك',
-    description: 'سجل دخولك للوصول إلى لوحات المتابعة الأكاديمية الخاصة بـ The Editorial Scholar.',
+    description: 'ادخل مباشرة إلى دروسك، واجباتك، ومتابعة تقدمك.',
   },
 ];
 
@@ -96,7 +96,7 @@ export default function LoginPage() {
                  <div className="space-y-2">
                    <h3 className="text-xl font-bold" style={{ color: 'var(--admin-text)' }}>نظام نادر جورج التعليمي</h3>
                    <p className="text-sm leading-relaxed" style={{ color: 'var(--admin-muted)' }}>
-                     بيئة رقمية متكاملة لضمان التفوق وتتبع الأداء خطوة بخطوة.
+                     دروس منظمة، امتحانات واضحة، وتقدم ظاهر في كل خطوة.
                    </p>
                  </div>
               </div>
@@ -126,7 +126,7 @@ export default function LoginPage() {
         </FeatureCarousel>
 
         <p className="auth-footer-caption mt-10">
-          © 2026 THE EDITORIAL SCHOLAR ARCHIVE • ALL RIGHTS RESERVED
+          © 2026 أكاديمية نادر جورج
         </p>
       </main>
     </div>

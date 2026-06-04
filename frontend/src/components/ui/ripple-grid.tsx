@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Renderer, Program, Triangle, Mesh } from 'ogl';
 
 type Props = {
@@ -20,6 +20,15 @@ type Props = {
   className?: string; // Support className for positioning
 };
 
+function canUseWebGL() {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
+
 export const RippleGrid: React.FC<Props> = ({
   enableRainbow = false,
   gridColor = '#ffffff',
@@ -37,6 +46,7 @@ export const RippleGrid: React.FC<Props> = ({
   className = '',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [useFallback, setUseFallback] = useState(false);
   const mousePositionRef = useRef({ x: 0.5, y: 0.5 });
   const targetMouseRef = useRef({ x: 0.5, y: 0.5 });
   const mouseInfluenceRef = useRef(0);
@@ -46,6 +56,15 @@ export const RippleGrid: React.FC<Props> = ({
     if (!containerRef.current) return;
 
     const container = containerRef.current;
+    let renderer: Renderer | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let intersectionObserver: IntersectionObserver | null = null;
+    let animationId = 0;
+
+    if (!canUseWebGL()) {
+      setUseFallback(true);
+      return;
+    }
 
     const hexToRgb = (hex: string): [number, number, number] => {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -54,10 +73,16 @@ export const RippleGrid: React.FC<Props> = ({
         : [1, 1, 1];
     };
 
-    const renderer = new Renderer({
-      dpr: Math.min(window.devicePixelRatio, 2),
-      alpha: true
-    });
+    try {
+      renderer = new Renderer({
+        dpr: Math.min(window.devicePixelRatio, 2),
+        alpha: true
+      });
+    } catch {
+      setUseFallback(true);
+      return;
+    }
+
     const gl = renderer.gl;
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -217,7 +242,7 @@ void main() {
     };
 
     window.addEventListener('resize', resize);
-    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
     if (mouseInteraction) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -228,7 +253,6 @@ void main() {
     resize();
     requestAnimationFrame(resize);
 
-    let animationId: number;
     let isVisible = true;
 
     const render = (t: number) => {
@@ -250,7 +274,7 @@ void main() {
       animationId = requestAnimationFrame(render);
     };
 
-    const intersectionObserver = new IntersectionObserver((entries) => {
+    intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const wasVisible = isVisible;
         isVisible = entry.isIntersecting;
@@ -269,13 +293,13 @@ void main() {
       intersectionObserver.disconnect();
       cancelAnimationFrame(animationId);
       window.removeEventListener('resize', resize);
-      resizeObserver.disconnect();
+      resizeObserver?.disconnect();
       window.removeEventListener('mousemove', handleMouseMove);
       if (mouseInteraction) {
         container.removeEventListener('mouseenter', handleMouseEnter);
         container.removeEventListener('mouseleave', handleMouseLeave);
       }
-      renderer.gl.getExtension('WEBGL_lose_context')?.loseContext();
+      renderer?.gl.getExtension('WEBGL_lose_context')?.loseContext();
       if (gl.canvas.parentNode === container) {
         container.removeChild(gl.canvas);
       }
@@ -320,7 +344,26 @@ void main() {
     mouseInteractionRadius
   ]);
 
-  return <div ref={containerRef} className={`${className} w-full h-full relative overflow-hidden [&_canvas]:block`} />;
+  return (
+    <div
+      ref={containerRef}
+      className={`${className} w-full h-full relative overflow-hidden [&_canvas]:block`}
+      style={
+        useFallback
+          ? {
+              backgroundImage: `
+                radial-gradient(circle at 80% 18%, ${gridColor}26, transparent 32%),
+                radial-gradient(circle at 18% 82%, ${gridColor}1F, transparent 34%),
+                linear-gradient(${gridColor}12 1px, transparent 1px),
+                linear-gradient(90deg, ${gridColor}12 1px, transparent 1px)
+              `,
+              backgroundSize: '100% 100%, 100% 100%, 42px 42px, 42px 42px',
+              opacity,
+            }
+          : undefined
+      }
+    />
+  );
 };
 
 export default RippleGrid;
