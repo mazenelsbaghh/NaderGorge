@@ -9,12 +9,15 @@
  */
 
 import { StudentShellChrome } from "@/components/layout/StudentShellChrome";
+import { StudentGuard } from "@/components/layout/StudentGuard";
 import { StudentThemeProvider } from "@/hooks/useStudentTheme";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   return (
     <StudentThemeProvider>
-      <StudentShellChrome>{children}</StudentShellChrome>
+      <StudentGuard>
+        <StudentShellChrome>{children}</StudentShellChrome>
+      </StudentGuard>
     </StudentThemeProvider>
   );
 }

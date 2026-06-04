@@ -112,6 +112,13 @@ public class AdminController : ControllerBase
         return result.Success ? NoContent() : BadRequest(result);
     }
 
+    [HttpPost("users/students/{userId:guid}/balance/adjust")]
+    public async Task<IActionResult> AdjustBalance(Guid userId, [FromBody] BalanceAdjustmentRequest dto)
+    {
+        var result = await _mediator.Send(new AdjustBalanceCommand(userId, dto.Amount, dto.Reason, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     // --- Content ---
     [HttpPost("packages")]
     public async Task<IActionResult> CreatePackage(CreatePackageCommand command)
@@ -484,6 +491,7 @@ public record RejectWatchRequestBody(string Reason);
 public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);
 public record GamificationAdjustmentRequest(int Points, string Reason);
+public record BalanceAdjustmentRequest(decimal Amount, string Reason);
 public record BulkGenerateRequest(
     string GroupName,
     Domain.Enums.CodeType CodeType,

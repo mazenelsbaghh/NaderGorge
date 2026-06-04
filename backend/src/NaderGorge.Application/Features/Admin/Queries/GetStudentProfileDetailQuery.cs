@@ -119,6 +119,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             })
             .ToListAsync(cancellationToken);
 
+        var balance = await _context.StudentBalances
+            .FirstOrDefaultAsync(b => b.UserId == request.UserId, cancellationToken);
+
         return new StudentProfileExtendedDto
         {
             Id = user.Id,
@@ -171,6 +174,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 WatchedVideosCount = watchActivities.Count,
                 Activities = watchActivities
             },
+            CurrentBalance = balance?.CurrentBalance ?? 0m,
             AuditTrail = auditLogs
         };
     }

@@ -43,6 +43,7 @@ public class StudentProfileExtendedDto
     public List<StudentDeviceDto> Devices { get; set; } = new();
     public List<VideoOverrideDto> Overrides { get; set; } = new();
     public WatchTrackingSummaryDto WatchTracking { get; set; } = new();
+    public decimal CurrentBalance { get; set; }
     public List<AuditLogDto> AuditTrail { get; set; } = new();
 }
 

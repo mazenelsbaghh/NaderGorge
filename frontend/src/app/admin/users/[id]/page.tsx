@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
 import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
-import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound, RotateCcw, Wallet, Package, PenLine } from 'lucide-react';
+import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, Calendar, MapPin, GraduationCap, UsersRound, RotateCcw, Wallet, Package, PenLine, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function AdminStudentProfile({ params }: { params: Promise<{ id: string }> }) {
@@ -13,10 +13,11 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
   const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit'>('overview');
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState<StudentProfileExtendedDto | null>(null);
-  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'|'watchCount'>('none');
+  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'|'watchCount'|'balance'>('none');
   const [overrideInput, setOverrideInput] = useState({ videoId: '', addedViews: 1, reason: '' });
   const [gamificationInput, setGamificationInput] = useState({ points: 10, reason: '' });
-  const [watchCountEdit, setWatchCountEdit] = useState({ lessonVideoId: '', videoTitle: '', currentCount: 0, newCount: 0 });
+  const [watchCountEdit, setWatchCountEdit] = useState({ lessonVideoId: '', videoTitle: '', currentCount: 0, newCount: 0, maxCount: 0 });
+  const [balanceInput, setBalanceInput] = useState({ amount: 0, reason: '' });
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '0 دقيقة';
@@ -360,7 +361,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
 
           {activeTab === 'financials' && (
               <div className="flex flex-col gap-6">
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                      <AdminStatCard
                        variant="accent"
                        icon={Package}
@@ -373,6 +374,21 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                        label="إجمالي النقاط"
                        value={studentData?.gamification?.totalPoints || 0}
                      />
+                     <div className="relative">
+                       <AdminStatCard
+                         variant="muted"
+                         icon={DollarSign}
+                         label="الرصيد"
+                         value={`${studentData?.currentBalance ?? 0} ج.م`}
+                       />
+                       <button
+                         onClick={() => { setBalanceInput({ amount: 0, reason: '' }); setModalOpen('balance'); }}
+                         className="absolute top-4 left-4 rounded-xl bg-[var(--admin-primary-15)] p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors"
+                         title="تعديل الرصيد"
+                       >
+                         <PenLine size={16} />
+                       </button>
+                     </div>
                   </div>
 
                   <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
@@ -461,17 +477,30 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
              <div className="flex flex-col gap-6">
                  <div className="flex justify-between items-center bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
                     <div>
-                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل النشاط (Audit Log)</h3>
+                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل النشاط</h3>
                         <p className="text-[var(--admin-muted)]">كافة الإجراءات والعمليات التي تمت على حساب هذا الطالب</p>
                     </div>
                  </div>
 
                  <AdminDataTable<any> 
                     columns={[
-                        {key: 'date', label:'الوقت والتاريخ', render: (row: any) => new Date(row.date).toLocaleString()},
-                        {key: 'action', label:'الإجراء', render: (row: any) => row.action},
-                        {key: 'adminName', label:'المسؤول', render: (row: any) => row.adminName},
-                        {key: 'details', label:'التفاصيل', render: (row: any) => <span className="text-xs truncate max-w-xs inline-block">{row.details}</span>}
+                        {key: 'date', label:'الوقت والتاريخ', render: (row: any) => new Date(row.date).toLocaleString('ar-EG')},
+                        {key: 'action', label:'الإجراء', render: (row: any) => {
+                          const m: Record<string, string> = {
+                            UpdateUserStatus: 'تغيير حالة المستخدم', TOGGLE_ACCESS: 'تبديل صلاحية الوصول',
+                            ResetWatchLimit: 'إعادة تعيين المشاهدات', SetWatchCount: 'تعديل عدد المشاهدات',
+                            OverrideVideoLimit: 'تجاوز حد الفيديو', AdjustGamification: 'تعديل النقاط',
+                            DisconnectDevice: 'فصل جهاز', DisconnectAllDevices: 'فصل جميع الأجهزة',
+                            ApproveWatchRequest: 'قبول طلب مشاهدة', RejectWatchRequest: 'رفض طلب مشاهدة',
+                          };
+                          return <span className="font-bold">{m[row.action] || row.action}</span>;
+                        }},
+                        {key: 'adminName', label:'المسؤول', render: (row: any) => row.adminName === 'System Admin' ? 'مدير النظام' : row.adminName},
+                        {key: 'details', label:'التفاصيل', render: (row: any) => {
+                          const d = typeof row.details === 'string' ? row.details : JSON.stringify(row.details);
+                          const dm: Record<string, string> = { 'Status Active': 'الحالة: نشط', 'Status Suspended': 'الحالة: موقوف' };
+                          return <span className="text-xs max-w-xs inline-block">{dm[d] || d}</span>;
+                        }}
                     ]}
                     data={studentData?.auditTrail || []}
                     rowKey={(row: any) => row.id}
@@ -553,7 +582,8 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                                   lessonVideoId: row.lessonVideoId,
                                   videoTitle: row.videoTitle,
                                   currentCount: row.watchCount,
-                                  newCount: row.watchCount
+                                  newCount: row.watchCount,
+                                  maxCount: row.maxWatchCount
                                 });
                                 setModalOpen('watchCount');
                               }}
@@ -628,8 +658,8 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                 } catch { toast.error('فشل تعديل المشاهدات'); }
               }} className="flex flex-col gap-4">
                   <div className="text-center">
-                      <p className="text-sm text-[var(--admin-muted)] mb-3">العدد الحالي: <strong className="text-[var(--admin-text)]">{watchCountEdit.currentCount}</strong></p>
-                      <div className="flex items-center justify-center gap-4">
+                      <p className="text-sm text-[var(--admin-muted)] mb-1">العدد الحالي: <strong className="text-[var(--admin-text)] text-lg">{watchCountEdit.currentCount}</strong> / {watchCountEdit.maxCount === 0 ? '∞' : watchCountEdit.maxCount}</p>
+                      <div className="flex items-center justify-center gap-4 mt-4">
                           <button type="button" onClick={() => setWatchCountEdit(p => ({...p, newCount: Math.max(0, p.newCount - 1)}))}
                             className="h-12 w-12 rounded-xl bg-red-500/10 text-red-500 font-bold text-xl hover:bg-red-500/20 transition-colors">−</button>
                           <input type="number" min="0" required
@@ -640,6 +670,45 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                       </div>
                   </div>
                   <div className="flex gap-4 mt-4">
+                      <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
+                      <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ</button>
+                  </div>
+              </form>
+          </AdminModal>
+
+          <AdminModal open={modalOpen === 'balance'} onClose={() => setModalOpen('none')} title="تعديل الرصيد">
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await adminService.adjustBalance(id, balanceInput.amount, balanceInput.reason);
+                  toast.success(`تم تعديل الرصيد بمقدار ${balanceInput.amount >= 0 ? '+' : ''}${balanceInput.amount} ج.م`);
+                  setModalOpen('none');
+                  fetchStudent();
+                } catch { toast.error('فشل تعديل الرصيد'); }
+              }} className="flex flex-col gap-4">
+                  <div className="text-center mb-2">
+                      <p className="text-sm text-[var(--admin-muted)]">الرصيد الحالي</p>
+                      <p className="text-3xl font-bold text-[var(--admin-text)]">{studentData?.currentBalance ?? 0} <span className="text-base font-normal text-[var(--admin-muted)]">ج.م</span></p>
+                  </div>
+                  <div>
+                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">المبلغ (موجب للإضافة، سالب للخصم)</label>
+                      <input required type="number" step="0.01"
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-lg font-bold text-center border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                        value={balanceInput.amount} onChange={e => setBalanceInput(p => ({...p, amount: parseFloat(e.target.value) || 0}))} />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">السبب</label>
+                      <input required type="text"
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-accent)] outline-none"
+                        placeholder="مثال: تعديل إداري"
+                        value={balanceInput.reason} onChange={e => setBalanceInput(p => ({...p, reason: e.target.value}))} />
+                  </div>
+                  {balanceInput.amount !== 0 && (
+                    <p className={`text-sm text-center font-bold ${balanceInput.amount > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      الرصيد الجديد: {((studentData?.currentBalance ?? 0) + balanceInput.amount).toFixed(2)} ج.م
+                    </p>
+                  )}
+                  <div className="flex gap-4 mt-2">
                       <button type="button" onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-border)] hover:brightness-110">إلغاء</button>
                       <button type="submit" className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-[var(--admin-accent)] hover:brightness-110">حفظ</button>
                   </div>

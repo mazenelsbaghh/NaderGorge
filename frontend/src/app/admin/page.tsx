@@ -68,7 +68,7 @@ export default function AdminRootPage() {
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)]"
+              className="inline-flex min-h-11 items-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)]"
             >
               {item.title}
             </Link>

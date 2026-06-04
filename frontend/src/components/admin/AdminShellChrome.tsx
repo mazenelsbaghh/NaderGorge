@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   BookOpenText,
-  ChevronLeft,
   ClipboardList,
   Home,
   KeyRound,
   LogOut,
+  Menu,
   MessageSquareText,
   Settings,
   Shield,
@@ -17,6 +17,7 @@ import {
   Star,
   UserCog,
   Wrench,
+  X,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -79,8 +80,9 @@ export function AdminShellChrome({
 }: AdminShellChromeProps) {
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const { isDark, themeVars, toggleTheme } = useAdminTheme();
+  const { isDark, toggleTheme } = useAdminTheme();
   const [showBackdrop, setShowBackdrop] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useRootOverscrollBackground();
 
@@ -99,12 +101,16 @@ export function AdminShellChrome({
     router.replace('/login');
   };
 
+  const mobilePrimaryItems = navItems.slice(0, 3);
+  const mobileMoreItems = navItems.slice(3);
+  const isMoreActive = mobileMoreItems.some((item) => item.href === activePath);
+
   return (
     <div
       dir="rtl"
       className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
     >
-      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(212,167,98,0.12),transparent_48%),linear-gradient(180deg,transparent,rgba(212,167,98,0.04))]" />
+      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(212,167,98,0.09),transparent_48%),linear-gradient(180deg,transparent,rgba(212,167,98,0.03))]" />
       <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}>
         {showBackdrop ? (
           <RippleGrid
@@ -114,7 +120,7 @@ export function AdminShellChrome({
             gridThickness={isDark ? 14 : 11}
             mouseInteraction={false}
             mouseInteractionRadius={1.2}
-            opacity={isDark ? 0.52 : 0.24}
+            opacity={isDark ? 0.32 : 0.14}
             animationSpeed={0.22}
           />
         ) : null}
@@ -188,8 +194,8 @@ export function AdminShellChrome({
         </div>
       </aside>
 
-      <main className="relative z-10 h-dvh overflow-y-auto overscroll-none px-5 py-8 pb-32 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10">
-        <header className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between w-full">
+      <main className="relative z-10 h-dvh overflow-y-auto overscroll-none px-4 py-6 pb-28 lg:mr-24 lg:px-7 lg:py-8 lg:pb-8">
+        <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9">
           <div className="w-full">
             <div className="flex items-center justify-end gap-2 mb-4 lg:hidden w-full">
               <AnimatedThemeToggler
@@ -212,12 +218,15 @@ export function AdminShellChrome({
             </div>
             <AdminBreadcrumbs />
 
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               <div>
-                <h1 className="mb-2 text-4xl font-extrabold tracking-tight text-[var(--admin-text)] lg:text-5xl">
+                <p className="mb-1 text-[11px] font-black tracking-[0.22em] text-[var(--admin-primary)]">
+                  {sectionLabel}
+                </p>
+                <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-[var(--admin-text)] lg:text-4xl">
                   {pageTitle}
                 </h1>
-                {subtitle ? <p className="font-medium text-[var(--admin-muted)]">{subtitle}</p> : null}
+                {subtitle ? <p className="max-w-3xl text-sm font-medium leading-6 text-[var(--admin-muted)]">{subtitle}</p> : null}
               </div>
               {headerAccessory}
             </div>
@@ -230,27 +239,20 @@ export function AdminShellChrome({
 
         {children}
 
-        <footer className="mt-20 flex flex-col items-center opacity-40 select-none">
-          <div className="mb-8 h-px w-full bg-gradient-to-r from-transparent via-[var(--admin-footer)] to-transparent" />
-          <div className="flex gap-8 text-[var(--admin-footer)]">
-            <Star className="h-9 w-9" />
-            <BookOpenText className="h-9 w-9" />
-            <Shield className="h-9 w-9" />
-            <KeyRound className="h-9 w-9" />
-            <Star className="h-9 w-9" />
-          </div>
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.4em] text-[var(--admin-primary)]">
+        <footer className="mt-14 flex flex-col items-center opacity-35 select-none">
+          <div className="mb-4 h-px w-full bg-gradient-to-r from-transparent via-[var(--admin-footer)] to-transparent" />
+          <p className="text-[10px] font-black uppercase tracking-[0.34em] text-[var(--admin-primary)]">
             شيخ المتحف
           </p>
         </footer>
       </main>
 
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)]/90 px-3 py-3 backdrop-blur-xl lg:hidden" role="navigation" aria-label="القائمة السفلية">
-        <div className="flex w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-2">
           <Link
             href="/admin"
             aria-current={activePath === '/admin' ? 'page' : undefined}
-            className={`flex shrink-0 w-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-[20px] p-2 text-center text-[10px] font-black transition-all ${activePath === '/admin'
+            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${activePath === '/admin'
               ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
               : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
               }`}
@@ -259,7 +261,7 @@ export function AdminShellChrome({
             <span className="truncate w-full" style={{ lineHeight: 1 }}>الرئيسية</span>
           </Link>
 
-          {navItems.map((item) => {
+          {mobilePrimaryItems.map((item) => {
             const Icon = item.icon;
             const isActive = item.href === activePath;
 
@@ -268,7 +270,7 @@ export function AdminShellChrome({
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex shrink-0 w-[4.5rem] flex-col items-center justify-center gap-1.5 rounded-[20px] p-2 text-center text-[10px] font-black transition-all ${isActive
+                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${isActive
                   ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
                   : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
                   }`}
@@ -278,8 +280,85 @@ export function AdminShellChrome({
               </Link>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] border p-2 text-center text-[10px] font-black transition-all ${isMoreActive || isMobileMenuOpen
+              ? 'border-transparent bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md'
+              : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'
+              }`}
+            aria-label="المزيد من صفحات الإدارة"
+          >
+            <Menu className="h-5 w-5" />
+            <span className="truncate w-full" style={{ lineHeight: 1 }}>المزيد</span>
+          </button>
         </div>
       </nav>
+
+      {isMobileMenuOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-50 bg-black/35 backdrop-blur-sm lg:hidden"
+            aria-label="إغلاق قائمة الإدارة"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <aside
+            className="fixed bottom-0 right-0 z-[60] w-full rounded-t-[24px] border border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_70px_var(--admin-shadow)] lg:hidden"
+            aria-label="قائمة الإدارة الإضافية"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-black text-[var(--admin-text)]">صفحات الإدارة</p>
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                aria-label="إغلاق القائمة"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {mobileMoreItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.href === activePath;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex min-h-12 items-center gap-3 rounded-[16px] border px-3 py-2 text-sm font-bold transition ${isActive
+                      ? 'border-transparent bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                      : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                      }`}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="min-w-0 truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+              <Link
+                href="/admin/settings"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex min-h-12 items-center gap-3 rounded-[16px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+              >
+                <Settings className="h-5 w-5 shrink-0" />
+                <span>الإعدادات</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex min-h-12 items-center gap-3 rounded-[16px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm font-bold text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
+              >
+                <LogOut className="h-5 w-5 shrink-0" />
+                <span>تسجيل الخروج</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      ) : null}
 
       {floatingAction}
     </div>

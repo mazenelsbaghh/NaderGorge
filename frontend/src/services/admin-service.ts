@@ -146,6 +146,7 @@ export interface StudentProfileExtendedDto {
       lastWatchedAt: string;
     }>;
   };
+  currentBalance: number;
   auditTrail: any[];
 }
 
@@ -656,6 +657,11 @@ export const adminService = {
 
   setWatchCount: async (lessonVideoId: string, studentId: string, newWatchCount: number) => {
     const res = await apiClient.put('/admin/overrides/set-watch-count', { lessonVideoId, studentId, newWatchCount });
+    return res.data?.data;
+  },
+
+  adjustBalance: async (studentId: string, amount: number, reason: string) => {
+    const res = await apiClient.post(`/admin/users/students/${studentId}/balance/adjust`, { amount, reason });
     return res.data?.data;
   },
 
