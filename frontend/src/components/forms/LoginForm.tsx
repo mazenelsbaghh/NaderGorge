@@ -47,6 +47,18 @@ export function LoginForm() {
 
       const { accessToken, refreshToken, user } = data.data;
 
+      // Role-based check
+      const isStaff = ['Admin', 'Teacher', 'Assistant'].some((r) =>
+        user.roles.includes(r)
+      );
+
+      // On landing surface: block staff — they must use the admin portal
+      const surface = process.env.NEXT_PUBLIC_APP_SURFACE;
+      if (isStaff && surface === 'landing') {
+        setError('هذا الحساب مخصص للإدارة فقط. يرجى تسجيل الدخول من بوابة الإدارة.');
+        return;
+      }
+
       setAuth(
         {
           id: user.id,
@@ -60,10 +72,6 @@ export function LoginForm() {
         rememberMe
       );
 
-      // Role-based redirect (same logic as original LoginForm)
-      const isStaff = ['Admin', 'Teacher', 'Assistant'].some((r) =>
-        user.roles.includes(r)
-      );
       router.push(isStaff ? '/admin' : '/student');
     } catch (error: unknown) {
       const message = isAxiosError<{ message?: string }>(error)
