@@ -19,14 +19,12 @@ interface User {
 interface AuthState {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 
   setAuth: (
     user: User,
     accessToken: string,
-    refreshToken: string,
     rememberMe: boolean
   ) => void;
   clearAuth: () => void;
@@ -39,13 +37,12 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
-  refreshToken: null,
   isAuthenticated: false,
   isLoading: true,
 
-  setAuth: (user, accessToken, refreshToken, rememberMe) => {
-    persistAuthSession({ user, accessToken, refreshToken }, rememberMe);
-    set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false });
+  setAuth: (user, accessToken, rememberMe) => {
+    persistAuthSession({ user, accessToken }, rememberMe);
+    set({ user, accessToken, isAuthenticated: true, isLoading: false });
   },
 
   clearAuth: () => {
@@ -53,7 +50,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
     });
@@ -94,7 +90,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       user: storedAuth.user as User,
       accessToken: storedAuth.accessToken,
-      refreshToken: storedAuth.refreshToken,
       isAuthenticated: true,
       isLoading: false,
     });
