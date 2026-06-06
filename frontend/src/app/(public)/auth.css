@@ -36,6 +36,147 @@
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ── Redirect / Session Check State ───────────────────── */
+.auth-redirect-screen {
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.auth-redirect-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--admin-primary) 9%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--admin-card-soft) 45%, transparent), transparent 55%);
+  pointer-events: none;
+}
+
+.auth-redirect-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: min(100% - 2rem, 28rem);
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--admin-card) 94%, transparent);
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 6px 8px var(--admin-shadow);
+  animation: auth-redirect-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-redirect-logo {
+  position: relative;
+  display: grid;
+  width: 6.75rem;
+  height: 6.75rem;
+  place-items: center;
+}
+
+.auth-redirect-logo img {
+  width: 4.75rem !important;
+  height: 4.75rem !important;
+}
+
+.auth-redirect-loader {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      transparent 92deg,
+      color-mix(in srgb, var(--admin-primary) 76%, transparent) 170deg,
+      var(--admin-primary) 238deg,
+      transparent 318deg
+    );
+  animation: auth-redirect-spin 1150ms linear infinite;
+  mask: radial-gradient(circle, transparent 58%, #000 60%);
+}
+
+.auth-redirect-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.auth-redirect-kicker {
+  color: var(--admin-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.auth-redirect-copy h1 {
+  color: var(--admin-text);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.auth-redirect-copy p:not(.auth-redirect-kicker) {
+  max-width: 28ch;
+  color: var(--admin-muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.7;
+  text-wrap: pretty;
+}
+
+.auth-redirect-progress {
+  position: relative;
+  width: min(100%, 15rem);
+  height: 0.45rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--admin-primary) 10%, var(--admin-card-strong));
+}
+
+.auth-redirect-progress span {
+  position: absolute;
+  inset-block: 0;
+  width: 42%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--admin-primary-strong),
+    var(--admin-primary)
+  );
+  animation: auth-redirect-progress 1250ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+@keyframes auth-redirect-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes auth-redirect-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes auth-redirect-progress {
+  0% {
+    transform: translateX(145%);
+  }
+  100% {
+    transform: translateX(-245%);
+  }
+}
+
 /* ── Ambient Glow Orbs ───────────────────────────────────
    Decorative blurred circles in background corners, same visual
    rhythm as the Admin pages that use gradient orbs.
@@ -518,6 +659,23 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .auth-redirect-card,
+  .auth-redirect-loader,
+  .auth-redirect-progress span {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .auth-redirect-card {
+    opacity: 1;
+    transform: none;
+  }
+
+  .auth-redirect-progress span {
+    width: 100%;
+    transform: none;
+  }
+
   .auth-btn-primary,
   .auth-btn-primary::before,
   .auth-btn-primary__trail,

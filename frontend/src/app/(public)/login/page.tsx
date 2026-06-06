@@ -66,8 +66,37 @@ export default function LoginPage() {
 
   if (isLoading || isAuthenticated) {
     return (
-      <div className="auth-shell relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]" style={themeVars}>
-        <div className="text-center font-bold">جارٍ التحقق وإعادة التوجيه...</div>
+      <div
+        className="auth-shell auth-redirect-screen relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]"
+        style={themeVars}
+      >
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <RippleGrid
+            gridColor={isDark ? '#64748b' : '#94a3b8'}
+            rippleIntensity={0.035}
+            gridSize={12}
+            gridThickness={isDark ? 12 : 10}
+            mouseInteraction={false}
+            opacity={isDark ? 0.5 : 0.28}
+          />
+        </div>
+
+        <section className="auth-redirect-card" aria-live="polite" aria-busy="true">
+          <div className="auth-redirect-logo">
+            <PlatformLogo variant="mark" size="md" tone={isDark ? 'light' : 'dark'} priority />
+            <span className="auth-redirect-loader" aria-hidden="true" />
+          </div>
+
+          <div className="auth-redirect-copy">
+            <p className="auth-redirect-kicker">منصة مسار</p>
+            <h1>جارٍ تجهيز حسابك</h1>
+            <p>نتحقق من الجلسة وننقلك للمكان المناسب.</p>
+          </div>
+
+          <div className="auth-redirect-progress" aria-hidden="true">
+            <span />
+          </div>
+        </section>
       </div>
     );
   }

@@ -12,13 +12,13 @@ def run_cmd(cmd, input_data=None):
 
 def check_table_exists(table_name):
     query = f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{table_name}');"
-    cmd = f'docker exec -i nadergorge_db psql -U postgres -d nadergorge -t -A -c "{query}"'
+    cmd = f'docker exec -i masar_db psql -U postgres -d nadergorge -t -A -c "{query}"'
     code, out, err = run_cmd(cmd)
     return out.strip() == "t"
 
 def check_column_exists(table_name, column_name):
     query = f"SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{table_name}' AND column_name = '{column_name}');"
-    cmd = f'docker exec -i nadergorge_db psql -U postgres -d nadergorge -t -A -c "{query}"'
+    cmd = f'docker exec -i masar_db psql -U postgres -d nadergorge -t -A -c "{query}"'
     code, out, err = run_cmd(cmd)
     return out.strip() == "t"
 
@@ -33,7 +33,7 @@ def main():
             with open(sql_path, "r") as f:
                 create_tables_sql = f.read()
             
-            db_cmd = 'docker exec -i nadergorge_db psql -U postgres -d nadergorge'
+            db_cmd = 'docker exec -i masar_db psql -U postgres -d nadergorge'
             code, out, err = run_cmd(db_cmd, input_data=create_tables_sql)
             
             if code != 0:
@@ -141,7 +141,7 @@ def main():
         
         # Seed the DB via stdin
         print("🛠  Populating __EFMigrationsHistory on production database (using stdin)...")
-        db_cmd = 'docker exec -i nadergorge_db psql -U postgres -d nadergorge'
+        db_cmd = 'docker exec -i masar_db psql -U postgres -d nadergorge'
         
         code, out, err = run_cmd(db_cmd, input_data=combined_sql)
         

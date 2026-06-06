@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Eye, EyeOff, Phone } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/auth-store';
@@ -25,6 +25,7 @@ import { ShinyButton } from '@/components/ui/shiny-button';
 export function LoginForm() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
+  const reduceMotion = useReducedMotion();
 
   const [formData, setFormData] = useState({ phoneNumber: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -86,13 +87,22 @@ export function LoginForm() {
   return (
     <motion.form
       onSubmit={handleSubmit}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      animate={reduceMotion ? {} : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className="space-y-5"
     >
       {/* ── Error Banner ── */}
-      {error && <div className="auth-error-banner">{error}</div>}
+      {error && (
+        <motion.div
+          className="auth-error-banner"
+          initial={reduceMotion ? false : { opacity: 0, y: -6 }}
+          animate={reduceMotion ? {} : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {error}
+        </motion.div>
+      )}
 
       {/* ── Phone Number ── */}
       <div>
