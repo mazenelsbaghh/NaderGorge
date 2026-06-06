@@ -12,7 +12,6 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Eye, EyeOff, Phone } from 'lucide-react';
@@ -24,7 +23,6 @@ import { ShinyButton } from '@/components/ui/shiny-button';
 import { getSurfaceOrigins } from '@/packages/surface-runtime/config';
 
 export function LoginForm() {
-  const router = useRouter();
   const { setAuth } = useAuthStore();
   const reduceMotion = useReducedMotion();
 

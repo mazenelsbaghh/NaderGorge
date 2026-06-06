@@ -37,11 +37,35 @@ export function getSurfaceName(value = process.env.APP_SURFACE || process.env.NE
 }
 
 export function getSurfaceOrigins(): SurfaceOrigins {
+  const mainDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'masarplatform.com';
+
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+
+    const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+    if (!isLocal && hostname.endsWith(mainDomain)) {
+      return {
+        landing: `${protocol}//${mainDomain}`,
+        student: `${protocol}//app.${mainDomain}`,
+        admin: `${protocol}//admin.${mainDomain}`,
+        mainDomain,
+      };
+    }
+
+    return {
+      landing: `${protocol}//${hostname}:8738`,
+      student: `${protocol}//${hostname}:8739`,
+      admin: `${protocol}//${hostname}:8740`,
+      mainDomain,
+    };
+  }
+
   return {
     landing: normalizeOrigin(process.env.LANDING_PUBLIC_ORIGIN || 'http://localhost:8738'),
     student: normalizeOrigin(process.env.STUDENT_PUBLIC_ORIGIN || 'http://localhost:8739'),
     admin: normalizeOrigin(process.env.ADMIN_PUBLIC_ORIGIN || 'http://localhost:8740'),
-    mainDomain: process.env.NEXT_PUBLIC_APP_DOMAIN || 'masarplatform.com',
+    mainDomain,
   };
 }
 

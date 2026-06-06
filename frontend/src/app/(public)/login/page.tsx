@@ -18,7 +18,6 @@ import '../auth.css';
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
@@ -44,7 +43,6 @@ export default function LoginPage() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
 
-  const router = useRouter();
   const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
 
   useEffect(() => {
