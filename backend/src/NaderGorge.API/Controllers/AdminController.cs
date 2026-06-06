@@ -526,7 +526,8 @@ public record UpdateUserStatusRequest(string Status);
 public record UpdateUserRolesRequest(string[] Roles);
 public record ResetWatchRequest(Guid LessonVideoId, Guid StudentId);
 public record SetWatchCountRequest(Guid LessonVideoId, Guid StudentId, int NewWatchCount);
-public record RejectWatchRequestBody(string Reason);
+public record RejectWatchRequestBody(string? Reason);
+
 public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);
 public record GamificationAdjustmentRequest(int Points, string Reason);
