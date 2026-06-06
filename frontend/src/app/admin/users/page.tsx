@@ -129,6 +129,11 @@ export default function AdminUsersPage() {
 
   async function handleToggleStatus(user: AdminUserListDto) {
     const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
+    if (normalizeRole(user) === 'Admin' && nextStatus === 'Disabled') {
+      toast.error('لا يمكن تعطيل حساب مدير النظام');
+      setConfirmUser(null);
+      return;
+    }
 
     try {
       await adminService.updateUserStatus(user.id, nextStatus);
@@ -333,17 +338,33 @@ export default function AdminUsersPage() {
       key: 'actions',
       label: 'الإجراءات',
       align: 'left',
-      render: (u) => (
+      render: (u) => {
+        const isAdmin = normalizeRole(u) === 'Admin';
+        const isDisableAction = u.status === 'Active';
+        const disableStatusToggle = isAdmin && isDisableAction;
+
+        return (
         <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
           <NeumorphButton
             type="button"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
+              if (disableStatusToggle) {
+                toast.error('لا يمكن تعطيل حساب مدير النظام');
+                return;
+              }
               setConfirmUser(u);
             }}
             intent={u.status === 'Active' ? 'danger' : 'primary'}
             size="icon"
-            title={u.status === 'Active' ? 'تعليق المستخدم' : 'تنشيط المستخدم'}
+            disabled={disableStatusToggle}
+            title={
+              disableStatusToggle
+                ? 'لا يمكن تعطيل مدير النظام'
+                : u.status === 'Active'
+                  ? 'تعليق المستخدم'
+                  : 'تنشيط المستخدم'
+            }
           >
             {u.status === 'Active' ? (
               <UserX className="h-5 w-5" />
@@ -352,7 +373,8 @@ export default function AdminUsersPage() {
             )}
           </NeumorphButton>
         </div>
-      )
+        );
+      }
     }
   ];
 

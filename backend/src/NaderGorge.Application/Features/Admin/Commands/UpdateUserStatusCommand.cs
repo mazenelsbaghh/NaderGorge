@@ -19,11 +19,23 @@ public class UpdateUserStatusCommandHandler : IRequestHandler<UpdateUserStatusCo
 
     public async Task<ApiResponse> Handle(UpdateUserStatusCommand request, CancellationToken ct)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
+        var user = await _db.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
         if (user == null) return ApiResponse.Fail("User not found");
 
         var oldStatus = user.IsActive ? "Active" : "Disabled";
         var isNewActive = request.NewStatus.Equals("Active", StringComparison.OrdinalIgnoreCase);
+        var isAdmin = user.UserRoles.Any(ur => ur.Role.Name == "Admin");
+
+        if (isAdmin && !isNewActive)
+        {
+            return ApiResponse.Fail(
+                "Admin accounts cannot be disabled.",
+                new List<string> { "ADMIN_CANNOT_BE_DISABLED" });
+        }
+
         user.IsActive = isNewActive;
 
         _db.AuditLogs.Add(new AuditLog

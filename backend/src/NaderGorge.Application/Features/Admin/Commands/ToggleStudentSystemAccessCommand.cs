@@ -37,8 +37,19 @@ public class ToggleStudentSystemAccessCommandHandler : IRequestHandler<ToggleStu
 
     public async Task<ApiResponse> Handle(ToggleStudentSystemAccessCommand request, CancellationToken cancellationToken)
     {
-        var user = await _context.Users.FindAsync(new object[] { request.UserId }, cancellationToken);
+        var user = await _context.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
         if (user == null) return ApiResponse.Fail("User not found.");
+
+        var isAdmin = user.UserRoles.Any(ur => ur.Role.Name == "Admin");
+        if (isAdmin && !request.IsActive)
+        {
+            return ApiResponse.Fail(
+                "Admin accounts cannot be disabled.",
+                new List<string> { "ADMIN_CANNOT_BE_DISABLED" });
+        }
 
         bool wasActive = user.IsActive;
         user.IsActive = request.IsActive;
