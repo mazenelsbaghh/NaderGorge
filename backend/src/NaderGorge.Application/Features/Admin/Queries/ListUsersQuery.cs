@@ -35,7 +35,11 @@ public record AdminUserListDto(
     string? District,                    // NEW
     string Address,
     string? SecondaryPhone,              // NEW
-    string? SecondaryParentPhone         // NEW
+    string? SecondaryParentPhone,         // NEW
+    string? ParentPhone,
+    string? MotherPhone,
+    string? SchoolName,
+    string? SchoolType
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
@@ -116,7 +120,11 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.StudentProfile?.District,
             u.StudentProfile?.Address ?? "",
             u.StudentProfile?.SecondaryPhone,
-            u.StudentProfile?.SecondaryParentPhone
+            u.StudentProfile?.SecondaryParentPhone,
+            u.StudentProfile?.ParentPhone,
+            u.StudentProfile?.MotherPhone,
+            u.StudentProfile?.SchoolName,
+            u.StudentProfile?.SchoolType?.ToString()
         )).ToList();
 
         return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, request.Page, request.PageSize));

@@ -26,6 +26,10 @@ export interface AdminUserListDto {
   address?: string;
   secondaryPhone?: string;              // NEW
   secondaryParentPhone?: string;        // NEW
+  parentPhone?: string;
+  motherPhone?: string;
+  schoolName?: string;
+  schoolType?: string;
 }
 
 export interface PagedResult<T> {

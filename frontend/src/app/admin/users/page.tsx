@@ -145,6 +145,127 @@ export default function AdminUsersPage() {
     }
   }
 
+  const handleExport = () => {
+    if (filteredUsers.length === 0) {
+      toast.error('لا توجد بيانات لتصديرها');
+      return;
+    }
+
+    const mapGender = (g?: string) => {
+      if (!g) return '—';
+      const m: Record<string, string> = { Male: 'ذكر', Female: 'أنثى' };
+      return m[g] || g;
+    };
+
+    const mapSchoolType = (t?: string) => {
+      if (!t) return '—';
+      const m: Record<string, string> = {
+        Government: 'حكومية', Language: 'لغات', Experimental: 'تجريبية',
+        Private: 'خاصة', Azhari: 'أزهرية', American: 'أمريكية',
+      };
+      return m[t] || t;
+    };
+
+    const mapEducationStage = (s?: string) => {
+      if (!s) return '—';
+      const m: Record<string, string> = { Secondary: 'ثانوية', Baccalaureate: 'بكالوريا' };
+      return m[s] || s;
+    };
+
+    const mapGradeLevel = (g?: string) => {
+      if (!g || g === 'N/A') return '—';
+      const m: Record<string, string> = {
+        FirstSecondary: 'أولى ثانوي', SecondSecondary: 'ثانية ثانوي',
+        FirstBaccalaureate: 'أولى بكالوريا', SecondBaccalaureate: 'ثانية بكالوريا',
+      };
+      return m[g] || g;
+    };
+
+    const mapStudyTrack = (t?: string) => {
+      if (!t || t === 'N/A') return '—';
+      const m: Record<string, string> = {
+        Science: 'علمي', Arts: 'أدبي',
+        MedicineAndLifeSciences: 'الطب وعلوم الحياة',
+        EngineeringAndComputerScience: 'الهندسة وعلوم الحاسب',
+        Business: 'قطاع الأعمال', ArtsAndHumanities: 'الآداب والفنون',
+      };
+      return m[t] || t;
+    };
+
+    const headers = [
+      'كود الطالب',
+      'الاسم الكامل',
+      'رقم الهاتف',
+      'رقم الهاتف الإضافي',
+      'هاتف الأب / ولي الأمر',
+      'هاتف الأم',
+      'هاتف ولي الأمر الإضافي',
+      'المرحلة الدراسية',
+      'الصف الدراسي',
+      'الشعبة / التخصص',
+      'المحافظة',
+      'المنطقة / الحي',
+      'العنوان بالتفصيل',
+      'تاريخ الميلاد',
+      'النوع',
+      'اسم المدرسة',
+      'نوع المدرسة',
+      'الأب على قيد الحياة',
+      'الأم على قيد الحياة',
+      'الصلاحية',
+      'الحالة',
+      'تاريخ الانضمام'
+    ];
+
+    const csvRows = [headers.join(',')];
+
+    for (const u of filteredUsers) {
+      const role = normalizeRole(u);
+      const rowData = [
+        u.studentCode || '—',
+        u.fullName,
+        u.phoneNumber,
+        u.secondaryPhone || '—',
+        u.parentPhone || '—',
+        u.motherPhone || '—',
+        u.secondaryParentPhone || '—',
+        mapEducationStage(u.educationStage),
+        mapGradeLevel(u.grade),
+        mapStudyTrack(u.track),
+        u.governorate || '—',
+        u.district || '—',
+        u.address || '—',
+        u.dateOfBirth ? new Date(u.dateOfBirth).toLocaleDateString('ar-EG') : '—',
+        mapGender(u.gender),
+        u.schoolName || '—',
+        mapSchoolType(u.schoolType),
+        u.isFatherAlive === false ? 'لا (متوفى)' : 'نعم',
+        u.isMotherAlive === false ? 'لا (متوفاة)' : 'نعم',
+        roleLabel(role),
+        statusLabel(u.status),
+        new Date(u.createdAt).toLocaleDateString('ar-EG')
+      ];
+
+      const escapedRow = rowData.map(val => {
+        const stringVal = String(val).replace(/"/g, '""');
+        return `"${stringVal}"`;
+      });
+
+      csvRows.push(escapedRow.join(','));
+    }
+
+    const csvContent = '\uFEFF' + csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `قائمة_المستخدمين_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('تم تصدير البيانات بنجاح');
+  };
+
   const filteredUsers =
     roleFilter === 'all'
       ? users
@@ -340,7 +461,10 @@ export default function AdminUsersPage() {
                   <Filter className="h-4 w-4" />
                   تصفية
                 </button>
-                <button className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]">
+                <button
+                  onClick={handleExport}
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-6 py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+                >
                   <Download className="h-4 w-4" />
                   تصدير البيانات
                 </button>
