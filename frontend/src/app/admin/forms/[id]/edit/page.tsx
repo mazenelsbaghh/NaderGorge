@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 
 import { AdminShellChrome, AdminPageSkeleton } from '@/components/admin';
 import { getAdminFormDetails, updateAdminForm, FormFieldConfig, FormFieldType } from '@/services/forms-service';
+import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 
 interface EditFormPageProps {
   params: Promise<{ id: string }>;
@@ -286,7 +287,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
                   className="admin-input w-full text-left"
                 />
                 <span className="text-[10px] text-[var(--admin-muted)]">
-                  الرابط العام سيكون: /forms/{slug || 'slug'}
+                  الرابط العام سيكون: {getAbsoluteLandingUrl(`/forms/${slug || 'slug'}`)}
                 </span>
               </div>
             </div>

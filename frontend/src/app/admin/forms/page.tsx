@@ -14,6 +14,7 @@ import {
   AdminColumn,
 } from '@/components/admin';
 import { getAdminForms, deleteAdminForm, CustomFormDto } from '@/services/forms-service';
+import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 
 export default function AdminFormsPage() {
   const [forms, setForms] = useState<CustomFormDto[]>([]);
@@ -38,9 +39,7 @@ export default function AdminFormsPage() {
   }, []);
 
   const getPublicFormUrl = (slug: string) => {
-    const path = `/forms/${slug}`;
-    if (typeof window === 'undefined') return path;
-    return `${window.location.origin}${path}`;
+    return getAbsoluteLandingUrl(`/forms/${slug}`);
   };
 
   const handleCopyFormUrl = async (slug: string) => {
@@ -98,7 +97,7 @@ export default function AdminFormsPage() {
             <Clipboard className="h-4 w-4" />
           </button>
           <Link
-            href={`/forms/${row.slug}`}
+            href={getPublicFormUrl(row.slug)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--admin-primary)]"

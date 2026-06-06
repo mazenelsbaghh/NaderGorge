@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 
 import { AdminShellChrome } from '@/components/admin';
 import { createAdminForm, FormFieldConfig, FormFieldType } from '@/services/forms-service';
+import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 
 export default function NewFormPage() {
   const router = useRouter();
@@ -247,7 +248,7 @@ export default function NewFormPage() {
                   className="admin-input w-full text-left"
                 />
                 <span className="text-[10px] text-[var(--admin-muted)]">
-                  الرابط العام سيكون: /forms/{slug || 'slug'}
+                  الرابط العام سيكون: {getAbsoluteLandingUrl(`/forms/${slug || 'slug'}`)}
                 </span>
               </div>
             </div>

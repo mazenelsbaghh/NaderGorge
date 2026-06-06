@@ -63,8 +63,9 @@ export function GlobalNav() {
   const isStudentArea = pathname.startsWith("/student");
   const isAdminArea = pathname.startsWith("/admin");
   const isAuthRoute = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password";
+  const isFormsPage = pathname.startsWith("/forms");
 
-  if (isStudentArea || isAdminArea || isAuthRoute) {
+  if (isStudentArea || isAdminArea || isAuthRoute || isFormsPage) {
     return null;
   }
 
