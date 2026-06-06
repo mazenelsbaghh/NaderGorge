@@ -13,7 +13,7 @@ import {
   AdminModal,
   AdminColumn,
 } from '@/components/admin';
-import { getAdminForms, deleteAdminForm, CustomFormDto } from '@/services/forms-service';
+import { getAdminForms, deleteAdminForm, CustomFormDto, getAdminFormDetails, updateAdminForm } from '@/services/forms-service';
 import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 
 export default function AdminFormsPage() {
@@ -65,6 +65,33 @@ export default function AdminFormsPage() {
       devConsole.error('Error deleting form:', error);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleToggleActive = async (row: CustomFormDto) => {
+    const originalIsActive = row.isActive;
+    // Optimistic UI update
+    setForms((prev) =>
+      prev.map((f) => (f.id === row.id ? { ...f, isActive: !originalIsActive } : f))
+    );
+
+    try {
+      const details = await getAdminFormDetails(row.id);
+      await updateAdminForm(row.id, {
+        title: details.title,
+        description: details.description,
+        slug: details.slug,
+        fieldsJson: details.fieldsJson,
+        isActive: !originalIsActive,
+      });
+      toast.success(!originalIsActive ? 'تم فتح استقبال الطلبات بنجاح' : 'تم إغلاق استقبال الطلبات بنجاح');
+    } catch (error) {
+      devConsole.error('Error toggling form active state:', error);
+      toast.error('تعذر تغيير حالة النموذج');
+      // Revert UI update
+      setForms((prev) =>
+        prev.map((f) => (f.id === row.id ? { ...f, isActive: originalIsActive } : f))
+      );
     }
   };
 
@@ -135,14 +162,19 @@ export default function AdminFormsPage() {
       key: 'isActive',
       label: 'حالة الاستقبال',
       render: (row) => (
-        <span
-          className={`inline-block rounded-full px-2.5 py-1 text-xs font-black ${row.isActive
-            ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-            : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
-            }`}
+        <button
+          type="button"
+          onClick={() => handleToggleActive(row)}
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black transition-all hover:scale-105 active:scale-95 ${
+            row.isActive
+              ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20'
+              : 'bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500/20'
+          }`}
+          title={row.isActive ? "اضغط لإغلاق استقبال الطلبات" : "اضغط لفتح استقبال الطلبات"}
         >
+          <span className={`h-1.5 w-1.5 rounded-full ${row.isActive ? 'bg-emerald-500' : 'bg-rose-500'}`} />
           {row.isActive ? 'مفتوح' : 'مغلق'}
-        </span>
+        </button>
       ),
       align: 'center',
     },
