@@ -11,9 +11,35 @@ const API_URL = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL
 const INTERNAL_TOKEN = process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRET;
 
 type VideoEmbedMaterialResponse = {
-  token: string;
-  key: string;
+  token?: string;
+  key?: string;
+  Token?: string;
+  Key?: string;
 };
+
+function iframeError(message: string, status = 500) {
+  const safeMessage = JSON.stringify(message);
+  return new NextResponse(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;background:#000;color:#fff;font-family:system-ui,sans-serif">
+<script>
+try {
+  window.parent.postMessage({ source: 'video-embed', type: 'error', data: { message: ${safeMessage} } }, window.location.origin);
+} catch (e) {}
+</script>
+</body>
+</html>`, {
+    status,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'Content-Security-Policy': "frame-ancestors 'self'",
+    },
+  });
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,22 +49,22 @@ export async function GET(request: NextRequest) {
     const host = request.headers.get('host');
 
     if (dest === 'document' && !referer) {
-      return new NextResponse('Embed must be loaded within Masar Platform', { status: 403 });
+      return iframeError('Embed must be loaded within Masar Platform', 403);
     }
 
     if (referer && host && !referer.includes(host)) {
-      return new NextResponse('Unauthorized embedding', { status: 403 });
+      return iframeError('Unauthorized embedding', 403);
     }
 
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('s');
 
     if (!sessionId) {
-      return new NextResponse('Missing session', { status: 400 });
+      return iframeError('Missing session', 400);
     }
 
     if (!INTERNAL_TOKEN) {
-      return new NextResponse('Embed proxy is not configured', { status: 503 });
+      return iframeError('Embed proxy is not configured. API_CALLBACK_SECRET is missing from the frontend runtime.', 503);
     }
 
     const materialResponse = await fetch(`${API_URL}/student/video-session/${encodeURIComponent(sessionId)}/embed-material`, {
@@ -49,12 +75,16 @@ export async function GET(request: NextRequest) {
     });
 
     if (!materialResponse.ok) {
-      return new NextResponse('Session expired or invalid', { status: materialResponse.status });
+      return iframeError('Session expired or invalid', materialResponse.status);
     }
 
     const material = (await materialResponse.json()) as VideoEmbedMaterialResponse;
-    const encryptedToken = material.token;
-    const base64Key = material.key;
+    const encryptedToken = material.token ?? material.Token;
+    const base64Key = material.key ?? material.Key;
+
+    if (!encryptedToken || !base64Key) {
+      return iframeError('Embed material response is missing token/key', 502);
+    }
 
     const keyBytes = Buffer.from(base64Key, 'base64');
     const tokenBytes = Buffer.from(encryptedToken, 'base64');
@@ -87,7 +117,7 @@ export async function GET(request: NextRequest) {
       // T004 & T021: Parse ProviderVideoId
       const match = videoId.match(/oid=([^&]+)&id=([^&]+)/);
       if (!match) {
-        return new NextResponse('Invalid VK video identifier format. Expected: oid=-XXXXX&id=XXXXX', { status: 400 });
+        return iframeError('Invalid VK video identifier format. Expected: oid=-XXXXX&id=XXXXX', 400);
       }
       const oid = match[1];
       const id = match[2];
@@ -108,7 +138,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[video-embed] Decryption failed:', error);
-    return new NextResponse('Session expired or invalid', { status: 403 });
+    return iframeError('Session expired or invalid', 403);
   }
 }
 

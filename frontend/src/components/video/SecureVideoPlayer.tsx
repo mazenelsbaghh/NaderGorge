@@ -92,6 +92,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   
   const [showControls, setShowControls] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const embedReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const watchThresholdPercentageRef = useRef<number>(30);
 
   const [isHoveringControls, setIsHoveringControls] = useState(false);
@@ -173,6 +174,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
       switch (msg.type) {
         case 'ready':
+          if (embedReadyTimeoutRef.current) {
+            clearTimeout(embedReadyTimeoutRef.current);
+            embedReadyTimeoutRef.current = null;
+          }
           setStatus('ready');
           setDuration(msg.data.duration || 0);
           setVolume(msg.data.volume || 100);
@@ -232,8 +237,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           }
           break;
         case 'error':
+          if (embedReadyTimeoutRef.current) {
+            clearTimeout(embedReadyTimeoutRef.current);
+            embedReadyTimeoutRef.current = null;
+          }
           setStatus('error');
-          setErrorMessage('حدث خطأ أثناء تشغيل الفيديو');
+          setErrorMessage(msg.data?.message || 'حدث خطأ أثناء تشغيل الفيديو');
           break;
         case 'overlayClick':
           if (status === 'ready') {
@@ -435,6 +444,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         setStatus('locked');
         return;
       }
+
+      if (embedReadyTimeoutRef.current) {
+        clearTimeout(embedReadyTimeoutRef.current);
+      }
+      embedReadyTimeoutRef.current = setTimeout(() => {
+        setStatus('error');
+        setErrorMessage('تعذر تحميل مشغل الفيديو. تأكد من إعدادات الاتصال الداخلي بين الواجهة والباك اند.');
+      }, 12000);
 
       const consumeAfterIframeLoad = () => {
         void videoSessionService.consumeSession(session.sessionId).catch((err) => {
