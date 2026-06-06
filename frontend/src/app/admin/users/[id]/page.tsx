@@ -688,9 +688,20 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                  
                  <AdminDataTable<any> 
                     columns={[
-                        {key: 'videoId', label:'رقم الفيديو (ID)', render: (row: any) => row.videoId}, 
-                        {key: 'addedViews', label:'المشاهدات المضافة', render: (row: any) => row.addedViews}, 
-                        {key: 'reason', label:'السبب', render: (row: any) => row.reason}
+                        {key: 'videoTitle', label: 'اسم الفيديو', render: (row: any) => row.videoTitle || row.videoId},
+                        {key: 'limitChange', label: 'تعديل الحد الأقصى', render: (row: any) => (
+                          <span className="font-mono text-sm">
+                            {row.originalLimit} ➔ {row.newLimit}
+                          </span>
+                        )},
+                        {key: 'addedViews', label: 'المشاهدات المضافة', render: (row: any) => (
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            +{row.addedViews}
+                          </span>
+                        )},
+                        {key: 'reason', label: 'السبب', render: (row: any) => row.reason || '—'},
+                        {key: 'overrideBy', label: 'بواسطة', render: (row: any) => row.overrideBy || 'مدير النظام'},
+                        {key: 'createdAt', label: 'التاريخ والوقت', render: (row: any) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
                     ]}
                     data={studentData?.overrides || []}
                     rowKey={(row: any) => row.id || `${row.videoId}-${row.addedViews}-${row.reason || 'override'}`}

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { extractAudioFromVideo } from '../utils/audioExtractor.js';
 import { analyzeVideoChapters } from '../services/geminiService.js';
 import type { VideoAIResult } from '../services/geminiService.js';
+import { throwIfCancellationRequested } from '../cancellation.js';
 
 // Resolve worker root reliably regardless of process.cwd()
 const __filename = fileURLToPath(import.meta.url);
@@ -35,9 +36,12 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
     let isSuccess = false;
 
     try {
+        await throwIfCancellationRequested(job);
+
         // Step 1: Extract Audio via FFmpeg (saves locally to .tmp directory)
         if (!audioPath || !fs.existsSync(audioPath)) {
             await job.updateProgress({ percentage: 10, stage: 'جاري استخراج وتحضير الصوت من الفيديو...' });
+            await throwIfCancellationRequested(job);
             audioPath = await extractAudioFromVideo(sourceUrl, lessonVideoId);
             await job.updateData({ ...job.data, audioPath });
         } else {
@@ -46,11 +50,13 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         
         // Step 2: Upload to Gemini & Execute Flash 2.5 Prompt
         await job.updateProgress({ percentage: 40, stage: 'الذكاء الاصطناعي يقوم بتحليل وتلخيص المحتوى (قد يستغرق دقائق)...' });
+        await throwIfCancellationRequested(job);
         console.log(`[Job ${job.id}] Starting Gemini processing...`);
         result = await analyzeVideoChapters(audioPath);
 
         // Save SRT file to configured shared storage.
         await job.updateProgress({ percentage: 85, stage: 'جاري بناء هيكل الفصول وإنشاء الترجمة...' });
+        await throwIfCancellationRequested(job);
         const srtDir = process.env.SUBTITLE_STORAGE_PATH || path.join(workerRoot, '.tmp/subtitles');
         if (!fs.existsSync(srtDir)) {
             fs.mkdirSync(srtDir, { recursive: true });
@@ -65,6 +71,7 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         
         // Step 3: Webhook Callback to .NET API
         await job.updateProgress({ percentage: 95, stage: 'جاري حفظ الفصول والخرائط في واجهة النظام...' });
+        await throwIfCancellationRequested(job);
         console.log(`[Job ${job.id}] Pushing results to backend via Webhook...`);
         
         const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';

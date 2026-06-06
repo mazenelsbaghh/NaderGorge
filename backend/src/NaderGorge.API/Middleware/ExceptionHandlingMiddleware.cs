@@ -62,7 +62,6 @@ public class ExceptionHandlingMiddleware
         catch (Exception ex)
         {
             var correlationId = context.Items["CorrelationId"]?.ToString() ?? Guid.NewGuid().ToString();
-            System.IO.File.AppendAllText("/tmp/NaderGorge_errors.txt", $"{DateTime.UtcNow} - {ex.ToString()}\n\n");
             _logger.LogError(ex, "Unhandled exception. CorrelationId: {CorrelationId}", correlationId);
 
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;

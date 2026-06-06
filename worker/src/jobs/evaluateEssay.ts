@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { Job } from 'bullmq';
+import { throwIfCancellationRequested } from '../cancellation.js';
 
 config();
 
@@ -25,6 +26,8 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
   console.log(`[EvaluateEssay] Starting evaluation for essay ${essaySubmissionId}`);
 
   try {
+    await throwIfCancellationRequested(job);
+
     const prompt = `
 You are a friendly Egyptian Arabic teacher who speaks in Egyptian colloquial Arabic (العامية المصرية).
 The student has submitted an answer to an essay question.
@@ -57,6 +60,7 @@ Do not return any markdown code blocks, just raw JSON.`;
 
     const responseText = response.text || "{}";
     await job.updateProgress({ percentage: 60, stage: 'بنجهّز النتيجة...' });
+    await throwIfCancellationRequested(job);
 
     console.log(`[EvaluateEssay] Gemini response received (${responseText.length} chars).`);
 
@@ -73,6 +77,7 @@ Do not return any markdown code blocks, just raw JSON.`;
     
     // Webhook callback to C# API
     await job.updateProgress({ percentage: 80, stage: 'بنبعت النتيجة...' });
+    await throwIfCancellationRequested(job);
     
     const webhookResponse = await fetch(`${API_URL}/internal/callbacks/essay-graded`, {
       method: 'POST',

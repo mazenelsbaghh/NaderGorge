@@ -12,6 +12,7 @@ import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
 import { requireWorkerAdminToken, validateWorkerSecurityConfig } from './security.js';
 import { logQueueEvent } from './logging.js';
+import { markJobCancellation } from './cancellation.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
@@ -218,8 +219,12 @@ async function startWorker() {
           job = await mindmapsQueue.getJob(jobId);
       }
       if (job) {
-          await job.remove();
-          return res.json({ success: true, message: 'Job cancelled' });
+          const cancellation = await markJobCancellation(job);
+          return res.json({
+            success: true,
+            message: cancellation.removed ? 'Job cancelled' : 'Cancellation requested',
+            state: cancellation.state
+          });
       }
       return res.status(404).json({ success: false, message: 'Job not found' });
     } catch (e: any) {

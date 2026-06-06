@@ -48,28 +48,45 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var rankPosition = gamification != null ? await _context.StudentGamifications
             .CountAsync(g => g.TotalPoints > gamification.TotalPoints, cancellationToken) + 1 : 0;
 
-        var packageGrants = await _context.StudentAccessGrants
+        var packages = await _context.StudentAccessGrants
             .Where(g => g.UserId == request.UserId && g.PackageId.HasValue)
-            .Select(g => new { g.Id, g.PackageId, g.CreatedAt, g.ExpiresAt, g.IsActive, g.AccessCodeId })
+            .Join(
+                _context.Packages,
+                grant => grant.PackageId!.Value,
+                package => package.Id,
+                (grant, package) => new StudentPackageDto
+                {
+                    Id = package.Id,
+                    AccessGrantId = grant.Id,
+                    Name = package.Name,
+                    EnrolledAt = grant.CreatedAt,
+                    ExpiresAt = grant.ExpiresAt,
+                    Progress = 0,
+                    IsActive = grant.IsActive,
+                    PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
+                    Price = package.Price
+                })
+            .OrderByDescending(p => p.EnrolledAt)
             .ToListAsync(cancellationToken);
 
-        var packages = new List<StudentPackageDto>();
-        foreach (var grant in packageGrants)
-        {
-            var p = await _context.Packages.FindAsync(new object[] { grant.PackageId!.Value }, cancellationToken);
-            packages.Add(new StudentPackageDto
+        var overrides = await _context.VideoOverrides
+            .Include(o => o.LessonVideo)
+            .Include(o => o.PerformedByUser)
+            .Where(o => o.UserId == request.UserId)
+            .OrderByDescending(o => o.CreatedAt)
+            .Select(o => new VideoOverrideDto
             {
-                Id = grant.PackageId.Value,
-                AccessGrantId = grant.Id,
-                Name = p != null ? p.Name : "Unknown",
-                EnrolledAt = grant.CreatedAt,
-                ExpiresAt = grant.ExpiresAt,
-                Progress = 0,
-                IsActive = grant.IsActive,
-                PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
-                Price = p != null ? p.Price : 0m
-            });
-        }
+                Id = o.Id,
+                VideoId = o.LessonVideoId,
+                VideoTitle = o.LessonVideo.Title,
+                OriginalLimit = o.OriginalLimit,
+                NewLimit = o.NewLimit,
+                AddedViews = o.AddedViews,
+                Reason = o.Reason,
+                OverrideBy = o.PerformedByUser.FullName,
+                CreatedAt = o.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
 
         // Map devices
         var devices = user.Devices.Select(d => new StudentDeviceDto
@@ -83,12 +100,6 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             LastActiveAt = d.LastUsedAt,
             IsActive = d.IsActive
         }).OrderByDescending(d => d.LastActiveAt).ToList();
-
-
-        // Overrides
-        // We will need VideoOverrides table if it exists. Reverting to empty for now if entity lacks it, 
-        // to avoid compiler error.
-        var overrides = new List<VideoOverrideDto>(); // Placeholder for US2 when we build the entity.
 
         var watchActivities = await _context.VideoWatchEvents
             .Where(v => v.UserId == request.UserId)

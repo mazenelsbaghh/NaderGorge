@@ -103,7 +103,8 @@ public class VideoOverrideDto
     public string VideoTitle { get; set; } = string.Empty;
     public int OriginalLimit { get; set; }
     public int NewLimit { get; set; }
-    public int CurrentViews { get; set; }
+    public int AddedViews { get; set; }
+    public string Reason { get; set; } = string.Empty;
     public string OverrideBy { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
 }

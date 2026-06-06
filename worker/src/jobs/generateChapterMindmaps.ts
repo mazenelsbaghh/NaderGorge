@@ -2,6 +2,7 @@ import { Job } from 'bullmq';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { generateChapterMindmap } from '../services/geminiService.js';
+import { throwIfCancellationRequested } from '../cancellation.js';
 
 // Resolve worker root reliably regardless of process.cwd()
 const __filename = fileURLToPath(import.meta.url);
@@ -45,6 +46,7 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
 
     try {
         await job.updateProgress({ percentage: 10, stage: 'تحضير شخصية المدرس...' });
+        await throwIfCancellationRequested(job);
 
         // Prepare local path for teacherPhotoUrl if it exists
         let activeTeacherPhotoLocalPath: string | undefined = undefined;
@@ -70,6 +72,7 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
 
         for (const chapter of chapters) {
             try {
+                await throwIfCancellationRequested(job);
                 const generatedUrl = await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPath);
                 if (generatedUrl) {
                     results.push({ title: chapter.title, imageUrl: generatedUrl });
@@ -87,6 +90,7 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
         }
 
         await job.updateProgress({ percentage: 95, stage: 'جاري حفظ الخرائط في لوحة التحكم...' });
+        await throwIfCancellationRequested(job);
 
         const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
         const apiKey = process.env.API_CALLBACK_SECRET;
