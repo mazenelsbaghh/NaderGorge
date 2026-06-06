@@ -1,3 +1,4 @@
+import "@/lib/timezone-bootstrap";
 import type { Metadata } from "next";
 import { Tajawal, Montserrat } from "next/font/google";
 import "./globals.css";

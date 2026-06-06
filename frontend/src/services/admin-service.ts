@@ -53,6 +53,17 @@ export interface DeviceDto {
   isActive: boolean;
 }
 
+export interface UserAuditLogDto {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  oldValues?: string;
+  newValues?: string;
+  ipAddress?: string;
+  createdAt: string;
+}
+
 export interface CodeGroupDto {
   id: string;
   createdAt: string;
@@ -472,6 +483,11 @@ export const adminService = {
 
   getUserDevices: async (id: string) => {
     const res = await apiClient.get<ApiResponse<DeviceDto[]>>(`/admin/users/${id}/devices`);
+    return res.data?.data;
+  },
+
+  getUserAuditLogs: async (id: string) => {
+    const res = await apiClient.get<ApiResponse<UserAuditLogDto[]>>(`/admin/users/${id}/audit-logs`);
     return res.data?.data;
   },
 

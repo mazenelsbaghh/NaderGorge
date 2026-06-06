@@ -35,7 +35,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const isStaff = user?.roles?.some((role) => ['Admin', 'Teacher'].includes(role));
+  const isStaff = user?.roles?.length ? !user.roles.includes('Student') : false;
 
   if (loading) {
     return (

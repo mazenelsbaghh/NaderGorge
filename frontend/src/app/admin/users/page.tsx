@@ -7,7 +7,6 @@ import {
   Download,
 
   Filter,
-  Monitor,
   Shield,
   Sparkles,
   UserPlus,
@@ -18,19 +17,19 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AddUserDrawer } from './components/AddUserDrawer';
+import { AssistantProfileModal } from './components/AssistantProfileModal';
 
 import {
   AdminShellChrome,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
-  AdminModal,
   AdminSearchToolbar,
   AdminPageSkeleton,
   ConfirmDialog,
 } from '@/components/admin';
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
-import { AdminUserListDto, DeviceDto, adminService } from '@/services/admin-service';
+import { AdminUserListDto, adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
@@ -46,8 +45,8 @@ const ROLE_FILTERS: Array<{ value: RoleFilter; label: string }> = [
 
 function normalizeRole(user: AdminUserListDto): UserRole {
   if (user.roles.includes('Admin')) return 'Admin';
-  if (user.roles.includes('Assistant')) return 'Assistant';
-  return 'Student';
+  if (user.roles.includes('Student')) return 'Student';
+  return 'Assistant';
 }
 
 function roleLabel(role: UserRole) {
@@ -75,9 +74,6 @@ export default function AdminUsersPage() {
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
-  const [deviceModalUser, setDeviceModalUser] = useState<AdminUserListDto | null>(null);
-  const [devices, setDevices] = useState<DeviceDto[]>([]);
-
   const [educationStageFilter, setEducationStageFilter] = useState('');
   const [gradeLevelFilter, setGradeLevelFilter] = useState('');
   const [studyTrackFilter, setStudyTrackFilter] = useState('');
@@ -86,6 +82,7 @@ export default function AdminUsersPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [confirmUser, setConfirmUser] = useState<AdminUserListDto | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [selectedAssistant, setSelectedAssistant] = useState<AdminUserListDto | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const fetchUsers = useCallback(async () => {
@@ -116,17 +113,6 @@ export default function AdminUsersPage() {
     return () => { isMounted = false; };
   }, [fetchUsers]);
 
-  async function handleViewDevices(user: AdminUserListDto) {
-    setDeviceModalUser(user);
-
-    try {
-      const data = await adminService.getUserDevices(user.id);
-      setDevices(data);
-    } catch (error) {
-      devConsole.error(error);
-      toast.error('حدث خطأ أثناء تحميل بيانات الأجهزة، يرجى المحاولة.');
-    }
-  }
 
   async function handleToggleStatus(user: AdminUserListDto) {
     const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
@@ -604,47 +590,18 @@ export default function AdminUsersPage() {
               if (normalizeRole(u) === 'Student') {
                 router.push(`/admin/users/${u.id}`);
               } else {
-                handleViewDevices(u);
+                setSelectedAssistant(u);
               }
             }}
           />
 
-          <AdminModal
-            open={!!deviceModalUser}
-            onClose={() => { setDeviceModalUser(null); setDevices([]); }}
-            title="الأجهزة المسجلة"
-            subtitle={deviceModalUser?.fullName}
-          >
-            {devices.length === 0 ? (
-              <div className="rounded-[1.5rem] bg-[var(--admin-card-soft)] p-8 text-center text-[var(--admin-muted)] border border-[var(--admin-border)] mt-4">
-                لا توجد أجهزة مسجلة لهذا المستخدم.
-              </div>
-            ) : (
-              <div className="space-y-3 mt-4">
-                {devices.map((device) => (
-                  <div
-                    key={device.id}
-                    className="flex flex-col gap-4 rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:flex-row sm:items-center sm:justify-between shadow-sm"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-2xl bg-[var(--admin-primary-15)] p-3 text-[var(--admin-primary)]">
-                        <Monitor className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-[var(--admin-text)]">
-                          {device.browser} <span className="text-[var(--admin-muted)] font-normal px-1">•</span> {device.os}
-                        </div>
-                        <div className="text-sm text-[var(--admin-muted)] mt-1 font-mono">{device.fingerprint}</div>
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${device.isActive ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)]'}`}>
-                      {device.isActive ? 'مسجل الدخول' : 'يُمكن توثيقه'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </AdminModal>
+
+
+          <AssistantProfileModal
+            open={!!selectedAssistant}
+            onClose={() => setSelectedAssistant(null)}
+            assistant={selectedAssistant}
+          />
         </>
       )}
     </AdminShellChrome>

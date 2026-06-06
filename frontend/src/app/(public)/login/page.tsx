@@ -53,9 +53,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (isLoading) return;
     if (isAuthenticated) {
-      const hasAdmin = user?.roles?.some((role) =>
-        ['Admin', 'Teacher', 'Assistant'].includes(role)
-      );
+      const hasAdmin = user?.roles?.length && !user.roles.includes('Student');
       if (hasAdmin) {
         router.replace('/admin');
       } else {

@@ -114,6 +114,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetUserDevices(Guid id)
         => Ok(await _mediator.Send(new GetUserDevicesQuery(id)));
 
+    [HttpGet("users/{id:guid}/audit-logs")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> GetUserAuditLogs(Guid id)
+        => Ok(await _mediator.Send(new GetUserAuditLogsQuery(id)));
+
     [HttpDelete("users/students/{userId:guid}/devices/{deviceId:guid}")]
     [HasPermission("users.manage")]
     public async Task<IActionResult> DisconnectDevice(Guid userId, Guid deviceId)

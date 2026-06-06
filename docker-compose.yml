@@ -9,6 +9,7 @@ x-frontend-build: &frontend-build
 
 x-frontend-environment: &frontend-environment
   NODE_ENV: production
+  TZ: Africa/Cairo
   NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5245/api}
   NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:5245}
   INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:5245/api}
@@ -31,6 +32,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-masar_platform}
+      TZ: Africa/Cairo
     ports:
       - "${MASAR_POSTGRES_PORT:-5435}:5432"
     volumes:
@@ -73,6 +75,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Docker}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:5245}
+      TZ: Africa/Cairo
       ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
       JwtSettings__Secret: ${JWT_SECRET}
@@ -120,6 +123,7 @@ services:
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}
       NODE_ENV: production
+      TZ: Africa/Cairo
     ports:
       - "${MASAR_WORKER_PORT:-3001}:3001"
     networks:
@@ -217,6 +221,7 @@ services:
     environment:
       ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
+      TZ: Africa/Cairo
     networks:
       - masar_net
     depends_on:

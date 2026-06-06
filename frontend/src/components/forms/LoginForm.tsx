@@ -49,9 +49,7 @@ export function LoginForm() {
       const { accessToken, user } = data.data;
 
       // Role-based check
-      const isStaff = ['Admin', 'Teacher', 'Assistant'].some((r) =>
-        user.roles.includes(r)
-      );
+      const isStaff = user.roles.length > 0 && !user.roles.includes('Student');
 
       // On landing surface: block staff — they must use the admin portal
       const surface = process.env.NEXT_PUBLIC_APP_SURFACE;
