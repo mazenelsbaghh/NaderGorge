@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRouter } from 'next/navigation';
+import { PlatformLogo } from '@/components/shared/PlatformLogo';
 
 export function Navbar() {
   const { user, isAuthenticated, clearAuth } = useAuthStore();
@@ -17,9 +18,11 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-[var(--landing-line)] bg-[var(--landing-bg-soft)]/95 backdrop-blur supports-[backdrop-filter]:bg-[var(--landing-bg-soft)]/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--landing-line)] bg-[var(--landing-card)] text-lg text-[var(--landing-accent)]">☥</span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--landing-line)] bg-[var(--landing-card)] p-1.5">
+            <PlatformLogo variant="mark" size="sm" />
+          </span>
           <span className="text-xl font-bold text-[var(--landing-ink)]">
-            نادر جورج
+            منصة مسار
           </span>
         </Link>
 

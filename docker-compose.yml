@@ -1,71 +1,95 @@
+name: masar_platform
+
+x-frontend-build: &frontend-build
+  context: ./frontend
+  dockerfile: Dockerfile
+  args:
+    NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5245/api}
+    NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:5245}
+
+x-frontend-environment: &frontend-environment
+  NODE_ENV: production
+  NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5245/api}
+  NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:5245}
+  INTERNAL_API_URL: ${INTERNAL_API_URL:-http://backend:5245/api}
+  INTERNAL_BACKEND_URL: ${INTERNAL_BACKEND_URL:-http://backend:5245}
+  WORKER_URL: ${WORKER_URL:-http://worker:3001}
+  LANDING_PUBLIC_ORIGIN: ${LANDING_PUBLIC_ORIGIN:-http://localhost:8738}
+  STUDENT_PUBLIC_ORIGIN: ${STUDENT_PUBLIC_ORIGIN:-http://localhost:8739}
+  ADMIN_PUBLIC_ORIGIN: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:8740}
+  NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-masarplatform.com}
+
 services:
 
-  # ─── Database ──────────────────────────────────────────────────────────────
+  # Database
   db:
     image: postgres:16-alpine
-    container_name: nadergorge_db
+    container_name: masar_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-nadergorge}
+      POSTGRES_DB: ${POSTGRES_DB:-masar_platform}
+    ports:
+      - "${MASAR_POSTGRES_PORT:-5435}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - masar_pgdata:/var/lib/postgresql/data
     networks:
-      - nadergorge_net
+      - masar_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
 
-  # ─── Cache / Queue Broker ──────────────────────────────────────────────────
+  # Cache / Queue Broker
   redis:
     image: redis:7-alpine
-    container_name: nadergorge_redis
+    container_name: masar_redis
+    ports:
+      - "${MASAR_REDIS_PORT:-6382}:6379"
     volumes:
-      - redisdata:/data
+      - masar_redisdata:/data
     networks:
-      - nadergorge_net
+      - masar_net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 5s
 
-  # ─── Backend (.NET 9 ASP.NET Core) ────────────────────────────────────────
+  # Backend API (.NET 9 ASP.NET Core)
   backend:
+    image: masar_backend:local
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nadergorge_backend
+    container_name: masar_backend
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Docker}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:5245}
-      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-nadergorge};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
       JwtSettings__Secret: ${JWT_SECRET}
-      JwtSettings__Issuer: ${JWT_ISSUER:-NaderGorgeAPI}
-      JwtSettings__Audience: ${JWT_AUDIENCE:-NaderGorgeClients}
-      JwtSettings__ExpirationMinutes: ${JWT_EXPIRY_MINUTES:-60}
+      JwtSettings__Issuer: ${JWT_ISSUER:-MasarPlatformAPI}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-MasarPlatformClients}
+      JwtSettings__ExpirationMinutes: ${JWT_EXPIRY_MINUTES:-18000000}
       JwtSettings__RefreshExpirationDays: ${JWT_REFRESH_DAYS:-30}
       DeviceLimits__MaxDevicesPerStudent: ${MAX_DEVICES_PER_STUDENT:-2}
       EvolutionApi__BaseUrl: ${EVOLUTION_API_BASE_URL:-}
       EvolutionApi__ApiKey: ${EVOLUTION_API_KEY:-}
-      EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Nader}
-      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:8738}
+      EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Masar}
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:8738,http://localhost:8739,http://localhost:8740}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       ParentReports__SigningSecret: ${PARENT_REPORT_SIGNING_SECRET:?PARENT_REPORT_SIGNING_SECRET is required}
     ports:
-      - "5245:5245"
-    volumes:
-      - subtitles:/app/wwwroot/subtitles
+      - "${MASAR_BACKEND_PORT:-5245}:5245"
     networks:
-      - nadergorge_net
+      - masar_net
     depends_on:
       db:
         condition: service_healthy
@@ -73,32 +97,31 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5245/api/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:5245/api/health || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
 
-  # ─── AI Worker (Node.js BullMQ) ───────────────────────────────────────────
+  # AI Worker (Node.js BullMQ)
   worker:
+    image: masar_worker:local
     build:
       context: ./worker
       dockerfile: Dockerfile
-    container_name: nadergorge_worker
+    container_name: masar_worker
     environment:
       REDIS_URL: "redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
-      DB_CONNECTION_STRING: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-nadergorge};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      DB_CONNECTION_STRING: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}
-      SUBTITLE_STORAGE_PATH: ${SUBTITLE_STORAGE_PATH:-/app/storage/subtitles}
-      PUBLIC_SUBTITLE_BASE_URL: ${PUBLIC_SUBTITLE_BASE_URL:-/subtitles}
       NODE_ENV: production
-    volumes:
-      - subtitles:/app/storage/subtitles
+    ports:
+      - "${MASAR_WORKER_PORT:-3001}:3001"
     networks:
-      - nadergorge_net
+      - masar_net
     depends_on:
       db:
         condition: service_healthy
@@ -106,52 +129,94 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3001/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:3001/health || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 20s
 
-  # ─── Frontend (Next.js) ────────────────────────────────────────────────────
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5245/api}
-        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://backend:5245}
-    container_name: nadergorge_frontend
+  # Public Landing Surface (Next.js)
+  landing:
+    image: masar_frontend:local
+    build: *frontend-build
+    container_name: masar_landing
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:5245/api}
-      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://backend:5245}
-      WORKER_URL: ${WORKER_URL:-http://worker:3001}
-      WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}
+      <<: *frontend-environment
+      APP_SURFACE: landing
+      NEXT_PUBLIC_APP_SURFACE: landing
     ports:
-      - "8738:8738"
+      - "${MASAR_LANDING_PORT:-8738}:8738"
     networks:
-      - nadergorge_net
+      - masar_net
     depends_on:
       backend:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8738 || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:8738 || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
 
-  # ─── EF Core Migration Runner (on-demand, not started by make up) ──────────
+  # Student Surface (Next.js)
+  student:
+    image: masar_frontend:local
+    container_name: masar_student
+    environment:
+      <<: *frontend-environment
+      APP_SURFACE: student
+      NEXT_PUBLIC_APP_SURFACE: student
+    ports:
+      - "${MASAR_STUDENT_PORT:-8739}:8738"
+    networks:
+      - masar_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8738 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # Admin Surface (Next.js)
+  admin:
+    image: masar_frontend:local
+    container_name: masar_admin
+    environment:
+      <<: *frontend-environment
+      APP_SURFACE: admin
+      NEXT_PUBLIC_APP_SURFACE: admin
+    ports:
+      - "${MASAR_ADMIN_PORT:-8740}:8738"
+    networks:
+      - masar_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8738 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # EF Core Migration Runner (on-demand, not started by make up)
   migrator:
+    image: masar_migrator:local
     build:
       context: ./backend
       dockerfile: Dockerfile.migrator
-    container_name: nadergorge_migrator
+    container_name: masar_migrator
     environment:
-      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-nadergorge};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
     networks:
-      - nadergorge_net
+      - masar_net
     depends_on:
       db:
         condition: service_healthy
@@ -160,13 +225,15 @@ services:
     profiles:
       - migration
 
-# ─── Networks ────────────────────────────────────────────────────────────────
 networks:
-  nadergorge_net:
+  masar_net:
+    name: masar_net
     driver: bridge
 
-# ─── Volumes ─────────────────────────────────────────────────────────────────
 volumes:
-  pgdata:
-  redisdata:
-  subtitles:
+  masar_pgdata:
+    name: nadergorge_masar_pgdata
+    external: true
+  masar_redisdata:
+    name: nadergorge_masar_redisdata
+    external: true

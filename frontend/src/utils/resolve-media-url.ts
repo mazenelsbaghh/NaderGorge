@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:5000/api';
+const DEFAULT_API_BASE_URL = 'http://localhost:5245/api';
 
 export function resolveMediaUrl(url?: string | null): string {
   if (!url) return '';

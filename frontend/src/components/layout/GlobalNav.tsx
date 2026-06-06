@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import {
   Navbar,
   NavBody,
@@ -20,25 +20,16 @@ import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { useAdminTheme } from "@/components/admin/useAdminTheme";
 import { motion, useReducedMotion } from "framer-motion";
 import { ShinyButton } from "@/components/ui/shiny-button";
-import { SphinxMark } from "@/components/icons/SphinxMark";
+import { PlatformLogo } from "@/components/shared/PlatformLogo";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
-
-const sphinxNavVars: CSSProperties = {
-  ['--sphinx-primary' as string]: 'var(--landing-accent)',
-  ['--sphinx-secondary' as string]:
-    'color-mix(in srgb, var(--landing-ink) 66%, var(--landing-accent) 34%)',
-};
 
 function LoginNavButtonContent() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <span
-      className="inline-flex items-center gap-2.5 whitespace-nowrap"
-      style={sphinxNavVars}
-    >
+    <span className="inline-flex items-center gap-2.5 whitespace-nowrap">
       <motion.span
-        className="inline-flex h-4 w-4 shrink-0 origin-center text-[var(--landing-accent)] drop-shadow-[0_2px_10px_rgba(145,95,42,0.2)]"
+        className="inline-flex h-4 w-4 shrink-0 origin-center drop-shadow-[0_2px_10px_rgba(145,95,42,0.2)]"
         animate={
           shouldReduceMotion
             ? undefined
@@ -54,7 +45,7 @@ function LoginNavButtonContent() {
           repeat: Infinity,
         }}
       >
-        <SphinxMark className="h-4 w-4" />
+        <PlatformLogo variant="mark" size="sm" />
       </motion.span>
       <span>تسجيل الدخول</span>
     </span>
@@ -98,8 +89,10 @@ export function GlobalNav() {
         ]
     : isLanding
       ? [
-          { href: "#features", label: "مميزات التجربة" },
-          { href: "#subjects", label: "فروع الدراسة" },
+          { href: "/", label: "الرئيسية" },
+          { href: "#courses", label: "الدورات" },
+          { href: "#teachers", label: "المعلمون" },
+          { href: "#about-platform", label: "عن المنصة" },
           { href: "#testimonials", label: "آراء الطلبة" },
         ]
       : [];

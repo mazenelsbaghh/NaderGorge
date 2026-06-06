@@ -1,7 +1,7 @@
 import { AssistantTaskBoard } from '@/components/assistant/AssistantTaskBoard';
 
 export const metadata = {
-  title: 'Assistant Dashboard | Nader Gorge',
+  title: 'Assistant Dashboard | Masar Platform',
   description: 'Manage and resolve student issues and academic tasks.',
 };
 

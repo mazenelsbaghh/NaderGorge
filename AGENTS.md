@@ -74,5 +74,7 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
 - [074-misc-fixes-and-improvements](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/074-misc-fixes-and-improvements/plan.md)
+- [079-brand-identity-migration](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/079-brand-identity-migration/plan.md)
+- [081-surface-docker-separation](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/081-surface-docker-separation/plan.md)
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

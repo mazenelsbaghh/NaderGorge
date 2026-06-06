@@ -10,8 +10,8 @@ import { adminService } from '@/services/admin-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
 const THEME_OPTIONS = [
-  { value: 'default-gold', label: 'ذهبي افتراضي' },
-  { value: 'physics-gold', label: 'ذهبي أكاديمي' },
+  { value: 'default-gold', label: 'افتراضي أكاديمي' },
+  { value: 'physics-gold', label: 'سماء شتوية' },
   { value: 'emerald-accent', label: 'زمردي هادئ' },
   { value: 'ocean-accent', label: 'أزرق بحري' },
 ] as const;

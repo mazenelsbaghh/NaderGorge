@@ -75,10 +75,10 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
             type="text"
             required
             minLength={6}
-            placeholder="مثال: NADER-2026"
+            placeholder="مثال: MASAR-2026"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            className="flex-1 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-3.5 text-sm font-mono tracking-[0.28em] text-[var(--admin-text)] placeholder:font-sans placeholder:tracking-normal placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(154,105,51,0.12)] transition-all"
+            className="flex-1 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-3.5 text-sm font-mono tracking-[0.28em] text-[var(--admin-text)] placeholder:font-sans placeholder:tracking-normal placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-4 focus:ring-[color:rgba(100,116,139,0.14)] transition-all"
             dir="ltr"
             autoCapitalize="characters"
             autoCorrect="off"

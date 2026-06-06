@@ -241,7 +241,7 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
 
             {/* Submitted field values */}
             <div className="space-y-4">
-              <div className="flex items-center gap-1 text-[#7f5427] font-bold text-sm border-r-2 border-[var(--admin-primary)] pr-2">
+              <div className="flex items-center gap-1 text-[#334155] font-bold text-sm border-r-2 border-[var(--admin-primary)] pr-2">
                 <FileText className="h-4 w-4" />
                 <span>إجابات مقدم الطلب:</span>
               </div>
@@ -265,7 +265,7 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
 
             {/* Moderation status and notes */}
             <div className="space-y-4 border-t border-[var(--admin-border)] pt-5">
-              <div className="flex items-center gap-1 text-[#7f5427] font-bold text-sm border-r-2 border-[var(--admin-primary)] pr-2">
+              <div className="flex items-center gap-1 text-[#334155] font-bold text-sm border-r-2 border-[var(--admin-primary)] pr-2">
                 <Settings className="h-4 w-4" />
                 <span>إجراء مراجعة الطلب:</span>
               </div>

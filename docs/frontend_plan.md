@@ -1,10 +1,25 @@
 # Frontend Master Plan
 
-**Last Updated**: 2026-06-04
+**Last Updated**: 2026-06-06
 
 ---
 
 ## Active Plans
+
+### Landing Page Dark Mode & Auto-Swiper Refinements (2026-06-06)
+- [x] Update `CircularGallerySection.tsx` to programmatically animate the student stack card's dragX to simulate manual dragging.
+- [x] Register color variables in Tailwind `@theme inline` in `globals.css` and transition hardcoded text color hexes to tailwind variables.
+- [x] Connect `useAdminTheme` hook to `HeroSection.tsx` and `LandingFooter.tsx` to conditionally toggle dark images and overlays.
+- [x] Update `resizable-navbar.tsx` to invert the logo mark in dark mode.
+
+### Landing Page Overdrive: 3D Swiper Stack & Kinetic Reveals (2026-06-06)
+- [x] Refactor gallery grids into draggable 3D stack cards and infinite auto-scroll row layout.
+- [x] Connect kinetic typography bouncy entries in `HeroSection.tsx`.
+- [x] Add auto-swipe cycle timer with exit animation to the student 3D Card Stack Swiper.
+
+### Landing Page Overdrive: Cinematic Reveals & Canvas Particles (2026-06-06)
+- [x] Implement interactive canvas component `ScholarlyParticles.tsx` for ambient animations.
+- [x] Connect `home.tsx` and integrate all scroll-driven visuals and entrance staggering with Framer Motion.
 
 ### Student Forgot Password Flow (2026-06-04)
 - [x] Create `/forgot-password` public route in `frontend/src/app/(public)/forgot-password/page.tsx`
@@ -17,4 +32,6 @@
 ---
 
 ## History
+- **2026-06-06**: Upgraded Landing Page Overdrive with auto-cycling 3D Card Stack Swiper and continuous horizontal marquee animations.
+- **2026-06-06**: Completed Landing Page Overdrive visual layout and Framer Motion integration.
 - Initialized frontend master plan directory.

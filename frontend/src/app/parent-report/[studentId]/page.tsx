@@ -122,7 +122,7 @@ export default function ParentReportPage() {
 
                     <div className="relative flex flex-col items-center justify-between gap-6 md:flex-row md:items-start">
                         <div className="flex flex-col items-center gap-6 md:flex-row">
-                            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[var(--primary)] to-[color:rgba(154,105,51,0.7)] text-4xl font-black text-[var(--primary-foreground)] shadow-[0_12px_40px_rgba(78,70,57,0.15)]">
+                            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-[var(--primary)] to-[color:rgba(100,116,139,0.72)] text-4xl font-black text-[var(--primary-foreground)] shadow-[0_12px_40px_rgba(15,23,42,0.15)]">
                                 {studentName.charAt(0)}
                             </div>
                             <div className="text-center md:text-right">

@@ -1,5 +1,5 @@
 /**
- * Shared Motion Utilities — Nader George Academy
+ * Shared Motion Utilities — Masar Platform
  *
  * Centralized Framer Motion variants, easings, and transition presets.
  * Import these instead of re-defining animation configs in every component.

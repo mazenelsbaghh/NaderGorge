@@ -23,6 +23,14 @@ namespace NaderGorge.Infrastructure.Migrations
                 type: "character varying(100)",
                 maxLength: 100,
                 nullable: true);
+
+            migrationBuilder.AddColumn<string>(
+                name: "CurrentMode",
+                table: "student_profiles",
+                type: "character varying(10)",
+                maxLength: 10,
+                nullable: false,
+                defaultValue: "light");
         }
 
         /// <inheritdoc />
@@ -34,6 +42,10 @@ namespace NaderGorge.Infrastructure.Migrations
 
             migrationBuilder.DropColumn(
                 name: "LightThemePaletteId",
+                table: "student_profiles");
+
+            migrationBuilder.DropColumn(
+                name: "CurrentMode",
                 table: "student_profiles");
         }
     }

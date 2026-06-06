@@ -111,9 +111,9 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#faf2e6] text-[#2c1708]">
+      <div className="flex h-screen w-screen items-center justify-center bg-[#f8fafc] text-[#0f172a]">
         <div className="text-center space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-[#9a6933] mx-auto" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#475569] mx-auto" />
           <p className="text-sm font-bold tracking-wider font-cairo">جاري تحميل النموذج...</p>
         </div>
       </div>
@@ -122,14 +122,14 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
 
   if (!form) {
     return (
-      <div className="flex min-h-screen w-screen items-center justify-center bg-[#faf2e6] p-6 text-[#2c1708] font-cairo" dir="rtl">
-        <div className="max-w-md w-full text-center bg-[#fcf6ea] p-8 rounded-[2rem] border border-[#f0e4ce] shadow-2xl space-y-6">
+      <div className="flex min-h-screen w-screen items-center justify-center bg-[#f8fafc] p-6 text-[#0f172a] font-cairo" dir="rtl">
+        <div className="max-w-md w-full text-center bg-[#ffffff] p-8 rounded-[2rem] border border-[#cbd5e1] shadow-2xl space-y-6">
           <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center mx-auto text-rose-500">
             <AlertCircle className="h-8 w-8" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-black text-[#7f5427]">النموذج غير متوفر</h1>
-            <p className="text-sm text-[#7a644d]">
+            <h1 className="text-2xl font-black text-[#334155]">النموذج غير متوفر</h1>
+            <p className="text-sm text-[#475569]">
               عذراً، هذا النموذج غير موجود أو تم إغلاق باب التسجيل به حالياً من قبل الإدارة.
             </p>
           </div>
@@ -139,10 +139,10 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#faf2e6] py-12 px-4 md:px-8 text-[#2c1708] font-cairo relative overflow-hidden" dir="rtl">
+    <div className="min-h-screen bg-[#f8fafc] py-12 px-4 md:px-8 text-[#0f172a] font-cairo relative overflow-hidden" dir="rtl">
       {/* Background Orbs and Grid */}
-      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(154,105,51,0.06),transparent_50%)]" />
-      <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-gradient-to-b from-[#f2dfbc]/30 to-transparent rounded-full filter blur-3xl opacity-40 -translate-y-1/2 translate-x-1/3" />
+      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.16),transparent_50%)]" />
+      <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-gradient-to-b from-[#dbeafe]/30 to-transparent rounded-full filter blur-3xl opacity-40 -translate-y-1/2 translate-x-1/3" />
       
       <div className="max-w-xl mx-auto relative z-10">
         <AnimatePresence mode="wait">
@@ -153,16 +153,16 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
-              className="bg-[#fcf6ea] rounded-[2.5rem] border border-[#f0e4ce] p-8 md:p-10 shadow-[0_20px_60px_rgba(44,23,8,0.05)] backdrop-blur-2xl"
+              className="bg-[#ffffff] rounded-[2.5rem] border border-[#cbd5e1] p-8 md:p-10 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-2xl"
             >
               {/* Header */}
-              <div className="text-center mb-8 border-b border-[#f0e4ce] pb-6">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#9a6933] to-[#7f5427] text-white flex items-center justify-center mx-auto shadow-md mb-4">
+              <div className="text-center mb-8 border-b border-[#cbd5e1] pb-6">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#475569] to-[#334155] text-white flex items-center justify-center mx-auto shadow-md mb-4">
                   <ClipboardCheck className="h-6 w-6" />
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black text-[#7f5427] tracking-tight">{form.title}</h1>
+                <h1 className="text-2xl md:text-3xl font-black text-[#334155] tracking-tight">{form.title}</h1>
                 {form.description && (
-                  <p className="text-xs text-[#7a644d] mt-3 leading-relaxed whitespace-pre-line">{form.description}</p>
+                  <p className="text-xs text-[#475569] mt-3 leading-relaxed whitespace-pre-line">{form.description}</p>
                 )}
               </div>
 
@@ -172,7 +172,7 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                   const hasError = !!errors[field.id];
                   return (
                     <div key={field.id} className="space-y-2 text-right">
-                      <label className="text-xs font-bold text-[#7f5427] flex items-center gap-1.5 px-1">
+                      <label className="text-xs font-bold text-[#334155] flex items-center gap-1.5 px-1">
                         {field.label}
                         {field.isRequired && <span className="text-rose-500 font-bold">*</span>}
                       </label>
@@ -183,8 +183,8 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                           value={answers[field.id] || ''}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
                           placeholder={field.placeholder || 'اكتب هنا...'}
-                          className={`w-full bg-[#faf2e6]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#9a6933]/20 ${
-                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#f0e4ce] focus:border-[#9a6933]'
+                          className={`w-full bg-[#f8fafc]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#475569]/20 ${
+                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#cbd5e1] focus:border-[#475569]'
                           }`}
                         />
                       )}
@@ -195,8 +195,8 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                           value={answers[field.id] || ''}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
                           placeholder={field.placeholder || 'اكتب بالتفصيل هنا...'}
-                          className={`w-full bg-[#faf2e6]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#9a6933]/20 resize-none ${
-                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#f0e4ce] focus:border-[#9a6933]'
+                          className={`w-full bg-[#f8fafc]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#475569]/20 resize-none ${
+                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#cbd5e1] focus:border-[#475569]'
                           }`}
                         />
                       )}
@@ -207,8 +207,8 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                           value={answers[field.id] || ''}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
                           placeholder={field.placeholder || '0'}
-                          className={`w-full bg-[#faf2e6]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#9a6933]/20 ${
-                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#f0e4ce] focus:border-[#9a6933]'
+                          className={`w-full bg-[#f8fafc]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#475569]/20 ${
+                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#cbd5e1] focus:border-[#475569]'
                           }`}
                         />
                       )}
@@ -219,8 +219,8 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                           value={answers[field.id] || ''}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
                           placeholder={field.placeholder || 'name@domain.com'}
-                          className={`w-full bg-[#faf2e6]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#9a6933]/20 text-left ${
-                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#f0e4ce] focus:border-[#9a6933]'
+                          className={`w-full bg-[#f8fafc]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#475569]/20 text-left ${
+                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#cbd5e1] focus:border-[#475569]'
                           }`}
                         />
                       )}
@@ -231,8 +231,8 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                           value={answers[field.id] || ''}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
                           placeholder={field.placeholder || '01000000000'}
-                          className={`w-full bg-[#faf2e6]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#9a6933]/20 text-left ${
-                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#f0e4ce] focus:border-[#9a6933]'
+                          className={`w-full bg-[#f8fafc]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#475569]/20 text-left ${
+                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#cbd5e1] focus:border-[#475569]'
                           }`}
                         />
                       )}
@@ -241,8 +241,8 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                         <select
                           value={answers[field.id] || ''}
                           onChange={(e) => handleInputChange(field.id, e.target.value)}
-                          className={`w-full bg-[#faf2e6]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#9a6933]/20 appearance-none ${
-                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#f0e4ce] focus:border-[#9a6933]'
+                          className={`w-full bg-[#f8fafc]/50 border rounded-2xl px-4 py-3.5 text-sm transition focus:outline-none focus:ring-2 focus:ring-[#475569]/20 appearance-none ${
+                            hasError ? 'border-rose-500 focus:border-rose-500' : 'border-[#cbd5e1] focus:border-[#475569]'
                           }`}
                         >
                           <option value="">{field.placeholder || 'اختر من القائمة...'}</option>
@@ -260,9 +260,9 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                             type="checkbox"
                             checked={answers[field.id] === 'true'}
                             onChange={(e) => handleInputChange(field.id, e.target.checked ? 'true' : '')}
-                            className="h-4 w-4 mt-0.5 rounded border-[#f0e4ce] bg-[#faf2e6] text-[#9a6933] focus:ring-[#9a6933]/20"
+                            className="h-4 w-4 mt-0.5 rounded border-[#cbd5e1] bg-[#f8fafc] text-[#475569] focus:ring-[#475569]/20"
                           />
-                          <span className="text-xs font-medium text-[#7a644d] select-none leading-relaxed">
+                          <span className="text-xs font-medium text-[#475569] select-none leading-relaxed">
                             {field.placeholder || 'أوافق على الشروط والأحكام'}
                           </span>
                         </label>
@@ -286,7 +286,7 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-gradient-to-r from-[#9a6933] to-[#7f5427] text-white rounded-2xl py-4 font-black shadow-lg shadow-[#7f5427]/15 hover:shadow-[#7f5427]/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#475569] to-[#334155] text-white rounded-2xl py-4 font-black shadow-lg shadow-[#334155]/15 hover:shadow-[#334155]/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {submitting ? (
                       <>
@@ -307,21 +307,21 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="bg-[#fcf6ea] rounded-[2.5rem] border border-[#f0e4ce] p-10 text-center shadow-[0_20px_60px_rgba(44,23,8,0.05)] space-y-6"
+              className="bg-[#ffffff] rounded-[2.5rem] border border-[#cbd5e1] p-10 text-center shadow-[0_20px_60px_rgba(15,23,42,0.08)] space-y-6"
             >
               <div className="w-20 h-20 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto shadow-sm">
                 <CheckCircle2 className="h-10 w-10 animate-bounce" />
               </div>
 
               <div className="space-y-3">
-                <h2 className="text-2xl font-black text-[#7f5427]">تم استلام طلبك بنجاح!</h2>
-                <p className="text-sm text-[#7a644d] leading-relaxed max-w-sm mx-auto">
+                <h2 className="text-2xl font-black text-[#334155]">تم استلام طلبك بنجاح!</h2>
+                <p className="text-sm text-[#475569] leading-relaxed max-w-sm mx-auto">
                   شكرًا لاهتمامك. لقد تم تسجيل إجاباتك بنجاح في النظام، وسنقوم بمراجعة البيانات وتفاصيل طلبك والتواصل معك في أقرب وقت ممكن.
                 </p>
               </div>
 
-              <div className="pt-4 border-t border-[#f0e4ce]">
-                <p className="text-[10px] uppercase font-black tracking-[0.2em] text-[#9a6933]">
+              <div className="pt-4 border-t border-[#cbd5e1]">
+                <p className="text-[10px] uppercase font-black tracking-[0.2em] text-[#475569]">
                   نظام الإدارة - مؤسسة نادِر جُورج
                 </p>
               </div>

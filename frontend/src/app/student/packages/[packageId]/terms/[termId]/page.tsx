@@ -317,10 +317,10 @@ export default function TermDetailPage() {
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {sections.map((section, idx) => {
                 const palettes = [
-                  { from: "#7f5427", to: "#b8842a" },
-                  { from: "#9a6933", to: "#c5a059" },
-                  { from: "#6b4623", to: "#9a6933" },
-                  { from: "#c5a059", to: "#dfc07e" },
+                  { from: "#334155", to: "#0f766e" },
+                  { from: "#475569", to: "#0891b2" },
+                  { from: "#1e293b", to: "#64748b" },
+                  { from: "#0f766e", to: "#38bdf8" },
                 ];
                 const pal = palettes[idx % palettes.length];
                 const isExpanded = expandedSection === section.id;

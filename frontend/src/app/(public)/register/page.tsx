@@ -24,22 +24,24 @@ import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground
 import { RippleGrid } from '@/components/ui/ripple-grid';
 import { RegistrationForm } from '@/components/forms/RegistrationForm';
 import { RegistrationInstructionsModal } from '@/components/registration/RegistrationInstructionsModal';
+import { PlatformLogo } from '@/components/shared/PlatformLogo';
 import { Info } from 'lucide-react';
 
 export default function RegisterPage() {
-  const { isDark, toggleTheme } = useAuthTheme();
+  const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
   const [showInstructions, setShowInstructions] = useState(false);
 
   return (
     <div 
       className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]" 
+      style={themeVars}
     >
 
       {/* ── Ripple Interactive Background ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <RippleGrid
-          gridColor={isDark ? '#c5a059' : '#d4a762'}
+          gridColor={isDark ? '#64748b' : '#94a3b8'}
           rippleIntensity={0.05}
           gridSize={10}
           gridThickness={isDark ? 15 : 12}
@@ -71,7 +73,9 @@ export default function RegisterPage() {
       <main className="relative z-10 w-full max-w-7xl px-4 py-10 sm:px-5 sm:py-16 m-auto">
 
         {/* Logo Avatar */}
-        <div className="auth-avatar">𓂀</div>
+        <div className="auth-avatar">
+          <PlatformLogo variant="mark" size="lg" tone={isDark ? 'light' : 'dark'} priority />
+        </div>
 
         {/* Heading */}
         <div className="mx-auto mb-8 max-w-3xl text-center flex flex-col items-center">
@@ -116,7 +120,7 @@ export default function RegisterPage() {
 
         {/* Footer branding */}
         <p className="auth-footer-caption mt-10">
-          © 2026 أكاديمية نادر جورج
+          © 2026 منصة مسار
         </p>
       </main>
 

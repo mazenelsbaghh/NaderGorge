@@ -24,13 +24,13 @@ export default function AboutPage() {
           <div className="mb-16 text-center">
             <div className="landing-chip mx-auto mb-5">
               <GraduationCap className="h-4 w-4" />
-              <span>عن المُعلم</span>
+              <span>عن المنصة</span>
             </div>
             <h1 className="text-4xl font-black text-[var(--landing-ink)] md:text-5xl leading-tight">
-              الأستاذ نادر جورج
+              منصة مسار
             </h1>
             <p className="mx-auto mt-4 max-w-2xl text-lg text-[var(--landing-muted)]">
-              معلم شغوف بتبسيط التاريخ وجعل التعلم أسهل وأمتع لكل طالب في المرحلة الثانوية.
+              تجربة تعليمية منظمة تساعد طلاب المرحلة الثانوية على التعلم والمتابعة والتفوق بخطوات واضحة.
             </p>
           </div>
 
@@ -41,7 +41,7 @@ export default function AboutPage() {
                 <div className="relative h-32 w-32 overflow-hidden rounded-[24px] shadow-[0_20px_60px_rgba(88,55,18,0.2)]">
                   <Image
                     src="/images/hero-pharaoh.png"
-                    alt="الأستاذ نادر جورج"
+                    alt="منصة مسار"
                     fill
                     className="object-cover"
                   />
@@ -50,7 +50,7 @@ export default function AboutPage() {
               <div className="space-y-4">
                 <h2 className="text-2xl font-black text-[var(--landing-ink)]">فلسفة التعليم</h2>
                 <p className="leading-8 text-[var(--landing-muted)]">
-                  بخبرة أكتر من عشر سنين في التدريس، الأستاذ نادر جورج بيؤمن إن كل طالب يقدر يتفوق لو اتوفرله الأدوات والبيئة المناسبة. أسلوبه بيجمع بين المنهج المنظم والتكنولوجيا الحديثة عشان يوفر تجربة تعلم سلسة ومميزة.
+                  منصة مسار بتجمع بين المحتوى المنظم والتكنولوجيا الحديثة عشان توفر تجربة تعلم سلسة ومميزة لكل طالب. الهدف إن الطالب يلاقي الدرس، الواجب، الامتحان، والمتابعة في مكان واحد واضح.
                 </p>
                 <p className="leading-8 text-[var(--landing-muted)]">
                   المنصة مصممة عشان تقدم دروس فيديو عالية الجودة يقدر الطالب يرجعلها في أي وقت، مع امتحانات تصحيح تلقائي بتضمن الفهم قبل الانتقال. النظام ده أثبت فعاليته في تحسين نتائج الطلاب بشكل ملموس.
@@ -88,7 +88,7 @@ export default function AboutPage() {
               href="/register"
               className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-10 py-4 text-lg font-extrabold text-[var(--landing-accent-foreground)] shadow-[0_16px_40px_rgba(145,95,42,0.28)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
             >
-              انضم للأكاديمية
+              ابدأ مع منصة مسار
               <ArrowUpLeft className="h-5 w-5" />
             </Link>
           </div>

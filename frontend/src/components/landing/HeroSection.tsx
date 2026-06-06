@@ -1,12 +1,11 @@
-'use client';
+"use client";
 
-import { ArrowUpLeft, BadgeCheck, Users } from "lucide-react";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import { useAdminTheme } from "@/components/admin/useAdminTheme";
-import { FloatingLines } from "@/components/ui/floating-lines";
-import { MorphingText } from "@/components/ui/morphing-text";
-import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
+import { ArrowUpLeft, GraduationCap } from "lucide-react";
+import Link from "next/link";
+import { motion, useScroll, useTransform, useReducedMotion, useMotionValue, useSpring, useMotionTemplate } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+
+import { heroHighlights } from "./data";
 
 type HeroSectionProps = {
   registeredStudentsCount: number;
@@ -21,119 +20,196 @@ export function HeroSection({
   registeredStudentsCount,
   baselineStudentsCount,
 }: HeroSectionProps) {
-  const { isDark } = useAdminTheme();
+  const [isDark, setIsDark] = useState(false);
   const totalRegisteredStudents = baselineStudentsCount + registeredStudentsCount;
+  const sectionRef = useRef<HTMLDivElement>(null);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
+  useEffect(() => {
+    const updateThemeState = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+
+    updateThemeState();
+    window.addEventListener("admin-theme-mode-change", updateThemeState);
+    window.addEventListener("storage", updateThemeState);
+
+    return () => {
+      window.removeEventListener("admin-theme-mode-change", updateThemeState);
+      window.removeEventListener("storage", updateThemeState);
+    };
+  }, []);
+  
+  const prefersReducedMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+
+  const transformBgY = useTransform(scrollYProgress, [0, 1], ["50%", "70%"]);
+  const transformContentY = useTransform(scrollYProgress, [0, 1], [0, 70]);
+  const transformContentOpacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
+
+  const bgY = prefersReducedMotion ? "50%" : transformBgY;
+  const contentY = prefersReducedMotion ? 0 : transformContentY;
+  const contentOpacity = prefersReducedMotion ? 1 : transformContentOpacity;
+
+  // Spotlight mouse tracking with smooth spring physics
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const spotlightX = useSpring(mouseX, { stiffness: 120, damping: 22 });
+  const spotlightY = useSpring(mouseY, { stiffness: 120, damping: 22 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (prefersReducedMotion) return;
+    const rect = sectionRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    mouseX.set(e.clientX - rect.left);
+    mouseY.set(e.clientY - rect.top);
+  };
+
+  // Kinetic Typography definitions
+  const titleText = "ابدأ رحلتك التعليمية";
+  const subText = "خطوتك الأولى نحو التفوق";
+  
+  const titleWords = titleText.split(" ");
+  const subWords = subText.split(" ");
+
+  const titleContainerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.08,
+      },
+    },
+  };
+
+  const wordVariants = {
+    hidden: { 
+      opacity: prefersReducedMotion ? 1 : 0,
+      y: prefersReducedMotion ? 0 : "110%" 
+    },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] as const } }
-  };
-
-  const imageVariants = {
-    hidden: { opacity: 0, scale: 0.95, y: 20 },
-    visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.8, ease: [0.25, 1, 0.5, 1] as const } }
+      y: 0,
+      transition: {
+        type: "spring" as const,
+        stiffness: 110,
+        damping: 14,
+      },
+    },
   };
 
   return (
-    <section className="relative -mt-28 min-h-screen overflow-hidden px-4 pt-48 pb-14 md:-mt-32 md:px-0 md:pt-40 md:pb-18 lg:pb-8">
-
-
-      {/* Floating lines background */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-60">
-        <FloatingLines
-          enabledWaves={["top", "middle", "bottom"]}
-          lineCount={5}
-          lineDistance={5}
-          bendRadius={5}
-          bendStrength={-0.5}
-          interactive={true}
-          parallax={true}
-          animationSpeed={0.3}
-          linesGradient={
-            isDark
-              ? ["#c5a059", "#8f6b2f", "#f4f1e7"] // Dark mode: bright gold, strong gold, light text color
-              : ["#5d4300", "#775a19", "#e8c176"] // Light mode: dark gold, strong gold, footer gold
-          }
+    <motion.section
+      ref={sectionRef}
+      onMouseMove={handleMouseMove}
+      className="landing-hero relative min-h-screen overflow-hidden px-5 pb-9 pt-28 text-[var(--landing-ink)] md:px-12 md:pb-12 md:pt-32 lg:px-16"
+      style={{
+        backgroundImage: `linear-gradient(90deg, var(--hero-overlay-start) 0%, var(--hero-overlay-mid) 32%, var(--hero-overlay-subtle) 58%, var(--hero-overlay-end) 100%), url('${
+          isDark ? "/images/landing-hero-dark.png" : "/images/landing-hero.png"
+        }')`,
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundPositionY: bgY,
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {/* Interactive mouse-glow spotlight */}
+      {!prefersReducedMotion && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 select-none"
+          style={{
+            background: useMotionTemplate`radial-gradient(350px circle at ${spotlightX}px ${spotlightY}px, rgba(14, 143, 143, 0.09) 0%, rgba(212, 160, 23, 0.04) 50%, transparent 100%)`,
+          }}
         />
-      </div>
+      )}
 
-      <div className="relative z-10 mx-auto grid w-[min(1320px,95vw)] items-center gap-8 lg:min-h-[calc(100vh-2rem)] lg:items-center lg:[direction:ltr] lg:grid-cols-[1.14fr_0.86fr]">
-        <div className="order-2 flex justify-center lg:order-1 lg:justify-start lg:self-end">
-          <motion.div 
-            initial="hidden" animate="visible" variants={imageVariants} 
-            className="relative aspect-[4/5] w-full max-w-[740px] overflow-visible sm:max-w-[780px] lg:max-w-[860px] lg:translate-y-8 xl:max-w-[900px]"
-          >
-            <Image
-              src="/images/hero-pharaoh.png"
-              alt="الأستاذ نادر جورج بالزي الفرعوني"
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-              className="scale-[1.1] object-contain object-bottom drop-shadow-[0_42px_100px_rgba(88,55,18,0.30)] lg:scale-[1.16] xl:scale-[1.18]"
-            />
-          </motion.div>
-        </div>
-
-        <motion.div 
-          initial="hidden" animate="visible" variants={containerVariants} 
-          className="order-1 space-y-8 text-right lg:order-2 lg:space-y-7 lg:[direction:rtl]"
+      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-9rem)] w-full max-w-[1440px] items-center lg:grid-cols-[0.72fr_1fr] lg:[direction:ltr]">
+        <motion.div
+          style={{ y: contentY, opacity: contentOpacity }}
+          className="max-w-xl text-right lg:[direction:rtl]"
         >
-          <motion.div variants={itemVariants} className="landing-chip w-fit">
-            <BadgeCheck className="h-4 w-4" />
-            <span>منصة تعليمية بروح فرعونية معاصرة</span>
-          </motion.div>
+          {/* Kinetic Typography Heading */}
+          <motion.h1
+            variants={titleContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="text-balance text-[clamp(2.3rem,4vw,4.2rem)] font-black leading-[1.22] tracking-normal text-[var(--landing-ink)]"
+          >
+            <span className="block overflow-hidden py-1">
+              {titleWords.map((word, index) => (
+                <motion.span
+                  key={index}
+                  variants={wordVariants}
+                  className="inline-block me-3 origin-bottom"
+                >
+                  {word}
+                </motion.span>
+              ))}
+            </span>
+            <span className="block overflow-hidden py-1 text-[#0E8F8F]">
+              {subWords.map((word, index) => (
+                <motion.span
+                  key={index}
+                  variants={wordVariants}
+                  className="inline-block me-3 origin-bottom"
+                >
+                  {word}
+                </motion.span>
+              ))}
+            </span>
+          </motion.h1>
 
-          <motion.div variants={itemVariants} className="space-y-4 lg:space-y-6">
-            <h1 className="max-w-3xl flex flex-col text-right font-black tracking-tight" dir="rtl">
-              <MorphingText texts={["شـــــيـــخ", "نـــــــــادر"]} className="text-[var(--landing-ink)] !w-full !max-w-none text-right lg:!h-[1.1em]" />
-              <MorphingText texts={["المـــتحف", "جـــــــورج"]} className="text-[var(--landing-accent)] !w-full !max-w-none text-right lg:!h-[1.1em]" />
-            </h1>
-            <p className="max-w-2xl text-base leading-8 text-[var(--landing-muted)] md:text-lg lg:text-[1.32rem] lg:leading-9">
-              بيئة رقمية متكاملة لضمان التفوق وتتبع الأداء خطوة بخطوة عبر محتوى مشروح بعناية، تقييمات ذكية، ومتابعة مستمرة.
-            </p>
-          </motion.div>
+          <motion.p
+            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, duration: 0.6 }}
+            className="mt-5 max-w-[38rem] text-pretty text-base font-semibold leading-8 text-[var(--landing-muted)] md:text-lg"
+          >
+            منصة تعليمية متكاملة تساعدك على تعلم كل مهارة، في أي وقت ومن أي مكان.
+          </motion.p>
 
-          <motion.div variants={itemVariants} className="flex flex-col items-stretch sm:items-start pt-6">
-            <InteractiveHoverButton
-              href="/register"
-              tabIndex={-1}
-              className="h-[58px] px-8 text-base shadow-[0_16px_40px_rgba(145,95,42,0.15)]"
-              icon={<ArrowUpLeft className="h-5 w-5" />}
-            >
-              ابدأ الجلسة التجريبية
-            </InteractiveHoverButton>
+          <motion.div
+            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55, duration: 0.6 }}
+            className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end"
+          >
+            <Link href="/register" className="landing-primary-button">
+              <GraduationCap className="h-5 w-5" />
+              ابدأ التعلم الآن
+            </Link>
+            <span className="text-sm font-bold text-[var(--landing-muted)]">
+              +{formatArabicNumber(totalRegisteredStudents)} طالب داخل الرحلة
+            </span>
           </motion.div>
 
           <motion.div
-            variants={itemVariants}
-            className="inline-flex w-full max-w-md items-center gap-4 rounded-[28px] border border-[var(--landing-line)] bg-[color:var(--landing-card)] px-5 py-4 shadow-[0_20px_50px_rgba(88,55,18,0.08)] backdrop-blur-sm"
+            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7, duration: 0.6 }}
+            className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4"
           >
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--landing-card-strong)] text-[var(--landing-accent)]">
-              <Users className="h-6 w-6" />
-            </div>
-
-            <div className="space-y-1 text-right">
-              <p className="text-xs font-bold tracking-[0.18em] text-[var(--landing-muted)]">
-                طلاب المنصة
-              </p>
-              <p className="text-2xl font-black text-[var(--landing-accent)] md:text-3xl">
-                +{formatArabicNumber(totalRegisteredStudents)}
-              </p>
-              <p className="text-sm text-[var(--landing-muted)]">
-                رقم تراكمي يجمع {formatArabicNumber(baselineStudentsCount)} طالبًا سابقًا مع {formatArabicNumber(registeredStudentsCount)} طالبًا مسجلًا حاليًا على المنصة
-              </p>
-            </div>
+            {heroHighlights.map(({ label, icon: Icon }) => (
+              <div key={label} className="flex flex-col items-center gap-2 text-center">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E7F6F6] dark:bg-teal-950/40 text-[#0E8F8F] hover:scale-105 transition-transform duration-200">
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="text-xs font-extrabold text-[var(--landing-ink)] md:text-sm">{label}</span>
+              </div>
+            ))}
           </motion.div>
         </motion.div>
+
+        <Link
+          href="#courses"
+          className="absolute bottom-8 left-1/2 hidden h-12 w-12 -translate-x-1/2 items-center justify-center rounded-full bg-[var(--landing-accent)] text-white transition hover:bg-[var(--landing-accent-strong)] lg:flex"
+          aria-label="استعرض الدورات"
+        >
+          <ArrowUpLeft className="h-5 w-5" />
+        </Link>
       </div>
-    </section>
+    </motion.section>
   );
 }
+

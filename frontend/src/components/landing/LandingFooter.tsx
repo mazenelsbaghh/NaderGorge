@@ -1,177 +1,169 @@
-import type { JSX, SVGProps } from "react";
-import { ArrowUpLeft } from "lucide-react";
+"use client";
+
+import { ArrowLeft, AtSign, Globe, MessageCircle, Play, Send, Video } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
-const footerSections = [
-  {
-    title: "المنصة",
-    links: [
-      { href: "/register", label: "ابدأ التجربة" },
-      { href: "/login", label: "تسجيل الدخول" },
-      { href: "/about", label: "عن الأستاذ" },
-    ],
-  },
-  {
-    title: "المساعدة",
-    links: [
-      { href: "/faq", label: "الأسئلة الشائعة" },
-      { href: "#testimonials", label: "آراء الطلبة" },
-      { href: "mailto:hello@nadergorge.com", label: "تواصل معنا" },
-    ],
-  },
-  {
-    title: "النظام",
-    links: [
-      { href: "/register", label: "احجز مكانك" },
-      { href: "/about", label: "رؤيتنا التعليمية" },
-      { href: "/login", label: "لوحة المتابعة" },
-    ],
-  },
-] as const;
+import { educationTracks, finalCtaFeatures } from "./data";
 
-function GithubIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.4 5.4 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
-      <path d="M9 18c-4.51 2-5-2-7-2" />
-    </svg>
-  );
-}
-
-function LinkedinIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-      <rect width="4" height="12" x="2" y="9" />
-      <circle cx="4" cy="4" r="2" />
-    </svg>
-  );
-}
-
-function YoutubeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-      <path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" />
-      <path d="m10 15 5-3-5-3z" />
-    </svg>
-  );
-}
-
-function InstagramIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-      <rect width="20" height="20" x="2" y="2" rx="5" ry="5" />
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-      <line x1="17.5" x2="17.51" y1="6.5" y2="6.5" />
-    </svg>
-  );
-}
-
-const socialLinks: Array<{
-  href: string;
-  label: string;
-  icon: (props: SVGProps<SVGSVGElement>) => JSX.Element;
-}> = [
-  { href: "#", label: "GitHub", icon: GithubIcon },
-  { href: "#", label: "LinkedIn", icon: LinkedinIcon },
-  { href: "#", label: "YouTube", icon: YoutubeIcon },
-  { href: "#", label: "Instagram", icon: InstagramIcon },
-];
+const quickLinks = ["الدورات", "المعلمون", "الأسئلة الشائعة"] as const;
+const supportLinks = ["تواصل معنا", "سياسة الخصوصية", "الشروط والأحكام"] as const;
 
 export function LandingFooter() {
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const updateThemeState = () => {
+      setIsDark(document.documentElement.classList.contains("dark"));
+    };
+
+    updateThemeState();
+    window.addEventListener("admin-theme-mode-change", updateThemeState);
+    window.addEventListener("storage", updateThemeState);
+
+    return () => {
+      window.removeEventListener("admin-theme-mode-change", updateThemeState);
+      window.removeEventListener("storage", updateThemeState);
+    };
+  }, []);
+
   return (
-    <div className="landing-content-visibility bg-[linear-gradient(180deg,color-mix(in_srgb,var(--landing-bg)_0%,transparent),color-mix(in_srgb,var(--landing-ink)_18%,transparent)_14%,var(--landing-ink)_100%)] px-4 pt-20">
-      <footer className="relative mx-auto w-full max-w-[1350px] overflow-hidden rounded-t-[2rem] border border-[color:color-mix(in_srgb,var(--landing-accent)_14%,var(--landing-line))] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--landing-ink)_90%,black_10%),color-mix(in_srgb,var(--landing-ink)_96%,black_4%))] px-5 pt-8 text-[var(--landing-accent-foreground)] shadow-[0_-20px_80px_rgba(44,23,8,0.24)] sm:px-8 md:px-14 lg:px-24 lg:pt-12">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-6 lg:gap-12">
-          <div className="space-y-6 lg:col-span-3">
-            <Link href="/" className="inline-flex items-center gap-4">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--landing-accent)_34%,transparent)] bg-[color:color-mix(in_srgb,var(--landing-accent)_12%,transparent)] text-2xl text-[var(--landing-accent)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--landing-accent)_18%,transparent)]">
-                ☥
-              </span>
-              <span>
-                <span className="block text-xs font-semibold tracking-[0.38em] text-[color:color-mix(in_srgb,var(--landing-accent-foreground)_54%,var(--landing-accent)_46%)]">
-                  NADER GORGE
-                </span>
-                <span className="mt-1 block text-xl font-black text-[var(--landing-accent-foreground)] md:text-2xl">
-                  الأستاذ نادر جورج
-                </span>
-              </span>
-            </Link>
-
-            <p className="max-w-[34rem] text-sm leading-7 text-[color:color-mix(in_srgb,var(--landing-accent-foreground)_72%,transparent)] md:text-base">
-              نظام تعليمي منظم لطلبة الثانوي يساعدهم يذاكروا بوضوح، يراجعوا أسرع، ويتابعوا
-              تقدمهم خطوة بخطوة بدون تشتت.
+    <>
+      <section id="courses" className="landing-section mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16">
+        <div className="relative z-10 mx-auto max-w-[1180px]">
+          <div className="text-center">
+            <h2 className="text-3xl font-black text-[var(--landing-ink)] md:text-5xl">مساراتنا التعليمية</h2>
+            <p className="mt-3 text-base font-bold text-[var(--landing-muted)] md:text-lg">
+              اختر المسار المناسب لك وابدأ رحلتك نحو النجاح
             </p>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/register"
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--landing-accent)] px-5 py-3 text-sm font-extrabold text-[var(--landing-accent-foreground)] shadow-[0_16px_36px_color-mix(in_srgb,var(--landing-accent)_34%,transparent)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
-              >
-                ابدأ التجربة
-                <ArrowUpLeft className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/faq"
-                className="inline-flex min-h-11 items-center rounded-full border border-[color:color-mix(in_srgb,var(--landing-accent)_18%,transparent)] bg-[color:color-mix(in_srgb,var(--landing-accent)_8%,transparent)] px-5 py-3 text-sm font-bold text-[var(--landing-accent-foreground)] transition hover:bg-[color:color-mix(in_srgb,var(--landing-accent)_14%,transparent)]"
-              >
-                اعرف النظام
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap gap-3 pt-1">
-              {socialLinks.map(({ href, label, icon: Icon }) => (
-                <a
-                  key={label}
-                  href={href}
-                  aria-label={label}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:color-mix(in_srgb,var(--landing-accent)_18%,transparent)] bg-[color:color-mix(in_srgb,var(--landing-accent)_7%,transparent)] text-[color:color-mix(in_srgb,var(--landing-accent-foreground)_82%,transparent)] transition hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--landing-accent)_34%,transparent)] hover:text-[var(--landing-accent)]"
-                >
-                  <Icon className="h-4.5 w-4.5" />
-                </a>
-              ))}
-            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-3 lg:gap-14">
-            {footerSections.map((section) => (
-              <div key={section.title} className="text-right">
-                <h3 className="mb-4 text-sm font-black tracking-[0.14em] text-[var(--landing-accent-foreground)]">
-                  {section.title}
-                </h3>
-                <ul className="space-y-3">
-                  {section.links.map((link) => (
-                    <li key={link.label}>
-                      <Link
-                        href={link.href}
-                        className="text-sm font-semibold text-[color:color-mix(in_srgb,var(--landing-accent-foreground)_68%,transparent)] transition hover:text-[var(--landing-accent)]"
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          <div className="mt-9 grid gap-5 lg:grid-cols-2">
+            {educationTracks.map(({ title, description, icon: Icon, cta, href, tone }) => (
+              <article key={title} className="landing-panel grid gap-6 p-6 text-right sm:grid-cols-[150px_1fr] sm:items-center">
+                <div className="flex aspect-square items-center justify-center rounded-xl bg-[#E7F6F6] dark:bg-teal-950/40 text-[#0E8F8F]">
+                  <Icon className="h-20 w-20" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-[var(--landing-ink)]">{title}</h3>
+                  <p className="mt-3 text-sm font-semibold leading-7 text-[var(--landing-muted)]">{description}</p>
+                  <Link
+                    href={href}
+                    className={`mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black text-white transition hover:-translate-y-0.5 ${
+                      tone === "teal"
+                        ? "bg-[#0E8F8F] hover:bg-[#0a6d72]"
+                        : "bg-[var(--landing-accent)] hover:bg-[var(--landing-accent-strong)]"
+                    }`}
+                  >
+                    {cta}
+                    <ArrowLeft className="h-4 w-4" />
+                  </Link>
+                </div>
+              </article>
             ))}
           </div>
         </div>
+      </section>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-[color:color-mix(in_srgb,var(--landing-accent)_12%,transparent)] pt-5 text-sm md:flex-row md:items-center md:justify-between">
-          <p className="text-[color:color-mix(in_srgb,var(--landing-accent-foreground)_52%,transparent)]">
-            © 2026 الأستاذ نادر جورج. جميع الحقوق محفوظة.
-          </p>
-          <p className="text-[color:color-mix(in_srgb,var(--landing-accent-foreground)_44%,transparent)]">
-            تعلّم بخطة واضحة. ذاكر بتركيز. تابع تقدمك باستمرار.
-          </p>
-        </div>
+      <footer id="contact" className="mt-3 overflow-hidden rounded-[clamp(1rem,1.4vw,1.25rem)] bg-[#071832] text-white">
+        <section className="relative px-5 py-14 md:px-12 md:py-16 lg:px-16">
+          <div className="absolute inset-0 opacity-50">
+            <div className="absolute left-10 top-10 h-40 w-40 rounded-full bg-[#0E8F8F] blur-[90px]" />
+            <div className="absolute right-20 bottom-10 h-52 w-52 rounded-full bg-[#123A73] blur-[110px]" />
+          </div>
 
-        <div className="relative mt-6">
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto h-44 w-full max-w-3xl rounded-full bg-[color:color-mix(in_srgb,var(--landing-accent)_52%,transparent)] blur-[150px]" />
-          <p className="relative text-center text-[clamp(3.4rem,15vw,12rem)] font-black leading-[0.74] tracking-[0.08em] text-transparent [-webkit-text-stroke:1px_color-mix(in_srgb,var(--landing-accent)_34%,transparent)]">
-            NADER
-          </p>
+          <div className="relative z-10 mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
+            <div className="text-center lg:text-right">
+              <h2 className="text-balance text-3xl font-black leading-tight md:text-5xl">
+                مستقبلك يبدأ من هنا
+              </h2>
+              <p className="mt-4 text-lg font-bold leading-8 text-white/82">
+                انضم لآلاف الطلاب وابدأ رحلتك نحو التفوق
+              </p>
+
+              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {finalCtaFeatures.map(({ label, detail, icon: Icon }) => (
+                  <div key={label} className="text-center">
+                    <Icon className="mx-auto h-7 w-7 text-[#9BE4E4]" />
+                    <strong className="mt-3 block text-sm font-black">{label}</strong>
+                    <span className="mt-1 block text-xs font-bold text-white/70">{detail}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Link href="/register" className="landing-primary-button mt-9">
+                <Play className="h-5 w-5 fill-current" />
+                ابدأ الآن مجانًا
+              </Link>
+            </div>
+
+            <div className="relative mx-auto aspect-[1.25] w-full max-w-lg">
+              <Image
+                src={isDark ? "/images/landing-hero-dark.png" : "/images/landing-hero.png"}
+                alt="منصة مسار على جهاز تعليمي"
+                fill
+                sizes="(max-width: 1024px) 92vw, 42vw"
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </section>
+
+        <div className="border-t border-white/10 px-5 py-8 md:px-12 lg:px-16">
+          <div className="mx-auto grid max-w-[1180px] gap-8 md:grid-cols-4">
+            <div className="text-right">
+              <Image
+                src="/images/logo-mark-light.svg"
+                alt="منصة مسار"
+                width={64}
+                height={64}
+                className="h-16 w-auto object-contain"
+                style={{ width: "auto", height: "auto" }}
+              />
+              <p className="mt-3 text-sm font-semibold leading-7 text-white/72">
+                خطواتك الأولى نحو التفوق
+              </p>
+            </div>
+
+            <FooterLinks title="روابط سريعة" links={quickLinks} />
+            <FooterLinks title="الدعم والمساعدة" links={supportLinks} />
+
+            <div className="text-right">
+              <h3 className="text-sm font-black">تابعنا</h3>
+              <div className="mt-4 flex gap-3 md:justify-start">
+                {[MessageCircle, AtSign, Send, Video, Globe].map((Icon, index) => (
+                  <a
+                    key={index}
+                    href="#"
+                    aria-label="تابع منصة مسار"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-[#0E8F8F]"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </footer>
+    </>
+  );
+}
+
+function FooterLinks({ title, links }: { title: string; links: readonly string[] }) {
+  return (
+    <div className="text-right">
+      <h3 className="text-sm font-black">{title}</h3>
+      <ul className="mt-4 space-y-2">
+        {links.map((link) => (
+          <li key={link}>
+            <a href="#" className="text-sm font-semibold text-white/68 transition hover:text-[#9BE4E4]">
+              {link}
+            </a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

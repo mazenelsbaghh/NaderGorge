@@ -137,13 +137,12 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   return (
     <div
       dir="rtl"
-      className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
+      className="student-app-background h-dvh overflow-hidden text-[var(--admin-text)] relative"
     >
       {showAmbientBackground ? (
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,var(--admin-primary-15),transparent_38%),radial-gradient(circle_at_16%_86%,var(--admin-primary-10),transparent_34%),linear-gradient(135deg,transparent_0_44%,var(--admin-primary-10)_44%_45%,transparent_45%_100%)]" />
           <div className="absolute inset-0 opacity-[0.18] [background-image:linear-gradient(var(--admin-border)_1px,transparent_1px),linear-gradient(90deg,var(--admin-border)_1px,transparent_1px)] [background-size:28px_28px]" />
-          <div className="absolute left-[8%] top-16 h-28 w-28 rounded-full border border-[var(--admin-primary-20)]" />
           <div className="absolute bottom-28 right-[14%] h-36 w-36 rounded-[32px] border border-[var(--admin-primary-15)] rotate-12" />
           {!shouldReduceMotion ? (
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-l from-transparent via-[var(--admin-primary)]/35 to-transparent" />
@@ -324,7 +323,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             >
               <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
               <p className="text-[11px] font-black tracking-[0.26em] text-[var(--admin-footer)]">
-                أكاديمية نادر جورج
+                منصة مسار
               </p>
             </motion.footer>
           )}

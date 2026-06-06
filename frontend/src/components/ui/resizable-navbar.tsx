@@ -9,6 +9,7 @@ import {
   useMotionValueEvent,
 } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -87,16 +88,16 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
   return (
     <motion.div
       initial={{
-        width: visible ? "1050px" : "100%",
-        y: visible ? 8 : 0,
+        width: visible ? "1180px" : "100%",
+        y: visible ? 12 : 0,
       }}
       animate={{
         backdropFilter: visible ? "blur(10px)" : "none",
         boxShadow: visible
           ? "0 4px 20px rgba(0, 0, 0, 0.08)"
           : "none",
-        width: visible ? "1050px" : "100%",
-        y: visible ? 8 : 0,
+        width: visible ? "1180px" : "100%",
+        y: visible ? 12 : 0,
       }}
       transition={{
         type: "spring",
@@ -104,7 +105,7 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
         damping: 50,
       }}
       className={cn(
-        "relative z-[60] mx-auto hidden w-[min(1180px,92vw)] flex-row items-center justify-between self-start rounded-full px-4 py-3 lg:flex transition-colors duration-300 gap-4 pointer-events-auto",
+        "relative z-[60] mx-auto hidden w-[min(1280px,94vw)] flex-row items-center justify-between self-start rounded-full px-5 py-4 lg:flex transition-colors duration-300 gap-5 pointer-events-auto",
         visible && "bg-[var(--landing-card-strong)] border border-[var(--landing-line)] backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.12)]",
         !visible && "bg-transparent border border-transparent",
         className,
@@ -238,18 +239,33 @@ export const MobileNavToggle = ({
 
 export const NavbarLogo = () => {
   return (
-    <Link href="/" className="relative z-20 flex items-center gap-2 sm:gap-3 ml-4">
+    <Link href="/" className="relative z-20 flex items-center gap-3 sm:gap-4 ml-4">
       <div
-        className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full text-sm sm:text-lg text-[var(--landing-accent)] shadow-[0_2px_10px_rgba(0,0,0,0.1)_inset] border border-[var(--landing-line)] bg-[var(--landing-card-strong)]"
+        className="flex h-11 w-11 sm:h-14 sm:w-14 items-center justify-center rounded-full border border-[var(--landing-line)] bg-[var(--landing-card-strong)] overflow-hidden"
       >
-        ☥
+        <Image
+          src="/images/logo-mark.svg"
+          width={44}
+          height={44}
+          className="h-8 w-8 object-contain sm:h-11 sm:w-11 dark:hidden"
+          style={{ width: "auto", height: "auto" }}
+          alt="Masar Platform"
+        />
+        <Image
+          src="/images/logo-mark-light.svg"
+          width={44}
+          height={44}
+          className="h-8 w-8 object-contain sm:h-11 sm:w-11 hidden dark:block"
+          style={{ width: "auto", height: "auto" }}
+          alt="Masar Platform"
+        />
       </div>
       <div>
-        <p className="text-[10px] sm:text-xs font-semibold tracking-[0.2em] sm:tracking-[0.3em] text-[var(--landing-muted)] leading-tight">
-          NADER GORGE
+        <p className="text-[10px] sm:text-[13px] font-semibold tracking-[0.25em] sm:tracking-[0.36em] text-[var(--landing-muted)] leading-tight">
+          MASAR PLATFORM
         </p>
-        <p className="text-sm sm:text-base font-black text-[var(--landing-ink)] md:text-lg leading-none mt-0.5 sm:mt-1">
-          الأستاذ نادر جورج
+        <p className="text-base sm:text-xl font-black text-[var(--landing-ink)] md:text-2xl leading-none mt-0.5 sm:mt-1">
+          منصة مسار
         </p>
       </div>
     </Link>

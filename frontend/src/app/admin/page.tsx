@@ -1,59 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  ArrowLeft,
-  BookOpenText,
-  KeyRound,
-  Layers3,
-  Shield,
-  Sparkles,
-  UserCog,
-  Wrench,
-  LucideIcon
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 import { AdminShellChrome, AdminStatCard } from '@/components/admin';
-
-interface AdminLink {
-  href: string;
-  title: string;
-  body: string;
-  icon: LucideIcon;
-}
-
-const adminLinks: AdminLink[] = [
-  {
-    href: '/admin/users',
-    title: 'إدارة المستخدمين',
-    body: 'الحسابات والصلاحيات والحالات وأجهزة الدخول.',
-    icon: UserCog,
-  },
-  {
-    href: '/admin/content',
-    title: 'إدارة المحتوى',
-    body: 'الباقات والأقسام والدروس والفيديوهات.',
-    icon: BookOpenText,
-  },
-  {
-    href: '/admin/codes',
-    title: 'أكواد الوصول',
-    body: 'توليد الأكواد وتتبع استخدامها وتصديرها.',
-    icon: KeyRound,
-  },
-  {
-    href: '/admin/questions',
-    title: 'بنك الأسئلة',
-    body: 'الأسئلة والاختيارات والنقاط والتصنيفات.',
-    icon: Shield,
-  },
-  {
-    href: '/admin/overrides',
-    title: 'التعديلات اليدوية',
-    body: 'فتح الدروس وتصفير المشاهدات للحالات الخاصة.',
-    icon: Wrench,
-  },
-];
+import { adminRootLinks, adminRootStats } from '@/packages/admin';
 
 export default function AdminRootPage() {
   return (
@@ -64,7 +15,7 @@ export default function AdminRootPage() {
       subtitle="بوابة الإدارة المركزية لكل أدوات النظام بدون أي تحويلات إلى صفحات الطالب أو المساعد."
       action={
         <div className="flex flex-wrap items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-2 shadow-sm backdrop-blur-xl">
-          {adminLinks.map((item) => (
+          {adminRootLinks.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -79,7 +30,7 @@ export default function AdminRootPage() {
       <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
         <AdminStatCard
           variant="light"
-          icon={Layers3}
+          icon={adminRootStats.structure}
           label="الهيكلة"
           value="5"
           subtitle="أقسام إدارة جاهزة ومتصلة ببعض"
@@ -87,7 +38,7 @@ export default function AdminRootPage() {
 
         <AdminStatCard
           variant="accent"
-          icon={Sparkles}
+          icon={adminRootStats.ready}
           label="Admin"
           value="جاهز"
           subtitle="الروتر الداخلي إداري بالكامل"
@@ -95,7 +46,7 @@ export default function AdminRootPage() {
 
         <AdminStatCard
           variant="muted"
-          icon={ArrowLeft}
+          icon={adminRootStats.route}
           label="المسار"
           value="1"
           subtitle="مسار رئيسي واضح يبدأ من /admin"
@@ -103,7 +54,7 @@ export default function AdminRootPage() {
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {adminLinks.map((item) => {
+        {adminRootLinks.map((item) => {
           const Icon = item.icon;
 
           return (

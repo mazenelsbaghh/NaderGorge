@@ -23,7 +23,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runner
 WORKDIR /app
 
 # Install curl for healthchecks
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only the published output (no SDK, no source code)

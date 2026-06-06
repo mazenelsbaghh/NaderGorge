@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Frequently Asked Questions | Nader George Academy',
+  title: 'Frequently Asked Questions | Masar Platform',
   description: 'Find answers to common questions about the learning platform, access codes, exams, and technical support.',
 };
 

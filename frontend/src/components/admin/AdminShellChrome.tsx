@@ -80,7 +80,7 @@ export function AdminShellChrome({
 }: AdminShellChromeProps) {
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
-  const { isDark, toggleTheme } = useAdminTheme();
+  const { isDark, themeVars, toggleTheme } = useAdminTheme();
   const [showBackdrop, setShowBackdrop] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -109,12 +109,13 @@ export function AdminShellChrome({
     <div
       dir="rtl"
       className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
+      style={themeVars}
     >
-      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(212,167,98,0.09),transparent_48%),linear-gradient(180deg,transparent,rgba(212,167,98,0.03))]" />
+      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.16),transparent_48%),linear-gradient(180deg,transparent,rgba(100,116,139,0.06))]" />
       <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}>
         {showBackdrop ? (
           <RippleGrid
-            gridColor={isDark ? '#c5a059' : '#d4a762'}
+            gridColor={isDark ? '#64748b' : '#94a3b8'}
             rippleIntensity={0.035}
             gridSize={10}
             gridThickness={isDark ? 14 : 11}
@@ -132,7 +133,7 @@ export function AdminShellChrome({
               <BookOpenText className="h-5 w-5" />
             </div>
             <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-text)] self-center mr-3 truncate whitespace-nowrap">
-              نادر جورج
+              منصة مسار
             </span>
           </div>
 

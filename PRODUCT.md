@@ -1,4 +1,4 @@
-# Impeccable Design Context — Nader George Academy
+# Impeccable Design Context — Masar Platform / منصة مسار
 
 > "We are not building a learning platform, we are building a controlled learning system that drives results."
 
@@ -8,7 +8,7 @@
 
 ### Users
 
-**Primary Users:** Egyptian secondary and baccalaureate students (First/Second Secondary, First/Second Baccalaureate) — mostly teenagers using mobile phones, studying history under Nader George's curriculum.
+**Primary Users:** Egyptian secondary and baccalaureate students (First/Second Secondary, First/Second Baccalaureate) — mostly teenagers using mobile phones, studying history through the Masar Platform curriculum.
 
 **Secondary Users:** Parents (viewing reports), Teaching Assistants (reviewing homework, following up), the Teacher himself (academic oversight, analytics), and Admins (full system control).
 

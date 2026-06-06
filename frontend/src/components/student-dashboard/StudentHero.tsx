@@ -2,7 +2,6 @@
 
 import type { DashboardDto } from "@/services/student-service";
 import { ProgressRing } from "./ProgressRing";
-import { UserAvatar } from "@/components/ui/UserAvatar";
 
 type StudentHeroProps = {
   data: DashboardDto;
@@ -24,17 +23,9 @@ export function StudentHero({ data }: StudentHeroProps) {
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
               لوحة الطالب
             </p>
-            <div className="flex items-center gap-4">
-              <UserAvatar
-                avatarSlug={data.avatarSlug}
-                fullName={data.studentName}
-                size="lg"
-                className="shadow-lg border-2 border-[var(--admin-primary)]/20"
-              />
-              <h1 className="text-2xl font-black leading-tight text-[var(--admin-text)] sm:text-3xl md:text-5xl">
-                أهلاً بيك، {data.studentName}
-              </h1>
-            </div>
+            <h1 className="text-2xl font-black leading-tight text-[var(--admin-text)] sm:text-3xl md:text-5xl">
+              أهلاً بيك، {data.studentName}
+            </h1>
             <p className="max-w-2xl text-sm leading-7 text-[var(--admin-muted)] sm:text-base md:text-lg">
               من هنا تعرف ما الذي عليك الآن: كمّل من آخر درس، تابع تقدّمك، وراجع
               ما ينتظرك بعد ذلك بدون تشتيت.

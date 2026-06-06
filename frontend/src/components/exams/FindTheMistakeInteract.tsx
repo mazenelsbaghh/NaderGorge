@@ -116,8 +116,8 @@ export function FindTheMistakeInteract({
 
   return (
     <div className="space-y-4" dir="rtl">
-      <div className="rounded-2xl border border-[rgba(149,111,62,0.2)] bg-[#faf2e6]/80 p-5 sm:p-6">
-        <div className="mb-4 flex items-center gap-2 text-sm font-bold text-[#9a6933]">
+      <div className="rounded-2xl border border-[rgba(100,116,139,0.22)] bg-[#f8fafc]/80 p-5 sm:p-6">
+        <div className="mb-4 flex items-center gap-2 text-sm font-bold text-[#475569]">
           <MousePointerClick className="h-4 w-4 shrink-0" />
           <span>انقر على الكلمة (أو الكلمات) الخطأ في الجملة التالية:</span>
         </div>
@@ -144,7 +144,7 @@ export function FindTheMistakeInteract({
                 className={`mx-1 rounded-xl px-3 py-1.5 font-bold transition-colors ${
                   isSelected
                     ? 'bg-red-500 font-black text-white shadow-md'
-                    : 'border border-[rgba(149,111,62,0.2)] bg-white/70 text-[#2c1708] hover:border-[#9a6933]/40 hover:bg-[#9a6933]/5'
+                    : 'border border-[rgba(100,116,139,0.22)] bg-white/70 text-[#0f172a] hover:border-[#475569]/40 hover:bg-[#475569]/5'
                 } ${disabled && !isSelected ? 'cursor-not-allowed opacity-50' : ''}`}
               >
                 {token.text}

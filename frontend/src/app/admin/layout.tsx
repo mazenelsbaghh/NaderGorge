@@ -1,22 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { Shield, Users, BookOpen, KeyRound, Wrench, Sparkles, MessageSquareText } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { AdminGuard } from "@/components/layout/AdminGuard";
 import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
 import { Sidebar } from "@/components/layout/Sidebar";
-
-const adminMenuItems = [
-  { label: "المستخدمين", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
-  { label: "المحتوى", href: "/admin/content", icon: <BookOpen className="h-4 w-4" /> },
-  { label: "المجتمع", href: "/admin/community", icon: <MessageSquareText className="h-4 w-4" /> },
-  { label: "تحليل AI", href: "/admin/ai-monitor", icon: <Sparkles className="h-4 w-4" /> },
-  { label: "أكواد الوصول", href: "/admin/codes", icon: <KeyRound className="h-4 w-4" /> },
-  { label: "بنك الأسئلة", href: "/admin/questions", icon: <Shield className="h-4 w-4" /> },
-  { label: "التعديلات", href: "/admin/overrides", icon: <Wrench className="h-4 w-4" /> },
-];
+import { adminMenuItems } from "@/packages/admin";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

@@ -23,7 +23,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: none;
-  font-family: var(--font-cairo, var(--font-sans, system-ui, sans-serif));
+  font-family: var(--font-tajawal, var(--font-sans, system-ui, sans-serif));
   direction: rtl;
 
   /* Background removed to allow RippleGrid behind content */
@@ -239,7 +239,7 @@
     var(--admin-primary-strong) 0%,
     var(--admin-primary) 100%
   );
-  box-shadow: 0 10px 22px rgba(119, 90, 25, 0.18);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--admin-primary) 18%, transparent);
 }
 
 .auth-checkbox__input:checked + .auth-checkbox__mark::after {
@@ -271,7 +271,7 @@
 }
 
 /* ── Submit Button ───────────────────────────────────────
-   Gold gradient pill — matches Admin's primary action buttons.
+   Primary gradient pill — matches the active brand theme.
    ───────────────────────────────────────────────────── */
 .auth-btn-primary {
   width: 100%;
@@ -294,7 +294,7 @@
     var(--admin-primary) 100%
   );
   color: var(--admin-primary-contrast);
-  box-shadow: 0 10px 24px rgba(119, 90, 25, 0.2);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--admin-primary) 24%, transparent);
   transition: box-shadow 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
 }
 
@@ -303,7 +303,7 @@
   position: absolute;
   inset: -45%;
   background:
-    radial-gradient(circle at center, rgba(255, 247, 224, 0.36), transparent 56%);
+    radial-gradient(circle at center, color-mix(in srgb, var(--admin-primary-contrast) 26%, transparent), transparent 56%);
   opacity: 0.5;
   transform: translate3d(32%, 18%, 0);
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
@@ -347,7 +347,7 @@
   border: 1px solid var(--auth-sphinx-shell-border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 10px 22px rgba(44, 23, 8, 0.16);
+    0 10px 22px color-mix(in srgb, var(--admin-primary) 16%, transparent);
   backdrop-filter: blur(12px);
 }
 
@@ -398,7 +398,7 @@
 }
 
 .auth-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 14px 32px rgba(119, 90, 25, 0.3);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--admin-primary) 30%, transparent);
   transform: translateY(-1px);
 }
 
@@ -433,26 +433,40 @@
   backdrop-filter: blur(8px);
 }
 
-/* ── Avatar / Logo Token ─────────────────────────────────
-   Round branded avatar at the top of the card, gradient matching
-   the Admin sidebar identity button.
+/* ── Auth Logo ───────────────────────────────────────────
+   Standalone brand mark above auth cards. Keep it unframed so the
+   actual logo carries the identity without an extra badge background.
    ───────────────────────────────────────────────────── */
 .auth-avatar {
-  width: 5rem;
-  height: 5rem;
-  border-radius: 9999px;
+  width: 14.5rem;
+  height: 14.5rem;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.25rem;
-  background: linear-gradient(
-    135deg,
-    var(--admin-primary-strong),
-    var(--admin-primary)
-  );
+  background: transparent;
   color: var(--admin-primary-contrast);
-  box-shadow: 0 8px 24px var(--admin-shadow);
-  margin: 0 auto 1.5rem;
+  box-shadow: none;
+  margin: 0 auto 1.25rem;
+  overflow: visible;
+  padding: 0;
+}
+
+.auth-avatar img {
+  width: 14.5rem !important;
+  height: 14.5rem !important;
+}
+
+@media (max-width: 640px) {
+  .auth-avatar {
+    width: 12rem;
+    height: 12rem;
+  }
+
+  .auth-avatar img {
+    width: 12rem !important;
+    height: 12rem !important;
+  }
 }
 
 /* ── Divider ─────────────────────────────────────────────
@@ -497,7 +511,7 @@
    ───────────────────────────────────────────────────── */
 .auth-input[data-select] {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c5a059' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: left 1rem center;
   padding-left: 2.5rem;

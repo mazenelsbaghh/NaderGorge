@@ -1,0 +1,1736 @@
+{
+  "generatedBy": "scripts/generate-endpoint-inventory.mjs",
+  "controllerDirectory": "backend/src/NaderGorge.API/Controllers",
+  "endpointCount": 144,
+  "digest": "cedb03fd6025c400c37a3f7aa077661cc2ce1133851978a795d29fb51914f3d6",
+  "endpoints": [
+    {
+      "controller": "AdminCommunityController",
+      "action": "ApproveComment",
+      "method": "POST",
+      "path": "/api/admin/community/comments/{commentid:guid}/approve",
+      "routeTemplate": "/api/admin/community/comments/{commentId:guid}/approve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
+        "line": 70
+      }
+    },
+    {
+      "controller": "AdminCommunityController",
+      "action": "RejectComment",
+      "method": "POST",
+      "path": "/api/admin/community/comments/{commentid:guid}/reject",
+      "routeTemplate": "/api/admin/community/comments/{commentId:guid}/reject",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
+        "line": 85
+      }
+    },
+    {
+      "controller": "AdminCommunityController",
+      "action": "GetPendingComments",
+      "method": "GET",
+      "path": "/api/admin/community/comments/pending",
+      "routeTemplate": "/api/admin/community/comments/pending",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
+        "line": 63
+      }
+    },
+    {
+      "controller": "AdminCommunityController",
+      "action": "GetPostsForModeration",
+      "method": "GET",
+      "path": "/api/admin/community/posts",
+      "routeTemplate": "/api/admin/community/posts",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "AdminCommunityController",
+      "action": "ApprovePost",
+      "method": "POST",
+      "path": "/api/admin/community/posts/{postid:guid}/approve",
+      "routeTemplate": "/api/admin/community/posts/{postId:guid}/approve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
+        "line": 33
+      }
+    },
+    {
+      "controller": "AdminCommunityController",
+      "action": "RejectPost",
+      "method": "POST",
+      "path": "/api/admin/community/posts/{postid:guid}/reject",
+      "routeTemplate": "/api/admin/community/posts/{postId:guid}/reject",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
+        "line": 48
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "RegenerateChapterMindmap",
+      "method": "POST",
+      "path": "/api/admin/chapters/{chapterid:guid}/regenerate-mindmap",
+      "routeTemplate": "/api/admin/chapters/{chapterId:guid}/regenerate-mindmap",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 313
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "BulkGenerateCodes",
+      "method": "POST",
+      "path": "/api/admin/codes/bulk-generate",
+      "routeTemplate": "/api/admin/codes/bulk-generate",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 460
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ListCodeGroups",
+      "method": "GET",
+      "path": "/api/admin/codes/groups",
+      "routeTemplate": "/api/admin/codes/groups",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 120
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetCodeGroupDetails",
+      "method": "GET",
+      "path": "/api/admin/codes/groups/{id:guid}/details",
+      "routeTemplate": "/api/admin/codes/groups/{id:guid}/details",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 124
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "AttachHomework",
+      "method": "POST",
+      "path": "/api/admin/content/lessons/{lessonid:guid}/homework",
+      "routeTemplate": "/api/admin/content/lessons/{lessonId:guid}/homework",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 334
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "RemoveDevice",
+      "method": "DELETE",
+      "path": "/api/admin/devices/{id:guid}",
+      "routeTemplate": "/api/admin/devices/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 112
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GradeEssay",
+      "method": "POST",
+      "path": "/api/admin/essays/{essaysubmissionid:guid}/grade",
+      "routeTemplate": "/api/admin/essays/{essaySubmissionId:guid}/grade",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 411
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetPendingEssays",
+      "method": "GET",
+      "path": "/api/admin/essays/pending",
+      "routeTemplate": "/api/admin/essays/pending",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 419
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetExamDashboard",
+      "method": "GET",
+      "path": "/api/admin/exams/{examid:guid}/dashboard",
+      "routeTemplate": "/api/admin/exams/{examId:guid}/dashboard",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 372
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "AddQuestionsToExam",
+      "method": "POST",
+      "path": "/api/admin/exams/{examid:guid}/questions",
+      "routeTemplate": "/api/admin/exams/{examId:guid}/questions",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 365
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DeleteExamQuestion",
+      "method": "DELETE",
+      "path": "/api/admin/exams/{examid:guid}/questions/{questionid:guid}",
+      "routeTemplate": "/api/admin/exams/{examId:guid}/questions/{questionId:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 379
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateInlineExam",
+      "method": "POST",
+      "path": "/api/admin/exams/inline",
+      "routeTemplate": "/api/admin/exams/inline",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 358
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateLesson",
+      "method": "POST",
+      "path": "/api/admin/lessons",
+      "routeTemplate": "/api/admin/lessons",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 250
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetLessonCockpit",
+      "method": "GET",
+      "path": "/api/admin/lessons/{lessonid:guid}/cockpit",
+      "routeTemplate": "/api/admin/lessons/{lessonId:guid}/cockpit",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 257
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "LinkExam",
+      "method": "PUT",
+      "path": "/api/admin/lessons/{lessonid:guid}/exam",
+      "routeTemplate": "/api/admin/lessons/{lessonId:guid}/exam",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 351
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ResetWatchLimit",
+      "method": "POST",
+      "path": "/api/admin/overrides/reset-watch",
+      "routeTemplate": "/api/admin/overrides/reset-watch",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 445
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "SetWatchCount",
+      "method": "PUT",
+      "path": "/api/admin/overrides/set-watch-count",
+      "routeTemplate": "/api/admin/overrides/set-watch-count",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 452
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreatePackage",
+      "method": "POST",
+      "path": "/api/admin/packages",
+      "routeTemplate": "/api/admin/packages",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 161
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetPackageById",
+      "method": "GET",
+      "path": "/api/admin/packages/{id:guid}",
+      "routeTemplate": "/api/admin/packages/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 168
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdatePackage",
+      "method": "PUT",
+      "path": "/api/admin/packages/{id:guid}",
+      "routeTemplate": "/api/admin/packages/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 172
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ResetPackageCodeProfile",
+      "method": "DELETE",
+      "path": "/api/admin/packages/{id:guid}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id:guid}/code-profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 207
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetPackageCodeProfile",
+      "method": "GET",
+      "path": "/api/admin/packages/{id:guid}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id:guid}/code-profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 179
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpsertPackageCodeProfile",
+      "method": "PUT",
+      "path": "/api/admin/packages/{id:guid}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id:guid}/code-profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 186
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ListQuestions",
+      "method": "GET",
+      "path": "/api/admin/questions",
+      "routeTemplate": "/api/admin/questions",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 387
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateQuestion",
+      "method": "POST",
+      "path": "/api/admin/questions",
+      "routeTemplate": "/api/admin/questions",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 391
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UploadQuestionAudio",
+      "method": "POST",
+      "path": "/api/admin/questions/{id:guid}/audio",
+      "routeTemplate": "/api/admin/questions/{id:guid}/audio",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 398
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateResource",
+      "method": "POST",
+      "path": "/api/admin/resources",
+      "routeTemplate": "/api/admin/resources",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 320
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateSection",
+      "method": "POST",
+      "path": "/api/admin/sections",
+      "routeTemplate": "/api/admin/sections",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 243
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetSectionById",
+      "method": "GET",
+      "path": "/api/admin/sections/{id:guid}",
+      "routeTemplate": "/api/admin/sections/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 239
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetPlatformSettings",
+      "method": "GET",
+      "path": "/api/admin/settings",
+      "routeTemplate": "/api/admin/settings",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 506
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdatePlatformSettings",
+      "method": "PUT",
+      "path": "/api/admin/settings",
+      "routeTemplate": "/api/admin/settings",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 514
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UploadTeacherPhoto",
+      "method": "POST",
+      "path": "/api/admin/teacher-photos/upload",
+      "routeTemplate": "/api/admin/teacher-photos/upload",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 327
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateTerm",
+      "method": "POST",
+      "path": "/api/admin/terms",
+      "routeTemplate": "/api/admin/terms",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 214
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DeleteTerm",
+      "method": "DELETE",
+      "path": "/api/admin/terms/{id:guid}",
+      "routeTemplate": "/api/admin/terms/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 232
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetTermById",
+      "method": "GET",
+      "path": "/api/admin/terms/{id:guid}",
+      "routeTemplate": "/api/admin/terms/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 221
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateTerm",
+      "method": "PUT",
+      "path": "/api/admin/terms/{id:guid}",
+      "routeTemplate": "/api/admin/terms/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 225
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ListUsers",
+      "method": "GET",
+      "path": "/api/admin/users",
+      "routeTemplate": "/api/admin/users",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetUserDevices",
+      "method": "GET",
+      "path": "/api/admin/users/{id:guid}/devices",
+      "routeTemplate": "/api/admin/users/{id:guid}/devices",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 94
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateUserRoles",
+      "method": "PUT",
+      "path": "/api/admin/users/{id:guid}/roles",
+      "routeTemplate": "/api/admin/users/{id:guid}/roles",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 87
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateUserStatus",
+      "method": "PUT",
+      "path": "/api/admin/users/{id:guid}/status",
+      "routeTemplate": "/api/admin/users/{id:guid}/status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 73
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "AdjustBalance",
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid:guid}/balance/adjust",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/balance/adjust",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 146
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DisconnectAllDevices",
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{userid:guid}/devices",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/devices",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 105
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DisconnectDevice",
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{userid:guid}/devices/{deviceid:guid}",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/devices/{deviceId:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 98
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "AdjustGamification",
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid:guid}/gamification/adjust",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/gamification/adjust",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 139
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "AddStudentNote",
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid:guid}/notes",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/notes",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 59
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DeleteStudentNote",
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{userid:guid}/notes/{noteid:guid}",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/notes/{noteId:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 66
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "OverrideVideoLimit",
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid:guid}/overrides",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/overrides",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 132
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CancelPackage",
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid:guid}/packages/{accessgrantid:guid}/cancel",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/packages/{accessGrantId:guid}/cancel",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 153
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetStudentProfile",
+      "method": "GET",
+      "path": "/api/admin/users/students/{userid:guid}/profile",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 37
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateStudentProfile",
+      "method": "PUT",
+      "path": "/api/admin/users/students/{userid:guid}/profile",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 41
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "AdminResetPassword",
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid:guid}/reset-password",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/reset-password",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 52
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ToggleStudentStatus",
+      "method": "PATCH",
+      "path": "/api/admin/users/students/{userid:guid}/status",
+      "routeTemplate": "/api/admin/users/students/{userId:guid}/status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 80
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateVideo",
+      "method": "POST",
+      "path": "/api/admin/videos",
+      "routeTemplate": "/api/admin/videos",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 264
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DeleteVideo",
+      "method": "DELETE",
+      "path": "/api/admin/videos/{id:guid}",
+      "routeTemplate": "/api/admin/videos/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 278
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateVideo",
+      "method": "PUT",
+      "path": "/api/admin/videos/{id:guid}",
+      "routeTemplate": "/api/admin/videos/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 271
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "RequestAIAnalysis",
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid:guid}/analyze-ai",
+      "routeTemplate": "/api/admin/videos/{videoId:guid}/analyze-ai",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 285
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CancelAIAnalysis",
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid:guid}/cancel-ai",
+      "routeTemplate": "/api/admin/videos/{videoId:guid}/cancel-ai",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 292
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CancelMindmapGeneration",
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid:guid}/cancel-mindmap",
+      "routeTemplate": "/api/admin/videos/{videoId:guid}/cancel-mindmap",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 299
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "RequestMindmapGeneration",
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid:guid}/generate-mindmaps",
+      "routeTemplate": "/api/admin/videos/{videoId:guid}/generate-mindmaps",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 306
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetWatchRequests",
+      "method": "GET",
+      "path": "/api/admin/watch-requests",
+      "routeTemplate": "/api/admin/watch-requests",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 484
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ApproveWatchRequest",
+      "method": "POST",
+      "path": "/api/admin/watch-requests/{id}/approve",
+      "routeTemplate": "/api/admin/watch-requests/{id}/approve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 491
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "RejectWatchRequest",
+      "method": "POST",
+      "path": "/api/admin/watch-requests/{id}/reject",
+      "routeTemplate": "/api/admin/watch-requests/{id}/reject",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 499
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "ListForms",
+      "method": "GET",
+      "path": "/api/admin/forms",
+      "routeTemplate": "/api/admin/forms",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 23
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "CreateForm",
+      "method": "POST",
+      "path": "/api/admin/forms",
+      "routeTemplate": "/api/admin/forms",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 39
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "DeleteForm",
+      "method": "DELETE",
+      "path": "/api/admin/forms/{id:guid}",
+      "routeTemplate": "/api/admin/forms/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 56
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "GetFormDetails",
+      "method": "GET",
+      "path": "/api/admin/forms/{id:guid}",
+      "routeTemplate": "/api/admin/forms/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 31
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "UpdateForm",
+      "method": "PUT",
+      "path": "/api/admin/forms/{id:guid}",
+      "routeTemplate": "/api/admin/forms/{id:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 47
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "GetFormSubmissions",
+      "method": "GET",
+      "path": "/api/admin/forms/{id:guid}/submissions",
+      "routeTemplate": "/api/admin/forms/{id:guid}/submissions",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 64
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "UpdateSubmissionStatus",
+      "method": "PUT",
+      "path": "/api/admin/forms/submissions/{submissionid:guid}/status",
+      "routeTemplate": "/api/admin/forms/submissions/{submissionId:guid}/status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 72
+      }
+    },
+    {
+      "controller": "AdminLessonCommentsController",
+      "action": "ApproveLessonComment",
+      "method": "POST",
+      "path": "/api/admin/comments/{commentid:guid}/approve",
+      "routeTemplate": "/api/admin/comments/{commentId:guid}/approve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminLessonCommentsController.cs",
+        "line": 43
+      }
+    },
+    {
+      "controller": "AdminLessonCommentsController",
+      "action": "RejectLessonComment",
+      "method": "POST",
+      "path": "/api/admin/comments/{commentid:guid}/reject",
+      "routeTemplate": "/api/admin/comments/{commentId:guid}/reject",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminLessonCommentsController.cs",
+        "line": 59
+      }
+    },
+    {
+      "controller": "AdminLessonCommentsController",
+      "action": "GetLessonCommentsForModeration",
+      "method": "GET",
+      "path": "/api/admin/lessons/{lessonid:guid}/comments",
+      "routeTemplate": "/api/admin/lessons/{lessonId:guid}/comments",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminLessonCommentsController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "AssistantController",
+      "action": "ResolveTask",
+      "method": "POST",
+      "path": "/api/v1/assistant/tasks/{taskid}/resolve",
+      "routeTemplate": "/api/v1/assistant/tasks/{taskId}/resolve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 33
+      }
+    },
+    {
+      "controller": "AssistantController",
+      "action": "GetPendingTasks",
+      "method": "GET",
+      "path": "/api/v1/assistant/tasks/pending",
+      "routeTemplate": "/api/v1/assistant/tasks/pending",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 23
+      }
+    },
+    {
+      "controller": "AuthController",
+      "action": "CompleteProfile",
+      "method": "POST",
+      "path": "/api/auth/complete-profile",
+      "routeTemplate": "/api/auth/complete-profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
+        "line": 41
+      }
+    },
+    {
+      "controller": "AuthController",
+      "action": "Login",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "routeTemplate": "/api/auth/login",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
+        "line": 26
+      }
+    },
+    {
+      "controller": "AuthController",
+      "action": "Refresh",
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "routeTemplate": "/api/auth/refresh",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
+        "line": 33
+      }
+    },
+    {
+      "controller": "AuthController",
+      "action": "Register",
+      "method": "POST",
+      "path": "/api/auth/register",
+      "routeTemplate": "/api/auth/register",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
+        "line": 19
+      }
+    },
+    {
+      "controller": "AuthController",
+      "action": "ResetPassword",
+      "method": "POST",
+      "path": "/api/auth/reset-password",
+      "routeTemplate": "/api/auth/reset-password",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
+        "line": 57
+      }
+    },
+    {
+      "controller": "AuthController",
+      "action": "VerifyResetFields",
+      "method": "POST",
+      "path": "/api/auth/verify-reset-fields",
+      "routeTemplate": "/api/auth/verify-reset-fields",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
+        "line": 50
+      }
+    },
+    {
+      "controller": "BalanceController",
+      "action": "GetBalance",
+      "method": "GET",
+      "path": "/api/balance",
+      "routeTemplate": "/api/balance",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/BalanceController.cs",
+        "line": 22
+      }
+    },
+    {
+      "controller": "BalanceController",
+      "action": "PurchaseContent",
+      "method": "POST",
+      "path": "/api/balance/purchase",
+      "routeTemplate": "/api/balance/purchase",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/BalanceController.cs",
+        "line": 29
+      }
+    },
+    {
+      "controller": "CodesController",
+      "action": "Activate",
+      "method": "POST",
+      "path": "/api/codes/activate",
+      "routeTemplate": "/api/codes/activate",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CodesController.cs",
+        "line": 20
+      }
+    },
+    {
+      "controller": "CommunityController",
+      "action": "GetPosts",
+      "method": "GET",
+      "path": "/api/community/posts",
+      "routeTemplate": "/api/community/posts",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "CommunityController",
+      "action": "CreatePost",
+      "method": "POST",
+      "path": "/api/community/posts",
+      "routeTemplate": "/api/community/posts",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
+        "line": 38
+      }
+    },
+    {
+      "controller": "CommunityController",
+      "action": "GetPostComments",
+      "method": "GET",
+      "path": "/api/community/posts/{postid:guid}/comments",
+      "routeTemplate": "/api/community/posts/{postId:guid}/comments",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
+        "line": 48
+      }
+    },
+    {
+      "controller": "CommunityController",
+      "action": "CreatePostComment",
+      "method": "POST",
+      "path": "/api/community/posts/{postid:guid}/comments",
+      "routeTemplate": "/api/community/posts/{postId:guid}/comments",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
+        "line": 58
+      }
+    },
+    {
+      "controller": "CommunityController",
+      "action": "ToggleLike",
+      "method": "POST",
+      "path": "/api/community/posts/{postid:guid}/likes/toggle",
+      "routeTemplate": "/api/community/posts/{postId:guid}/likes/toggle",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
+        "line": 73
+      }
+    },
+    {
+      "controller": "CommunityController",
+      "action": "ToggleVote",
+      "method": "POST",
+      "path": "/api/community/posts/{postid:guid}/polls/{optionid:guid}/vote",
+      "routeTemplate": "/api/community/posts/{postId:guid}/polls/{optionId:guid}/vote",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
+        "line": 83
+      }
+    },
+    {
+      "controller": "CommunityController",
+      "action": "GetMyPosts",
+      "method": "GET",
+      "path": "/api/community/posts/mine",
+      "routeTemplate": "/api/community/posts/mine",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
+        "line": 31
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetLessonDetail",
+      "method": "GET",
+      "path": "/api/content/lessons/{lessonid:guid}",
+      "routeTemplate": "/api/content/lessons/{lessonId:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 65
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetLessonComments",
+      "method": "GET",
+      "path": "/api/content/lessons/{lessonid:guid}/comments",
+      "routeTemplate": "/api/content/lessons/{lessonId:guid}/comments",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 81
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "CreateLessonComment",
+      "method": "POST",
+      "path": "/api/content/lessons/{lessonid:guid}/comments",
+      "routeTemplate": "/api/content/lessons/{lessonId:guid}/comments",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 120
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetMyLessonComments",
+      "method": "GET",
+      "path": "/api/content/lessons/{lessonid:guid}/comments/mine",
+      "routeTemplate": "/api/content/lessons/{lessonId:guid}/comments/mine",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 100
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetPackages",
+      "method": "GET",
+      "path": "/api/content/packages",
+      "routeTemplate": "/api/content/packages",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetPackageCodePage",
+      "method": "GET",
+      "path": "/api/content/packages/{packageid:guid}/code-page",
+      "routeTemplate": "/api/content/packages/{packageId:guid}/code-page",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 40
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetTerms",
+      "method": "GET",
+      "path": "/api/content/packages/{packageid:guid}/terms",
+      "routeTemplate": "/api/content/packages/{packageId:guid}/terms",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 33
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetLessons",
+      "method": "GET",
+      "path": "/api/content/sections/{sectionid:guid}/lessons",
+      "routeTemplate": "/api/content/sections/{sectionId:guid}/lessons",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 54
+      }
+    },
+    {
+      "controller": "ContentController",
+      "action": "GetSections",
+      "method": "GET",
+      "path": "/api/content/terms/{termid:guid}/sections",
+      "routeTemplate": "/api/content/terms/{termId:guid}/sections",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
+        "line": 47
+      }
+    },
+    {
+      "controller": "E2eTestingController",
+      "action": "ClearDevices",
+      "method": "POST",
+      "path": "/api/e2e/clear-devices",
+      "routeTemplate": "/api/e2e/clear-devices",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
+        "line": 250
+      }
+    },
+    {
+      "controller": "E2eTestingController",
+      "action": "GrantPackage",
+      "method": "POST",
+      "path": "/api/e2e/grant-package",
+      "routeTemplate": "/api/e2e/grant-package",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
+        "line": 195
+      }
+    },
+    {
+      "controller": "E2eTestingController",
+      "action": "GetNotifications",
+      "method": "GET",
+      "path": "/api/e2e/notifications",
+      "routeTemplate": "/api/e2e/notifications",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
+        "line": 289
+      }
+    },
+    {
+      "controller": "E2eTestingController",
+      "action": "ResetGamification",
+      "method": "POST",
+      "path": "/api/e2e/reset-gamification",
+      "routeTemplate": "/api/e2e/reset-gamification",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
+        "line": 265
+      }
+    },
+    {
+      "controller": "E2eTestingController",
+      "action": "SeedDatabase",
+      "method": "POST",
+      "path": "/api/e2e/seed",
+      "routeTemplate": "/api/e2e/seed",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
+        "line": 27
+      }
+    },
+    {
+      "controller": "E2eTestingController",
+      "action": "SetupMockPackage",
+      "method": "POST",
+      "path": "/api/e2e/setup-mock-package",
+      "routeTemplate": "/api/e2e/setup-mock-package",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
+        "line": 113
+      }
+    },
+    {
+      "controller": "ExamsController",
+      "action": "UseFiftyFifty",
+      "method": "GET",
+      "path": "/api/exams/{id:guid}/attempts/{attemptid:guid}/questions/{questionid:guid}/fifty-fifty",
+      "routeTemplate": "/api/exams/{id:guid}/attempts/{attemptId:guid}/questions/{questionId:guid}/fifty-fifty",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 88
+      }
+    },
+    {
+      "controller": "ExamsController",
+      "action": "SwapQuestion",
+      "method": "POST",
+      "path": "/api/exams/{id:guid}/attempts/{attemptid:guid}/questions/{questionid:guid}/swap",
+      "routeTemplate": "/api/exams/{id:guid}/attempts/{attemptId:guid}/questions/{questionId:guid}/swap",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 99
+      }
+    },
+    {
+      "controller": "ExamsController",
+      "action": "GetLatestPassedResult",
+      "method": "GET",
+      "path": "/api/exams/{id:guid}/latest-passed-result",
+      "routeTemplate": "/api/exams/{id:guid}/latest-passed-result",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 43
+      }
+    },
+    {
+      "controller": "ExamsController",
+      "action": "StartExamAttempt",
+      "method": "POST",
+      "path": "/api/exams/{id:guid}/start",
+      "routeTemplate": "/api/exams/{id:guid}/start",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "ExamsController",
+      "action": "SubmitExam",
+      "method": "POST",
+      "path": "/api/exams/{id:guid}/submit/{attemptid:guid}",
+      "routeTemplate": "/api/exams/{id:guid}/submit/{attemptId:guid}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 62
+      }
+    },
+    {
+      "controller": "ExamsController",
+      "action": "ManualUnlock",
+      "method": "POST",
+      "path": "/api/exams/admin/lessons/{lessonid:guid}/students/{studentid:guid}/unlock",
+      "routeTemplate": "/api/exams/admin/lessons/{lessonId:guid}/students/{studentId:guid}/unlock",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 110
+      }
+    },
+    {
+      "controller": "ExamsController",
+      "action": "GetGradingStatus",
+      "method": "GET",
+      "path": "/api/exams/attempts/{attemptid:guid}/grading-status",
+      "routeTemplate": "/api/exams/attempts/{attemptId:guid}/grading-status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
+        "line": 73
+      }
+    },
+    {
+      "controller": "GamificationController",
+      "action": "GetStatus",
+      "method": "GET",
+      "path": "/api/gamification/status",
+      "routeTemplate": "/api/gamification/status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/GamificationController.cs",
+        "line": 22
+      }
+    },
+    {
+      "controller": "HealthController",
+      "action": "Get",
+      "method": "GET",
+      "path": "/api/health",
+      "routeTemplate": "/api/health",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HealthController.cs",
+        "line": 9
+      }
+    },
+    {
+      "controller": "HomeworkController",
+      "action": "SubmitHomework",
+      "method": "POST",
+      "path": "/api/homework/{homeworkid}/submit",
+      "routeTemplate": "/api/homework/{homeworkId}/submit",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HomeworkController.cs",
+        "line": 28
+      }
+    },
+    {
+      "controller": "HomeworkController",
+      "action": "GetPendingHomework",
+      "method": "GET",
+      "path": "/api/homework/pending",
+      "routeTemplate": "/api/homework/pending",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HomeworkController.cs",
+        "line": 21
+      }
+    },
+    {
+      "controller": "InternalController",
+      "action": "AiAnalysisCompleted",
+      "method": "POST",
+      "path": "/api/v1/internal/callbacks/ai-analysis-completed",
+      "routeTemplate": "/api/v1/internal/callbacks/ai-analysis-completed",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
+        "line": 22
+      }
+    },
+    {
+      "controller": "InternalController",
+      "action": "EssayGraded",
+      "method": "POST",
+      "path": "/api/v1/internal/callbacks/essay-graded",
+      "routeTemplate": "/api/v1/internal/callbacks/essay-graded",
+      "authorization": "internal-token",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
+        "line": 57
+      }
+    },
+    {
+      "controller": "InternalController",
+      "action": "MindmapsCompleted",
+      "method": "POST",
+      "path": "/api/v1/internal/callbacks/mindmaps-completed",
+      "routeTemplate": "/api/v1/internal/callbacks/mindmaps-completed",
+      "authorization": "internal-token",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
+        "line": 33
+      }
+    },
+    {
+      "controller": "InternalController",
+      "action": "SingleMindmapCompleted",
+      "method": "POST",
+      "path": "/api/v1/internal/callbacks/single-mindmap-completed",
+      "routeTemplate": "/api/v1/internal/callbacks/single-mindmap-completed",
+      "authorization": "internal-token",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
+        "line": 45
+      }
+    },
+    {
+      "controller": "ParentController",
+      "action": "CreateParentReportLink",
+      "method": "POST",
+      "path": "/api/parent/reports/{studentid}/links",
+      "routeTemplate": "/api/parent/reports/{studentId}/links",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ParentController.cs",
+        "line": 40
+      }
+    },
+    {
+      "controller": "ParentController",
+      "action": "GetSummaryReport",
+      "method": "GET",
+      "path": "/api/parent/reports/{studentid}/summary",
+      "routeTemplate": "/api/parent/reports/{studentId}/summary",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/ParentController.cs",
+        "line": 26
+      }
+    },
+    {
+      "controller": "PublicController",
+      "action": "GetPlatformStats",
+      "method": "GET",
+      "path": "/api/public/stats",
+      "routeTemplate": "/api/public/stats",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/PublicController.cs",
+        "line": 19
+      }
+    },
+    {
+      "controller": "PublicFormsController",
+      "action": "GetPublicForm",
+      "method": "GET",
+      "path": "/api/public/forms/{slug}",
+      "routeTemplate": "/api/public/forms/{slug}",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/PublicFormsController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "PublicFormsController",
+      "action": "SubmitPublicForm",
+      "method": "POST",
+      "path": "/api/public/forms/{slug}/submit",
+      "routeTemplate": "/api/public/forms/{slug}/submit",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/PublicFormsController.cs",
+        "line": 32
+      }
+    },
+    {
+      "controller": "StudentController",
+      "action": "GetDashboard",
+      "method": "GET",
+      "path": "/api/student/dashboard",
+      "routeTemplate": "/api/student/dashboard",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 29
+      }
+    },
+    {
+      "controller": "StudentController",
+      "action": "GetQuickAccess",
+      "method": "GET",
+      "path": "/api/student/dashboard/quick-access",
+      "routeTemplate": "/api/student/dashboard/quick-access",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 43
+      }
+    },
+    {
+      "controller": "StudentController",
+      "action": "GetMistakes",
+      "method": "GET",
+      "path": "/api/student/mistakes",
+      "routeTemplate": "/api/student/mistakes",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 50
+      }
+    },
+    {
+      "controller": "StudentController",
+      "action": "GetProgress",
+      "method": "GET",
+      "path": "/api/student/progress",
+      "routeTemplate": "/api/student/progress",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 36
+      }
+    },
+    {
+      "controller": "StudentController",
+      "action": "GetThemePreferences",
+      "method": "GET",
+      "path": "/api/student/theme-preferences",
+      "routeTemplate": "/api/student/theme-preferences",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 57
+      }
+    },
+    {
+      "controller": "StudentController",
+      "action": "UpdateThemePreferences",
+      "method": "PUT",
+      "path": "/api/student/theme-preferences",
+      "routeTemplate": "/api/student/theme-preferences",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 64
+      }
+    },
+    {
+      "controller": "TrackingController",
+      "action": "RecordVideoEvent",
+      "method": "POST",
+      "path": "/api/tracking/video-event",
+      "routeTemplate": "/api/tracking/video-event",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TrackingController.cs",
+        "line": 25
+      }
+    },
+    {
+      "controller": "VideoSessionController",
+      "action": "CreateSession",
+      "method": "POST",
+      "path": "/api/student/video-session",
+      "routeTemplate": "/api/student/video-session",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "VideoSessionController",
+      "action": "RequestExtraWatch",
+      "method": "POST",
+      "path": "/api/student/video-session/{lessonvideoid}/request-extra",
+      "routeTemplate": "/api/student/video-session/{lessonVideoId}/request-extra",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
+        "line": 94
+      }
+    },
+    {
+      "controller": "VideoSessionController",
+      "action": "GetExtraWatchStatus",
+      "method": "GET",
+      "path": "/api/student/video-session/{lessonvideoid}/request-status",
+      "routeTemplate": "/api/student/video-session/{lessonVideoId}/request-status",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
+        "line": 107
+      }
+    },
+    {
+      "controller": "VideoSessionController",
+      "action": "TrackProgress",
+      "method": "POST",
+      "path": "/api/student/video-session/{lessonvideoid}/track-progress",
+      "routeTemplate": "/api/student/video-session/{lessonVideoId}/track-progress",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
+        "line": 74
+      }
+    },
+    {
+      "controller": "VideoSessionController",
+      "action": "ConsumeSession",
+      "method": "POST",
+      "path": "/api/student/video-session/{sessionid}/consume",
+      "routeTemplate": "/api/student/video-session/{sessionId}/consume",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
+        "line": 52
+      }
+    },
+    {
+      "controller": "WhatsAppController",
+      "action": "CheckWhatsApp",
+      "method": "POST",
+      "path": "/api/whatsapp/check",
+      "routeTemplate": "/api/whatsapp/check",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/WhatsAppController.cs",
+        "line": 26
+      }
+    }
+  ]
+}

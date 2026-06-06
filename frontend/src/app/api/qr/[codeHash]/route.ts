@@ -15,17 +15,17 @@ export async function GET(
   { params }: { params: Promise<{ codeHash: string }> }
 ) {
   const { codeHash } = await params;
-  let backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-  if (backendUrl.includes('localhost:5245')) {
-    backendUrl = backendUrl.replace('localhost:5245', 'backend:5245');
-  }
+    const backendUrl =
+      process.env.INTERNAL_API_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:5245/api';
 
 
   // Check if user has an auth token
   const authToken = request.cookies.get('token')?.value;
 
   // Resolve base URL dynamically to handle reverse proxy domains correctly
-  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || process.env.NEXT_PUBLIC_APP_DOMAIN || 'nadergeorge.academy';
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || process.env.NEXT_PUBLIC_APP_DOMAIN || 'masaracademy.com';
   const proto = request.headers.get('x-forwarded-proto') || 'https';
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
 

@@ -32,7 +32,7 @@ export function getStudentThemePalettesByMode(mode: StudentThemeMode): StudentTh
 }
 
 export function getDefaultStudentThemePalette(mode: StudentThemeMode): StudentThemePalette {
-  const fallbackId = mode === 'dark' ? 'scholar-dark' : 'scholar-light';
+  const fallbackId = mode === 'dark' ? 'rainy-night' : 'winter-sky-light';
   return getStudentThemePaletteById(fallbackId) ?? studentThemePalettes[0];
 }
 

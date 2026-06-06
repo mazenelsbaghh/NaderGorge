@@ -236,12 +236,12 @@ export default function PackageProfilePage() {
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {terms.map((term, idx) => {
-              // Each term gets a distinct warm palette derived from the gold brand
+              // Each term gets a distinct cool palette from the default student theme.
               const palettes = [
-                { from: "#9a6933", to: "#c5a059", pat: "#b8842a" },
-                { from: "#7f5427", to: "#9a6933", pat: "#8f6030" },
-                { from: "#c5a059", to: "#dfc07e", pat: "#c9aa65" },
-                { from: "#6b4623", to: "#9a6933", pat: "#7d5228" },
+                { from: "#475569", to: "#0f766e", pat: "#64748b" },
+                { from: "#334155", to: "#0891b2", pat: "#475569" },
+                { from: "#0f766e", to: "#38bdf8", pat: "#0e7490" },
+                { from: "#1e293b", to: "#64748b", pat: "#334155" },
               ];
               const pal = palettes[idx % palettes.length];
               return (
@@ -350,4 +350,3 @@ export default function PackageProfilePage() {
     </motion.div>
   );
 }
-

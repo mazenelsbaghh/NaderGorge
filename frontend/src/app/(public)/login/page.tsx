@@ -27,6 +27,7 @@ import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground
 import { RippleGrid } from '@/components/ui/ripple-grid';
 import { LoginForm } from '@/components/forms/LoginForm';
 import { FeatureCarousel } from '@/components/ui/feature-carousel';
+import { PlatformLogo } from '@/components/shared/PlatformLogo';
 
 const LOGIN_STEPS = [
   {
@@ -39,7 +40,7 @@ const LOGIN_STEPS = [
 ];
 
 export default function LoginPage() {
-  const { isDark, toggleTheme } = useAuthTheme();
+  const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
 
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function LoginPage() {
 
   if (isLoading || isAuthenticated) {
     return (
-      <div className="auth-shell relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]">
+      <div className="auth-shell relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]" style={themeVars}>
         <div className="text-center font-bold">جارٍ التحقق وإعادة التوجيه...</div>
       </div>
     );
@@ -74,11 +75,12 @@ export default function LoginPage() {
   return (
     <div 
       className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]" 
+      style={themeVars}
     >
       {/* ── Ripple Interactive Background ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <RippleGrid
-          gridColor={isDark ? '#c5a059' : '#d4a762'}
+          gridColor={isDark ? '#64748b' : '#94a3b8'}
           rippleIntensity={0.05}
           gridSize={10}
           gridThickness={isDark ? 15 : 12}
@@ -109,7 +111,9 @@ export default function LoginPage() {
       <main className="relative z-10 w-full max-w-7xl px-4 py-10 sm:px-5 sm:py-16 m-auto">
         
         {/* Logo Avatar is now inside the layout or just centered at top */}
-        <div className="auth-avatar mb-8">☥</div>
+        <div className="auth-avatar mb-8">
+          <PlatformLogo variant="mark" size="lg" tone={isDark ? 'light' : 'dark'} priority />
+        </div>
 
         <FeatureCarousel
           clickToAdvance={false}
@@ -122,11 +126,8 @@ export default function LoginPage() {
               
               {/* Left Side: Welcoming Visual (Hidden on mobile) */}
               <div className="hidden lg:flex lg:w-[50%] xl:w-[45%] flex-col justify-center items-center text-center space-y-6">
-                 <div className="flex h-32 w-32 items-center justify-center rounded-full shadow-[0_0_80px_var(--admin-primary-15)] animate-pulse border border-[var(--admin-border)]">
-                    <span className="text-7xl" style={{ color: 'var(--admin-primary)' }}>𓂀</span>
-                 </div>
                  <div className="space-y-2">
-                   <h3 className="text-xl font-bold" style={{ color: 'var(--admin-text)' }}>نظام نادر جورج التعليمي</h3>
+                   <h3 className="text-xl font-bold" style={{ color: 'var(--admin-text)' }}>منصة مسار</h3>
                    <p className="text-sm leading-relaxed" style={{ color: 'var(--admin-muted)' }}>
                      دروس منظمة، امتحانات واضحة، وتقدم ظاهر في كل خطوة.
                    </p>
@@ -158,7 +159,7 @@ export default function LoginPage() {
         </FeatureCarousel>
 
         <p className="auth-footer-caption mt-10">
-          © 2026 أكاديمية نادر جورج
+          © 2026 منصة مسار
         </p>
       </main>
     </div>

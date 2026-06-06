@@ -562,7 +562,7 @@ export function FloatingLines({
         mixBlendMode: mixBlendMode,
         ...(isMobileDevice || useFallback ? {
           background: `
-            radial-gradient(circle at 82% 20%, ${linesGradient?.[0] || '#c5a059'}24, transparent 48%),
+            radial-gradient(circle at 82% 20%, ${linesGradient?.[0] || '#64748b'}24, transparent 48%),
             radial-gradient(circle at 18% 80%, ${linesGradient?.[1] || '#8f6b2f'}1F, transparent 46%),
             linear-gradient(115deg, transparent 0 42%, ${linesGradient?.[2] || '#f4f1e7'}18 42% 43%, transparent 43% 100%)
           `

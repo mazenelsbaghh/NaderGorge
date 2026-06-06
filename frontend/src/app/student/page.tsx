@@ -5,15 +5,17 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { stagger, fadeSlideUp } from "@/lib/motion";
 
-import { ContinueLearningCard } from "@/components/student-dashboard/ContinueLearningCard";
-import { StudentDestinationsPanel } from "@/components/student-dashboard/StudentDestinationsPanel";
-import { StudentGettingStartedPanel } from "@/components/student-dashboard/StudentGettingStartedPanel";
-import { StudentMomentumRail } from "@/components/student-dashboard/StudentMomentumRail";
-import { PackageGrid } from "@/components/student-dashboard/PackageGrid";
-import { StatsStrip } from "@/components/student-dashboard/StatsStrip";
-import { StudentHero } from "@/components/student-dashboard/StudentHero";
-import { UpcomingExamsPanel } from "@/components/student-dashboard/UpcomingExamsPanel";
-import { QuickAccessPanel } from "@/components/student-dashboard/QuickAccessPanel";
+import {
+  ContinueLearningCard,
+  StudentDestinationsPanel,
+  StudentGettingStartedPanel,
+  StudentMomentumRail,
+  PackageGrid,
+  StatsStrip,
+  StudentHero,
+  UpcomingExamsPanel,
+  QuickAccessPanel,
+} from "@/packages/student";
 import { useStudentTheme } from "@/hooks/useStudentTheme";
 import { studentService, type DashboardDto, type QuickAccessItemDto } from "@/services/student-service";
 import { useAuthStore } from "@/stores/auth-store";

@@ -1,112 +1,135 @@
-'use client';
+"use client";
 
-import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import Image from "next/image";
-import { Quote } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 
-import { cn } from "@/lib/utils";
-import { AnimatedList } from "@/components/ui/animated-list";
 import { testimonials } from "./data";
 
 export function TestimonialsSection() {
-  const sectionVariants = {
-    hidden: { opacity: 0, y: 30 },
+  const prefersReducedMotion = useReducedMotion();
+
+  const titleVariants = {
+    hidden: {
+      opacity: prefersReducedMotion ? 1 : 0,
+      y: prefersReducedMotion ? 0 : 15,
+    },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.45, ease: [0.25, 1, 0.5, 1] as const, staggerChildren: 0.05 },
+      transition: {
+        duration: 0.55,
+        ease: [0.25, 1, 0.5, 1] as const,
+      },
+    },
+  };
+
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: prefersReducedMotion ? 0 : 0.08,
+      },
     },
   };
 
   const itemVariants = {
-    hidden: { opacity: 0, y: 18 },
+    hidden: {
+      opacity: prefersReducedMotion ? 1 : 0,
+      y: prefersReducedMotion ? 0 : 20,
+    },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.32, ease: [0.25, 1, 0.5, 1] as const },
+      transition: {
+        duration: 0.6,
+        ease: [0.25, 1, 0.5, 1] as const,
+      },
     },
   };
 
   return (
-    <section id="testimonials" className="landing-content-visibility px-4 py-24 md:px-0">
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-80px" }}
-        variants={sectionVariants}
-        className="mx-auto flex w-[min(1080px,92vw)] flex-col items-center gap-12"
-      >
+    <section id="testimonials" className="landing-section mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16">
+      <div className="relative z-10 mx-auto max-w-[1180px]">
         <motion.div
-          variants={itemVariants}
-          className="mx-auto flex max-w-[780px] flex-col items-center gap-5 text-center"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-80px" }}
+          variants={titleVariants}
+          className="text-center"
         >
-          <span className="landing-chip">آراء الطلاب فينا</span>
-          <div className="space-y-4">
-            <h2 className="text-3xl font-black tracking-tight text-[var(--landing-ink)] md:text-5xl">
-              كلام حقيقي من الطلبة عن التجربة داخل المنصة
-            </h2>
-            <p className="mx-auto max-w-[720px] text-base leading-8 text-[var(--landing-muted)] md:text-lg">
-              انطباعات مباشرة من الطلاب عن الشرح، الاختبارات، وسهولة متابعة الرحلة التعليمية خطوة بخطوة.
-            </p>
-          </div>
+          <h2 className="text-3xl font-black text-[var(--landing-ink)] md:text-5xl">آراء طلابنا</h2>
+          <p className="mt-3 text-base font-bold text-[var(--landing-muted)] md:text-lg">
+            تجارب حقيقية من طلاب حققوا أهدافهم
+          </p>
         </motion.div>
 
-        <motion.div
-          variants={itemVariants}
-          className="relative mx-auto h-[860px] w-full max-w-[920px] overflow-hidden rounded-[44px] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--landing-card)_52%,transparent),color-mix(in_srgb,var(--landing-bg-soft)_94%,transparent))] px-5 py-6 shadow-[0_24px_80px_rgba(88,55,18,0.10)]"
-        >
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-gradient-to-b from-[var(--landing-bg-soft)] to-transparent" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-t from-[var(--landing-bg-soft)] to-transparent" />
-          <AnimatedList
-            delay={900}
-            className="mx-auto w-full max-w-[860px] items-stretch gap-5 px-3 py-3 md:px-6 md:py-5"
+        <div className="mt-9 grid items-center gap-4 md:grid-cols-[44px_1fr_44px]">
+          <button
+            type="button"
+            className="hidden h-11 w-11 items-center justify-center rounded-full bg-[var(--landing-card)] text-[var(--landing-ink)] border border-[var(--landing-line)] hover:bg-[var(--landing-card-strong)] transition-colors duration-200 md:flex"
+            aria-label="الرأي السابق"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          <motion.div
+            className="grid gap-5 md:grid-cols-3"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
           >
             {testimonials.map((review) => (
-              <ReviewCard key={review.name} {...review} />
+              <motion.figure
+                key={review.name}
+                variants={itemVariants}
+                className="landing-panel px-6 py-6 text-right hover:scale-[1.02] transition-transform duration-300"
+              >
+                <div className="flex items-center gap-4">
+                  <Image
+                    src={review.avatar}
+                    alt={review.name}
+                    width={64}
+                    height={64}
+                    unoptimized
+                    className="h-16 w-16 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <figcaption className="truncate text-base font-black text-[var(--landing-ink)]">
+                      {review.name}
+                    </figcaption>
+                    <div className="mt-1 flex gap-0.5 text-[#D4A017]" aria-label="تقييم خمسة نجوم">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <Star key={index} className="h-4 w-4 fill-current" />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <blockquote className="mt-4 text-sm font-semibold leading-7 text-[var(--landing-muted)]">
+                  {review.quote}
+                </blockquote>
+              </motion.figure>
             ))}
-          </AnimatedList>
-        </motion.div>
-      </motion.div>
+          </motion.div>
+
+          <button
+            type="button"
+            className="hidden h-11 w-11 items-center justify-center rounded-full bg-[var(--landing-card)] text-[var(--landing-ink)] border border-[var(--landing-line)] hover:bg-[var(--landing-card-strong)] transition-colors duration-200 md:flex"
+            aria-label="الرأي التالي"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-8 flex justify-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-[var(--landing-ink)]" />
+          <span className="h-2 w-2 rounded-full bg-[#0E8F8F]" />
+          <span className="h-2 w-2 rounded-full bg-[var(--landing-line)]" />
+          <span className="h-2 w-2 rounded-full bg-[var(--landing-line)]" />
+        </div>
+      </div>
     </section>
   );
 }
 
-type ReviewCardProps = {
-  avatar: string;
-  name: string;
-  role: string;
-  quote: string;
-};
-
-function ReviewCard({ avatar, name, role, quote }: ReviewCardProps) {
-  return (
-    <figure
-      className={cn(
-        "landing-panel relative h-fit w-full overflow-hidden rounded-[34px] border border-[var(--landing-line-strong)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--landing-card-strong)_86%,transparent),color-mix(in_srgb,var(--landing-card)_98%,transparent))] p-7 text-right shadow-[0_18px_42px_rgba(88,55,18,0.08)]"
-      )}
-    >
-      <div className="flex items-center gap-4">
-        <Image
-          className="h-[56px] w-[56px] rounded-full object-cover ring-2 ring-[var(--landing-line)]"
-          width={56}
-          height={56}
-          alt={name}
-          src={avatar}
-          unoptimized
-        />
-        <div className="min-w-0 flex-1">
-          <figcaption className="truncate text-[1.15rem] font-black text-[var(--landing-ink)]">
-            {name}
-          </figcaption>
-          <p className="truncate text-[0.98rem] font-semibold text-[var(--landing-muted)]">{role}</p>
-        </div>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--landing-card-strong)] text-[var(--landing-accent)]">
-          <Quote className="h-5 w-5" />
-        </div>
-      </div>
-      <blockquote className="mt-5 text-[1.02rem] leading-8 text-[var(--landing-muted)]">
-        &ldquo;{quote}&rdquo;
-      </blockquote>
-    </figure>
-  );
-}

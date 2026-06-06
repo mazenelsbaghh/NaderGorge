@@ -20,9 +20,9 @@ html.theme-switching *::after {
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-cairo, system-ui, sans-serif);
+  --font-sans: var(--font-tajawal, var(--font-montserrat), system-ui, sans-serif);
   --font-mono: var(--font-geist-mono, monospace);
-  --font-heading: var(--font-cairo, system-ui, sans-serif);
+  --font-heading: var(--font-tajawal, var(--font-montserrat), system-ui, sans-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -52,6 +52,17 @@ html.theme-switching *::after {
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-landing-bg: var(--landing-bg);
+  --color-landing-bg-soft: var(--landing-bg-soft);
+  --color-landing-card: var(--landing-card);
+  --color-landing-card-strong: var(--landing-card-strong);
+  --color-landing-ink: var(--landing-ink);
+  --color-landing-muted: var(--landing-muted);
+  --color-landing-accent: var(--landing-accent);
+  --color-landing-accent-strong: var(--landing-accent-strong);
+  --color-landing-accent-foreground: var(--landing-accent-foreground);
+  --color-landing-line: var(--landing-line);
+  --color-landing-line-strong: var(--landing-line-strong);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -62,71 +73,72 @@ html.theme-switching *::after {
 }
 
 :root {
-  /* === Pharaonic Theme - Sand, Gold, Papyrus === */
-  --background: #faf2e6;
-  --foreground: #2c1708;
-  --card: #fcf6ea;
-  --card-foreground: #2c1708;
-  --popover: #fcf6ea;
-  --popover-foreground: #2c1708;
-  --primary: #9a6933;
-  --primary-foreground: #fffaf1;
-  --secondary: #f2dfbc;
-  --secondary-foreground: #3d2510;
-  --muted: #f0e4ce;
-  --muted-foreground: #7a644d;
-  --accent: #f2dfbc;
-  --accent-foreground: #3d2510;
+  /* === Brand Theme - White, Deep Navy, Teal === */
+  --font-cairo: var(--font-tajawal);
+  --background: #ffffff;
+  --foreground: #0A1D3D;
+  --card: #ffffff;
+  --card-foreground: #0A1D3D;
+  --popover: #ffffff;
+  --popover-foreground: #0A1D3D;
+  --primary: #0A1D3D;
+  --primary-foreground: #ffffff;
+  --secondary: #0E8F8F;
+  --secondary-foreground: #ffffff;
+  --muted: #eef1f4;
+  --muted-foreground: #2E3A47;
+  --accent: #D4A017;
+  --accent-foreground: #ffffff;
   --destructive: #c4402a;
-  --border: rgba(149, 111, 62, 0.22);
-  --input: rgba(149, 111, 62, 0.18);
-  --ring: #9a6933;
-  --chart-1: #9a6933;
-  --chart-2: #c49454;
-  --chart-3: #7a644d;
-  --chart-4: #d4a762;
-  --chart-5: #5c3d1f;
+  --border: rgba(10, 29, 61, 0.15);
+  --input: rgba(10, 29, 61, 0.10);
+  --ring: #0A1D3D;
+  --chart-1: #0A1D3D;
+  --chart-2: #0E8F8F;
+  --chart-3: #2E3A47;
+  --chart-4: #D4A017;
+  --chart-5: #021f45;
   --radius: 0.75rem;
-  --sidebar: #f7ecda;
-  --sidebar-foreground: #2c1708;
-  --sidebar-primary: #9a6933;
-  --sidebar-primary-foreground: #fffaf1;
-  --sidebar-accent: #f2dfbc;
-  --sidebar-accent-foreground: #3d2510;
-  --sidebar-border: rgba(149, 111, 62, 0.18);
-  --sidebar-ring: #9a6933;
+  --sidebar: #eef1f4;
+  --sidebar-foreground: #0A1D3D;
+  --sidebar-primary: #0A1D3D;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #0E8F8F;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(10, 29, 61, 0.12);
+  --sidebar-ring: #0A1D3D;
   /* Landing-specific tokens */
-  --landing-bg: #f7ecda;
-  --landing-bg-soft: #fbf4e8;
-  --landing-card: rgba(252, 246, 234, 0.86);
-  --landing-card-strong: #f2dfbc;
-  --landing-ink: #2c1708;
-  --landing-muted: #7a644d;
-  --landing-accent: #9a6933;
-  --landing-accent-strong: #7f5427;
-  --landing-accent-foreground: #fffaf1;
-  --landing-line: rgba(149, 111, 62, 0.22);
-  --landing-line-strong: rgba(255, 240, 215, 0.16);
+  --landing-bg: #ffffff;
+  --landing-bg-soft: #f9f9fb;
+  --landing-card: rgba(255, 255, 255, 0.95);
+  --landing-card-strong: #eef1f4;
+  --landing-ink: #0A1D3D;
+  --landing-muted: #2E3A47;
+  --landing-accent: #0A1D3D;
+  --landing-accent-strong: #021f45;
+  --landing-accent-foreground: #ffffff;
+  --landing-line: rgba(10, 29, 61, 0.15);
+  --landing-line-strong: rgba(10, 29, 61, 0.08);
 
-  /* Admin System Tokens (Migrated from useAdminTheme.ts) */
-  --admin-bg: #fcf9ef;
-  --admin-bg-overlay: rgba(252,249,239,0.9);
-  --admin-dot: rgba(209,197,180,0.8);
-  --admin-sidebar: #f7f7f7;
-  --admin-text: #1c1c16;
-  --admin-muted: #7f7667;
-  --admin-primary: #5d4300;
-  --admin-primary-strong: #775a19;
-  --admin-primary-contrast: #fcd386;
-  --admin-hover: #e5e2d9;
-  --admin-card: rgba(241,238,228,0.95);
-  --admin-card-soft: rgba(246,244,234,0.96);
-  --admin-card-strong: rgba(235,232,222,0.96);
-  --admin-border: rgba(149,111,62,0.16);
-  --admin-search: rgba(252,249,239,0.78);
-  --admin-footer: #e8c176;
-  --admin-shadow: rgba(78,70,57,0.1);
-  --admin-primary-15: rgba(93,67,0,0.12);
+  /* Admin System Tokens */
+  --admin-bg: #ffffff;
+  --admin-bg-overlay: rgba(255, 255, 255, 0.9);
+  --admin-dot: rgba(10, 29, 61, 0.12);
+  --admin-sidebar: #fcfcfc;
+  --admin-text: #0A1D3D;
+  --admin-muted: #2E3A47;
+  --admin-primary: #0A1D3D;
+  --admin-primary-strong: #021f45;
+  --admin-primary-contrast: #ffffff;
+  --admin-hover: #eef1f4;
+  --admin-card: rgba(255, 255, 255, 0.95);
+  --admin-card-soft: rgba(250, 250, 250, 0.96);
+  --admin-card-strong: rgba(240, 240, 240, 0.96);
+  --admin-border: rgba(10, 29, 61, 0.15);
+  --admin-search: rgba(255, 255, 255, 0.78);
+  --admin-footer: #0E8F8F;
+  --admin-shadow: rgba(10, 29, 61, 0.08);
+  --admin-primary-15: rgba(10, 29, 61, 0.12);
   --admin-success: #16a34a;
   --admin-success-10: rgba(22, 163, 74, 0.1);
   --admin-success-20: rgba(22, 163, 74, 0.18);
@@ -136,90 +148,84 @@ html.theme-switching *::after {
   --admin-warning: #ea580c;
   --admin-warning-10: rgba(234, 88, 12, 0.1);
   --admin-warning-20: rgba(234, 88, 12, 0.18);
+
+  /* Hero overlay gradients - Light */
+  --hero-overlay-start: rgba(255, 255, 255, 0.98);
+  --hero-overlay-mid: rgba(255, 255, 255, 0.92);
+  --hero-overlay-subtle: rgba(255, 255, 255, 0.22);
+  --hero-overlay-end: rgba(255, 255, 255, 0);
 }
 
 .dark {
-  /* === Pharaonic Dark — Premium Calm with Gold Warmth === */
-  --background: oklch(0.16 0.015 70);
-  /* warm near-black */
-  --foreground: oklch(0.94 0.015 70);
+  /* === Brand Dark — Premium Navy & Teal === */
+  --font-cairo: var(--font-tajawal);
+  --background: oklch(0.16 0.015 240);
+  /* navy near-black */
+  --foreground: oklch(0.94 0.015 240);
   /* warm cream */
-  --card: oklch(0.20 0.018 70);
-  /* warm dark card */
-  --card-foreground: oklch(0.94 0.015 70);
-  /* warm cream */
-  --popover: oklch(0.20 0.018 70);
-  --popover-foreground: oklch(0.94 0.015 70);
-  --primary: oklch(0.72 0.12 70);
-  /* gold primary */
-  --primary-foreground: oklch(0.16 0.015 70);
-  /* dark on gold */
-  --secondary: oklch(0.24 0.02 70);
-  /* warm dark surface */
-  --secondary-foreground: oklch(0.90 0.015 70);
-  --muted: oklch(0.24 0.02 70);
-  --muted-foreground: oklch(0.65 0.03 70);
-  /* warm muted text */
-  --accent: oklch(0.28 0.025 70);
-  --accent-foreground: oklch(0.90 0.015 70);
+  --card: oklch(0.20 0.018 240);
+  /* dark navy card */
+  --card-foreground: oklch(0.94 0.015 240);
+  --popover: oklch(0.20 0.018 240);
+  --popover-foreground: oklch(0.94 0.015 240);
+  --primary: oklch(0.72 0.12 240);
+  /* teal-navy primary */
+  --primary-foreground: oklch(0.16 0.015 240);
+  --secondary: oklch(0.24 0.02 240);
+  --secondary-foreground: oklch(0.90 0.015 240);
+  --muted: oklch(0.24 0.02 240);
+  --muted-foreground: oklch(0.65 0.03 240);
+  --accent: oklch(0.28 0.025 240);
+  --accent-foreground: oklch(0.90 0.015 240);
   --destructive: oklch(0.65 0.2 25);
-  /* warm red */
-  --border: oklch(0.40 0.04 70 / 20%);
-  /* gold-tinted border */
-  --input: oklch(0.40 0.04 70 / 25%);
-  --ring: oklch(0.72 0.12 70);
-  /* gold ring */
-  --chart-1: oklch(0.72 0.12 70);
-  /* gold */
-  --chart-2: oklch(0.60 0.10 70);
-  /* dark gold */
-  --chart-3: oklch(0.50 0.06 70);
-  /* bronze */
-  --chart-4: oklch(0.40 0.04 70);
-  /* deep bronze */
-  --chart-5: oklch(0.30 0.03 70);
-  /* shadow */
-  --sidebar: oklch(0.18 0.015 70);
-  --sidebar-foreground: oklch(0.90 0.015 70);
-  --sidebar-primary: oklch(0.72 0.12 70);
-  /* gold */
-  --sidebar-primary-foreground: oklch(0.94 0.015 70);
-  --sidebar-accent: oklch(0.24 0.02 70);
-  --sidebar-accent-foreground: oklch(0.90 0.015 70);
-  --sidebar-border: oklch(0.40 0.04 70 / 16%);
-  --sidebar-ring: oklch(0.72 0.12 70);
+  --border: oklch(0.40 0.04 240 / 20%);
+  --input: oklch(0.40 0.04 240 / 25%);
+  --ring: oklch(0.72 0.12 240);
+  --chart-1: oklch(0.72 0.12 240);
+  --chart-2: oklch(0.60 0.10 240);
+  --chart-3: oklch(0.50 0.06 240);
+  --chart-4: oklch(0.40 0.04 240);
+  --chart-5: oklch(0.30 0.03 240);
+  --sidebar: oklch(0.18 0.015 240);
+  --sidebar-foreground: oklch(0.90 0.015 240);
+  --sidebar-primary: oklch(0.72 0.12 240);
+  --sidebar-primary-foreground: oklch(0.94 0.015 240);
+  --sidebar-accent: oklch(0.24 0.02 240);
+  --sidebar-accent-foreground: oklch(0.90 0.015 240);
+  --sidebar-border: oklch(0.40 0.04 240 / 16%);
+  --sidebar-ring: oklch(0.72 0.12 240);
   /* Landing dark tokens */
-  --landing-bg: oklch(0.16 0.015 70);
-  --landing-bg-soft: oklch(0.18 0.018 70);
-  --landing-card: oklch(0.20 0.018 70 / 86%);
-  --landing-card-strong: oklch(0.24 0.02 70);
-  --landing-ink: oklch(0.94 0.015 70);
-  --landing-muted: oklch(0.65 0.03 70);
-  --landing-accent: oklch(0.72 0.12 70);
-  --landing-accent-strong: oklch(0.60 0.10 70);
-  --landing-accent-foreground: oklch(0.16 0.015 70);
-  --landing-line: oklch(0.40 0.04 70 / 18%);
-  --landing-line-strong: oklch(0.50 0.06 70 / 12%);
+  --landing-bg: oklch(0.16 0.015 240);
+  --landing-bg-soft: oklch(0.18 0.018 240);
+  --landing-card: oklch(0.20 0.018 240 / 86%);
+  --landing-card-strong: oklch(0.24 0.02 240);
+  --landing-ink: oklch(0.94 0.015 240);
+  --landing-muted: oklch(0.65 0.03 240);
+  --landing-accent: oklch(0.72 0.12 240);
+  --landing-accent-strong: oklch(0.60 0.10 240);
+  --landing-accent-foreground: oklch(0.16 0.015 240);
+  --landing-line: oklch(0.40 0.04 240 / 18%);
+  --landing-line-strong: oklch(0.50 0.06 240 / 12%);
 
-  /* Admin System Tokens - Dark (Migrated from useAdminTheme.ts) */
-  --admin-bg: #1a1a19;
-  --admin-bg-overlay: rgba(12,12,12,0.95);
-  --admin-dot: #775a19;
-  --admin-sidebar: rgba(26,26,24,0.82);
+  /* Admin System Tokens - Dark */
+  --admin-bg: #111115;
+  --admin-bg-overlay: rgba(12,12,15,0.95);
+  --admin-dot: #0E8F8F;
+  --admin-sidebar: rgba(20,20,25,0.82);
   --admin-text: #f4f1e7;
   --admin-muted: #d1c5b4;
-  --admin-primary: #c5a059;
-  --admin-primary-strong: #8f6b2f;
-  --admin-primary-contrast: #0c0c0c;
-  --admin-hover: #2c261f;
-  --admin-card: rgba(30,30,30,0.85);
-  --admin-card-soft: rgba(21,21,18,0.95);
-  --admin-card-strong: rgba(40,40,36,0.95);
-  --admin-border: rgba(119,90,25,0.2);
-  --admin-search: rgba(12,12,12,0.85);
-  --admin-footer: #c5a059;
-  --admin-shadow: rgba(6,5,3,0.5);
-  --admin-primary-15: rgba(197,160,89,0.15);
+  --admin-primary: #0E8F8F;
+  --admin-primary-strong: #0A1D3D;
+  --admin-primary-contrast: #ffffff;
+  --admin-hover: #1e1e24;
+  --admin-card: rgba(30,30,35,0.85);
+  --admin-card-soft: rgba(21,21,25,0.95);
+  --admin-card-strong: rgba(40,40,46,0.95);
+  --admin-border: rgba(14,143,143,0.2);
+  --admin-search: rgba(12,12,15,0.85);
+  --admin-footer: #0E8F8F;
+  --admin-shadow: rgba(10,29,61,0.5);
+  --admin-primary-15: rgba(14,143,143,0.15);
   --admin-success: oklch(0.62 0.15 145);
   --admin-success-10: oklch(0.62 0.15 145 / 10%);
   --admin-success-20: oklch(0.62 0.15 145 / 20%);
@@ -229,6 +235,12 @@ html.theme-switching *::after {
   --admin-warning: oklch(0.7 0.15 50);
   --admin-warning-10: oklch(0.7 0.15 50 / 10%);
   --admin-warning-20: oklch(0.7 0.15 50 / 20%);
+
+  /* Hero overlay gradients - Dark */
+  --hero-overlay-start: rgba(21, 25, 34, 0.98);
+  --hero-overlay-mid: rgba(21, 25, 34, 0.92);
+  --hero-overlay-subtle: rgba(21, 25, 34, 0.22);
+  --hero-overlay-end: rgba(21, 25, 34, 0);
 }
 
 html[data-student-theme-surface="student"],
@@ -252,6 +264,10 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
   body {
     @apply bg-background text-foreground;
     overscroll-behavior: none;
+    background:
+      radial-gradient(circle at 12% 12%, rgba(14, 143, 143, 0.08), transparent 28%),
+      radial-gradient(circle at 78% 20%, rgba(10, 29, 61, 0.06), transparent 30%),
+      linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   }
 
   html {
@@ -332,38 +348,55 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     min-height: 100vh;
     overflow-x: hidden;
     background:
-      radial-gradient(circle at top left, color-mix(in srgb, var(--landing-accent) 18%, transparent), transparent 30%),
-      radial-gradient(circle at top right, color-mix(in srgb, var(--landing-accent) 12%, transparent), transparent 34%),
-      linear-gradient(180deg, var(--landing-bg-soft), var(--landing-bg));
+      radial-gradient(circle at 12% 12%, rgba(14, 143, 143, 0.08), transparent 28%),
+      radial-gradient(circle at 78% 20%, var(--landing-line-strong), transparent 30%),
+      linear-gradient(180deg, var(--landing-bg) 0%, var(--landing-bg-soft) 100%);
+    color: var(--landing-ink);
   }
 
-  .landing-page__backdrop {
-    position: absolute;
-    inset: 0;
-    background-image: url("/images/egyptian-wall.png");
-    background-position: center;
-    background-size: cover;
-    opacity: 0.12;
-    mix-blend-mode: multiply;
+  .student-app-background {
+    background:
+      radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--admin-primary) 10%, transparent), transparent 28%),
+      radial-gradient(circle at 78% 20%, color-mix(in srgb, var(--admin-primary-strong) 8%, transparent), transparent 30%),
+      linear-gradient(180deg, var(--admin-bg) 0%, color-mix(in srgb, var(--admin-bg) 92%, var(--admin-card-strong)) 100%);
   }
 
-  .landing-page__texture {
+  html.dark[data-student-theme-surface="student"] .student-app-background {
+    background:
+      radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--admin-primary) 12%, transparent), transparent 30%),
+      radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--admin-primary-strong) 16%, transparent), transparent 34%),
+      linear-gradient(180deg, color-mix(in srgb, var(--admin-bg) 92%, black) 0%, color-mix(in srgb, var(--admin-bg) 78%, black) 100%);
+  }
+
+  .landing-section {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 12% 12%, rgba(14, 143, 143, 0.08), transparent 28%),
+      radial-gradient(circle at 78% 20%, var(--landing-line-strong), transparent 30%),
+      linear-gradient(180deg, var(--landing-bg) 0%, var(--landing-bg-soft) 100%);
+    border-radius: clamp(1rem, 1.4vw, 1.25rem);
+    color: var(--landing-ink);
+  }
+
+  .landing-section::before {
+    content: "";
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(color-mix(in srgb, var(--landing-accent) 5%, transparent) 1px, transparent 1px),
-      linear-gradient(90deg, color-mix(in srgb, var(--landing-accent) 5%, transparent) 1px, transparent 1px);
-    background-size: 64px 64px;
-    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 92%);
+      radial-gradient(circle, rgba(14, 143, 143, 0.35) 1.5px, transparent 1.5px);
+    background-position: right 3rem top 5rem;
+    background-repeat: no-repeat;
+    background-size: 12px 12px;
+    mask-image: radial-gradient(circle at right 7rem top 8rem, black 0 7rem, transparent 7.2rem);
+    opacity: 0.55;
     pointer-events: none;
   }
 
   .landing-panel {
-    border: 1px solid var(--landing-line);
     background: var(--landing-card);
-    box-shadow: 0 10px 40px color-mix(in srgb, var(--landing-accent) 6%, transparent);
-    backdrop-filter: blur(14px);
-    border-radius: 20px;
+    box-shadow: 0 6px 14px rgba(10, 29, 61, 0.06);
+    border-radius: 12px;
   }
 
   .landing-chip {
@@ -372,14 +405,60 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     align-items: center;
     gap: 0.5rem;
     border-radius: 9999px;
-    border: 1px solid var(--landing-line);
-    background: var(--landing-card);
+    background: rgba(14, 143, 143, 0.1);
     padding: 0.625rem 1rem;
     font-size: 0.8rem;
     font-weight: 800;
-    color: var(--landing-accent);
-    box-shadow: 0 8px 30px color-mix(in srgb, var(--landing-accent) 6%, transparent);
-    backdrop-filter: blur(12px);
+    color: #087575;
+  }
+
+  .landing-primary-button {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    border-radius: 0.5rem;
+    background: linear-gradient(135deg, #0e8f8f, #0b777a);
+    padding: 0.75rem 1.5rem;
+    color: #ffffff;
+    font-weight: 900;
+    transition: transform 180ms ease, background-color 180ms ease;
+  }
+
+  .landing-primary-button:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #108585, #0a6d72);
+  }
+
+  .landing-secondary-button {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(10, 29, 61, 0.18);
+    background: rgba(255, 255, 255, 0.82);
+    padding: 0.65rem 1.15rem;
+    color: #0a1d3d;
+    font-weight: 800;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  .landing-secondary-button:hover {
+    background: #eef1f4;
+  }
+
+  .landing-shell {
+    margin-inline: auto;
+    width: 100%;
+    padding: 0;
+  }
+
+  @media (min-width: 768px) {
+    .landing-shell {
+      padding: 0;
+    }
   }
 
   @supports (content-visibility: auto) {
