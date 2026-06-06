@@ -41,9 +41,10 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
                 "رقم الهاتف مسجل بالفعل",
                 new List<string> { "PHONE_ALREADY_EXISTS" });
 
-        // 2. Validate role
+        // 2. Validate role (normalize to PascalCase)
         var validRoles = new[] { "Admin", "Assistant", "Student" };
-        if (!Array.Exists(validRoles, r => r.Equals(request.Role, StringComparison.OrdinalIgnoreCase)))
+        var normalizedRole = validRoles.FirstOrDefault(r => r.Equals(request.Role, StringComparison.OrdinalIgnoreCase));
+        if (normalizedRole == null)
             return ApiResponse<AdminCreateUserResult>.Fail(
                 "الدور غير صالح",
                 new List<string> { "INVALID_ROLE" });
@@ -65,13 +66,13 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
             PhoneNumber = request.PhoneNumber.Trim(),
             PasswordHash = passwordHash,
             IsActive = true,
-            IsProfileComplete = request.Role != "Student" // non-students are immediately complete
+            IsProfileComplete = normalizedRole != "Student"
         };
         _context.Users.Add(user);
 
         // 6. Find and assign role
         var roleEntity = await _context.Roles
-            .FirstOrDefaultAsync(r => r.Name == request.Role, cancellationToken);
+            .FirstOrDefaultAsync(r => r.Name == normalizedRole, cancellationToken);
 
         if (roleEntity == null)
             return ApiResponse<AdminCreateUserResult>.Fail(
@@ -85,7 +86,7 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
         });
 
         // 7. If student: create minimal profile + enrol in packages
-        if (request.Role == "Student")
+        if (normalizedRole == "Student")
         {
             var profile = new StudentProfile
             {
@@ -108,21 +109,14 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
 
                     if (!packageExists) continue;
 
-                    // Check not already granted
-                    var alreadyGranted = await _context.StudentAccessGrants
-                        .AnyAsync(g => g.UserId == user.Id && g.PackageId == packageId && g.IsActive, cancellationToken);
-
-                    if (!alreadyGranted)
+                    _context.StudentAccessGrants.Add(new StudentAccessGrant
                     {
-                        _context.StudentAccessGrants.Add(new StudentAccessGrant
-                        {
-                            UserId = user.Id,
-                            PackageId = packageId,
-                            GrantType = CodeType.Package,
-                            GrantedAt = DateTime.UtcNow,
-                            IsActive = true
-                        });
-                    }
+                        UserId = user.Id,
+                        PackageId = packageId,
+                        GrantType = CodeType.Package,
+                        GrantedAt = DateTime.UtcNow,
+                        IsActive = true
+                    });
                 }
             }
         }
