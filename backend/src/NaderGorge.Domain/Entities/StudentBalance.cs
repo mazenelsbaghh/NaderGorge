@@ -31,4 +31,7 @@ public class BalanceTransaction : BaseEntity
     public Guid? ReferenceId { get; set; }
 
     public string Description { get; set; } = string.Empty;
+
+    public Guid? PerformedByUserId { get; set; }
+    public User? PerformedByUser { get; set; }
 }

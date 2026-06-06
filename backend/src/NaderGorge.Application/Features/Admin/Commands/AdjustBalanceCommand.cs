@@ -52,7 +52,8 @@ public class AdjustBalanceCommandHandler : IRequestHandler<AdjustBalanceCommand,
             Amount = request.Amount,
             BalanceAfter = balance.CurrentBalance,
             TransactionType = "AdminAdjustment",
-            Description = request.Reason
+            Description = request.Reason,
+            PerformedByUserId = request.AdminId
         };
         _db.BalanceTransactions.Add(transaction);
 

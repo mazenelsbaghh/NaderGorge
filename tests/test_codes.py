@@ -51,10 +51,13 @@ def test_concurrent_duplicate_package_code_redemption_allows_one_success(mock_pa
     assert gen_res.status_code == 200
     code = gen_res.json().get("data", {}).get("codes", [])[0]
 
+    student = NaderGorgeClient(fingerprint="e2e-concurrent-code-login")
+    login_res = student.login("20000000001", "password")
+    assert login_res.status_code == 200
+
     students = [NaderGorgeClient(fingerprint=f"e2e-concurrent-code-{i}") for i in range(2)]
-    for phone, client in zip(["20000000001", "20000000002"], students):
-        login_res = client.login(phone, "password")
-        assert login_res.status_code == 200
+    for client in students:
+        client.token = student.token
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(

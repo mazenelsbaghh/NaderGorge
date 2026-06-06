@@ -74,14 +74,23 @@
 
 ## Final Phase: Polish and Verification
 
-- [ ] T044 Run `dotnet build backend/NaderGorge.sln` and fix any compile warnings/errors.
-- [ ] T045 Run `dotnet test backend/NaderGorge.sln --no-build` and fix any failing tests.
-- [ ] T046 Run `cd frontend && npm run lint && npm run build` and fix any lint/build warnings/errors.
-- [ ] T047 Run `cd worker && npm run build` and fix any worker build warnings/errors.
-- [ ] T048 Run `python3 -m pip install -r tests/requirements.txt && python3 -m pytest tests/test_endpoint_inventory.py tests/test_codes.py tests/test_purchases.py tests/test_video.py -q` and fix any failing tests or environment gaps.
-- [ ] T049 Run `node scripts/generate-endpoint-inventory.mjs --check` and fix stale inventory output.
-- [ ] T050 Run `docker compose config -q` and fix configuration errors.
-- [ ] T051 Update `achievements.md` with any warnings/issues found during implementation and mark all resolved items checked.
+- [x] T044 Run `dotnet build backend/NaderGorge.sln` and fix any compile warnings/errors.
+- [x] T045 Run `dotnet test backend/NaderGorge.sln --no-build` and fix any failing tests.
+- [x] T046 Run `cd frontend && npm run lint && npm run build` and fix any lint/build warnings/errors.
+- [x] T047 Run `cd worker && npm run build` and fix any worker build warnings/errors.
+- [x] T048 Run `python3 -m pip install -r tests/requirements.txt && python3 -m pytest tests/test_endpoint_inventory.py tests/test_codes.py tests/test_purchases.py tests/test_video.py -q` and fix any failing tests or environment gaps.
+- [x] T049 Run `node scripts/generate-endpoint-inventory.mjs --check` and fix stale inventory output.
+- [x] T050 Run `docker compose config -q` and fix configuration errors.
+- [x] T051 Update `achievements.md` with any warnings/issues found during implementation and mark all resolved items checked.
+
+## Residual Audit Closure Tasks
+
+- [ ] T052 In `backend/src/NaderGorge.API/Controllers/AuthController.cs`, `frontend/src/lib/auth-storage.ts`, `frontend/src/stores/auth-store.ts`, `frontend/src/services/api-client.ts`, and `frontend/src/services/auth-service.ts`, move refresh-token persistence out of browser storage and into an HttpOnly cookie-backed refresh flow while preserving access-token retry behavior.
+- [ ] T053 In `backend/src/NaderGorge.API/Middleware/ExceptionHandlingMiddleware.cs`, remove direct `/tmp` exception file writes and rely on structured logging with correlation id.
+- [ ] T054 In `backend/src/NaderGorge.Application/Features/Admin/Queries/GetStudentProfileDetailQuery.cs`, replace package N+1 lookup and placeholder overrides with projected package and watch override data.
+- [ ] T055 In `worker/src/index.ts`, replace active BullMQ `job.remove()` cancellation behavior with a cooperative cancellation marker for active jobs and safe removal for waiting/delayed jobs.
+- [ ] T056 In `frontend/src/app/admin/ai-monitor/page.tsx` and `frontend/src/components/admin/CommunityCommentsModerationTable.tsx`, replace native confirm/prompt calls with accessible app confirm/reason UI.
+- [ ] T057 Re-run frontend lint/build, worker build, backend build/test, and update `docs/deep-technical-audit-2026-06-06.md` remediation status.
 
 ## Dependencies
 

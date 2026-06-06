@@ -70,7 +70,8 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
                         TransactionType = "Refund",
                         ReferenceId = grant.PackageId.Value,
                         Description = $"إرجاع رصيد باقة {package.Name} بعد إلغاء الإدارة",
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        PerformedByUserId = request.AdminId
                     };
                     _context.BalanceTransactions.Add(transaction);
                 }

@@ -126,6 +126,16 @@ export interface StudentAuditLogDto {
   details: string | Record<string, unknown>;
 }
 
+export interface BalanceTransactionDto {
+  id: string;
+  amount: number;
+  balanceAfter: number;
+  transactionType: string;
+  description: string;
+  createdAt: string;
+  adminName: string;
+}
+
 export interface AdminWatchRequestDto {
   id: string;
   userId: string;
@@ -200,6 +210,7 @@ export interface StudentProfileExtendedDto {
     }>;
   };
   currentBalance: number;
+  balanceTransactions: BalanceTransactionDto[];
   auditTrail: StudentAuditLogDto[];
   notes: Array<{
     id: string;

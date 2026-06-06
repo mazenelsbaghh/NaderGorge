@@ -132,6 +132,26 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var balance = await _context.StudentBalances
             .FirstOrDefaultAsync(b => b.UserId == request.UserId, cancellationToken);
 
+        var balanceTransactions = new List<StudentBalanceTransactionDto>();
+        if (balance != null)
+        {
+            balanceTransactions = await _context.BalanceTransactions
+                .Include(t => t.PerformedByUser)
+                .Where(t => t.StudentBalanceId == balance.Id)
+                .OrderByDescending(t => t.CreatedAt)
+                .Select(t => new StudentBalanceTransactionDto
+                {
+                    Id = t.Id,
+                    Amount = t.Amount,
+                    BalanceAfter = t.BalanceAfter,
+                    TransactionType = t.TransactionType,
+                    Description = t.Description,
+                    CreatedAt = t.CreatedAt,
+                    AdminName = t.PerformedByUser != null ? t.PerformedByUser.FullName : (t.TransactionType == "AdminAdjustment" ? "مدير النظام" : "النظام")
+                })
+                .ToListAsync(cancellationToken);
+        }
+
         return new StudentProfileExtendedDto
         {
             Id = user.Id,
@@ -185,6 +205,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 Activities = watchActivities
             },
             CurrentBalance = balance?.CurrentBalance ?? 0m,
+            BalanceTransactions = balanceTransactions,
             AuditTrail = auditLogs,
             Notes = await _context.StudentNotes
                 .Include(n => n.Admin)

@@ -678,6 +678,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(b => b.TransactionType).HasMaxLength(50).IsRequired();
             e.Property(b => b.Description).HasMaxLength(500).IsRequired();
             e.HasOne(b => b.StudentBalance).WithMany(s => s.Transactions).HasForeignKey(b => b.StudentBalanceId);
+            e.HasOne(b => b.PerformedByUser).WithMany().HasForeignKey(b => b.PerformedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // Phase 3: CodeVideoTarget

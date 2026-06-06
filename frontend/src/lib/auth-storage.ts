@@ -2,7 +2,6 @@ type PersistedStorageType = 'local' | 'session';
 
 type PersistedAuthPayload = {
   accessToken: string;
-  refreshToken: string;
   user: unknown;
 };
 
@@ -35,10 +34,9 @@ function readRawPayload(storage: Storage | null) {
   if (!storage) return null;
 
   const accessToken = storage.getItem(AUTH_KEYS.accessToken);
-  const refreshToken = storage.getItem(AUTH_KEYS.refreshToken);
   const user = storage.getItem(AUTH_KEYS.user);
 
-  if (!accessToken || !refreshToken || !user) {
+  if (!accessToken || !user) {
     // Self-heal partial auth state so stale access tokens do not keep triggering refresh attempts.
     if (hasAnyAuthKey(storage)) {
       clearStorage(storage);
@@ -46,7 +44,8 @@ function readRawPayload(storage: Storage | null) {
     return null;
   }
 
-  return { accessToken, refreshToken, user };
+  storage.removeItem(AUTH_KEYS.refreshToken);
+  return { accessToken, user };
 }
 
 function getPreferredStorage(): Storage | null {
@@ -67,7 +66,6 @@ export function persistAuthSession(
   if (!storage) return;
 
   storage.setItem(AUTH_KEYS.accessToken, payload.accessToken);
-  storage.setItem(AUTH_KEYS.refreshToken, payload.refreshToken);
   storage.setItem(AUTH_KEYS.user, JSON.stringify(payload.user));
 }
 
@@ -110,16 +108,12 @@ export function getStoredAccessToken() {
   return readStoredAuth()?.accessToken ?? null;
 }
 
-export function getStoredRefreshToken() {
-  return readStoredAuth()?.refreshToken ?? null;
-}
-
-export function replaceStoredTokens(accessToken: string, refreshToken: string) {
+export function replaceStoredTokens(accessToken: string) {
   const storage = getPreferredStorage();
   if (!storage) return;
 
   storage.setItem(AUTH_KEYS.accessToken, accessToken);
-  storage.setItem(AUTH_KEYS.refreshToken, refreshToken);
+  storage.removeItem(AUTH_KEYS.refreshToken);
 }
 
 export function updateStoredUser(user: unknown) {

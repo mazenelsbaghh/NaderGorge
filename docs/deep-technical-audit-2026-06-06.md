@@ -1,709 +1,514 @@
-# تقرير بحث تقني شامل لمشاكل منصة Masar/Nader Gorge
+# تقرير الفحص التقني العميق - Nader Gorge
 
-تاريخ التقرير: 2026-06-06  
-النطاق: Frontend, Backend API, Admin, Student, Worker, Docker/Ops, Tests  
-الهدف: توثيق المشاكل التقنية الحالية القابلة للتحقق، مع الأولوية والتأثير وخطوات العلاج المقترحة.
+تاريخ الفحص: 2026-06-06  
+النطاق: Frontend Next.js، Backend .NET، Worker Node/BullMQ، واجهات Admin، واجهات Student، اختبارات E2E/Unit، الأمن، الأداء، قابلية الصيانة.
 
 ## ملخص تنفيذي
 
-حالة المشروع العامة: **قابل للبناء، لكنه يحتاج إصلاحات تشغيلية وأمنية قبل اعتباره production-ready بالكامل**.
+المشروع ليس في حالة انهيار: `frontend build` ناجح، `frontend lint` بدون errors، `worker build` ناجح، و`dotnet test` ناجح. لكن توجد مشاكل تقنية مهمة قبل الاعتماد الإنتاجي الكامل، أغلبها في الأمن، جودة اختبارات E2E، أداء استعلامات صفحات الطالب/الأدمن، وتباين تصميم/تجربة الواجهات.
 
-الفحوصات التي تم تشغيلها:
+درجة الصحة العامة: **13/20 - مقبول مع عمل مهم مطلوب**
 
-| الفحص | النتيجة |
-|---|---|
-| `frontend npm run lint` | نجح |
-| `frontend npm run build` | نجح |
-| `backend dotnet build NaderGorge.sln` | نجح بدون warnings |
-| `backend dotnet test NaderGorge.sln --no-build` | نجح: 12 test |
-| `worker npm run build` | نجح |
-| `python3 -m pytest -q` | فشل: `pytest` غير مثبت في البيئة |
-| `node scripts/generate-endpoint-inventory.mjs` | نجح ووجد 144 endpoint |
-
-توزيع المشاكل:
-
-| الأولوية | العدد | المعنى |
+| البعد | الدرجة | أهم ملاحظة |
 |---|---:|---|
-| P0 | 3 | مشاكل تكسر workflow أو تفتح سطح حساس |
-| P1 | 9 | مشاكل كبيرة تؤثر على الطلاب/الأدمن/الأمان/البيانات |
-| P2 | 12 | مشاكل جودة وتشغيل وقابلية صيانة |
-| P3 | 6 | تحسينات مهمة لكنها ليست عاجلة |
+| الأمن والصلاحيات | 2/4 | تخزين access/refresh tokens في `localStorage/sessionStorage`، وحماية route shell client-side فقط. |
+| الأداء وقابلية التوسع | 2/4 | عدة استعلامات N+1 وتحميل graph كبير في dashboard/profile/progress. |
+| موثوقية الاختبارات | 2/4 | E2E config قديم على port 3000 رغم أن التطبيق يعمل على 8738، وبعض selectors/endpoints قديمة. |
+| جودة Frontend/Admin/Student | 3/4 | البناء واللينت جيدان، لكن يوجد خلط tokens، `any` كثير، confirm/prompt native، وتجربة admin ثقيلة. |
+| Worker/Background Jobs | 4/4 | TypeScript build ناجح وحماية worker token موجودة، لكن توجد مخاطر في إلغاء jobs وتنظيف الملفات والـ cron. |
 
-أهم 5 مشاكل:
+نتائج الفحوصات:
 
-1. **Worker proxy في Next.js لا يمرر auth الحقيقي، وفي نفس الوقت لا يتحقق من دور Admin**.
-2. **QR auto-redeem لا يعمل غالبا بسبب تعارض تخزين auth في localStorage مع route يبحث عن cookie**.
-3. **Homework service يستدعي paths غير موجودة (`/api/api/v1/...`)**.
-4. **عمليات الأكواد والرصيد والمشاهدة معرضة race conditions بدون transaction/locking كافيين**.
-5. **فصل landing/student/admin موجود في Docker والـ proxy، لكن نفس bundle والـ routes ما زالت تحتوي كل الأسطح، مما يقلل العزل الفعلي**.
+- `npm run lint` في `frontend`: نجح، مع warning واحد فقط في `frontend/src/app/admin/users/[id]/page.tsx:8`.
+- `npm run build` في `frontend`: نجح.
+- `npm run build` في `worker`: نجح.
+- `dotnet test backend/NaderGorge.sln --no-restore`: نجح، 12 اختبارًا.
+- لم أشغل Playwright E2E فعليًا لأن تشغيله يحتاج خدمات backend/frontend/E2E DB متاحة ومتزامنة، لكن فحص الملفات كشف مشاكل إعداد واضحة.
 
-## تقدير جودة الواجهة
+## P0 - مشاكل مانعة
 
-| البعد | الدرجة /4 | ملاحظة |
-|---|---:|---|
-| Accessibility | 2 | يوجد ARIA في أماكن جيدة، لكن الاعتماد الكثيف على custom UI وoverlays يحتاج e2e/a11y coverage |
-| Performance | 2 | build ناجح، لكن صفحات admin/student كثيفة client-side وتستخدم polling وanimations كثيرة |
-| Theming | 3 | token system واضح، لكن الطالب يعتمد على `--admin-*` واسماء admin داخل student |
-| Responsive | 2 | يوجد mobile nav، لكن كثافة الجداول والـ cards في admin تحتاج اختبار حقيقي على viewports |
-| Anti-patterns | 2 | تكرار cards/glass/rounded-heavy/ambient gradients بكثرة يجعل الواجهة أقل نضجا بصريا |
-| الإجمالي | 11/20 | مقبول، يحتاج تمريرة harden/adapt/normalize |
+لا توجد مشكلة P0 مؤكدة من build/test الحالي. المشروع يبني ويمرر unit tests. أقرب شيء لـ P0 عملي هو أن اختبارات E2E غالبًا غير قابلة للاعتماد بوضعها الحالي، لكنه مصنف P1 لأنه لا يمنع build الإنتاجي.
 
-## P0 - مشاكل عاجلة
+## P1 - مشاكل كبيرة يجب علاجها قبل الإنتاج
 
-### P0-1: Worker proxy يكسر شاشة مراقبة AI وقد يسمح بتحكم غير مضبوط
+### P1-1: تخزين التوكنات في browser storage يرفع أثر أي XSS
 
-المكان:
-- `frontend/src/app/api/worker/[...path]/route.ts:30-47`
-- `frontend/src/app/admin/ai-monitor/page.tsx:162`
-- `frontend/src/app/admin/ai-monitor/page.tsx:789-801`
-- `frontend/src/components/admin/LessonVideoList.tsx:27-78`
-- `worker/src/index.ts:183-240`
+الموقع:
 
-المشكلة:
-- Next proxy يشترط وجود `authorization` header فقط، لكنه لا يتحقق من JWT ولا من دور المستخدم.
-- صفحات admin تستدعي `fetch('/api/worker/status/...')` مباشرة، وليس `apiClient`، لذلك لا تضيف Authorization من localStorage.
-- النتيجة العملية: طلبات مراقبة/حذف/إعادة jobs غالبا ترجع 401 من proxy.
-- لو تم تمرير أي Authorization header يدويا، الـ proxy يستخدم `WORKER_ADMIN_TOKEN` server-side للوصول إلى worker، بدون إثبات أن الطالب/المستخدم Admin.
-
-التأثير:
-- شاشة AI monitor وtracking داخل LessonVideoList قد تظهر worker unavailable/unauthorized.
-- احتمال escalation: أي مستخدم قادر على صنع request فيه Authorization header قد يصل إلى عمليات DELETE/POST retry عبر proxy لو endpoint متاح له.
-
-الإصلاح المقترح:
-- لا تعتمد على header وجودي فقط.
-- أضف JWT validation داخل route handler أو مرر الطلب إلى backend endpoint محمي بـ `[Authorize(Roles="Admin,Teacher")]`.
-- في frontend استخدم helper خاص يقرأ access token أو استخدم `apiClient` بدلا من raw `fetch`.
-- اجعل DELETE/Retry محصورة في Admin/Teacher فقط، وليس أي authenticated user.
-
-### P0-2: QR auto-redeem لا يتوافق مع نظام auth الحالي
-
-المكان:
-- `frontend/src/app/api/qr/[codeHash]/route.ts:24-46`
-- `frontend/src/lib/auth-storage.ts:60-72`
-- `frontend/src/services/api-client.ts:24-30`
-
-المشكلة:
-- QR route يقرأ token من cookie باسم `token`.
-- نظام login يخزن `accessToken`, `refreshToken`, و`user` داخل localStorage/sessionStorage.
-- لا يوجد في auth flow الحالي ما يضع cookie باسم `token`.
-
-التأثير:
-- الطالب المسجل دخوله عندما يفتح QR URL من المتصفح سيظهر للـ server route كأنه غير مسجل.
-- سيعاد توجيهه إلى login بدلا من تفعيل الكود.
-- بعد login لا يوجد ضمان أن `returnUrl=/api/qr/...` سيعمل لأن token لا يزال ليس cookie.
-
-الإصلاح المقترح:
-- إما تحويل auth إلى HttpOnly cookies للـ server routes.
-- أو جعل QR flow client-side: صفحة `/qr/[codeHash]` تقرأ token من auth store وتستدعي `/codes/activate`.
-- أو route يمرر المستخدم إلى صفحة student redeem ومعها codeHash، وليس يحاول تفعيل server-side.
-
-### P0-3: Homework frontend يستدعي API paths غير موجودة
-
-المكان:
-- `frontend/src/services/homework-service.ts:24-31`
-- `backend/src/NaderGorge.API/Controllers/HomeworkController.cs:10-29`
-- `frontend/src/services/api-client.ts:11`
-
-المشكلة:
-- `apiClient` base URL ينتهي بـ `/api`.
-- `homework-service` يستدعي `/api/v1/students/homework/pending` و`/api/v1/students/homework/{id}/submit`.
-- المسارات الفعلية في backend هي `/api/homework/pending` و`/api/homework/{homeworkId}/submit`.
-- الناتج الفعلي يصبح غالبا `/api/api/v1/students/homework/...`.
-
-التأثير:
-- واجبات الطالب pending/submit ستفشل 404.
-
-الإصلاح المقترح:
-- عدل service إلى:
-  - `apiClient.get('/homework/pending')`
-  - `apiClient.post(`/homework/${homeworkId}/submit`, answers)`
-- أضف integration/e2e test لصفحة الواجب.
-
-## P1 - مشاكل كبيرة
-
-### P1-1: Refresh/access tokens مخزنة في localStorage
-
-المكان:
 - `frontend/src/lib/auth-storage.ts:69-71`
-- `frontend/src/lib/auth-storage.ts:121-128`
+- `frontend/src/services/api-client.ts:24-30`
+- `frontend/src/services/api-client.ts:53-68`
 
-المشكلة:
-- accessToken وrefreshToken محفوظان في localStorage/sessionStorage.
-- أي XSS داخل التطبيق أو dependency يمكنه سرقة refresh token طويل العمر.
+الوصف:
 
-التأثير:
-- account takeover لطلاب أو admin.
-- الخطر أكبر لأن admin يستخدم نفس auth mechanism.
+الـ access token والـ refresh token يتم تخزينهما في `localStorage` أو `sessionStorage`، ثم يقرأهما axios interceptor ويضع `Authorization: Bearer`. هذا يجعل أي ثغرة XSS في أي شاشة قادرة على سرقة refresh token طويل العمر، وليس فقط access token.
 
-الإصلاح المقترح:
+الأثر:
+
+- سيطرة طويلة على حساب الطالب/الأدمن لو حدث XSS.
+- صفحات فيها rich HTML أو scripts مدمجة تزيد حساسية هذا القرار.
+
+التوصية:
+
 - نقل refresh token إلى HttpOnly Secure SameSite cookie.
-- إبقاء access token قصير العمر في memory فقط أو cookie HttpOnly مع CSRF protection.
-- إضافة CSP قوية وتقليل `dangerouslySetInnerHTML`.
+- إبقاء access token قصير جدًا أو استخدام BFF/proxy pattern.
+- إضافة rotation مع reuse detection في backend.
 
-### P1-2: Code redemption معرض لسباق تفعيل نفس الكود
+### P1-2: حماية صفحات Admin/Student تعتمد على client guard فقط
 
-المكان:
-- `backend/src/NaderGorge.Application/Features/Codes/Commands/ActivateCodeCommand.cs:47-64`
-- `backend/src/NaderGorge.Application/Features/Codes/Commands/ActivateCodeCommand.cs:115-153`
-- `backend/src/NaderGorge.Infrastructure/Data/AppDbContext.cs:202-209`
+الموقع:
 
-المشكلة:
-- يتم جلب الكود بشرط `!IsConsumed` ثم يتم تعليمه consumed في الذاكرة.
-- لا يوجد transaction isolation/row lock/concurrency token يضمن أن طلبين متزامنين لن ينجحا معا.
+- `frontend/src/components/layout/AdminGuard.tsx:18-35`
+- `frontend/src/components/layout/StudentGuard.tsx:12-24`
+- `frontend/src/app/admin/layout.tsx:24-37`
+- `frontend/src/app/student/layout.tsx:17-20`
 
-التأثير:
-- نفس الكود يمكن أن يمنح access لأكثر من مستخدم تحت ضغط أو إعادة محاولة متزامنة.
+الوصف:
 
-الإصلاح المقترح:
-- استخدم transaction مع `SELECT ... FOR UPDATE` أو update مشروط:
-  - `UPDATE access_codes SET IsConsumed=true ... WHERE Id=@id AND IsConsumed=false`
-  - تحقق من affected rows = 1.
-- أضف unique partial guard للـ grants حسب نوع المحتوى والمستخدم.
+الـ route shell يتحقق بعد render client-side من storage. الـ backend endpoints محمية وهذا جيد، لكن route access نفسه لا توجد له middleware/SSR redirect. صفحات كثيرة مبنية كـ static routes في `next build`، ثم تعتمد على client redirect.
 
-### P1-3: شراء المحتوى والرصيد معرضان race conditions
+الأثر:
 
-المكان:
-- `backend/src/NaderGorge.Application/Features/Student/Commands/PurchaseContentCommand.cs:62-115`
-- `backend/src/NaderGorge.Application/Services/BalanceService.cs:57-72`
-- `backend/src/NaderGorge.Application/Services/BalanceService.cs:92-111`
+- Flash/loading shell قبل الحسم.
+- UX ضعيف في الجلسات المنتهية.
+- أي data fetching client-side سليم من ناحية API، لكن routing authorization غير موحد وممكن يتكرر أو ينسى.
 
-المشكلة:
-- يتم قراءة الرصيد ثم تعديله وحفظه بدون row lock أو optimistic concurrency.
-- طلبان شراء متزامنان قد يقرآن نفس الرصيد ويصرفاه مرتين.
+التوصية:
 
-التأثير:
-- رصيد سلبي أو grants بدون رصيد كاف.
-- تضارب في `BalanceAfter`.
+- إضافة Next middleware يفصل `/admin`, `/student`, `/assistant` بناءً على cookie/session server-readable.
+- إن استمر token في storage فقط، أضف route-level auth state bootstrap موحد وامنع static shells من عرض محتوى قبل التحقق.
 
-الإصلاح المقترح:
-- إضافة row version/concurrency token لـ `StudentBalance`.
-- أو تنفيذ debit بعملية SQL شرطية: `WHERE CurrentBalance >= amount`.
-- لف purchase + grant + transaction داخل transaction صريحة.
+### P1-3: E2E tests غير موثوقة بسبب port/config/selectors/endpoints قديمة
 
-### P1-4: تتبع المشاهدة يعتمد على client seconds ويمكن تزويره
+الموقع:
 
-المكان:
-- `frontend/src/components/video/SecureVideoPlayer.tsx:332-346`
-- `frontend/src/components/video/SecureVideoPlayer.tsx:290-295`
-- `backend/src/NaderGorge.Application/Features/Student/Commands/TrackWatchProgressCommand.cs:65-89`
+- `frontend/playwright.config.ts:16-18`
+- `frontend/package.json:6-10`
+- `frontend/tests/e2e/codes.spec.ts:31-36`
+- `frontend/tests/e2e/assistant-dashboard.spec.ts` يستخدم `/api/v1/auth/login` في أكثر من موضع بينما controllers الأساسية على `api/[controller]`.
 
-المشكلة:
-- backend يضيف `SecondsWatched` كما يرسلها العميل.
-- لا يوجد session binding أو server-side elapsed validation أو حد أقصى للزيادة لكل request.
+الوصف:
 
-التأثير:
-- الطالب يستطيع عبر console/API رفع secondsWatched بسرعة وتجاوز watch threshold/locks.
+Playwright مضبوط على `http://localhost:3000`، بينما scripts تشغل Next على `8738`. كذلك بعض الاختبارات تتوقع نصوص قديمة مثل `Access Codes` و`BullMQ Bulk Generate` بينما الواجهة الحالية عربية ومختلفة. بعض login payloads تستخدم `deviceId` بدل `deviceFingerprint` المطلوب في `AuthController`.
 
-الإصلاح المقترح:
-- اربط progress بـ `VideoPlaybackSession`.
-- اقبل delta بحد أقصى بناء على الزمن الحقيقي منذ آخر update.
-- خزّن `LastProgressAt` وتحقق من session/user/video.
+الأثر:
 
-### P1-5: منطق قفل المشاهدة يسمح بمشاهدة إضافية قبل القفل
+- CI ممكن يكون أخضر بشكل مضلل لو E2E لا يعمل، أو أحمر بسبب test drift وليس bug حقيقي.
+- صعب الاعتماد على E2E لحماية تدفقات الدفع/الأكواد/الامتحانات.
 
-المكان:
-- `backend/src/NaderGorge.Application/Features/Student/Commands/TrackWatchProgressCommand.cs:81-91`
+التوصية:
 
-المشكلة:
-- القفل يحصل عندما `WatchCount > MaxWatchCount`.
-- لو الحد 3، سيصبح القفل بعد الوصول إلى 4 وليس عند 3.
+- توحيد `baseURL` مع `8738` أو جعلها env-driven.
+- إضافة `webServer` في Playwright config.
+- تحديث selectors إلى role/name مستقرة.
+- توحيد API base paths والـ DTOs المستخدمة في الاختبارات.
 
-التأثير:
-- الطالب يحصل على مشاهدة إضافية كاملة فوق الحد المتوقع.
+### P1-4: استعلامات Student dashboard/progress فيها تحميل زائد وN+1
 
-الإصلاح المقترح:
-- استخدم `>=` عند الوصول للحد، أو عرّف بوضوح هل `MaxWatchCount` عدد مرات مسموحة قبل القفل أم بعده.
-- أضف unit tests للحالات: 0, 1, max, max+1.
+الموقع:
 
-### P1-6: AdminGuard يسمح لـ Assistant بدخول كامل admin UI بينما backend لا يسمح له بكل endpoints
+- `backend/src/NaderGorge.Application/Features/Student/Queries/GetDashboardQuery.cs:47-50`
+- `backend/src/NaderGorge.Application/Features/Student/Queries/GetDashboardQuery.cs:108-115`
+- `backend/src/NaderGorge.Application/Features/Student/Queries/GetProgressQuery.cs:36-39`
+- `backend/src/NaderGorge.Application/Features/Student/Queries/GetQuickAccessQuery.cs:31-83`
 
-المكان:
-- `frontend/src/components/layout/AdminGuard.tsx:8-11`
-- أمثلة backend:
-  - `backend/src/NaderGorge.API/Controllers/AdminController.cs:13`
-  - endpoints كثيرة تحت `[Authorize(Roles = "Admin")]`
+الوصف:
 
-المشكلة:
-- الواجهة تعتبر `Assistant` له admin access.
-- كثير من controllers/backend operations تتطلب Admin فقط أو Admin/Teacher فقط.
+Dashboard/Progress يحمل Packages -> Terms -> Sections -> Lessons كاملة ثم يحسب في الذاكرة. في `GetDashboardQuery` يتم جلب كل امتحان داخل loop (`FirstOrDefaultAsync`)، و`GetQuickAccessQuery` يجلب entity داخل loop لكل grant.
 
-التأثير:
-- تجربة assistant ستظهر صفحات/أزرار تفشل 403.
-- خطر confusion وتشغيل UI لا يطابق الصلاحيات.
+الأثر:
 
-الإصلاح المقترح:
-- بناء permission matrix واضح.
-- إخفاء pages/actions حسب role granular وليس فقط دخول عام للـ `/admin`.
-- توحيد roles بين frontend/backend: Assistant, AssistantAcademic, AssistantReviewer.
+- بطء واضح مع الطلاب أصحاب باقات كثيرة.
+- استهلاك ذاكرة أعلى من اللازم.
+- latency متزايد مع حجم المحتوى.
 
-### P1-7: Surface separation غير كامل رغم وجود services منفصلة
+التوصية:
 
-المكان:
-- `docker-compose.yml:138-194`
-- `frontend/src/proxy.ts:15-69`
-- `frontend/src/packages/surface-runtime/config.ts:57-123`
+- Projection مباشر إلى DTO بدل `Include` كامل.
+- جلب exams/terms/sections/lessons المطلوبة دفعة واحدة باستخدام ids.
+- إضافة indexes على `StudentAccessGrants(UserId, IsActive, ExpiresAt)`, `LessonProgresses(UserId, LessonId)`, `StudentExamAttempts(UserId, ExamId, IsPassed)`.
 
-المشكلة:
-- landing/student/admin تستخدم نفس صورة frontend ونفس Next app bundle.
-- الفصل يعتمد على runtime proxy/redirect، وليس build-time route pruning.
-- matcher يستثني `/api` بالكامل، لذلك API routes موجودة على كل surface إن لم يحجبها reverse proxy.
+### P1-5: Admin student profile فيه N+1 وبيانات placeholders
 
-التأثير:
-- admin bundle/routes قد تكون قابلة للاكتشاف على student/landing حسب misconfig.
-- سطح الهجوم أكبر مما يوحي به فصل الحاويات.
+الموقع:
 
-الإصلاح المقترح:
-- تطبيق build-time route gating أو separate Next apps/surfaces.
-- حجب `/api/worker` وأي admin-only Next routes على student/landing.
-- إضافة tests حقيقية لـ landing/student/admin origins وليس static-only فقط.
+- `backend/src/NaderGorge.Application/Features/Admin/Queries/GetStudentProfileDetailQuery.cs:51-72`
+- `backend/src/NaderGorge.Application/Features/Admin/Queries/GetStudentProfileDetailQuery.cs:88-92`
+- `backend/src/NaderGorge.Application/Features/Admin/Queries/GetStudentProfileDetailQuery.cs:93-115`
 
-### P1-8: E2E endpoints تظهر anonymous في inventory وتعتمد على runtime env/token فقط
+الوصف:
 
-المكان:
-- `backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:12-30`
-- `backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:305-319`
+كل package grant يعمل `FindAsync` منفصل للباقة. `Overrides` يرجع list فارغة مع comment أنها placeholder. صفحة الطالب الشاملة في الأدمن تعتمد على هذا DTO، وبالتالي تعرض بيانات ناقصة أو مضللة.
 
-المشكلة:
-- لا توجد `[Authorize]` أو compile-time exclusion.
-- الحماية داخل method عبر `EnvironmentName == "E2e"` و`X-E2E-Token`.
+الأثر:
 
-التأثير:
-- لو production env misconfigured إلى E2e أو token ضعيف، توجد endpoints destructive مثل seed/clear.
+- شاشة الأدمن الحرجة قد لا تعرض overrides الحقيقية.
+- بطء مع الطلاب أصحاب منح كثيرة.
+- قرارات دعم خاطئة لأن جزء من history غير ظاهر.
 
-الإصلاح المقترح:
-- افصل controller في build profile/testing assembly أو اشترط Development/E2e مع startup registration.
-- أضف startup guard يمنع `E2e` في Docker/Production deployments.
+التوصية:
 
-### P1-9: AI/video session token/key موجودان في iframe query string
+- join/projection لجلب package grants مع package data في query واحدة.
+- تنفيذ مصدر overrides الحقيقي أو إزالة القسم من UI حتى يكتمل.
+- إضافة tests لهذه الشاشة لأنها تحتوي قرارات إدارية عالية التأثير.
 
-المكان:
-- `frontend/src/components/video/SecureVideoPlayer.tsx:445`
-- `frontend/src/app/api/video/embed/route.ts:24-49`
+### P1-6: إلغاء Worker job بـ `job.remove()` لا يضمن إيقاف job نشط فعليًا
 
-المشكلة:
-- encrypted token والمفتاح `k` في URL query.
-- URL قد يظهر في browser history, logs, reverse proxy logs, Referer في بعض الحالات.
+الموقع:
 
-التأثير:
-- حماية الفيديو تصبح obfuscation أكثر من كونها secure access control.
+- `worker/src/index.ts:212-227`
+- `frontend/src/app/admin/ai-monitor/page.tsx:429-436`
 
-الإصلاح المقترح:
-- استخدم opaque session id فقط في query.
-- اجعل server route يجلب key/token من DB بعد تحقق session/user.
-- لا ترسل key للعميل.
+الوصف:
 
-## P2 - مشاكل جودة وتشغيل
+Endpoint الإلغاء يحاول `job.remove()` للـ job. في BullMQ، إزالة job نشط ليست دائمًا إيقافًا تعاونيًا للمعالجة الجارية. Job استخراج فيديو/نداء Gemini قد يستمر حتى لو الواجهة اعتبرته اتلغى.
 
-### P2-1: `beforeunload` يحاول إرسال progress async بطريقة غير موثوقة
+الأثر:
 
-المكان:
-- `frontend/src/components/video/SecureVideoPlayer.tsx:368-379`
+- تكلفة AI/تحميل فيديو قد تستمر بعد الإلغاء.
+- حالة frontend/backend قد تتعارض: UI يقول canceled بينما worker يكمل callback.
+- احتمالية overwrite لنتيجة قديمة بعد إلغاء أو retry.
 
-المشكلة:
-- `void flushTrackedProgress()` داخل beforeunload لا يضمن اكتمال HTTP request.
+التوصية:
 
-التأثير:
-- آخر ثواني مشاهدة قد تضيع.
+- إضافة cancellation flag في DB/Redis يفحصه processor بين المراحل.
+- تمرير AbortController للـ fetch/عمليات قابلة للإلغاء حيث يمكن.
+- جعل callback backend يرفض النتائج إذا حالة الفيديو أصبحت Cancelled.
 
-الإصلاح:
-- استخدم `navigator.sendBeacon` أو flush دوري أقصر مع server reconciliation.
+### P1-7: native confirm/prompt في إجراءات إدارية خطرة
 
-### P2-2: Session consumed قبل التأكد من تحميل iframe/player
+الموقع:
 
-المكان:
-- `frontend/src/components/video/SecureVideoPlayer.tsx:438-445`
-- `backend/src/NaderGorge.Application/Features/Student/Commands/ConsumeVideoSessionCommand.cs:27-38`
+- `frontend/src/app/admin/ai-monitor/page.tsx:429-430`
+- `frontend/src/app/admin/ai-monitor/page.tsx:268`
+- `frontend/src/components/admin/CommunityCommentsModerationTable.tsx` يستخدم `window.prompt` حسب نتائج البحث.
 
-المشكلة:
-- يتم استهلاك session قبل أن ينجح iframe/player فعليا.
+الوصف:
 
-التأثير:
-- network/browser failure بعد consume قد يجبر الطالب على طلب session جديد أو يسبب أخطاء.
+إجراءات مثل إلغاء AI job أو إعادة توليد mindmap تستخدم browser confirm/prompt. هذا لا يعطي سياقًا كافيًا ولا audit note ولا قابلية وصول جيدة.
 
-الإصلاح:
-- consume عند أول `ready` مؤكد من embed، أو اجعل session reusable حتى أول progress event.
+الأثر:
 
-### P2-3: `innerHTML = ''` في player مع mutation guard قد يسبب states هشة
+- أخطاء تشغيلية من الأدمن.
+- صعوبة توثيق السبب.
+- تجربة غير متسقة مع باقي UI.
 
-المكان:
-- `frontend/src/components/video/SecureVideoPlayer.tsx:448`
-- `frontend/src/utils/dom-shield.ts:35-65`
+التوصية:
 
-المشكلة:
-- الكود يمسح DOM يدويا ثم يركب iframe، ومع MutationObserver قد يفسر تغييرات شرعية كتلاعب.
+- استخدام `ConfirmDialog` موحد مع عنوان، أثر العملية، item summary، وسبب إلزامي للإجراءات المدمرة.
 
-التأثير:
-- أخطاء player متقطعة يصعب تشخيصها.
+## P2 - مشاكل متوسطة
 
-الإصلاح:
-- إدارة iframe عبر React state/rendering بدلا من DOM imperative.
-- اجعل guard يبدأ بعد اكتمال التركيب.
+### P2-1: استخدام `any` واسع في service layer ومكونات admin/video
 
-### P2-4: `postMessage('*')` بدون origin validation
+الموقع:
 
-المكان:
-- `frontend/src/components/video/SecureVideoPlayer.tsx:169-172`
-- `frontend/src/components/video/SecureVideoPlayer.tsx:253-256`
+- `frontend/src/services/admin-service.ts:327-329`
+- `frontend/src/services/admin-service.ts:548-596`
+- `frontend/src/app/admin/users/[id]/page.tsx` عدة render callbacks بـ `any`
+- `worker/src/jobs/analyzeVideoChapters.ts:19`
+- `worker/src/services/geminiService.ts:191`
 
-المشكلة:
-- listener يقبل أي `event.origin` طالما `msg.source === 'video-embed'`.
-- sender يستخدم `'*'`.
+الوصف:
 
-التأثير:
-- spoofed message من iframe/نافذة غير متوقعة قد يغير state محلي.
+Type safety ضعيف في DTOs حرجة مثل videos/resources/homework/content creators. هذا يخفي contract drift بين backend/frontend.
 
-الإصلاح:
-- تحقق من `event.origin === window.location.origin`.
-- استخدم target origin صريح.
+الأثر:
 
-### P2-5: Endpoint inventory يظهر internal callbacks كـ anonymous لبعض actions
+- أخطاء runtime عند تغير shape من backend.
+- صعوبة refactor.
+- اختبارات TypeScript لا تمسك مشاكل البيانات.
 
-المكان:
-- `tests/endpoint_inventory.md`
-- `backend/src/NaderGorge.API/Controllers/InternalController.cs:22-31`
+التوصية:
 
-المشكلة:
-- الحماية custom header داخل method لا تظهر كـ auth attribute.
-- inventory يصنف بعض callbacks anonymous.
+- تعريف DTOs دقيقة لكل endpoint.
+- استخدام schema validation خفيف للـ AI/worker payloads مثل zod أو parser يدوي واضح.
 
-التأثير:
-- tooling/security reviews قد تفوّت endpoints محمية custom أو تعتبرها مفتوحة.
+### P2-2: Student community يستخدم admin tokens وألوان hard-coded
 
-الإصلاح:
-- تحويل internal token validation إلى Authorization policy/filter attribute.
+الموقع:
 
-### P2-6: تغطية الاختبارات ضيقة مقارنة بـ 144 endpoint
+- `frontend/src/components/student/CommunityFeed.tsx:29-40`
+- `frontend/src/components/student/CommunityFeed.tsx:81-82`
+- `frontend/src/components/student/CommunityPostComposer.tsx:89-111`
+- `frontend/src/components/student/CommunityPostComposer.tsx:156-160`
 
-المكان:
-- `backend/tests/NaderGorge.Application.Tests`
-- `tests/endpoint_inventory.md`
+الوصف:
 
-المشكلة:
-- .NET tests الحالية 12 فقط.
-- Python API tests موجودة لكن لا تعمل لأن `pytest` غير مثبت.
-- لا توجد نتيجة e2e مؤكدة للـ frontend.
+واجهة الطالب تستخدم `--admin-*` tokens وFacebook blue `#0866ff`. هذا يخالف فصل surfaces ويفقد هوية الطالب التعليمية.
 
-التأثير:
-- regressions في admin/student workflows لن تظهر في CI المحلي الحالي.
+الأثر:
 
-الإصلاح:
-- إضافة test setup موثق لـ Python أو نقل API smoke tests إلى .NET integration tests.
-- إضافة Playwright smoke لـ login, code redemption, homework, video, admin AI monitor.
+- تباين بصري بين الطالب وباقي المنتج.
+- صعوبة theme customization لاحقًا.
 
-### P2-7: Worker logs قد تكشف بيانات أو responses حساسة
+التوصية:
 
-المكان:
-- `worker/src/jobs/evaluateEssay.ts:61`
-- `worker/src/utils/audioExtractor.ts:45`
-- `worker/src/services/geminiService.ts:94-176`
+- إنشاء semantic tokens مشتركة: `--surface-card`, `--surface-muted`, `--status-info`.
+- إعادة community كـ "مناقشة صف" لا social feed.
 
-المشكلة:
-- logging مباشر لـ AI responses/source URLs/job details.
+### P2-3: inline style blocks وصفحة AI monitor ضخمة وغير معزولة
 
-التأثير:
-- تسريب بيانات طالب أو محتوى تعليمي أو URLs في logs.
+الموقع:
 
-الإصلاح:
-- استخدم logger مع redaction.
-- لا تطبع AI raw response إلا في debug mode وبقص محدود.
+- `frontend/src/app/admin/ai-monitor/page.tsx:861+`
 
-### P2-8: Worker queues تحتفظ بعدد قليل جدا من jobs
+الوصف:
 
-المكان:
-- `worker/src/index.ts:270-274`
-- `worker/src/index.ts:307-310`
-- `worker/src/index.ts:338-341`
+صفحة AI monitor تحتوي CSS كبير داخل component. هذا يجعل الصيانة والـ theming والمراجعة أصعب، ويزيد احتمال كسر responsive states.
 
-المشكلة:
-- `removeOnComplete` يحتفظ بآخر 10 لمدة ساعة، و`removeOnFail` آخر 5.
+الأثر:
 
-التأثير:
-- admin monitor قد يرى `not_found` بسرعة بعد completion/failure.
-- التحقيق في failures صعب.
+- صعوبة reuse.
+- styles غير قابلة للفحص المركزي.
+- أي تغيير صغير في monitoring يصبح risky.
 
-الإصلاح:
-- احتفظ بسجل job state في PostgreSQL أو زد retention حسب احتياج support.
+التوصية:
 
-### P2-9: Redis fallback ports متضاربة بين Docker/native
+- تقسيم الصفحة إلى components: `WorkerStatusBanner`, `JobCard`, `MindmapTracker`, `FailedJobsTable`.
+- نقل styles إلى CSS module أو tokens/classes مشتركة.
 
-المكان:
-- `backend/src/NaderGorge.API/Program.cs:29-43`
-- `backend/src/NaderGorge.Infrastructure/Cache/RedisConnectionFactory.cs:18`
-- `worker/src/index.ts:19`
+### P2-4: Exam drafts تحفظ إجابات الطالب في localStorage
 
-المشكلة:
-- fallback محلي يستخدم `localhost:6382` في backend/worker، بينما docker redis داخليا `6379`.
-- docker compose يمرر env صحيح، لكن native/dev قد يتعطل لو redis على 6379.
+الموقع:
 
-التأثير:
-- onboarding محلي هش.
+- `frontend/src/components/exams/ExamViewer.tsx:676-686`
+- `frontend/src/components/exams/ExamViewer.tsx:699-718`
+- `frontend/src/components/exams/ExamViewer.tsx:775-780`
 
-الإصلاح:
-- توحيد fallback أو توثيقه في `.env.example` وMakefile.
+الوصف:
 
-### P2-10: `JWT_EXPIRY_MINUTES` الافتراضي في docker طويل جدا
+الإجابات تحفظ محليًا باسم attempt id. هذا جيد للـ recovery، لكنه يعرض إجابات الامتحان لأي script على الصفحة، ويبقى أثر بيانات تعليمية بعد session issues لو فشل التنظيف.
 
-المكان:
-- `docker-compose.yml:79`
+الأثر:
 
-المشكلة:
-- الافتراضي `18000000` دقيقة.
+- خصوصية أقل للطالب.
+- احتمال leakage في جهاز مشترك.
 
-التأثير:
-- access token شبه دائم، يزيد أثر التسريب.
+التوصية:
 
-الإصلاح:
-- استخدم 15-60 دقيقة، واعتمد refresh rotation.
+- حفظ drafts server-side أو sessionStorage مع TTL وتنظيف عند logout.
+- تشفير local draft بمفتاح session غير persistent إن استمر التخزين المحلي.
 
-### P2-11: Password reset/admin reset validation غير متسقة
+### P2-5: Exception middleware يكتب إلى `/tmp` مباشرة
 
-المكان:
-- `backend/src/NaderGorge.Application/Features/Admin/Commands/AdminResetPasswordCommand.cs:22`
-- `backend/src/NaderGorge.Application/Features/Auth/Commands/RegisterCommand.cs:68`
+الموقع:
 
-المشكلة:
-- register يطلب 8 أحرف، admin reset يقبل 4 أحرف.
+- `backend/src/NaderGorge.API/Middleware/ExceptionHandlingMiddleware.cs:62-72`
 
-التأثير:
-- admin قد يضع كلمات مرور أضعف من سياسة التسجيل.
+الوصف:
 
-الإصلاح:
-- استخراج PasswordPolicy مشتركة.
+الـ middleware يستخدم `File.AppendAllText("/tmp/NaderGorge_errors.txt", ex.ToString())` بجانب logger. هذا يخرج عن logging pipeline وقد يفشل حسب صلاحيات container أو يسرّب stack traces محليًا.
 
-### P2-12: Frontend services فيها `any` كثير في admin DTOs
+الأثر:
 
-المكان:
-- `frontend/src/services/admin-service.ts:3`
-- `frontend/src/services/admin-service.ts:130-150`
-- `frontend/src/services/admin-service.ts:495-504`
+- مشاكل تشغيل في containers/read-only filesystems.
+- logs غير مركزية.
 
-المشكلة:
-- استخدام `any` يقلل حماية TypeScript على أهم سطح إداري.
+التوصية:
 
-التأثير:
-- تغييرات backend DTO قد تكسر UI في runtime فقط.
+- حذف الكتابة المباشرة، والاعتماد على structured logging provider.
+- تضمين correlation id فقط في response.
 
-الإصلاح:
-- توليد types من OpenAPI أو تشديد DTOs تدريجيا.
+### P2-6: Cron worker مكتوب كـ interval hourly رغم وصفه nightly
 
-## P3 - تحسينات
+الموقع:
 
-### P3-1: أسماء student theme تعتمد على admin tokens
+- `worker/src/index.ts:156-164`
 
-المكان:
-- `frontend/src/components/layout/StudentShellChrome.tsx:4-15`
-- `frontend/src/hooks/useStudentTheme.tsx`
+الوصف:
 
-المشكلة:
-- الطالب يستخدم `--admin-*` كمصدر tokens.
+الدالة تقول nightly sweep لكنها تعمل كل ساعة. التعليق يذكر simulated hourly، لكنه موجود في مسار worker العام.
 
-التأثير:
-- صعوبة صيانة الهوية البصرية وفصل الأسطح.
+الأثر:
 
-الإصلاح:
-- alias tokens: `--surface-*` أو `--student-*` مع mapping داخلي.
+- إنذار/حساب commitment أكثر من المتوقع.
+- ضغط زائد على DB.
 
-### P3-2: UI يستخدم rounded/glass/cards بشكل زائد
+التوصية:
 
-المكان:
-- صفحات admin/student متعددة، أمثلة: `frontend/src/app/student/code-redemption/packages/[packageId]/page.tsx`
+- استخدام BullMQ repeatable jobs أو cron حقيقي مضبوط env-driven.
+- فصل dev cadence عن production cadence.
 
-المشكلة:
-- مظهر متكرر وcard-heavy، أقل ملاءمة لواجهات تشغيلية كثيفة.
+### P2-7: video embed anti-download يعتمد على obfuscation وليس security boundary
 
-الإصلاح:
-- تمريرة normalize/arrange لتقليل nested cards وتحسين density.
+الموقع:
 
-### P3-3: بعض comments قديمة أو misleading
+- `frontend/src/app/api/video/embed/route.ts:20-31`
+- `frontend/src/app/api/video/embed/route.ts:117-260`
 
-المكان:
-- `frontend/src/utils/dom-shield.ts:4`
-- `frontend/src/components/video/SecureVideoPlayer.tsx:37-46`
+الوصف:
 
-المشكلة:
-- عبارات مثل "stop 99% of users" و"no YouTube URL" مبالغ فيها.
+الصفحة تولد HTML يتلاعب بـ DOM APIs ويخفي iframe ويفحص devtools. هذا يرفع الاحتكاك لكنه ليس حماية حقيقية؛ الـ stream/provider id يمكن استخلاصه من runtime دائمًا.
 
-التأثير:
-- توقعات أمان غير دقيقة.
+الأثر:
 
-الإصلاح:
-- استبدالها بتوصيف threat model حقيقي.
+- إحساس أمان مبالغ فيه.
+- احتمال كسر accessibility/debugging/browser compatibility.
 
-### P3-4: `pytest` requirements غير مفعلة تلقائيا
+التوصية:
 
-المكان:
-- `tests/requirements.txt`
+- التعامل معه كـ deterrence فقط.
+- الاعتماد الحقيقي يكون signed sessions قصيرة، watermark، watch limits server-side، وlogging.
 
-المشكلة:
-- tests موجودة لكن بيئة التشغيل لا تحتوي pytest.
+## P3 - تحسينات وصيانة
 
-الإصلاح:
-- أضف Make target/CI step: `python3 -m pip install -r tests/requirements.txt && python3 -m pytest`.
+### P3-1: warning لينت واحد
 
-### P3-5: endpoint inventory generated file مفيد لكنه ليس enforce gate
+الموقع:
 
-المكان:
-- `scripts/generate-endpoint-inventory.mjs`
-- `tests/test_endpoint_inventory.py`
+- `frontend/src/app/admin/users/[id]/page.tsx:8`
 
-المشكلة:
-- inventory موجود، لكن لا يوجد تأكيد أن كل endpoint له frontend service أو test.
+الوصف:
 
-الإصلاح:
-- أضف coverage matrix: endpoint -> service -> test.
+`Play` imported وغير مستخدم.
 
-### P3-6: Docker volumes declared external في root compose
+التوصية:
 
-المكان:
-- `docker-compose.yml:233-239`
+- حذف import.
 
-المشكلة:
-- `external: true` يتطلب إنشاء volumes مسبقا.
+### P3-2: ملفات build artifacts داخل backend tree
 
-التأثير:
-- `docker compose up` لأول مرة قد يفشل عند مستخدم جديد.
+الموقع:
 
-الإصلاح:
-- إما Make target ينشئ volumes، أو إزالة external في local profile.
+- `backend/src/**/bin`
+- `backend/src/**/obj`
 
-## مشاكل حسب السطح
+الوصف:
+
+وجود bin/obj داخل tree يزيد ضوضاء البحث والتقارير. قد تكون غير tracked، لكن تظهر في الفحص.
+
+التوصية:
+
+- التأكد من `.gitignore`.
+- تنظيف artifacts قبل audits/CI إن كانت غير لازمة.
+
+### P3-3: Playwright tests تستخدم waits ثابتة
+
+الموقع:
+
+- `frontend/tests/e2e/auth.spec.ts:6`
+- `frontend/tests/e2e/auth.spec.ts:31`
+- عدة ملفات E2E أخرى.
+
+الوصف:
+
+`waitForTimeout` يجعل الاختبارات أبطأ وأقل موثوقية.
+
+التوصية:
+
+- استبدالها بانتظار عناصر أو responses محددة.
+
+## ملاحظات حسب السطح
 
 ### Frontend عام
 
-- Auth state client-only؛ لا يدعم server routes التي تحتاج معرفة المستخدم.
-- raw `fetch` مستخدم في AI monitor بدلا من `apiClient`.
-- الاعتماد على localStorage واسع: auth, theme, onboarding, exam drafts.
-- `postMessage` وiframe player يحتاجان hardening.
-- بعض services تستعمل paths قديمة (`homework-service`).
+الإيجابيات:
+
+- `next build` ناجح.
+- lint errors = 0.
+- يوجد `StudentGuard` و`AdminGuard`.
+- يوجد sanitization في `ExamViewer` قبل `dangerouslySetInnerHTML`، وهذا جيد.
+
+المشاكل:
+
+- Auth tokens في browser storage.
+- `any` في service layer.
+- hard-coded colors وadmin tokens داخل student UI.
+- اختبار E2E غير متزامن مع ports/UI الحالي.
 
 ### Admin
 
-- AdminGuard غير كاف كـ permission model.
-- AI monitor غالبا مكسور بسبب worker proxy auth.
-- أزرار cancel/retry jobs تمر عبر proxy لا يتحقق من Admin role.
-- كثافة DTOs بـ `any` عالية.
-- بعض العمليات الحساسة مثل reset password لها validation أضعف من register.
+الإيجابيات:
+
+- endpoints محمية بـ `[Authorize(Roles = "Admin")]`.
+- worker proxy يتحقق من staff role قبل تمرير `WORKER_ADMIN_TOKEN`.
+
+المشاكل:
+
+- AI monitor ضخم ومليء CSS داخلي وnative confirms.
+- Student profile query فيه placeholders وN+1.
+- إجراءات خطرة تحتاج confirm dialog مع audit reason.
 
 ### Student
 
-- QR activation لا يعمل مع auth الحالي.
-- Homework pending/submit paths خاطئة.
-- video watch tracking يمكن تزويره client-side.
-- watch limit قد يسمح بمشاهدة إضافية.
-- student UI يعتمد على admin design tokens.
+الإيجابيات:
+
+- `StudentGuard` موجود.
+- backend endpoints عامة للطالب محمية بـ `[Authorize]`.
+- progress/exam/lesson locking موجود على backend وليس UI فقط.
+
+المشاكل:
+
+- student shell يعتمد على client auth.
+- dashboard/progress queries تحمل بيانات كثيرة.
+- community UI تستخدم admin visual system.
+- exam drafts في localStorage.
 
 ### Backend
 
-- Builds/tests سليمة، وهذا إيجابي.
-- أكبر المخاطر في concurrency وليس compile errors.
-- code redemption, purchase, balance, watch tracking تحتاج transactions/concurrency controls.
-- بعض custom auth لا يظهر كسياسات رسمية في inventory.
+الإيجابيات:
+
+- JWT validation وsecurity config validator موجودان.
+- rate limiting موجود على auth/codes/parent.
+- unit tests الحالية ناجحة.
+- callback/internal token validation موجود في controllers الحساسة.
+
+المشاكل:
+
+- بعض queries تحتاج projection وتحسين indexing.
+- refresh tokens مخزنة كقيمة مباشرة في DB حسب `LoginCommand` و`RefreshTokenCommand`; الأفضل hash refresh tokens في DB.
+- Exception middleware يكتب stack traces إلى `/tmp`.
+- tests تغطي 12 حالة فقط، أغلبها application logic حديث وليس auth/device/codes/watch limits.
 
 ### Worker
 
-- build ناجح.
-- auth الداخلي موجود في worker نفسه، لكن Next proxy قبله هو الحلقة الضعيفة.
-- logs تحتاج redaction.
-- retention قصير جدا للـ job diagnostics.
-- queue loops تعمل infinite loops بدون graceful shutdown واضح.
+الإيجابيات:
 
-### Docker/Ops
+- TypeScript build ناجح.
+- `WORKER_ADMIN_TOKEN` و`API_CALLBACK_SECRET` مطلوبان عند startup.
+- Bull Board محمي بتوكن.
 
-- فصل surfaces موجود لكنه runtime-level وليس build-level.
-- JWT expiry الافتراضي طويل جدا.
-- volumes external قد تصعب أول تشغيل.
-- أكثر من docker-compose file مع ports مختلفة قد يسبب confusion.
+المشاكل:
 
-## خطة علاج مقترحة
+- cancel لا يضمن إيقاف job نشط.
+- cron hourly رغم اسم nightly.
+- `.tmp` audio/subtitle lifecycle يحتاج retention/cleanup job.
+- استخدام `any` في AI payloads.
 
-### المرحلة 1 - إصلاحات حرجة
+## أولويات الإصلاح المقترحة
 
-1. إصلاح worker proxy:
-   - تحقق JWT ودور Admin/Teacher في Next route، أو انقل proxy للbackend.
-   - عدل raw fetch في admin إلى helper يضيف Authorization.
+1. **P1 - Auth hardening**: انقل refresh token إلى HttpOnly cookie، وابدأ في server-readable session strategy.
+2. **P1 - E2E repair**: أصلح Playwright baseURL/webServer/selectors/API DTOs، ثم اجعلها جزءًا من CI.
+3. **P1 - Query optimization**: حسّن Student dashboard/progress/quick-access وAdmin student profile باستخدام projections/batched queries.
+4. **P1 - Worker cancellation**: أضف cancellation state وفحصه في processor/backend callbacks.
+5. **P1 - Admin destructive actions UX**: استبدل confirm/prompt native بمكون confirm موحد مع reason/audit.
+6. **P2 - Type cleanup**: استبدل `any` في admin-service/video/worker payloads بـ DTOs.
+7. **P2 - Surface token normalization**: افصل student/community tokens عن admin tokens وأزل hard-coded blues.
+8. **P2 - Logging cleanup**: أزل الكتابة المباشرة لـ `/tmp` من middleware.
+9. **P3 - Cleanup**: حذف import غير مستخدم، تنظيف build artifacts، وتقليل `waitForTimeout`.
 
-2. إصلاح QR flow:
-   - اختيار strategy واحدة: HttpOnly cookies أو client-side redemption page.
+## أوامر التحقق التي تم تشغيلها
 
-3. إصلاح homework-service:
-   - استبدال paths القديمة بالمسارات الفعلية.
+```bash
+cd frontend && npm run lint
+cd frontend && npm run build
+cd worker && npm run build
+dotnet test backend/NaderGorge.sln --no-restore
+```
 
-4. تقليل JWT expiry الافتراضي:
-   - من `18000000` دقيقة إلى قيمة production معقولة.
+كلها نجحت، مع warning واحد فقط في lint.
 
-### المرحلة 2 - سلامة البيانات
+## ملفات يجب مراجعتها أولًا عند بدء الإصلاح
 
-1. إضافة transactions/locking لـ:
-   - `ActivateCodeCommand`
-   - `PurchaseContentCommand`
-   - `BalanceService`
-   - `TrackWatchProgressCommand`
-
-2. إضافة concurrency tests:
-   - redeem نفس الكود بطلبين متزامنين.
-   - شراءين بنفس الرصيد.
-   - watch progress deltas متضاربة.
-
-3. تعديل watch limit من `>` إلى behavior محدد ومختبر.
-
-### المرحلة 3 - Security hardening
-
-1. نقل refresh tokens إلى HttpOnly cookies.
-2. تشديد CSP.
-3. إزالة key من video embed query.
-4. تحويل internal-token checks إلى authorization filter/policy.
-5. مراجعة logs وإخفاء PII/AI content.
-
-### المرحلة 4 - Frontend/Admin/Student quality
-
-1. endpoint-service-test matrix.
-2. Playwright smoke flows:
-   - login student
-   - QR/code redemption
-   - homework submit
-   - video watch
-   - admin AI monitor
-   - admin user detail actions
-3. a11y/responsive pass على admin tables وstudent player.
-4. تقليل `any` في admin-service تدريجيا.
-
-## ملاحظات إيجابية
-
-- المشروع يبني بنجاح في frontend/backend/worker.
-- .NET tests الحالية ناجحة.
-- يوجد SecurityConfigurationValidator ويتحقق من secrets في non-development.
-- يوجد rate limiting لبعض endpoints الحساسة مثل auth/codes/video-session/public forms.
-- يوجد endpoint inventory script مفيد كبداية لحوكمة API.
-- يوجد محاولة واضحة لفصل surfaces في Docker/proxy.
-
-## الخلاصة
-
-المشكلة ليست أن المشروع "لا يعمل"؛ بالعكس build صحي. المشكلة أن هناك workflows أساسية معرضة للكسر أو race/security bugs في وقت التشغيل: QR, homework, worker monitor, code redemption, balance purchase, and video tracking.
-
-الأولوية العملية: ابدأ بـ P0 الثلاثة، ثم concurrency fixes، ثم hardening auth/video/session، ثم ارفع تغطية الاختبارات حول flows الحقيقية للطالب والأدمن.
-
-## حالة المعالجة - 2026-06-06
-
-مرجع التنفيذ التفصيلي: [083-deep-audit-remediation spec](../specs/083-deep-audit-remediation/spec.md) و[قائمة المهام](../specs/083-deep-audit-remediation/tasks.md).
-
-### تم إصلاحه
-
-- Worker proxy لم يعد يثق في وجود header فقط؛ أصبح يتحقق من `/api/auth/me` ويقبل أدوار `Admin` و`Teacher` فقط، مع helper موحد في الواجهة يرسل bearer token.
-- QR flow لم يعد يفعل الأكواد من Next API route server-side؛ route يوجه إلى صفحة redemption client-side تحترم حالة تسجيل الدخول و`returnUrl`.
-- Homework service يستخدم المسارات الفعلية `/homework/pending` و`/homework/{homeworkId}/submit`.
-- تفعيل الأكواد، شحن/خصم الرصيد، وشراء الباقات أصبحت داخل معاملات serializable مع تحديثات شرطية تمنع double redemption وoverspend.
-- مسارات video watch تقبل deltas معقولة فقط، وتغلق الفيديو عند الوصول إلى `MaxWatchCount` بالضبط.
-- public video session DTO لم يعد يعيد token/key؛ embed material ينتقل فقط عبر server-side endpoint محمي بـ `InternalTokenAuthorize`.
-- رسائل `postMessage` داخل secure player وembed HTML أصبحت تتحقق من origin ولا تستخدم wildcard target للرسائل بين الصفحة والإطار.
-- Internal callbacks وE2E endpoints أصبحت تستخدم filters مركزية، والـ endpoint inventory يصنفها `internal-token` و`e2e-token` بدل anonymous.
-- JWT expiry الافتراضي في Docker أصبح 60 دقيقة، وvalidator يرفض أكثر من 120 دقيقة خارج development.
-- Worker logs أصبحت تخفي URLs والحقول الحساسة والنصوص الطويلة، وتمت إزالة طباعة ردود Gemini الخام وروابط الفيديو الخام.
-- BullMQ retention زاد لدعم التشخيص الإداري، وأضيفت Makefile targets للجرد، اختبارات Python، Docker volumes، والتحقق الكامل.
-- Admin reset password يستخدم سياسة موحدة بحد أدنى 8 أحرف، وadmin/student UI لمسارات الباقات وطلبات المشاهدة حصلت على DTOs/tokens أوضح.
-
-### مؤجل عمداً
-
-- نقل refresh tokens بالكامل إلى HttpOnly cookies يحتاج migration أوسع لتخزين auth في الواجهة وتدوير الجلسات.
-- CSP شامل للواجهات يحتاج حصر مصادر الفيديو وTelegram/VK/YouTube بدقة حتى لا يكسر providers الحالية.
-- Playwright smoke suite كامل للطالب والأدمن لم يضف هنا؛ الاعتماد الحالي على Python E2E + build/lint/inventory.
-- فصل Docker على مستوى build images لكل surface بقي خارج هذا الإصلاح لأن الخطة الحالية ركزت على runtime safety والبوابات الحرجة.
+- `frontend/src/lib/auth-storage.ts`
+- `frontend/src/services/api-client.ts`
+- `frontend/playwright.config.ts`
+- `backend/src/NaderGorge.Application/Features/Student/Queries/GetDashboardQuery.cs`
+- `backend/src/NaderGorge.Application/Features/Student/Queries/GetProgressQuery.cs`
+- `backend/src/NaderGorge.Application/Features/Student/Queries/GetQuickAccessQuery.cs`
+- `backend/src/NaderGorge.Application/Features/Admin/Queries/GetStudentProfileDetailQuery.cs`
+- `worker/src/index.ts`
+- `frontend/src/app/admin/ai-monitor/page.tsx`
+- `frontend/src/components/student/CommunityFeed.tsx`
+- `frontend/src/components/student/CommunityPostComposer.tsx`

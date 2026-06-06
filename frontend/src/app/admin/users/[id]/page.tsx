@@ -624,6 +624,52 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                         emptyMessage="لا توجد باقات مسجلة لهذا الطالب"
                       />
                   </div>
+
+                  <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                     <div className="mb-5">
+                       <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل معاملات الرصيد</h3>
+                       <p className="text-[var(--admin-muted)]">سجل بكافة عمليات الإيداع، الخصم، التعديل اليدوي، واسترجاع المبالغ.</p>
+                     </div>
+
+                     <AdminDataTable<any>
+                        columns={[
+                          {key: 'transactionType', label: 'نوع العملية', render: (row) => {
+                            const types: Record<string, string> = {
+                              CodeRedemption: 'شحن كود',
+                              ContentPurchase: 'شراء باقة',
+                              AdminAdjustment: 'تعديل إداري',
+                              Refund: 'استرجاع رصيد'
+                            };
+                            return (
+                              <span className="font-bold text-[var(--admin-text)]">
+                                {types[row.transactionType] || row.transactionType}
+                              </span>
+                            );
+                          }},
+                          {key: 'amount', label: 'القيمة', render: (row) => {
+                            const isPositive = row.amount >= 0;
+                            return (
+                              <span className={`font-mono font-bold ${isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                {isPositive ? '+' : ''}{row.amount} ج.م
+                              </span>
+                            );
+                          }},
+                          {key: 'balanceAfter', label: 'الرصيد بعد العملية', render: (row) => (
+                            <span className="font-mono text-[var(--admin-text)]">{row.balanceAfter} ج.م</span>
+                          )},
+                          {key: 'description', label: 'البيان / الملاحظات', render: (row) => (
+                            <span className="text-sm text-[var(--admin-text)]">{row.description || '—'}</span>
+                          )},
+                          {key: 'adminName', label: 'بواسطة', render: (row) => (
+                            <span className="text-sm font-semibold text-[var(--admin-text)]">{row.adminName}</span>
+                          )},
+                          {key: 'createdAt', label: 'التاريخ والوقت', render: (row) => row.createdAt ? new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                        ]}
+                        data={studentData?.balanceTransactions || []}
+                        rowKey={(row) => row.id}
+                        emptyMessage="لا توجد عمليات رصيد مسجلة لهذا الطالب"
+                      />
+                  </div>
               </div>
           )}
          

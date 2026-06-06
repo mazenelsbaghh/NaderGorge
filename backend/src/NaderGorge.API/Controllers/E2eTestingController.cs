@@ -128,7 +128,7 @@ public class E2eTestingController : ControllerBase
         var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };
         var lesson2 = new Lesson { Id = lesson2Id, ContentSectionId = sectionId, Title = "E2E Lesson 2", Summary = "Essay lesson", Order = 1 };
-        var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "vimeo", ProviderVideoId = "12345", MaxWatchCount = 2, Order = 0 };
+        var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "youtube", ProviderVideoId = "dQw4w9WgXcQ", MaxWatchCount = 2, Order = 0 };
         var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5 };
         var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5 };
 
