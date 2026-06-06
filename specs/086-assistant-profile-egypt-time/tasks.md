@@ -106,7 +106,7 @@
 
 ## Phase 5: Polish, Build & Verification
 
-- [ ] T013 Verify the build compilation: run `npm run build` inside `frontend/` and build backend project. Fix any warnings or type check errors.
-- [ ] T014 Run Quickstart tests manually and document results.
+- [x] T013 Verify the build compilation: run `npm run build` inside `frontend/` and build backend project. Fix any warnings or type check errors.
+- [x] T014 Run Quickstart tests manually and document results.
 - [x] T015 [P] [US1] Security Hardening: Ensure `isStaff` checks `user.roles.length > 0` in `LoginForm.tsx`
 - [x] T016 [P] [US2] Performance Optimization: Add `.AsNoTracking()` to the database query in `GetUserAuditLogsQueryHandler.cs`
