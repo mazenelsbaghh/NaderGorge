@@ -28,6 +28,7 @@ import { RippleGrid } from '@/components/ui/ripple-grid';
 import { LoginForm } from '@/components/forms/LoginForm';
 import { FeatureCarousel } from '@/components/ui/feature-carousel';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
+import { getSurfaceOrigins } from '@/packages/surface-runtime/config';
 
 const LOGIN_STEPS = [
   {
@@ -53,14 +54,25 @@ export default function LoginPage() {
   useEffect(() => {
     if (isLoading) return;
     if (isAuthenticated) {
+      let returnUrl = '';
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        returnUrl = params.get('returnUrl') || '';
+      }
+      if (returnUrl) {
+        window.location.replace(returnUrl);
+        return;
+      }
+
+      const origins = getSurfaceOrigins();
       const hasAdmin = user?.roles?.length && !user.roles.includes('Student');
       if (hasAdmin) {
-        router.replace('/admin');
+        window.location.replace(`${origins.admin}/admin`);
       } else {
-        router.replace('/student');
+        window.location.replace(`${origins.student}/student`);
       }
     }
-  }, [isAuthenticated, isLoading, user, router]);
+  }, [isAuthenticated, isLoading, user]);
 
   if (isLoading || isAuthenticated) {
     return (

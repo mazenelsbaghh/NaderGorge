@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import { ShinyButton } from '@/components/ui/shiny-button';
+import { getSurfaceOrigins } from '@/packages/surface-runtime/config';
 
 export function LoginForm() {
   const router = useRouter();
@@ -70,7 +71,18 @@ export function LoginForm() {
         rememberMe
       );
 
-      router.push(isStaff ? '/admin' : '/student');
+      let targetUrl = '';
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        targetUrl = params.get('returnUrl') || '';
+      }
+
+      if (targetUrl) {
+        window.location.replace(targetUrl);
+      } else {
+        const origins = getSurfaceOrigins();
+        window.location.replace(isStaff ? `${origins.admin}/admin` : `${origins.student}/student`);
+      }
     } catch (error: unknown) {
       const message = isAxiosError<{ message?: string }>(error)
         ? error.response?.data?.message

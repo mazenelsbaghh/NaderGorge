@@ -41,10 +41,16 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
 
         var user = storedToken.User;
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
-        var newAccessToken = _tokens.GenerateAccessToken(user, roles);
+        var isStaff = roles.Any(r => !string.Equals(r, "Student", StringComparison.OrdinalIgnoreCase));
+
+        var newAccessToken = isStaff 
+            ? _tokens.GenerateAccessToken(user, roles)
+            : _tokens.GenerateAccessToken(user, roles, TimeSpan.FromDays(365));
         var newRefreshToken = _tokens.GenerateRefreshToken();
 
-        var refreshDays = int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30");
+        var refreshDays = isStaff 
+            ? int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30")
+            : 365;
         _db.RefreshTokens.Add(new Domain.Entities.RefreshToken
         {
             UserId = user.Id,

@@ -117,10 +117,14 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         }
 
         // --- Generate tokens ---
-        var accessToken = _tokens.GenerateAccessToken(user, roles);
+        var accessToken = isStaff 
+            ? _tokens.GenerateAccessToken(user, roles)
+            : _tokens.GenerateAccessToken(user, roles, TimeSpan.FromDays(365));
         var refreshToken = _tokens.GenerateRefreshToken();
 
-        var refreshDays = int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30");
+        var refreshDays = isStaff 
+            ? int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30")
+            : 365;
         _db.RefreshTokens.Add(new RefreshToken
         {
             UserId = user.Id,
