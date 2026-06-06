@@ -18,6 +18,8 @@ public record CreateFormCommand(
     string Slug,
     bool IsActive,
     string? CoverImageUrl,
+    DateTime? StartsAt,
+    DateTime? ExpiresAt,
     string FieldsJson
 ) : IRequest<ApiResponse<Guid>>;
 
@@ -62,6 +64,8 @@ public class CreateFormCommandHandler : IRequestHandler<CreateFormCommand, ApiRe
             Slug = request.Slug.ToLowerInvariant(),
             IsActive = request.IsActive,
             CoverImageUrl = request.CoverImageUrl,
+            StartsAt = request.StartsAt,
+            ExpiresAt = request.ExpiresAt,
             FieldsJson = request.FieldsJson
         };
 
@@ -80,6 +84,8 @@ public record UpdateFormCommand(
     string Slug,
     bool IsActive,
     string? CoverImageUrl,
+    DateTime? StartsAt,
+    DateTime? ExpiresAt,
     string FieldsJson
 ) : IRequest<ApiResponse>;
 
@@ -125,6 +131,8 @@ public class UpdateFormCommandHandler : IRequestHandler<UpdateFormCommand, ApiRe
         form.Slug = request.Slug.ToLowerInvariant();
         form.IsActive = request.IsActive;
         form.CoverImageUrl = request.CoverImageUrl;
+        form.StartsAt = request.StartsAt;
+        form.ExpiresAt = request.ExpiresAt;
         form.FieldsJson = request.FieldsJson;
 
         await _db.SaveChangesAsync(ct);

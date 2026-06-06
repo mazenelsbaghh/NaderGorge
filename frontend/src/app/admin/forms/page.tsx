@@ -81,6 +81,9 @@ export default function AdminFormsPage() {
         title: details.title,
         description: details.description,
         slug: details.slug,
+        coverImageUrl: details.coverImageUrl,
+        startsAt: details.startsAt,
+        expiresAt: details.expiresAt,
         fieldsJson: details.fieldsJson,
         isActive: !originalIsActive,
       });

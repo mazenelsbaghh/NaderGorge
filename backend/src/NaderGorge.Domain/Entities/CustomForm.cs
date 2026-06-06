@@ -10,6 +10,8 @@ public class CustomForm : BaseEntity
     public string Slug { get; set; } = null!;
     public bool IsActive { get; set; } = true;
     public string? CoverImageUrl { get; set; }
+    public System.DateTime? StartsAt { get; set; }
+    public System.DateTime? ExpiresAt { get; set; }
     public int VisitCount { get; set; }
     public string FieldsJson { get; set; } = null!; // JSON array representation of dynamic fields
 

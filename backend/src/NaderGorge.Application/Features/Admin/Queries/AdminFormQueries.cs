@@ -18,6 +18,8 @@ public record AdminFormDto(
     string Slug,
     bool IsActive,
     string? CoverImageUrl,
+    DateTime? StartsAt,
+    DateTime? ExpiresAt,
     int VisitCount,
     int SubmissionCount,
     DateTime CreatedAt
@@ -30,6 +32,8 @@ public record AdminFormDetailDto(
     string Slug,
     bool IsActive,
     string? CoverImageUrl,
+    DateTime? StartsAt,
+    DateTime? ExpiresAt,
     string FieldsJson,
     DateTime CreatedAt
 );
@@ -62,6 +66,8 @@ public class ListFormsQueryHandler : IRequestHandler<ListFormsQuery, ApiResponse
                 f.Slug,
                 f.IsActive,
                 f.CoverImageUrl,
+                f.StartsAt,
+                f.ExpiresAt,
                 f.VisitCount,
                 f.Submissions.Count,
                 f.CreatedAt
@@ -90,6 +96,8 @@ public class GetFormDetailsQueryHandler : IRequestHandler<GetFormDetailsQuery, A
                 f.Slug,
                 f.IsActive,
                 f.CoverImageUrl,
+                f.StartsAt,
+                f.ExpiresAt,
                 f.FieldsJson,
                 f.CreatedAt
             ))

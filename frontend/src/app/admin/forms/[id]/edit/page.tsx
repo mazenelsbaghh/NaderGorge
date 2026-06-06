@@ -3,7 +3,7 @@
 import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye, ClipboardList } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { AdminShellChrome, AdminPageSkeleton } from '@/components/admin';
@@ -14,6 +14,22 @@ interface EditFormPageProps {
   params: Promise<{ id: string }>;
 }
 
+const PREVIEW_GOVERNORATES = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'الدقهلية'];
+
+const formatForDateTimeLocal = (isoString?: string) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  
+  const yyyy = date.getFullYear();
+  const MM = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const mm = pad(date.getMinutes());
+  
+  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+};
+
 export default function EditFormPage({ params }: EditFormPageProps) {
   const { id } = use(params);
   const router = useRouter();
@@ -23,8 +39,14 @@ export default function EditFormPage({ params }: EditFormPageProps) {
   const [description, setDescription] = useState('');
   const [slug, setSlug] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [startsAt, setStartsAt] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // State for options adding item-by-item
+  const [newOptionTexts, setNewOptionTexts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const loadForm = async () => {
@@ -34,6 +56,9 @@ export default function EditFormPage({ params }: EditFormPageProps) {
         setDescription(data.description);
         setSlug(data.slug);
         setIsActive(data.isActive);
+        setCoverImageUrl(data.coverImageUrl || '');
+        setStartsAt(formatForDateTimeLocal(data.startsAt));
+        setExpiresAt(formatForDateTimeLocal(data.expiresAt));
         setFields(JSON.parse(data.fieldsJson || '[]'));
       } catch (error) {
         devConsole.error('Error loading form details:', error);
@@ -84,6 +109,91 @@ export default function EditFormPage({ params }: EditFormPageProps) {
     setFields(list);
   };
 
+  // Predefined fields quick insertion
+  const addPredefinedField = (type: 'name' | 'phone' | 'email' | 'gov_dist') => {
+    const now = Date.now();
+    if (type === 'name') {
+      const newField: FormFieldConfig = {
+        id: `field_name_${now}`,
+        type: 'text',
+        label: 'الاسم الكامل',
+        placeholder: 'اكتب اسمك ثلاثي أو رباعي هنا...',
+        isRequired: true,
+        options: [],
+      };
+      setFields([...fields, newField]);
+      toast.success('تم إضافة حقل الاسم الكامل');
+    } else if (type === 'phone') {
+      const newField: FormFieldConfig = {
+        id: `field_phone_${now}`,
+        type: 'phone',
+        label: 'رقم الهاتف (واتساب)',
+        placeholder: 'اكتب رقم الهاتف هنا...',
+        isRequired: true,
+        options: [],
+      };
+      setFields([...fields, newField]);
+      toast.success('تم إضافة حقل رقم الهاتف');
+    } else if (type === 'email') {
+      const newField: FormFieldConfig = {
+        id: `field_email_${now}`,
+        type: 'email',
+        label: 'البريد الإلكتروني',
+        placeholder: 'مثال: student@masar.com',
+        isRequired: true,
+        options: [],
+      };
+      setFields([...fields, newField]);
+      toast.success('تم إضافة حقل البريد الإلكتروني');
+    } else if (type === 'gov_dist') {
+      const hasGov = fields.some(f => f.type === 'governorate');
+      if (hasGov) {
+        toast.error('حقل المحافظة والحي موجود بالفعل بالنموذج');
+        return;
+      }
+      const newFieldGov: FormFieldConfig = {
+        id: `field_gov_${now}`,
+        type: 'governorate',
+        label: 'المحافظة',
+        isRequired: true,
+        options: [],
+      };
+      const newFieldDist: FormFieldConfig = {
+        id: `field_dist_${now + 1}`,
+        type: 'district',
+        label: 'المنطقة / الحي',
+        isRequired: true,
+        options: [],
+      };
+      setFields([...fields, newFieldGov, newFieldDist]);
+      toast.success('تم إضافة حقلي المحافظة والحي (مترابطين)');
+    }
+  };
+
+  // Dropdown options helpers
+  const handleAddOption = (fieldId: string) => {
+    const text = (newOptionTexts[fieldId] || '').trim();
+    if (!text) return;
+    const currentField = fields.find((f) => f.id === fieldId);
+    if (!currentField) return;
+
+    if (currentField.options.includes(text)) {
+      toast.error('هذا الخيار موجود بالفعل');
+      return;
+    }
+
+    updateField(fieldId, { options: [...currentField.options, text] });
+    setNewOptionTexts((prev) => ({ ...prev, [fieldId]: '' }));
+  };
+
+  const handleRemoveOption = (fieldId: string, optionIndex: number) => {
+    const currentField = fields.find((f) => f.id === fieldId);
+    if (!currentField) return;
+    updateField(fieldId, {
+      options: currentField.options.filter((_, idx) => idx !== optionIndex),
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return toast.error('يرجى إدخال عنوان النموذج');
@@ -105,6 +215,9 @@ export default function EditFormPage({ params }: EditFormPageProps) {
         description,
         slug: slug.trim().toLowerCase(),
         isActive,
+        coverImageUrl: coverImageUrl.trim() || undefined,
+        startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
         fieldsJson: JSON.stringify(fields),
       });
       toast.success('تم تحديث النموذج بنجاح');
@@ -133,7 +246,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
       activePath="/admin/forms"
       sectionLabel="النماذج المخصصة"
       pageTitle="تعديل النموذج"
-      subtitle={`أنت تقوم حالياً بتحديث نموذج "${title}"`}
+      subtitle="قم بتعديل وتحديث حقول وإعدادات النموذج المخصص."
       action={
         <button
           onClick={() => router.push('/admin/forms')}
@@ -154,9 +267,24 @@ export default function EditFormPage({ params }: EditFormPageProps) {
             </div>
 
             <div className="bg-[var(--admin-card-soft)] rounded-[1.5rem] p-6 border border-[var(--admin-border)] min-h-[400px]">
+              {coverImageUrl && (
+                <div className="mb-4 rounded-xl overflow-hidden h-32 border border-[var(--admin-border)] bg-[var(--admin-bg)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverImageUrl}
+                    alt="غلاف النموذج"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '';
+                      toast.error('تعذر تحميل صورة الغلاف في المعاينة، يرجى التأكد من الرابط');
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="mb-6 text-center">
                 <h3 className="text-xl font-bold text-[var(--admin-text-strong)]">
-                  {title || 'عنوان النموذج'}
+                  {title || 'عنوان النموذج الجديد'}
                 </h3>
                 {description && (
                   <p className="text-xs text-[var(--admin-muted)] mt-2 whitespace-pre-line">{description}</p>
@@ -165,8 +293,8 @@ export default function EditFormPage({ params }: EditFormPageProps) {
 
               {fields.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[250px] text-center opacity-40 select-none">
-                  <Plus className="h-12 w-12 mb-3 text-[var(--admin-muted)]" />
-                  <p className="text-sm">أضف حقولاً للنموذج لرؤية المعاينة</p>
+                  <ClipboardList className="h-12 w-12 mb-3 text-[var(--admin-muted)]" />
+                  <p className="text-sm">أضف حقولاً للنموذج من اللوحة الجانبية لرؤية المعاينة</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -236,6 +364,29 @@ export default function EditFormPage({ params }: EditFormPageProps) {
                         </select>
                       )}
 
+                      {f.type === 'governorate' && (
+                        <select
+                          disabled
+                          className="admin-input w-full pointer-events-none opacity-80"
+                        >
+                          <option value="">اختر المحافظة...</option>
+                          {PREVIEW_GOVERNORATES.map((gov, oIdx) => (
+                            <option key={oIdx} value={gov}>
+                              {gov}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {f.type === 'district' && (
+                        <select
+                          disabled
+                          className="admin-input w-full pointer-events-none opacity-80"
+                        >
+                          <option value="">اختر المنطقة / الحي...</option>
+                        </select>
+                      )}
+
                       {f.type === 'checkbox' && (
                         <label className="flex items-center gap-2 cursor-pointer pointer-events-none">
                           <input
@@ -293,7 +444,43 @@ export default function EditFormPage({ params }: EditFormPageProps) {
             </div>
 
             <div className="space-y-1 text-right">
-              <label className="text-xs font-bold text-[var(--admin-text)]">وصف النموذج</label>
+              <label className="text-xs font-bold text-[var(--admin-text)]">رابط صورة الغلاف (Cover Image URL)</label>
+              <input
+                type="text"
+                placeholder="مثال: https://images.unsplash.com/photo-... (رابط الصورة الغلاف)"
+                value={coverImageUrl}
+                onChange={(e) => setCoverImageUrl(e.target.value)}
+                className="admin-input w-full text-left"
+              />
+              <span className="text-[10px] text-[var(--admin-muted)]">
+                ضع رابط الصورة التي ترغب بظهورها كغلاف أعلى النموذج (اختياري).
+              </span>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1 text-right">
+                <label className="text-xs font-bold text-[var(--admin-text)]">تاريخ ووقت البدء التلقائي (اختياري)</label>
+                <input
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  className="admin-input w-full text-left"
+                />
+              </div>
+
+              <div className="space-y-1 text-right">
+                <label className="text-xs font-bold text-[var(--admin-text)]">تاريخ ووقت الانتهاء التلقائي (اختياري)</label>
+                <input
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  className="admin-input w-full text-left"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1 text-right">
+              <label className="text-xs font-bold text-[var(--admin-text)] block">وصف النموذج</label>
               <textarea
                 rows={3}
                 placeholder="اكتب تعليمات أو تفاصيل حول هذا النموذج للزوار..."
@@ -316,6 +503,44 @@ export default function EditFormPage({ params }: EditFormPageProps) {
             </div>
           </div>
 
+          {/* Quick predefined fields section */}
+          <div className="admin-panel space-y-4">
+            <div className="flex items-center gap-2 border-b border-[var(--admin-border)] pb-3">
+              <ClipboardList className="h-5 w-5 text-[var(--admin-primary)]" />
+              <h2 className="text-lg font-bold text-[var(--admin-text-strong)]">حقول جاهزة مسبقاً (إضافة سريعة)</h2>
+            </div>
+            <div className="flex flex-wrap gap-2.5">
+              <button
+                type="button"
+                onClick={() => addPredefinedField('name')}
+                className="px-3.5 py-2 rounded-xl bg-[var(--admin-card-strong)] hover:bg-[var(--admin-hover)] border border-[var(--admin-border)] text-xs font-bold text-[var(--admin-text)] transition"
+              >
+                + الاسم الكامل
+              </button>
+              <button
+                type="button"
+                onClick={() => addPredefinedField('phone')}
+                className="px-3.5 py-2 rounded-xl bg-[var(--admin-card-strong)] hover:bg-[var(--admin-hover)] border border-[var(--admin-border)] text-xs font-bold text-[var(--admin-text)] transition"
+              >
+                + رقم الهاتف (واتساب)
+              </button>
+              <button
+                type="button"
+                onClick={() => addPredefinedField('email')}
+                className="px-3.5 py-2 rounded-xl bg-[var(--admin-card-strong)] hover:bg-[var(--admin-hover)] border border-[var(--admin-border)] text-xs font-bold text-[var(--admin-text)] transition"
+              >
+                + البريد الإلكتروني
+              </button>
+              <button
+                type="button"
+                onClick={() => addPredefinedField('gov_dist')}
+                className="px-3.5 py-2 rounded-xl bg-[var(--admin-primary-soft)] hover:bg-[var(--admin-hover)] border border-[var(--admin-primary-15)] text-xs font-bold text-[var(--admin-primary)] transition"
+              >
+                + المحافظة والحي (مترابطين)
+              </button>
+            </div>
+          </div>
+
           {/* Fields Builder list */}
           <div className="admin-panel space-y-6">
             <div className="flex items-center justify-between border-b border-[var(--admin-border)] pb-4">
@@ -329,13 +554,13 @@ export default function EditFormPage({ params }: EditFormPageProps) {
                 className="flex items-center gap-1 bg-[var(--admin-primary-soft)] hover:bg-[var(--admin-primary-strong)] hover:text-white text-[var(--admin-primary)] font-bold rounded-2xl px-4 py-2 text-xs transition"
               >
                 <Plus className="h-4 w-4" />
-                إضافة حقل
+                إضافة حقل مخصص
               </button>
             </div>
 
             {fields.length === 0 ? (
               <div className="py-12 text-center text-[var(--admin-muted)] border border-dashed border-[var(--admin-border)] rounded-2xl">
-                لا توجد حقول حتى الآن. انقر على &quot;إضافة حقل&quot; للبدء في تصميم الحقول.
+                لا توجد حقول حتى الآن. انقر على &quot;إضافة حقل&quot; أو استخدم &quot;الحقول الجاهزة مسبقاً&quot; للبدء.
               </div>
             ) : (
               <div className="space-y-6">
@@ -399,6 +624,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
                             updateField(f.id, {
                               type: e.target.value as FormFieldType,
                               placeholder: e.target.value === 'checkbox' ? 'أوافق على الشروط والأحكام' : '',
+                              options: [],
                             })
                           }
                           className="admin-input w-full"
@@ -409,6 +635,8 @@ export default function EditFormPage({ params }: EditFormPageProps) {
                           <option value="email">بريد إلكتروني (Email)</option>
                           <option value="phone">رقم هاتف (Phone)</option>
                           <option value="select">قائمة خيارات (Dropdown)</option>
+                          <option value="governorate">المحافظة (Egypt Governorates)</option>
+                          <option value="district">المنطقة / الحي (Egypt Districts)</option>
                           <option value="checkbox">مربع خيار (Checkbox)</option>
                         </select>
                       </div>
@@ -423,32 +651,59 @@ export default function EditFormPage({ params }: EditFormPageProps) {
                           onChange={(e) => updateField(f.id, { placeholder: e.target.value })}
                           className="admin-input w-full"
                           placeholder={f.type === 'checkbox' ? 'مثال: أوافق على شروط التوظيف' : 'مثال: اكتب هنا...'}
+                          disabled={f.type === 'governorate' || f.type === 'district'}
                         />
                       </div>
                     </div>
 
                     {f.type === 'select' && (
-                      <div className="space-y-1 border-t border-[var(--admin-border)] pt-3">
+                      <div className="space-y-2 border-t border-[var(--admin-border)] pt-3">
                         <label className="text-xs font-bold text-[var(--admin-text)]">
-                          خيارات القائمة المنسدلة (مفصولة بفواصل)
+                          خيارات القائمة المنسدلة (إضافة عنصر تلو الآخر)
                         </label>
-                        <input
-                          type="text"
-                          value={f.options.join(', ')}
-                          onChange={(e) =>
-                            updateField(f.id, {
-                              options: e.target.value
-                                .split(',')
-                                .map((opt) => opt.trim())
-                                .filter((opt) => opt !== ''),
-                            })
-                          }
-                          className="admin-input w-full"
-                          placeholder="مثال: خيار أول, خيار ثاني, خيار ثالث"
-                        />
-                        <span className="text-[10px] text-[var(--admin-muted)] block mt-1">
-                          افصل بين كل خيار والآخر بفاصلة لكي تظهر كعناصر مستقلة في المعاينة والنموذج.
-                        </span>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newOptionTexts[f.id] || ''}
+                            onChange={(e) =>
+                              setNewOptionTexts((prev) => ({ ...prev, [f.id]: e.target.value }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddOption(f.id);
+                              }
+                            }}
+                            className="admin-input flex-1"
+                            placeholder="اكتب خياراً ثم اضغط إضافة أو مفتاح Enter..."
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddOption(f.id)}
+                            className="px-4 py-2 bg-[var(--admin-primary)] text-white rounded-xl text-xs font-bold hover:opacity-90"
+                          >
+                            إضافة خيار
+                          </button>
+                        </div>
+                        {f.options.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2 bg-[var(--admin-card-strong)] p-2 rounded-xl border border-[var(--admin-border)]">
+                            {f.options.map((opt, optIdx) => (
+                              <div
+                                key={optIdx}
+                                className="flex items-center gap-1.5 bg-[var(--admin-bg)] px-2.5 py-1 rounded-lg text-xs font-bold border border-[var(--admin-border)] text-[var(--admin-text)]"
+                              >
+                                <span>{opt}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveOption(f.id, optIdx)}
+                                  className="text-rose-500 hover:text-rose-700 font-bold ml-1 text-sm leading-none"
+                                >
+                                  &times;
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -483,7 +738,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
               className="admin-btn-primary disabled:opacity-50"
               disabled={saving}
             >
-              {saving ? 'جاري حفظ التعديلات...' : 'حفظ التعديلات ونشرها'}
+              {saving ? 'جاري الحفظ...' : 'حفظ ونشر النموذج'}
             </button>
           </div>
         </div>

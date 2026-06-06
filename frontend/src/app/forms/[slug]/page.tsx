@@ -6,6 +6,7 @@ import { ClipboardCheck, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react
 import toast from 'react-hot-toast';
 
 import { getPublicForm, submitPublicForm, FormFieldConfig, PublicFormDto } from '@/services/forms-service';
+import { GOVERNORATE_DISTRICTS, getDistrictsForGovernorate } from '@/data/governorate-districts';
 
 interface PublicFormPageProps {
   params: Promise<{ slug: string }>;
@@ -29,6 +30,7 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     const loadForm = async () => {
@@ -44,8 +46,10 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
           initialAnswers[f.id] = '';
         });
         setAnswers(initialAnswers);
-      } catch {
+      } catch (error: any) {
         setForm(null);
+        const message = error.response?.data?.message || 'عذراً، هذا النموذج غير موجود أو تم إغلاق باب التسجيل به حالياً من قبل الإدارة.';
+        setErrorMessage(message);
       } finally {
         setLoading(false);
       }
@@ -82,7 +86,6 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
             isValid = false;
           }
         } else if (field.type === 'phone') {
-          // Allow spaces, digits, and leading +
           const phoneRegex = /^[0-9+ ]{8,15}$/;
           if (!phoneRegex.test(val)) {
             nextErrors[field.id] = 'رقم الهاتف غير صالح (يجب أن يحتوي على أرقام فقط وبطول مناسب)';
@@ -135,8 +138,8 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
           </div>
           <div className="space-y-2">
             <h1 className="text-2xl font-black text-[var(--admin-text)]">النموذج غير متوفر</h1>
-            <p className="text-sm text-[var(--admin-muted)]">
-              عذراً، هذا النموذج غير موجود أو تم إغلاق باب التسجيل به حالياً من قبل الإدارة.
+            <p className="text-sm text-[var(--admin-muted)] leading-relaxed">
+              {errorMessage}
             </p>
           </div>
         </div>
@@ -159,11 +162,24 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
               transition={{ duration: 0.4 }}
               className="bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] p-8 md:p-10 shadow-sm"
             >
+              {form.coverImageUrl && (
+                <div className="mb-6 rounded-2xl overflow-hidden h-48 border border-[var(--admin-border)] shadow-inner bg-[var(--admin-bg)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={form.coverImageUrl}
+                    alt={form.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+
               {/* Header */}
               <div className="text-center mb-8 border-b border-[var(--admin-border)] pb-6">
-                <div className="w-12 h-12 rounded-full bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] flex items-center justify-center mx-auto shadow-sm mb-4">
-                  <ClipboardCheck className="h-6 w-6" />
-                </div>
+                {!form.coverImageUrl && (
+                  <div className="w-12 h-12 rounded-full bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] flex items-center justify-center mx-auto shadow-sm mb-4">
+                    <ClipboardCheck className="h-6 w-6" />
+                  </div>
+                )}
                 <h1 className="text-2xl md:text-3xl font-black text-[var(--admin-text)] tracking-tight">{form.title}</h1>
                 {form.description && (
                   <p className="text-xs text-[var(--admin-muted)] mt-3 leading-relaxed whitespace-pre-line">{form.description}</p>
@@ -266,6 +282,56 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                         </select>
                       )}
 
+                      {field.type === 'governorate' && (
+                        <select
+                          id={fieldInputId}
+                          value={answers[field.id] || ''}
+                          onChange={(e) => {
+                            handleInputChange(field.id, e.target.value);
+                            const districtField = fields.find((fd) => fd.type === 'district');
+                            if (districtField) {
+                              handleInputChange(districtField.id, '');
+                            }
+                          }}
+                          aria-invalid={hasError}
+                          aria-describedby={hasError ? fieldErrorId : undefined}
+                          className={`${inputBaseClass} ${fieldBorderClass(hasError)}`}
+                        >
+                          <option value="">اختر المحافظة...</option>
+                          {Object.keys(GOVERNORATE_DISTRICTS).map((gov) => (
+                            <option key={gov} value={gov}>
+                              {gov}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {field.type === 'district' && (() => {
+                        const govField = fields.find((fd) => fd.type === 'governorate');
+                        const selectedGov = govField ? answers[govField.id] : '';
+                        const districts = selectedGov ? getDistrictsForGovernorate(selectedGov) : [];
+                        return (
+                          <select
+                            id={fieldInputId}
+                            value={answers[field.id] || ''}
+                            onChange={(e) => handleInputChange(field.id, e.target.value)}
+                            disabled={!selectedGov}
+                            aria-invalid={hasError}
+                            aria-describedby={hasError ? fieldErrorId : undefined}
+                            className={`${inputBaseClass} ${fieldBorderClass(hasError)}`}
+                          >
+                            <option value="">
+                              {selectedGov ? 'اختر المنطقة / الحي...' : 'اختر المحافظة أولاً'}
+                            </option>
+                            {districts.map((dist) => (
+                              <option key={dist} value={dist}>
+                                {dist}
+                              </option>
+                            ))}
+                          </select>
+                        );
+                      })()}
+
                       {field.type === 'checkbox' && (
                         <label className="flex items-start gap-2.5 cursor-pointer py-1 px-1">
                           <input
@@ -299,47 +365,36 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                   );
                 })}
 
-                <div className="pt-4">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] rounded-2xl py-4 font-black shadow-sm transition-colors hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>جاري إرسال البيانات...</span>
-                      </>
-                    ) : (
-                      <span>إرسال الطلب الآن</span>
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2 bg-[var(--admin-primary)] text-white hover:bg-[var(--admin-primary-strong)] h-12 rounded-2xl font-bold transition-all hover:shadow-lg hover:shadow-[var(--admin-primary-15)] disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>جاري إرسال الطلب...</span>
+                    </>
+                  ) : (
+                    <span>تقديم الطلب</span>
+                  )}
+                </button>
               </form>
             </motion.div>
           ) : (
-            /* Success State */
             <motion.div
               key="success-container"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
               className="bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] p-10 text-center shadow-sm space-y-6"
             >
-              <div className="w-20 h-20 rounded-full bg-[var(--admin-success-10)] text-[var(--admin-success)] flex items-center justify-center mx-auto shadow-sm">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="h-10 w-10" />
               </div>
-
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <h2 className="text-2xl font-black text-[var(--admin-text)]">تم استلام طلبك بنجاح!</h2>
-                <p className="text-sm text-[var(--admin-muted)] leading-relaxed max-w-sm mx-auto">
-                  شكرًا لاهتمامك. لقد تم تسجيل إجاباتك بنجاح في النظام، وسنقوم بمراجعة البيانات وتفاصيل طلبك والتواصل معك في أقرب وقت ممكن.
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-[var(--admin-border)]">
-                <p className="text-[10px] font-black tracking-[0.1em] text-[var(--admin-muted)]">
-                  Massar Academy
+                <p className="text-sm text-[var(--admin-muted)]">
+                  نشكرك على ملء النموذج. تم تسجيل بياناتك بنجاح وسنقوم بمراجعتها في أقرب وقت.
                 </p>
               </div>
             </motion.div>

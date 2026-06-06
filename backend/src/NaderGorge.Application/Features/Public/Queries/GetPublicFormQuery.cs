@@ -14,6 +14,8 @@ public record PublicFormDto(
     string Title,
     string Description,
     string? CoverImageUrl,
+    DateTime? StartsAt,
+    DateTime? ExpiresAt,
     string FieldsJson
 );
 
@@ -28,10 +30,23 @@ public class GetPublicFormQueryHandler : IRequestHandler<GetPublicFormQuery, Api
     {
         var lowerSlug = request.Slug.ToLowerInvariant();
         var form = await _db.CustomForms
-            .Where(f => f.Slug == lowerSlug && f.IsActive)
+            .Where(f => f.Slug == lowerSlug)
             .FirstOrDefaultAsync(ct);
 
-        if (form == null) return ApiResponse<PublicFormDto>.Fail("النموذج المطلوب غير موجود أو غير مفعل حالياً.");
+        if (form == null || !form.IsActive) 
+            return ApiResponse<PublicFormDto>.Fail("النموذج المطلوب غير موجود أو غير مفعل حالياً.");
+
+        var now = DateTime.UtcNow;
+        if (form.StartsAt.HasValue && form.StartsAt.Value > now)
+        {
+            var localTime = form.StartsAt.Value.AddHours(2);
+            return ApiResponse<PublicFormDto>.Fail($"عذراً، هذا النموذج لم يبدأ بعد. سيبدأ استقبال الطلبات في {localTime:yyyy-MM-dd HH:mm}.");
+        }
+
+        if (form.ExpiresAt.HasValue && form.ExpiresAt.Value < now)
+        {
+            return ApiResponse<PublicFormDto>.Fail("عذراً، لقد انتهت صلاحية هذا النموذج وتم إغلاق استقبال الطلبات به.");
+        }
 
         form.VisitCount += 1;
         form.UpdatedAt = DateTime.UtcNow;
@@ -42,6 +57,8 @@ public class GetPublicFormQueryHandler : IRequestHandler<GetPublicFormQuery, Api
             form.Title,
             form.Description,
             form.CoverImageUrl,
+            form.StartsAt,
+            form.ExpiresAt,
             form.FieldsJson
         ));
     }

@@ -1,6 +1,6 @@
 import apiClient from './api-client';
 
-export type FormFieldType = 'text' | 'longtext' | 'number' | 'email' | 'phone' | 'select' | 'checkbox';
+export type FormFieldType = 'text' | 'longtext' | 'number' | 'email' | 'phone' | 'select' | 'checkbox' | 'governorate' | 'district';
 
 export interface FormFieldConfig {
   id: string;
@@ -17,6 +17,9 @@ export interface CustomFormDto {
   description: string;
   slug: string;
   isActive: boolean;
+  coverImageUrl?: string;
+  startsAt?: string;
+  expiresAt?: string;
   visitCount: number;
   submissionCount: number;
   createdAt: string;
@@ -28,6 +31,9 @@ export interface CustomFormDetailDto {
   description: string;
   slug: string;
   isActive: boolean;
+  coverImageUrl?: string;
+  startsAt?: string;
+  expiresAt?: string;
   fieldsJson: string; // JSON array of FormFieldConfig
   createdAt: string;
 }
@@ -47,6 +53,9 @@ export interface PublicFormDto {
   id: string;
   title: string;
   description: string;
+  coverImageUrl?: string;
+  startsAt?: string;
+  expiresAt?: string;
   fieldsJson: string; // JSON array of FormFieldConfig
 }
 
@@ -74,6 +83,9 @@ export async function createAdminForm(form: {
   description: string;
   slug: string;
   isActive: boolean;
+  coverImageUrl?: string;
+  startsAt?: string;
+  expiresAt?: string;
   fieldsJson: string;
 }): Promise<string> {
   const { data } = await apiClient.post<{ data: string }>('/admin/forms', form);
@@ -90,6 +102,9 @@ export async function updateAdminForm(
     description: string;
     slug: string;
     isActive: boolean;
+    coverImageUrl?: string;
+    startsAt?: string;
+    expiresAt?: string;
     fieldsJson: string;
   }
 ): Promise<void> {
