@@ -7,6 +7,31 @@ description: Connect and manage the Nader Gorge production server via SSH. Use f
 
 This skill provides structured workflows for connecting to and managing the Nader Gorge production server.
 
+## 🚀 Quick Deploy (Recommended)
+
+Use the built-in deploy script for one-command deployments:
+
+```bash
+# Full deploy: push to git + migrate + rebuild Docker
+bash ".agents/skills/ssh-server/scripts/deploy.sh"
+
+# Deploy without running migrations
+bash ".agents/skills/ssh-server/scripts/deploy.sh" --no-migrate
+
+# Run migrations only (no push, no rebuild)
+bash ".agents/skills/ssh-server/scripts/deploy.sh" --migrate-only
+```
+
+**The script does automatically:**
+1. 📤 Push current branch → GitHub (`origin`)
+2. 📤 Push current branch → Production server (`prod`)
+3. 🔄 Checkout latest code on server
+4. 🗄️ Run EF Core migrations (via `migrator` Docker profile)
+5. 🐳 Rebuild & restart all Docker containers
+6. ✅ Health-check all containers
+
+---
+
 ## Server Credentials
 
 ```
