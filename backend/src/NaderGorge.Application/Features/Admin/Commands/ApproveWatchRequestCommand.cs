@@ -3,10 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record ApproveWatchRequestCommand(Guid RequestId) : IRequest<ApiResponse<bool>>;
+public record ApproveWatchRequestCommand(Guid RequestId, Guid AdminId) : IRequest<ApiResponse<bool>>;
 
 public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchRequestCommand, ApiResponse<bool>>
 {
@@ -44,6 +45,19 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
             if (maxLimit > 0)
             {
                 watchEvent.CustomMaxWatchCount = maxLimit + 1;
+
+                var videoOverride = new VideoOverride
+                {
+                    UserId = req.UserId,
+                    LessonVideoId = req.LessonVideoId,
+                    OriginalLimit = maxLimit,
+                    NewLimit = watchEvent.CustomMaxWatchCount.Value,
+                    AddedViews = 1,
+                    Reason = "قبول طلب مشاهدة إضافية من الطالب",
+                    PerformedByUserId = request.AdminId,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.VideoOverrides.Add(videoOverride);
             }
         }
 

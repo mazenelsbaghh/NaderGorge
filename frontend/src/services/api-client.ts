@@ -4,12 +4,14 @@ import toast from 'react-hot-toast';
 import {
   clearStoredAuth,
   getStoredAccessToken,
+  replaceStoredTokens,
 } from '@/lib/auth-storage';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -43,13 +45,30 @@ apiClient.interceptors.response.use(
 
     if (
       error.response?.status === 401 &&
+      !originalRequest?._retry &&
       !shouldBypassAuthRefresh
     ) {
-      clearStoredAuth();
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      originalRequest._retry = true;
+
+      try {
+        const { data } = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
+
+        replaceStoredTokens(data.data.accessToken);
+
+        originalRequest.headers = originalRequest.headers ?? {};
+        originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+        return apiClient(originalRequest);
+      } catch {
+        clearStoredAuth();
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
       }
-      return Promise.reject(error);
     }
 
     const status = error.response?.status;

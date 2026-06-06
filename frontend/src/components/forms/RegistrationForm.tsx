@@ -371,7 +371,7 @@ export function RegistrationForm() {
         deviceName: navigator.userAgent.slice(0, 100),
       });
 
-      const { accessToken, refreshToken, user } = loginRes.data.data;
+      const { accessToken, user } = loginRes.data.data;
 
       setAuth(
         {

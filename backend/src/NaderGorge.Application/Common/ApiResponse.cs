@@ -20,6 +20,14 @@ public class ApiResponse<T>
         Message = message,
         Errors = errors
     };
+
+    public static ApiResponse<T> Fail(string message, List<string>? errors, T? data) => new()
+    {
+        Success = false,
+        Message = message,
+        Errors = errors,
+        Data = data
+    };
 }
 
 public class ApiResponse : ApiResponse<object>

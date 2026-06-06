@@ -301,7 +301,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         watchCountRef.current = data.currentCount;
         setWatchInfo(prev => ({
           current: data.currentCount,
-          max: prev?.max || data.maxCount,
+          max: data.maxCount ?? prev?.max ?? 0,   // always prefer fresh server value
           isLocked: data.isLocked
         }));
         const total = data.totalTrackedSeconds ?? actualWatchedSeconds.current;
@@ -506,7 +506,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const errors = err.response?.data?.errors || [];
       if (errors.includes('WATCH_LIMIT_REACHED')) {
         setStatus('locked');
-        setWatchInfo(prev => ({ current: prev?.current || 3, max: prev?.max || 3, isLocked: true }));
+        // Use real watchInfo from the error response data (backend includes it even when locked)
+        const lockData = err.response?.data?.data?.watchInfo;
+        setWatchInfo(prev => ({
+          current: lockData?.currentCount ?? prev?.current ?? 0,
+          max: lockData?.maxCount ?? prev?.max ?? 0,
+          isLocked: true
+        }));
         return;
       }
       

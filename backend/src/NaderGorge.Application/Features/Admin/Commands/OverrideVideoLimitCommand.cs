@@ -56,6 +56,19 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
         watchEvent.CustomMaxWatchCount = oldLimit + request.AddedViews;
         watchEvent.IsLocked = false;
 
+        var videoOverride = new VideoOverride
+        {
+            UserId = request.UserId,
+            LessonVideoId = request.VideoId,
+            OriginalLimit = oldLimit,
+            NewLimit = watchEvent.CustomMaxWatchCount.Value,
+            AddedViews = request.AddedViews,
+            Reason = request.Reason,
+            PerformedByUserId = request.AdminId,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.VideoOverrides.Add(videoOverride);
+
         // Write to AuditLog
         var audit = new AuditLog
         {

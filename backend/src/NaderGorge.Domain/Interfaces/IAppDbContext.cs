@@ -53,6 +53,7 @@ public interface IAppDbContext
     DbSet<ExtraWatchRequest> ExtraWatchRequests { get; }
     DbSet<LessonProgress> LessonProgresses { get; }
     DbSet<VideoPlaybackSession> VideoPlaybackSessions { get; }
+    DbSet<VideoOverride> VideoOverrides { get; }
     
     // Exams
     DbSet<Exam> Exams { get; }

@@ -31,3 +31,20 @@ public class LessonProgress : BaseEntity
     // Support Teacher/Assistant-Controlled Gating
     public bool IsManuallyUnlocked { get; set; }
 }
+
+public class VideoOverride : BaseEntity
+{
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+
+    public Guid LessonVideoId { get; set; }
+    public LessonVideo LessonVideo { get; set; } = null!;
+
+    public int OriginalLimit { get; set; }
+    public int NewLimit { get; set; }
+    public int AddedViews { get; set; }
+    public string Reason { get; set; } = string.Empty;
+
+    public Guid PerformedByUserId { get; set; }
+    public User PerformedByUser { get; set; } = null!;
+}

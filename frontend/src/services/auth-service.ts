@@ -62,7 +62,7 @@ export interface ResetPasswordData {
 export const authService = {
   register: (data: RegisterData) => apiClient.post('/auth/register', data),
   login: (data: LoginData) => apiClient.post('/auth/login', data),
-  refresh: (refreshToken: string) => apiClient.post('/auth/refresh', { refreshToken }),
+  refresh: () => apiClient.post('/auth/refresh', {}),
   completeProfile: (data: CompleteProfileData) => apiClient.post('/auth/complete-profile', data),
   activateCode: (code: string) => apiClient.post('/codes/activate', { code }),
   verifyResetFields: (data: VerifyResetFieldsData) => apiClient.post('/auth/verify-reset-fields', data),

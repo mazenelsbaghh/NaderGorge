@@ -6,7 +6,7 @@
  * Uses auth.css utility classes (.auth-input, .auth-label, .auth-btn-primary …)
  * and inline --admin-* CSS vars (injected by parent page via useAuthTheme).
  *
- * API: POST /auth/login → { accessToken, refreshToken, user }
+ * API: POST /auth/login → { accessToken, user } plus an HttpOnly refresh cookie.
  * On success: redirects Admin/Teacher to /admin, Students to /student.
  */
 
@@ -45,7 +45,7 @@ export function LoginForm() {
         deviceName: navigator.userAgent.slice(0, 100),
       });
 
-      const { accessToken, refreshToken, user } = data.data;
+      const { accessToken, user } = data.data;
 
       // Role-based check
       const isStaff = ['Admin', 'Teacher', 'Assistant'].some((r) =>

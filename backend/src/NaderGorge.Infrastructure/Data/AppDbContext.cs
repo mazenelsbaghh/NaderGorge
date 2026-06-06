@@ -57,6 +57,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ExtraWatchRequest> ExtraWatchRequests => Set<ExtraWatchRequest>();
     public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
     public DbSet<VideoPlaybackSession> VideoPlaybackSessions => Set<VideoPlaybackSession>();
+    public DbSet<VideoOverride> VideoOverrides => Set<VideoOverride>();
     
     // Exams
     public DbSet<Exam> Exams => Set<Exam>();
@@ -475,6 +476,17 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(l => new { l.UserId, l.LessonId }).IsUnique();
             e.HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId);
             e.HasOne(l => l.Lesson).WithMany().HasForeignKey(l => l.LessonId);
+        });
+
+        modelBuilder.Entity<VideoOverride>(e =>
+        {
+            e.ToTable("video_overrides");
+            e.HasKey(o => o.Id);
+            e.HasIndex(o => o.UserId);
+            e.HasIndex(o => o.LessonVideoId);
+            e.HasOne(o => o.User).WithMany().HasForeignKey(o => o.UserId);
+            e.HasOne(o => o.LessonVideo).WithMany().HasForeignKey(o => o.LessonVideoId);
+            e.HasOne(o => o.PerformedByUser).WithMany().HasForeignKey(o => o.PerformedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // Exam
