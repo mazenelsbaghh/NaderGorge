@@ -1,7 +1,8 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
-import { useEffect, useState } from 'react';
+
+import { useEffect, useState, useCallback } from 'react';
 import {
   Download,
 
@@ -16,6 +17,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { AddUserDrawer } from './components/AddUserDrawer';
 
 import {
   AdminShellChrome,
@@ -83,42 +85,35 @@ export default function AdminUsersPage() {
   const [governorateFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [confirmUser, setConfirmUser] = useState<AdminUserListDto | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setLoadError(false);
+      const data = await adminService.listUsers(
+        1,
+        1000,
+        search,
+        educationStageFilter || undefined,
+        gradeLevelFilter || undefined,
+        studyTrackFilter || undefined,
+        genderFilter || undefined,
+        governorateFilter || undefined
+      );
+      setUsers(data.items);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, educationStageFilter, gradeLevelFilter, studyTrackFilter, genderFilter, governorateFilter]);
 
   useEffect(() => {
     let isMounted = true;
-
-    async function fetchUsers() {
-      try {
-        setLoading(true);
-        setLoadError(false);
-        const data = await adminService.listUsers(
-          1,
-          1000,
-          search,
-          educationStageFilter || undefined,
-          gradeLevelFilter || undefined,
-          studyTrackFilter || undefined,
-          genderFilter || undefined,
-          governorateFilter || undefined
-        );
-        if (!isMounted) return;
-
-        setUsers(data.items);
-      } catch {
-        setLoadError(true);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchUsers();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [search, educationStageFilter, gradeLevelFilter, studyTrackFilter, genderFilter, governorateFilter]);
+    fetchUsers().finally(() => { if (!isMounted) return; });
+    return () => { isMounted = false; };
+  }, [fetchUsers]);
 
   async function handleViewDevices(user: AdminUserListDto) {
     setDeviceModalUser(user);
@@ -247,12 +242,17 @@ export default function AdminUsersPage() {
       pageTitle="قائمة المستخدمين"
       subtitle="إدارة وتدقيق الوصول إلى النظام والبيانات الأكاديمية."
       action={
-        <NeumorphButton intent="primary" size="lg" pill>
+        <NeumorphButton intent="primary" size="lg" pill onClick={() => setShowAddUser(true)}>
           <UserPlus className="h-4 w-4" />
-          دعوة عضو جديد
+          إضافة مستخدم
         </NeumorphButton>
       }
     >
+      <AddUserDrawer
+        open={showAddUser}
+        onClose={() => setShowAddUser(false)}
+        onSuccess={() => fetchUsers()}
+      />
       <ConfirmDialog
         open={!!confirmUser}
         title={confirmUser?.status === 'Active' ? 'تعليق حساب مستخدم؟' : 'تنشيط حساب مستخدم؟'}

@@ -16,6 +16,8 @@ export function CommunityCommentsModerationTable() {
   const [comments, setComments] = useState<ModerationCommunityCommentDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [rejectingCommentId, setRejectingCommentId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const loadComments = useCallback(async () => {
     setLoading(true);
@@ -42,21 +44,22 @@ export function CommunityCommentsModerationTable() {
     }
   }, [loadComments]);
 
-  const handleReject = useCallback(async (commentId: string) => {
-    const reason = window.prompt('سبب الرفض');
-    if (!reason?.trim()) {
+  const handleReject = useCallback(async () => {
+    if (!rejectingCommentId || !rejectReason.trim()) {
       return;
     }
 
-    setActingId(commentId);
+    setActingId(rejectingCommentId);
     try {
-      await adminService.rejectCommunityComment(commentId, reason.trim());
+      await adminService.rejectCommunityComment(rejectingCommentId, rejectReason.trim());
       toast.success('تم رفض التعليق.');
+      setRejectingCommentId(null);
+      setRejectReason('');
       await loadComments();
     } finally {
       setActingId(null);
     }
-  }, [loadComments]);
+  }, [loadComments, rejectReason, rejectingCommentId]);
 
   const columns = useMemo<AdminColumn<ModerationCommunityCommentDto>[]>(() => [
     {
@@ -98,7 +101,10 @@ export function CommunityCommentsModerationTable() {
           <button
             type="button"
             disabled={actingId === row.id}
-            onClick={() => void handleReject(row.id)}
+            onClick={() => {
+              setRejectingCommentId(row.id);
+              setRejectReason('');
+            }}
             className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-4 py-2 text-xs font-black text-[var(--admin-danger)] transition hover:brightness-110 disabled:opacity-60"
           >
             <ShieldX className="h-4 w-4" />
@@ -107,7 +113,7 @@ export function CommunityCommentsModerationTable() {
         </div>
       ),
     },
-  ], [actingId, handleApprove, handleReject]);
+  ], [actingId, handleApprove]);
 
   return (
     <section className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
@@ -135,6 +141,62 @@ export function CommunityCommentsModerationTable() {
         rowKey={(row) => row.id}
         emptyMessage="لا توجد تعليقات قيد المراجعة حاليًا."
       />
+
+      {rejectingCommentId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reject-community-comment-title"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          dir="rtl"
+        >
+          <button
+            type="button"
+            aria-label="إغلاق"
+            onClick={() => {
+              setRejectingCommentId(null);
+              setRejectReason('');
+            }}
+            className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-[2px]"
+          />
+          <div className="relative w-full max-w-lg rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-6 shadow-2xl">
+            <h4 id="reject-community-comment-title" className="text-lg font-black text-[var(--admin-text)]">
+              سبب رفض التعليق
+            </h4>
+            <p className="mt-2 text-sm font-medium leading-6 text-[var(--admin-muted)]">
+              سيتم حفظ السبب في سجل المراجعة ولن يظهر التعليق للطلاب.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              rows={4}
+              autoFocus
+              className="mt-5 w-full resize-none rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 text-sm font-medium text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)]"
+              placeholder="اكتب سبب الرفض..."
+            />
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejectingCommentId(null);
+                  setRejectReason('');
+                }}
+                className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-2.5 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                disabled={!rejectReason.trim() || actingId === rejectingCommentId}
+                onClick={() => void handleReject()}
+                className="rounded-full bg-[var(--admin-danger)] px-5 py-2.5 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                رفض التعليق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

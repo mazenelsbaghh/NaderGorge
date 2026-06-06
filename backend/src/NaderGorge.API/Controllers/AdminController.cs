@@ -34,6 +34,14 @@ public class AdminController : ControllerBase
     )
         => Ok(await _mediator.Send(new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate)));
 
+    [HttpPost("users")]
+    public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequest dto)
+    {
+        var result = await _mediator.Send(new AdminCreateUserCommand(
+            dto.FullName, dto.PhoneNumber, dto.Password, dto.Role, dto.PackageIds));
+        return result.Success ? StatusCode(201, result) : BadRequest(result);
+    }
+
     [HttpGet("users/students/{userId:guid}/profile")]
     public async Task<IActionResult> GetStudentProfile(Guid userId)
         => Ok(await _mediator.Send(new GetStudentProfileDetailQuery(userId)));
@@ -158,6 +166,10 @@ public class AdminController : ControllerBase
     }
 
     // --- Content ---
+    [HttpGet("packages/list")]
+    public async Task<IActionResult> GetPackagesList()
+        => Ok(await _mediator.Send(new GetAdminPackagesListQuery()));
+
     [HttpPost("packages")]
     public async Task<IActionResult> CreatePackage(CreatePackageCommand command)
     {
@@ -577,3 +589,10 @@ public record UpdateStudentProfileRequest(
 );
 public record AdminResetPasswordRequest(string NewPassword);
 public record AddStudentNoteRequest(string Content, bool IsPinned);
+public record AdminCreateUserRequest(
+    string FullName,
+    string PhoneNumber,
+    string Password,
+    string Role,
+    List<Guid>? PackageIds
+);

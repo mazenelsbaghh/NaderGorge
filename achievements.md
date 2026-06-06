@@ -9,10 +9,11 @@
 
 ## Verification Notes
 
-- [x] `dotnet build backend/NaderGorge.sln` completed with 0 warnings and 0 errors.
+- [x] `dotnet build backend/NaderGorge.sln --no-restore` completed with 0 warnings and 0 errors.
 - [x] `dotnet test backend/NaderGorge.sln --no-build` passed 12/12 tests.
-- [x] `cd frontend && npm run lint && npm run build` passed after normalizing optional worker progress data.
-- [x] `cd worker && npm run build` passed.
+- [x] `cd frontend && npm run lint` passed with 0 warnings and 0 errors.
+- [x] `cd frontend && npm run build` completed successfully.
+- [x] `cd worker && npm run build` completed successfully.
 - [x] Python audit suite passed 13/13 via a temporary venv because system Python rejected direct `pip install` under PEP 668.
 - [x] `node scripts/generate-endpoint-inventory.mjs --check` passed with 146 endpoints.
 - [x] `docker compose config -q` passed.
@@ -20,8 +21,8 @@
 
 ### Residual Audit Issues / مشاكل متبقية من تقرير 2026-06-06
 
-- [ ] Move refresh-token persistence out of browser storage and into HttpOnly cookie-backed refresh flow.
-- [ ] Remove direct `/tmp` exception file writes from API middleware.
-- [ ] Replace admin student profile package N+1 lookup and placeholder overrides with real query data.
-- [ ] Replace active BullMQ `job.remove()` cancellation with a cooperative cancellation marker.
-- [ ] Replace native browser confirm/prompt on touched admin remediation paths with accessible confirm UI.
+- [x] Move refresh-token persistence out of browser storage and into HttpOnly cookie-backed refresh flow.
+- [x] Remove direct `/tmp` exception file writes from API middleware.
+- [x] Replace admin student profile package N+1 lookup and placeholder overrides with real query data.
+- [x] Replace active BullMQ `job.remove()` cancellation with a cooperative cancellation marker.
+- [x] Replace native browser confirm/prompt on touched admin remediation paths with accessible confirm UI.

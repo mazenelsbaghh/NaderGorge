@@ -85,12 +85,12 @@
 
 ## Residual Audit Closure Tasks
 
-- [ ] T052 In `backend/src/NaderGorge.API/Controllers/AuthController.cs`, `frontend/src/lib/auth-storage.ts`, `frontend/src/stores/auth-store.ts`, `frontend/src/services/api-client.ts`, and `frontend/src/services/auth-service.ts`, move refresh-token persistence out of browser storage and into an HttpOnly cookie-backed refresh flow while preserving access-token retry behavior.
-- [ ] T053 In `backend/src/NaderGorge.API/Middleware/ExceptionHandlingMiddleware.cs`, remove direct `/tmp` exception file writes and rely on structured logging with correlation id.
-- [ ] T054 In `backend/src/NaderGorge.Application/Features/Admin/Queries/GetStudentProfileDetailQuery.cs`, replace package N+1 lookup and placeholder overrides with projected package and watch override data.
-- [ ] T055 In `worker/src/index.ts`, replace active BullMQ `job.remove()` cancellation behavior with a cooperative cancellation marker for active jobs and safe removal for waiting/delayed jobs.
-- [ ] T056 In `frontend/src/app/admin/ai-monitor/page.tsx` and `frontend/src/components/admin/CommunityCommentsModerationTable.tsx`, replace native confirm/prompt calls with accessible app confirm/reason UI.
-- [ ] T057 Re-run frontend lint/build, worker build, backend build/test, and update `docs/deep-technical-audit-2026-06-06.md` remediation status.
+- [x] T052 In `backend/src/NaderGorge.API/Controllers/AuthController.cs`, `frontend/src/lib/auth-storage.ts`, `frontend/src/stores/auth-store.ts`, `frontend/src/services/api-client.ts`, and `frontend/src/services/auth-service.ts`, move refresh-token persistence out of browser storage and into an HttpOnly cookie-backed refresh flow while preserving access-token retry behavior.
+- [x] T053 In `backend/src/NaderGorge.API/Middleware/ExceptionHandlingMiddleware.cs`, remove direct `/tmp` exception file writes and rely on structured logging with correlation id.
+- [x] T054 In `backend/src/NaderGorge.Application/Features/Admin/Queries/GetStudentProfileDetailQuery.cs`, replace package N+1 lookup and placeholder overrides with projected package and watch override data.
+- [x] T055 In `worker/src/index.ts`, replace active BullMQ `job.remove()` cancellation behavior with a cooperative cancellation marker for active jobs and safe removal for waiting/delayed jobs.
+- [x] T056 In `frontend/src/app/admin/ai-monitor/page.tsx` and `frontend/src/components/admin/CommunityCommentsModerationTable.tsx`, replace native confirm/prompt calls with accessible app confirm/reason UI.
+- [x] T057 Re-run frontend lint/build, worker build, backend build/test, and update `docs/deep-technical-audit-2026-06-06.md` remediation status.
 
 ## Dependencies
 

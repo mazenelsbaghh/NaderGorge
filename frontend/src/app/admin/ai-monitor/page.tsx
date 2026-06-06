@@ -25,6 +25,7 @@ import { adminService } from '@/services/admin-service';
 import { contentService, type VideoChapterDto, type VideoDto } from '@/services/content-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { AdminShellChrome, AdminTeacherPhotoUpload } from '@/components/admin';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -261,11 +262,11 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
 function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number; videoId: string }) {
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const jobId = `${videoId}_mindmap_${ch.id}`;
 
   const handleRegenerate = async () => {
-    if (!confirm(`إعادة توليد خريطة الفصل "${ch.title}"؟`)) return;
     setSending(true);
     try {
       await adminService.regenerateChapterMindmap(ch.id);
@@ -283,6 +284,7 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
   };
 
   return (
+    <>
     <div className="ai-chapter-row">
       <div className="ai-chapter-row__num">{index + 1}</div>
       <div className="ai-chapter-row__body">
@@ -301,7 +303,7 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
                   خريطة ذهنية
                 </div>
                 <button
-                  onClick={handleRegenerate}
+                  onClick={() => setConfirmOpen(true)}
 	                  disabled={sending || !!activeJobId}
                   title="إعادة توليد الخريطة"
                   className="ai-mindmap-preview__action"
@@ -324,7 +326,7 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
           ) : (
             /* No mindmap yet — show a generate button */
             <button
-              onClick={handleRegenerate}
+              onClick={() => setConfirmOpen(true)}
 	              disabled={sending || !!activeJobId}
               title="توليد خريطة ذهنية لهذا الفصل"
               className="ai-mindmap-generate"
@@ -345,6 +347,19 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
         <span>{formatTime(ch.endTime)}</span>
       </div>
     </div>
+    <ConfirmDialog
+      open={confirmOpen}
+      title="تأكيد توليد الخريطة"
+      description={`سيتم إرسال طلب جديد لتوليد خريطة الفصل "${ch.title}".`}
+      confirmLabel="توليد"
+      variant="primary"
+      onCancel={() => setConfirmOpen(false)}
+      onConfirm={() => {
+        setConfirmOpen(false);
+        void handleRegenerate();
+      }}
+    />
+    </>
   );
 }
 
@@ -393,6 +408,7 @@ function JobCard({
   const [showChapters, setShowChapters] = useState(false);
   const [chapters, setChapters] = useState<VideoChapterDto[] | null>(null);
   const [chaptersLoading, setChaptersLoading] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
 
   const progressVal = jobStatus ? getProgressVal(jobStatus.progress) : 0;
   const progressStage = jobStatus ? getProgressStage(jobStatus.progress) : '';
@@ -427,7 +443,6 @@ function JobCard({
   };
 
   const handleCancel = async () => {
-    if (!confirm('هل أنت متأكد من إلغاء هذه المهمة؟')) return;
     setActioning(true);
     try {
       await onCancel(video.id, !!video.isProcessingMindmaps);
@@ -474,7 +489,7 @@ function JobCard({
 
           {isActive && (
             <button
-              onClick={handleCancel}
+              onClick={() => setCancelConfirmOpen(true)}
               disabled={actioning}
               className="ai-icon-btn ai-icon-btn--danger"
               title="إلغاء المهمة"
@@ -510,7 +525,7 @@ function JobCard({
                 <RefreshCw className={`h-4 w-4 ${actioning ? 'animate-spin' : ''}`} />
               </button>
               <button
-                onClick={handleCancel}
+                onClick={() => setCancelConfirmOpen(true)}
                 disabled={actioning}
                 className="ai-icon-btn ai-icon-btn--danger"
                 title="إلغاء وحذف المهمة"
@@ -523,7 +538,7 @@ function JobCard({
           {/* ── Wipe Data button — only for done cards ── */}
           {isDone && (
             <button
-              onClick={handleCancel}
+              onClick={() => setCancelConfirmOpen(true)}
 	              disabled={actioning}
               className="ai-icon-btn ai-icon-btn--danger ai-icon-btn--offset"
               title="مسح الترجمة والفصول بالكامل (إعادة ضبط)"
@@ -634,6 +649,18 @@ function JobCard({
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={cancelConfirmOpen}
+        title="تأكيد إلغاء المهمة"
+        description={`سيتم طلب إلغاء مهمة "${video.title}". إذا كانت المهمة قيد التنفيذ سيتم إيقافها عند أقرب نقطة آمنة.`}
+        confirmLabel="إلغاء المهمة"
+        variant="danger"
+        onCancel={() => setCancelConfirmOpen(false)}
+        onConfirm={() => {
+          setCancelConfirmOpen(false);
+          void handleCancel();
+        }}
+      />
     </div>
   );
 }

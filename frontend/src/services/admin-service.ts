@@ -377,6 +377,26 @@ export interface PackageCodeProfilePayload {
 }
 
 
+export interface AdminCreateUserPayload {
+  fullName: string;
+  phoneNumber: string;
+  password: string;
+  role: 'Admin' | 'Assistant' | 'Student';
+  packageIds?: string[];
+}
+
+export interface AdminCreateUserResult {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  role: string;
+}
+
+export interface AdminPackageListItemDto {
+  id: string;
+  name: string;
+}
+
 export const adminService = {
   // Users
   listUsers: async (
@@ -402,6 +422,19 @@ export const adminService = {
       }
     });
     return res.data?.data;
+  },
+
+  createUser: async (payload: AdminCreateUserPayload) => {
+    const res = await apiClient.post<ApiResponse<AdminCreateUserResult>>('/admin/users', {
+      ...payload,
+      packageIds: payload.packageIds ?? []
+    });
+    return res.data;
+  },
+
+  listAllPackages: async (): Promise<AdminPackageListItemDto[]> => {
+    const res = await apiClient.get<ApiResponse<AdminPackageListItemDto[]>>('/admin/packages/list');
+    return res.data?.data ?? [];
   },
 
   updateUserStatus: async (id: string, status: string) => {
