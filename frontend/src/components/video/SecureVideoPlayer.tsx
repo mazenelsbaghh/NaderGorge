@@ -279,6 +279,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const trackingInterval = useRef<NodeJS.Timeout | null>(null);
   const [thresholdSeconds, setThresholdSeconds] = useState(60);
 
+  const capWatchCount = useCallback((current: number, max: number) => {
+    return max > 0 ? Math.min(current, max) : current;
+  }, []);
+
   useEffect(() => {
     if (duration > 0) {
       setThresholdSeconds(
@@ -307,15 +311,21 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (data) {
         const newThreshold = data.thresholdSeconds || 60;
         setThresholdSeconds(newThreshold);
-        watchCountRef.current = data.currentCount;
+        const maxCount = data.maxCount ?? watchInfo?.max ?? 0;
+        const cappedCurrent = capWatchCount(data.currentCount, maxCount);
+        watchCountRef.current = cappedCurrent;
         setWatchInfo(prev => ({
-          current: data.currentCount,
-          max: data.maxCount ?? prev?.max ?? 0,   // always prefer fresh server value
+          current: cappedCurrent,
+          max: maxCount || prev?.max || 0,
           isLocked: data.isLocked
         }));
         const total = data.totalTrackedSeconds ?? actualWatchedSeconds.current;
         actualWatchedSeconds.current = total;
         setDisplayedWatched(total % Math.max(1, newThreshold));
+        if (data.isLocked) {
+          pendingTrackedSeconds.current = 0;
+          setStatus('locked');
+        }
         if (data.viewRegistered) {
           setViewTracked(true);
           viewTrackedRef.current = true;
@@ -332,7 +342,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     } finally {
       flushInFlight.current = false;
     }
-  }, [duration, lessonVideoId]);
+  }, [capWatchCount, duration, lessonVideoId, watchInfo?.max]);
 
   useEffect(() => {
     if (status !== 'ready') return;
@@ -430,10 +440,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       if (session.thresholdPercentage) {
         watchThresholdPercentageRef.current = session.thresholdPercentage;
       }
-      watchCountRef.current = session.watchInfo.currentCount ?? 0;
+      const sessionMaxCount = session.watchInfo.maxCount ?? 0;
+      const sessionCurrentCount = capWatchCount(session.watchInfo.currentCount ?? 0, sessionMaxCount);
+      watchCountRef.current = sessionCurrentCount;
       setWatchInfo({
-        current: session.watchInfo.currentCount,
-        max: session.watchInfo.maxCount
+        current: sessionCurrentCount,
+        max: sessionMaxCount,
+        isLocked: session.watchInfo.isLocked
       });
       actualWatchedSeconds.current = session.watchInfo.totalTrackedSeconds ?? 0;
       setDisplayedWatched((session.watchInfo.totalTrackedSeconds ?? 0) % Math.max(1, thresholdSeconds));
@@ -526,7 +539,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         // Use real watchInfo from the error response data (backend includes it even when locked)
         const lockData = err.response?.data?.data?.watchInfo;
         setWatchInfo(prev => ({
-          current: lockData?.currentCount ?? prev?.current ?? 0,
+          current: capWatchCount(lockData?.currentCount ?? prev?.current ?? 0, lockData?.maxCount ?? prev?.max ?? 0),
           max: lockData?.maxCount ?? prev?.max ?? 0,
           isLocked: true
         }));

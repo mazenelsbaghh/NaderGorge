@@ -15,6 +15,15 @@ interface WatchStatusBarProps {
  * Renders outside the video player, below or alongside it.
  */
 export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
+  const cappedCurrent = status
+    ? status.max > 0
+      ? Math.min(status.current, status.max)
+      : status.current
+    : 0;
+  const watchedInThreshold = status
+    ? Math.min(status.displayedWatched, Math.max(0, status.thresholdSeconds))
+    : 0;
+
   return (
     <motion.div
       className="w-full flex items-center justify-between gap-4 px-5 py-3 rounded-2xl bg-[var(--admin-card)]/90 backdrop-blur-xl border border-[var(--admin-border)] shadow-sm"
@@ -39,7 +48,7 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
           </span>
           <span className="text-xs text-[var(--admin-muted)] font-medium mt-px">
             {status
-              ? `${status.current} مشاهدة من أصل ${status.max}`
+              ? `${cappedCurrent} مشاهدة من أصل ${status.max}`
               : "جاري التجهيز..."}
           </span>
         </div>
@@ -53,7 +62,7 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
                 className="h-1.5 w-5 rounded-full"
                 style={{
                   backgroundColor:
-                    i < status.current
+                    i < cappedCurrent
                       ? "var(--admin-primary)"
                       : "var(--admin-border)",
                 }}
@@ -68,7 +77,18 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
 
       {/* Right — status badge */}
       <AnimatePresence mode="wait">
-        {status?.viewTracked ? (
+        {status?.isLocked ? (
+          <motion.span
+            key="locked"
+            className="inline-flex items-center gap-1.5 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 shrink-0"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          >
+            تم الوصول للحد الأقصى
+          </motion.span>
+        ) : status?.viewTracked ? (
           <motion.span
             key="tracked"
             className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0"
@@ -93,7 +113,7 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
             <InlineLoader className="text-[var(--admin-primary)] !w-3 !h-3" />
             <span>
               {status
-                ? `${status.displayedWatched}ث · تُحتسب المشاهدة بعد ${status.thresholdSeconds}ث`
+                ? `${watchedInThreshold}ث من ${status.thresholdSeconds}ث · تُحتسب المشاهدة عند اكتمال المدة`
                 : "جاري التجهيز..."}
             </span>
           </motion.div>

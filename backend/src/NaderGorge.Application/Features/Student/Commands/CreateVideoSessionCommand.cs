@@ -57,7 +57,10 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         var watchEvent = await _db.VideoWatchEvents
             .FirstOrDefaultAsync(v => v.UserId == request.UserId && v.LessonVideoId == request.LessonVideoId, ct);
 
-        int currentCount = watchEvent?.WatchCount ?? 0;
+        var maxCount = watchEvent?.CustomMaxWatchCount ?? video.MaxWatchCount;
+        int currentCount = watchEvent == null
+            ? 0
+            : maxCount > 0 ? Math.Min(watchEvent.WatchCount, maxCount) : watchEvent.WatchCount;
         bool isLocked = watchEvent?.IsLocked ?? false;
 
         var isAdminOrTeacher = await _db.UserRoles
@@ -73,7 +76,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                 video.Provider,
                 new WatchInfoDto(
                     currentCount,
-                    watchEvent?.CustomMaxWatchCount ?? video.MaxWatchCount,
+                    maxCount,
                     IsLocked: true,
                     TotalTrackedSeconds: watchEvent?.TimeWatchedInSeconds ?? 0),
                 video.Title,
@@ -133,7 +136,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             session.Id,
             session.ExpiresAt,
             video.Provider,
-            new WatchInfoDto(currentCount, watchEvent?.CustomMaxWatchCount ?? video.MaxWatchCount, isLocked, watchEvent?.TimeWatchedInSeconds ?? 0),
+            new WatchInfoDto(currentCount, maxCount, isLocked, watchEvent?.TimeWatchedInSeconds ?? 0),
             video.Title,
             thresholdPercentage
         );
