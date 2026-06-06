@@ -54,12 +54,31 @@ public class AuthController : ControllerBase
             ?? HttpContext.Connection.RemoteIpAddress?.ToString()
             ?? "Unknown";
 
+        var appSurface = HttpContext.Request.Headers["X-App-Surface"].ToString();
+        if (string.IsNullOrWhiteSpace(appSurface))
+        {
+            var referer = HttpContext.Request.Headers["Referer"].ToString() ?? string.Empty;
+            var host = HttpContext.Request.Headers["Host"].ToString() ?? string.Empty;
+            if (referer.Contains("admin.", StringComparison.OrdinalIgnoreCase) || 
+                host.Contains("admin.", StringComparison.OrdinalIgnoreCase) ||
+                referer.Contains("localhost:8740", StringComparison.OrdinalIgnoreCase) || 
+                host.Contains("localhost:8740", StringComparison.OrdinalIgnoreCase))
+            {
+                appSurface = "admin";
+            }
+            else
+            {
+                appSurface = "student";
+            }
+        }
+
         var command = new LoginCommand(
             request.PhoneNumber,
             request.Password,
             request.DeviceFingerprint,
             request.DeviceName,
-            ipAddress);
+            ipAddress,
+            appSurface);
 
         var result = await _mediator.Send(command);
         if (!result.Success || result.Data == null)

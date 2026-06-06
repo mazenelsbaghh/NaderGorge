@@ -14,6 +14,7 @@ const apiClient = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'X-App-Surface': process.env.NEXT_PUBLIC_APP_SURFACE || '',
   },
 });
 

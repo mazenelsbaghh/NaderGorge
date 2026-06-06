@@ -9,7 +9,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.Application.Features.Auth.Commands;
 
 // ---- Login Command ----
-public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName, string? IpAddress) : IRequest<ApiResponse<LoginResponse>>;
+public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName, string? IpAddress, string? AppSurface = null) : IRequest<ApiResponse<LoginResponse>>;
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
 public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, bool ProfileComplete, string? AvatarSlug);
 
@@ -47,6 +47,25 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             .FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber, ct)
             ?? throw new UnauthorizedAccessException("Invalid phone number or password");
 
+        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
+        var isStaff = roles.Any(r => r is "Admin" or "Assistant" or "Teacher" or "AssistantReviewer" or "AssistantAcademic");
+
+        if (string.Equals(request.AppSurface, "admin", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!isStaff)
+            {
+                throw new UnauthorizedAccessException("Invalid phone number or password");
+            }
+        }
+        else // student or landing
+        {
+            var isStudent = roles.Contains("Student");
+            if (!isStudent)
+            {
+                throw new UnauthorizedAccessException("Invalid phone number or password");
+            }
+        }
+
         if (!user.IsActive)
         {
             var platformSettings = await _settingsReader.GetAsync(ct);
@@ -63,8 +82,6 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             throw new UnauthorizedAccessException("Invalid phone number or password");
 
         // --- Device limit enforcement ---
-        var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
-        var isStaff = roles.Any(r => r is "Admin" or "Assistant" or "Teacher");
 
         var dynamicSettings = await _settingsReader.GetAsync(ct);
         var maxDevices = dynamicSettings.MaxActiveDevicesPerStudent;

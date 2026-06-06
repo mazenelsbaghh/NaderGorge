@@ -324,7 +324,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         setDisplayedWatched(total % Math.max(1, newThreshold));
         if (data.isLocked) {
           pendingTrackedSeconds.current = 0;
-          setStatus('locked');
+          // Do not kick out actively watching students; they will be blocked on their next session attempt.
         }
         if (data.viewRegistered) {
           setViewTracked(true);
