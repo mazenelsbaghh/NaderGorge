@@ -6,9 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
 function hasAdminAccess(roles: string[] | undefined) {
-  return !!roles?.some((role) =>
-    ["Admin", "Teacher"].includes(role),
-  );
+  return !!roles?.length && !roles.includes("Student");
 }
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
