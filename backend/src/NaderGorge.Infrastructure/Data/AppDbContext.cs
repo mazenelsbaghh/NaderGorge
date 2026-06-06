@@ -1,4 +1,6 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Entities.Assistant;
@@ -96,6 +98,13 @@ public class AppDbContext : DbContext, IAppDbContext
         return StudentAnswers.FirstOrDefaultAsync(
             answer => answer.StudentExamAttemptId == studentExamAttemptId && answer.ExamQuestionId == examQuestionId,
             cancellationToken);
+    }
+
+    public Task<IDbContextTransaction> BeginTransactionAsync(
+        IsolationLevel isolationLevel,
+        CancellationToken cancellationToken = default)
+    {
+        return Database.BeginTransactionAsync(isolationLevel, cancellationToken);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
