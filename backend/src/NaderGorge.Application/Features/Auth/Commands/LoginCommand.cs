@@ -48,7 +48,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             ?? throw new UnauthorizedAccessException("Invalid phone number or password");
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
-        var isStaff = roles.Any(r => r is "Admin" or "Assistant" or "Teacher" or "AssistantReviewer" or "AssistantAcademic");
+        var isStaff = roles.Any(r => !string.Equals(r, "Student", StringComparison.OrdinalIgnoreCase));
 
         if (string.Equals(request.AppSurface, "admin", StringComparison.OrdinalIgnoreCase))
         {

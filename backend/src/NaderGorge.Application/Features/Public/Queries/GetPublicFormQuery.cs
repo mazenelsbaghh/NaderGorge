@@ -13,6 +13,7 @@ public record PublicFormDto(
     Guid Id,
     string Title,
     string Description,
+    string? CoverImageUrl,
     string FieldsJson
 );
 
@@ -40,6 +41,7 @@ public class GetPublicFormQueryHandler : IRequestHandler<GetPublicFormQuery, Api
             form.Id,
             form.Title,
             form.Description,
+            form.CoverImageUrl,
             form.FieldsJson
         ));
     }

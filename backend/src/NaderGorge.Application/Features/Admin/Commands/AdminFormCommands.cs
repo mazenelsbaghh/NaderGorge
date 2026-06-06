@@ -17,6 +17,7 @@ public record CreateFormCommand(
     string Description,
     string Slug,
     bool IsActive,
+    string? CoverImageUrl,
     string FieldsJson
 ) : IRequest<ApiResponse<Guid>>;
 
@@ -60,6 +61,7 @@ public class CreateFormCommandHandler : IRequestHandler<CreateFormCommand, ApiRe
             Description = request.Description,
             Slug = request.Slug.ToLowerInvariant(),
             IsActive = request.IsActive,
+            CoverImageUrl = request.CoverImageUrl,
             FieldsJson = request.FieldsJson
         };
 
@@ -77,6 +79,7 @@ public record UpdateFormCommand(
     string Description,
     string Slug,
     bool IsActive,
+    string? CoverImageUrl,
     string FieldsJson
 ) : IRequest<ApiResponse>;
 
@@ -121,6 +124,7 @@ public class UpdateFormCommandHandler : IRequestHandler<UpdateFormCommand, ApiRe
         form.Description = request.Description;
         form.Slug = request.Slug.ToLowerInvariant();
         form.IsActive = request.IsActive;
+        form.CoverImageUrl = request.CoverImageUrl;
         form.FieldsJson = request.FieldsJson;
 
         await _db.SaveChangesAsync(ct);

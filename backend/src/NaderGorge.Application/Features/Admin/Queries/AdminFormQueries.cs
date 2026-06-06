@@ -17,6 +17,7 @@ public record AdminFormDto(
     string Description,
     string Slug,
     bool IsActive,
+    string? CoverImageUrl,
     int VisitCount,
     int SubmissionCount,
     DateTime CreatedAt
@@ -28,6 +29,7 @@ public record AdminFormDetailDto(
     string Description,
     string Slug,
     bool IsActive,
+    string? CoverImageUrl,
     string FieldsJson,
     DateTime CreatedAt
 );
@@ -59,6 +61,7 @@ public class ListFormsQueryHandler : IRequestHandler<ListFormsQuery, ApiResponse
                 f.Description,
                 f.Slug,
                 f.IsActive,
+                f.CoverImageUrl,
                 f.VisitCount,
                 f.Submissions.Count,
                 f.CreatedAt
@@ -86,6 +89,7 @@ public class GetFormDetailsQueryHandler : IRequestHandler<GetFormDetailsQuery, A
                 f.Description,
                 f.Slug,
                 f.IsActive,
+                f.CoverImageUrl,
                 f.FieldsJson,
                 f.CreatedAt
             ))

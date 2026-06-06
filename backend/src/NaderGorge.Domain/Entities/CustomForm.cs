@@ -9,6 +9,7 @@ public class CustomForm : BaseEntity
     public string Description { get; set; } = null!;
     public string Slug { get; set; } = null!;
     public bool IsActive { get; set; } = true;
+    public string? CoverImageUrl { get; set; }
     public int VisitCount { get; set; }
     public string FieldsJson { get; set; } = null!; // JSON array representation of dynamic fields
 
