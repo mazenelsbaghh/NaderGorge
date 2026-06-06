@@ -169,53 +169,63 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[70] bg-[var(--admin-text)]/35 backdrop-blur-sm"
-            onClick={onClose}
+            className="fixed inset-0 z-[90] bg-[var(--admin-text)]/35 backdrop-blur-sm"
+            onClick={() => {
+              if (!submitting) onClose();
+            }}
           />
 
-          {/* Drawer */}
+          {/* Modal */}
           <motion.div
-            key="drawer"
-            initial={{ x: '100%', opacity: 0.5 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="fixed inset-y-0 right-0 z-[80] flex w-full max-w-[480px] flex-col border-l border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl"
+            key="modal"
+            initial={{ opacity: 0, scale: 0.96, y: 18 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98, y: 12 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
             dir="rtl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-user-title"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
-                  <UserPlus className="h-5 w-5" />
+            <div className="flex max-h-[min(860px,calc(100dvh-2rem))] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl">
+              {/* Header */}
+              <div className="flex shrink-0 items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+                    <UserPlus className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2
+                      id="add-user-title"
+                      className="text-lg font-black text-[var(--admin-text)] tracking-tight"
+                    >
+                      إضافة مستخدم جديد
+                    </h2>
+                    <p className="text-xs text-[var(--admin-muted)]">أنشئ حساباً جديداً في النظام</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-black text-[var(--admin-text)] tracking-tight">
-                    إضافة مستخدم جديد
-                  </h2>
-                  <p className="text-xs text-[var(--admin-muted)]">أنشئ حساباً جديداً في النظام</p>
-                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="إغلاق إضافة مستخدم"
+                  disabled={submitting}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="إغلاق إضافة مستخدم"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)]"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-y-auto">
-              <div className="flex-1 space-y-6 px-6 py-6">
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
 
                 {/* Role Selector */}
                 <div>
                   <label className="mb-3 block text-sm font-bold text-[var(--admin-text)]">
                     الدور
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     {ROLES.map((r) => (
                       <button
                         key={r.value}
@@ -408,8 +418,8 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
                 )}
               </div>
 
-              {/* Footer */}
-              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-4">
+                {/* Footer */}
+                <div className="shrink-0 border-t border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-4">
                 <div className="flex gap-3">
                   <button
                     type="button"
@@ -438,7 +448,8 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
                   </button>
                 </div>
               </div>
-            </form>
+              </form>
+            </div>
           </motion.div>
         </>
       )}
