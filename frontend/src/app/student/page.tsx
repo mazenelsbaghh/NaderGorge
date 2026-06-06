@@ -32,21 +32,37 @@ export default function StudentDashboard() {
   const [showInstructionsOnboard, setShowInstructionsOnboard] = useState(false);
   const router = useRouter();
 
+  // ─── Cookie helpers (cross-subdomain, persists 1 year) ─────────────────
+  const COOKIE_KEY = `onboarding_ack_${user?.id ?? 'anon'}`;
+
+  const getOnboardingCookie = () => {
+    if (typeof document === 'undefined') return false;
+    return document.cookie.split('; ').some((c) => c.startsWith(`${COOKIE_KEY}=1`));
+  };
+
+  const setOnboardingCookie = () => {
+    if (typeof document === 'undefined') return;
+    const domain = window.location.hostname.includes('bsma-academy.com')
+      ? '.bsma-academy.com'
+      : window.location.hostname;
+    const expires = new Date();
+    expires.setFullYear(expires.getFullYear() + 1);
+    document.cookie = `${COOKIE_KEY}=1; path=/; domain=${domain}; expires=${expires.toUTCString()}; SameSite=Lax`;
+    // Also set in localStorage as fallback for local dev
+    try { localStorage.setItem(COOKIE_KEY, '1'); } catch {}
+  };
+
   useEffect(() => {
     if (user?.id) {
-      const storageKey = `has_viewed_onboarding_instructions_${user.id}`;
-      const hasViewed = localStorage.getItem(storageKey);
-      if (!hasViewed) {
+      if (!getOnboardingCookie()) {
         setShowInstructionsOnboard(true);
       }
     }
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handleCloseOnboard = () => {
-    if (user?.id) {
-      const storageKey = `has_viewed_onboarding_instructions_${user.id}`;
-      localStorage.setItem(storageKey, "true");
-    }
+    setOnboardingCookie();
     setShowInstructionsOnboard(false);
   };
 
@@ -66,7 +82,7 @@ export default function StudentDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-72 rounded-[36px] bg-[var(--admin-card-strong)] animate-pulse" />
+        <div className="h-72 rounded-2xl bg-[var(--admin-card-strong)] animate-pulse" />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <div
@@ -77,8 +93,8 @@ export default function StudentDashboard() {
         </div>
         <div className="h-44 rounded-[28px] bg-[var(--admin-card-strong)] animate-pulse" />
         <div className="grid gap-6 xl:grid-cols-[1.45fr_0.85fr]">
-          <div className="h-[28rem] rounded-[32px] bg-[var(--admin-card-strong)] animate-pulse" />
-          <div className="h-[28rem] rounded-[32px] bg-[var(--admin-card-strong)] animate-pulse" />
+          <div className="h-[28rem] rounded-2xl bg-[var(--admin-card-strong)] animate-pulse" />
+          <div className="h-[28rem] rounded-2xl bg-[var(--admin-card-strong)] animate-pulse" />
         </div>
       </div>
     );
