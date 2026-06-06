@@ -8,6 +8,8 @@ import { adminService, type StudentPackageDto, type StudentProfileExtendedDto } 
 import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, MapPin, GraduationCap, UsersRound, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin, ChevronDown, ChevronRight, Lock, Unlock, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Checkbox } from '@/components/ui/checkbox';
+import { formatRelativeDate } from '@/components/admin/admin-utils';
+
 
 export default function AdminStudentProfile({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -52,6 +54,75 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
 
     return `${remainingSeconds}ث`;
   };
+
+  const translateAction = (action: string): string => {
+    const map: Record<string, string> = {
+      AdjustBalance: 'تعديل رصيد الطالب',
+      OverrideVideoLimit: 'تجاوز حد مشاهدة الفيديو',
+      ToggleStudentSystemAccess: 'تعديل صلاحية وصول الطالب',
+      TOGGLE_ACCESS: 'تعديل صلاحية وصول الطالب',
+      ResetWatchLimit: 'إعادة تعيين حد مشاهدة الفيديو',
+      AdjustGamificationPoints: 'تعديل نقاط الطالب',
+      AdjustGamification: 'تعديل نقاط الطالب',
+      ApproveWatchRequest: 'الموافقة على طلب مشاهدة إضافية',
+      AddStudentNote: 'إضافة ملاحظة للطالب',
+      DeleteStudentNote: 'حذف ملاحظة الطالب',
+      UpdateStudentProfile: 'تحديث الملف الشخصي للطالب',
+      DisconnectStudentDevice: 'فصل جهاز الطالب',
+      DisconnectDevice: 'فصل جهاز الطالب',
+      DisconnectAllDevices: 'فصل جميع الأجهزة للطالب',
+      RemoveDevice: 'حذف جهاز مسجل',
+      CreateUser: 'إنشاء مستخدم جديد',
+      UpdateUserStatus: 'تحديث حالة المستخدم',
+      UpdateUserRoles: 'تحديث أدوار المستخدم',
+      SetWatchCount: 'تعديل عدد المشاهدات للفيديو',
+      RejectWatchRequest: 'رفض طلب مشاهدة إضافية',
+    };
+    return map[action] || action;
+  };
+
+  const renderChangedValues = (oldVal?: string, newVal?: string) => {
+    try {
+      if (!oldVal && !newVal) return null;
+      const oldObj = oldVal ? JSON.parse(oldVal) : null;
+      const newObj = newVal ? JSON.parse(newVal) : null;
+
+      const keys = Array.from(new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]));
+      const changes = keys.filter(key => {
+        const o = oldObj ? oldObj[key] : undefined;
+        const n = newObj ? newObj[key] : undefined;
+        return o !== n;
+      });
+
+      if (changes.length === 0) return null;
+
+      return (
+        <div className="mt-2 space-y-1 text-xs text-[var(--admin-muted)] bg-[var(--admin-hover)]/30 px-3 py-2 rounded-xl border border-[var(--admin-border)]/5 outline-none">
+          {changes.map(key => {
+            const o = oldObj ? oldObj[key] : undefined;
+            const n = newObj ? newObj[key] : undefined;
+            return (
+              <div key={key} className="flex flex-wrap items-center gap-1.5">
+                <span className="font-bold text-[var(--admin-text)]">{key}:</span>
+                {o !== undefined && <span className="line-through text-red-500/80">{String(o)}</span>}
+                {o !== undefined && <span className="opacity-40">←</span>}
+                {n !== undefined && <span className="text-emerald-500 font-bold">{String(n)}</span>}
+              </div>
+            );
+          })}
+        </div>
+      );
+    } catch {
+      const d = newVal || oldVal;
+      if (!d) return null;
+      return (
+        <div className="mt-2 text-xs text-[var(--admin-muted)] bg-[var(--admin-hover)]/30 px-3 py-2 rounded-xl border border-[var(--admin-border)]/5">
+          {d}
+        </div>
+      );
+    }
+  };
+
 
   const TABS: AdminTab<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit' | 'notes'>[] = [
      { key: 'overview', label: 'نظرة عامة' },
@@ -809,40 +880,50 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
          )}
 
          {activeTab === 'audit' && (
-             <div className="flex flex-col gap-6">
-                 <div className="flex justify-between items-center bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
-                    <div>
-                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل النشاط</h3>
-                        <p className="text-[var(--admin-muted)]">كافة الإجراءات والعمليات التي تمت على حساب هذا الطالب</p>
-                    </div>
-                 </div>
+              <div className="flex flex-col gap-6">
+                  <div className="flex justify-between items-center bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                     <div>
+                         <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل النشاط</h3>
+                         <p className="text-[var(--admin-muted)]">كافة الإجراءات والعمليات التي تمت على حساب هذا الطالب</p>
+                     </div>
+                  </div>
 
-                 <AdminDataTable<any> 
-                    columns={[
-                        {key: 'date', label:'الوقت والتاريخ', render: (row: any) => new Date(row.date).toLocaleString('ar-EG')},
-                        {key: 'action', label:'الإجراء', render: (row: any) => {
-                          const m: Record<string, string> = {
-                            UpdateUserStatus: 'تغيير حالة المستخدم', TOGGLE_ACCESS: 'تبديل صلاحية الوصول',
-                            ResetWatchLimit: 'إعادة تعيين المشاهدات', SetWatchCount: 'تعديل عدد المشاهدات',
-                            OverrideVideoLimit: 'تجاوز حد الفيديو', AdjustGamification: 'تعديل النقاط',
-                            DisconnectDevice: 'فصل جهاز', DisconnectAllDevices: 'فصل جميع الأجهزة',
-                            ApproveWatchRequest: 'قبول طلب مشاهدة', RejectWatchRequest: 'رفض طلب مشاهدة',
-                          };
-                          return <span className="font-bold">{m[row.action] || row.action}</span>;
-                        }},
-                        {key: 'adminName', label:'المسؤول', render: (row: any) => row.adminName === 'System Admin' ? 'مدير النظام' : row.adminName},
-                        {key: 'details', label:'التفاصيل', render: (row: any) => {
-                          const d = typeof row.details === 'string' ? row.details : JSON.stringify(row.details);
-                          const dm: Record<string, string> = { 'Status Active': 'الحالة: نشط', 'Status Suspended': 'الحالة: موقوف' };
-                          return <span className="text-xs max-w-xs inline-block">{dm[d] || d}</span>;
-                        }}
-                    ]}
-                    data={studentData?.auditTrail || []}
-                    rowKey={(row: any) => row.id}
-                    emptyMessage="لا يوجد سجل نشاط"
-                 />
-             </div>
-          )}
+                  {(studentData?.auditTrail?.length ?? 0) === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-[var(--admin-muted)] bg-[var(--admin-card-soft)] rounded-3xl shadow-sm">
+                      <p className="text-sm font-bold">لا يوجد أي نشاطات مسجلة لهذا الحساب حالياً.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-[var(--admin-bg)] p-8 rounded-3xl shadow-sm">
+                      <div className="relative border-r border-[var(--admin-border)]/60 mr-3 pr-6 space-y-6">
+                        {studentData!.auditTrail.map((log) => (
+                          <div key={log.id} className="relative group">
+                            {/* Timeline node */}
+                            <div className="absolute right-[-31px] top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 border-[var(--admin-bg)] bg-[var(--admin-primary)] ring-4 ring-[var(--admin-primary-15)]" />
+                            
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5">
+                              <div>
+                                <p className="text-sm font-bold text-[var(--admin-text)]">
+                                  {translateAction(log.action)}
+                                </p>
+                                <p className="text-xs text-[var(--admin-muted)] mt-0.5">
+                                  بواسطة المسؤول: <span className="font-semibold text-[var(--admin-text)]">{log.adminName === 'System Admin' || log.adminName === 'System' ? 'مدير النظام' : log.adminName}</span>
+                                  {log.ipAddress && log.ipAddress !== 'System' && <> | عنوان الـ IP: <span className="font-mono">{log.ipAddress}</span></>}
+                                </p>
+                              </div>
+                              <span className="text-xs text-[var(--admin-muted)] font-medium shrink-0">
+                                {formatRelativeDate(log.date)}
+                              </span>
+                            </div>
+
+                            {/* Changed values visualization */}
+                            {renderChangedValues(log.oldValues, log.newValues)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+              </div>
+           )}
 
           {activeTab === 'notes' && (
               <div className="flex flex-col gap-6">

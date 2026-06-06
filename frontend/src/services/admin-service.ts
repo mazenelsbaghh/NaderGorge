@@ -144,6 +144,11 @@ export interface StudentAuditLogDto {
   action: string;
   date: string;
   details: string | Record<string, unknown>;
+  entityType?: string;
+  entityId?: string;
+  oldValues?: string;
+  newValues?: string;
+  ipAddress?: string;
 }
 
 export interface BalanceTransactionDto {

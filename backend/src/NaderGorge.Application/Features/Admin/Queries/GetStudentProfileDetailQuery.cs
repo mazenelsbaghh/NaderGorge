@@ -136,7 +136,12 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 Action = a.Action,
                 AdminName = a.PerformedByUser != null ? a.PerformedByUser.FullName : "System",
                 Date = a.CreatedAt,
-                Details = a.NewValues ?? string.Empty
+                Details = a.NewValues ?? string.Empty,
+                EntityType = a.EntityType,
+                EntityId = a.EntityId,
+                OldValues = a.OldValues,
+                NewValues = a.NewValues,
+                IpAddress = a.IpAddress
             })
             .ToListAsync(cancellationToken);
 
