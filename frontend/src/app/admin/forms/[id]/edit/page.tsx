@@ -3,12 +3,13 @@
 import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye, ClipboardList } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye, ClipboardList, Upload, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { AdminShellChrome, AdminPageSkeleton } from '@/components/admin';
 import { getAdminFormDetails, updateAdminForm, FormFieldConfig, FormFieldType } from '@/services/forms-service';
 import { getAbsoluteLandingUrl } from '@/utils/url-utils';
+import { adminService } from '@/services/admin-service';
 
 interface EditFormPageProps {
   params: Promise<{ id: string }>;
@@ -44,6 +45,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
   const [expiresAt, setExpiresAt] = useState('');
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   // State for options adding item-by-item
   const [newOptionTexts, setNewOptionTexts] = useState<Record<string, string>>({});
@@ -271,7 +273,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
                 <div className="mb-4 rounded-xl overflow-hidden h-32 border border-[var(--admin-border)] bg-[var(--admin-bg)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={coverImageUrl}
+                    src={coverImageUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_BACKEND_URL || ''}${coverImageUrl}` : coverImageUrl}
                     alt="غلاف النموذج"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -443,17 +445,69 @@ export default function EditFormPage({ params }: EditFormPageProps) {
               </div>
             </div>
 
-            <div className="space-y-1 text-right">
-              <label className="text-xs font-bold text-[var(--admin-text)]">رابط صورة الغلاف (Cover Image URL)</label>
-              <input
-                type="text"
-                placeholder="مثال: https://images.unsplash.com/photo-... (رابط الصورة الغلاف)"
-                value={coverImageUrl}
-                onChange={(e) => setCoverImageUrl(e.target.value)}
-                className="admin-input w-full text-left"
-              />
+            <div className="space-y-2 text-right">
+              <label className="text-xs font-bold text-[var(--admin-text)] block">صورة غلاف النموذج (Cover Image)</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="رابط الصورة (مثل https://...) أو ارفع ملفاً"
+                  value={coverImageUrl}
+                  onChange={(e) => setCoverImageUrl(e.target.value)}
+                  className="admin-input flex-1 text-left"
+                />
+                <input
+                  type="file"
+                  id="cover-upload-input"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith('image/')) {
+                      toast.error('الرجاء اختيار ملف صورة صالح');
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error('حجم الصورة يجب ألا يتجاوز 5 ميجابايت');
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = async () => {
+                      try {
+                        setUploadingCover(true);
+                        const base64 = reader.result as string;
+                        const result = await adminService.uploadFormCoverImage(base64, file.name);
+                        if (result.success) {
+                          setCoverImageUrl(result.data);
+                          toast.success('تم رفع صورة الغلاف بنجاح');
+                        } else {
+                          toast.error(result.message || 'فشل رفع صورة الغلاف');
+                        }
+                      } catch (err: any) {
+                        toast.error(err.response?.data?.message || 'تعذر رفع صورة الغلاف');
+                      } finally {
+                        setUploadingCover(false);
+                      }
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={uploadingCover}
+                  onClick={() => document.getElementById('cover-upload-input')?.click()}
+                  className="px-4 py-2 bg-[var(--admin-card-strong)] hover:bg-[var(--admin-hover)] border border-[var(--admin-border)] rounded-xl text-xs font-bold text-[var(--admin-text)] transition flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {uploadingCover ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  رفع صورة
+                </button>
+              </div>
               <span className="text-[10px] text-[var(--admin-muted)]">
-                ضع رابط الصورة التي ترغب بظهورها كغلاف أعلى النموذج (اختياري).
+                ضع رابط صورة الغلاف أو انقر على &quot;رفع صورة&quot; لاختيار صورة من جهازك.
               </span>
             </div>
 

@@ -481,6 +481,14 @@ export const adminService = {
     return res.data;
   },
 
+  uploadFormCoverImage: async (base64Image: string, fileName: string) => {
+    const res = await apiClient.post<{ success: boolean; data: string; message?: string }>('/admin/forms/cover/upload', {
+      base64Image,
+      fileName
+    });
+    return res.data;
+  },
+
   getStudentProfile: async (id: string) => {
     const res = await apiClient.get(`/admin/users/students/${id}/profile`);
     return res.data?.data !== undefined ? res.data?.data : res.data;

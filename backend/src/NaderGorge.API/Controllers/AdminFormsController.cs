@@ -80,4 +80,36 @@ public class AdminFormsController : ControllerBase
         if (!result.Success) return BadRequest(result);
         return Ok(result);
     }
+
+    [HttpPost("cover/upload")]
+    public async Task<IActionResult> UploadCoverImage([FromBody] UploadCoverImageRequest dto)
+    {
+        try
+        {
+            var base64Data = dto.Base64Image.Contains(",") ? dto.Base64Image.Split(',')[1] : dto.Base64Image;
+            var bytes = Convert.FromBase64String(base64Data);
+
+            var uploadsDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads", "form-covers");
+            if (!System.IO.Directory.Exists(uploadsDir))
+                System.IO.Directory.CreateDirectory(uploadsDir);
+
+            var uniqueFileName = $"{Guid.NewGuid()}_{System.IO.Path.GetFileName(dto.FileName)}";
+            var filePath = System.IO.Path.Combine(uploadsDir, uniqueFileName);
+
+            await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+
+            var relativeUrl = $"/uploads/form-covers/{uniqueFileName}";
+            return Ok(new { Success = true, Data = relativeUrl });
+        }
+        catch (FormatException)
+        {
+            return BadRequest(new { Success = false, Message = "Invalid image data format" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Success = false, Message = $"Could not save the image: {ex.Message}" });
+        }
+    }
 }
+
+public record UploadCoverImageRequest(string Base64Image, string FileName);
