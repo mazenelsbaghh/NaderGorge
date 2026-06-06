@@ -232,8 +232,8 @@ networks:
 
 volumes:
   masar_pgdata:
-    name: nadergorge_masar_pgdata
+    name: nadergorge_pgdata
     external: true
   masar_redisdata:
-    name: nadergorge_masar_redisdata
+    name: nadergorge_redisdata
     external: true
