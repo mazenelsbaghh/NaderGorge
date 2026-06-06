@@ -28,9 +28,9 @@ public class RejectWatchRequestCommandHandler : IRequestHandler<RejectWatchReque
         if (req.Status != RequestStatus.Pending)
             return ApiResponse<bool>.Fail("Request is already resolved", new List<string> { "ALREADY_RESOLVED" });
 
-        var reason = request.Reason.Trim();
-        if (string.IsNullOrWhiteSpace(reason))
-            return ApiResponse<bool>.Fail("Reason is required", new List<string> { "INVALID_REASON" });
+        var reason = string.IsNullOrWhiteSpace(request.Reason)
+            ? "تم الرفض بواسطة الإدارة"
+            : request.Reason.Trim();
 
         req.Status = RequestStatus.Rejected;
         req.ResolvedAt = DateTime.UtcNow;

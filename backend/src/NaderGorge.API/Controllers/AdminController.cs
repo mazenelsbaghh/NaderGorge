@@ -497,9 +497,10 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("watch-requests/{id}/reject")]
-    public async Task<IActionResult> RejectWatchRequest(Guid id, [FromBody] RejectWatchRequestBody request, CancellationToken ct)
+    public async Task<IActionResult> RejectWatchRequest(Guid id, [FromBody] RejectWatchRequestBody? request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.RejectWatchRequestCommand(id, request.Reason), ct);
+        var reason = request?.Reason ?? "تم الرفض بواسطة الإدارة";
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.RejectWatchRequestCommand(id, reason), ct);
         if (result.Success) return Ok(result);
         return BadRequest(result);
     }
