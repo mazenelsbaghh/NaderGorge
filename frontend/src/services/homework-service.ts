@@ -23,10 +23,10 @@ export interface AnswerSubmissionDto {
 
 export const homeworkService = {
     getPending: async () => {
-        return apiClient.get<{ data: HomeworkDto[] }>('/api/v1/students/homework/pending');
+        return apiClient.get<{ data: HomeworkDto[] }>('/homework/pending');
     },
 
     submitHomework: async (homeworkId: string, answers: AnswerSubmissionDto[]) => {
-        return apiClient.post(`/api/v1/students/homework/${homeworkId}/submit`, answers);
+        return apiClient.post(`/homework/${homeworkId}/submit`, answers);
     }
 };

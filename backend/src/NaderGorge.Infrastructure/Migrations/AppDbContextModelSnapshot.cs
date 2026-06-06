@@ -564,6 +564,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BrowserName")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -574,6 +577,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("DeviceName")
                         .HasColumnType("text");
 
+                    b.Property<string>("DeviceType")
+                        .HasColumnType("text");
+
                     b.Property<string>("IpAddress")
                         .HasColumnType("text");
 
@@ -582,6 +588,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<DateTime>("LastUsedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("OsName")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");

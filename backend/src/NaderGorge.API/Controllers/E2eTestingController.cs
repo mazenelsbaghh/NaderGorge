@@ -3,32 +3,25 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Enums;
-using Microsoft.AspNetCore.Hosting;
-using System.Security.Cryptography;
 using NaderGorge.API.Configuration;
 
 namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/e2e")]
+[E2eOnly]
 public class E2eTestingController : ControllerBase
 {
     private readonly DbContext _dbContext;
-    private readonly IWebHostEnvironment _env;
-    private readonly IConfiguration _configuration;
 
-    public E2eTestingController(IAppDbContext dbContext, IWebHostEnvironment env, IConfiguration configuration)
+    public E2eTestingController(IAppDbContext dbContext)
     {
         _dbContext = (DbContext)dbContext;
-        _env = env;
-        _configuration = configuration;
     }
 
     [HttpPost("seed")]
     public async Task<IActionResult> SeedDatabase([FromBody] SeedRequest request)
     {
-        if (!IsAuthorizedE2eRequest(out var rejection)) return rejection;
-
         if (request.ClearDatabase)
         {
             if (!UsesE2eDatabase())
@@ -113,8 +106,6 @@ public class E2eTestingController : ControllerBase
     [HttpPost("setup-mock-package")]
     public async Task<IActionResult> SetupMockPackage()
     {
-        if (!IsAuthorizedE2eRequest(out var rejection)) return rejection;
-
         // Create a Program first (Package requires ProgramId)
         var programId = Guid.NewGuid();
         var packageId = Guid.NewGuid();
@@ -195,8 +186,6 @@ public class E2eTestingController : ControllerBase
     [HttpPost("grant-package")]
     public async Task<IActionResult> GrantPackage([FromBody] GrantPackageRequest request)
     {
-        if (!IsAuthorizedE2eRequest(out var rejection)) return rejection;
-
         // Find the student by phone number if no userId provided
         var student = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == "20000000001");
         if (student == null) return BadRequest("Student not found. Did you seed first?");
@@ -250,8 +239,6 @@ public class E2eTestingController : ControllerBase
     [HttpPost("clear-devices")]
     public async Task<IActionResult> ClearDevices([FromBody] ClearDevicesRequest request)
     {
-        if (!IsAuthorizedE2eRequest(out var rejection)) return rejection;
-
         var user = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
         if (user == null) return BadRequest("User not found.");
 
@@ -265,8 +252,6 @@ public class E2eTestingController : ControllerBase
     [HttpPost("reset-gamification")]
     public async Task<IActionResult> ResetGamification([FromBody] ClearDevicesRequest request)
     {
-        if (!IsAuthorizedE2eRequest(out var rejection)) return rejection;
-
         var user = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
         if (user == null) return BadRequest("User not found.");
 
@@ -289,7 +274,6 @@ public class E2eTestingController : ControllerBase
     [HttpGet("notifications")]
     public async Task<IActionResult> GetNotifications()
     {
-        if (!IsAuthorizedE2eRequest(out var rejection)) return rejection;
         var notifications = await _dbContext.Set<Domain.Entities.Notifications.NotificationEvent>()
             .OrderByDescending(n => n.CreatedAt)
             .Select(n => new { n.Id, n.UserId, n.ChannelType, n.Title, n.Body, n.Status, n.CreatedAt })
@@ -300,26 +284,6 @@ public class E2eTestingController : ControllerBase
     private static string HashPassword(string password)
     {
         return BCrypt.Net.BCrypt.HashPassword(password);
-    }
-
-    private bool IsAuthorizedE2eRequest(out IActionResult rejection)
-    {
-        if (_env.EnvironmentName != "E2e")
-        {
-            rejection = NotFound("E2E endpoints only available in E2E environment.");
-            return false;
-        }
-
-        var configuredToken = _configuration["E2E_TEST_TOKEN"];
-        var suppliedToken = Request.Headers["X-E2E-Token"].FirstOrDefault();
-        if (!ServiceTokenValidator.IsValid(suppliedToken, configuredToken))
-        {
-            rejection = Unauthorized("Invalid E2E token.");
-            return false;
-        }
-
-        rejection = Ok();
-        return true;
     }
 
     private bool UsesE2eDatabase()

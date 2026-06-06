@@ -16,7 +16,13 @@ import { logQueueEvent } from './logging.js';
 dotenv.config();
 validateWorkerSecurityConfig();
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6382');
+const DEFAULT_REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const JOB_RETENTION_OPTIONS = {
+  removeOnComplete: { count: 1000, age: 7 * 24 * 3600 },
+  removeOnFail: { count: 500, age: 14 * 24 * 3600 },
+};
+
+const redis = new Redis(DEFAULT_REDIS_URL);
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.DB_CONNECTION_STRING || 'postgresql://postgres:postgres@localhost:5435/nadergorge?schema=public'
 });
@@ -73,10 +79,10 @@ async function processJob(json: string) {
 
 // BullMQ Connection Shared config
 const connection = {
-  host: new URL(process.env.REDIS_URL || 'redis://localhost:6382').hostname,
-  port: parseInt(new URL(process.env.REDIS_URL || 'redis://localhost:6382').port) || 6382,
-  username: new URL(process.env.REDIS_URL || 'redis://localhost:6382').username || undefined,
-  password: new URL(process.env.REDIS_URL || 'redis://localhost:6382').password || undefined,
+  host: new URL(DEFAULT_REDIS_URL).hostname,
+  port: parseInt(new URL(DEFAULT_REDIS_URL).port) || 6379,
+  username: new URL(DEFAULT_REDIS_URL).username || undefined,
+  password: new URL(DEFAULT_REDIS_URL).password || undefined,
 };
 
 async function startNotificationWorker() {
@@ -269,8 +275,7 @@ async function startWorker() {
                 logQueueEvent('ai-video-queue', 'Enqueueing BullMQ job', { lessonVideoId: payload.lessonVideoId });
                 await aiQueue.add('analyze', payload, {
                     jobId: payload.lessonVideoId,
-                    removeOnComplete: { count: 10, age: 3600 }, // keep last 10 for 1h so monitor can read status
-                    removeOnFail:     { count: 5 },
+                    ...JOB_RETENTION_OPTIONS,
                 });
             }
         } catch (e) {
@@ -280,7 +285,7 @@ async function startWorker() {
     }
   })();
 
-  const mindmapsSubRedis = new Redis(process.env.REDIS_URL || 'redis://localhost:6382');
+  const mindmapsSubRedis = new Redis(DEFAULT_REDIS_URL);
   
   // Dedicated loop for Mindmaps ingestion from .NET
   (async () => {
@@ -306,8 +311,7 @@ async function startWorker() {
                 logQueueEvent('ai-mindmaps-queue', 'Enqueueing BullMQ job', { jobId, lessonVideoId: vidId, chapterId: chapId });
                 await mindmapsQueue.add('generate', payload, {
                     jobId,
-                    removeOnComplete: { count: 10, age: 3600 }, // keep last 10 for 1h
-                    removeOnFail:     { count: 5 },
+                    ...JOB_RETENTION_OPTIONS,
                 });
             }
         } catch (e) {
@@ -317,7 +321,7 @@ async function startWorker() {
     }
   })();
 
-  const essaySubRedis = new Redis(process.env.REDIS_URL || 'redis://localhost:6382');
+  const essaySubRedis = new Redis(DEFAULT_REDIS_URL);
   
   // Dedicated loop for Essay Ingestion from .NET
   (async () => {
@@ -337,8 +341,7 @@ async function startWorker() {
                 logQueueEvent('ai-essay-queue', 'Enqueueing BullMQ job', { essaySubmissionId: payload.essaySubmissionId });
                 await essayQueue.add('evaluate', payload, {
                     jobId: payload.essaySubmissionId,
-                    removeOnComplete: { count: 10, age: 3600 },
-                    removeOnFail:     { count: 5 },
+                    ...JOB_RETENTION_OPTIONS,
                 });
             }
         } catch (e) {

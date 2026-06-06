@@ -86,6 +86,58 @@ export interface QuestionBankItemDto {
   options: QuestionOptionDto[];
 }
 
+export interface StudentPackageDto {
+  id: string;
+  accessGrantId: string;
+  name: string;
+  enrolledAt: string;
+  expiresAt?: string | null;
+  progress: number;
+  isActive: boolean;
+  purchaseMethod: string;
+  price: number;
+}
+
+export interface StudentDeviceProfileDto {
+  id: string;
+  deviceName: string;
+  lastActiveAt: string;
+  isActive: boolean;
+}
+
+export interface StudentVideoOverrideDto {
+  id: string;
+  videoId: string;
+  videoTitle?: string;
+  originalLimit?: number;
+  newLimit?: number;
+  currentViews?: number;
+  overrideBy?: string;
+  createdAt?: string;
+  addedViews?: number;
+  reason?: string;
+}
+
+export interface StudentAuditLogDto {
+  id: string;
+  adminName: string;
+  action: string;
+  date: string;
+  details: string | Record<string, unknown>;
+}
+
+export interface AdminWatchRequestDto {
+  id: string;
+  userId: string;
+  studentName: string;
+  studentPhone: string;
+  lessonVideoId: string;
+  videoTitle: string;
+  status: number;
+  createdAt: string;
+  resolvedAt?: string | null;
+}
+
 export interface StudentProfileExtendedDto {
   id: string;
   fullName: string;
@@ -127,9 +179,9 @@ export interface StudentProfileExtendedDto {
     title: string;
     recentBadges: string[];
   };
-  packages: any[];
-  devices: any[];
-  overrides: any[];
+  packages: StudentPackageDto[];
+  devices: StudentDeviceProfileDto[];
+  overrides: StudentVideoOverrideDto[];
   watchTracking: {
     totalWatchedSeconds: number;
     watchedVideosCount: number;
@@ -147,7 +199,7 @@ export interface StudentProfileExtendedDto {
     }>;
   };
   currentBalance: number;
-  auditTrail: any[];
+  auditTrail: StudentAuditLogDto[];
   notes: Array<{
     id: string;
     content: string;
@@ -693,22 +745,22 @@ export const adminService = {
   },
 
   getWatchRequests: async () => {
-    const res = await apiClient.get('/admin/watch-requests');
+    const res = await apiClient.get<ApiResponse<AdminWatchRequestDto[]>>('/admin/watch-requests');
     return res.data;
   },
 
   approveWatchRequest: async (id: string) => {
-    const res = await apiClient.post(`/admin/watch-requests/${id}/approve`, {});
+    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/approve`, {});
     return res.data;
   },
 
   rejectWatchRequest: async (id: string) => {
-    const res = await apiClient.post(`/admin/watch-requests/${id}/reject`, {});
+    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/reject`, {});
     return res.data;
   },
 
   cancelStudentPackage: async (userId: string, accessGrantId: string, refundBalance: boolean) => {
-    const res = await apiClient.post(`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`, { refundBalance });
+    const res = await apiClient.post<ApiResponse>(`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`, { refundBalance });
     return res.data;
   }
 };

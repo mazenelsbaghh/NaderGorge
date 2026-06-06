@@ -42,7 +42,7 @@ interface SecureVideoPlayerProps {
  * That route decrypts the video ID server-side and returns an HTML page with YouTube
  * embedded. Communication happens via postMessage.
  * 
- * DevTools shows: <iframe src="/api/video/embed?t=ENCRYPTED..."> (no YouTube URL)
+ * DevTools shows only an opaque session id in the iframe URL.
  */
 export interface SecureVideoPlayerRef {
   seekTo: (seconds: number) => void;
@@ -167,6 +167,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   // Receives events from the embedded video page
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
       const msg = event.data;
       if (!msg || msg.source !== 'video-embed') return;
 
@@ -252,7 +253,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   // ── Send command to embedded player ──
   const sendCommand = useCallback((type: string, data?: any) => {
     if (iframeRef.current?.contentWindow) {
-      iframeRef.current.contentWindow.postMessage({ type, ...data }, '*');
+      iframeRef.current.contentWindow.postMessage({ type, ...data }, window.location.origin);
     }
   }, []);
 
@@ -435,20 +436,24 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         return;
       }
 
-      // 2. Mark session consumed
-      await videoSessionService.consumeSession(session.sessionId);
+      const consumeAfterIframeLoad = () => {
+        void videoSessionService.consumeSession(session.sessionId).catch((err) => {
+          devConsole.error('Failed to consume video session after iframe load:', err);
+        });
+      };
 
-      // 3. Render appropriately based on provider
+      // 2. Render appropriately based on provider
       if (session.provider?.toLowerCase() === 'vk') {
         setProvider('vk');
-        // Build the embed URL pointing to our own API route for VK
-        const embedUrl = `/api/video/embed?t=${encodeURIComponent(session.token)}&k=${encodeURIComponent(session.key)}`;
+        // Build the embed URL pointing to our own API route for VK.
+        const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
 
         if (containerRef.current) {
           containerRef.current.innerHTML = '';
           
           const iframe = document.createElement('iframe');
           iframe.src = embedUrl;
+          iframe.onload = consumeAfterIframeLoad;
           iframe.style.position = 'absolute';
           iframe.style.top = '0';
           iframe.style.left = '0';
@@ -469,14 +474,15 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       } else {
         // Fallback or explicit youtube
         setProvider('youtube');
-        // Build the embed URL pointing to our own API route for YouTube
-        const embedUrl = `/api/video/embed?t=${encodeURIComponent(session.token)}&k=${encodeURIComponent(session.key)}`;
+        // Build the embed URL pointing to our own API route for YouTube.
+        const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
 
         if (containerRef.current) {
           containerRef.current.innerHTML = '';
           
           const iframe = document.createElement('iframe');
           iframe.src = embedUrl;
+          iframe.onload = consumeAfterIframeLoad;
           iframe.style.position = 'absolute';
           iframe.style.top = '0';
           iframe.style.left = '0';

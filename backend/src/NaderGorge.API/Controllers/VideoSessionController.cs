@@ -19,13 +19,11 @@ public class VideoSessionController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IAppDbContext _db;
-    private readonly IConfiguration _configuration;
 
-    public VideoSessionController(IMediator mediator, IAppDbContext db, IConfiguration configuration)
+    public VideoSessionController(IMediator mediator, IAppDbContext db)
     {
         _mediator = mediator;
         _db = db;
-        _configuration = configuration;
     }
 
     [HttpPost]
@@ -79,18 +77,10 @@ public class VideoSessionController : ControllerBase
     }
 
     [AllowAnonymous]
+    [InternalTokenAuthorize("API_CALLBACK_SECRET", "AI_CALLBACK_SECRET")]
     [HttpGet("{sessionId:guid}/embed-material")]
     public async Task<IActionResult> GetEmbedMaterial(Guid sessionId, CancellationToken ct)
     {
-        var suppliedToken = Request.Headers["X-Internal-Token"].FirstOrDefault();
-        if (!ServiceTokenValidator.IsValid(
-                suppliedToken,
-                _configuration["API_CALLBACK_SECRET"],
-                _configuration["AI_CALLBACK_SECRET"]))
-        {
-            return Unauthorized("Invalid internal token.");
-        }
-
         var session = await _db.VideoPlaybackSessions
             .FirstOrDefaultAsync(s => s.Id == sessionId && !s.IsConsumed && s.ExpiresAt > DateTime.UtcNow, ct);
 

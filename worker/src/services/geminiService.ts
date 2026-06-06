@@ -167,7 +167,7 @@ STRICT RULES:
         // Try extracting a JSON array substring as last resort
         const match = chaptersText.match(/\[[\s\S]*\]/);
         if (!match) {
-            console.error('[Gemini] CALL B raw output:', chaptersText.slice(0, 500));
+            console.error(`[Gemini] CALL B parse failed without JSON array. Output length: ${chaptersText.length} chars.`);
             throw new Error('Gemini chapter analysis returned unparseable output.');
         }
         chaptersArray = JSON.parse(match[0]);

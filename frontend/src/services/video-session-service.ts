@@ -9,8 +9,6 @@ export interface WatchInfo {
 
 export interface VideoSession {
   sessionId: string;
-  token: string;
-  key: string;
   expiresAt: string;
   provider: string;
   watchInfo: WatchInfo;

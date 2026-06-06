@@ -43,24 +43,28 @@ function extractAttributeValue(attributeText, attributeName) {
 }
 
 function classifyAuthorization(classAttributes, methodAttributes, source, signatureStart) {
+  const customAttributes = `${classAttributes}\n${methodAttributes}`;
+  if (/\[InternalTokenAuthorize(?:Attribute)?\b/i.test(customAttributes)) {
+    return 'internal-token';
+  }
+
+  if (/\[E2eOnly(?:Attribute)?\b/i.test(customAttributes)) {
+    return 'e2e-token';
+  }
+
   const methodAllowsAnonymous = /\[AllowAnonymous(?:Attribute)?\b/i.test(methodAttributes);
   if (methodAllowsAnonymous) {
     return 'anonymous';
   }
 
-  const classAllowsAnonymous = /\[AllowAnonymous(?:Attribute)?\b/i.test(classAttributes);
   const methodRequiresAuthorization = /\[Authorize(?:Attribute)?\b/i.test(methodAttributes);
   const classRequiresAuthorization = /\[Authorize(?:Attribute)?\b/i.test(classAttributes);
-  const precedingSlice = source.slice(Math.max(0, signatureStart - 1200), signatureStart);
-
-  if (/X-Internal-Token|ServiceToken|InternalToken|API_CALLBACK_SECRET/i.test(precedingSlice)) {
-    return 'internal-token';
-  }
 
   if (methodRequiresAuthorization || classRequiresAuthorization) {
     return 'authorized';
   }
 
+  const classAllowsAnonymous = /\[AllowAnonymous(?:Attribute)?\b/i.test(classAttributes);
   if (classAllowsAnonymous) {
     return 'anonymous';
   }

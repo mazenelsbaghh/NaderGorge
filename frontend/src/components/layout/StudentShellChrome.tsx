@@ -15,7 +15,7 @@
  * Token source: useAdminTheme() → same --admin-* CSS vars as admin pages.
  */
 
-import { ReactNode, useEffect, useState, useCallback } from 'react';
+import { type CSSProperties, ReactNode, useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -56,6 +56,21 @@ type StudentShellRoute =
 type StudentShellChromeProps = {
   children: ReactNode;
 };
+
+const studentShellTokenAliases = {
+  '--student-bg': 'var(--admin-bg)',
+  '--student-sidebar': 'var(--admin-sidebar)',
+  '--student-text': 'var(--admin-text)',
+  '--student-muted': 'var(--admin-muted)',
+  '--student-primary': 'var(--admin-primary)',
+  '--student-primary-strong': 'var(--admin-primary-strong)',
+  '--student-card': 'var(--admin-card)',
+  '--student-card-soft': 'var(--admin-card-soft)',
+  '--student-card-strong': 'var(--admin-card-strong)',
+  '--student-border': 'var(--admin-border)',
+  '--student-hover': 'var(--admin-hover)',
+  '--student-shadow': 'var(--admin-shadow)',
+} as CSSProperties;
 
 /* ── Nav items ──────────────────────────────────────────────────────── */
 
@@ -137,7 +152,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   return (
     <div
       dir="rtl"
-      className="student-app-background h-dvh overflow-hidden text-[var(--admin-text)] relative"
+      style={studentShellTokenAliases}
+      className="student-app-background h-dvh overflow-hidden text-[var(--student-text)] relative"
     >
       {showAmbientBackground ? (
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">

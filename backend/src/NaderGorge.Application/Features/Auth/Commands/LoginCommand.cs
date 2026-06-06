@@ -9,7 +9,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.Application.Features.Auth.Commands;
 
 // ---- Login Command ----
-public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName) : IRequest<ApiResponse<LoginResponse>>;
+public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName, string? IpAddress) : IRequest<ApiResponse<LoginResponse>>;
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
 public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, bool ProfileComplete, string? AvatarSlug);
 
@@ -75,11 +75,16 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
                     throw new InvalidOperationException($"Maximum device limit ({maxDevices}) reached. Contact admin to remove a device.");
             }
 
+            var (osName, browserName, deviceType) = UserAgentParser.Parse(request.DeviceName);
             var newDevice = new Device
             {
                 UserId = user.Id,
                 DeviceFingerprint = request.DeviceFingerprint,
                 DeviceName = request.DeviceName,
+                IpAddress = request.IpAddress,
+                OsName = osName,
+                BrowserName = browserName,
+                DeviceType = deviceType,
                 LastUsedAt = DateTime.UtcNow
             };
             _db.Devices.Add(newDevice);
@@ -87,6 +92,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         else
         {
             existingDevice.LastUsedAt = DateTime.UtcNow;
+            existingDevice.IpAddress = request.IpAddress ?? existingDevice.IpAddress;
         }
 
         // --- Generate tokens ---

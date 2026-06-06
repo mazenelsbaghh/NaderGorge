@@ -1,4 +1,5 @@
 import pytest
+from concurrent.futures import ThreadPoolExecutor
 from tests.conftest import NaderGorgeClient
 
 def test_unpurchased_access_blocked(mock_package):
@@ -113,3 +114,49 @@ def test_balance_purchase_flow(mock_package):
     # Student 1 can start the exam
     exam_res = student.post(f"/api/exams/{exam_id}/start")
     assert exam_res.status_code == 200
+
+def test_concurrent_package_purchase_cannot_overspend_balance(mock_package):
+    package_id = mock_package.get("packageId")
+    lesson_id = mock_package.get("lessonId")
+    assert package_id is not None
+    assert lesson_id is not None
+
+    admin = NaderGorgeClient()
+    admin.login("20000000000", "password")
+
+    gen_res = admin.post("/api/admin/codes/bulk-generate", json={
+        "groupName": "E2E Concurrent Wallet Recharge Batch",
+        "codeType": "Balance",
+        "count": 1,
+        "codeLength": 8,
+        "balanceAmount": 100.0
+    })
+    assert gen_res.status_code == 200
+    code = gen_res.json().get("data", {}).get("codes", [])[0]
+
+    student = NaderGorgeClient()
+    assert student.login("20000000001", "password").status_code == 200
+
+    act_res = student.post("/api/codes/activate", json={"code": code})
+    assert act_res.status_code == 200
+
+    def purchase_once():
+        client = NaderGorgeClient(fingerprint="e2e-concurrent-purchase")
+        client.token = student.token
+        return client.post("/api/student/balance/purchase", json={
+            "contentType": "Package",
+            "contentId": package_id
+        }).status_code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda _: purchase_once(), range(2)))
+
+    assert results.count(200) == 1
+    assert all(status in {200, 400} for status in results)
+
+    bal_res = student.get("/api/student/balance")
+    assert bal_res.status_code == 200
+    assert bal_res.json().get("data", {}).get("currentBalance") == 0.0
+
+    lesson_res = student.get(f"/api/content/lessons/{lesson_id}")
+    assert lesson_res.status_code == 200

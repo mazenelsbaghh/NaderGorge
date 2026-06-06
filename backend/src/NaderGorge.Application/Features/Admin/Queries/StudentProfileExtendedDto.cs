@@ -74,7 +74,11 @@ public class StudentPackageDto
 public class StudentDeviceDto
 {
     public Guid Id { get; set; }
-    public string DeviceName { get; set; } = string.Empty;
+    public string DeviceName { get; set; } = string.Empty;   // Raw User-Agent
+    public string? IpAddress { get; set; }
+    public string? OsName { get; set; }
+    public string? BrowserName { get; set; }
+    public string? DeviceType { get; set; }
     public DateTime LastActiveAt { get; set; }
     public bool IsActive { get; set; }
 }

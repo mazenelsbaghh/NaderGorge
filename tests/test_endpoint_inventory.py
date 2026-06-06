@@ -39,6 +39,24 @@ def test_endpoint_inventory_schema_and_paths():
         assert endpoint["path"].startswith("/api/")
         assert endpoint["controller"].endswith("Controller")
         assert endpoint["action"]
-        assert endpoint["authorization"] in {"anonymous", "authorized", "internal-token"}
+        assert endpoint["authorization"] in {"anonymous", "authorized", "internal-token", "e2e-token"}
         assert endpoint["source"]["file"].startswith("backend/src/NaderGorge.API/Controllers/")
         assert endpoint["source"]["line"] > 0
+
+
+def test_internal_and_e2e_routes_are_classified_as_protected():
+    endpoints = load_inventory()["endpoints"]
+
+    internal_routes = [e for e in endpoints if e["controller"] == "InternalController"]
+    assert internal_routes
+    assert all(e["authorization"] == "internal-token" for e in internal_routes)
+
+    e2e_routes = [e for e in endpoints if e["controller"] == "E2eTestingController"]
+    assert e2e_routes
+    assert all(e["authorization"] == "e2e-token" for e in e2e_routes)
+
+    embed_material = next(
+        e for e in endpoints
+        if e["controller"] == "VideoSessionController" and e["action"] == "GetEmbedMaterial"
+    )
+    assert embed_material["authorization"] == "internal-token"

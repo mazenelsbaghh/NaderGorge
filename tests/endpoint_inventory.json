@@ -1,8 +1,8 @@
 {
   "generatedBy": "scripts/generate-endpoint-inventory.mjs",
   "controllerDirectory": "backend/src/NaderGorge.API/Controllers",
-  "endpointCount": 144,
-  "digest": "cedb03fd6025c400c37a3f7aa077661cc2ce1133851978a795d29fb51914f3d6",
+  "endpointCount": 146,
+  "digest": "b1a6357720a6e29a893042b6009409a47cab0c833ae474938ede9b618a3c38ab",
   "endpoints": [
     {
       "controller": "AdminCommunityController",
@@ -433,7 +433,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 506
+        "line": 507
       }
     },
     {
@@ -445,7 +445,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 514
+        "line": 515
       }
     },
     {
@@ -973,7 +973,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 41
+        "line": 73
       }
     },
     {
@@ -985,7 +985,19 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 26
+        "line": 47
+      }
+    },
+    {
+      "controller": "AuthController",
+      "action": "Me",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "routeTemplate": "/api/auth/me",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
+        "line": 20
       }
     },
     {
@@ -997,7 +1009,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 33
+        "line": 65
       }
     },
     {
@@ -1009,7 +1021,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 19
+        "line": 40
       }
     },
     {
@@ -1021,7 +1033,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 57
+        "line": 89
       }
     },
     {
@@ -1033,7 +1045,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 50
+        "line": 82
       }
     },
     {
@@ -1270,10 +1282,10 @@
       "method": "POST",
       "path": "/api/e2e/clear-devices",
       "routeTemplate": "/api/e2e/clear-devices",
-      "authorization": "anonymous",
+      "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 250
+        "line": 239
       }
     },
     {
@@ -1282,10 +1294,10 @@
       "method": "POST",
       "path": "/api/e2e/grant-package",
       "routeTemplate": "/api/e2e/grant-package",
-      "authorization": "anonymous",
+      "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 195
+        "line": 186
       }
     },
     {
@@ -1294,10 +1306,10 @@
       "method": "GET",
       "path": "/api/e2e/notifications",
       "routeTemplate": "/api/e2e/notifications",
-      "authorization": "anonymous",
+      "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 289
+        "line": 274
       }
     },
     {
@@ -1306,10 +1318,10 @@
       "method": "POST",
       "path": "/api/e2e/reset-gamification",
       "routeTemplate": "/api/e2e/reset-gamification",
-      "authorization": "anonymous",
+      "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 265
+        "line": 252
       }
     },
     {
@@ -1318,10 +1330,10 @@
       "method": "POST",
       "path": "/api/e2e/seed",
       "routeTemplate": "/api/e2e/seed",
-      "authorization": "anonymous",
+      "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 27
+        "line": 22
       }
     },
     {
@@ -1330,10 +1342,10 @@
       "method": "POST",
       "path": "/api/e2e/setup-mock-package",
       "routeTemplate": "/api/e2e/setup-mock-package",
-      "authorization": "anonymous",
+      "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 113
+        "line": 106
       }
     },
     {
@@ -1474,10 +1486,10 @@
       "method": "POST",
       "path": "/api/v1/internal/callbacks/ai-analysis-completed",
       "routeTemplate": "/api/v1/internal/callbacks/ai-analysis-completed",
-      "authorization": "anonymous",
+      "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
-        "line": 22
+        "line": 21
       }
     },
     {
@@ -1489,7 +1501,7 @@
       "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
-        "line": 57
+        "line": 51
       }
     },
     {
@@ -1501,7 +1513,7 @@
       "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
-        "line": 33
+        "line": 31
       }
     },
     {
@@ -1513,7 +1525,7 @@
       "authorization": "internal-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/InternalController.cs",
-        "line": 45
+        "line": 41
       }
     },
     {
@@ -1669,7 +1681,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 24
+        "line": 29
       }
     },
     {
@@ -1681,7 +1693,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 94
+        "line": 115
       }
     },
     {
@@ -1693,7 +1705,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 107
+        "line": 128
       }
     },
     {
@@ -1705,7 +1717,19 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 74
+        "line": 95
+      }
+    },
+    {
+      "controller": "VideoSessionController",
+      "action": "GetEmbedMaterial",
+      "method": "GET",
+      "path": "/api/student/video-session/{sessionid:guid}/embed-material",
+      "routeTemplate": "/api/student/video-session/{sessionId:guid}/embed-material",
+      "authorization": "internal-token",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
+        "line": 81
       }
     },
     {
@@ -1717,7 +1741,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 52
+        "line": 57
       }
     },
     {

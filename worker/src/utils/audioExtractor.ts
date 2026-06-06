@@ -14,6 +14,12 @@ const ytDlpPath = (ytDlp as any).constants.YOUTUBE_DL_PATH;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const workerRoot = path.resolve(__dirname, '../../');
+const URL_PATTERN = /\bhttps?:\/\/[^\s]+/gi;
+
+function sanitizeProcessOutput(value: unknown): string {
+    const text = String(value || '').replace(URL_PATTERN, '[redacted-url]');
+    return text.length > 500 ? `${text.substring(0, 500)}...` : text;
+}
 
 /**
  * Downloads a remote video and extracts a compressed MP3 audio track
@@ -42,7 +48,7 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
     }
 
     console.log(`[Youtube-DL] Starting extraction for job ${outputFileName}`);
-    console.log(`[Youtube-DL] Source URL: ${sourceUrl.substring(0, 80)}...`);
+    console.log(`[Youtube-DL] Source received (${sourceUrl.length} chars).`);
     console.log(`[Youtube-DL] Worker root: ${workerRoot}`);
     console.log(`[Youtube-DL] Temp dir:    ${tempDir}`);
 
@@ -79,12 +85,13 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
     console.log(`[Youtube-DL] Running yt-dlp...`);
     try {
         const { stdout, stderr } = await execFileAsync(ytDlpPath, args);
-        if (stdout) console.log(`[Youtube-DL] stdout:\n${stdout.substring(0, 500)}`);
-        if (stderr) console.warn(`[Youtube-DL] stderr:\n${stderr.substring(0, 500)}`);
+        if (stdout) console.log(`[Youtube-DL] stdout:\n${sanitizeProcessOutput(stdout)}`);
+        if (stderr) console.warn(`[Youtube-DL] stderr:\n${sanitizeProcessOutput(stderr)}`);
     } catch (err: any) {
         const errorMsg = err.stderr || err.stdout || err.message || String(err);
-        console.error(`[Youtube-DL] yt-dlp exited with error:\n${errorMsg}`);
-        throw new Error(`yt-dlp failed to download. Detail: ${errorMsg}`);
+        const safeErrorMsg = sanitizeProcessOutput(errorMsg);
+        console.error(`[Youtube-DL] yt-dlp exited with error:\n${safeErrorMsg}`);
+        throw new Error(`yt-dlp failed to download. Detail: ${safeErrorMsg}`);
     }
 
     // ── Check expected path first ─────────────────────────────────────────────
@@ -102,7 +109,7 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
         // yt-dlp exited 0 but produced nothing — likely a format/URL issue
         throw new Error(
             `yt-dlp ran successfully but created no output file. ` +
-            `URL may be unsupported or private. Source: ${sourceUrl.substring(0, 80)}`
+            `URL may be unsupported or private.`
         );
     }
 

@@ -1,3 +1,4 @@
+using System.Data;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -40,15 +41,23 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
 
     public async Task<ApiResponse<ActivateCodeResponse>> Handle(ActivateCodeCommand request, CancellationToken ct)
     {
+        try
+        {
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
         var user = await _db.Users
             .FirstOrDefaultAsync(u => u.Id == request.UserId, ct)
             ?? throw new KeyNotFoundException("User not found");
 
         var accessCode = await _db.AccessCodes
+            .AsNoTracking()
             .Include(c => c.CodeGroup)
                 .ThenInclude(g => g.CodeVideoTargets)
-            .FirstOrDefaultAsync(c => c.CodePlaintext == request.Code && !c.IsConsumed, ct)
+            .FirstOrDefaultAsync(c => c.CodePlaintext == request.Code, ct)
             ?? throw new KeyNotFoundException("Invalid or already used code");
+
+        if (accessCode.IsConsumed)
+            throw new KeyNotFoundException("Invalid or already used code");
 
         // Check expiration
         var now = DateTime.UtcNow;
@@ -58,10 +67,16 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
         if (accessCode.CodeGroup.ExpiresAt.HasValue && accessCode.CodeGroup.ExpiresAt.Value < now)
             throw new InvalidOperationException("This code group has expired.");
 
-        // Mark code as consumed
-        accessCode.IsConsumed = true;
-        accessCode.ConsumedByUserId = user.Id;
-        accessCode.ConsumedAt = now;
+        var consumedRows = await _db.AccessCodes
+            .Where(c => c.Id == accessCode.Id && !c.IsConsumed)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(c => c.IsConsumed, true)
+                .SetProperty(c => c.ConsumedByUserId, user.Id)
+                .SetProperty(c => c.ConsumedAt, now)
+                .SetProperty(c => c.UpdatedAt, now), ct);
+
+        if (consumedRows != 1)
+            throw new KeyNotFoundException("Invalid or already used code");
 
         var codeGroup = accessCode.CodeGroup;
         var codeType = codeGroup.CodeType;
@@ -79,6 +94,7 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
             grantId = tx.Id; // Use tx ID as reference
 
             await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return ApiResponse<ActivateCodeResponse>.Ok(
                 new ActivateCodeResponse(grantId, $"تم شحن رصيدك بـ {amount} جنيه", CodeType.Balance, "/student/balance"));
         }
@@ -151,6 +167,7 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
         }
 
         await _db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         var message = codeType switch
         {
@@ -165,5 +182,17 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
 
         return ApiResponse<ActivateCodeResponse>.Ok(
             new ActivateCodeResponse(grantId, message, codeType, redirectUrl));
+        }
+        catch (Exception ex) when (IsConcurrencyFailure(ex))
+        {
+            return ApiResponse<ActivateCodeResponse>.Fail("Invalid or already used code");
+        }
+    }
+
+    private static bool IsConcurrencyFailure(Exception ex)
+    {
+        return ex.Message.Contains("could not serialize", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("concurrent update", StringComparison.OrdinalIgnoreCase)
+            || (ex.InnerException != null && IsConcurrencyFailure(ex.InnerException));
     }
 }

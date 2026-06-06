@@ -19,8 +19,8 @@ public class AdminResetPasswordCommandHandler : IRequestHandler<AdminResetPasswo
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.StudentId, ct);
         if (user == null) return ApiResponse.Fail("Student not found.");
 
-        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 4)
-            return ApiResponse.Fail("Password must be at least 4 characters.");
+        if (!PasswordPolicy.IsValid(request.NewPassword))
+            return ApiResponse.Fail(PasswordPolicy.ValidationMessage);
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
 

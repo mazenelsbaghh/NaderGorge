@@ -40,7 +40,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 // Singleton ConnectionMultiplexer for raw queue pushing (BulkGenerateCodesCommand)
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
-    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString ?? "localhost:6382,abortConnect=false")
+    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString ?? "localhost:6379,abortConnect=false")
 );
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -172,11 +172,11 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
+if (app.Environment.EnvironmentName != "E2e")
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<NaderGorge.Infrastructure.Data.AppDbContext>();
-    var canSeedDefaults = app.Configuration.GetValue<bool>("SeedDefaults:Enabled") &&
-        (app.Environment.IsDevelopment() || app.Environment.EnvironmentName == "E2e");
+    var canSeedDefaults = app.Configuration.GetValue<bool>("SeedDefaults:Enabled") && app.Environment.IsDevelopment();
     await NaderGorge.Infrastructure.Data.Seeder.SeedAsync(db, canSeedDefaults);
 }
 

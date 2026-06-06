@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 /**
- * GET /api/video/embed?t=<encryptedToken>&k=<base64Key>
+ * GET /api/video/embed?s=<sessionId>
  * 
- * Decrypts the video session token SERVER-SIDE and returns an HTML page
- * with the player embedded.
+ * Fetches encrypted video material server-side and returns an HTML page with
+ * the player embedded. The browser-visible URL never carries token/key data.
  */
+const API_URL = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:5245/api').replace(/\/$/, '');
+const INTERNAL_TOKEN = process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRET;
+
+type VideoEmbedMaterialResponse = {
+  token: string;
+  key: string;
+};
+
 export async function GET(request: NextRequest) {
   try {
     // Prevent direct loading of the iframe (copying the iframe URL)
@@ -23,12 +31,30 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const encryptedToken = searchParams.get('t');
-    const base64Key = searchParams.get('k');
+    const sessionId = searchParams.get('s');
 
-    if (!encryptedToken || !base64Key) {
-      return new NextResponse('Missing parameters', { status: 400 });
+    if (!sessionId) {
+      return new NextResponse('Missing session', { status: 400 });
     }
+
+    if (!INTERNAL_TOKEN) {
+      return new NextResponse('Embed proxy is not configured', { status: 503 });
+    }
+
+    const materialResponse = await fetch(`${API_URL}/student/video-session/${encodeURIComponent(sessionId)}/embed-material`, {
+      headers: {
+        'X-Internal-Token': INTERNAL_TOKEN,
+      },
+      cache: 'no-store',
+    });
+
+    if (!materialResponse.ok) {
+      return new NextResponse('Session expired or invalid', { status: materialResponse.status });
+    }
+
+    const material = (await materialResponse.json()) as VideoEmbedMaterialResponse;
+    const encryptedToken = material.token;
+    const base64Key = material.key;
 
     const keyBytes = Buffer.from(base64Key, 'base64');
     const tokenBytes = Buffer.from(encryptedToken, 'base64');
@@ -306,6 +332,7 @@ function startProgressUpdates() {
 }
 
 window.addEventListener('message', function (event) {
+  if (event.origin !== window.location.origin) return;
   if (!player) return;
   var msg = event.data;
   if (!msg || !msg.type || msg.source === 'video-embed') return;
@@ -332,7 +359,7 @@ window.addEventListener('message', function (event) {
 });
 
 function postToParent(type, data) {
-  try { window.parent.postMessage({ source: 'video-embed', type: type, data: data }, '*'); } catch (e) { }
+  try { window.parent.postMessage({ source: 'video-embed', type: type, data: data }, window.location.origin); } catch (e) { }
 }
 
 document.getElementById('click-overlay').addEventListener('click', function () {
@@ -507,7 +534,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
     }, 12000);
 
     function postToParent(type, data) {
-      try { window.parent.postMessage({ source: 'video-embed', type: type, data: data }, '*'); } catch (e) { }
+      try { window.parent.postMessage({ source: 'video-embed', type: type, data: data }, window.location.origin); } catch (e) { }
     }
 
     var initTimeout = setTimeout(function() {
@@ -585,6 +612,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
     }
 
     window.addEventListener('message', function (event) {
+      if (event.origin !== window.location.origin) return;
       if (!player) return;
       var msg = event.data;
       if (!msg || !msg.type || msg.source === 'video-embed') return;
@@ -608,8 +636,8 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
           // Strategy 3: postMessage to the VK iframe (internal VK command format)
           try {
             if (iframe.contentWindow) {
-              iframe.contentWindow.postMessage({ action: 'setPlaybackRate', value: rate }, '*');
-              iframe.contentWindow.postMessage({ type: 'player:setPlaybackRate', rate: rate }, '*');
+              iframe.contentWindow.postMessage({ action: 'setPlaybackRate', value: rate }, 'https://vk.com');
+              iframe.contentWindow.postMessage({ type: 'player:setPlaybackRate', rate: rate }, 'https://vk.com');
             }
           } catch(e) {}
           break;

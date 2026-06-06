@@ -4,7 +4,7 @@ import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
-import { adminService, type StudentProfileExtendedDto } from '@/services/admin-service';
+import { adminService, type StudentPackageDto, type StudentProfileExtendedDto } from '@/services/admin-service';
 import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, MapPin, GraduationCap, UsersRound, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -145,7 +145,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
     }
   };
 
-  const handleOpenCancelPackageModal = (p: any) => {
+  const handleOpenCancelPackageModal = (p: StudentPackageDto) => {
     setSelectedPackageForCancel({
       accessGrantId: p.accessGrantId,
       name: p.name,
@@ -573,22 +573,22 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                        <p className="text-[var(--admin-muted)]">قائمة بالباقات التي اشترك فيها الطالب مع تاريخ الاشتراك والانتهاء.</p>
                      </div>
 
-                     <AdminDataTable<any>
+                     <AdminDataTable<StudentPackageDto>
                         columns={[
-                          {key: 'name', label: 'اسم الباقة', render: (row: any) => (
+                          {key: 'name', label: 'اسم الباقة', render: (row) => (
                             <span className="font-bold text-[var(--admin-text)]">{row.name}</span>
                           )},
-                          {key: 'price', label: 'السعر', render: (row: any) => (
+                          {key: 'price', label: 'السعر', render: (row) => (
                             <span className="font-medium text-[var(--admin-text)]">{row.price} ج.م</span>
                           )},
-                          {key: 'purchaseMethod', label: 'طريقة الشراء', render: (row: any) => (
+                          {key: 'purchaseMethod', label: 'طريقة الشراء', render: (row) => (
                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${row.purchaseMethod === 'Code' ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
                               {row.purchaseMethod === 'Code' ? 'كود شحن' : 'رصيد محفظة'}
                             </span>
                           )},
-                          {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row: any) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB') : 'غير محدد'},
-                          {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row: any) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB') : 'غير محدد'},
-                          {key: 'status', label: 'الحالة', render: (row: any) => {
+                          {key: 'enrolledAt', label: 'تاريخ الاشتراك', render: (row) => row.enrolledAt ? new Date(row.enrolledAt).toLocaleDateString('en-GB') : 'غير محدد'},
+                          {key: 'expiresAt', label: 'تاريخ الانتهاء', render: (row) => row.expiresAt ? new Date(row.expiresAt).toLocaleDateString('en-GB') : 'غير محدد'},
+                          {key: 'status', label: 'الحالة', render: (row) => {
                             const isExpired = row.expiresAt && new Date(row.expiresAt) < new Date();
                             const isGrantActive = row.isActive;
                             let statusClass = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400';
@@ -604,7 +604,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                               </span>
                             );
                           }},
-                          {key: 'actions', label: 'إجراءات الإلغاء', render: (row: any) => {
+                          {key: 'actions', label: 'إجراءات الإلغاء', render: (row) => {
                             if (!row.isActive) return <span className="text-[var(--admin-muted)] text-xs">غير متاحة</span>;
                             return (
                               <button
@@ -617,7 +617,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                           }}
                         ]}
                         data={studentData?.packages || []}
-                        rowKey={(row: any) => row.accessGrantId || row.id || row.name}
+                        rowKey={(row) => row.accessGrantId || row.id || row.name}
                         emptyMessage="لا توجد باقات مسجلة لهذا الطالب"
                       />
                   </div>
@@ -662,16 +662,89 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                     </button>
                  </div>
 
-                 <AdminDataTable<any> 
-                    columns={[
-                        {key: 'id', label:'معرف الجهاز', render: (row: any) => row.id}, 
-                        {key: 'deviceName', label:'اسم الجهاز', render: (row: any) => row.deviceName}, 
-                        {key: 'lastActiveAt', label:'آخر نشاط', render: (row: any) => row.lastActiveAt ? new Date(row.lastActiveAt).toLocaleString() : ''}
-                    ]}
-                    data={studentData?.devices || []}
-                    rowKey={(row: any) => row.id}
-                    emptyMessage="لا توجد أجهزة مسجلة"
-                 />
+                 {(studentData?.devices?.length ?? 0) === 0 ? (
+                   <div className="flex flex-col items-center justify-center py-16 text-[var(--admin-muted)] bg-[var(--admin-card-soft)] rounded-3xl">
+                     <span className="text-5xl mb-4">📱</span>
+                     <p className="font-bold text-[var(--admin-text)]">لا توجد أجهزة مسجلة</p>
+                   </div>
+                 ) : (
+                   <div className="grid gap-4 sm:grid-cols-2">
+                     {(studentData?.devices ?? []).map((device: any) => {
+                       const osIcon: Record<string, string> = {
+                         'Windows 10/11': '🪟', 'Windows': '🪟',
+                         'Android': '🤖', 'iOS': '🍎', 'iPadOS': '🍎',
+                         'macOS': '🍎', 'Linux': '🐧', 'ChromeOS': '🌐',
+                       };
+                       const deviceIcon: Record<string, string> = {
+                         'Mobile': '📱', 'Tablet': '📟', 'Desktop': '🖥️',
+                       };
+                       return (
+                         <div
+                           key={device.id}
+                           className={`relative flex flex-col gap-4 rounded-3xl border p-5 transition-all ${
+                             device.isActive
+                               ? 'bg-[var(--admin-card)] border-[var(--admin-border)]'
+                               : 'bg-[var(--admin-card-soft)] border-[var(--admin-border)]/40 opacity-60'
+                           }`}
+                         >
+                           {/* Header row */}
+                           <div className="flex items-center justify-between gap-3">
+                             <div className="flex items-center gap-3">
+                               <span className="text-3xl">{deviceIcon[device.deviceType ?? 'Desktop'] ?? '🖥️'}</span>
+                               <div>
+                                 <p className="font-black text-[var(--admin-text)] text-sm">
+                                   {osIcon[device.osName ?? ''] ?? '💻'} {device.osName ?? 'Unknown OS'}
+                                 </p>
+                                 <p className="text-xs text-[var(--admin-muted)] font-medium">{device.deviceType ?? 'Desktop'}</p>
+                               </div>
+                             </div>
+                             <span className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                               device.isActive
+                                 ? 'bg-emerald-500/10 text-emerald-500'
+                                 : 'bg-zinc-500/10 text-zinc-400'
+                             }`}>
+                               <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                               {device.isActive ? 'نشط' : 'معطل'}
+                             </span>
+                           </div>
+
+                           {/* Details grid */}
+                           <div className="grid grid-cols-2 gap-3">
+                             <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2">
+                               <p className="text-[10px] text-[var(--admin-muted)] font-semibold mb-0.5">المتصفح</p>
+                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.browserName ?? 'Unknown'}</p>
+                             </div>
+                             <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2">
+                               <p className="text-[10px] text-[var(--admin-muted)] font-semibold mb-0.5">عنوان IP</p>
+                               <p className="text-sm font-bold text-[var(--admin-text)] font-mono">{device.ipAddress ?? '—'}</p>
+                             </div>
+                             <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2 col-span-2">
+                               <p className="text-[10px] text-[var(--admin-muted)] font-semibold mb-0.5">آخر نشاط</p>
+                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
+                             </div>
+                           </div>
+
+                           {/* Disconnect button */}
+                           {device.isActive && (
+                             <button
+                               onClick={async () => {
+                                 if (!confirm('هل تريد فصل هذا الجهاز؟')) return;
+                                 try {
+                                   await adminService.disconnectDevice(id, device.id);
+                                   toast.success('تم فصل الجهاز');
+                                   fetchStudent();
+                                 } catch { toast.error('فشل فصل الجهاز'); }
+                               }}
+                               className="w-full rounded-2xl bg-red-500/10 py-2 text-sm font-bold text-red-500 hover:bg-red-500/20 transition-colors"
+                             >
+                               فصل الجهاز
+                             </button>
+                           )}
+                         </div>
+                       );
+                     })}
+                   </div>
+                 )}
              </div>
          )}
 

@@ -98,6 +98,27 @@ verify-surfaces-static: ## Verify Compose service separation, ports, healthcheck
 verify-surfaces: ## Verify Compose separation and running HTTP endpoints
 	node scripts/verify-surface-separation.mjs
 
+endpoint-inventory: ## Regenerate backend endpoint inventory artifacts
+	node scripts/generate-endpoint-inventory.mjs
+
+test-python: ## Install Python test requirements and run smoke/inventory tests
+	python3 -m pip install -r tests/requirements.txt
+	python3 -m pytest -q
+
+docker-volumes: ## Create external Docker volumes required by docker-compose.yml
+	docker volume create masar_pgdata
+	docker volume create masar_redisdata
+
+verify-audit-remediation: ## Run audit remediation verification commands
+	dotnet build backend/NaderGorge.sln
+	dotnet test backend/NaderGorge.sln --no-build
+	cd frontend && npm run lint && npm run build
+	cd worker && npm run build
+	python3 -m pip install -r tests/requirements.txt
+	python3 -m pytest tests/test_endpoint_inventory.py tests/test_codes.py tests/test_purchases.py tests/test_video.py -q
+	node scripts/generate-endpoint-inventory.mjs --check
+	docker compose config -q
+
 # =============================================================================
 # LOGS
 # =============================================================================

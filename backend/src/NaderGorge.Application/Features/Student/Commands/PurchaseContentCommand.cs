@@ -1,6 +1,8 @@
+using System.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -12,14 +14,20 @@ public record PurchaseContentCommand(Guid StudentId, CodeType ContentType, Guid 
 public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentCommand, ApiResponse<bool>>
 {
     private readonly IAppDbContext _db;
+    private readonly BalanceService _balanceService;
 
-    public PurchaseContentCommandHandler(IAppDbContext db)
+    public PurchaseContentCommandHandler(IAppDbContext db, BalanceService balanceService)
     {
         _db = db;
+        _balanceService = balanceService;
     }
 
     public async Task<ApiResponse<bool>> Handle(PurchaseContentCommand request, CancellationToken ct)
     {
+        try
+        {
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
         // 1. Validate content exists and get its price
         decimal price = 0;
         string contentName = "";
@@ -59,37 +67,19 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             return ApiResponse<bool>.Fail("تم شراء هذا المحتوى مسبقاً");
         }
 
-        // 3. Get Student Balance
-        var balance = await _db.StudentBalances
-            .FirstOrDefaultAsync(b => b.UserId == request.StudentId, ct);
-            
-        if (balance == null)
+        try
         {
-            balance = new StudentBalance { Id = Guid.NewGuid(), UserId = request.StudentId, CurrentBalance = 0 };
-            _db.StudentBalances.Add(balance);
+            await _balanceService.DeductBalance(
+                request.StudentId,
+                price,
+                $"شراء {contentName} ({request.ContentType})",
+                request.ContentId,
+                ct);
         }
-
-        if (balance.CurrentBalance < price)
+        catch (InvalidOperationException)
         {
-            return ApiResponse<bool>.Fail($"رصيدك الحالي ({balance.CurrentBalance} ج.م) لا يكفي لشراء {contentName} بسعر ({price} ج.م)");
+            return ApiResponse<bool>.Fail($"رصيدك الحالي لا يكفي لشراء {contentName} بسعر ({price} ج.م)");
         }
-
-        // 4. Perform Transaction (Atomic by SaveChanges)
-        balance.CurrentBalance -= price;
-        balance.UpdatedAt = DateTime.UtcNow;
-
-        var transaction = new BalanceTransaction
-        {
-            Id = Guid.NewGuid(),
-            StudentBalanceId = balance.Id,
-            Amount = -price,
-            BalanceAfter = balance.CurrentBalance,
-            TransactionType = "ContentPurchase",
-            ReferenceId = request.ContentId,
-            Description = $"شراء {contentName} ({request.ContentType})",
-            CreatedAt = DateTime.UtcNow
-        };
-        _db.BalanceTransactions.Add(transaction);
 
         // 5. Grant Access
         var grant = new StudentAccessGrant
@@ -113,7 +103,20 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
         _db.StudentAccessGrants.Add(grant);
 
         await _db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         return ApiResponse<bool>.Ok(true, "تم الشراء بنجاح");
+        }
+        catch (Exception ex) when (IsConcurrencyFailure(ex))
+        {
+            return ApiResponse<bool>.Fail("تم تنفيذ عملية متزامنة قبل هذه المحاولة. راجع الرصيد وحاول مرة أخرى.");
+        }
+    }
+
+    private static bool IsConcurrencyFailure(Exception ex)
+    {
+        return ex.Message.Contains("could not serialize", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("concurrent update", StringComparison.OrdinalIgnoreCase)
+            || (ex.InnerException != null && IsConcurrencyFailure(ex.InnerException));
     }
 }

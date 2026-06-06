@@ -11,65 +11,50 @@ namespace NaderGorge.API.Controllers;
 public class InternalController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly IConfiguration _config;
 
-    public InternalController(IMediator mediator, IConfiguration config)
+    public InternalController(IMediator mediator)
     {
         _mediator = mediator;
-        _config = config;
     }
 
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
     [HttpPost("ai-analysis-completed")]
     public async Task<IActionResult> AiAnalysisCompleted([FromBody] AiAnalysisCompletedWebhookRequest request)
     {
-        if (!IsAuthorizedCallback(_config["AI_CALLBACK_SECRET"], _config["API_CALLBACK_SECRET"]))
-            return Unauthorized("Invalid webhook token");
-
         var cmd = new AiAnalysisCompletedCommand(request.VideoId, request.SubtitleUrl, request.Chapters);
         var result = await _mediator.Send(cmd);
         
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [InternalTokenAuthorize("API_CALLBACK_SECRET")]
     [HttpPost("mindmaps-completed")]
     public async Task<IActionResult> MindmapsCompleted([FromBody] MindmapsCompletedWebhookRequest request)
     {
-        if (!IsAuthorizedCallback(_config["API_CALLBACK_SECRET"]))
-            return Unauthorized("Invalid webhook token");
-
         var cmd = new MindmapsCompletedCommand(request.VideoId, request.Mindmaps);
         var result = await _mediator.Send(cmd);
         
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [InternalTokenAuthorize("API_CALLBACK_SECRET")]
     [HttpPost("single-mindmap-completed")]
     public async Task<IActionResult> SingleMindmapCompleted([FromBody] SingleMindmapCompletedWebhookRequest request)
     {
-        if (!IsAuthorizedCallback(_config["API_CALLBACK_SECRET"]))
-            return Unauthorized("Invalid webhook token");
-
         var cmd = new SingleMindmapCompletedCommand(request.ChapterId, request.ImageUrl);
         var result = await _mediator.Send(cmd);
 
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
     [HttpPost("essay-graded")]
     public async Task<IActionResult> EssayGraded([FromBody] EssayGradedWebhookRequest request)
     {
-        if (!IsAuthorizedCallback(_config["AI_CALLBACK_SECRET"], _config["API_CALLBACK_SECRET"]))
-            return Unauthorized("Invalid webhook token");
-
         var cmd = new WebhookEssayGradedCommand(request.EssaySubmissionId, request.AiScore, request.AiFeedback);
         var result = await _mediator.Send(cmd);
         
         return result.Success ? Ok(result) : BadRequest(result);
-    }
-
-    private bool IsAuthorizedCallback(params string?[] configuredTokens)
-    {
-        var token = Request.Headers["X-Internal-Token"].FirstOrDefault();
-        return ServiceTokenValidator.IsValid(token, configuredTokens);
     }
 }
 

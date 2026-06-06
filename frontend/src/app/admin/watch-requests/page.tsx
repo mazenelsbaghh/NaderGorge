@@ -2,7 +2,7 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { useState, useEffect } from 'react';
-import { adminService } from '@/services/admin-service';
+import { adminService, type AdminWatchRequestDto } from '@/services/admin-service';
 import { Check, X, Clock, AlertCircle } from 'lucide-react';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
 import { 
@@ -16,7 +16,7 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
 export default function WatchRequestsPage() {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<AdminWatchRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -71,7 +71,7 @@ export default function WatchRequestsPage() {
   const approvedCount = requests.filter(r => r.status === 1).length;
   const rejectedCount = requests.filter(r => r.status === 2).length;
 
-  const columns: AdminColumn<any>[] = [
+  const columns: AdminColumn<AdminWatchRequestDto>[] = [
     {
       key: 'student',
       label: 'الطالب',

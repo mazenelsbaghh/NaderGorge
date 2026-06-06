@@ -75,10 +75,15 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var devices = user.Devices.Select(d => new StudentDeviceDto
         {
             Id = d.Id,
-            DeviceName = d.DeviceFingerprint,
+            DeviceName = d.DeviceName ?? d.DeviceFingerprint,
+            IpAddress = d.IpAddress,
+            OsName = d.OsName,
+            BrowserName = d.BrowserName,
+            DeviceType = d.DeviceType,
             LastActiveAt = d.LastUsedAt,
             IsActive = d.IsActive
-        }).ToList();
+        }).OrderByDescending(d => d.LastActiveAt).ToList();
+
 
         // Overrides
         // We will need VideoOverrides table if it exists. Reverting to empty for now if entity lacks it, 

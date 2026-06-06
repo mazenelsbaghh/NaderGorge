@@ -1,8 +1,14 @@
 import pytest
 import requests
+import os
 
-BASE_URL = "http://localhost:5245"
-INTERNAL_SECRET = "secretxyz"
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:5245")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8738")
+E2E_TEST_TOKEN = os.environ.get("E2E_TEST_TOKEN", "E2eOnlyTestTokenValue123456789012345")
+
+
+def e2e_headers():
+    return {"X-E2E-Token": E2E_TEST_TOKEN}
 
 class NaderGorgeClient:
     def __init__(self, fingerprint="e2e-test-device", device_name="E2E Test Agent"):
@@ -16,6 +22,8 @@ class NaderGorgeClient:
             "X-Device-Fingerprint": self.fingerprint,
             "X-Device-Name": self.device_name
         }
+        if path.startswith("/api/e2e"):
+            req_headers.update(e2e_headers())
         if self.token:
             req_headers["Authorization"] = f"Bearer {self.token}"
         if headers:
@@ -24,6 +32,8 @@ class NaderGorgeClient:
 
     def get(self, path, params=None, headers=None):
         req_headers = {}
+        if path.startswith("/api/e2e"):
+            req_headers.update(e2e_headers())
         if self.token:
             req_headers["Authorization"] = f"Bearer {self.token}"
         if headers:
@@ -32,6 +42,8 @@ class NaderGorgeClient:
 
     def delete(self, path, headers=None):
         req_headers = {}
+        if path.startswith("/api/e2e"):
+            req_headers.update(e2e_headers())
         if self.token:
             req_headers["Authorization"] = f"Bearer {self.token}"
         if headers:
@@ -59,13 +71,13 @@ def clean_db():
         "seedAdmin": True,
         "seedStudents": True,
         "seedAssistant": True
-    })
+    }, headers=e2e_headers())
     assert res.status_code == 200
     return res.json()
 
 @pytest.fixture(scope="function")
 def mock_package(clean_db):
     # Setup standard package, term, section, lesson, video, exam, and homework
-    res = requests.post(f"{BASE_URL}/api/e2e/setup-mock-package")
+    res = requests.post(f"{BASE_URL}/api/e2e/setup-mock-package", headers=e2e_headers())
     assert res.status_code == 200
     return res.json()

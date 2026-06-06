@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/auth-store";
 
 function hasAdminAccess(roles: string[] | undefined) {
   return !!roles?.some((role) =>
-    ["Admin", "Teacher", "Assistant"].includes(role),
+    ["Admin", "Teacher"].includes(role),
   );
 }
 

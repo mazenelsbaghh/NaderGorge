@@ -58,7 +58,7 @@ Do not return any markdown code blocks, just raw JSON.`;
     const responseText = response.text || "{}";
     await job.updateProgress({ percentage: 60, stage: 'بنجهّز النتيجة...' });
 
-    console.log(`[EvaluateEssay] Gemini response:`, responseText);
+    console.log(`[EvaluateEssay] Gemini response received (${responseText.length} chars).`);
 
     let parsed: { isCorrect: boolean, feedback: string };
     try {

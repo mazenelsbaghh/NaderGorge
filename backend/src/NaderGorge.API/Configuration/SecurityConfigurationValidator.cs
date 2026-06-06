@@ -41,6 +41,13 @@ public static class SecurityConfigurationValidator
         {
             throw new InvalidOperationException("JWT secret is missing, weak, or uses an unsafe placeholder.");
         }
+
+        if (!env.IsDevelopment() &&
+            int.TryParse(config["JwtSettings:ExpirationMinutes"], out var expirationMinutes) &&
+            expirationMinutes > 120)
+        {
+            throw new InvalidOperationException("JWT access-token expiration must not exceed 120 minutes outside Development.");
+        }
     }
 
     private static void RequireStrongSecret(

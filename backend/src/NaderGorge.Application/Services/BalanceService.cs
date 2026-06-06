@@ -55,8 +55,17 @@ public class BalanceService
         if (amount <= 0) throw new ArgumentException("Credit amount must be positive", nameof(amount));
 
         var balance = await GetOrCreateBalance(userId, ct);
-        balance.CurrentBalance += amount;
-        balance.UpdatedAt = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
+        var affectedRows = await _db.StudentBalances
+            .Where(b => b.Id == balance.Id)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance + amount)
+                .SetProperty(b => b.UpdatedAt, now), ct);
+
+        if (affectedRows != 1)
+            throw new InvalidOperationException("Unable to update student balance.");
+
+        await _db.Entry(balance).ReloadAsync(ct);
 
         var tx = new BalanceTransaction
         {
@@ -91,11 +100,17 @@ public class BalanceService
 
         var balance = await GetOrCreateBalance(userId, ct);
 
-        if (balance.CurrentBalance < amount)
+        var now = DateTime.UtcNow;
+        var affectedRows = await _db.StudentBalances
+            .Where(b => b.Id == balance.Id && b.CurrentBalance >= amount)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance - amount)
+                .SetProperty(b => b.UpdatedAt, now), ct);
+
+        if (affectedRows != 1)
             throw new InvalidOperationException($"Insufficient balance. Current: {balance.CurrentBalance}, Required: {amount}");
 
-        balance.CurrentBalance -= amount;
-        balance.UpdatedAt = DateTime.UtcNow;
+        await _db.Entry(balance).ReloadAsync(ct);
 
         var tx = new BalanceTransaction
         {

@@ -23,6 +23,7 @@ import {
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
 import { contentService, type VideoChapterDto, type VideoDto } from '@/services/content-service';
+import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { AdminShellChrome, AdminTeacherPhotoUpload } from '@/components/admin';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -87,6 +88,22 @@ function getProgressVal(progress: JobProgress | number): number {
 function getProgressStage(progress: JobProgress | number): string {
   if (typeof progress === 'object' && progress !== null && progress.stage) return progress.stage;
   return 'جاري التحضير ووضع المهمة في الطابور...';
+}
+
+function normalizeJobStatus(status: WorkerJobStatus): JobStatus {
+  const progress = typeof status.progress === 'object' && status.progress !== null
+    ? {
+        percentage: status.progress.percentage ?? 0,
+        stage: status.progress.stage ?? 'جاري التحضير ووضع المهمة في الطابور...',
+      }
+    : status.progress ?? 0;
+
+  return {
+    id: status.id ?? '',
+    state: status.state,
+    progress,
+    failedReason: status.failedReason,
+  };
 }
 
 // ─── Format seconds to mm:ss ─────────────────────────────────────────────────
@@ -159,9 +176,7 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
     const poll = async () => {
       if (doneRef.current) return;
       try {
-        const res = await fetch(`/api/worker/status/${jobId}`);
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = normalizeJobStatus(await workerService.getWorkerJobStatus(jobId));
         pollCountRef.current++;
 
         if (data.state === 'waiting' || data.state === 'active') {
@@ -724,11 +739,7 @@ export default function AIMonitorPage() {
           currentItems.map(async (item) => {
             try {
               const idSuffix = item.video.isProcessingMindmaps ? '_mindmaps' : '';
-              const res = await fetch(
-                `/api/worker/status/${item.video.id}${idSuffix}`
-              );
-              if (!res.ok) return { ...item, fetchError: true };
-              const data: JobStatus = await res.json();
+              const data = normalizeJobStatus(await workerService.getWorkerJobStatus(`${item.video.id}${idSuffix}`));
               anySuccess = true;
               return { ...item, jobStatus: data, fetchError: false };
             } catch {
@@ -759,11 +770,7 @@ export default function AIMonitorPage() {
         items.map(async (item) => {
           try {
             const idSuffix = item.video.isProcessingMindmaps ? '_mindmaps' : '';
-            const res = await fetch(
-              `/api/worker/status/${item.video.id}${idSuffix}`
-            );
-            if (!res.ok) return { ...item, fetchError: true };
-            const data: JobStatus = await res.json();
+            const data = normalizeJobStatus(await workerService.getWorkerJobStatus(`${item.video.id}${idSuffix}`));
             anySuccess = true;
             return { ...item, jobStatus: data, fetchError: false };
           } catch {
@@ -786,7 +793,7 @@ export default function AIMonitorPage() {
   const handleCancel = async (videoId: string, isMindmap: boolean) => {
     try {
       const idSuffix = isMindmap ? '_mindmaps' : '';
-      await fetch(`/api/worker/status/${videoId}${idSuffix}`, { method: 'DELETE' });
+      await workerService.cancelWorkerJob(`${videoId}${idSuffix}`);
       await adminService.cancelVideoAiAnalysis(videoId); // Unlocks both states
       toast.success('تم إلغاء المهمة');
       await loadProcessingVideos();
@@ -798,7 +805,7 @@ export default function AIMonitorPage() {
   const handleRetry = async (videoId: string, isMindmap: boolean) => {
     try {
       const idSuffix = isMindmap ? '_mindmaps' : '';
-      await fetch(`/api/worker/status/${videoId}${idSuffix}/retry`, { method: 'POST' });
+      await workerService.retryWorkerJob(`${videoId}${idSuffix}`);
       toast.success('تمت إعادة المحاولة');
     } catch {
       toast.error('تعذر إعادة المحاولة');

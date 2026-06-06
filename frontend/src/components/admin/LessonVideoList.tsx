@@ -4,11 +4,12 @@ import NextImage from 'next/image';
 import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, ChevronDown, Image as ImageIcon, Play, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
+import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
 
 function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<WorkerJobStatus | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const onCompleteRef = useRef(onComplete);
@@ -24,9 +25,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     const checkStatus = async () => {
       if (isCancelling || isFinishedRef.current) return;
       try {
-        const res = await fetch(`/api/worker/status/${videoId}`);
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await workerService.getWorkerJobStatus(videoId);
         setStatus(data);
 
         if (data.state === 'completed' || data.state === 'not_found') {
@@ -53,7 +52,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     if (!confirm('هل أنت متأكد من إلغاء العملية؟')) return;
     setIsCancelling(true);
     try {
-      await fetch(`/api/worker/status/${videoId}`, { method: 'DELETE' });
+      await workerService.cancelWorkerJob(videoId);
       const realId = videoId.replace('_mindmaps', '');
       
       if (isMindmap) {
@@ -75,7 +74,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     try {
       // If there's an active job, retry it; otherwise re-trigger analysis
       if (status?.state === 'failed') {
-        await fetch(`/api/worker/status/${videoId}/retry`, { method: 'POST' });
+        await workerService.retryWorkerJob(videoId);
         toast.success('جاري إعادة المحاولة...');
         setStatus(null);
       } else {
