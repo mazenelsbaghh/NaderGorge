@@ -1,5 +1,6 @@
 "use client";
 
+import { devConsole } from '@/utils/dev-console';
 /**
  * Package Profile Page — /student/packages/[packageId]
  *
@@ -79,7 +80,7 @@ export default function PackageProfilePage() {
         setPkg(found ?? cachedPackage ?? null);
         setTerms(termRes.data.data);
       })
-      .catch((err) => console.error(err))
+      .catch((err) => devConsole.error(err))
       .finally(() => {
         setLoading(false);
         setTermsLoading(false);
@@ -157,7 +158,7 @@ export default function PackageProfilePage() {
 
       {/* ── Hero Image ── */}
       <div
-        className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-[32px] lg:min-h-[26rem]"
+        className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-2xl lg:min-h-[26rem]"
         style={{ viewTransitionName: `pkg-image-${packageId}` }}
       >
         <Image

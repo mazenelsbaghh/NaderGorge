@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useCallback, useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Inbox, Eye, CheckCircle, RefreshCw, FileText, Settings } from 'lucide-react';
@@ -50,7 +51,7 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
       const subsData = await getFormSubmissions(id);
       setSubmissions(subsData);
     } catch (error) {
-      console.error('Error loading submissions data:', error);
+      devConsole.error('Error loading submissions data:', error);
       toast.error('حدث خطأ أثناء تحميل البيانات');
       router.push('/admin/forms');
     } finally {
@@ -86,7 +87,7 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
       );
       setSelectedSubmission(null);
     } catch (error) {
-      console.error('Error updating status:', error);
+      devConsole.error('Error updating status:', error);
     } finally {
       setSavingStatus(false);
     }
@@ -182,7 +183,7 @@ export default function SubmissionsPage({ params }: SubmissionsPageProps) {
     try {
       selectedAnswers = JSON.parse(selectedSubmission.submittedDataJson || '{}');
     } catch (e) {
-      console.error(e);
+      devConsole.error(e);
     }
   }
 

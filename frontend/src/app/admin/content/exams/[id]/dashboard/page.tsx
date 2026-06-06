@@ -49,7 +49,7 @@ export default function ExamDashboardPage(props: { params: Promise<{ id: string 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary/20 border-t-primary"></div>
       </div>
     );
   }

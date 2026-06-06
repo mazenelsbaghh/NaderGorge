@@ -23,10 +23,10 @@ export default function StudentMistakesPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-52 animate-pulse rounded-[36px] bg-[var(--admin-card-strong)]" />
+        <div className="h-52 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="h-80 animate-pulse rounded-[32px] bg-[var(--admin-card-strong)]" />
-          <div className="h-80 animate-pulse rounded-[32px] bg-[var(--admin-card-strong)]" />
+          <div className="h-80 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
+          <div className="h-80 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
         </div>
       </div>
     );
@@ -42,7 +42,7 @@ export default function StudentMistakesPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[36px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-[0_24px_60px_var(--admin-shadow)] sm:p-8">
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-[0_24px_60px_var(--admin-shadow)] sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-danger-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-danger)]">
@@ -75,7 +75,7 @@ export default function StudentMistakesPage() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-        <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm sm:p-8">
+        <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black text-[var(--admin-text)]">أخطاء الامتحانات</h2>
@@ -157,7 +157,7 @@ export default function StudentMistakesPage() {
           )}
         </section>
 
-        <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm sm:p-8">
+        <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm sm:p-8">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-warning-10)] text-[var(--admin-warning)]">
               <BookX className="h-6 w-6" />

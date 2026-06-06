@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { CircleCheck, Plus, Shield, Tags } from 'lucide-react';
 
@@ -50,7 +51,7 @@ export default function AdminQuestionsPage() {
       const data = await adminService.listQuestions(1, 100, '');
       setQuestions(data.items);
     } catch (error) {
-      console.error(error);
+      devConsole.error(error);
     } finally {
       setLoading(false);
     }
@@ -128,7 +129,7 @@ export default function AdminQuestionsPage() {
       ]);
       await loadQuestions();
     } catch (error) {
-      console.error(error);
+      devConsole.error(error);
       toast.error('تعذر حفظ السؤال');
     } finally {
       setSaving(false);

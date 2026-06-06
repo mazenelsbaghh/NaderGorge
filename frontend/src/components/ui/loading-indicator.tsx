@@ -33,9 +33,9 @@ export function FullScreenLoader({ className = '' }: { className?: string }) {
 export function InlineLoader({ className = '' }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center gap-1 ${className}`}>
-      <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
-      <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
-      <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-current" />
+      <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:-0.3s]" />
+      <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-current [animation-delay:-0.15s]" />
+      <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
     </div>
   );
 }

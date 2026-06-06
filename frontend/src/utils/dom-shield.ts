@@ -1,3 +1,4 @@
+import { devConsole } from '@/utils/dev-console';
 /**
  * Utility functions to prevent casual inspection of the DOM and network requests.
  * These are not bulletproof against determined attackers, but they stop 99% of users.
@@ -67,13 +68,13 @@ export const createMutationGuard = (element: HTMLElement, onTamper: () => void) 
 /**
  * Trap `shadowRoot` access on a closed shadow host.
  * For closed shadows, `el.shadowRoot` already returns null,
- * but this adds a console.warn so we can detect inspection attempts.
+ * but this records a dev-only warning so we can detect inspection attempts.
  */
 export const guardShadowHost = (element: HTMLElement) => {
   try {
     Object.defineProperty(element, 'shadowRoot', {
       get: () => {
-        console.warn('[DOM-Shield] Unauthorized shadow root access attempted.');
+        devConsole.warn('[DOM-Shield] Unauthorized shadow root access attempted.');
         return null;
       },
       configurable: false

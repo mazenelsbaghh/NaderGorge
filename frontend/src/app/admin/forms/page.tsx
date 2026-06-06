@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Clipboard, ClipboardList, Edit2, ExternalLink, Eye, Inbox, Plus, Trash2 } from 'lucide-react';
@@ -26,7 +27,7 @@ export default function AdminFormsPage() {
       const data = await getAdminForms();
       setForms(data);
     } catch (error) {
-      console.error('Error fetching forms:', error);
+      devConsole.error('Error fetching forms:', error);
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export default function AdminFormsPage() {
       await navigator.clipboard.writeText(formUrl);
       toast.success('تم نسخ رابط النموذج الكامل');
     } catch (error) {
-      console.error('Error copying form link:', error);
+      devConsole.error('Error copying form link:', error);
       toast.error('تعذر نسخ الرابط');
     }
   };
@@ -62,7 +63,7 @@ export default function AdminFormsPage() {
       setForms((prev) => prev.filter((f) => f.id !== deleteFormId));
       setDeleteFormId(null);
     } catch (error) {
-      console.error('Error deleting form:', error);
+      devConsole.error('Error deleting form:', error);
     } finally {
       setDeleting(false);
     }

@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useState, useEffect } from 'react';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
 import { Save, Info } from 'lucide-react';
@@ -18,7 +19,7 @@ export default function AdminSettingsPage() {
       if (t) setThreshold(t.value);
       setIsLoading(false);
     }).catch(err => {
-      console.error(err);
+      devConsole.error(err);
       setIsLoading(false);
     });
   }, []);
@@ -35,7 +36,7 @@ export default function AdminSettingsPage() {
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (err) {
-      console.error(err);
+      devConsole.error(err);
       setSaveStatus('error');
     } finally {
       setIsSaving(false);

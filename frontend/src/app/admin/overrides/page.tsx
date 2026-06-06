@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { FormEvent, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LockOpen, RefreshCcw, ShieldAlert } from 'lucide-react';
@@ -72,7 +73,7 @@ export default function AdminOverridesPage() {
       setPackages((packagesResponse.data?.data || []) as PackageDto[]);
       setStudents((usersResponse?.items || []) as UserItem[]);
     } catch (error) {
-      console.error(error);
+      devConsole.error(error);
     }
   }
 

@@ -113,7 +113,7 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
   };
 
   return (
-    <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
+    <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="mb-4 inline-flex items-center gap-3 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">

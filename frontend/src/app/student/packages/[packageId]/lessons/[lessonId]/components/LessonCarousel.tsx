@@ -179,7 +179,7 @@ export function LessonCarousel({ videos, activeStep, onStepChange }: LessonCarou
         >
             <div
                 className={clsx(
-                    "group relative w-full overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-gradient-to-b from-[var(--admin-card)]/95 to-[var(--admin-background)] backdrop-blur-3xl transition duration-500",
+                    "group relative w-full overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-gradient-to-b from-[var(--admin-card)]/95 to-[var(--admin-background)] backdrop-blur-md transition duration-500",
                     "hover:border-[var(--admin-primary)]/30"
                 )}
             >

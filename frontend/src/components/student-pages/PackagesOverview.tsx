@@ -12,8 +12,8 @@ export function PackagesOverview({ packages }: PackagesOverviewProps) {
   const available = packages.length - enrolled.length;
 
   return (
-    <section className="relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10">
-      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[100px]" />
+    <section className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10">
+      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[48px]" />
       
       <div className="relative z-10 flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-xl">

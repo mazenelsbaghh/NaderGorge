@@ -2,9 +2,9 @@ import { ShieldCheck } from "lucide-react";
 
 export function CodeRedemptionShowcase() {
   return (
-    <section className="relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10">
-      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[100px]" />
-      <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[100px]" />
+    <section className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10">
+      <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[48px]" />
+      <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[48px]" />
 
       <div className="relative z-10 grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="max-w-xl">

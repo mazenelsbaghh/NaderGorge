@@ -161,7 +161,12 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             aria-label="القائمة الرئيسية"
           >
             <div className="space-y-7">
-              <div className="flex justify-start px-5 transition-all duration-300 cursor-pointer items-center gap-3" onClick={() => setIsThemeSettingsOpen(true)}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-start gap-3 rounded-full px-5 py-1 text-right transition-colors duration-200 hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+                onClick={() => setIsThemeSettingsOpen(true)}
+                aria-label="فتح إعدادات مظهر الطالب"
+              >
                 <UserAvatar
                   avatarSlug={user?.avatarSlug}
                   fullName={user?.fullName}
@@ -171,7 +176,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-text)] truncate whitespace-nowrap">
                   {user?.fullName || 'طالب'}
                 </span>
-              </div>
+              </button>
 
               <nav className="space-y-3 px-3">
                 <Link

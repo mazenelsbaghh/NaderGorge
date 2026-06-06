@@ -16,7 +16,7 @@ export function StudentHero({ data }: StudentHeroProps) {
         : "ابدأ بالدرس التالي، وسترى التقدّم يتحرك بسرعة";
 
   return (
-    <section className="rounded-[28px] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-5 shadow-[0_28px_70px_var(--admin-shadow)] sm:rounded-[32px] sm:p-7 md:p-9">
+    <section className="rounded-[28px] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-5 shadow-[0_28px_70px_var(--admin-shadow)] sm:rounded-2xl sm:p-7 md:p-9">
       <div className="relative grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
         <div className="space-y-4">
           <div className="space-y-3">

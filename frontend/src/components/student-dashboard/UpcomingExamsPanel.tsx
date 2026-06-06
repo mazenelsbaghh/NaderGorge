@@ -12,7 +12,7 @@ export function UpcomingExamsPanel({
   onStartExam,
 }: UpcomingExamsPanelProps) {
   return (
-    <aside className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 backdrop-blur-xl">
+    <aside className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 backdrop-blur-xl">
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">

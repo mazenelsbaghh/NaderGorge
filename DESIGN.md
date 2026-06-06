@@ -1,65 +1,240 @@
-# Design System Document: The Editorial Scholar
-## 1. Overview & Creative North Star
-### The Creative North Star: "The Curated Archive"
-This design system moves away from the sterile, "software-as-a-service" aesthetic toward a high-end, editorial experience. Inspired by premium academic journals and luxury curators, it treats information not as data to be managed, but as content to be showcased.
-We achieve this through **Organic Intentionality**: a rejection of standard grids in favor of purposeful whitespace, sophisticated tonal shifts, and "soft-touch" digital surfaces. By using a palette of warm creams and burnished golds, the system fosters a sense of prestige and focus—essential for a high-end Student Area. The layout avoids "boxed-in" feelings by using asymmetrical breathing room and layered elevations that mimic the depth of fine stationary stacked on a desk.
+# Design System Document - Massar Academy Digital System
+
+## 1. Creative North Star
+
+Massar Academy's interface is a structured learning path. The brand is not a luxury archive and not a generic SaaS dashboard. It is a confident educational system that makes progress visible through steps, route lines, dotted grids, growth marks, and clear academic hierarchy.
+
+The visual promise is simple: **every student has a path, every path has a next step, and every step moves upward.**
+
 ---
-## 2. Colors: Tonal Depth & Luster
-The color palette is anchored in heritage tones: rich creams (`surface`), deep umbers (`on-surface`), and metallic-inspired golds (`primary`).
-### The "No-Line" Rule
-**Borders are an admission of failure in layout.** To maintain a premium, seamless feel, designers are prohibited from using 1px solid borders to define sections. Instead, boundaries must be established through:
-- **Background Shifts:** Use `surface-container-low` for a sidebar against a `surface` main body.
-- **Negative Space:** Use the Spacing Scale (specifically `8` to `12`) to separate functional groups.
-### Surface Hierarchy & Nesting
-Think of the UI as a series of nested cardstock.
-- **Base Level:** `surface` (#fcf9ef)
-- **Primary Containers:** `surface-container` (#f1eee4)
-- **Focused Elements:** `surface-container-highest` (#e5e2d9)
-Always place a higher-tier container on a lower-tier background to create "natural" depth without artificial strokes.
-### The "Glass & Gradient" Rule
-To add "soul" to the digital interface:
-- **Glassmorphism:** Use `surface_variant` at 60% opacity with a `24px` backdrop blur for floating navigation bars or modal overlays.
-- **Signature Gradients:** Main CTAs or active state backgrounds (like a selected student track) should utilize a subtle linear gradient from `primary` (#775a19) to `primary_container` (#c5a059) at a 135° angle.
+
+## 2. Color System
+
+### Core Colors
+
+| Role | Name | Hex | Use |
+|---|---|---:|---|
+| Primary | Deep Navy | `#0A1D3D` | Brand authority, headings, nav, primary text, major surfaces |
+| Accent | Teal | `#0E8F8F` | Progress, active states, icons, route lines, links |
+| Achievement | Warm Gold | `#D4A017` | Milestones, graduation cues, small separators, premium emphasis |
+| Canvas | Off White | `#F6F7F8` | App and marketing backgrounds |
+| Text Secondary | Dark Gray | `#2E3A47` | Body/supporting copy |
+| Line | Light Gray | `#DCE1E6` | Quiet boundaries and disabled outlines |
+| Surface | Soft Gray | `#EEF1F4` | Secondary panels, inactive fills, muted backgrounds |
+| White | White | `#FFFFFF` | Cards and high-contrast logo applications |
+
+### CSS Token Mapping
+
+```css
+:root {
+  --background: #F6F7F8;
+  --foreground: #0A1D3D;
+  --card: #FFFFFF;
+  --card-foreground: #0A1D3D;
+  --primary: #0A1D3D;
+  --primary-foreground: #FFFFFF;
+  --secondary: #0E8F8F;
+  --secondary-foreground: #FFFFFF;
+  --accent: #D4A017;
+  --accent-foreground: #0A1D3D;
+  --muted: #EEF1F4;
+  --muted-foreground: #2E3A47;
+  --border: #DCE1E6;
+  --ring: #0E8F8F;
+}
+```
+
+### Usage Rules
+
+- Deep Navy should carry the most visual weight.
+- Teal should signal movement, progress, interactivity, and selected states.
+- Warm Gold should be rare and meaningful: achievement, separators, graduation tassel cues, celebration moments.
+- Off White is the default canvas. Avoid warm cream/sand palettes from the previous identity.
+- Do not use purple, neon cyan, or saturated gradients.
+- Do not use standard blue links. Use Teal.
+- Use Dark Gray for secondary text, not washed-out low-contrast gray.
+
 ---
-## 3. Typography: The Manrope Monograph
-We use **Manrope** exclusively for its geometric clarity and modern humanist feel. It bridges the gap between technical precision and editorial warmth.
-- **Display (Lg/Md/Sm):** Reserved for high-level dashboard welcomes (e.g., "Welcome back, Alex"). Use `-0.02em` letter spacing to feel more compact and premium.
-- **Headline (Lg/Md/Sm):** Used for section titles like "User Management." These should always use `on_surface` to establish a strong visual anchor.
-- **Title (Lg/Md/Sm):** Used for card headers and navigation items. Pair `title-md` with `secondary` colors for a sophisticated, subdued hierarchy.
-- **Body (Lg/Md/Sm):** The workhorse for student data. Use `body-md` for standard text and `body-sm` for metadata.
-- **Label (Md/Sm):** Use exclusively for micro-copy, tags, and "all-caps" secondary markers to provide rhythmic contrast to the body text.
+
+## 3. Typography
+
+### Font Families
+
+- Arabic headings: **Tajawal Bold**
+- Arabic body: **Tajawal Regular**
+- English headings: **Montserrat Bold**
+- English body: **Montserrat Regular**
+
+### Type Scale
+
+| Role | Font | Size | Weight | Use |
+|---|---|---:|---|---|
+| Heading | Tajawal | 36-40px | 700-800 | Page titles, hero statements, major dashboards |
+| Subheading | Tajawal | 20-24px | 500-700 | Section headers and primary cards |
+| Body | Tajawal | 14-16px | 400 | Main content and descriptions |
+| Caption | Tajawal | 11-12px | 400-500 | Metadata, helper text, minor labels |
+
+### Typography Rules
+
+- Arabic-first surfaces use Tajawal throughout.
+- English fragments, marketing labels, or bilingual captions use Montserrat.
+- Headings should be navy. Teal may emphasize one key word or progress phrase.
+- Avoid negative letter spacing in Arabic.
+- Keep body line length comfortable. Long Arabic paragraphs should not exceed 65-75 characters per line.
+
 ---
-## 4. Elevation & Depth
-In this design system, elevation is a feeling, not a drop-shadow.
-- **The Layering Principle:** Stacking is our primary tool. A `surface-container-lowest` card placed on a `surface-container-low` background provides a soft "lift."
-- **Ambient Shadows:** When an element must float (e.g., a dropdown or a primary action card), use an extra-diffused shadow: `box-shadow: 0 12px 40px rgba(78, 70, 57, 0.08)`. Notice the shadow is tinted with a warm umber—never pure black.
-- **The "Ghost Border" Fallback:** If a border is required for high-contrast accessibility, use `outline_variant` at **15% opacity**. It should be felt, not seen.
-- **Glassmorphism:** Use for floating elements like the "Student Area" header. This ensures the gold accents bleed through the interface, keeping the experience cohesive.
+
+## 4. Visual Language
+
+### Brand Patterns
+
+Use these as structural motifs:
+
+- Steps and stair forms.
+- Dotted progress grids.
+- Route lines and dashed paths.
+- Upward arrows and growth bars.
+- Circular arcs for continuous learning.
+- Small gold separators under headings.
+
+### Pattern Rules
+
+- Patterns must support progress, hierarchy, or wayfinding.
+- Dots and route lines should be low contrast and quiet.
+- Stair shapes can frame empty states, onboarding, lesson progress, or achievement summaries.
+- Avoid decorative blobs, gradient orbs, and abstract bokeh.
+
+### Iconography
+
+Icons should be clean line icons with consistent stroke. Preferred semantic set:
+
+- تعلم / graduation cap
+- معرفة / book
+- فكرة / lightbulb
+- هدف / target
+- تطور / growth chart
+- طالب / user
+- ثقة / shield
+- وقت / clock
+- إبداع / pencil
+- عالم / globe
+
+Use Teal for most icons, Deep Navy for active authority states, and Warm Gold for achievement details only.
+
+### Photography
+
+Photo style: optimistic, clean, youthful, and inspiring. Students should feel ambitious and focused. Classrooms and study environments should be bright and organized. Brand overlays may use teal stair lines, dots, or small flags.
+
 ---
-## 5. Components
+
+## 5. Layout And Surfaces
+
+### Surface Hierarchy
+
+```text
+Canvas:          #F6F7F8
+Card:            #FFFFFF
+Muted panel:     #EEF1F4
+Quiet line:      #DCE1E6
+Authority block: #0A1D3D
+Progress accent: #0E8F8F
+Achievement:     #D4A017
+```
+
+### Layout Rules
+
+- Use generous whitespace, but keep task flows compact enough for mobile study sessions.
+- Student screens should guide the eye from current status to next action.
+- Admin screens can be denser, but must still use clear grouping and readable tables.
+- Prefer structural separators: spacing, soft gray panels, and navy/teal section anchors.
+- Thin borders are allowed when they improve clarity, but avoid heavy boxed-in layouts.
+- Rounded corners should be moderate: 12-20px. Avoid overly pill-shaped cards unless the control is a chip or CTA.
+
+---
+
+## 6. Components
+
 ### Buttons
-- **Primary:** Gradient fill (`primary` to `primary_container`), `full` roundedness, and `title-sm` typography.
-- **Secondary:** `surface-container-highest` background with `primary` text. No border.
-- **Tertiary/Ghost:** Pure text using `primary` color, with a background shift to `surface-variant` only on hover.
-### Cards & Tables (The "Lineless" Table)
-- **Forbid Dividers:** Do not use lines between table rows or card sections.
-- **Styling:** Use a `surface-container-low` background for the header row. Use `surface-container-lowest` for the body. Distinguish rows by a 4px vertical gap (Spacing `1`) and a subtle color change on hover.
-- **Roundedness:** All cards must use `xl` (1.5rem) or `lg` (1rem) corners to feel approachable and soft.
-### Inputs & Search
-- **Search Bar:** Use `surface-container-highest` with `full` roundedness. The placeholder text should use `outline` color for a "recessed" look.
-- **Focus State:** Instead of a thick border, use a 2px outer glow of `primary_fixed` at 50% opacity.
-### Chips (Status Markers)
-- **Design:** Use `secondary_container` for background and `on_secondary_container` for text. `full` roundedness is mandatory.
-- **Context:** Perfect for "Active," "Pending," or "Graded" statuses in the Student Area.
+
+- Primary: Deep Navy background, white text.
+- Primary active/progress variant: Teal background, white text.
+- Achievement CTA: Warm Gold accent only for completion, success, rewards, or graduation moments.
+- Secondary: White or Soft Gray background with navy text.
+- Ghost: transparent with teal or navy text and soft gray hover.
+- All buttons must be at least 44px high on mobile.
+
+### Cards
+
+- Use white cards on Off White canvas.
+- Use Soft Gray for nested or secondary panels.
+- Do not stack cards inside cards unless the nested element is a real repeated item.
+- Highlight progress with a teal line, step marker, or growth indicator rather than a decorative gradient.
+
+### Tables
+
+- Header rows can use Soft Gray with navy labels.
+- Row hover can use `#EEF1F4`.
+- Use subtle `#DCE1E6` separators only when density requires them.
+- Clickable rows must be keyboard accessible and announced as buttons or links.
+
+### Forms
+
+- Inputs use white or Soft Gray fill, navy text, Dark Gray placeholder.
+- Focus state: 2px Teal ring.
+- Error state: clear red only for actual errors.
+- Required indicators must be text or accessible markers, not color alone.
+
+### Progress And Status
+
+- Progress bars, current steps, active tabs: Teal.
+- Completed milestones: Warm Gold or Teal depending on context.
+- Locked/inactive: Soft Gray with Dark Gray text.
+- Dangerous/destructive states: use red sparingly and consistently.
+
 ---
-## 6. Do's and Don'ts
+
+## 7. Motion
+
+- Motion should communicate progress, reveal, loading, or completion.
+- Use 150-250ms transitions for product UI.
+- Avoid bounce and elastic movement.
+- Do not animate layout properties like width, height, top, left, padding, or margin when transform/opacity can work.
+- Respect `prefers-reduced-motion`.
+- Heavy canvas/WebGL effects are only acceptable on marketing or landing surfaces, and must pause offscreen.
+
+---
+
+## 8. Logo Rules
+
+- Use the primary logo on light backgrounds.
+- Use the reversed white logo on Deep Navy backgrounds.
+- Use the monochrome logo only when reproduction demands it.
+- Do not change logo colors.
+- Do not rotate the logo.
+- Do not distort proportions.
+- Do not add shadows or effects.
+- Maintain clear space around the logo.
+- Minimum size: 20mm equivalent for digital icon use, 25mm equivalent for print logo use.
+
+---
+
+## 9. Do And Do Not
+
 ### Do
-* **Do** use asymmetrical margins. A wider left margin on a dashboard title creates an "editorial" entry point.
-* **Do** use tonal shifts (e.g., `surface` to `surface-dim`) to separate the sidebar from the main content.
-* **Do** embrace large typography scales for empty states to make them feel like a design choice rather than a "missing" page.
-* **Do** ensure `on-surface` text maintains a 4.5:1 contrast ratio against the cream backgrounds.
-### Don't
-* **Don't** use 1px solid #CCCCCC or #000000 borders. Ever.
-* **Don't** use pure black (#000000) for text. Use the provided `on_surface` (#1c1c16).
-* **Don't** cram elements together. If a section feels crowded, double the spacing token (e.g., move from `4` to `8`).
-* **Don't** use standard "Blue" for links. Use the `tertiary` (#485e8b) or `primary` (#775a19) tones to maintain the gold/cream warmth.
+
+- Use Deep Navy as the foundation.
+- Use Teal to show movement and interactivity.
+- Use Warm Gold for achievement and small brand separators.
+- Use stair, route, dot, and growth motifs where they clarify progress.
+- Keep Arabic copy direct and motivating.
+- Make the next step obvious on every student surface.
+
+### Do Not
+
+- Do not keep the old gold/cream/pharaonic direction.
+- Do not use generic purple/blue gradients.
+- Do not use decorative glassmorphism as a default.
+- Do not overload screens with unrelated icons.
+- Do not use tiny touch targets.
+- Do not make student flows feel like social feeds.
+- Do not make admin tables inaccessible by using clickable rows without keyboard behavior.

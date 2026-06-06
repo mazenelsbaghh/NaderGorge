@@ -148,7 +148,7 @@ rebuild_containers() {
 
   remote "
     cd ${SERVER_APP_DIR}
-    docker compose up -d --build --remove-orphans 2>&1
+    docker compose up -d --build --force-recreate --remove-orphans 2>&1
   " &
   REMOTE_PID=$!
 

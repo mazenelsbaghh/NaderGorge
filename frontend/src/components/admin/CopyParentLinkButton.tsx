@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useState } from 'react';
 import { Copy, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,7 +23,7 @@ export function CopyParentLinkButton({ userId }: CopyParentLinkButtonProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
-      console.error('Failed to copy', e);
+      devConsole.error('Failed to copy', e);
       toast.error('تعذر إنشاء رابط ولي الأمر الآمن.');
     }
   };

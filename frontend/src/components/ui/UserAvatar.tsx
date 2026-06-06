@@ -29,11 +29,11 @@ function getGradientStyle(name: string) {
   }
   const index = Math.abs(hash) % 5;
   const gradients = [
-    'from-amber-500 to-orange-600 text-white',
-    'from-teal-400 to-emerald-600 text-white',
-    'from-rose-500 to-pink-600 text-white',
-    'from-violet-500 to-purple-600 text-white',
-    'from-blue-500 to-indigo-600 text-white',
+    'from-[var(--primary)] to-[var(--secondary)] text-white',
+    'from-[var(--secondary)] to-[var(--primary)] text-white',
+    'from-[var(--primary)] to-[var(--accent)] text-white',
+    'from-[var(--secondary)] to-[#0B6F6F] text-white',
+    'from-[#173760] to-[var(--primary)] text-white',
   ];
   return gradients[index];
 }

@@ -61,7 +61,7 @@ export function LessonViewer({
 
   if (lesson.isLocked) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-12 text-center shadow-sm sm:px-8 sm:py-20">
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-12 text-center shadow-sm sm:px-8 sm:py-20">
         <div className="mb-8 flex h-24 w-24 items-center justify-center rounded-full border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] text-[var(--admin-danger)] shadow-inner">
           <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -106,7 +106,7 @@ export function LessonViewer({
 
   return (
     <div className="space-y-8 sm:space-y-12 pb-10">
-      <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/95 p-5 shadow-sm sm:p-8">
+      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/95 p-5 shadow-sm sm:p-8">
         <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <span className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-4 py-1.5 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">
@@ -146,7 +146,7 @@ export function LessonViewer({
               onStepChange={setActiveVideoIndex} 
             />
           ) : (
-            <div className="rounded-[32px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-12 text-center text-[var(--admin-muted)] font-medium">
+            <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-12 text-center text-[var(--admin-muted)] font-medium">
               لا توجد فيديوهات متاحة لهذا الدرس حاليًا.
             </div>
           )}
@@ -155,7 +155,7 @@ export function LessonViewer({
         <LessonCommentsSection lessonId={lesson.id} />
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
             <div className="mb-6 flex items-center gap-3">
               <FileText className="h-5 w-5 text-[var(--admin-primary)]" />
               <h3 className="text-xl font-black text-[var(--admin-text)]">المصادر والملفات</h3>
@@ -183,7 +183,7 @@ export function LessonViewer({
           </div>
 
           {lesson.examId && (
-            <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
+            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
               <div className="flex items-center gap-3">
                 <FlaskConical className="h-5 w-5 text-[var(--admin-primary)]" />
                 <h3 className="text-xl font-black text-[var(--admin-text)]">اختبار الدرس</h3>
@@ -204,7 +204,7 @@ export function LessonViewer({
       </div>
 
       {lesson.homework && (
-        <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm lg:p-10">
+        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm lg:p-10">
           <div className="mb-8 sm:mb-10">
             <div>
               <h2 className="text-2xl font-black tracking-tight text-[var(--admin-text)] sm:text-3xl">{lesson.homework.title}</h2>

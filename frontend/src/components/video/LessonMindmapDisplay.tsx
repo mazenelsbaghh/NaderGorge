@@ -1,7 +1,6 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element */
-
+import Image from 'next/image';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ImageIcon, X } from 'lucide-react';
@@ -92,11 +91,14 @@ export function LessonMindmapDisplay({ chapters, currentTime }: LessonMindmapDis
               aria-label="تكبير الخريطة الذهنية"
               title="تكبير الخريطة"
             >
-              <img 
-                src={imageUrl} 
-                alt={`خريطة ذهنيه لِـ ${currentChapter.title}`} 
-                className="max-w-full rounded-2xl shadow-lg border border-[var(--admin-primary)]/20 object-contain hover:scale-105 transition-transform duration-500"
-                style={{ maxHeight: '600px' }}
+              <Image
+                src={imageUrl}
+                alt={`خريطة ذهنية لِـ ${currentChapter.title}`}
+                width={1200}
+                height={800}
+                sizes="(max-width: 768px) 92vw, 960px"
+                className="h-auto max-h-[600px] max-w-full rounded-2xl border border-[var(--admin-primary)]/20 object-contain shadow-lg transition-transform duration-500 hover:scale-105"
+                unoptimized
               />
             </button>
           </div>
@@ -121,16 +123,23 @@ export function LessonMindmapDisplay({ chapters, currentTime }: LessonMindmapDis
               <X className="h-5 w-5" />
             </button>
   
-            <motion.img
-              src={imageUrl}
-              alt={`خريطة ذهنيه لِـ ${currentChapter.title}`}
-              className="max-h-[90vh] max-w-[95vw] rounded-3xl object-contain shadow-2xl"
+            <motion.div
+              className="relative h-[90vh] w-[95vw] max-w-6xl overflow-hidden rounded-2xl shadow-2xl"
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.96, opacity: 0 }}
               transition={{ duration: 0.22 }}
               onClick={(event) => event.stopPropagation()}
-            />
+            >
+              <Image
+                src={imageUrl}
+                alt={`خريطة ذهنية لِـ ${currentChapter.title}`}
+                fill
+                sizes="95vw"
+                className="object-contain"
+                unoptimized
+              />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

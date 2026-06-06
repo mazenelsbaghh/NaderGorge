@@ -206,7 +206,7 @@ export default function TermDetailPage() {
     return (
       <div className="space-y-6 animate-pulse pb-10">
         <div className="h-9 w-48 rounded-full bg-[var(--admin-card-strong)]" />
-        <div className="h-[clamp(18rem,52vh,40rem)] rounded-[28px] bg-[var(--admin-card-strong)] sm:rounded-[32px]" />
+        <div className="h-[clamp(18rem,52vh,40rem)] rounded-[28px] bg-[var(--admin-card-strong)] sm:rounded-2xl" />
         <div className="h-6 w-2/3 rounded-xl bg-[var(--admin-card-strong)]" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -240,7 +240,7 @@ export default function TermDetailPage() {
           Uses the package image as backdrop, term title as heading
           ══════════════════════════════════════════════════════════════════ */}
       <div
-        className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-[32px] lg:min-h-[26rem]"
+        className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-2xl lg:min-h-[26rem]"
       >
         <Image
           src={pkg?.imageUrl || "/images/default-package.png"}

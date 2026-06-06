@@ -1,5 +1,6 @@
 "use client";
 
+import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -18,14 +19,14 @@ export default function PackagesPage() {
     contentService
       .getPackages()
       .then((res) => setPackages(res.data?.data || []))
-      .catch((err) => console.error(err))
+      .catch((err) => devConsole.error(err))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-72 rounded-[36px] bg-[var(--admin-card-strong)]" />
+        <div className="h-72 rounded-2xl bg-[var(--admin-card-strong)]" />
         <div className="grid gap-6 xl:grid-cols-2">
           {[1, 2].map((i) => (
             <div key={i} className="h-80 rounded-[30px] bg-[var(--admin-card-strong)]" />

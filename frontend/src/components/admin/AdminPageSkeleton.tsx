@@ -30,7 +30,7 @@ export function AdminPageSkeleton() {
       </div>
 
       {/* Table Area Skeleton */}
-      <div className="h-[500px] w-full overflow-hidden rounded-[2.5rem] bg-[var(--admin-card-strong)] shadow-sm">
+      <div className="h-[500px] w-full overflow-hidden rounded-2xl bg-[var(--admin-card-strong)] shadow-sm">
         {/* Header */}
         <div className="h-16 w-full border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)]" />
         {/* Rows */}

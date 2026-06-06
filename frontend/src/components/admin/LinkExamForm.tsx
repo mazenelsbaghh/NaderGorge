@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useState, useEffect } from 'react';
 import { BookCheck, Trash2, Users, Clock, AlertCircle, ArrowUpLeft, LayoutDashboard, FileText, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -39,7 +40,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
       })
       .catch(err => {
         if (!abortController.signal.aborted) {
-          console.error("Failed to load exam stats", err);
+          devConsole.error("Failed to load exam stats", err);
         }
       })
       .finally(() => {

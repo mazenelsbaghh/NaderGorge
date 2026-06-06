@@ -30,7 +30,7 @@ export function PackageGrid({
       </div>
 
       {packages.length === 0 ? (
-        <div className="rounded-[32px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-10 text-center backdrop-blur-xl">
+        <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-10 text-center backdrop-blur-xl">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">
             <BookCopy className="h-7 w-7" />
           </div>

@@ -152,11 +152,11 @@ coverShadow.style.cssText = 'position:absolute;inset:0;box-shadow:inset 0 0 40px
 
 var watermark = document.createElement('div');
 watermark.id = 'video-watermark';
-watermark.style.cssText = 'position: absolute; top: 15%; left: 15%; z-index: 99; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.25rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: top 1.5s ease-in-out, left 1.5s ease-in-out; text-align: center; line-height: 1.3; white-space: pre-wrap;';
+watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 99; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.5rem; font-family: Tajawal, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: transform 1.5s ease-in-out; transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3; white-space: pre-wrap;';
 [
   { text: ${watermarkBrand}, css: 'font-weight: 900; letter-spacing: 0.05em;' },
-  { text: ${watermarkStudentName}, css: 'font-size: 0.85em; font-weight: bold; opacity: 0.85;' },
-  { text: ${watermarkStudentPhone}, css: 'font-size: 0.8em; opacity: 0.75;' }
+  { text: ${watermarkStudentName}, css: 'font-size: 0.75em; font-weight: bold; opacity: 0.85;' },
+  { text: ${watermarkStudentPhone}, css: 'font-size: 0.6em; opacity: 0.75;' }
 ].filter(function(line) { return line.text; }).forEach(function(line, index) {
   if (index > 0) watermark.appendChild(document.createElement('br'));
   var span = document.createElement('span');
@@ -169,8 +169,7 @@ setInterval(function() {
   if (!watermark) return;
   var topPos = Math.random() * 80 + 10;
   var leftPos = Math.random() * 80 + 10;
-  watermark.style.top = topPos + '%';
-  watermark.style.left = leftPos + '%';
+  watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
 }, 12000);
 
 wrap.appendChild(ytDiv);
@@ -420,11 +419,11 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
 
     var watermark = document.createElement('div');
     watermark.id = 'video-watermark';
-    watermark.style.cssText = 'position: absolute; top: 15%; left: 15%; z-index: 2147483646; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.25rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: top 1.5s ease-in-out, left 1.5s ease-in-out; text-align: center; line-height: 1.3; white-space: pre-wrap;';
+    watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 2147483646; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.5rem; font-family: Tajawal, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: transform 1.5s ease-in-out; transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3; white-space: pre-wrap;';
     [
       { text: ${watermarkBrand}, css: 'font-weight: 900; letter-spacing: 0.05em;' },
-      { text: ${watermarkStudentName}, css: 'font-size: 0.85em; font-weight: bold; opacity: 0.85;' },
-      { text: ${watermarkStudentPhone}, css: 'font-size: 0.8em; opacity: 0.75;' }
+      { text: ${watermarkStudentName}, css: 'font-size: 0.75em; font-weight: bold; opacity: 0.85;' },
+      { text: ${watermarkStudentPhone}, css: 'font-size: 0.6em; opacity: 0.75;' }
     ].filter(function(line) { return line.text; }).forEach(function(line, index) {
       if (index > 0) watermark.appendChild(document.createElement('br'));
       var span = document.createElement('span');
@@ -504,8 +503,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
       if (!watermark) return;
       var topPos = Math.random() * 80 + 10;
       var leftPos = Math.random() * 80 + 10;
-      watermark.style.top = topPos + '%';
-      watermark.style.left = leftPos + '%';
+      watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
     }, 12000);
 
     function postToParent(type, data) {

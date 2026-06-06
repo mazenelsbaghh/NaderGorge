@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useState, useEffect } from 'react';
 import { adminService } from '@/services/admin-service';
 import { Check, X, Clock, AlertCircle } from 'lucide-react';
@@ -31,7 +32,7 @@ export default function WatchRequestsPage() {
       const response = await adminService.getWatchRequests();
       setRequests(response.data || []);
     } catch (err: any) {
-      console.error(err);
+      devConsole.error(err);
       setError('فشل في تحميل الطلبات.');
     } finally {
       setLoading(false);
@@ -45,7 +46,7 @@ export default function WatchRequestsPage() {
       await fetchRequests();
       toast.success('تم قبول طلب المشاهدة الإضافية.');
     } catch (err) {
-      console.error(err);
+      devConsole.error(err);
       toast.error('فشل في الموافقة على الطلب');
     } finally {
       setActionLoading(null);
@@ -59,7 +60,7 @@ export default function WatchRequestsPage() {
       await fetchRequests();
       toast.success('تم رفض طلب المشاهدة الإضافية.');
     } catch (err) {
-      console.error(err);
+      devConsole.error(err);
       toast.error('فشل في رفض الطلب');
     } finally {
       setActionLoading(null);

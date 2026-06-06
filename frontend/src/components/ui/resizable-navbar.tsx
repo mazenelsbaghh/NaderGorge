@@ -230,10 +230,18 @@ export const MobileNavToggle = ({
   isOpen: boolean;
   onClick: () => void;
 }) => {
-  return isOpen ? (
-    <X className="text-[var(--landing-ink)] h-6 w-6 cursor-pointer" onClick={onClick} />
-  ) : (
-    <Menu className="text-[var(--landing-ink)] h-6 w-6 cursor-pointer" onClick={onClick} />
+  const Icon = isOpen ? X : Menu;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={isOpen ? "إغلاق القائمة" : "فتح القائمة"}
+      aria-expanded={isOpen}
+      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-[var(--landing-ink)] transition hover:bg-[var(--landing-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--landing-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--landing-bg)]"
+    >
+      <Icon className="h-6 w-6" aria-hidden="true" />
+    </button>
   );
 };
 
@@ -250,6 +258,7 @@ export const NavbarLogo = () => {
           className="h-8 w-8 object-contain sm:h-11 sm:w-11 dark:hidden"
           style={{ width: "auto", height: "auto" }}
           alt="Masar Platform"
+          priority
         />
         <Image
           src="/images/logo-mark-light.svg"
@@ -258,6 +267,7 @@ export const NavbarLogo = () => {
           className="h-8 w-8 object-contain sm:h-11 sm:w-11 hidden dark:block"
           style={{ width: "auto", height: "auto" }}
           alt="Masar Platform"
+          priority
         />
       </div>
       <div>

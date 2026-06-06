@@ -100,7 +100,7 @@ export function StudentMomentumRail({ data }: StudentMomentumRailProps) {
 
   return (
     <motion.section
-      className="relative overflow-hidden rounded-[32px] bg-[var(--admin-card)] p-6 shadow-[0_20px_56px_var(--admin-shadow)] ring-1 ring-[var(--admin-border)] sm:p-8"
+      className="relative overflow-hidden rounded-2xl bg-[var(--admin-card)] p-6 shadow-[0_20px_56px_var(--admin-shadow)] ring-1 ring-[var(--admin-border)] sm:p-8"
       onPointerMove={(event) => {
         if (shouldReduceMotion) {
           return;

@@ -9,9 +9,9 @@ export default function StudentBalancePage() {
     <div className="space-y-8 pb-10">
       
       {/* Hero Section */}
-      <div className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm transition-all sm:p-10">
-        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-[80px] transition-all duration-700 group-hover:scale-150" />
-        <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-[80px] transition-all duration-700 group-hover:scale-150 group-hover:bg-[var(--admin-primary-20)]" />
+      <div className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm transition-all sm:p-10">
+        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-[48px] transition-all duration-700 group-hover:scale-150" />
+        <div className="absolute -bottom-20 -right-20 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-[48px] transition-all duration-700 group-hover:scale-150 group-hover:bg-[var(--admin-primary-20)]" />
         
         <div className="relative z-10 flex flex-col items-start gap-8 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-3">
@@ -45,7 +45,7 @@ export default function StudentBalancePage() {
         
         {/* Left side: Code Redemption */}
         <div className="lg:col-span-12 xl:col-span-5 relative">
-          <div className="sticky top-8 rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm xl:p-8">
+          <div className="sticky top-8 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm xl:p-8">
             <div className="mb-6 space-y-2">
               <h3 className="text-xl font-black text-[var(--admin-text)]">شحن باستخدام كود</h3>
               <p className="text-sm font-medium leading-relaxed text-[var(--admin-muted)]">

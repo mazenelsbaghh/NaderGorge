@@ -50,13 +50,13 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
 
         {/* Footer / CTA */}
         <div className="mt-auto pt-4 border-t border-[var(--admin-border)]">
-          <button className={`w-full rounded-xl px-4 py-3 text-sm font-bold transition-colors ${
+          <span className={`block w-full rounded-xl px-4 py-3 text-center text-sm font-bold transition-colors ${
             pkg.isEnrolled
               ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-[var(--admin-primary-contrast)]'
               : 'bg-[var(--admin-card-strong)] text-[var(--admin-text)] group-hover:bg-[var(--admin-card-strong)]'
           }`}>
             {pkg.isEnrolled ? 'دخول الباقة' : 'تفعيل بالكود'}
-          </button>
+          </span>
         </div>
       </div>
     </motion.button>

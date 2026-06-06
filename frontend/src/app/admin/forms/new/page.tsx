@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye, ClipboardList } from 'lucide-react';
@@ -81,7 +82,7 @@ export default function NewFormPage() {
       toast.success('تم إنشاء النموذج بنجاح');
       router.push('/admin/forms');
     } catch (error: any) {
-      console.error(error);
+      devConsole.error(error);
     } finally {
       setSaving(false);
     }

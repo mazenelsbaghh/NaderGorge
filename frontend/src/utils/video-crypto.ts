@@ -1,3 +1,4 @@
+import { devConsole } from '@/utils/dev-console';
 export const decryptVideoId = async (encryptedToken: string, base64Key: string): Promise<{ provider: string; videoId: string }> => {
   try {
     // 1. Decode base64 inputs
@@ -49,7 +50,7 @@ export const decryptVideoId = async (encryptedToken: string, base64Key: string):
       videoId: parsed.VideoId
     };
   } catch (err) {
-    console.error("Failed to decrypt video session", err);
+    devConsole.error("Failed to decrypt video session", err);
     throw new Error("Video decryption failed. Session might be invalid or expired.");
   }
 };

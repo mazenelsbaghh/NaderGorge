@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye } from 'lucide-react';
@@ -34,7 +35,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
         setIsActive(data.isActive);
         setFields(JSON.parse(data.fieldsJson || '[]'));
       } catch (error) {
-        console.error('Error loading form details:', error);
+        devConsole.error('Error loading form details:', error);
         toast.error('حدث خطأ أثناء تحميل بيانات النموذج');
         router.push('/admin/forms');
       } finally {
@@ -108,7 +109,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
       toast.success('تم تحديث النموذج بنجاح');
       router.push('/admin/forms');
     } catch (error: any) {
-      console.error(error);
+      devConsole.error(error);
     } finally {
       setSaving(false);
     }

@@ -32,7 +32,7 @@ const destinations = [
 
 export function StudentDestinationsPanel() {
   return (
-    <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
+    <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
       <div className="mb-6 flex flex-col gap-2">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
           أماكنك الأساسية

@@ -1,5 +1,7 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
+import Image from 'next/image';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { videoSessionService, type ExtraWatchRequestStatus } from '@/services/video-session-service';
 import { AlertCircle, Play, Info, X, Map } from 'lucide-react';
@@ -139,7 +141,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       setExtraWatchReqStatus('Pending');
       setExtraWatchRejectionReason(null);
     } catch(err) {
-      console.error(err);
+      devConsole.error(err);
     } finally {
       setRequestingExtra(false);
     }
@@ -186,7 +188,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
           // Debug: Log VK player available methods
           if (msg.data.vkMethods) {
-            console.log('[SecureVideoPlayer] VK Player methods:', msg.data.vkMethods);
+            devConsole.log('[SecureVideoPlayer] VK Player methods:', msg.data.vkMethods);
           }
           break;
         case 'stateChange':
@@ -316,7 +318,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         setErrorMessage('تعذر تتبع المشاهدة لأن مدة الفيديو غير متاحة.');
       }
       pendingTrackedSeconds.current += secondsToFlush;
-      console.error("Failed to sync progress:", err);
+      devConsole.error("Failed to sync progress:", err);
     } finally {
       flushInFlight.current = false;
     }
@@ -502,7 +504,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         return;
       }
       
-      console.error(err);
+      devConsole.error(err);
       setStatus('error');
       const msg = err.response?.data?.message || err.message || 'فشل في تحميل الفيديو';
       setErrorMessage(msg);
@@ -609,14 +611,19 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   if (status === 'idle') {
     return (
-      <div className={`relative w-full aspect-video bg-black rounded-xl overflow-hidden flex items-center justify-center border border-pharaoh-gold/30 cursor-pointer group ${className}`} onClick={loadVideo}>
+      <button
+        type="button"
+        className={`relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl border border-[var(--secondary)]/30 bg-black text-white group focus-visible:ring-2 focus-visible:ring-[var(--secondary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black ${className}`}
+        onClick={loadVideo}
+        aria-label="تحميل وتشغيل الفيديو"
+      >
         <div className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-30 transition-opacity" style={{ backgroundImage: "url('/images/lesson-placeholder.jpg')" }}></div>
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-30 flex items-center justify-center transition-all duration-300 pointer-events-auto">
           <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer">
             <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
           </div>
         </div>
-      </div>
+      </button>
     );
   }
 
@@ -665,7 +672,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }
 
   return (
-    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-pharaoh-gold/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? '!fixed !inset-0 !z-[100] !rounded-none' : ''}`}>
+    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-[var(--secondary)]/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? '!fixed !inset-0 !z-[100] !rounded-none' : ''}`}>
       
       {/* Video Container */}
       <div 
@@ -786,12 +793,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                       splitType="words"
                     />
                     <div className="flex-grow w-full relative rounded-lg overflow-hidden border border-white/10 bg-black/50">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={resolveMediaUrl(activeChapterDesktop.mindmapImageUrl)} 
-                          alt="Mindmap" 
-                          className="w-full h-full object-contain absolute top-0 left-0"
-                        />
+                      <Image
+                        src={resolveMediaUrl(activeChapterDesktop.mindmapImageUrl)}
+                        alt={`الخريطة الذهنية: ${activeChapterDesktop.title}`}
+                        fill
+                        sizes="(max-width: 640px) 280px, 500px"
+                        className="object-contain"
+                        unoptimized
+                      />
                     </div>
                  </motion.div>
                )}

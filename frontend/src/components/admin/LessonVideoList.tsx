@@ -114,11 +114,11 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
   return (
     <div className="flex flex-col gap-1 items-end px-1 py-0.5 min-w-[180px]">
       {/* Status text + spinner */}
-      <div className="flex items-center gap-1.5 font-bold text-pharaoh-gold w-full justify-end">
+      <div className="flex items-center gap-1.5 font-bold text-[var(--admin-primary)] w-full justify-end">
         {(isWorking || !status) && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
         {isFailed && <AlertTriangle className="h-3 w-3 shrink-0 text-red-500" />}
         <span
-          className={`truncate text-[11px] ${isFailed ? 'text-red-500' : isCompleted ? 'text-green-500' : 'text-pharaoh-gold'}`}
+          className={`truncate text-[11px] ${isFailed ? 'text-red-500' : isCompleted ? 'text-green-500' : 'text-[var(--admin-primary)]'}`}
           title={progressText}
         >
           {isFailed ? 'فشلت العملية' : progressText}
@@ -127,9 +127,9 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
 
       {/* Progress bar (when working) */}
       {(isWorking || (!status && !isFailed)) && (
-        <div className="w-full h-1 bg-pharaoh-gold/10 rounded-full overflow-hidden border border-pharaoh-gold/20">
+        <div className="w-full h-1 rounded-full overflow-hidden border border-[var(--admin-primary)]/20 bg-[var(--admin-primary)]/10">
           <div
-            className="h-full bg-pharaoh-gold transition-all duration-[800ms] ease-out"
+            className="h-full bg-[var(--admin-primary)] transition-all duration-[800ms] ease-out"
             style={{ width: `${Math.max(4, progressVal)}%` }}
           />
         </div>
@@ -166,7 +166,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
           onClick={handleRetry}
           disabled={isRetrying || isCancelling}
           title="إعادة التحليل من البداية"
-          className="flex items-center justify-center h-6 w-6 rounded text-pharaoh-gold bg-pharaoh-gold/10 hover:bg-pharaoh-gold/20 transition disabled:opacity-40"
+          className="flex h-8 w-8 items-center justify-center rounded text-[var(--admin-primary)] bg-[var(--admin-primary)]/10 transition hover:bg-[var(--admin-primary)]/20 disabled:opacity-40"
         >
           <RefreshCw className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
         </button>
@@ -431,8 +431,8 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                           onClick={() => handleTriggerAI(video.id)}
                           disabled={triggeringId === video.id || triggeringId === video.id + '_mindmaps'}
                           className={`rounded-lg p-2 transition-colors ${triggeringId === video.id
-                              ? 'text-pharaoh-gold/60 opacity-50 cursor-not-allowed bg-pharaoh-gold/5'
-                              : 'text-pharaoh-gold hover:bg-pharaoh-gold/10'
+                              ? 'text-[var(--admin-primary)]/60 opacity-50 cursor-not-allowed bg-[var(--admin-primary)]/5'
+                              : 'text-[var(--admin-primary)] hover:bg-[var(--admin-primary)]/10'
                             }`}
                           aria-label="استخراج الفصول بالذكاء الاصطناعي"
                           title={video.chapters?.length > 0 ? 'إعادة توليد الفصول' : 'استخراج فصول الفيديو بالذكاء الاصطناعي'}
@@ -494,10 +494,21 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
 
       {/* Video Preview Modal */}
       {previewVideoId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 md:p-8" onClick={() => setPreviewVideoId(null)}>
-          <div className="bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lesson-video-preview-title"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            onClick={() => setPreviewVideoId(null)}
+            aria-label="إغلاق معاينة الفيديو"
+          />
+          <div className="relative z-10 bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl flex flex-col">
             <div className="flex items-center justify-between border-b border-[var(--admin-border)] px-6 py-4 bg-[var(--admin-card)]" dir="rtl">
-              <h3 className="text-lg font-bold text-[var(--admin-text)] flex items-center gap-2">
+              <h3 id="lesson-video-preview-title" className="text-lg font-bold text-[var(--admin-text)] flex items-center gap-2">
                 <Play className="h-5 w-5 text-[var(--admin-primary)]" />
                 <span>معاينة الفيديو كطالب: {videos.find(v => v.id === previewVideoId)?.title}</span>
               </h3>

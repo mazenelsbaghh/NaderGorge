@@ -13,7 +13,7 @@ export function ContinueLearningCard({
 }: ContinueLearningCardProps) {
   if (!resumePoint) {
     return (
-      <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-7 shadow-sm">
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-7 shadow-sm">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
@@ -40,7 +40,7 @@ export function ContinueLearningCard({
   }
 
   return (
-    <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-7 shadow-sm">
+    <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-7 shadow-sm">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-4">
           <div className="mt-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-primary)]">

@@ -14,7 +14,7 @@ export default function CodeRedemptionPage() {
       <CodeRedemptionShowcase />
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:shadow-lg sm:p-10">
+        <section className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:shadow-lg sm:p-10">
           <div className="absolute -left-20 -top-20 h-40 w-40 rounded-full bg-[var(--admin-primary-15)] blur-[70px] transition-all group-hover:scale-150" />
           <div className="relative z-10 mb-8">
             <h2 className="text-3xl font-black tracking-tight text-[var(--admin-text)]">
@@ -34,7 +34,7 @@ export default function CodeRedemptionPage() {
           </div>
         </section>
 
-        <aside className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all sm:p-10">
+        <aside className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all sm:p-10">
           <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.02] mix-blend-overlay" />
           <div className="relative z-10">
             <h2 className="text-2xl font-black tracking-tight text-[var(--admin-text)]">

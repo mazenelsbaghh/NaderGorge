@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Download, Eye, KeyRound, Plus, Sparkles, Printer, Layers } from 'lucide-react';
@@ -60,7 +61,7 @@ export default function AdminCodesPage() {
         setPackages((packagesResponse.data?.data || []) as PackageDto[]);
       } catch (error) {
         if (!isAxiosError(error) || error.response?.status !== 429) {
-          console.error(error);
+          devConsole.error(error);
         }
       } finally {
         setLoading(false);
@@ -107,7 +108,7 @@ export default function AdminCodesPage() {
       setGenCount(10);
       await loadData({ force: true });
     } catch (error: unknown) {
-      console.error(error);
+      devConsole.error(error);
       const msg = isAxiosError<{ message?: string }>(error)
         ? error.response?.data?.message || 'تعذر إنشاء الأكواد. تأكد من إدخال جميع الحقول المطلوبة.'
         : 'تعذر إنشاء الأكواد. تأكد من إدخال جميع الحقول المطلوبة.';
@@ -126,7 +127,7 @@ export default function AdminCodesPage() {
       const data = await adminService.getCodeGroupDetails(group.id);
       setCodes(data);
     } catch (error) {
-      console.error(error);
+      devConsole.error(error);
       toast.error('تعذر تحميل تفاصيل المجموعة');
     } finally {
       setCodesLoading(false);

@@ -25,7 +25,7 @@ export function AdminStatCard({
 
   if (variant === 'light') {
     return (
-      <div className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl dark:bg-[var(--admin-card)] dark:shadow-none dark:hover:border-[var(--admin-primary-15)]">
+      <div className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl dark:bg-[var(--admin-card)] dark:shadow-none dark:hover:border-[var(--admin-primary-15)]">
         <div className="absolute -right-8 -top-8 text-[var(--admin-primary-15)] transition-transform duration-700 group-hover:rotate-12 group-hover:scale-125 dark:opacity-50 pointer-events-none">
           <Icon className="h-40 w-40" />
         </div>
@@ -54,7 +54,7 @@ export function AdminStatCard({
 
   if (variant === 'accent') {
     return (
-      <div className="group relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] p-6 shadow-2xl transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--admin-primary-15)]">
+      <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] p-6 shadow-2xl transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--admin-primary-15)]">
         {/* Subtle noise/texture overlay (using admin primary tint if no image exists, or a subtle pattern) */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,var(--admin-card-soft),transparent_70%)] opacity-[0.08] mix-blend-overlay pointer-events-none"></div>
         <div className="absolute -bottom-10 -left-10 text-[var(--admin-primary-contrast)] opacity-[0.08] transition-transform duration-700 group-hover:-rotate-12 group-hover:scale-125 pointer-events-none">
@@ -89,7 +89,7 @@ export function AdminStatCard({
 
   // muted
   return (
-    <div className="group relative overflow-hidden rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-6 shadow-sm transition-colors duration-500 hover:bg-[var(--admin-card)] dark:bg-[var(--admin-background)] dark:hover:bg-[var(--admin-card)]">
+    <div className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-6 shadow-sm transition-colors duration-500 hover:bg-[var(--admin-card)] dark:bg-[var(--admin-background)] dark:hover:bg-[var(--admin-card)]">
       <div className="relative z-10 flex h-full flex-col justify-between gap-6">
         <div className="flex items-start justify-between">
           <span className="text-sm font-extrabold text-[var(--admin-muted)] group-hover:text-[var(--admin-text)] transition-colors">

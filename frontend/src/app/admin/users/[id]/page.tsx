@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
@@ -65,7 +66,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
           setStudentData(res);
           setLoading(false);
       }).catch(err => {
-          console.error("Failed to load student", err);
+          devConsole.error("Failed to load student", err);
           setLoading(false);
       });
   }, [id]);
@@ -590,8 +591,14 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                           {key: 'status', label: 'الحالة', render: (row: any) => {
                             const isExpired = row.expiresAt && new Date(row.expiresAt) < new Date();
                             const isGrantActive = row.isActive;
+                            let statusClass = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400';
+                            if (!isGrantActive) {
+                              statusClass = 'bg-zinc-100 text-zinc-800 dark:bg-zinc-900/70 dark:text-zinc-100';
+                            } else if (isExpired) {
+                              statusClass = 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400';
+                            }
                             return (
-                              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${!isGrantActive ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' : isExpired ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
+                              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${statusClass}`}>
                                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                                 {!isGrantActive ? 'ملغية من الإدارة' : isExpired ? 'منتهية' : 'نشطة'}
                               </span>

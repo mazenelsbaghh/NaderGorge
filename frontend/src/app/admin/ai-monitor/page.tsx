@@ -47,36 +47,36 @@ interface MonitoredVideo {
 
 // ─── Progress stages matching the worker exactly ────────────────────────────
 
-const STAGE_CONFIG: Record<string, { label: string; color: string; emoji: string }> = {
+const STAGE_CONFIG: Record<string, { label: string; fillClass: string; emoji: string }> = {
   'جاري استخراج وتحضير الصوت من الفيديو...': {
     label: 'استخراج الصوت',
-    color: 'oklch(0.65 0.15 200)',
+    fillClass: 'ai-progress-fill--audio',
     emoji: '🎵',
   },
   'الذكاء الاصطناعي يقوم بتحليل وتلخيص المحتوى (قد يستغرق دقائق)...': {
     label: 'تحليل Gemini AI',
-    color: 'oklch(0.65 0.18 280)',
+    fillClass: 'ai-progress-fill--analysis',
     emoji: '🤖',
   },
   'جاري بناء هيكل الفصول وإنشاء الترجمة...': {
     label: 'بناء الفصول',
-    color: 'oklch(0.65 0.15 140)',
+    fillClass: 'ai-progress-fill--chapters',
     emoji: '📋',
   },
   'جاري حفظ الفصول وتحديث قواعد البيانات...': {
     label: 'حفظ البيانات',
-    color: 'oklch(0.65 0.15 80)',
+    fillClass: 'ai-progress-fill--saving',
     emoji: '💾',
   },
   'اكتملت المعالجة بنجاح مئة بالمئة.': {
     label: 'تم بنجاح',
-    color: 'oklch(0.65 0.18 145)',
+    fillClass: 'ai-progress-fill--done',
     emoji: '✅',
   },
 };
 
 function getStageConfig(stage: string) {
-  return STAGE_CONFIG[stage] ?? { label: stage, color: 'oklch(0.65 0.1 70)', emoji: '⚙️' };
+  return STAGE_CONFIG[stage] ?? { label: stage, fillClass: 'ai-progress-fill--default', emoji: '⚙️' };
 }
 
 function getProgressVal(progress: JobProgress | number): number {
@@ -195,8 +195,8 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
 
   if (!status) {
     return (
-      <div className="flex items-center gap-2 text-[11px] text-[var(--admin-muted)] mt-2 px-2 py-1.5 rounded-lg" style={{ background: 'rgba(13,148,136,0.06)' }}>
-        <Loader2 className="w-3 h-3 animate-spin text-teal-500" />
+      <div className="ai-inline-status">
+        <Loader2 className="w-3 h-3 animate-spin text-[var(--admin-primary)]" />
         <span>جاري الاتصال بالـ worker...</span>
       </div>
     );
@@ -210,34 +210,34 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
   const isFailed = status.state === 'failed';
 
   return (
-    <div className="mt-2 rounded-lg border overflow-hidden" style={{ borderColor: isFailed ? 'rgba(239,68,68,0.2)' : isCompleted ? 'rgba(22,163,74,0.2)' : 'rgba(13,148,136,0.2)', background: isFailed ? 'rgba(239,68,68,0.04)' : isCompleted ? 'rgba(22,163,74,0.04)' : 'rgba(13,148,136,0.04)' }}>
+    <div className={`ai-mini-progress ${isFailed ? 'ai-mini-progress--failed' : isCompleted ? 'ai-mini-progress--done' : 'ai-mini-progress--active'}`}>
       {/* Header row */}
       <div className="flex items-center justify-between px-2.5 py-1.5">
-        <div className="flex items-center gap-1.5 text-[11px] font-bold" style={{ color: isFailed ? '#ef4444' : isCompleted ? '#16a34a' : '#0d9488' }}>
+        <div className="ai-mini-progress__label">
           {isFailed ? <AlertTriangle className="w-3 h-3" /> : isCompleted ? <CheckCircle2 className="w-3 h-3" /> : <Loader2 className="w-3 h-3 animate-spin" />}
           {isFailed ? 'فشل التوليد' : isCompleted ? 'اكتمل التوليد ✓' : isPending ? 'في قائمة الانتظار...' : 'جاري التوليد...'}
         </div>
-        {!isFailed && !isPending && <span className="text-[10px] font-mono font-bold" style={{ color: '#0d9488' }}>{pct}%</span>}
+        {!isFailed && !isPending && <span className="ai-mini-progress__pct">{pct}%</span>}
       </div>
       {/* Progress bar */}
       {!isFailed && (
-        <div className="h-1 w-full" style={{ background: 'rgba(0,0,0,0.08)' }}>
+        <div className="ai-mini-progress__track">
           <div
-            className="h-full transition-all duration-700"
+            className={`ai-mini-progress__fill ${isCompleted ? 'ai-mini-progress__fill--done' : 'ai-mini-progress__fill--active'}`}
             style={{
-              width: `${pct}%`,
-              background: isCompleted ? 'linear-gradient(90deg,#16a34a,#22c55e)' : 'linear-gradient(90deg,#0d9488,#14b8a6)',
+              width: '100%',
+              transform: `scaleX(${pct / 100})`,
             }}
           />
         </div>
       )}
       {/* Stage text */}
       {stage && !isCompleted && (
-        <div className="px-2.5 py-1 text-[10px]" style={{ color: 'var(--admin-muted)' }}>{stage}</div>
+        <div className="px-2.5 py-1 text-[10px] text-[var(--admin-muted)]">{stage}</div>
       )}
       {/* Error reason */}
       {isFailed && status.failedReason && (
-        <div className="px-2.5 py-1.5 text-[10px] text-red-500">{status.failedReason}</div>
+        <div className="px-2.5 py-1.5 text-[10px] text-[var(--admin-danger)]">{status.failedReason}</div>
       )}
     </div>
   );
@@ -278,19 +278,18 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
         {/* Mindmap section */}
         <div className="mt-3">
           {ch.mindmapImageUrl ? (
-            <div className="rounded-lg border border-black/10 overflow-hidden relative" style={{ background: 'rgba(0,0,0,0.03)' }}>
+            <div className="ai-mindmap-preview">
               {/* Badge + regen button row */}
-              <div className="flex items-center justify-between px-2 py-1 bg-teal-500/10 border-b border-teal-500/15">
-                <div className="flex items-center gap-1 text-teal-600 text-[10px] font-bold">
+              <div className="ai-mindmap-preview__bar">
+                <div className="ai-mindmap-preview__label">
                   <ImageIcon className="w-3 h-3" />
                   خريطة ذهنية
                 </div>
                 <button
                   onClick={handleRegenerate}
-                  disabled={sending || !!activeJobId}
+	                  disabled={sending || !!activeJobId}
                   title="إعادة توليد الخريطة"
-                  className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded transition-all disabled:opacity-50"
-                  style={{ color: '#0d9488', background: 'rgba(13,148,136,0.1)' }}
+                  className="ai-mindmap-preview__action"
                 >
                   {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                   {sending ? 'جاري الإرسال...' : 'إعادة توليد'}
@@ -311,10 +310,9 @@ function ChapterRow({ ch, index, videoId }: { ch: VideoChapterDto; index: number
             /* No mindmap yet — show a generate button */
             <button
               onClick={handleRegenerate}
-              disabled={sending || !!activeJobId}
+	              disabled={sending || !!activeJobId}
               title="توليد خريطة ذهنية لهذا الفصل"
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all disabled:opacity-50"
-              style={{ color: '#0d9488', borderColor: 'rgba(13,148,136,0.3)', background: 'rgba(13,148,136,0.08)' }}
+              className="ai-mindmap-generate"
             >
               {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               {sending ? 'جاري الإرسال...' : 'توليد خريطة ذهنية'}
@@ -511,10 +509,9 @@ function JobCard({
           {isDone && (
             <button
               onClick={handleCancel}
-              disabled={actioning}
-              className="ai-icon-btn ai-icon-btn--danger"
+	              disabled={actioning}
+              className="ai-icon-btn ai-icon-btn--danger ai-icon-btn--offset"
               title="مسح الترجمة والفصول بالكامل (إعادة ضبط)"
-              style={{ marginRight: '2px' }}
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -522,11 +519,10 @@ function JobCard({
 
           {/* ── Dismiss button — only for done or failed cards ── */}
           {(isDone || isFailed) && (
-            <button
+	            <button
               onClick={() => onDismiss(video.id)}
-              className="ai-icon-btn"
+              className="ai-icon-btn ai-icon-btn--offset"
               title="إخفاء هذا الكارت من المراقبة"
-              style={{ marginRight: '2px' }}
             >
               <XCircle className="h-4 w-4 opacity-50" />
             </button>
@@ -563,10 +559,9 @@ function JobCard({
           {/* Progress bar */}
           <div className="ai-progress-track">
             <div
-              className="ai-progress-fill"
+              className={`ai-progress-fill ${stageConf.fillClass}`}
               style={{
-                width: `${Math.max(2, progressVal)}%`,
-                background: stageConf.color,
+                transform: `scaleX(${Math.max(2, progressVal) / 100})`,
               }}
             />
           </div>
@@ -898,6 +893,14 @@ export default function AIMonitorPage() {
           background: oklch(0.62 0.15 145 / 10%); color: oklch(0.50 0.15 145);
           border-color: oklch(0.62 0.15 145 / 20%);
         }
+        .ai-summary-chip--muted {
+          opacity: 0.6; border-color: var(--admin-border);
+          color: var(--admin-muted); background: transparent;
+        }
+        .ai-summary-chip--clear {
+          cursor: pointer; border-color: var(--admin-danger-20);
+          color: var(--admin-danger); background: var(--admin-danger-10);
+        }
 
         /* ─── Cards ─── */
         .ai-card {
@@ -907,6 +910,7 @@ export default function AIMonitorPage() {
         }
         .ai-card:hover { box-shadow: 0 4px 20px var(--admin-shadow); }
         .ai-card--done { opacity: 0.85; }
+        .ai-card--skeleton { opacity: 0.5; }
         .ai-card--failed {
           border-color: oklch(0.65 0.2 25 / 30%);
           background: oklch(0.65 0.2 25 / 4%);
@@ -956,9 +960,102 @@ export default function AIMonitorPage() {
           overflow: hidden; margin-bottom: 0.75rem;
         }
         .ai-progress-fill {
-          height: 100%; border-radius: 9999px;
-          transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+          height: 100%; width: 100%; border-radius: 9999px;
+          transform-origin: left center;
+          transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        .ai-progress-fill--audio,
+        .ai-progress-fill--analysis,
+        .ai-progress-fill--chapters,
+        .ai-progress-fill--saving,
+        .ai-progress-fill--default {
+          background: var(--admin-primary);
+        }
+        .ai-progress-fill--done { background: var(--admin-success); }
+
+        .ai-inline-status {
+          display: flex; align-items: center; gap: 0.5rem;
+          margin-top: 0.5rem; padding: 0.375rem 0.5rem;
+          border-radius: 0.5rem; background: var(--admin-primary-15);
+          color: var(--admin-muted); font-size: 0.6875rem;
+        }
+        .ai-mini-progress {
+          margin-top: 0.5rem; overflow: hidden;
+          border: 1px solid; border-radius: 0.5rem;
+        }
+        .ai-mini-progress--active {
+          border-color: var(--admin-primary-15); background: var(--admin-primary-15);
+        }
+        .ai-mini-progress--done {
+          border-color: var(--admin-success-20); background: var(--admin-success-10);
+        }
+        .ai-mini-progress--failed {
+          border-color: var(--admin-danger-20); background: var(--admin-danger-10);
+        }
+        .ai-mini-progress__label {
+          display: flex; align-items: center; gap: 0.375rem;
+          color: var(--admin-primary); font-size: 0.6875rem; font-weight: 800;
+        }
+        .ai-mini-progress--done .ai-mini-progress__label { color: var(--admin-success); }
+        .ai-mini-progress--failed .ai-mini-progress__label { color: var(--admin-danger); }
+        .ai-mini-progress__pct {
+          color: var(--admin-primary); font-family: var(--font-mono);
+          font-size: 0.625rem; font-weight: 800;
+        }
+        .ai-mini-progress__track {
+          height: 0.25rem; width: 100%; background: var(--admin-border);
+        }
+        .ai-mini-progress__fill {
+          height: 100%; transform-origin: left center;
+          transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .ai-mini-progress__fill--active { background: var(--admin-primary); }
+        .ai-mini-progress__fill--done { background: var(--admin-success); }
+
+        .ai-mindmap-preview {
+          position: relative; overflow: hidden;
+          border: 1px solid var(--admin-border); border-radius: 0.5rem;
+          background: var(--admin-card);
+        }
+        .ai-mindmap-preview__bar {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 0.25rem 0.5rem;
+          border-bottom: 1px solid var(--admin-border);
+          background: var(--admin-primary-15);
+        }
+        .ai-mindmap-preview__label {
+          display: flex; align-items: center; gap: 0.25rem;
+          color: var(--admin-primary); font-size: 0.625rem; font-weight: 800;
+        }
+        .ai-mindmap-preview__action,
+        .ai-mindmap-generate {
+          display: inline-flex; align-items: center; gap: 0.25rem;
+          border: 1px solid var(--admin-primary-15);
+          border-radius: 0.5rem; background: var(--admin-card);
+          color: var(--admin-primary); font-weight: 800;
+          transition: background 0.15s, border-color 0.15s;
+        }
+        .ai-mindmap-preview__action {
+          padding: 0.125rem 0.5rem; font-size: 0.625rem;
+        }
+        .ai-mindmap-generate {
+          padding: 0.375rem 0.75rem; font-size: 0.6875rem;
+        }
+        .ai-mindmap-preview__action:hover:not(:disabled),
+        .ai-mindmap-generate:hover:not(:disabled) {
+          background: var(--admin-primary-15); border-color: var(--admin-primary);
+        }
+        .ai-mindmap-preview__action:disabled,
+        .ai-mindmap-generate:disabled {
+          opacity: 0.5;
+        }
+
+        .ai-skeleton-line {
+          background: var(--admin-hover); border-radius: 9999px;
+        }
+        .ai-skeleton-line--title { height: 1.25rem; width: 60%; border-radius: 0.375rem; }
+        .ai-skeleton-line--meta { height: 0.75rem; width: 40%; margin-top: 0.5rem; border-radius: 0.25rem; }
+        .ai-skeleton-line--bar { height: 0.375rem; width: 100%; margin-top: 1rem; }
 
         /* ─── Steps ─── */
         .ai-steps { display: flex; justify-content: space-between; gap: 0.25rem; }
@@ -1084,6 +1181,7 @@ export default function AIMonitorPage() {
           color: var(--admin-muted); cursor: pointer; transition: all 0.15s;
         }
         .ai-icon-btn:hover:not(:disabled) { background: var(--admin-hover); color: var(--admin-text); }
+        .ai-icon-btn--offset { margin-right: 2px; }
         .ai-icon-btn--danger:hover:not(:disabled) {
           background: oklch(0.65 0.2 25 / 10%); color: oklch(0.55 0.2 25);
           border-color: oklch(0.65 0.2 25 / 30%);
@@ -1103,6 +1201,7 @@ export default function AIMonitorPage() {
           cursor: pointer; transition: all 0.15s;
         }
         .ai-refresh-btn:hover { background: var(--admin-hover); }
+        .ai-refresh-btn--spaced { margin-top: 0.5rem; }
 
         /* ─── Empty state ─── */
         .ai-empty {
@@ -1159,15 +1258,14 @@ export default function AIMonitorPage() {
                 {doneCount} اكتمل
               </span>
             )}
-            <span className="ai-summary-chip" style={{ opacity: 0.6, borderColor: 'var(--admin-border)', color: 'var(--admin-muted)', background: 'transparent' }}>
+            <span className="ai-summary-chip ai-summary-chip--muted">
               {items.length} فيديو إجمالاً
             </span>
             {/* Clear all done/failed */}
             {(doneCount > 0 || failedCount > 0) && (
               <button
                 onClick={handleDismissAllDone}
-                className="ai-summary-chip"
-                style={{ cursor: 'pointer', borderColor: 'oklch(0.65 0.2 25 / 25%)', color: 'oklch(0.55 0.2 25)', background: 'oklch(0.65 0.2 25 / 6%)' }}
+                className="ai-summary-chip ai-summary-chip--clear"
                 title="إخفاء جميع الكروت المنتهية"
               >
                 <XCircle className="h-3.5 w-3.5" />
@@ -1181,10 +1279,10 @@ export default function AIMonitorPage() {
         {loading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="ai-card" style={{ opacity: 0.5 }}>
-                <div style={{ height: 20, width: '60%', borderRadius: 6, background: 'var(--admin-hover)' }} />
-                <div style={{ height: 12, width: '40%', borderRadius: 4, background: 'var(--admin-hover)', marginTop: 8 }} />
-                <div style={{ height: 6, width: '100%', borderRadius: 9999, background: 'var(--admin-hover)', marginTop: 16 }} />
+              <div key={i} className="ai-card ai-card--skeleton">
+                <div className="ai-skeleton-line ai-skeleton-line--title" />
+                <div className="ai-skeleton-line ai-skeleton-line--meta" />
+                <div className="ai-skeleton-line ai-skeleton-line--bar" />
               </div>
             ))}
           </div>
@@ -1217,7 +1315,7 @@ export default function AIMonitorPage() {
               <br />
               اذهب لأي درس واضغط على ✨ لبدء تحليل فيديو جديد.
             </p>
-            <Link href="/admin/content" className="ai-refresh-btn" style={{ marginTop: '0.5rem' }}>
+            <Link href="/admin/content" className="ai-refresh-btn ai-refresh-btn--spaced">
               <ExternalLink className="h-4 w-4" />
               انتقل لإدارة المحتوى
             </Link>

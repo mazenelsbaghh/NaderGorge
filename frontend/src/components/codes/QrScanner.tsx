@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 /**
  * QrScanner — Component to scan QR codes
  * Uses @yudiel/react-qr-scanner for device camera integration.
@@ -42,7 +43,7 @@ export function QrScanner() {
   };
 
   const handleError = (error: unknown) => {
-    console.warn('QR Scan Error:', error);
+    devConsole.warn('QR Scan Error:', error);
   };
 
   if (!isOpen) {

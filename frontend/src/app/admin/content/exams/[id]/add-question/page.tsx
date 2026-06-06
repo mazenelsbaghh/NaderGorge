@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
@@ -42,7 +43,7 @@ export default function AddExamQuestionPage(props: { params: Promise<{ id: strin
       })
       .catch((err) => {
         toast.error('حدث خطأ أثناء تحميل بيانات الامتحان');
-        console.error(err);
+        devConsole.error(err);
       })
       .finally(() => setLoadingContext(false));
   }, [params.id]);

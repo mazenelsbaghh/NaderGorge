@@ -1,5 +1,6 @@
 'use client';
 
+import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState } from 'react';
 import {
   Download,
@@ -126,7 +127,7 @@ export default function AdminUsersPage() {
       const data = await adminService.getUserDevices(user.id);
       setDevices(data);
     } catch (error) {
-      console.error(error);
+      devConsole.error(error);
       toast.error('حدث خطأ أثناء تحميل بيانات الأجهزة، يرجى المحاولة.');
     }
   }
@@ -144,7 +145,7 @@ export default function AdminUsersPage() {
       setConfirmUser(null);
       toast.success(nextStatus === 'Active' ? 'تم تنشيط المستخدم' : 'تم تعليق المستخدم');
     } catch (error) {
-      console.error(error);
+      devConsole.error(error);
       toast.error('حدث خطأ أثناء تحديث حالة المستخدم، أعد المحاولة.');
     }
   }

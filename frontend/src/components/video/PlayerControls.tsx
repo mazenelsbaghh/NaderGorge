@@ -10,12 +10,14 @@ const CustomSlider = ({
   value,
   onChange,
   className,
-  chapters
+  chapters,
+  ariaLabel = "شريط التقدم",
 }: {
   value: number;
   onChange: (value: number) => void;
   className?: string;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
+  ariaLabel?: string;
 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -82,6 +84,47 @@ const CustomSlider = ({
     }
   };
 
+  const commitValue = useCallback((nextValue: number) => {
+    const clamped = Math.min(Math.max(nextValue, 0), 100);
+    const snapped = chapters ? snapToChapter(clamped) : clamped;
+    setLocalValue(snapped);
+    onChange(snapped);
+  }, [chapters, onChange, snapToChapter]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? 10 : 5;
+    let nextValue: number | null = null;
+
+    switch (e.key) {
+      case "ArrowRight":
+      case "ArrowUp":
+        nextValue = localValue + step;
+        break;
+      case "ArrowLeft":
+      case "ArrowDown":
+        nextValue = localValue - step;
+        break;
+      case "PageUp":
+        nextValue = localValue + 10;
+        break;
+      case "PageDown":
+        nextValue = localValue - 10;
+        break;
+      case "Home":
+        nextValue = 0;
+        break;
+      case "End":
+        nextValue = 100;
+        break;
+      default:
+        return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
+    commitValue(nextValue);
+  };
+
   const displayChapters = React.useMemo(
     () => (chapters && chapters.length > 0
       ? chapters
@@ -97,8 +140,15 @@ const CustomSlider = ({
   return (
     <div
       ref={containerRef}
+      role="slider"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(localValue)}
+      aria-valuetext={`${Math.round(localValue)}%`}
       className={cn(
-        "relative w-full h-1.5 bg-transparent rounded-full cursor-pointer group/slider hover:h-2 transition-[height] duration-200 flex items-center touch-none",
+        "relative flex h-2 w-full cursor-pointer touch-none items-center rounded-full bg-transparent focus-visible:ring-2 focus-visible:ring-[var(--secondary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black",
         className
       )}
       onPointerDown={handlePointerDown}
@@ -106,6 +156,7 @@ const CustomSlider = ({
       onPointerLeave={handlePointerLeave}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onKeyDown={handleKeyDown}
     >
       {/* Tooltip */}
       {hoverPercent !== null && hoveredChapter && hoveredChapter.title && (
@@ -136,9 +187,9 @@ const CustomSlider = ({
               className="h-full bg-white/20 relative overflow-hidden backdrop-blur-sm transition-all duration-300"
               style={{ width: `${widthPercent}%` }}
             >
-              {/* Filled progress bar (Beige / Gold) */}
+              {/* Filled progress bar */}
               <div
-                className="absolute top-0 left-0 h-full bg-[#EBE2D4] transition-none origin-left shadow-[0_0_10px_rgba(235,226,212,0.5)]"
+                className="absolute top-0 left-0 h-full bg-[#0E8F8F] transition-none origin-left shadow-[0_0_10px_rgba(14,143,143,0.45)]"
                 style={{ width: `${fillPercent}%` }}
               />
             </div>
@@ -230,6 +281,7 @@ export default function PlayerControls({
               onChange={onSeek}
               className="flex-1"
               chapters={chapters}
+              ariaLabel="تقدم الفيديو"
             />
             <span className="text-white text-xs font-medium w-10 text-center shrink-0">
               {durationFormatted}
@@ -275,13 +327,14 @@ export default function PlayerControls({
                   <CustomSlider
                     value={isMuted ? 0 : volume}
                     onChange={onVolumeChange}
+                    ariaLabel="مستوى الصوت"
                   />
                 </div>
               </div>
 
               {currentChapter ? (
                 <div className="flex items-center gap-2 ml-2 sm:ml-4 text-white font-bold text-xs sm:text-sm whitespace-nowrap overflow-hidden min-w-0">
-                  <span className="w-2 h-2 rounded-full bg-[#EBE2D4] shadow-[0_0_8px_rgba(235,226,212,0.8)] shrink-0"></span>
+                  <span className="w-2 h-2 rounded-full bg-[#0E8F8F] shadow-[0_0_8px_rgba(14,143,143,0.75)] shrink-0"></span>
                   <span className="truncate min-w-0 leading-relaxed block mask-image-fade">{(currentChapter as any).title || (currentChapter as any).name || 'الفصل الحالي'}</span>
                 </div>
               ) : (

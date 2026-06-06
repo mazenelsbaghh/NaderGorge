@@ -120,7 +120,7 @@ export function StudentGettingStartedPanel({ data }: StudentGettingStartedPanelP
   const SecondaryIcon = variant.secondaryCta.icon;
 
   return (
-    <section className="rounded-[32px] bg-[var(--admin-card)] p-6 shadow-sm ring-1 ring-[var(--admin-border)] sm:p-8">
+    <section className="rounded-2xl bg-[var(--admin-card)] p-6 shadow-sm ring-1 ring-[var(--admin-border)] sm:p-8">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl space-y-3">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">

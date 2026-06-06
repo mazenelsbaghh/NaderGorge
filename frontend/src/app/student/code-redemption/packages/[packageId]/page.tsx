@@ -29,10 +29,10 @@ export default function PackageCodeRedemptionPage(props: { params: Promise<{ pac
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-52 animate-pulse rounded-[32px] bg-[var(--admin-card-strong)]" />
+        <div className="h-52 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="h-80 animate-pulse rounded-[32px] bg-[var(--admin-card-strong)]" />
-          <div className="h-80 animate-pulse rounded-[32px] bg-[var(--admin-card-strong)]" />
+          <div className="h-80 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
+          <div className="h-80 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
         </div>
       </div>
     );
@@ -40,7 +40,7 @@ export default function PackageCodeRedemptionPage(props: { params: Promise<{ pac
 
   if (!pageData) {
     return (
-      <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 text-center text-[var(--admin-muted)] backdrop-blur-xl">
+      <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 text-center text-[var(--admin-muted)] backdrop-blur-xl">
         تعذر تحميل صفحة الكود الخاصة بهذه الباقة.
       </div>
     );
@@ -51,7 +51,7 @@ export default function PackageCodeRedemptionPage(props: { params: Promise<{ pac
       <PackageCodeRedemptionShowcase page={pageData} />
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <section className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-xl md:p-8">
+        <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-xl md:p-8">
           <div className="mb-6">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
               {pageData.isUsingCustomProfile ? "صفحة مخصصة" : "الوضع الافتراضي"}
@@ -76,7 +76,7 @@ export default function PackageCodeRedemptionPage(props: { params: Promise<{ pac
           </div>
         </section>
 
-        <aside className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-xl md:p-8">
+        <aside className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-xl md:p-8">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
             {pageData.packageName}
           </p>

@@ -12,7 +12,7 @@ export function QuickAccessPanel({ items }: QuickAccessPanelProps) {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
+    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
       <div className="mb-6">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">وصول سريع</p>
         <p className="mt-2 text-sm font-bold text-[var(--admin-muted)]">ارجع بسرعة إلى الدروس والمسارات المفتوحة لك الآن.</p>
