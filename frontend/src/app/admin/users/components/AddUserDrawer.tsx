@@ -169,7 +169,7 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[70] bg-[var(--admin-text)]/35 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -180,7 +180,7 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[480px] flex-col bg-[var(--admin-bg)] shadow-2xl border-l border-[var(--admin-border)]"
+            className="fixed inset-y-0 right-0 z-[80] flex w-full max-w-[480px] flex-col border-l border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl"
             dir="rtl"
           >
             {/* Header */}
@@ -199,6 +199,7 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
               <button
                 type="button"
                 onClick={onClose}
+                aria-label="إغلاق إضافة مستخدم"
                 className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)]"
               >
                 <X className="h-4 w-4" />
