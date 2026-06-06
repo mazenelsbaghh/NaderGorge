@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { Wrench } from 'lucide-react';
 import apiClient from '@/services/api-client';
+import Image from 'next/image';
 
 export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore();
@@ -49,25 +50,43 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 
   if (isMaintenance && !isStaff) {
     return (
-      <div dir="rtl" className="flex min-h-dvh flex-col items-center justify-center bg-[#faf2e6] px-6 text-[#2c1708] font-[family-name:var(--font-tajawal)]">
-        <div className="relative max-w-md w-full overflow-hidden rounded-[32px] bg-[#fcf6ea] p-8 text-center shadow-[0_24px_60px_rgba(154,105,51,0.12)] border border-[#f0e4ce]">
-          {/* Subtle gold gradient background glow */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(154,105,51,0.08),transparent_70%)]" />
+      <div dir="rtl" className="flex min-h-dvh flex-col items-center justify-center bg-[#050e1a] px-6 text-slate-100 font-[family-name:var(--font-tajawal)] overflow-hidden relative">
+        {/* Modern ambient branding glow elements */}
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[#0E8F8F]/15 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#D4A017]/10 blur-[120px] pointer-events-none" />
+        
+        {/* Brand Logo Header */}
+        <div className="relative mb-8 text-center animate-fade-in">
+          <Image 
+            src="/images/logo-mark-light.svg" 
+            width={80}
+            height={80}
+            className="h-20 w-auto mx-auto drop-shadow-[0_0_15px_rgba(14,143,143,0.3)]" 
+            alt="مسار أكاديمي" 
+            priority
+          />
+        </div>
+
+        {/* Premium Glassmorphism Card */}
+        <div className="relative max-w-lg w-full overflow-hidden rounded-[32px] bg-slate-900/60 border border-white/10 p-8 sm:p-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+          {/* Internal card gold highlight glow */}
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,160,23,0.06),transparent_70%)]" />
           
           <div className="relative flex justify-center mb-6">
-            <div className="p-4 bg-[#f2dfbc] rounded-2xl text-[#9a6933] shadow-[0_8px_20px_rgba(154,105,51,0.1)]">
-              <Wrench className="w-12 h-12 animate-pulse" />
+            <div className="p-4.5 bg-[#0E8F8F]/10 rounded-2xl text-[#0E8F8F] border border-[#0E8F8F]/20 shadow-[0_8px_30px_rgba(14,143,143,0.15)]">
+              <Wrench className="w-10 h-10 animate-bounce" style={{ animationDuration: '3s' }} />
             </div>
           </div>
 
-          <h1 className="relative text-2xl font-[900] mb-4 text-[#7f5427] tracking-tight">أعمال صيانة مجدولة</h1>
+          <h1 className="relative text-2xl font-black mb-4 text-[#D4A017] tracking-tight">أعمال صيانة مجدولة</h1>
           
-          <p className="relative text-[#7a644d] leading-relaxed mb-6 font-medium text-[15px]">
+          <p className="relative text-slate-300 leading-relaxed mb-6 font-medium text-[15px] px-2">
             {maintenanceMessage}
           </p>
 
-          <div className="relative pt-4 border-t border-[#f0e4ce] flex items-center justify-center gap-2 text-xs text-[#7a644d] font-bold">
-            <span>شكراً لتفهمكم ونعتذر عن هذا العطل المؤقت.</span>
+          <div className="relative pt-5 border-t border-white/5 flex flex-col items-center justify-center gap-1.5 text-xs text-slate-400 font-bold">
+            <span className="text-[#0E8F8F]">مسار أكاديمي — شريك تفوقك الدراسي</span>
+            <span className="opacity-75 font-normal">شكراً لتفهمكم ونعتذر عن هذا العطل المؤقت.</span>
           </div>
         </div>
       </div>
