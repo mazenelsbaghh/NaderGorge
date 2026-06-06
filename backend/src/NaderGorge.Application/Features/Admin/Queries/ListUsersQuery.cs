@@ -39,7 +39,12 @@ public record AdminUserListDto(
     string? ParentPhone,
     string? MotherPhone,
     string? SchoolName,
-    string? SchoolType
+    string? SchoolType,
+    string? Nationality,
+    DateTime? FatherDateOfBirth,
+    DateTime? MotherDateOfBirth,
+    string? SuspensionReason,
+    decimal CurrentBalance
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
@@ -57,6 +62,7 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
     {
         var query = _db.Users
             .Include(u => u.StudentProfile)
+            .Include(u => u.StudentBalance)
             .Include(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
             .AsQueryable();
@@ -124,7 +130,12 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.StudentProfile?.ParentPhone,
             u.StudentProfile?.MotherPhone,
             u.StudentProfile?.SchoolName,
-            u.StudentProfile?.SchoolType?.ToString()
+            u.StudentProfile?.SchoolType?.ToString(),
+            u.StudentProfile?.Nationality,
+            u.StudentProfile?.FatherDateOfBirth,
+            u.StudentProfile?.MotherDateOfBirth,
+            u.SuspensionReason,
+            u.StudentBalance?.CurrentBalance ?? 0m
         )).ToList();
 
         return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, request.Page, request.PageSize));

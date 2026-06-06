@@ -30,6 +30,11 @@ export interface AdminUserListDto {
   motherPhone?: string;
   schoolName?: string;
   schoolType?: string;
+  nationality?: string;
+  fatherDateOfBirth?: string;
+  motherDateOfBirth?: string;
+  suspensionReason?: string;
+  currentBalance?: number;
 }
 
 export interface PagedResult<T> {
