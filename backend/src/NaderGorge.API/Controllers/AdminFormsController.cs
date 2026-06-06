@@ -6,11 +6,14 @@ using NaderGorge.Application.Features.Admin.Queries;
 using System;
 using System.Threading.Tasks;
 
+using NaderGorge.API.Extensions;
+
 namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/admin/forms")]
-[Authorize(Roles = "Admin")]
+[Authorize]
+[HasPermission("users.manage")]
 public class AdminFormsController : ControllerBase
 {
     private readonly IMediator _mediator;

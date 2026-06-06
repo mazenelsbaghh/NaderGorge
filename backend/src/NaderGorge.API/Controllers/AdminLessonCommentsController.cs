@@ -9,7 +9,8 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/admin")]
-[Authorize(Roles = "Admin,Teacher")]
+[Authorize]
+[HasPermission("comments.manage")]
 public class AdminLessonCommentsController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -11,12 +11,15 @@
 import { StudentShellChrome } from "@/components/layout/StudentShellChrome";
 import { StudentGuard } from "@/components/layout/StudentGuard";
 import { StudentThemeProvider } from "@/hooks/useStudentTheme";
+import { MaintenanceGuard } from "@/components/layout/MaintenanceGuard";
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   return (
     <StudentThemeProvider>
       <StudentGuard>
-        <StudentShellChrome>{children}</StudentShellChrome>
+        <MaintenanceGuard>
+          <StudentShellChrome>{children}</StudentShellChrome>
+        </MaintenanceGuard>
       </StudentGuard>
     </StudentThemeProvider>
   );

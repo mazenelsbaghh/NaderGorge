@@ -10,7 +10,7 @@ import {
 } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
-type Role = 'Admin' | 'Assistant' | 'Student';
+type Role = string;
 
 interface AddUserDrawerProps {
   open: boolean;
@@ -18,7 +18,7 @@ interface AddUserDrawerProps {
   onSuccess: () => void;
 }
 
-const ROLES: { value: Role; label: string; icon: React.ReactNode; desc: string }[] = [
+const ROLES: { value: string; label: string; icon: React.ReactNode; desc: string }[] = [
   {
     value: 'Admin',
     label: 'مدير',
@@ -27,9 +27,9 @@ const ROLES: { value: Role; label: string; icon: React.ReactNode; desc: string }
   },
   {
     value: 'Assistant',
-    label: 'مساعد',
+    label: 'مساعد مخصص',
     icon: <GraduationCap className="h-4 w-4" />,
-    desc: 'صلاحيات محدودة للمساعدة',
+    desc: 'صلاحيات مخصصة للمساعدين',
   },
   {
     value: 'Student',
@@ -57,6 +57,8 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<FieldError>({});
+  const [dynamicRoles, setDynamicRoles] = useState<any[]>([]);
+  const [selectedAssistantRole, setSelectedAssistantRole] = useState<string>('');
 
   // Load packages when Student role is selected
   useEffect(() => {
@@ -80,6 +82,24 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
       setShowPassword(false);
       setSelectedPackageIds([]);
       setErrors({});
+      setSelectedAssistantRole('');
+    }
+  }, [open]);
+
+  // Load dynamic roles on open
+  useEffect(() => {
+    if (open) {
+      adminService.listRoles()
+        .then((data) => {
+          if (data) {
+            setDynamicRoles(data);
+            const assistants = data.filter((r: any) => r.name !== 'Admin' && r.name !== 'Student' && r.name !== 'Teacher');
+            if (assistants.length > 0) {
+              setSelectedAssistantRole(assistants[0].name);
+            }
+          }
+        })
+        .catch(() => toast.error('تعذر تحميل قائمة الأدوار'));
     }
   }, [open]);
 
@@ -107,6 +127,10 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
       newErrors.password = 'كلمة السر يجب أن تكون 6 أحرف على الأقل';
     }
 
+    if (role === 'Assistant' && !selectedAssistantRole) {
+      newErrors.general = 'يرجى اختيار دور المساعد المخصص، أو إنشاء دور جديد في الإعدادات';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
@@ -122,7 +146,7 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
       fullName: fullName.trim(),
       phoneNumber: phoneNumber.trim(),
       password,
-      role,
+      role: role === 'Assistant' ? selectedAssistantRole : role,
       packageIds: role === 'Student' ? selectedPackageIds : [],
     };
 
@@ -243,6 +267,34 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
                       </button>
                     ))}
                   </div>
+
+                  {/* Custom Assistant Role Dropdown */}
+                  {role === 'Assistant' && (
+                    <div className="mt-4 space-y-2">
+                      <label className="block text-sm font-bold text-[var(--admin-text)] text-right">
+                        اختر دور المساعد المخصص
+                      </label>
+                      {dynamicRoles.filter((r: any) => r.name !== 'Admin' && r.name !== 'Student' && r.name !== 'Teacher').length === 0 ? (
+                        <div className="text-sm text-amber-500 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-3 text-right">
+                          لا توجد أدوار مساعد مخصصة حالياً. يرجى إنشاء دور جديد في صفحة الإعدادات أولاً.
+                        </div>
+                      ) : (
+                        <select
+                          value={selectedAssistantRole}
+                          onChange={(e) => setSelectedAssistantRole(e.target.value)}
+                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none text-sm text-[var(--admin-text)]"
+                        >
+                          {dynamicRoles
+                            .filter((r: any) => r.name !== 'Admin' && r.name !== 'Student' && r.name !== 'Teacher')
+                            .map((r: any) => (
+                              <option key={r.id} value={r.name}>
+                                {r.name}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Full Name */}

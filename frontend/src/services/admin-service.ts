@@ -390,7 +390,7 @@ export interface AdminCreateUserPayload {
   fullName: string;
   phoneNumber: string;
   password: string;
-  role: 'Admin' | 'Assistant' | 'Student';
+  role: string;
   packageIds?: string[];
 }
 
@@ -815,6 +815,36 @@ export const adminService = {
 
   cancelStudentPackage: async (userId: string, accessGrantId: string, refundBalance: boolean) => {
     const res = await apiClient.post<ApiResponse>(`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`, { refundBalance });
+    return res.data;
+  },
+
+  getPlatformSettings: async () => {
+    const res = await apiClient.get<ApiResponse<any[]>>('/admin/settings');
+    return res.data?.data;
+  },
+
+  updatePlatformSettings: async (settings: Record<string, string>) => {
+    const res = await apiClient.put<ApiResponse<boolean>>('/admin/settings', { settings });
+    return res.data;
+  },
+
+  listRoles: async () => {
+    const res = await apiClient.get<ApiResponse<any[]>>('/admin/roles');
+    return res.data?.data;
+  },
+
+  createRole: async (payload: { name: string; permissions: string[] }) => {
+    const res = await apiClient.post<ApiResponse<any>>('/admin/roles', payload);
+    return res.data;
+  },
+
+  updateRole: async (id: string, payload: { name: string; permissions: string[] }) => {
+    const res = await apiClient.put<ApiResponse<any>>(`/admin/roles/${id}`, payload);
+    return res.data;
+  },
+
+  deleteRole: async (id: string) => {
+    const res = await apiClient.delete<ApiResponse<any>>(`/admin/roles/${id}`);
     return res.data;
   }
 };

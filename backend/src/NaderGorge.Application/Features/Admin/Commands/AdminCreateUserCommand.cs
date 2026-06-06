@@ -41,13 +41,16 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
                 "رقم الهاتف مسجل بالفعل",
                 new List<string> { "PHONE_ALREADY_EXISTS" });
 
-        // 2. Validate role (normalize to PascalCase)
-        var validRoles = new[] { "Admin", "Assistant", "Student" };
-        var normalizedRole = validRoles.FirstOrDefault(r => r.Equals(request.Role, StringComparison.OrdinalIgnoreCase));
-        if (normalizedRole == null)
+        // 2. Validate and retrieve role from database dynamically
+        var roleEntity = await _context.Roles
+            .FirstOrDefaultAsync(r => r.Name.ToLower() == request.Role.ToLower(), cancellationToken);
+
+        if (roleEntity == null)
             return ApiResponse<AdminCreateUserResult>.Fail(
-                "الدور غير صالح",
-                new List<string> { "INVALID_ROLE" });
+                "الدور المحدد غير صالح أو غير موجود في النظام",
+                new List<string> { "ROLE_NOT_FOUND" });
+
+        var isStudent = roleEntity.Name.Equals("Student", StringComparison.OrdinalIgnoreCase);
 
         // 3. Validate password
         if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 6)
@@ -66,19 +69,11 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
             PhoneNumber = request.PhoneNumber.Trim(),
             PasswordHash = passwordHash,
             IsActive = true,
-            IsProfileComplete = normalizedRole != "Student"
+            IsProfileComplete = !isStudent
         };
         _context.Users.Add(user);
 
-        // 6. Find and assign role
-        var roleEntity = await _context.Roles
-            .FirstOrDefaultAsync(r => r.Name == normalizedRole, cancellationToken);
-
-        if (roleEntity == null)
-            return ApiResponse<AdminCreateUserResult>.Fail(
-                "لم يُعثر على الدور في النظام",
-                new List<string> { "ROLE_NOT_FOUND" });
-
+        // 6. Assign role
         _context.UserRoles.Add(new UserRole
         {
             UserId = user.Id,
@@ -86,7 +81,7 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
         });
 
         // 7. If student: create minimal profile + enrol in packages
-        if (normalizedRole == "Student")
+        if (isStudent)
         {
             var profile = new StudentProfile
             {

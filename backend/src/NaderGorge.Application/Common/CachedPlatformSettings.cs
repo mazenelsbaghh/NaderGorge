@@ -7,10 +7,34 @@ namespace NaderGorge.Application.Common;
 public sealed record CachedPlatformSettings(
     int VideoWatchThresholdPercentage,
     int MaxExtraWatchRequestsPerVideo,
-    decimal HintPenaltyPercentage
+    decimal HintPenaltyPercentage,
+    string PlatformName,
+    string SupportPhoneNumber,
+    string SupportWhatsAppUrl,
+    string YouTubeChannelUrl,
+    string TelegramChannelUrl,
+    int MaxActiveDevicesPerStudent,
+    bool EnableWatermark,
+    decimal WatermarkOpacity,
+    bool MaintenanceMode,
+    string MaintenanceMessage
 )
 {
-    public static CachedPlatformSettings Default { get; } = new(30, 3, 25m);
+    public static CachedPlatformSettings Default { get; } = new(
+        30, 
+        3, 
+        25m,
+        "منصة مسار التعليمية",
+        "01000000000",
+        "https://wa.me/201000000000",
+        "https://youtube.com",
+        "https://t.me",
+        2,
+        true,
+        0.15m,
+        false,
+        "المنصة في أعمال الصيانة حالياً، سنعود قريباً."
+    );
 }
 
 public interface ICachedPlatformSettingsReader
@@ -45,7 +69,17 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
             return new CachedPlatformSettings(
                 GetInt(settings, PlatformSettingKeys.VideoWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage, minValue: 1),
                 GetInt(settings, PlatformSettingKeys.MaxExtraWatchRequestsPerVideo, CachedPlatformSettings.Default.MaxExtraWatchRequestsPerVideo, minValue: 1),
-                GetDecimal(settings, PlatformSettingKeys.HintPenaltyPercentage, CachedPlatformSettings.Default.HintPenaltyPercentage, minValue: 0m)
+                GetDecimal(settings, PlatformSettingKeys.HintPenaltyPercentage, CachedPlatformSettings.Default.HintPenaltyPercentage, minValue: 0m),
+                GetString(settings, PlatformSettingKeys.PlatformName, CachedPlatformSettings.Default.PlatformName),
+                GetString(settings, PlatformSettingKeys.SupportPhoneNumber, CachedPlatformSettings.Default.SupportPhoneNumber),
+                GetString(settings, PlatformSettingKeys.SupportWhatsAppUrl, CachedPlatformSettings.Default.SupportWhatsAppUrl),
+                GetString(settings, PlatformSettingKeys.YouTubeChannelUrl, CachedPlatformSettings.Default.YouTubeChannelUrl),
+                GetString(settings, PlatformSettingKeys.TelegramChannelUrl, CachedPlatformSettings.Default.TelegramChannelUrl),
+                GetInt(settings, PlatformSettingKeys.MaxActiveDevicesPerStudent, CachedPlatformSettings.Default.MaxActiveDevicesPerStudent, minValue: 1),
+                GetBool(settings, PlatformSettingKeys.EnableWatermark, CachedPlatformSettings.Default.EnableWatermark),
+                GetDecimal(settings, PlatformSettingKeys.WatermarkOpacity, CachedPlatformSettings.Default.WatermarkOpacity, minValue: 0m),
+                GetBool(settings, PlatformSettingKeys.MaintenanceMode, CachedPlatformSettings.Default.MaintenanceMode),
+                GetString(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage)
             );
         })!;
     }
@@ -65,6 +99,20 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
     private static decimal GetDecimal(IReadOnlyDictionary<string, string> settings, string key, decimal fallback, decimal minValue)
     {
         return settings.TryGetValue(key, out var rawValue) && decimal.TryParse(rawValue, out var parsed) && parsed >= minValue
+            ? parsed
+            : fallback;
+    }
+
+    private static string GetString(IReadOnlyDictionary<string, string> settings, string key, string fallback)
+    {
+        return settings.TryGetValue(key, out var rawValue) && !string.IsNullOrWhiteSpace(rawValue)
+            ? rawValue
+            : fallback;
+    }
+
+    private static bool GetBool(IReadOnlyDictionary<string, string> settings, string key, bool fallback)
+    {
+        return settings.TryGetValue(key, out var rawValue) && bool.TryParse(rawValue, out var parsed)
             ? parsed
             : fallback;
     }

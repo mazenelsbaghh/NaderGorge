@@ -28,12 +28,14 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
     private readonly IAppDbContext _db;
     private readonly ITokenService _tokens;
     private readonly IConfiguration _config;
+    private readonly ICachedPlatformSettingsReader _settingsReader;
 
-    public LoginCommandHandler(IAppDbContext db, ITokenService tokens, IConfiguration config)
+    public LoginCommandHandler(IAppDbContext db, ITokenService tokens, IConfiguration config, ICachedPlatformSettingsReader settingsReader)
     {
         _db = db;
         _tokens = tokens;
         _config = config;
+        _settingsReader = settingsReader;
     }
 
     public async Task<ApiResponse<LoginResponse>> Handle(LoginCommand request, CancellationToken ct)
@@ -47,13 +49,14 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
 
         if (!user.IsActive)
         {
+            var platformSettings = await _settingsReader.GetAsync(ct);
             var reason = user.SuspensionReason;
             if (string.IsNullOrWhiteSpace(reason))
             {
                 reason = "مخالفة شروط الاستخدام";
             }
             var reasonText = !string.IsNullOrWhiteSpace(reason) ? $" السبب: {reason}." : "";
-            throw new UnauthorizedAccessException($"تم تعطيل الحساب.{reasonText} برجاء التواصل مع الدعم الفني: 01272629122");
+            throw new UnauthorizedAccessException($"تم تعطيل الحساب.{reasonText} برجاء التواصل مع الدعم الفني: {platformSettings.SupportPhoneNumber}");
         }
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
@@ -63,7 +66,8 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
         var isStaff = roles.Any(r => r is "Admin" or "Assistant" or "Teacher");
 
-        var maxDevices = int.Parse(_config["DeviceLimits:MaxDevicesPerStudent"] ?? "2");
+        var dynamicSettings = await _settingsReader.GetAsync(ct);
+        var maxDevices = dynamicSettings.MaxActiveDevicesPerStudent;
         var existingDevice = user.Devices.FirstOrDefault(d => d.DeviceFingerprint == request.DeviceFingerprint && d.IsActive);
 
         if (existingDevice == null)

@@ -9,7 +9,8 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/admin/community")]
-[Authorize(Roles = "Admin")]
+[Authorize]
+[HasPermission("community.manage")]
 public class AdminCommunityController : ControllerBase
 {
     private readonly IMediator _mediator;

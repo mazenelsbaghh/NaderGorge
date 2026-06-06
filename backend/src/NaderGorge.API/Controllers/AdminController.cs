@@ -11,7 +11,7 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -22,6 +22,7 @@ public class AdminController : ControllerBase
 
     // --- Users ---
     [HttpGet("users")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> ListUsers(
         [FromQuery] int page = 1, 
         [FromQuery] int pageSize = 20, 
@@ -35,6 +36,7 @@ public class AdminController : ControllerBase
         => Ok(await _mediator.Send(new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate)));
 
     [HttpPost("users")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> CreateUser([FromBody] AdminCreateUserRequest dto)
     {
         var result = await _mediator.Send(new AdminCreateUserCommand(
@@ -43,10 +45,12 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("users/students/{userId:guid}/profile")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> GetStudentProfile(Guid userId)
         => Ok(await _mediator.Send(new GetStudentProfileDetailQuery(userId)));
 
     [HttpPut("users/students/{userId:guid}/profile")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> UpdateStudentProfile(Guid userId, [FromBody] UpdateStudentProfileRequest dto)
     {
         var result = await _mediator.Send(new UpdateStudentProfileCommand(
@@ -58,6 +62,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("users/students/{userId:guid}/reset-password")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> AdminResetPassword(Guid userId, [FromBody] AdminResetPasswordRequest dto)
     {
         var result = await _mediator.Send(new AdminResetPasswordCommand(userId, dto.NewPassword, GetUserId()));
@@ -65,6 +70,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("users/students/{userId:guid}/notes")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> AddStudentNote(Guid userId, [FromBody] AddStudentNoteRequest dto)
     {
         var result = await _mediator.Send(new AddStudentNoteCommand(userId, dto.Content, dto.IsPinned, GetUserId()));
@@ -72,6 +78,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("users/students/{userId:guid}/notes/{noteId:guid}")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> DeleteStudentNote(Guid userId, Guid noteId)
     {
         var result = await _mediator.Send(new DeleteStudentNoteCommand(noteId, GetUserId()));
@@ -79,6 +86,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("users/{id:guid}/status")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusRequest dto)
     {
         var result = await _mediator.Send(new UpdateUserStatusCommand(id, dto.Status, GetUserId()));
@@ -86,6 +94,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPatch("users/students/{userId:guid}/status")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> ToggleStudentStatus(Guid userId, [FromBody] ToggleStudentStatusRequest dto)
     {
         var result = await _mediator.Send(new ToggleStudentSystemAccessCommand(userId, dto.IsActive, dto.Reason ?? string.Empty, GetUserId()));
@@ -93,6 +102,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("users/{id:guid}/roles")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> UpdateUserRoles(Guid id, [FromBody] UpdateUserRolesRequest dto)
     {
         var result = await _mediator.Send(new UpdateUserRoleCommand(id, dto.Roles, GetUserId()));
@@ -100,10 +110,12 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("users/{id:guid}/devices")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> GetUserDevices(Guid id)
         => Ok(await _mediator.Send(new GetUserDevicesQuery(id)));
 
     [HttpDelete("users/students/{userId:guid}/devices/{deviceId:guid}")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> DisconnectDevice(Guid userId, Guid deviceId)
     {
         var result = await _mediator.Send(new DisconnectStudentDeviceCommand(userId, deviceId, GetUserId()));
@@ -111,6 +123,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("users/students/{userId:guid}/devices")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> DisconnectAllDevices(Guid userId)
     {
         var result = await _mediator.Send(new DisconnectStudentDeviceCommand(userId, null, GetUserId()));
@@ -118,6 +131,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("devices/{id:guid}")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> RemoveDevice(Guid id)
     {
         var result = await _mediator.Send(new RemoveDeviceCommand(id, GetUserId()));
@@ -126,10 +140,12 @@ public class AdminController : ControllerBase
 
     // --- Codes ---
     [HttpGet("codes/groups")]
+    [HasPermission("codes.manage")]
     public async Task<IActionResult> ListCodeGroups()
         => Ok(await _mediator.Send(new ListCodeGroupsQuery()));
 
     [HttpGet("codes/groups/{id:guid}/details")]
+    [HasPermission("codes.manage")]
     public async Task<IActionResult> GetCodeGroupDetails(Guid id)
     {
         var result = await _mediator.Send(new GetCodeGroupCodesQuery(id));
@@ -138,6 +154,7 @@ public class AdminController : ControllerBase
 
     // --- Student Profile Actions ---
     [HttpPost("users/students/{userId:guid}/overrides")]
+    [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> OverrideVideoLimit(Guid userId, [FromBody] OverrideVideoLimitRequest dto)
     {
         var result = await _mediator.Send(new OverrideVideoLimitCommand(userId, dto.VideoId, dto.AddedViews, dto.Reason, GetUserId()));
@@ -145,6 +162,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("users/students/{userId:guid}/gamification/adjust")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> AdjustGamification(Guid userId, [FromBody] GamificationAdjustmentRequest dto)
     {
         var result = await _mediator.Send(new AdjustGamificationPointsCommand(userId, dto.Points, dto.Reason, GetUserId()));
@@ -152,6 +170,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("users/students/{userId:guid}/balance/adjust")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> AdjustBalance(Guid userId, [FromBody] BalanceAdjustmentRequest dto)
     {
         var result = await _mediator.Send(new AdjustBalanceCommand(userId, dto.Amount, dto.Reason, GetUserId()));
@@ -159,6 +178,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("users/students/{userId:guid}/packages/{accessGrantId:guid}/cancel")]
+    [HasPermission("users.manage")]
     public async Task<IActionResult> CancelPackage(Guid userId, Guid accessGrantId, [FromBody] CancelPackageRequest dto)
     {
         var result = await _mediator.Send(new CancelPackageGrantCommand(accessGrantId, dto.RefundBalance, GetUserId()));
@@ -167,10 +187,12 @@ public class AdminController : ControllerBase
 
     // --- Content ---
     [HttpGet("packages/list")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackagesList()
         => Ok(await _mediator.Send(new GetAdminPackagesListQuery()));
 
     [HttpPost("packages")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CreatePackage(CreatePackageCommand command)
     {
         var result = await _mediator.Send(command);
@@ -178,10 +200,12 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("packages/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackageById(Guid id)
         => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetPackageByIdQuery(id)));
 
     [HttpPut("packages/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> UpdatePackage(Guid id, [FromBody] UpdatePackageDto dto)
     {
         var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive));
@@ -189,6 +213,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("packages/{id:guid}/code-profile")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackageCodeProfile(Guid id)
     {
         var result = await _mediator.Send(new GetPackageCodeProfileQuery(id));
@@ -196,6 +221,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("packages/{id:guid}/code-profile")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> UpsertPackageCodeProfile(Guid id, [FromBody] UpsertPackageCodeProfileRequest dto)
     {
         var result = await _mediator.Send(new UpsertPackageCodeProfileCommand(
@@ -217,6 +243,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("packages/{id:guid}/code-profile")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> ResetPackageCodeProfile(Guid id)
     {
         var result = await _mediator.Send(new ResetPackageCodeProfileCommand(id, GetUserId()));
@@ -224,6 +251,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("terms")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CreateTerm(CreateTermCommand command)
     {
         var result = await _mediator.Send(command);
@@ -231,10 +259,12 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("terms/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> GetTermById(Guid id)
         => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetTermByIdQuery(id)));
 
     [HttpPut("terms/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateTermDto dto)
     {
         var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price));
@@ -242,6 +272,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("terms/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> DeleteTerm(Guid id)
     {
         var result = await _mediator.Send(new DeleteTermCommand(id));
@@ -249,10 +280,12 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("sections/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> GetSectionById(Guid id)
         => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetSectionByIdQuery(id)));
 
     [HttpPost("sections")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CreateSection(CreateSectionCommand command)
     {
         var result = await _mediator.Send(command);
@@ -260,6 +293,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("lessons")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CreateLesson(CreateLessonCommand command)
     {
         var result = await _mediator.Send(command);
@@ -267,6 +301,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("lessons/{lessonId:guid}/cockpit")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> GetLessonCockpit(Guid lessonId)
     {
         var result = await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetLessonCockpitQuery(lessonId));
@@ -274,6 +309,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("videos")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CreateVideo(CreateVideoCommand command)
     {
         var result = await _mediator.Send(command);
@@ -281,6 +317,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("videos/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoRequest dto)
     {
         var result = await _mediator.Send(new UpdateVideoCommand(id, dto.Title, dto.Provider, dto.UrlOrEmbedCode, dto.Order, dto.Limit));
@@ -288,6 +325,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("videos/{id:guid}")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> DeleteVideo(Guid id)
     {
         var result = await _mediator.Send(new DeleteVideoCommand(id));
@@ -295,6 +333,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("videos/{videoId:guid}/analyze-ai")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> RequestAIAnalysis(Guid videoId)
     {
         var result = await _mediator.Send(new AnalyzeVideoAICommand(videoId));
@@ -302,6 +341,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("videos/{videoId:guid}/cancel-ai")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CancelAIAnalysis(Guid videoId)
     {
         var result = await _mediator.Send(new CancelAnalyzeVideoAICommand(videoId));
@@ -309,6 +349,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("videos/{videoId:guid}/cancel-mindmap")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CancelMindmapGeneration(Guid videoId)
     {
         var result = await _mediator.Send(new CancelAnalyzeVideoAICommand(videoId, IsMindmapOnly: true));
@@ -316,6 +357,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("videos/{videoId:guid}/generate-mindmaps")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> RequestMindmapGeneration(Guid videoId)
     {
         var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.GenerateChapterMindmapsCommand(videoId));
@@ -323,6 +365,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("chapters/{chapterId:guid}/regenerate-mindmap")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> RegenerateChapterMindmap(Guid chapterId)
     {
         var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.MindmapOps.RegenerateChapterMindmapCommand(chapterId));
@@ -330,6 +373,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("resources")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> CreateResource(CreateLessonResourceCommand command)
     {
         var result = await _mediator.Send(command);
@@ -337,6 +381,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("teacher-photos/upload")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> UploadTeacherPhoto([FromBody] UploadTeacherPhotoRequest dto)
     {
         var result = await _mediator.Send(new UploadTeacherPhotoCommand(dto.TeacherId, dto.Base64Image, dto.FileName));
@@ -344,6 +389,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("content/lessons/{lessonId:guid}/homework")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> AttachHomework(Guid lessonId, [FromBody] AttachHomeworkRequest dto)
     {
         var cmd = new AttachHomeworkCommand(
@@ -361,6 +407,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("lessons/{lessonId:guid}/exam")]
+    [HasPermission("content.manage")]
     public async Task<IActionResult> LinkExam(Guid lessonId, [FromBody] LinkLessonExamRequest dto)
     {
         var result = await _mediator.Send(new LinkLessonExamCommand(lessonId, dto.ExamId));
@@ -368,6 +415,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("exams/inline")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> CreateInlineExam([FromBody] CreateInlineExamCommand command)
     {
         var result = await _mediator.Send(command);
@@ -375,6 +423,7 @@ public class AdminController : ControllerBase
     }
     
     [HttpPost("exams/{examId:guid}/questions")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> AddQuestionsToExam(Guid examId, [FromBody] AddQuestionsToExamRequest dto)
     {
         var result = await _mediator.Send(new AddQuestionsToExamCommand { ExamId = examId, Questions = dto.Questions });
@@ -382,6 +431,7 @@ public class AdminController : ControllerBase
     }
     
     [HttpGet("exams/{examId:guid}/dashboard")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> GetExamDashboard(Guid examId)
     {
         var result = await _mediator.Send(new GetExamDashboardQuery(examId));
@@ -389,6 +439,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpDelete("exams/{examId:guid}/questions/{questionId:guid}")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> DeleteExamQuestion(Guid examId, Guid questionId)
     {
         var result = await _mediator.Send(new DeleteExamQuestionCommand(examId, questionId));
@@ -397,10 +448,12 @@ public class AdminController : ControllerBase
 
     // --- Questions ---
     [HttpGet("questions")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> ListQuestions([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
         => Ok(await _mediator.Send(new ListQuestionsQuery(page, pageSize, search)));
 
     [HttpPost("questions")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> CreateQuestion(CreateQuestionCommand command)
     {
         var result = await _mediator.Send(command);
@@ -408,6 +461,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("questions/{id:guid}/audio")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> UploadQuestionAudio(Guid id, [FromForm] Microsoft.AspNetCore.Http.IFormFile audio)
     {
         if (audio == null || audio.Length == 0) return BadRequest(new { Success = false, Message = "No file uploaded" });
@@ -421,6 +475,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("essays/{essaySubmissionId:guid}/grade")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> GradeEssay(Guid essaySubmissionId, [FromBody] NaderGorge.Application.Features.Admin.Commands.GradeEssayCommand command)
     {
         if (essaySubmissionId != command.EssaySubmissionId) return BadRequest();
@@ -429,6 +484,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("essays/pending")]
+    [HasPermission("exams.manage")]
     public async Task<IActionResult> GetPendingEssays([FromServices] NaderGorge.Domain.Interfaces.IAppDbContext db)
     {
         var aiScored = db.EssaySubmissions
@@ -455,6 +511,7 @@ public class AdminController : ControllerBase
 
     // --- Overrides ---
     [HttpPost("overrides/reset-watch")]
+    [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> ResetWatchLimit([FromBody] ResetWatchRequest dto)
     {
         var result = await _mediator.Send(new ResetWatchLimitCommand(dto.LessonVideoId, dto.StudentId, GetUserId()));
@@ -462,6 +519,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("overrides/set-watch-count")]
+    [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> SetWatchCount([FromBody] SetWatchCountRequest dto)
     {
         var result = await _mediator.Send(new SetWatchCountCommand(dto.LessonVideoId, dto.StudentId, dto.NewWatchCount, GetUserId()));
@@ -470,6 +528,7 @@ public class AdminController : ControllerBase
 
     // --- Codes ---
     [HttpPost("codes/bulk-generate")]
+    [HasPermission("codes.manage")]
     public async Task<IActionResult> BulkGenerateCodes([FromBody] BulkGenerateRequest dto)
     {
         var result = await _mediator.Send(new BulkGenerateCodesCommand(
@@ -494,6 +553,7 @@ public class AdminController : ControllerBase
     // Tracking endpoints
 
     [HttpGet("watch-requests")]
+    [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> GetWatchRequests(CancellationToken ct)
     {
         var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Queries.GetWatchRequestsQuery(), ct);
@@ -501,6 +561,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("watch-requests/{id}/approve")]
+    [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> ApproveWatchRequest(Guid id, CancellationToken ct)
     {
         var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.ApproveWatchRequestCommand(id, GetUserId()), ct);
@@ -509,6 +570,7 @@ public class AdminController : ControllerBase
     }
 
     [HttpPost("watch-requests/{id}/reject")]
+    [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> RejectWatchRequest(Guid id, [FromBody] RejectWatchRequestBody? request, CancellationToken ct)
     {
         var reason = request?.Reason ?? "تم الرفض بواسطة الإدارة";
@@ -517,7 +579,7 @@ public class AdminController : ControllerBase
         return BadRequest(result);
     }
     [HttpGet("settings")]
-    [Authorize(Roles = "Admin,Teacher")]
+    [HasPermission("settings.manage")]
     public async Task<IActionResult> GetPlatformSettings()
     {
         var response = await _mediator.Send(new NaderGorge.Application.Features.Admin.Queries.GetPlatformSettingsQuery());
@@ -525,14 +587,47 @@ public class AdminController : ControllerBase
     }
 
     [HttpPut("settings")]
-    [Authorize(Roles = "Admin,Teacher")]
+    [HasPermission("settings.manage")]
     public async Task<IActionResult> UpdatePlatformSettings([FromBody] UpdateSettingsRequest req)
     {
         var response = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.UpdatePlatformSettingsCommand(req.Settings));
         return Ok(response);
     }
 
+    // --- Roles CRUD ---
+    [HttpGet("roles")]
+    [HasPermission("roles.manage")]
+    public async Task<IActionResult> ListRoles(CancellationToken ct)
+        => Ok(await _mediator.Send(new ListRolesQuery(), ct));
+
+    [HttpPost("roles")]
+    [HasPermission("roles.manage")]
+    public async Task<IActionResult> CreateRole([FromBody] CreateRoleDto dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CreateRoleCommand(dto.Name, dto.Permissions), ct);
+        return result.Success ? StatusCode(201, result) : BadRequest(result);
+    }
+
+    [HttpPut("roles/{id:guid}")]
+    [HasPermission("roles.manage")]
+    public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleDto dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new UpdateRoleCommand(id, dto.Name, dto.Permissions), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("roles/{id:guid}")]
+    [HasPermission("roles.manage")]
+    public async Task<IActionResult> DeleteRole(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new DeleteRoleCommand(id), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
 }
+
+public record CreateRoleDto(string Name, List<string> Permissions);
+public record UpdateRoleDto(string Name, List<string> Permissions);
 
 public record UpdateUserStatusRequest(string Status);
 public record UpdateUserRolesRequest(string[] Roles);

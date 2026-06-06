@@ -130,6 +130,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(r => r.Id);
             e.HasIndex(r => r.Name).IsUnique();
             e.Property(r => r.Name).HasMaxLength(50).IsRequired();
+            e.Property(r => r.PermissionsJson).HasMaxLength(4000).HasDefaultValue("[]");
         });
 
         // UserRole (many-to-many)

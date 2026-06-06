@@ -42,6 +42,29 @@ public class TokenService : ITokenService
         foreach (var role in roles)
             claims.Add(new Claim(ClaimTypes.Role, role));
 
+        // Add permissions from user roles
+        if (user.UserRoles != null)
+        {
+            foreach (var userRole in user.UserRoles)
+            {
+                if (userRole.Role != null && !string.IsNullOrEmpty(userRole.Role.PermissionsJson))
+                {
+                    try
+                    {
+                        var rolePerms = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(userRole.Role.PermissionsJson);
+                        if (rolePerms != null)
+                        {
+                            foreach (var perm in rolePerms)
+                            {
+                                claims.Add(new Claim("permission", perm));
+                            }
+                        }
+                    }
+                    catch { /* Ignore invalid JSON */ }
+                }
+            }
+        }
+
         var token = new JwtSecurityToken(
             issuer: _config["JwtSettings:Issuer"],
             audience: _config["JwtSettings:Audience"],
