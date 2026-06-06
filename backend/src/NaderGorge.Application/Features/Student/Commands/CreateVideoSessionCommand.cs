@@ -10,8 +10,6 @@ public record CreateVideoSessionCommand(Guid LessonVideoId, Guid UserId, string?
 
 public record VideoSessionDto(
     Guid SessionId,
-    string Token,
-    string Key,
     DateTime ExpiresAt,
     string Provider,
     WatchInfoDto WatchInfo,
@@ -118,11 +116,9 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
         var dto = new VideoSessionDto(
             session.Id,
-            session.SessionToken,
-            session.EncryptionKey,
             session.ExpiresAt,
             video.Provider,
-            new WatchInfoDto(currentCount, video.MaxWatchCount, isLocked, watchEvent?.TimeWatchedInSeconds ?? 0),
+            new WatchInfoDto(currentCount, watchEvent?.CustomMaxWatchCount ?? video.MaxWatchCount, isLocked, watchEvent?.TimeWatchedInSeconds ?? 0),
             video.Title,
             thresholdPercentage
         );

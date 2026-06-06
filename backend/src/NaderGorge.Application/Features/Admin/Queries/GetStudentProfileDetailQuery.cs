@@ -101,7 +101,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 LessonTitle = v.LessonVideo.Lesson.Title,
                 PackageName = v.LessonVideo.Lesson.ContentSection.Term.Package.Name,
                 WatchCount = v.WatchCount,
-                MaxWatchCount = v.LessonVideo.MaxWatchCount,
+                MaxWatchCount = v.CustomMaxWatchCount ?? v.LessonVideo.MaxWatchCount,
                 WatchedSeconds = v.TimeWatchedInSeconds,
                 IsLocked = v.IsLocked,
                 LastWatchedAt = v.UpdatedAt ?? v.CreatedAt

@@ -50,15 +50,11 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
             throw new KeyNotFoundException("VideoWatchEvent not found");
         }
 
-        int oldLimit = watchEvent.WatchCount;
+        int oldLimit = watchEvent.CustomMaxWatchCount ?? watchEvent.LessonVideo.MaxWatchCount;
         
-        // "Adding views" practically means giving them back the ability to watch. 
-        // We decrement the WatchCount but never below zero.
-        watchEvent.WatchCount = Math.Max(0, watchEvent.WatchCount - request.AddedViews);
-        if (watchEvent.WatchCount < watchEvent.LessonVideo.MaxWatchCount)
-        {
-            watchEvent.IsLocked = false;
-        }
+        // "Adding views" increases the maximum watch count for this student.
+        watchEvent.CustomMaxWatchCount = oldLimit + request.AddedViews;
+        watchEvent.IsLocked = false;
 
         // Write to AuditLog
         var audit = new AuditLog
@@ -67,8 +63,8 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
             EntityId = request.UserId,
             Action = "OVERRIDE_VIEWS",
             PerformedByUserId = request.AdminId,
-            OldValues = JsonSerializer.Serialize(new { watchCount = oldLimit, action = "reduce count" }),
-            NewValues = JsonSerializer.Serialize(new { watchCount = watchEvent.WatchCount, addedViews = request.AddedViews, reason = request.Reason })
+            OldValues = JsonSerializer.Serialize(new { customMaxWatchCount = oldLimit, action = "increase limit" }),
+            NewValues = JsonSerializer.Serialize(new { customMaxWatchCount = watchEvent.CustomMaxWatchCount, addedViews = request.AddedViews, reason = request.Reason })
         };
         _context.AuditLogs.Add(audit);
 

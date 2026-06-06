@@ -1,6 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using NaderGorge.API.Configuration;
+using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
 
@@ -15,10 +18,14 @@ namespace NaderGorge.API.Controllers;
 public class VideoSessionController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IAppDbContext _db;
+    private readonly IConfiguration _configuration;
 
-    public VideoSessionController(IMediator mediator)
+    public VideoSessionController(IMediator mediator, IAppDbContext db, IConfiguration configuration)
     {
         _mediator = mediator;
+        _db = db;
+        _configuration = configuration;
     }
 
     [HttpPost]
@@ -69,6 +76,30 @@ public class VideoSessionController : ControllerBase
         if (result.Errors != null && result.Errors.Contains("SESSION_EXPIRED")) return BadRequest(result);
 
         return BadRequest(result);
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{sessionId:guid}/embed-material")]
+    public async Task<IActionResult> GetEmbedMaterial(Guid sessionId, CancellationToken ct)
+    {
+        var suppliedToken = Request.Headers["X-Internal-Token"].FirstOrDefault();
+        if (!ServiceTokenValidator.IsValid(
+                suppliedToken,
+                _configuration["API_CALLBACK_SECRET"],
+                _configuration["AI_CALLBACK_SECRET"]))
+        {
+            return Unauthorized("Invalid internal token.");
+        }
+
+        var session = await _db.VideoPlaybackSessions
+            .FirstOrDefaultAsync(s => s.Id == sessionId && !s.IsConsumed && s.ExpiresAt > DateTime.UtcNow, ct);
+
+        if (session == null)
+        {
+            return NotFound("Video session not found or expired.");
+        }
+
+        return Ok(new VideoEmbedMaterialResponse(session.SessionToken, session.EncryptionKey));
     }
 
     [HttpPost("{lessonVideoId}/track-progress")]
@@ -134,3 +165,5 @@ public class CreateVideoSessionRequest
 {
     public Guid LessonVideoId { get; set; }
 }
+
+public record VideoEmbedMaterialResponse(string Token, string Key);

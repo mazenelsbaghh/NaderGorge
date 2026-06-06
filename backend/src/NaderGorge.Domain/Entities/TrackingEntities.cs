@@ -15,6 +15,7 @@ public class VideoWatchEvent : BaseEntity
     
     public int WatchCount { get; set; }
     public bool IsLocked { get; set; }
+    public int? CustomMaxWatchCount { get; set; }
 }
 
 public class LessonProgress : BaseEntity

@@ -1,3 +1,4 @@
+using System.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -39,6 +40,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         if (request.TotalDurationSeconds <= 0)
             return ApiResponse<WatchProgressDto>.Fail("Duration required", new List<string> { "DURATION_REQUIRED" });
 
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
         var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, ct);
         if (video == null)
             return ApiResponse<WatchProgressDto>.Fail("Video not found");
@@ -46,6 +49,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         var watchEvent = await _db.VideoWatchEvents
             .FirstOrDefaultAsync(v => v.UserId == request.UserId && v.LessonVideoId == request.LessonVideoId, ct);
 
+        var now = DateTime.UtcNow;
+        var isNewWatchEvent = watchEvent == null;
         if (watchEvent == null)
         {
             watchEvent = new VideoWatchEvent
@@ -55,14 +60,31 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
                 LessonVideoId = request.LessonVideoId,
                 WatchCount = 0,
                 TimeWatchedInSeconds = 0,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                CreatedAt = now,
+                UpdatedAt = now,
                 IsLocked = false
             };
             _db.VideoWatchEvents.Add(watchEvent);
         }
 
-        var trackedSecondsDelta = (int)Math.Max(0, Math.Round(request.SecondsWatched, MidpointRounding.AwayFromZero));
+        if (watchEvent.IsLocked)
+        {
+            await transaction.CommitAsync(ct);
+            return ApiResponse<WatchProgressDto>.Ok(new WatchProgressDto(
+                watchEvent.WatchCount,
+                watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount,
+                true,
+                false,
+                watchEvent.TimeWatchedInSeconds,
+                1
+            ));
+        }
+
+        var reportedSecondsDelta = (int)Math.Max(0, Math.Round(request.SecondsWatched, MidpointRounding.AwayFromZero));
+        var maxPlausibleDelta = isNewWatchEvent
+            ? 30
+            : Math.Max(0, (int)Math.Ceiling((now - (watchEvent.UpdatedAt ?? watchEvent.CreatedAt)).TotalSeconds) + 5);
+        var trackedSecondsDelta = Math.Min(reportedSecondsDelta, Math.Min(maxPlausibleDelta, 30));
         if (trackedSecondsDelta > 0)
         {
             watchEvent.TimeWatchedInSeconds += trackedSecondsDelta;
@@ -78,26 +100,27 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
 
         var previousWatchCount = watchEvent.WatchCount;
 
-        var shouldIncrement = watchEvent.TimeWatchedInSeconds >= (watchEvent.WatchCount + 1) * thresholdSeconds;
-        if (shouldIncrement)
+        while (watchEvent.TimeWatchedInSeconds >= (watchEvent.WatchCount + 1) * thresholdSeconds)
         {
             watchEvent.WatchCount++;
         }
 
         var viewRegistered = watchEvent.WatchCount > previousWatchCount;
 
-        if (video.MaxWatchCount > 0 && watchEvent.WatchCount > video.MaxWatchCount)
+        int maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
+        if (maxLimit > 0 && watchEvent.WatchCount >= maxLimit)
         {
             watchEvent.IsLocked = true;
         }
 
-        watchEvent.UpdatedAt = DateTime.UtcNow;
+        watchEvent.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         return ApiResponse<WatchProgressDto>.Ok(new WatchProgressDto(
             watchEvent.WatchCount,
-            video.MaxWatchCount,
+            watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount,
             watchEvent.IsLocked,
             viewRegistered,
             watchEvent.TimeWatchedInSeconds,

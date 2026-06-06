@@ -39,11 +39,11 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
         {
             watchEvent.IsLocked = false;
             // MaxWatchCount might be 0 meaning unlimited, but if it was locked, it has a limit.
-            // Reset to max-1 to allow 1 more view
-            int maxCount = req.LessonVideo.MaxWatchCount;
-            if (maxCount > 0)
+            // Increment the custom max limit by 1 to allow 1 more view
+            int maxLimit = watchEvent.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount;
+            if (maxLimit > 0)
             {
-                watchEvent.WatchCount = Math.Max(0, maxCount - 1);
+                watchEvent.CustomMaxWatchCount = maxLimit + 1;
             }
         }
 

@@ -30,9 +30,13 @@ public class SetWatchCountCommandHandler : IRequestHandler<SetWatchCountCommand,
 
         // If we reduced the count below the video limit, unlock the video
         var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, ct);
-        if (video != null && video.MaxWatchCount > 0 && request.NewWatchCount < video.MaxWatchCount)
+        if (video != null)
         {
-            watchEvent.IsLocked = false;
+            int maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
+            if (maxLimit > 0 && request.NewWatchCount < maxLimit)
+            {
+                watchEvent.IsLocked = false;
+            }
         }
 
         _db.AuditLogs.Add(new AuditLog
