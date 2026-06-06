@@ -491,7 +491,7 @@ public class AdminController : ControllerBase
     [HttpPost("watch-requests/{id}/approve")]
     public async Task<IActionResult> ApproveWatchRequest(Guid id, CancellationToken ct)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.ApproveWatchRequestCommand(id), ct);
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.ApproveWatchRequestCommand(id, GetUserId()), ct);
         if (result.Success) return Ok(result);
         return BadRequest(result);
     }
