@@ -383,7 +383,6 @@ export function RegistrationForm() {
           avatarSlug: user.avatarSlug,
         },
         accessToken,
-        refreshToken,
         true // rememberMe: true ensures session persistence
       );
 

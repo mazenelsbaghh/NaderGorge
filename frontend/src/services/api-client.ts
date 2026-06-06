@@ -4,8 +4,6 @@ import toast from 'react-hot-toast';
 import {
   clearStoredAuth,
   getStoredAccessToken,
-  getStoredRefreshToken,
-  replaceStoredTokens,
 } from '@/lib/auth-storage';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api';
@@ -45,37 +43,13 @@ apiClient.interceptors.response.use(
 
     if (
       error.response?.status === 401 &&
-      !originalRequest?._retry &&
       !shouldBypassAuthRefresh
     ) {
-      originalRequest._retry = true;
-
-      const refreshToken = getStoredRefreshToken();
-      if (!refreshToken) {
-        clearStoredAuth();
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
+      clearStoredAuth();
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        window.location.href = '/login';
       }
-
-      try {
-        const { data } = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          { refreshToken }
-        );
-
-        replaceStoredTokens(data.data.accessToken, data.data.refreshToken);
-
-        originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
-        return apiClient(originalRequest);
-      } catch {
-        clearStoredAuth();
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
-      }
+      return Promise.reject(error);
     }
 
     const status = error.response?.status;

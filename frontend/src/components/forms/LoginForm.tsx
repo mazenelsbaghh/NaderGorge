@@ -68,7 +68,6 @@ export function LoginForm() {
           profileComplete: user.profileComplete,
         },
         accessToken,
-        refreshToken,
         rememberMe
       );
 
