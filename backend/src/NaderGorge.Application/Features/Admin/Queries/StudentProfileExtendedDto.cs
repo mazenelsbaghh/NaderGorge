@@ -109,6 +109,7 @@ public class StudentVideoWatchActivityDto
     public Guid LessonId { get; set; }
     public string LessonTitle { get; set; } = string.Empty;
     public string? PackageName { get; set; }
+    public string? TermTitle { get; set; }
     public int WatchCount { get; set; }
     public int MaxWatchCount { get; set; }
     public int WatchedSeconds { get; set; }

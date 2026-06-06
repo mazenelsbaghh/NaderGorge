@@ -5,7 +5,7 @@ import { useCallback, useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
 import { adminService, type StudentPackageDto, type StudentProfileExtendedDto } from '@/services/admin-service';
-import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, MapPin, GraduationCap, UsersRound, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin } from 'lucide-react';
+import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, MapPin, GraduationCap, UsersRound, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin, ChevronDown, ChevronRight, Play, Lock, Unlock, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -32,6 +32,9 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
   } | null>(null);
   const [refundBalanceOption, setRefundBalanceOption] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({});
+  const [expandedTerms, setExpandedTerms] = useState<Record<string, boolean>>({});
+  const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '0 دقيقة';
@@ -892,99 +895,210 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
           )}
 
          {activeTab === 'academic' && (
-             <div className="flex flex-col gap-6">
-                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                    <AdminStatCard
-                      variant="accent"
-                      icon={Video}
-                      label="فيديوهات تم تتبعها"
-                      value={studentData?.watchTracking?.watchedVideosCount || 0}
-                    />
-                    <AdminStatCard
-                      variant="light"
-                      icon={Clock3}
-                      label="إجمالي زمن المشاهدة"
-                      value={formatDuration(studentData?.watchTracking?.totalWatchedSeconds || 0)}
-                    />
-                    <AdminStatCard
-                      variant="muted"
-                      icon={MonitorPlay}
-                      label="جلسات محتسبة"
-                      value={studentData?.watchTracking?.activities?.reduce((sum, activity) => sum + activity.watchCount, 0) || 0}
-                    />
-                 </div>
+              <div className="flex flex-col gap-6">
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                     <AdminStatCard
+                       variant="accent"
+                       icon={Video}
+                       label="فيديوهات تم تتبعها"
+                       value={studentData?.watchTracking?.watchedVideosCount || 0}
+                     />
+                     <AdminStatCard
+                       variant="light"
+                       icon={Clock3}
+                       label="إجمالي زمن المشاهدة"
+                       value={formatDuration(studentData?.watchTracking?.totalWatchedSeconds || 0)}
+                     />
+                     <AdminStatCard
+                       variant="muted"
+                       icon={MonitorPlay}
+                       label="جلسات محتسبة"
+                       value={studentData?.watchTracking?.activities?.reduce((sum, activity) => sum + activity.watchCount, 0) || 0}
+                     />
+                  </div>
 
-                 <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
-                    <div className="mb-5">
-                      <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل مشاهدة الفيديوهات</h3>
-                      <p className="text-[var(--admin-muted)]">آخر الفيديوهات التي شاهدها الطالب مع الزمن التراكمي الفعلي وآخر نشاط.</p>
-                    </div>
+                  <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                     <div className="mb-5">
+                       <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل مشاهدة الفيديوهات</h3>
+                       <p className="text-[var(--admin-muted)]">آخر الفيديوهات التي شاهدها الطالب مع الزمن التراكمي الفعلي وآخر نشاط.</p>
+                     </div>
 
-                    <AdminDataTable<StudentProfileExtendedDto['watchTracking']['activities'][number]>
-                      columns={[
-                        {
-                          key: 'videoTitle',
-                          label: 'الفيديو',
-                          render: (row) => (
-                            <div className="flex flex-col">
-                              <span className="font-bold text-[var(--admin-text)]">{row.videoTitle}</span>
-                              <span className="text-xs text-[var(--admin-muted)]">{row.lessonTitle}{row.packageName ? ` • ${row.packageName}` : ''}</span>
-                            </div>
-                          )
-                        },
-                        {
-                          key: 'watchedSeconds',
-                          label: 'المدة المشاهدة',
-                          render: (row) => formatDuration(row.watchedSeconds)
-                        },
-                        {
-                          key: 'watchCount',
-                          label: 'المشاهدات',
-                          render: (row) => `${row.watchCount} / ${row.maxWatchCount === 0 ? '∞' : row.maxWatchCount}`
-                        },
-                        {
-                          key: 'isLocked',
-                          label: 'الحالة',
-                          render: (row) => row.isLocked ? 'مقفول' : 'نشط'
-                        },
-                        {
-                          key: 'lastWatchedAt',
-                          label: 'آخر مشاهدة',
-                          render: (row) => row.lastWatchedAt ? new Date(row.lastWatchedAt).toLocaleString() : 'غير متوفر'
-                        },
-                        {
-                          key: 'actions',
-                          label: 'إجراء',
-                          align: 'left' as const,
-                          render: (row) => (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setWatchCountEdit({
-                                  lessonVideoId: row.lessonVideoId,
-                                  videoTitle: row.videoTitle,
-                                  currentCount: row.watchCount,
-                                  newCount: row.watchCount,
-                                  maxCount: row.maxWatchCount
-                                });
-                                setModalOpen('watchCount');
-                              }}
-                              className="flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors"
-                              title="تعديل عدد المشاهدات"
-                            >
-                              <PenLine size={14} />
-                              تعديل
-                            </button>
-                          )
-                        }
-                      ]}
-                      data={studentData?.watchTracking?.activities || []}
-                      rowKey={(row) => row.lessonVideoId}
-                      emptyMessage="لا توجد بيانات مشاهدة لهذا الطالب بعد"
-                    />
-                 </div>
-             </div>
-         )}
+                     {(() => {
+                       const activities = studentData?.watchTracking?.activities || [];
+                       const groupedData: {
+                         packageName: string;
+                         terms: {
+                           termTitle: string;
+                           lessons: {
+                             lessonTitle: string;
+                             activities: typeof activities;
+                           }[];
+                         }[];
+                       }[] = [];
+
+                       activities.forEach(activity => {
+                         const pkgName = activity.packageName || "باقات أخرى / مباشرة";
+                         const tTitle = activity.termTitle || "ترم عام";
+                         const lesTitle = activity.lessonTitle || "حصة عامة";
+
+                         let pkg = groupedData.find(p => p.packageName === pkgName);
+                         if (!pkg) {
+                           pkg = { packageName: pkgName, terms: [] };
+                           groupedData.push(pkg);
+                         }
+
+                         let term = pkg.terms.find(t => t.termTitle === tTitle);
+                         if (!term) {
+                           term = { termTitle: tTitle, lessons: [] };
+                           pkg.terms.push(term);
+                         }
+
+                         let lesson = term.lessons.find(l => l.lessonTitle === lesTitle);
+                         if (!lesson) {
+                           lesson = { lessonTitle: lesTitle, activities: [] };
+                           term.lessons.push(lesson);
+                         }
+
+                         lesson.activities.push(activity);
+                       });
+
+                       if (activities.length === 0) {
+                         return (
+                           <div className="text-center py-12 text-[var(--admin-muted)] border border-dashed border-[var(--admin-border)]/50 rounded-2xl">
+                             لا توجد بيانات مشاهدة لهذا الطالب بعد
+                           </div>
+                         );
+                       }
+
+                       return (
+                         <div className="space-y-4" dir="rtl">
+                           {groupedData.map((pkg) => {
+                             const isPkgExpanded = !!expandedPackages[pkg.packageName];
+                             return (
+                               <div key={pkg.packageName} className="border border-[var(--admin-border)]/40 rounded-3xl overflow-hidden bg-[var(--admin-card-soft)]">
+                                 {/* Package Row */}
+                                 <div 
+                                   onClick={() => setExpandedPackages(prev => ({ ...prev, [pkg.packageName]: !prev[pkg.packageName] }))}
+                                   className="flex items-center justify-between p-4 cursor-pointer hover:bg-[var(--admin-card-strong)]/40 transition-colors select-none"
+                                 >
+                                   <div className="flex items-center gap-3">
+                                     <div className="p-2 rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+                                       <Package size={18} />
+                                     </div>
+                                     <span className="font-extrabold text-sm text-[var(--admin-text)]">{pkg.packageName}</span>
+                                   </div>
+                                   {isPkgExpanded ? <ChevronDown size={18} className="text-[var(--admin-muted)]" /> : <ChevronRight size={18} className="text-[var(--admin-muted)]" />}
+                                 </div>
+
+                                 {isPkgExpanded && (
+                                   <div className="border-t border-[var(--admin-border)]/30 p-4 space-y-3 bg-[var(--admin-bg)]">
+                                     {pkg.terms.map((term) => {
+                                       const termKey = `${pkg.packageName}-${term.termTitle}`;
+                                       const isTermExpanded = !!expandedTerms[termKey];
+                                       return (
+                                         <div key={term.termTitle} className="border border-[var(--admin-border)]/20 rounded-2xl overflow-hidden bg-[var(--admin-card-soft)]/50 mr-4">
+                                           {/* Term Row */}
+                                           <div 
+                                             onClick={() => setExpandedTerms(prev => ({ ...prev, [termKey]: !prev[termKey] }))}
+                                             className="flex items-center justify-between p-3.5 cursor-pointer hover:bg-[var(--admin-card-strong)]/30 transition-colors select-none"
+                                           >
+                                             <div className="flex items-center gap-2.5">
+                                               <div className="p-1.5 rounded-lg bg-[var(--admin-muted)]/10 text-[var(--admin-muted)]">
+                                                 <GraduationCap size={16} />
+                                               </div>
+                                               <span className="font-bold text-xs text-[var(--admin-text)]">{term.termTitle}</span>
+                                             </div>
+                                             {isTermExpanded ? <ChevronDown size={16} className="text-[var(--admin-muted)]" /> : <ChevronRight size={16} className="text-[var(--admin-muted)]" />}
+                                           </div>
+
+                                           {isTermExpanded && (
+                                             <div className="border-t border-[var(--admin-border)]/20 p-3 space-y-2 bg-[var(--admin-bg)]">
+                                               {term.lessons.map((lesson) => {
+                                                 const lessonKey = `${termKey}-${lesson.lessonTitle}`;
+                                                 const isLessonExpanded = !!expandedLessons[lessonKey];
+                                                 return (
+                                                   <div key={lesson.lessonTitle} className="border border-[var(--admin-border)]/10 rounded-xl overflow-hidden mr-4 bg-[var(--admin-card-soft)]/20">
+                                                     {/* Lesson Row */}
+                                                     <div 
+                                                       onClick={() => setExpandedLessons(prev => ({ ...prev, [lessonKey]: !prev[lessonKey] }))}
+                                                       className="flex items-center justify-between p-3 cursor-pointer hover:bg-[var(--admin-card-strong)]/20 transition-colors select-none"
+                                                     >
+                                                       <div className="flex items-center gap-2">
+                                                         <BookOpen size={14} className="text-[var(--admin-muted)]" />
+                                                         <span className="font-semibold text-xs text-[var(--admin-text)]">{lesson.lessonTitle}</span>
+                                                       </div>
+                                                       {isLessonExpanded ? <ChevronDown size={14} className="text-[var(--admin-muted)]" /> : <ChevronRight size={14} className="text-[var(--admin-muted)]" />}
+                                                     </div>
+
+                                                     {isLessonExpanded && (
+                                                       <div className="p-3 bg-[var(--admin-bg)] space-y-2 border-t border-[var(--admin-border)]/10">
+                                                         {lesson.activities.map((activity) => (
+                                                           <div key={activity.lessonVideoId} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 p-3 bg-[var(--admin-card-soft)]/40 hover:bg-[var(--admin-card-soft)] border border-[var(--admin-border)]/20 rounded-xl transition-all mr-4">
+                                                             {/* Video Details */}
+                                                             <div className="flex items-center gap-2 min-w-0">
+                                                               <MonitorPlay size={14} className="text-[var(--admin-primary)] shrink-0" />
+                                                               <span className="font-medium text-xs text-[var(--admin-text)] truncate">{activity.videoTitle}</span>
+                                                             </div>
+
+                                                             {/* Metrics */}
+                                                             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-[var(--admin-muted)]">
+                                                               <div>
+                                                                 <span className="font-bold">المشاهدة:</span> {formatDuration(activity.watchedSeconds)}
+                                                               </div>
+                                                               <div>
+                                                                 <span className="font-bold">المشاهدات:</span> {activity.watchCount} / {activity.maxWatchCount === 0 ? '∞' : activity.maxWatchCount}
+                                                               </div>
+                                                               <div>
+                                                                 <span className="font-bold">آخر نشاط:</span> {activity.lastWatchedAt ? new Date(activity.lastWatchedAt).toLocaleDateString('ar-EG', { dateStyle: 'medium' }) : 'غير متوفر'}
+                                                               </div>
+                                                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${activity.isLocked ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                                 {activity.isLocked ? <Lock size={10} /> : <Unlock size={10} />}
+                                                                 {activity.isLocked ? 'مقفول' : 'نشط'}
+                                                               </span>
+                                                             </div>
+
+                                                             {/* Action */}
+                                                             <button
+                                                               onClick={(e) => {
+                                                                 e.stopPropagation();
+                                                                 setWatchCountEdit({
+                                                                   lessonVideoId: activity.lessonVideoId,
+                                                                   videoTitle: activity.videoTitle,
+                                                                   currentCount: activity.watchCount,
+                                                                   newCount: activity.watchCount,
+                                                                   maxCount: activity.maxWatchCount
+                                                                 });
+                                                                 setModalOpen('watchCount');
+                                                               }}
+                                                               className="flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors"
+                                                               title="تعديل عدد المشاهدات"
+                                                             >
+                                                               <PenLine size={14} />
+                                                               تعديل
+                                                             </button>
+                                                           </div>
+                                                         ))}
+                                                       </div>
+                                                     )}
+                                                   </div>
+                                                 );
+                                               })}
+                                             </div>
+                                           )}
+                                         </div>
+                                       );
+                                     })}
+                                   </div>
+                                 )}
+                               </div>
+                             );
+                           })}
+                         </div>
+                       );
+                     })()}
+                  </div>
+              </div>
+          )}
          
          <AdminModal open={modalOpen === 'gamification'} onClose={() => !submitting && setModalOpen('none')} title="تعديل نقاط الطالب">
              <form onSubmit={handleGamificationSubmit} className="flex flex-col gap-4">

@@ -191,6 +191,7 @@ export interface StudentProfileExtendedDto {
       lessonId: string;
       lessonTitle: string;
       packageName?: string;
+      termTitle?: string;
       watchCount: number;
       maxWatchCount: number;
       watchedSeconds: number;
