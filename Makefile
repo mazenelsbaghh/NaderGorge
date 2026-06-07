@@ -106,8 +106,8 @@ test-python: ## Install Python test requirements and run smoke/inventory tests
 	python3 -m pytest -q
 
 docker-volumes: ## Create external Docker volumes required by docker-compose.yml
-	docker volume create massar_pgdata
-	docker volume create massar_redisdata
+	docker volume create masar_pgdata
+	docker volume create masar_redisdata
 
 verify-audit-remediation: ## Run audit remediation verification commands
 	dotnet build backend/NaderGorge.sln
