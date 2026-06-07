@@ -567,9 +567,10 @@ public class AdminController : ControllerBase
 
     [HttpPost("watch-requests/{id}/approve")]
     [HasPermission("watch_requests.manage")]
-    public async Task<IActionResult> ApproveWatchRequest(Guid id, CancellationToken ct)
+    public async Task<IActionResult> ApproveWatchRequest(Guid id, [FromBody] ApproveWatchRequestBody? request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.ApproveWatchRequestCommand(id, GetUserId()), ct);
+        var reason = request?.Reason;
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.ApproveWatchRequestCommand(id, GetUserId(), reason), ct);
         if (result.Success) return Ok(result);
         return BadRequest(result);
     }
@@ -639,6 +640,7 @@ public record UpdateUserRolesRequest(string[] Roles);
 public record ResetWatchRequest(Guid LessonVideoId, Guid StudentId);
 public record SetWatchCountRequest(Guid LessonVideoId, Guid StudentId, int NewWatchCount);
 public record RejectWatchRequestBody(string? Reason);
+public record ApproveWatchRequestBody(string? Reason);
 
 public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);

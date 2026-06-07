@@ -7,7 +7,7 @@ using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record ApproveWatchRequestCommand(Guid RequestId, Guid AdminId) : IRequest<ApiResponse<bool>>;
+public record ApproveWatchRequestCommand(Guid RequestId, Guid AdminId, string? Reason = null) : IRequest<ApiResponse<bool>>;
 
 public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchRequestCommand, ApiResponse<bool>>
 {
@@ -30,8 +30,13 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
         if (req.Status != RequestStatus.Pending)
             return ApiResponse<bool>.Fail("Request is already resolved", new List<string> { "ALREADY_RESOLVED" });
 
+        var reason = string.IsNullOrWhiteSpace(request.Reason)
+            ? "تمت الموافقة بواسطة الإدارة"
+            : request.Reason.Trim();
+
         req.Status = RequestStatus.Approved;
         req.ResolvedAt = DateTime.UtcNow;
+        req.RejectionReason = reason;
 
         var watchEvent = await _context.VideoWatchEvents
             .FirstOrDefaultAsync(v => v.UserId == req.UserId && v.LessonVideoId == req.LessonVideoId, cancellationToken);
@@ -53,7 +58,7 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
                     OriginalLimit = maxLimit,
                     NewLimit = watchEvent.CustomMaxWatchCount.Value,
                     AddedViews = 1,
-                    Reason = "قبول طلب مشاهدة إضافية من الطالب",
+                    Reason = $"قبول طلب مشاهدة إضافية: {reason}",
                     PerformedByUserId = request.AdminId,
                     CreatedAt = DateTime.UtcNow
                 };

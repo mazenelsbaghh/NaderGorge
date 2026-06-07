@@ -16,7 +16,8 @@ public record AdminWatchRequestDto(
     string VideoTitle,
     int Status,
     DateTime CreatedAt,
-    DateTime? ResolvedAt
+    DateTime? ResolvedAt,
+    string? Reason
 );
 
 public record GetWatchRequestsQuery() : IRequest<ApiResponse<List<AdminWatchRequestDto>>>;
@@ -46,7 +47,8 @@ public class GetWatchRequestsQueryHandler : IRequestHandler<GetWatchRequestsQuer
                 r.LessonVideo != null ? r.LessonVideo.Title : string.Empty,
                 (int)r.Status,
                 r.CreatedAt,
-                r.ResolvedAt
+                r.ResolvedAt,
+                r.RejectionReason
             )).ToListAsync(cancellationToken);
 
         return ApiResponse<List<AdminWatchRequestDto>>.Ok(requests);

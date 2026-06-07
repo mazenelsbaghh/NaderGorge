@@ -171,6 +171,7 @@ export interface AdminWatchRequestDto {
   status: number;
   createdAt: string;
   resolvedAt?: string | null;
+  reason?: string | null;
 }
 
 export interface StudentProfileExtendedDto {
@@ -832,13 +833,13 @@ export const adminService = {
     return res.data;
   },
 
-  approveWatchRequest: async (id: string) => {
-    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/approve`, {});
+  approveWatchRequest: async (id: string, reason?: string) => {
+    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/approve`, { reason });
     return res.data;
   },
 
-  rejectWatchRequest: async (id: string) => {
-    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/reject`, {});
+  rejectWatchRequest: async (id: string, reason?: string) => {
+    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/reject`, { reason });
     return res.data;
   },
 

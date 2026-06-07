@@ -40,9 +40,12 @@ export default function WatchRequestsPage() {
   };
 
   const handleApprove = async (id: string) => {
+    const reason = window.prompt('أدخل سبب الموافقة (اختياري):', 'تمت الموافقة بواسطة الإدارة');
+    if (reason === null) return;
+
     setActionLoading(id);
     try {
-      await adminService.approveWatchRequest(id);
+      await adminService.approveWatchRequest(id, reason.trim());
       await fetchRequests();
       toast.success('تم قبول طلب المشاهدة الإضافية.');
     } catch (err) {
@@ -54,9 +57,12 @@ export default function WatchRequestsPage() {
   };
 
   const handleReject = async (id: string) => {
+    const reason = window.prompt('أدخل سبب الرفض (اختياري):', 'تم الرفض لعدم الاستحقاق');
+    if (reason === null) return;
+
     setActionLoading(id);
     try {
-      await adminService.rejectWatchRequest(id);
+      await adminService.rejectWatchRequest(id, reason.trim());
       await fetchRequests();
       toast.success('تم رفض طلب المشاهدة الإضافية.');
     } catch (err) {
@@ -113,15 +119,29 @@ export default function WatchRequestsPage() {
         }
         if (req.status === 1) {
           return (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-500">
-              <Check className="w-3.5 h-3.5 ml-1.5" /> تمت الموافقة
-            </span>
+            <div className="flex flex-col items-start gap-1">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-500">
+                <Check className="w-3.5 h-3.5 ml-1.5" /> تمت الموافقة
+              </span>
+              {req.reason && (
+                <span className="text-[10px] font-semibold text-[var(--admin-muted)] max-w-[150px] truncate block leading-normal" title={req.reason}>
+                  السبب: {req.reason}
+                </span>
+              )}
+            </div>
           );
         }
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-600 dark:text-red-500">
-            <X className="w-3.5 h-3.5 ml-1.5" /> مرفوض
-          </span>
+          <div className="flex flex-col items-start gap-1">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-500/10 text-red-600 dark:text-red-500">
+              <X className="w-3.5 h-3.5 ml-1.5" /> مرفوض
+            </span>
+            {req.reason && (
+              <span className="text-[10px] font-semibold text-rose-500 dark:text-rose-400 max-w-[150px] truncate block leading-normal" title={req.reason}>
+                السبب: {req.reason}
+              </span>
+            )}
+          </div>
         );
       }
     },
