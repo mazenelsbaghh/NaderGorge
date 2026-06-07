@@ -85,7 +85,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
       type: 'text',
       label: 'حقل جديد',
       placeholder: 'ادخل القيمة هنا...',
-      isRequired: false,
+      isRequired: true,
       options: [],
     };
     setFields([...fields, newField]);
