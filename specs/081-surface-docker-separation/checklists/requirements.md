@@ -1,4 +1,4 @@
-# Specification Quality Checklist: Surface Docker Separation and Masar Platform Rename
+# Specification Quality Checklist: Surface Docker Separation and Massar Platform Rename
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning  
 **Created**: 2026-06-06  
@@ -31,4 +31,4 @@
 
 ## Notes
 
-- Validation passed after applying reasonable defaults for host port separation, route boundaries, and Masar user-facing identity.
+- Validation passed after applying reasonable defaults for host port separation, route boundaries, and Massar user-facing identity.

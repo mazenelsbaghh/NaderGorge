@@ -1,4 +1,4 @@
-# Research: Surface Docker Separation and Masar Platform Rename
+# Research: Surface Docker Separation and Massar Platform Rename
 
 ## Decision: Runtime surface separation uses one frontend image with three containers
 
@@ -24,9 +24,9 @@
 - Per-page redirects in `/page.tsx`: rejected because it duplicates logic and cannot catch wrong-surface deep links consistently.
 - External nginx only: rejected because local Docker verification should work without an additional reverse proxy.
 
-## Decision: Masar rename is user-visible and operational, not namespace-wide
+## Decision: Massar rename is user-visible and operational, not namespace-wide
 
-**Rationale**: C# namespaces, solution names, migration names, and historical internal paths are deeply coupled and not user-facing. Renaming them would be risky and unrelated to Docker separation. Docker service/container names, visible UI copy, metadata, and docs changed by this feature will use Masar.
+**Rationale**: C# namespaces, solution names, migration names, and historical internal paths are deeply coupled and not user-facing. Renaming them would be risky and unrelated to Docker separation. Docker service/container names, visible UI copy, metadata, and docs changed by this feature will use Massar.
 
 **Alternatives considered**:
 - Rename all namespaces and solution files: rejected because it is high-risk, migration-heavy, and outside the requested runtime separation.

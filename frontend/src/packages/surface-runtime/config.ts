@@ -37,7 +37,7 @@ export function getSurfaceName(value = process.env.APP_SURFACE || process.env.NE
 }
 
 export function getSurfaceOrigins(): SurfaceOrigins {
-  const mainDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'masarplatform.com';
+  const mainDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'massarplatform.com';
 
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;

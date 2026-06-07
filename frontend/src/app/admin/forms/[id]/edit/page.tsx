@@ -147,7 +147,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
         id: `field_email_${now}`,
         type: 'email',
         label: 'البريد الإلكتروني',
-        placeholder: 'مثال: student@masar.com',
+        placeholder: 'مثال: student@massar.com',
         isRequired: true,
         options: [],
       };

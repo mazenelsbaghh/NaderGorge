@@ -7,15 +7,15 @@
 ## Active Plans
 
 ### Rebuild and Deploy Auto-Cycle Swiper Updates (2026-06-06)
-- [x] Rebuild shared frontend docker image `masar_frontend:local` via `make build-frontend`.
+- [x] Rebuild shared frontend docker image `massar_frontend:local` via `make build-frontend`.
 - [x] Recreate and restart frontend surface containers (`landing`, `student`, `admin`) via `docker compose up -d`.
 
 ### Rebuild and Deploy 3D Swiper Stack & Kinetic Reveals (2026-06-06)
-- [x] Rebuild shared frontend docker image `masar_frontend:local` via `make build-frontend`.
+- [x] Rebuild shared frontend docker image `massar_frontend:local` via `make build-frontend`.
 - [x] Recreate and restart frontend surface containers (`landing`, `student`, `admin`) via `docker compose up -d`.
 
 ### Rebuild and Deploy Frontend Overdrive Updates (2026-06-06)
-- [x] Rebuild shared frontend docker image `masar_frontend:local` using `make build-frontend`.
+- [x] Rebuild shared frontend docker image `massar_frontend:local` using `make build-frontend`.
 - [x] Recreate and restart frontend surface containers (`landing`, `student`, `admin`) using `docker compose up -d`.
 
 ### Impeccable Skills Installation & Update Check (2026-06-05)

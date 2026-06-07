@@ -1,7 +1,7 @@
 import { AssistantTaskBoard } from '@/components/assistant/AssistantTaskBoard';
 
 export const metadata = {
-  title: 'Assistant Dashboard | Masar Platform',
+  title: 'Assistant Dashboard | Massar Platform',
   description: 'Manage and resolve student issues and academic tasks.',
 };
 

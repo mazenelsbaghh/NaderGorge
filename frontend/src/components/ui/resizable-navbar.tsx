@@ -257,7 +257,7 @@ export const NavbarLogo = () => {
           height={44}
           className="h-8 w-8 object-contain sm:h-11 sm:w-11 dark:hidden"
           style={{ width: "auto", height: "auto" }}
-          alt="Masar Platform"
+          alt="Massar Platform"
           priority
         />
         <Image
@@ -266,13 +266,13 @@ export const NavbarLogo = () => {
           height={44}
           className="h-8 w-8 object-contain sm:h-11 sm:w-11 hidden dark:block"
           style={{ width: "auto", height: "auto" }}
-          alt="Masar Platform"
+          alt="Massar Platform"
           priority
         />
       </div>
       <div>
         <p className="text-[10px] sm:text-[13px] font-semibold tracking-[0.25em] sm:tracking-[0.36em] text-[var(--landing-muted)] leading-tight">
-          MASAR PLATFORM
+          MASSAR PLATFORM
         </p>
         <p className="text-base sm:text-xl font-black text-[var(--landing-ink)] md:text-2xl leading-none mt-0.5 sm:mt-1">
           منصة مسار

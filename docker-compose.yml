@@ -1,4 +1,4 @@
-name: masar_platform
+name: massar_platform
 
 x-frontend-build: &frontend-build
   context: ./frontend
@@ -20,25 +20,25 @@ x-frontend-environment: &frontend-environment
   LANDING_PUBLIC_ORIGIN: ${LANDING_PUBLIC_ORIGIN:-http://localhost:8738}
   STUDENT_PUBLIC_ORIGIN: ${STUDENT_PUBLIC_ORIGIN:-http://localhost:8739}
   ADMIN_PUBLIC_ORIGIN: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:8740}
-  NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-masarplatform.com}
+  NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-massarplatform.com}
 
 services:
 
   # Database
   db:
     image: postgres:16-alpine
-    container_name: masar_db
+    container_name: massar_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-masar_platform}
+      POSTGRES_DB: ${POSTGRES_DB:-massar_platform}
       TZ: Africa/Cairo
     ports:
-      - "${MASAR_POSTGRES_PORT:-5435}:5432"
+      - "${MASSAR_POSTGRES_PORT:-5435}:5432"
     volumes:
-      - masar_pgdata:/var/lib/postgresql/data
+      - massar_pgdata:/var/lib/postgresql/data
     networks:
-      - masar_net
+      - massar_net
     restart: unless-stopped
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}" ]
@@ -50,13 +50,13 @@ services:
   # Cache / Queue Broker
   redis:
     image: redis:7-alpine
-    container_name: masar_redis
+    container_name: massar_redis
     ports:
-      - "${MASAR_REDIS_PORT:-6382}:6379"
+      - "${MASSAR_REDIS_PORT:-6382}:6379"
     volumes:
-      - masar_redisdata:/data
+      - massar_redisdata:/data
     networks:
-      - masar_net
+      - massar_net
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
@@ -67,34 +67,34 @@ services:
 
   # Backend API (.NET 9 ASP.NET Core)
   backend:
-    image: masar_backend:local
+    image: massar_backend:local
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: masar_backend
+    container_name: massar_backend
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Docker}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:5245}
       TZ: Africa/Cairo
-      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-massar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
       JwtSettings__Secret: ${JWT_SECRET}
-      JwtSettings__Issuer: ${JWT_ISSUER:-MasarPlatformAPI}
-      JwtSettings__Audience: ${JWT_AUDIENCE:-MasarPlatformClients}
+      JwtSettings__Issuer: ${JWT_ISSUER:-MassarPlatformAPI}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-MassarPlatformClients}
       JwtSettings__ExpirationMinutes: ${JWT_EXPIRY_MINUTES:-60}
       JwtSettings__RefreshExpirationDays: ${JWT_REFRESH_DAYS:-30}
       DeviceLimits__MaxDevicesPerStudent: ${MAX_DEVICES_PER_STUDENT:-2}
       EvolutionApi__BaseUrl: ${EVOLUTION_API_BASE_URL:-}
       EvolutionApi__ApiKey: ${EVOLUTION_API_KEY:-}
-      EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Masar}
+      EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Massar}
       Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:8738,http://localhost:8739,http://localhost:8740}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       ParentReports__SigningSecret: ${PARENT_REPORT_SIGNING_SECRET:?PARENT_REPORT_SIGNING_SECRET is required}
     ports:
-      - "${MASAR_BACKEND_PORT:-5245}:5245"
+      - "${MASSAR_BACKEND_PORT:-5245}:5245"
     networks:
-      - masar_net
+      - massar_net
     depends_on:
       db:
         condition: service_healthy
@@ -110,14 +110,14 @@ services:
 
   # AI Worker (Node.js BullMQ)
   worker:
-    image: masar_worker:local
+    image: massar_worker:local
     build:
       context: ./worker
       dockerfile: Dockerfile
-    container_name: masar_worker
+    container_name: massar_worker
     environment:
       REDIS_URL: "redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
-      DB_CONNECTION_STRING: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      DB_CONNECTION_STRING: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-massar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
@@ -125,9 +125,9 @@ services:
       NODE_ENV: production
       TZ: Africa/Cairo
     ports:
-      - "${MASAR_WORKER_PORT:-3001}:3001"
+      - "${MASSAR_WORKER_PORT:-3001}:3001"
     networks:
-      - masar_net
+      - massar_net
     depends_on:
       db:
         condition: service_healthy
@@ -143,17 +143,17 @@ services:
 
   # Public Landing Surface (Next.js)
   landing:
-    image: masar_frontend:local
+    image: massar_frontend:local
     build: *frontend-build
-    container_name: masar_landing
+    container_name: massar_landing
     environment:
       <<: *frontend-environment
       APP_SURFACE: landing
       NEXT_PUBLIC_APP_SURFACE: landing
     ports:
-      - "${MASAR_LANDING_PORT:-8738}:8738"
+      - "${MASSAR_LANDING_PORT:-8738}:8738"
     networks:
-      - masar_net
+      - massar_net
     depends_on:
       backend:
         condition: service_healthy
@@ -167,16 +167,16 @@ services:
 
   # Student Surface (Next.js)
   student:
-    image: masar_frontend:local
-    container_name: masar_student
+    image: massar_frontend:local
+    container_name: massar_student
     environment:
       <<: *frontend-environment
       APP_SURFACE: student
       NEXT_PUBLIC_APP_SURFACE: student
     ports:
-      - "${MASAR_STUDENT_PORT:-8739}:8738"
+      - "${MASSAR_STUDENT_PORT:-8739}:8738"
     networks:
-      - masar_net
+      - massar_net
     depends_on:
       backend:
         condition: service_healthy
@@ -190,16 +190,16 @@ services:
 
   # Admin Surface (Next.js)
   admin:
-    image: masar_frontend:local
-    container_name: masar_admin
+    image: massar_frontend:local
+    container_name: massar_admin
     environment:
       <<: *frontend-environment
       APP_SURFACE: admin
       NEXT_PUBLIC_APP_SURFACE: admin
     ports:
-      - "${MASAR_ADMIN_PORT:-8740}:8738"
+      - "${MASSAR_ADMIN_PORT:-8740}:8738"
     networks:
-      - masar_net
+      - massar_net
     depends_on:
       backend:
         condition: service_healthy
@@ -213,17 +213,17 @@ services:
 
   # EF Core Migration Runner (on-demand, not started by make up)
   migrator:
-    image: masar_migrator:local
+    image: massar_migrator:local
     build:
       context: ./backend
       dockerfile: Dockerfile.migrator
-    container_name: masar_migrator
+    container_name: massar_migrator
     environment:
-      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-masar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
+      ConnectionStrings__DefaultConnection: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-massar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
       ConnectionStrings__Redis: "${REDIS_HOST:-redis}:${REDIS_PORT:-6379},abortConnect=false"
       TZ: Africa/Cairo
     networks:
-      - masar_net
+      - massar_net
     depends_on:
       db:
         condition: service_healthy
@@ -233,14 +233,14 @@ services:
       - migration
 
 networks:
-  masar_net:
-    name: masar_net
+  massar_net:
+    name: massar_net
     driver: bridge
 
 volumes:
-  masar_pgdata:
-    name: masar_pgdata
+  massar_pgdata:
+    name: massar_pgdata
     external: true
-  masar_redisdata:
-    name: masar_redisdata
+  massar_redisdata:
+    name: massar_redisdata
     external: true

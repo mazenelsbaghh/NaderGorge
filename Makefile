@@ -11,7 +11,7 @@
 
 help: ## Show all available make targets
 	@echo ""
-	@echo "  Masar Platform — Make Targets"
+	@echo "  Massar Platform — Make Targets"
 	@echo "  ─────────────────────────────"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
@@ -22,23 +22,23 @@ help: ## Show all available make targets
 # =============================================================================
 
 up: ## Build if needed and start all Docker services in the background
-	@echo "Starting Masar Platform services..."
+	@echo "Starting Massar Platform services..."
 	docker compose up --build -d
 	@echo ""
-	@echo "Masar Platform services started."
-	@echo "   Landing:       http://localhost:$${MASAR_LANDING_PORT:-8738}"
-	@echo "   Student:       http://localhost:$${MASAR_STUDENT_PORT:-8739}"
-	@echo "   Admin:         http://localhost:$${MASAR_ADMIN_PORT:-8740}"
-	@echo "   Backend:       http://localhost:$${MASAR_BACKEND_PORT:-5245}"
-	@echo "   Swagger:       http://localhost:$${MASAR_BACKEND_PORT:-5245}/swagger"
-	@echo "   AI Bull-Board: http://localhost:$${MASAR_WORKER_PORT:-3001}/ui"
+	@echo "Massar Platform services started."
+	@echo "   Landing:       http://localhost:$${MASSAR_LANDING_PORT:-8738}"
+	@echo "   Student:       http://localhost:$${MASSAR_STUDENT_PORT:-8739}"
+	@echo "   Admin:         http://localhost:$${MASSAR_ADMIN_PORT:-8740}"
+	@echo "   Backend:       http://localhost:$${MASSAR_BACKEND_PORT:-5245}"
+	@echo "   Swagger:       http://localhost:$${MASSAR_BACKEND_PORT:-5245}/swagger"
+	@echo "   AI Bull-Board: http://localhost:$${MASSAR_WORKER_PORT:-3001}/ui"
 	@echo ""
 	@echo "   Run 'make ps' to check container health"
 	@echo "   Run 'make verify-surfaces-static' to verify Compose separation"
 	@echo "   Run 'make migrate' to apply DB migrations"
 
 down: ## Stop and remove all containers (data volumes preserved)
-	@echo "Stopping Masar Platform services..."
+	@echo "Stopping Massar Platform services..."
 	docker compose down
 	@echo "Done."
 
@@ -71,7 +71,7 @@ build-worker: ## Rebuild only the worker image
 	docker compose build --no-cache worker
 
 restart: ## Stop all containers then rebuild and start again
-	@echo "Restarting Masar Platform services..."
+	@echo "Restarting Massar Platform services..."
 	docker compose down
 	docker compose up --build -d
 	@echo "Done."
@@ -92,7 +92,7 @@ clean: ## Stop containers and destroy all named volumes (DATABASE DATA WILL BE L
 # VERIFICATION
 # =============================================================================
 
-verify-surfaces-static: ## Verify Compose service separation, ports, healthchecks, env, and Masar naming
+verify-surfaces-static: ## Verify Compose service separation, ports, healthchecks, env, and Massar naming
 	node scripts/verify-surface-separation.mjs --static-only
 
 verify-surfaces: ## Verify Compose separation and running HTTP endpoints
@@ -106,8 +106,8 @@ test-python: ## Install Python test requirements and run smoke/inventory tests
 	python3 -m pytest -q
 
 docker-volumes: ## Create external Docker volumes required by docker-compose.yml
-	docker volume create masar_pgdata
-	docker volume create masar_redisdata
+	docker volume create massar_pgdata
+	docker volume create massar_redisdata
 
 verify-audit-remediation: ## Run audit remediation verification commands
 	dotnet build backend/NaderGorge.sln
@@ -173,7 +173,7 @@ shell-worker: ## Open shell in the worker container
 	docker compose exec worker sh
 
 shell-db: ## Open psql session in the database container
-	@PGUSER=$${POSTGRES_USER:-postgres} PGDB=$${POSTGRES_DB:-masar_platform}; \
+	@PGUSER=$${POSTGRES_USER:-postgres} PGDB=$${POSTGRES_DB:-massar_platform}; \
 	docker compose exec db psql -U $$PGUSER $$PGDB
 
 # =============================================================================
@@ -189,10 +189,10 @@ migrate-add: ## Scaffold a new EF Core migration (usage: make migrate-add NAME=M
 	@[ "$(NAME)" ] || (echo "" && echo "  NAME is required." && echo "     Usage: make migrate-add NAME=MyMigration" && echo "" && exit 1)
 	@echo "Adding migration: $(NAME)"
 	docker run --rm \
-		--network masar_net \
+		--network massar_net \
 		-v "$(PWD)/backend":/src \
 		-w /src \
-		-e "ConnectionStrings__DefaultConnection=Host=db;Database=masar_platform;Username=postgres;Password=postgres" \
+		-e "ConnectionStrings__DefaultConnection=Host=db;Database=massar_platform;Username=postgres;Password=postgres" \
 		-e "ConnectionStrings__Redis=redis:6379,abortConnect=false" \
 		mcr.microsoft.com/dotnet/sdk:9.0 \
 		sh -c "dotnet tool install --global dotnet-ef && \
@@ -219,7 +219,7 @@ dev: stop ## Run all services natively (requires .NET SDK and Node.js on host)
 	@echo "Starting Frontend..."
 	@cd frontend && npm run dev &
 	@echo ""
-	@echo "Masar local services running."
+	@echo "Massar local services running."
 	@echo "   Frontend:      http://localhost:8738"
 	@echo "   Backend:       http://localhost:5245"
 	@echo "   AI Bull-Board: http://localhost:3001/ui"

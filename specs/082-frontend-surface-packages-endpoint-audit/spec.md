@@ -21,13 +21,13 @@ A developer needs a clear frontend package boundary for landing, admin, and stud
 
 ### User Story 2 - Register Branding Uses One Logo Source (Priority: P1)
 
-A maintainer needs one shared place to change the Masar logo used by registration and small navigation brand marks, replacing older standalone icon glyphs.
+A maintainer needs one shared place to change the Massar logo used by registration and small navigation brand marks, replacing older standalone icon glyphs.
 
 **Independent Test**: Change the logo source in the shared logo component and verify the register page and public login navigation both render the new logo asset.
 
 **Acceptance Scenarios**:
 
-1. **Given** the register page renders, **When** the top brand mark appears, **Then** it uses the shared Masar logo component rather than the old eye glyph.
+1. **Given** the register page renders, **When** the top brand mark appears, **Then** it uses the shared Massar logo component rather than the old eye glyph.
 2. **Given** the public login button renders, **When** the decorative brand mark appears, **Then** it uses the shared logo component rather than the Sphinx icon component.
 3. **Given** the shared logo source is changed, **When** dependent surfaces rebuild, **Then** all updated logo instances use that new source.
 
@@ -61,7 +61,7 @@ A developer needs a complete, repeatable endpoint audit that finds every control
 - **SC-001**: `npm run lint` in `frontend/` completes without new lint failures caused by this feature.
 - **SC-002**: `pytest tests/test_endpoint_inventory.py` passes and validates every discovered controller endpoint against the committed inventory.
 - **SC-003**: The endpoint inventory includes every current controller endpoint discovered during the deep scan.
-- **SC-004**: Registration and public nav brand marks use the shared Masar logo component.
+- **SC-004**: Registration and public nav brand marks use the shared Massar logo component.
 
 ## Assumptions
 

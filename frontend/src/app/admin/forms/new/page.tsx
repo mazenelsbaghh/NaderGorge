@@ -103,7 +103,7 @@ export default function NewFormPage() {
         id: `field_email_${now}`,
         type: 'email',
         label: 'البريد الإلكتروني',
-        placeholder: 'مثال: student@masar.com',
+        placeholder: 'مثال: student@massar.com',
         isRequired: true,
         options: [],
       };

@@ -55,14 +55,14 @@ make build-frontend
 
 ## Expected Outcomes
 
-- `docker compose ps` shows `masar_landing`, `masar_student`, `masar_admin`, `masar_backend`, `masar_worker`, `masar_db`, and `masar_redis`.
+- `docker compose ps` shows `massar_landing`, `massar_student`, `massar_admin`, `massar_backend`, `massar_worker`, `massar_db`, and `massar_redis`.
 - Landing, student, and admin surfaces are available on distinct ports.
 - Browser API requests use `http://localhost:5245/api` by default.
 - Server-side Next.js calls use `http://backend:5245/api` inside Docker.
 
 ## Troubleshooting
 
-- **Port already in use**: change `MASAR_LANDING_PORT`, `MASAR_STUDENT_PORT`, `MASAR_ADMIN_PORT`, or `MASAR_BACKEND_PORT` in `.env`, then run `docker compose config --format json` to confirm the rendered ports.
+- **Port already in use**: change `MASSAR_LANDING_PORT`, `MASSAR_STUDENT_PORT`, `MASSAR_ADMIN_PORT`, or `MASSAR_BACKEND_PORT` in `.env`, then run `docker compose config --format json` to confirm the rendered ports.
 - **Static verification fails on secrets**: set `JWT_SECRET`, `API_CALLBACK_SECRET`, `AI_CALLBACK_SECRET`, `PARENT_REPORT_SIGNING_SECRET`, and `WORKER_ADMIN_TOKEN` in `.env`.
 - **Browser cannot reach API**: confirm `NEXT_PUBLIC_API_URL` is a browser URL such as `http://localhost:5245/api`, not `http://backend:5245/api`.
 - **Server-side Next.js cannot reach API**: confirm `INTERNAL_API_URL` is `http://backend:5245/api` inside Docker.

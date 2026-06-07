@@ -4,7 +4,7 @@
 
 ## Summary
 
-Create explicit frontend surface package boundaries for landing, admin, and student without destabilizing the current dirty worktree; centralize the Masar logo in a reusable shared component and replace hardcoded register/login icon marks; add a source-driven endpoint inventory generator plus committed JSON/Markdown reports and Pytest stale-inventory protection.
+Create explicit frontend surface package boundaries for landing, admin, and student without destabilizing the current dirty worktree; centralize the Massar logo in a reusable shared component and replace hardcoded register/login icon marks; add a source-driven endpoint inventory generator plus committed JSON/Markdown reports and Pytest stale-inventory protection.
 
 ## Technical Context
 
@@ -12,7 +12,7 @@ Create explicit frontend surface package boundaries for landing, admin, and stud
 **Primary Dependencies**: Next.js App Router, lucide-react, next/image, ASP.NET Core controller attributes, Pytest  
 **Storage**: N/A for this feature  
 **Testing**: `npm run lint`, endpoint inventory generator, `pytest tests/test_endpoint_inventory.py`, backend build if available  
-**Target Platform**: Local development and Docker-separated Masar surfaces  
+**Target Platform**: Local development and Docker-separated Massar surfaces
 **Project Type**: Multi-surface web platform  
 **Performance Goals**: No additional client bundle dependency beyond existing `next/image` and existing components; endpoint inventory generation completes in under one second on current controllers  
 **Constraints**: Do not revert existing user changes; avoid mass file moves in dirty worktree; preserve existing App Router paths and Docker runtime separation  
@@ -22,7 +22,7 @@ Create explicit frontend surface package boundaries for landing, admin, and stud
 
 - **Modular Clean Architecture**: PASS. Frontend boundaries become package entry points; backend endpoint parsing is test/documentation only.
 - **Security & Access Control**: PASS. Endpoint inventory records authorization classification and does not expose secrets.
-- **Premium Editorial Design System**: PASS. Shared logo uses existing Masar assets, Cairo/RTL context, and restrained product UI treatment. Impeccable product register is applied to admin/student; brand register is applied to landing.
+- **Premium Editorial Design System**: PASS. Shared logo uses existing Massar assets, Cairo/RTL context, and restrained product UI treatment. Impeccable product register is applied to admin/student; brand register is applied to landing.
 - **Provider Abstraction First**: PASS. No provider code is changed.
 - **Phased Delivery with MVP Discipline**: PASS. Incremental package boundaries avoid unsafe large rewrites.
 
@@ -30,7 +30,7 @@ Create explicit frontend surface package boundaries for landing, admin, and stud
 
 - **Impeccable**: Product surfaces remain task-focused and familiar. No new decorative cards or animation systems are introduced. The register logo becomes a stable brand mark with accessible alt text.
 - **ui-ux-pro-max**: Applied Arabic education platform recommendations: visible focus states, 4.5:1 text contrast target, mobile responsiveness at 375/768/1024/1440, SVG/image logo instead of emoji-like glyphs, and hover transitions within 150-300ms.
-- Existing PRODUCT/DESIGN context overrides generic recommendations where they conflict: keep Cairo and current Masar assets instead of adding new fonts.
+- Existing PRODUCT/DESIGN context overrides generic recommendations where they conflict: keep Cairo and current Massar assets instead of adding new fonts.
 
 ## Project Structure
 

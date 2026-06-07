@@ -8,7 +8,7 @@ import {
 } from '@/packages/surface-runtime/config';
 
 function withSurfaceHeader(response: NextResponse, surface: string) {
-  response.headers.set('x-masar-surface', surface);
+  response.headers.set('x-massar-surface', surface);
   return response;
 }
 

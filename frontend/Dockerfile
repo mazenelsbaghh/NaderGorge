@@ -15,7 +15,7 @@ RUN npm ci --no-audit --no-fund --loglevel=error
 # Copy source and build
 COPY . .
 
-# Accept build arguments shared by all Masar frontend runtime surfaces.
+# Accept build arguments shared by all Massar frontend runtime surfaces.
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BACKEND_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL

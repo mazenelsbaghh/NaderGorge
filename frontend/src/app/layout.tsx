@@ -18,7 +18,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "منصة مسار | Masar Platform",
+  title: "منصة مسار | Massar Platform",
   description: "المنصة المتكاملة للتعليم الثانوي - منصة مسار",
 };
 

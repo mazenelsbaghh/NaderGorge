@@ -1,4 +1,4 @@
-# Feature Specification: Surface Docker Separation and Masar Platform Rename
+# Feature Specification: Surface Docker Separation and Massar Platform Rename
 
 **Feature Branch**: `081-surface-docker-separation`  
 **Created**: 2026-06-06  
@@ -40,20 +40,20 @@ Frontend surfaces need a stable way to reach the backend API inside Docker while
 
 ---
 
-### User Story 3 - Rebrand User-Facing Platform Identity to Masar (Priority: P1)
+### User Story 3 - Rebrand User-Facing Platform Identity to Massar (Priority: P1)
 
-Students, admins, and public visitors should see the platform identity as "منصة مسار" in Arabic contexts and "Masar Platform" in English contexts, without mixed old brand names in visible UI, metadata, or Docker runtime labels.
+Students, admins, and public visitors should see the platform identity as "منصة مسار" in Arabic contexts and "Massar Platform" in English contexts, without mixed old brand names in visible UI, metadata, or Docker runtime labels.
 
 **Why this priority**: The user explicitly requested the platform to become "منصة مسار". Mixed naming reduces trust and makes deployments hard to reason about.
 
-**Independent Test**: Search the user-facing frontend output and Docker configuration for old visible brand strings, then load the landing, login, student, and admin routes to verify the Masar identity appears consistently.
+**Independent Test**: Search the user-facing frontend output and Docker configuration for old visible brand strings, then load the landing, login, student, and admin routes to verify the Massar identity appears consistently.
 
 **Acceptance Scenarios**:
 
-1. **Given** a public visitor opens the landing surface, **When** the page renders, **Then** visible brand copy and metadata identify the product as "منصة مسار" or "Masar Platform".
-2. **Given** a student opens the student surface, **When** the page or login state renders, **Then** visible platform identity uses "منصة مسار" or "Masar Platform".
-3. **Given** an admin opens the admin surface, **When** the shell or page metadata renders, **Then** visible platform identity uses "منصة مسار" or "Masar Platform".
-4. **Given** an operator inspects Docker containers, **When** viewing service or container names, **Then** application containers use the Masar naming convention rather than the old brand.
+1. **Given** a public visitor opens the landing surface, **When** the page renders, **Then** visible brand copy and metadata identify the product as "منصة مسار" or "Massar Platform".
+2. **Given** a student opens the student surface, **When** the page or login state renders, **Then** visible platform identity uses "منصة مسار" or "Massar Platform".
+3. **Given** an admin opens the admin surface, **When** the shell or page metadata renders, **Then** visible platform identity uses "منصة مسار" or "Massar Platform".
+4. **Given** an operator inspects Docker containers, **When** viewing service or container names, **Then** application containers use the Massar naming convention rather than the old brand.
 
 ---
 
@@ -68,7 +68,7 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 **Acceptance Scenarios**:
 
 1. **Given** the stack is built, **When** the verification command runs, **Then** it checks every configured host port and fails if any surface is missing or sharing a port.
-2. **Given** frontend routes are reachable, **When** the verification command runs, **Then** it checks landing, student, and admin entry points for expected routing and Masar branding.
+2. **Given** frontend routes are reachable, **When** the verification command runs, **Then** it checks landing, student, and admin entry points for expected routing and Massar branding.
 3. **Given** Docker Compose files are present, **When** static validation runs, **Then** it verifies service separation, unique ports, and required health checks.
 
 ### Edge Cases
@@ -91,8 +91,8 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 - **FR-005**: The admin surface MUST route root traffic to the admin experience or the admin login flow.
 - **FR-006**: The backend API MUST expose a dedicated health endpoint on its own host port.
 - **FR-007**: Frontend surfaces MUST use backend internal service discovery when running inside Docker.
-- **FR-008**: Docker service names, container names, and labels for application services MUST use a Masar naming convention.
-- **FR-009**: User-facing product identity MUST display "منصة مسار" for Arabic surfaces and "Masar Platform" for English metadata or operational text.
+- **FR-008**: Docker service names, container names, and labels for application services MUST use a Massar naming convention.
+- **FR-009**: User-facing product identity MUST display "منصة مسار" for Arabic surfaces and "Massar Platform" for English metadata or operational text.
 - **FR-010**: User-facing old brand names MUST be removed from frontend visible copy, page metadata, operational docs changed by this feature, and Docker runtime labels.
 - **FR-011**: The system MUST include automated checks for unique ports, expected services, health checks, and route boundaries.
 - **FR-012**: The system MUST provide Make targets or documented commands to start, stop, rebuild, log, and verify each separated surface.
@@ -104,7 +104,7 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 - **Runtime Surface**: A separately addressable application boundary with a name, host port, internal service address, health check, logs, and route entry point.
 - **Port Map**: The documented assignment of host ports to landing, student, admin, backend API, worker, database, Redis, and supporting services.
 - **Surface Route Boundary**: The routing rule that determines which entry path belongs to which surface and what happens when a request enters the wrong surface.
-- **Platform Identity**: The user-facing Arabic and English brand names, metadata, and Docker runtime naming convention for Masar.
+- **Platform Identity**: The user-facing Arabic and English brand names, metadata, and Docker runtime naming convention for Massar.
 - **Verification Suite**: Automated checks that validate Docker Compose structure, running HTTP endpoints, route boundaries, and brand consistency.
 
 ## Success Criteria *(mandatory)*
@@ -114,7 +114,7 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 - **SC-001**: All four application surfaces are reachable on unique host ports after one Docker startup command.
 - **SC-002**: Static verification reports zero duplicate host ports across application surfaces.
 - **SC-003**: Runtime verification confirms the landing, student, admin, and backend health endpoints respond within 30 seconds of startup on a warmed environment.
-- **SC-004**: 100% of changed user-facing UI metadata and Docker application service names use "منصة مسار", "Masar Platform", or `masar` naming.
+- **SC-004**: 100% of changed user-facing UI metadata and Docker application service names use "منصة مسار", "Massar Platform", or `massar` naming.
 - **SC-005**: Existing backend, frontend, and Docker verification commands complete without new warnings caused by this feature.
 - **SC-006**: Route boundary tests prove that opening a surface root sends the user to that surface's expected entry point.
 

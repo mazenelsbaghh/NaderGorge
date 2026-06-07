@@ -1,11 +1,11 @@
-# Implementation Plan: Surface Docker Separation and Masar Platform Rename
+# Implementation Plan: Surface Docker Separation and Massar Platform Rename
 
 **Branch**: `081-surface-docker-separation` | **Date**: 2026-06-06 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/081-surface-docker-separation/spec.md`
 
 ## Summary
 
-Separate the platform runtime into dedicated Docker surfaces for landing, student, admin, and backend API while keeping the existing Next.js codebase and .NET API architecture intact. The implementation will run three independent frontend containers from the same production image, each with its own surface identity, host port, route boundary, health check, logs, and public origin. Client-side API calls will use a browser-reachable backend URL, while server-side Next.js routes will use Docker internal service DNS. User-visible and operational runtime identity will be updated to "منصة مسار" / "Masar Platform" and `masar_*` container naming.
+Separate the platform runtime into dedicated Docker surfaces for landing, student, admin, and backend API while keeping the existing Next.js codebase and .NET API architecture intact. The implementation will run three independent frontend containers from the same production image, each with its own surface identity, host port, route boundary, health check, logs, and public origin. Client-side API calls will use a browser-reachable backend URL, while server-side Next.js routes will use Docker internal service DNS. User-visible and operational runtime identity will be updated to "منصة مسار" / "Massar Platform" and `massar_*` container naming.
 
 ## Technical Context
 
@@ -28,7 +28,7 @@ Separate the platform runtime into dedicated Docker surfaces for landing, studen
 - **Security & Access Control**: PASS. Dedicated admin/student surfaces keep auth guards; CORS becomes explicit for all surface origins.
 - **Phased Delivery with MVP Discipline**: PASS. Scope is runtime separation and branding; no unrelated domain features.
 - **Academic Content Integrity**: PASS. No academic content model changes.
-- **Premium Editorial Design System**: PASS. Use existing Cairo/RTL tokens and Masar identity; no new visual pattern conflicts.
+- **Premium Editorial Design System**: PASS. Use existing Cairo/RTL tokens and Massar identity; no new visual pattern conflicts.
 - **Multi-Provider Video Architecture**: PASS. Video embed proxy remains available on frontend surfaces and uses internal backend URLs where needed.
 - **AI Worker Orchestration**: PASS. Worker remains separate and is only reached through the existing Next.js server-side proxy.
 
@@ -52,8 +52,8 @@ specs/081-surface-docker-separation/
 ### Source Code (repository root)
 
 ```text
-docker-compose.yml                  # separated Masar runtime services and ports
-docker-compose.override.yml          # local db/redis overrides aligned with Masar names
+docker-compose.yml                  # separated Massar runtime services and ports
+docker-compose.override.yml          # local db/redis overrides aligned with Massar names
 Makefile                            # per-surface build/log/shell/verify targets
 .env.example                        # documented port and public/internal URL settings
 
@@ -63,7 +63,7 @@ frontend/
 │   ├── packages/
 │   │   └── surface-runtime/         # feature package: surface config and route rules
 │   ├── app/
-│   │   ├── layout.tsx               # Masar metadata
+│   │   ├── layout.tsx               # Massar metadata
 │   │   ├── page.tsx                 # server-side internal API URL
 │   │   └── api/                     # server-only proxy routes use internal URLs
 │   ├── components/                  # existing landing/admin/student components
@@ -98,15 +98,15 @@ Data model is captured in [data-model.md](./data-model.md). Runtime contract is 
 3. Update frontend API URL handling:
    - browser code uses `NEXT_PUBLIC_API_URL`, defaulting to a host-reachable backend URL
    - server code uses `INTERNAL_API_URL` / `INTERNAL_BACKEND_URL`, defaulting to Docker DNS
-4. Replace user-visible `مسار أكاديمي` and `Massar Academy` copy touched by this feature with `منصة مسار` and `Masar Platform`.
-5. Replace root Docker Compose application container/service naming with `masar_*`, add `landing`, `student`, and `admin` services, and publish unique configurable ports.
+4. Replace user-visible `مسار أكاديمي` and `Massar Academy` copy touched by this feature with `منصة مسار` and `Massar Platform`.
+5. Replace root Docker Compose application container/service naming with `massar_*`, add `landing`, `student`, and `admin` services, and publish unique configurable ports.
 6. Update Makefile commands for per-surface logs/build/shell and add `verify-surfaces`.
-7. Add a static/runtime verification script to validate unique ports, required services, health checks, Masar naming, and optional running HTTP endpoints.
+7. Add a static/runtime verification script to validate unique ports, required services, health checks, Massar naming, and optional running HTTP endpoints.
 
 ## UI/UX Planning Notes
 
 - **Impeccable product register**: authenticated student/admin surfaces stay task-focused, dense, and familiar. No new decorative UI is introduced.
-- **Impeccable brand register**: landing retains existing brand-led visual treatment and imagery; only runtime boundary and Masar identity are adjusted.
+- **Impeccable brand register**: landing retains existing brand-led visual treatment and imagery; only runtime boundary and Massar identity are adjusted.
 - **ui-ux-pro-max checklist applied**: retain strong focus states, WCAG contrast, responsive behavior at 375/768/1024/1440 widths, smooth hover states, and dashboard density.
 - Existing Cairo/Tajawal Arabic-first typography is preserved because project context already committed to Arabic-first student workflows. The generic Fira/indigo design-system suggestion is rejected to avoid brand drift.
 

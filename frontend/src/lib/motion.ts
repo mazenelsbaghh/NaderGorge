@@ -1,5 +1,5 @@
 /**
- * Shared Motion Utilities — Masar Platform
+ * Shared Motion Utilities — Massar Platform
  *
  * Centralized Framer Motion variants, easings, and transition presets.
  * Import these instead of re-defining animation configs in every component.

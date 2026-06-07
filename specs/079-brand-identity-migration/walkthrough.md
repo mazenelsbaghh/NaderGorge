@@ -27,7 +27,7 @@ This document summarizes the changes implemented to migrate the platform's visua
 - Updated student dashboard navbar logos and text in [resizable-navbar.tsx](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/components/ui/resizable-navbar.tsx).
 - Rebranded page titles in [faq/layout.tsx](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/app/faq/layout.tsx), [about/layout.tsx](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/app/about/layout.tsx), and [assistant/dashboard/page.tsx](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/app/assistant/dashboard/page.tsx).
 - Updated video player secure embed watermarks in [route.ts](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/app/api/video/embed/route.ts).
-- Replaced domain fallbacks with `masaracademy.com` in [proxy.ts](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/proxy.ts) and [route.ts](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/app/api/qr/[codeHash]/route.ts).
+- Replaced domain fallbacks with `massaracademy.com` in [proxy.ts](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/proxy.ts) and [route.ts](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/app/api/qr/[codeHash]/route.ts).
 - Rebranded activation forms and QR codes in [CodeActivationForm.tsx](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/components/forms/CodeActivationForm.tsx) and [QrDisplay.tsx](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/components/codes/QrDisplay.tsx).
 
 ---

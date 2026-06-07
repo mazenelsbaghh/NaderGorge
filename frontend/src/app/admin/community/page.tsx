@@ -1,6 +1,8 @@
 'use client';
 
-import { MessageSquareText } from 'lucide-react';
+import { MessageSquareText, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
+import NeumorphButton from '@/components/ui/neumorph-button';
 
 import { AdminShellChrome } from '@/components/admin';
 import { CommunityCommentsModerationTable } from '@/components/admin/CommunityCommentsModerationTable';
@@ -13,6 +15,14 @@ export default function AdminCommunityPage() {
       sectionLabel="إدارة المجتمع"
       pageTitle="مجتمع الطلاب"
       subtitle="مراجعة البوستات المرسلة واعتماد المناسب منها قبل ظهوره للطلاب."
+      action={
+        <Link href="/student/community" passHref legacyBehavior>
+          <NeumorphButton intent="primary" size="lg" pill>
+            <ExternalLink className="h-4 w-4 ml-1.5" />
+            تصفح مجتمع الطلاب
+          </NeumorphButton>
+        </Link>
+      }
       headerAccessory={
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">
           <MessageSquareText className="h-4 w-4" />

@@ -4,7 +4,7 @@
 
 Implemented feature `082-frontend-surface-packages-endpoint-audit`.
 
-The frontend now has explicit package entry points for landing, admin, student, and brand identity work. Auth surfaces use one shared Masar logo component instead of scattered glyph/icon marks. The backend API surface now has a generated endpoint inventory covering every discovered controller endpoint.
+The frontend now has explicit package entry points for landing, admin, student, and brand identity work. Auth surfaces use one shared Massar logo component instead of scattered glyph/icon marks. The backend API surface now has a generated endpoint inventory covering every discovered controller endpoint.
 
 Spec location: `specs/082-frontend-surface-packages-endpoint-audit/spec.md`
 
@@ -14,7 +14,7 @@ Spec location: `specs/082-frontend-surface-packages-endpoint-audit/spec.md`
 - Added `frontend/src/packages/landing/home.tsx` and wired `frontend/src/app/page.tsx` through the landing package.
 - Added `frontend/src/packages/admin/navigation.tsx` and wired admin layout/root page through the admin package.
 - Added `frontend/src/packages/student/dashboard.ts` and wired student dashboard imports through the student package.
-- Replaced old auth/navigation glyph marks in login, register, forgot-password, public navbar, and public login nav with the shared Masar logo.
+- Replaced old auth/navigation glyph marks in login, register, forgot-password, public navbar, and public login nav with the shared Massar logo.
 - Added `scripts/generate-endpoint-inventory.mjs`.
 - Generated `tests/endpoint_inventory.json` and `tests/endpoint_inventory.md` with 144 backend controller endpoints.
 - Added `tests/test_endpoint_inventory.py` to fail when the committed endpoint inventory is stale.

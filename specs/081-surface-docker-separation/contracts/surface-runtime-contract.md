@@ -4,10 +4,10 @@
 
 | Surface | Docker service | Container name | Host port env | Default URL | Entry behavior |
 | --- | --- | --- | --- | --- | --- |
-| Landing | `landing` | `masar_landing` | `MASAR_LANDING_PORT` | `http://localhost:8738` | `/` serves landing |
-| Student | `student` | `masar_student` | `MASAR_STUDENT_PORT` | `http://localhost:8739` | `/` rewrites to `/student` |
-| Admin | `admin` | `masar_admin` | `MASAR_ADMIN_PORT` | `http://localhost:8740` | `/` rewrites to `/admin` |
-| Backend API | `backend` | `masar_backend` | `MASAR_BACKEND_PORT` | `http://localhost:5245` | `/api/health` health |
+| Landing | `landing` | `massar_landing` | `MASSAR_LANDING_PORT` | `http://localhost:8738` | `/` serves landing |
+| Student | `student` | `massar_student` | `MASSAR_STUDENT_PORT` | `http://localhost:8739` | `/` rewrites to `/student` |
+| Admin | `admin` | `massar_admin` | `MASSAR_ADMIN_PORT` | `http://localhost:8740` | `/` rewrites to `/admin` |
+| Backend API | `backend` | `massar_backend` | `MASSAR_BACKEND_PORT` | `http://localhost:5245` | `/api/health` health |
 
 ## Required Frontend Environment
 
@@ -44,7 +44,7 @@ The verification command must fail if:
 
 - any required service is missing from Docker Compose output
 - landing, student, admin, or backend host ports duplicate each other
-- application container names do not start with `masar_`
+- application container names do not start with `massar_`
 - a required health check is missing
 - a frontend surface lacks `APP_SURFACE`
 - runtime mode is requested and an endpoint fails to respond

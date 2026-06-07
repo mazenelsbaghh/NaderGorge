@@ -4,14 +4,14 @@ import re
 
 def check_table_exists(ssh, table_name):
     query = f"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{table_name}');"
-    cmd = f'docker exec -i masar_db psql -U postgres -d nadergorge -t -A -c "{query}"'
+    cmd = f'docker exec -i massar_db psql -U postgres -d nadergorge -t -A -c "{query}"'
     stdin, stdout, stderr = ssh.exec_command(cmd)
     out = stdout.read().decode('utf-8').strip()
     return out == "t"
 
 def check_column_exists(ssh, table_name, column_name):
     query = f"SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{table_name}' AND column_name = '{column_name}');"
-    cmd = f'docker exec -i masar_db psql -U postgres -d nadergorge -t -A -c "{query}"'
+    cmd = f'docker exec -i massar_db psql -U postgres -d nadergorge -t -A -c "{query}"'
     stdin, stdout, stderr = ssh.exec_command(cmd)
     out = stdout.read().decode('utf-8').strip()
     return out == "t"
@@ -41,7 +41,7 @@ def main():
             create_tables_sql = f.read()
         
         # Run the SQL on production db container
-        db_cmd = 'docker exec -i masar_db psql -U postgres -d nadergorge'
+        db_cmd = 'docker exec -i massar_db psql -U postgres -d nadergorge'
         stdin_db, stdout_db, stderr_db = ssh.exec_command(db_cmd)
         stdin_db.write(create_tables_sql)
         stdin_db.flush()
@@ -163,7 +163,7 @@ def main():
         
         # Seed the DB via stdin
         print("🛠  Populating __EFMigrationsHistory on production database (using stdin)...")
-        db_cmd = 'docker exec -i masar_db psql -U postgres -d nadergorge'
+        db_cmd = 'docker exec -i massar_db psql -U postgres -d nadergorge'
         
         stdin_db, stdout_db, stderr_db = ssh.exec_command(db_cmd)
         stdin_db.write(combined_sql)

@@ -91,13 +91,13 @@ function assertServices(config) {
   }
 }
 
-function assertMasarNaming(config) {
+function assertMassarNaming(config) {
   for (const name of [...requiredServices, 'migrator']) {
     const service = config.services?.[name];
     if (!service) continue;
     const containerName = service.container_name || '';
-    if (!containerName.startsWith('masar_')) {
-      fail(`Service ${name} container_name must start with masar_: ${containerName}`);
+    if (!containerName.startsWith('massar_')) {
+      fail(`Service ${name} container_name must start with massar_: ${containerName}`);
     }
     if (/nadergorge/i.test(containerName)) {
       fail(`Service ${name} container_name still contains old brand: ${containerName}`);
@@ -253,7 +253,7 @@ async function assertRuntimeHttp() {
 async function main() {
   const config = readComposeConfig();
   assertServices(config);
-  assertMasarNaming(config);
+  assertMassarNaming(config);
   assertUniqueAppPorts(config);
   assertHealthchecks(config);
   assertFrontendEnvironment(config);

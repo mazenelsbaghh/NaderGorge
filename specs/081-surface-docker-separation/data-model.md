@@ -6,7 +6,7 @@ Represents one externally addressable application boundary.
 
 **Fields**:
 - `name`: one of `landing`, `student`, `admin`, `backend`
-- `containerName`: Masar-prefixed Docker container name
+- `containerName`: Massar-prefixed Docker container name
 - `hostPort`: unique host port
 - `containerPort`: internal container port
 - `publicOrigin`: browser-accessible origin
@@ -15,7 +15,7 @@ Represents one externally addressable application boundary.
 
 **Validation Rules**:
 - `hostPort` must be unique among application surfaces.
-- `containerName` must start with `masar_`.
+- `containerName` must start with `massar_`.
 - frontend surfaces must include `APP_SURFACE`.
 - backend surface must expose `/api/health`.
 
@@ -61,13 +61,13 @@ Defines visible and operational naming.
 
 **Fields**:
 - `arabicName`: `منصة مسار`
-- `englishName`: `Masar Platform`
-- `dockerPrefix`: `masar`
+- `englishName`: `Massar Platform`
+- `dockerPrefix`: `massar`
 - `metadataTitle`: Arabic-first title with English fallback
 
 **Validation Rules**:
 - changed visible frontend copy must not use `مسار أكاديمي`, `Massar Academy`, or `Nader George`.
-- Docker service/container names for application services must use the `masar` prefix.
+- Docker service/container names for application services must use the `massar` prefix.
 
 ## VerificationSuite
 
@@ -77,7 +77,7 @@ Defines checks used before delivery.
 - `composeConfigCheck`
 - `uniquePortsCheck`
 - `serviceHealthcheckCheck`
-- `masarNamingCheck`
+- `massarNamingCheck`
 - `runtimeHttpCheck`
 - `brandStringCheck`
 

@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const host = request.headers.get('host');
 
     if (dest === 'document' && !referer) {
-      return iframeError('Embed must be loaded within Masar Platform', 403);
+      return iframeError('Embed must be loaded within Massar Platform', 403);
     }
 
     if (referer && host && !referer.includes(host)) {
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     const parsed = JSON.parse(decrypted) as { Provider: string; VideoId: string; StudentName?: string; StudentPhone?: string };
     const videoId = parsed.VideoId;
     const provider = parsed.Provider?.toLowerCase() || 'youtube';
-    const studentName = parsed.StudentName || 'Masar Platform';
+    const studentName = parsed.StudentName || 'Massar Platform';
     const studentPhone = parsed.StudentPhone || '';
 
     let html = '';
@@ -148,7 +148,7 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
   // ── Server-side: XOR-encode the video ID so it never appears as plain text ──
   const xorKey = Math.floor(Math.random() * 200) + 50;
   const encodedId = Array.from(videoId).map(c => c.charCodeAt(0) ^ xorKey);
-  const watermarkBrand = JSON.stringify('Masar Platform');
+  const watermarkBrand = JSON.stringify('Massar Platform');
   const watermarkStudentName = JSON.stringify(studentName);
   const watermarkStudentPhone = JSON.stringify(studentPhone);
 
@@ -410,7 +410,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
   const vkUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${videoId}&hd=2&js_api=1`;
   const xorKey = Math.floor(Math.random() * 200) + 50; // random key 50-249
   const encoded = Array.from(vkUrl).map(c => c.charCodeAt(0) ^ xorKey);
-  const watermarkBrand = JSON.stringify('Masar Platform');
+  const watermarkBrand = JSON.stringify('Massar Platform');
   const watermarkStudentName = JSON.stringify(studentName);
   const watermarkStudentPhone = JSON.stringify(studentPhone);
 

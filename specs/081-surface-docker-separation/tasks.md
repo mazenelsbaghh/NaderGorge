@@ -1,4 +1,4 @@
-# Tasks: Surface Docker Separation and Masar Platform Rename
+# Tasks: Surface Docker Separation and Massar Platform Rename
 
 **Input**: Design documents from `/specs/081-surface-docker-separation/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/surface-runtime-contract.md, quickstart.md
@@ -56,9 +56,9 @@
 ### Implementation for User Story 1
 
 - [x] T013 [US1] Replace the single `frontend` service in `docker-compose.yml` with three frontend services named `landing`, `student`, and `admin`, each using the same frontend image/build but a distinct `APP_SURFACE`.
-- [x] T014 [US1] Update `docker-compose.yml` application container names to `masar_landing`, `masar_student`, `masar_admin`, `masar_backend`, `masar_worker`, `masar_db`, `masar_redis`, and `masar_migrator`.
-- [x] T015 [US1] Update `docker-compose.yml` ports so `landing` uses `${MASAR_LANDING_PORT:-8738}:8738`, `student` uses `${MASAR_STUDENT_PORT:-8739}:8738`, `admin` uses `${MASAR_ADMIN_PORT:-8740}:8738`, and `backend` uses `${MASAR_BACKEND_PORT:-5245}:5245`.
-- [x] T016 [US1] Update `docker-compose.yml` network and volume names to use Masar naming while preserving db, redis, worker, and migrator service dependencies.
+- [x] T014 [US1] Update `docker-compose.yml` application container names to `massar_landing`, `massar_student`, `massar_admin`, `massar_backend`, `massar_worker`, `massar_db`, `massar_redis`, and `massar_migrator`.
+- [x] T015 [US1] Update `docker-compose.yml` ports so `landing` uses `${MASSAR_LANDING_PORT:-8738}:8738`, `student` uses `${MASSAR_STUDENT_PORT:-8739}:8738`, `admin` uses `${MASSAR_ADMIN_PORT:-8740}:8738`, and `backend` uses `${MASSAR_BACKEND_PORT:-5245}:5245`.
+- [x] T016 [US1] Update `docker-compose.yml` network and volume names to use Massar naming while preserving db, redis, worker, and migrator service dependencies.
 - [x] T017 [US1] Update `frontend/Dockerfile` comments and build args to support reusable frontend surfaces without changing the internal app port.
 - [x] T018 [US1] Update `Makefile` `up`, `build-frontend`, `logs-*`, `shell-*`, `stop`, and `ps` output to reference landing/student/admin/backend separated URLs and service names.
 - [x] T019 [US1] Add `Makefile` targets `logs-landing`, `logs-student`, `logs-admin`, `shell-landing`, `shell-student`, `shell-admin`, `verify-surfaces-static`, and `verify-surfaces`.
@@ -80,20 +80,20 @@
 
 ### Implementation for User Story 2
 
-- [x] T022 [US2] Update `docker-compose.yml` frontend build args and runtime env so `NEXT_PUBLIC_API_URL` defaults to `http://localhost:${MASAR_BACKEND_PORT:-5245}/api` and `INTERNAL_API_URL` defaults to `http://backend:5245/api`.
+- [x] T022 [US2] Update `docker-compose.yml` frontend build args and runtime env so `NEXT_PUBLIC_API_URL` defaults to `http://localhost:${MASSAR_BACKEND_PORT:-5245}/api` and `INTERNAL_API_URL` defaults to `http://backend:5245/api`.
 - [x] T023 [US2] Update `docker-compose.yml` backend `Cors__AllowedOrigins` default to include `http://localhost:8738,http://localhost:8739,http://localhost:8740`.
-- [x] T024 [US2] Update `.env.example` with `MASAR_LANDING_PORT`, `MASAR_STUDENT_PORT`, `MASAR_ADMIN_PORT`, `MASAR_BACKEND_PORT`, public frontend origins, public backend URL, and internal backend URL variables.
-- [x] T025 [US2] Update `docker-compose.override.yml` only if its db/redis port overrides conflict with the new Masar defaults.
+- [x] T024 [US2] Update `.env.example` with `MASSAR_LANDING_PORT`, `MASSAR_STUDENT_PORT`, `MASSAR_ADMIN_PORT`, `MASSAR_BACKEND_PORT`, public frontend origins, public backend URL, and internal backend URL variables.
+- [x] T025 [US2] Update `docker-compose.override.yml` only if its db/redis port overrides conflict with the new Massar defaults.
 
 **Checkpoint**: `node scripts/verify-surface-separation.mjs --static-only` confirms URL and CORS configuration.
 
 ---
 
-## Phase 5: User Story 3 - Rebrand User-Facing Platform Identity to Masar (Priority: P1)
+## Phase 5: User Story 3 - Rebrand User-Facing Platform Identity to Massar (Priority: P1)
 
-**Goal**: Visible UI metadata and Docker runtime naming use `منصة مسار` / `Masar Platform` / `masar`.
+**Goal**: Visible UI metadata and Docker runtime naming use `منصة مسار` / `Massar Platform` / `massar`.
 
-**Independent Test**: Search changed user-facing files and Docker config for old visible brand strings; load landing/login/admin/student roots and confirm Masar identity.
+**Independent Test**: Search changed user-facing files and Docker config for old visible brand strings; load landing/login/admin/student roots and confirm Massar identity.
 
 ### Tests for User Story 3
 
@@ -102,13 +102,13 @@
 
 ### Implementation for User Story 3
 
-- [x] T028 [US3] Update `frontend/src/app/layout.tsx` metadata title and description from `مسار أكاديمي | Massar Academy` to `منصة مسار | Masar Platform`.
+- [x] T028 [US3] Update `frontend/src/app/layout.tsx` metadata title and description from `مسار أكاديمي | Massar Academy` to `منصة مسار | Massar Platform`.
 - [x] T029 [US3] Update `frontend/src/app/(public)/login/page.tsx` visible brand heading and footer caption to `منصة مسار`.
-- [x] T030 [US3] Update `frontend/src/app/api/video/embed/route.ts` default watermark brand from `Massar Academy` to `Masar Platform`.
-- [x] T031 [US3] Update `frontend/src/app/api/video/embed/route.ts` direct-load rejection text from old academy wording to Masar wording.
-- [x] T032 [US3] Update `.env.example`, `Makefile`, and `docker-compose.yml` comments/headings from old brand labels to Masar labels.
-- [x] T033 [US3] Update `PRODUCT.md` title and direct old teacher-name references to `Masar Platform` / `منصة مسار` without changing the design principles.
-- [x] T047 [US3] Replace legacy public logo assets and remaining visible shell/about/FAQ/QR/navigation copy with `منصة مسار` / `Masar Platform`.
+- [x] T030 [US3] Update `frontend/src/app/api/video/embed/route.ts` default watermark brand from `Massar Academy` to `Massar Platform`.
+- [x] T031 [US3] Update `frontend/src/app/api/video/embed/route.ts` direct-load rejection text from old academy wording to Massar wording.
+- [x] T032 [US3] Update `.env.example`, `Makefile`, and `docker-compose.yml` comments/headings from old brand labels to Massar labels.
+- [x] T033 [US3] Update `PRODUCT.md` title and direct old teacher-name references to `Massar Platform` / `منصة مسار` without changing the design principles.
+- [x] T047 [US3] Replace legacy public logo assets and remaining visible shell/about/FAQ/QR/navigation copy with `منصة مسار` / `Massar Platform`.
 
 **Checkpoint**: `node scripts/verify-surface-separation.mjs --static-only` brand checks pass.
 
@@ -145,7 +145,7 @@
 - [x] T042 Run `docker compose config --format json` and confirm it renders without Compose errors.
 - [x] T043 If Docker secrets are available, run `make build` and `make up`, then run `make verify-surfaces`; otherwise record the missing-secret limitation in `achievements.md`.
 - [x] T044 Review `specs/081-surface-docker-separation/spec.md`, `plan.md`, and `tasks.md` against the final implementation and update docs if behavior changed.
-- [x] T045 Fix Docker build failure by ensuring only one frontend service builds `masar_frontend:local` while the other frontend surfaces reuse that image.
+- [x] T045 Fix Docker build failure by ensuring only one frontend service builds `massar_frontend:local` while the other frontend surfaces reuse that image.
 - [x] T046 Suppress non-actionable third-party npm deprecation notices in Docker install steps by using npm error-level logging in `frontend/Dockerfile` and `worker/Dockerfile`.
 
 ---
@@ -175,5 +175,5 @@
 1. Complete setup and foundational frontend routing/API URL separation.
 2. Deliver MVP with US1: separated Docker services and unique ports.
 3. Add US2 to make backend/browser/internal URL behavior correct.
-4. Add US3 to finish Masar visible/runtime identity.
+4. Add US3 to finish Massar visible/runtime identity.
 5. Add US4 and polish verification.

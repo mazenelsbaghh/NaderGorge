@@ -1,6 +1,6 @@
 export const PLATFORM_IDENTITY = {
   arabicName: 'منصة مسار',
-  englishName: 'Masar Platform',
+  englishName: 'Massar Platform',
   logo: {
     full: '/images/logo.svg',
     mark: '/images/logo-mark.svg',

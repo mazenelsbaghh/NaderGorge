@@ -13,5 +13,5 @@
 ## Production Verification (via SSH / Remote logs)
 1. View backend logs on the remote production server to ensure no further 400 Bad Request error is printed:
    ```bash
-   sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker logs --tail=100 masar_backend'
+   sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker logs --tail=100 massar_backend'
    ```

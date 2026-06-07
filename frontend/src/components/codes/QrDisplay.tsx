@@ -19,7 +19,7 @@ interface QrDisplayProps {
 
 export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProps) {
   const printRef = useRef<HTMLDivElement>(null);
-  const effectiveBaseUrl = process.env.NEXT_PUBLIC_APP_URL || baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://masaracademy.com');
+  const effectiveBaseUrl = process.env.NEXT_PUBLIC_APP_URL || baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://massaracademy.com');
   const isLocalhost = effectiveBaseUrl.includes('localhost') || effectiveBaseUrl.includes('0.0.0.0') || effectiveBaseUrl.includes('127.0.0.1');
 
   const handlePrint = () => {
@@ -74,7 +74,7 @@ export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProp
               >
                 {/* Brand / Title per card */}
                 <div className="text-black font-bold text-[10px] sm:text-xs mb-2 text-center uppercase tracking-widest print:text-[10px]">
-                  MASAR PLATFORM
+                  MASSAR PLATFORM
                 </div>
 
                 <QRCodeSVG
