@@ -16,11 +16,13 @@ x-frontend-environment: &frontend-environment
   INTERNAL_BACKEND_URL: ${INTERNAL_BACKEND_URL:-http://backend:5245}
   API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
   AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
+  WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}
   WORKER_URL: ${WORKER_URL:-http://worker:3001}
   LANDING_PUBLIC_ORIGIN: ${LANDING_PUBLIC_ORIGIN:-http://localhost:8738}
   STUDENT_PUBLIC_ORIGIN: ${STUDENT_PUBLIC_ORIGIN:-http://localhost:8739}
   ADMIN_PUBLIC_ORIGIN: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:8740}
   NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-massarplatform.com}
+
 
 services:
 
@@ -36,7 +38,7 @@ services:
     ports:
       - "${MASSAR_POSTGRES_PORT:-5435}:5432"
     volumes:
-      - massar_pgdata:/var/lib/postgresql/data
+      - masar_pgdata:/var/lib/postgresql/data
     networks:
       - massar_net
     restart: unless-stopped
@@ -54,7 +56,7 @@ services:
     ports:
       - "${MASSAR_REDIS_PORT:-6382}:6379"
     volumes:
-      - massar_redisdata:/data
+      - masar_redisdata:/data
     networks:
       - massar_net
     restart: unless-stopped
@@ -238,9 +240,9 @@ networks:
     driver: bridge
 
 volumes:
-  massar_pgdata:
-    name: massar_pgdata
+  masar_pgdata:
+    name: masar_pgdata
     external: true
-  massar_redisdata:
-    name: massar_redisdata
+  masar_redisdata:
+    name: masar_redisdata
     external: true
