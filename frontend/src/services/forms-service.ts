@@ -108,7 +108,7 @@ export async function updateAdminForm(
     fieldsJson: string;
   }
 ): Promise<void> {
-  await apiClient.put(`/admin/forms/${id}`, form);
+  await apiClient.put(`/admin/forms/${id}`, { ...form, id });
 }
 
 /**
@@ -135,6 +135,7 @@ export async function updateSubmissionStatus(
   adminNotes?: string
 ): Promise<void> {
   await apiClient.put(`/admin/forms/submissions/${submissionId}/status`, {
+    submissionId,
     status,
     adminNotes,
   });

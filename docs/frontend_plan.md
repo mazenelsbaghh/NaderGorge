@@ -1,10 +1,14 @@
 # Frontend Master Plan
 
-**Last Updated**: 2026-06-06
+**Last Updated**: 2026-06-07
 
 ---
 
 ## Active Plans
+
+### Custom Forms API Payload Alignment (2026-06-07)
+- [x] Fix `updateAdminForm` in `frontend/src/services/forms-service.ts` to include the `id` field inside the request body to resolve the 400 Bad Request ID mismatch.
+- [x] Fix `updateSubmissionStatus` in `frontend/src/services/forms-service.ts` to include the `submissionId` field inside the request body to resolve the 400 Bad Request ID mismatch.
 
 ### Landing Page Dark Mode & Auto-Swiper Refinements (2026-06-06)
 - [x] Update `CircularGallerySection.tsx` to programmatically animate the student stack card's dragX to simulate manual dragging.

@@ -6,9 +6,3 @@
 - [x] Phase 4: Implementation (`speckit-implement`)
 - [x] Phase 5: Deep Architectural, Code & UI/UX Critique
 - [x] Phase 6: Final Verification & Summary Report
-
-### Critique & Architectural Issues / مشاكل الانتقاد والبنية
-
-- [x] Security Hardening: Ensure `isStaff` checks `user.roles.length > 0` in `LoginForm.tsx` to prevent routing users with empty roles to `/admin`.
-- [x] Performance Optimization: Add `.AsNoTracking()` to the `AuditLogs` database query in `GetUserAuditLogsQueryHandler`.
-

@@ -98,7 +98,6 @@ public class ContentController : ControllerBase
     }
 
     [HttpGet("lessons/{lessonId:guid}/comments/mine")]
-    [Authorize(Roles = "Student")]
     public async Task<IActionResult> GetMyLessonComments(Guid lessonId)
     {
         var response = await _mediator.Send(new GetMyLessonCommentsQuery(lessonId, GetUserId()));
@@ -118,7 +117,6 @@ public class ContentController : ControllerBase
     }
 
     [HttpPost("lessons/{lessonId:guid}/comments")]
-    [Authorize(Roles = "Student")]
     public async Task<IActionResult> CreateLessonComment(Guid lessonId, [FromBody] CreateLessonCommentRequest request)
     {
         var response = await _mediator.Send(new CreateLessonCommentCommand(lessonId, GetUserId(), request.Body));
