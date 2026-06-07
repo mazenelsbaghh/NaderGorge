@@ -7,7 +7,7 @@ namespace NaderGorge.Application.Features.Admin.Queries;
 
 public record ListCodeGroupsQuery() : IRequest<ApiResponse<List<CodeGroupDto>>>;
 
-public record CodeGroupDto(Guid Id, DateTime CreatedAt, Guid? PackageId, Guid? LessonId, int CodeCount, int UsedCount);
+public record CodeGroupDto(Guid Id, string Name, DateTime CreatedAt, Guid? PackageId, Guid? LessonId, int CodeCount, int UsedCount);
 
 public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, ApiResponse<List<CodeGroupDto>>>
 {
@@ -24,6 +24,7 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
 
         var dtos = groups.Select(cg => new CodeGroupDto(
             cg.Id,
+            cg.Name,
             cg.CreatedAt,
             cg.PackageId,
             cg.LessonId,

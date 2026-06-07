@@ -144,7 +144,7 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
 
     private static string GenerateSecureCode(int length)
     {
-        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const string chars = "0123456789";
         var bytes = RandomNumberGenerator.GetBytes(length);
         var result = new char[length];
         for (int i = 0; i < length; i++)

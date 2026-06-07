@@ -51,8 +51,8 @@ public class VideoWatchProgressTests
         Assert.Equal(30, firstResult.Data.TotalTrackedSeconds);
 
         var watchEvent = await db.VideoWatchEvents.SingleAsync();
+        // Simulate elapsed wall-clock time; SaveChanges would overwrite UpdatedAt before the handler reads it.
         watchEvent.UpdatedAt = DateTime.UtcNow.AddSeconds(-31);
-        await db.SaveChangesAsync();
 
         var secondResult = await handler.Handle(
             new TrackWatchProgressCommand(video.Id, userId, SecondsWatched: 30, TotalDurationSeconds: 100),
@@ -66,9 +66,6 @@ public class VideoWatchProgressTests
         Assert.Equal(60, secondResult.Data.TotalTrackedSeconds);
 
         var lockedTotal = secondResult.Data.TotalTrackedSeconds;
-        watchEvent = await db.VideoWatchEvents.SingleAsync();
-        watchEvent.UpdatedAt = DateTime.UtcNow.AddSeconds(-31);
-        await db.SaveChangesAsync();
 
         var lockedResult = await handler.Handle(
             new TrackWatchProgressCommand(video.Id, userId, SecondsWatched: 30, TotalDurationSeconds: 100),

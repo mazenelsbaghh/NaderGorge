@@ -66,6 +66,7 @@ export interface UserAuditLogDto {
 
 export interface CodeGroupDto {
   id: string;
+  name: string;
   createdAt: string;
   packageId?: string;
   lessonId?: string;
@@ -78,6 +79,8 @@ export interface CodeDetailDto {
   isUsed: boolean;
   usedAt?: string;
   usedByUserId?: string;
+  usedByStudentName?: string | null;
+  usedByStudentPhone?: string | null;
 }
 
 const CODE_GROUPS_CACHE_TTL_MS = 10_000;

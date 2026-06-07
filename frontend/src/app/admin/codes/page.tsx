@@ -3,7 +3,8 @@
 import { devConsole } from '@/utils/dev-console';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Download, Eye, KeyRound, Plus, Sparkles, Printer, Layers } from 'lucide-react';
+import { Eye, KeyRound, Plus, Sparkles, Layers, Search } from 'lucide-react';
+import Link from 'next/link';
 
 import {
   AdminShellChrome,
@@ -13,11 +14,10 @@ import {
   AdminModal,
 } from '@/components/admin';
 import { formatCompactNumber, formatDate } from '@/components/admin/admin-utils';
-import { adminService, CodeDetailDto, CodeGroupDto } from '@/services/admin-service';
+import { adminService, CodeGroupDto } from '@/services/admin-service';
 import { PackageDto, contentService } from '@/services/content-service';
 import { codeService } from '@/services/code-service';
 import { CodeTypeSelector, CodeTypeSelection } from '@/components/codes/CodeTypeSelector';
-import { QrDisplay } from '@/components/codes/QrDisplay';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
@@ -25,18 +25,13 @@ export default function AdminCodesPage() {
   const [groups, setGroups] = useState<CodeGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGenModal, setShowGenModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Generation Form State
   const [genCount, setGenCount] = useState(10);
   const [genSelection, setGenSelection] = useState<CodeTypeSelection>({ codeType: 'Package' });
   const [genGroupName, setGenGroupName] = useState('');
   const [genLoading, setGenLoading] = useState(false);
-
-  // Details Modal State
-  const [selectedGroup, setSelectedGroup] = useState<CodeGroupDto | null>(null);
-  const [codes, setCodes] = useState<CodeDetailDto[]>([]);
-  const [codesLoading, setCodesLoading] = useState(false);
-  const [showQrPrint, setShowQrPrint] = useState(false);
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const loadDataInFlightRef = useRef<Promise<void> | null>(null);
@@ -118,46 +113,35 @@ export default function AdminCodesPage() {
     }
   }
 
-  async function openGroupDetails(group: CodeGroupDto) {
-    setSelectedGroup(group);
-    setShowQrPrint(false); // Reset to table view
-
-    try {
-      setCodesLoading(true);
-      const data = await adminService.getCodeGroupDetails(group.id);
-      setCodes(data);
-    } catch (error) {
-      devConsole.error(error);
-      toast.error('تعذر تحميل تفاصيل المجموعة');
-    } finally {
-      setCodesLoading(false);
-    }
-  }
-
-  function exportCsv() {
-    if (!selectedGroup || codes.length === 0) return;
-
-    const header = 'Code,IsUsed,UsedAt,UsedByUserId\n';
-    const rows = codes
-      .map((code) => `${code.code},${code.isUsed},${code.usedAt ? formatDate(code.usedAt) : ''},${code.usedByUserId || ''}`)
-      .join('\n');
-    const blob = new Blob([header + rows], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `codes_${selectedGroup.id}.csv`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
-  }
-
   const packageNameMap = useMemo(() => {
     return Object.fromEntries(packages.map((pkg) => [pkg.id, pkg.name]));
   }, [packages]);
+
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return groups;
+    const q = searchQuery.toLowerCase().trim();
+    return groups.filter((g) => 
+      g.name.toLowerCase().includes(q) || 
+      g.id.toLowerCase().includes(q) ||
+      (g.packageId && (packageNameMap[g.packageId] || g.packageId).toLowerCase().includes(q)) ||
+      (g.lessonId && g.lessonId.toLowerCase().includes(q))
+    );
+  }, [groups, searchQuery, packageNameMap]);
 
   const totalCodes = groups.reduce((sum, group) => sum + group.codeCount, 0);
   const usedCodes = groups.reduce((sum, group) => sum + group.usedCount, 0);
 
   const groupColumns: AdminColumn<CodeGroupDto>[] = [
+    {
+      key: 'name',
+      label: 'المجموعة',
+      render: (g) => (
+        <div>
+          <div className="font-bold text-[var(--admin-text-strong)]">{g.name || 'دفعة بدون اسم'}</div>
+          <div className="text-[10px] font-mono text-[var(--admin-muted)] mt-0.5">{g.id}</div>
+        </div>
+      ),
+    },
     {
       key: 'createdAt',
       label: 'تاريخ الإنشاء',
@@ -198,55 +182,18 @@ export default function AdminCodesPage() {
       align: 'left',
       render: (g) => (
         <div className="flex items-center justify-end gap-2">
-          <NeumorphButton
-            type="button"
-            onClick={() => openGroupDetails(g)}
-            intent="icon"
-            size="icon"
-            title="عرض التفاصيل والطباعة"
-          >
-            <Eye className="h-5 w-5" />
-          </NeumorphButton>
+          <Link href={`/admin/codes/${g.id}`} passHref legacyBehavior>
+            <NeumorphButton
+              type="button"
+              intent="icon"
+              size="icon"
+              title="عرض التفاصيل والطباعة"
+            >
+              <Eye className="h-5 w-5" />
+            </NeumorphButton>
+          </Link>
         </div>
       ),
-    },
-  ];
-
-  const codeColumns: AdminColumn<CodeDetailDto>[] = [
-    {
-      key: 'code',
-      label: 'الكود',
-      render: (c) => (
-        <span className="bg-[var(--admin-card-strong)] px-2 py-1 rounded-md border border-[var(--admin-border)] font-mono font-bold text-[var(--admin-text)] tracking-wider">
-          {c.code}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      label: 'الحالة',
-      render: (c) =>
-        c.isUsed ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs font-bold dark:bg-emerald-950/40 dark:text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            مستخدم
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--admin-card-strong)] text-[var(--admin-muted)] px-3 py-1 text-xs font-bold">
-            <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            جديد
-          </span>
-        ),
-    },
-    {
-      key: 'usedAt',
-      label: 'وقت الاستخدام',
-      render: (c) => <span className="text-[var(--admin-muted)]">{c.usedAt ? formatDate(c.usedAt) : '-'}</span>,
-    },
-    {
-      key: 'usedBy',
-      label: 'المستخدم',
-      render: (c) => <span className="font-medium text-[var(--admin-text)]">{c.usedByUserId || '-'}</span>,
     },
   ];
 
@@ -297,9 +244,22 @@ export default function AdminCodesPage() {
         />
       </section>
 
+      {/* Search and Filters */}
+      <div className="mb-6 flex items-center bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] px-4 py-3 shadow-sm max-w-md mr-auto">
+        <Search className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
+        <input
+          type="text"
+          placeholder="ابحث عن اسم دفعة، ID، أو باقة مربوطة..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="bg-transparent border-none outline-none text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] w-full text-right"
+          dir="rtl"
+        />
+      </div>
+
       {/* Code Groups Table */}
       <AdminDataTable
-        data={groups}
+        data={filteredGroups}
         columns={groupColumns}
         loading={loading}
         rowKey={(g) => g.id}
@@ -357,54 +317,6 @@ export default function AdminCodesPage() {
             </NeumorphButton>
           </div>
         </form>
-      </AdminModal>
-
-      {/* Group Details / QR Print Modal */}
-      <AdminModal
-        open={!!selectedGroup}
-        onClose={() => setSelectedGroup(null)}
-        title={showQrPrint ? "طباعة أكواد QR" : "تفاصيل المجموعة"}
-        subtitle={`مجموعة: ${selectedGroup?.id}`}
-        maxWidth="max-w-5xl"
-      >
-        <div className="mb-6 flex flex-wrap gap-2 justify-between items-center bg-[var(--admin-card-soft)] p-2 rounded-xl border border-[var(--admin-border)]">
-          
-          <div className="flex gap-2 p-1 bg-[var(--admin-bg)] rounded-lg border border-[var(--admin-border)]">
-            <button
-              onClick={() => setShowQrPrint(false)}
-              className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${!showQrPrint ? 'bg-[var(--admin-primary)] text-white shadow-sm' : 'text-[var(--admin-muted)] hover:text-white'}`}
-            >
-              عرض السجل
-            </button>
-            <button
-              onClick={() => setShowQrPrint(true)}
-              className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-2 transition-all ${showQrPrint ? 'bg-[var(--admin-primary)] text-white shadow-sm' : 'text-[var(--admin-muted)] hover:text-white'}`}
-            >
-              <Printer size={16} />
-              طباعة QR
-            </button>
-          </div>
-
-          <NeumorphButton type="button" onClick={exportCsv} intent="ghost" size="md">
-            <Download className="h-4 w-4" />
-            تصدير CSV
-          </NeumorphButton>
-        </div>
-
-        {showQrPrint ? (
-          <QrDisplay 
-            codes={codes.map(c => c.code)} 
-            groupName={selectedGroup ? `دفعة ${formatDate(selectedGroup.createdAt)}` : 'Batch'} 
-          />
-        ) : (
-          <AdminDataTable
-            data={codes}
-            columns={codeColumns}
-            loading={codesLoading}
-            rowKey={(c) => c.code}
-            emptyMessage="لا توجد أكواد لعرضها."
-          />
-        )}
       </AdminModal>
     </AdminShellChrome>
   );

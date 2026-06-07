@@ -7,7 +7,13 @@ namespace NaderGorge.Application.Features.Admin.Queries;
 
 public record GetCodeGroupCodesQuery(Guid GroupId) : IRequest<ApiResponse<List<CodeDetailDto>>>;
 
-public record CodeDetailDto(string Code, bool IsUsed, DateTime? UsedAt, Guid? UsedByUserId);
+public record CodeDetailDto(
+    string Code, 
+    bool IsUsed, 
+    DateTime? UsedAt, 
+    Guid? UsedByUserId,
+    string? UsedByStudentName,
+    string? UsedByStudentPhone);
 
 public class GetCodeGroupCodesQueryHandler : IRequestHandler<GetCodeGroupCodesQuery, ApiResponse<List<CodeDetailDto>>>
 {
@@ -19,6 +25,7 @@ public class GetCodeGroupCodesQueryHandler : IRequestHandler<GetCodeGroupCodesQu
     {
         var group = await _db.CodeGroups
             .Include(cg => cg.AccessCodes)
+                .ThenInclude(ac => ac.ConsumedByUser)
             .FirstOrDefaultAsync(cg => cg.Id == request.GroupId, ct);
 
         if (group == null) return ApiResponse<List<CodeDetailDto>>.Fail("Code Group not found");
@@ -27,7 +34,9 @@ public class GetCodeGroupCodesQueryHandler : IRequestHandler<GetCodeGroupCodesQu
             c.CodePlaintext ?? c.CodeHash,
             c.IsConsumed,
             c.ConsumedAt,
-            c.ConsumedByUserId
+            c.ConsumedByUserId,
+            c.ConsumedByUser != null ? c.ConsumedByUser.FullName : null,
+            c.ConsumedByUser != null ? c.ConsumedByUser.PhoneNumber : null
         )).ToList();
 
         return ApiResponse<List<CodeDetailDto>>.Ok(dtos);
