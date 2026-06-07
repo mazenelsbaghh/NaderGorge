@@ -1,7 +1,7 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye, ClipboardList, Upload, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,6 +10,7 @@ import { AdminShellChrome } from '@/components/admin';
 import { createAdminForm, FormFieldConfig, FormFieldType } from '@/services/forms-service';
 import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 import { adminService } from '@/services/admin-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 const PREVIEW_GOVERNORATES = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'الدقهلية'];
 
@@ -20,11 +21,16 @@ export default function NewFormPage() {
   const [slug, setSlug] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [coverImageError, setCoverImageError] = useState(false);
   const [startsAt, setStartsAt] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+
+  useEffect(() => {
+    setCoverImageError(false);
+  }, [coverImageUrl]);
 
   // State for adding new options item-by-item
   const [newOptionTexts, setNewOptionTexts] = useState<Record<string, string>>({});
@@ -214,15 +220,15 @@ export default function NewFormPage() {
             </div>
 
             <div className="bg-[var(--admin-card-soft)] rounded-[1.5rem] p-6 border border-[var(--admin-border)] min-h-[400px]">
-              {coverImageUrl && (
+              {coverImageUrl && !coverImageError && (
                 <div className="mb-4 rounded-xl overflow-hidden h-32 border border-[var(--admin-border)] bg-[var(--admin-bg)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={coverImageUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_BACKEND_URL || ''}${coverImageUrl}` : coverImageUrl}
+                    src={resolveMediaUrl(coverImageUrl)}
                     alt="غلاف النموذج"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '';
+                    onError={() => {
+                      setCoverImageError(true);
                       toast.error('تعذر تحميل صورة الغلاف في المعاينة، يرجى التأكد من الرابط');
                     }}
                   />

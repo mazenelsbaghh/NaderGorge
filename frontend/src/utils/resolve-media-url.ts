@@ -3,8 +3,13 @@ const DEFAULT_API_BASE_URL = 'http://localhost:5245/api';
 export function resolveMediaUrl(url?: string | null): string {
   if (!url) return '';
 
-  const normalized = url.trim();
+  let normalized = url.trim();
   if (!normalized) return '';
+
+  // Strip trailing slash if it ends with one
+  if (normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
 
   if (/^(https?:|data:|blob:)/i.test(normalized)) {
     return normalized;

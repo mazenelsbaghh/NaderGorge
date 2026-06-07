@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 import { getPublicForm, submitPublicForm, FormFieldConfig, PublicFormDto } from '@/services/forms-service';
 import { GOVERNORATE_DISTRICTS, getDistrictsForGovernorate } from '@/data/governorate-districts';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 interface PublicFormPageProps {
   params: Promise<{ slug: string }>;
@@ -166,7 +167,7 @@ export default function PublicFormPage({ params }: PublicFormPageProps) {
                 <div className="mb-6 rounded-2xl overflow-hidden h-48 border border-[var(--admin-border)] shadow-inner bg-[var(--admin-bg)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={form.coverImageUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_BACKEND_URL || ''}${form.coverImageUrl}` : form.coverImageUrl}
+                    src={resolveMediaUrl(form.coverImageUrl)}
                     alt={form.title}
                     className="w-full h-full object-cover"
                   />

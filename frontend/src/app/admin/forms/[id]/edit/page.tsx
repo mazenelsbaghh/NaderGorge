@@ -10,6 +10,7 @@ import { AdminShellChrome, AdminPageSkeleton } from '@/components/admin';
 import { getAdminFormDetails, updateAdminForm, FormFieldConfig, FormFieldType } from '@/services/forms-service';
 import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 import { adminService } from '@/services/admin-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 interface EditFormPageProps {
   params: Promise<{ id: string }>;
@@ -41,6 +42,7 @@ export default function EditFormPage({ params }: EditFormPageProps) {
   const [slug, setSlug] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [coverImageUrl, setCoverImageUrl] = useState('');
+  const [coverImageError, setCoverImageError] = useState(false);
   const [startsAt, setStartsAt] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [fields, setFields] = useState<FormFieldConfig[]>([]);
@@ -49,6 +51,10 @@ export default function EditFormPage({ params }: EditFormPageProps) {
 
   // State for options adding item-by-item
   const [newOptionTexts, setNewOptionTexts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setCoverImageError(false);
+  }, [coverImageUrl]);
 
   useEffect(() => {
     const loadForm = async () => {
@@ -269,15 +275,15 @@ export default function EditFormPage({ params }: EditFormPageProps) {
             </div>
 
             <div className="bg-[var(--admin-card-soft)] rounded-[1.5rem] p-6 border border-[var(--admin-border)] min-h-[400px]">
-              {coverImageUrl && (
+              {coverImageUrl && !coverImageError && (
                 <div className="mb-4 rounded-xl overflow-hidden h-32 border border-[var(--admin-border)] bg-[var(--admin-bg)]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={coverImageUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_BACKEND_URL || ''}${coverImageUrl}` : coverImageUrl}
+                    src={resolveMediaUrl(coverImageUrl)}
                     alt="غلاف النموذج"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '';
+                    onError={() => {
+                      setCoverImageError(true);
                       toast.error('تعذر تحميل صورة الغلاف في المعاينة، يرجى التأكد من الرابط');
                     }}
                   />
