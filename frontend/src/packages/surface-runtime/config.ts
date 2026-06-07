@@ -44,12 +44,15 @@ export function getSurfaceOrigins(): SurfaceOrigins {
     const protocol = window.location.protocol;
 
     const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.startsWith('192.168.') || hostname.startsWith('10.');
-    if (!isLocal && hostname.endsWith(mainDomain)) {
+    if (!isLocal) {
+      const hostParts = hostname.split('.');
+      const detectedDomain = hostParts.length >= 2 ? hostParts.slice(-2).join('.') : hostname;
+
       return {
-        landing: `${protocol}//${mainDomain}`,
-        student: `${protocol}//app.${mainDomain}`,
-        admin: `${protocol}//admin.${mainDomain}`,
-        mainDomain,
+        landing: `${protocol}//${detectedDomain}`,
+        student: `${protocol}//app.${detectedDomain}`,
+        admin: `${protocol}//admin.${detectedDomain}`,
+        mainDomain: detectedDomain,
       };
     }
 
