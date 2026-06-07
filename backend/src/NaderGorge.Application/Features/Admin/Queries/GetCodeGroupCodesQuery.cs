@@ -9,6 +9,7 @@ public record GetCodeGroupCodesQuery(Guid GroupId) : IRequest<ApiResponse<List<C
 
 public record CodeDetailDto(
     string Code, 
+    long SerialNumber,
     bool IsUsed, 
     DateTime? UsedAt, 
     Guid? UsedByUserId,
@@ -32,6 +33,7 @@ public class GetCodeGroupCodesQueryHandler : IRequestHandler<GetCodeGroupCodesQu
 
         var dtos = group.AccessCodes.OrderBy(c => c.CreatedAt).Select(c => new CodeDetailDto(
             c.CodePlaintext ?? c.CodeHash,
+            c.SerialNumber,
             c.IsConsumed,
             c.ConsumedAt,
             c.ConsumedByUserId,

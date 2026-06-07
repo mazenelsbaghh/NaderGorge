@@ -6,6 +6,8 @@ using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Services;
 using System.Security.Cryptography;
 
+using Microsoft.EntityFrameworkCore;
+
 namespace NaderGorge.Application.Features.Admin.Commands;
 
 /// <summary>
@@ -91,6 +93,7 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         }
 
         // Generate codes
+        var maxSerial = await _db.AccessCodes.MaxAsync(c => (long?)c.SerialNumber, ct) ?? 10000000;
         var codes = new List<AccessCode>(request.Count);
         var plaintexts = new List<string>(request.Count);
 
@@ -98,6 +101,7 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         {
             var plaintext = GenerateSecureCode(request.CodeLength);
             var hash = HashCode(plaintext);
+            maxSerial++;
 
             codes.Add(new AccessCode
             {
@@ -106,7 +110,8 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
                 CodePlaintext = plaintext,
                 CodeGroupId = group.Id,
                 IsConsumed = false,
-                ExpiresAt = request.ExpiresAt
+                ExpiresAt = request.ExpiresAt,
+                SerialNumber = maxSerial
             });
 
             plaintexts.Add(plaintext);

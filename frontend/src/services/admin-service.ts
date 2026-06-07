@@ -76,6 +76,7 @@ export interface CodeGroupDto {
 
 export interface CodeDetailDto {
   code: string;
+  serialNumber: number;
   isUsed: boolean;
   usedAt?: string;
   usedByUserId?: string;

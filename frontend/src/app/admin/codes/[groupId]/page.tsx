@@ -86,6 +86,7 @@ export default function CodeGroupDetailsPage() {
     const q = searchQuery.toLowerCase().trim();
     return codes.filter((c) => 
       c.code.toLowerCase().includes(q) ||
+      String(c.serialNumber).includes(q) ||
       (c.usedByUserId && c.usedByUserId.toLowerCase().includes(q)) ||
       (c.usedByStudentName && c.usedByStudentName.toLowerCase().includes(q)) ||
       (c.usedByStudentPhone && c.usedByStudentPhone.toLowerCase().includes(q))
@@ -95,11 +96,11 @@ export default function CodeGroupDetailsPage() {
   function exportCsv() {
     if (!group || codes.length === 0) return;
 
-    const header = 'Code,IsUsed,UsedAt,UsedByUserId,StudentName,StudentPhone\n';
+    const header = 'SerialNumber,Code,IsUsed,UsedAt,UsedByUserId,StudentName,StudentPhone\n';
     const rows = codes
       .map(
         (code) =>
-          `"${code.code}","${code.isUsed}","${code.usedAt ? formatDate(code.usedAt) : ''}","${
+          `"${code.serialNumber}","${code.code}","${code.isUsed}","${code.usedAt ? formatDate(code.usedAt) : ''}","${
             code.usedByUserId || ''
           }","${code.usedByStudentName || ''}","${code.usedByStudentPhone || ''}"`
       )
@@ -114,6 +115,15 @@ export default function CodeGroupDetailsPage() {
   }
 
   const codeColumns: AdminColumn<CodeDetailDto>[] = [
+    {
+      key: 'serialNumber',
+      label: 'السيريال (S/N)',
+      render: (c) => (
+        <span className="text-xs font-mono font-bold text-[var(--admin-text)]">
+          #{c.serialNumber || '—'}
+        </span>
+      ),
+    },
     {
       key: 'code',
       label: 'الكود',

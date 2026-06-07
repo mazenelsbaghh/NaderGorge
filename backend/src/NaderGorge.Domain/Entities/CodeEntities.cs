@@ -47,6 +47,7 @@ public class AccessCode : BaseEntity
     // --- New fields ---
     public string? QrCodeUrl { get; set; }
     public DateTime? ExpiresAt { get; set; }
+    public long SerialNumber { get; set; }
 }
 
 public class StudentAccessGrant : BaseEntity
