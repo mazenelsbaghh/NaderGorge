@@ -10,7 +10,8 @@ import {
   AdminDataTable, 
   AdminColumn,
   AdminPageSkeleton,
-  AdminStatCard 
+  AdminStatCard,
+  AdminModal
 } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
@@ -20,6 +21,12 @@ export default function WatchRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  // Custom modal states
+  const [activeModal, setActiveModal] = useState<'approve' | 'reject' | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<AdminWatchRequestDto | null>(null);
+  const [reasonText, setReasonText] = useState('');
+  const [validationError, setValidationError] = useState('');
 
   useEffect(() => {
     fetchRequests();
@@ -39,13 +46,28 @@ export default function WatchRequestsPage() {
     }
   };
 
-  const handleApprove = async (id: string) => {
-    const reason = window.prompt('أدخل سبب الموافقة (اختياري):', 'تمت الموافقة بواسطة الإدارة');
-    if (reason === null) return;
+  const handleApproveClick = (req: AdminWatchRequestDto) => {
+    setSelectedRequest(req);
+    setReasonText('تمت الموافقة بواسطة الإدارة');
+    setValidationError('');
+    setActiveModal('approve');
+  };
 
-    setActionLoading(id);
+  const handleRejectClick = (req: AdminWatchRequestDto) => {
+    setSelectedRequest(req);
+    setReasonText('');
+    setValidationError('');
+    setActiveModal('reject');
+  };
+
+  const handleApproveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRequest) return;
+
+    setActionLoading(selectedRequest.id);
+    setActiveModal(null);
     try {
-      await adminService.approveWatchRequest(id, reason.trim());
+      await adminService.approveWatchRequest(selectedRequest.id, reasonText.trim());
       await fetchRequests();
       toast.success('تم قبول طلب المشاهدة الإضافية.');
     } catch (err) {
@@ -53,16 +75,24 @@ export default function WatchRequestsPage() {
       toast.error('فشل في الموافقة على الطلب');
     } finally {
       setActionLoading(null);
+      setSelectedRequest(null);
+      setReasonText('');
     }
   };
 
-  const handleReject = async (id: string) => {
-    const reason = window.prompt('أدخل سبب الرفض (اختياري):', 'تم الرفض لعدم الاستحقاق');
-    if (reason === null) return;
+  const handleRejectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRequest) return;
 
-    setActionLoading(id);
+    if (!reasonText.trim()) {
+      setValidationError('سبب الرفض إجباري.');
+      return;
+    }
+
+    setActionLoading(selectedRequest.id);
+    setActiveModal(null);
     try {
-      await adminService.rejectWatchRequest(id, reason.trim());
+      await adminService.rejectWatchRequest(selectedRequest.id, reasonText.trim());
       await fetchRequests();
       toast.success('تم رفض طلب المشاهدة الإضافية.');
     } catch (err) {
@@ -70,6 +100,8 @@ export default function WatchRequestsPage() {
       toast.error('فشل في رفض الطلب');
     } finally {
       setActionLoading(null);
+      setSelectedRequest(null);
+      setReasonText('');
     }
   };
 
@@ -154,7 +186,7 @@ export default function WatchRequestsPage() {
           <div className="flex items-center justify-end gap-2">
             <NeumorphButton
               type="button"
-              onClick={() => handleApprove(req.id)}
+              onClick={() => handleApproveClick(req)}
               disabled={actionLoading !== null}
               intent="primary"
               size="sm"
@@ -168,7 +200,7 @@ export default function WatchRequestsPage() {
             </NeumorphButton>
             <NeumorphButton
               type="button"
-              onClick={() => handleReject(req.id)}
+              onClick={() => handleRejectClick(req)}
               disabled={actionLoading !== null}
               intent="danger"
               size="sm"
@@ -239,6 +271,79 @@ export default function WatchRequestsPage() {
           />
         </>
       )}
+
+      <AdminModal
+        open={activeModal !== null}
+        onClose={() => {
+          if (actionLoading) return;
+          setActiveModal(null);
+          setSelectedRequest(null);
+          setReasonText('');
+          setValidationError('');
+        }}
+        title={activeModal === 'approve' ? 'موافقة على طلب المشاهدة' : 'رفض طلب المشاهدة'}
+      >
+        <form onSubmit={activeModal === 'approve' ? handleApproveSubmit : handleRejectSubmit} className="space-y-5 text-right">
+          <div>
+            <p className="text-sm text-[var(--admin-muted)] mb-3 leading-relaxed">
+              {activeModal === 'approve' 
+                ? `هل أنت متأكد من الموافقة على طلب الطالب ${selectedRequest?.studentName} لمشاهدة فيديو "${selectedRequest?.videoTitle}"؟`
+                : `برجاء كتابة سبب رفض طلب الطالب ${selectedRequest?.studentName} لمشاهدة فيديو "${selectedRequest?.videoTitle}".`
+              }
+            </p>
+            
+            <label htmlFor="reason-input" className="block text-xs font-bold text-[var(--admin-text)] mb-2">
+              السبب {activeModal === 'reject' ? <span className="text-rose-500 font-black">* (إجباري ويظهر للطالب)</span> : '(اختياري)'}
+            </label>
+            <textarea
+              id="reason-input"
+              rows={3}
+              value={reasonText}
+              onChange={(e) => {
+                setReasonText(e.target.value);
+                if (e.target.value.trim()) {
+                  setValidationError('');
+                }
+              }}
+              placeholder={activeModal === 'reject' ? "اكتب سبب الرفض بالتفصيل هنا ليظهر للطالب..." : "اكتب ملاحظة أو سبب الموافقة..."}
+              className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
+                validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
+              } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
+              required={activeModal === 'reject'}
+            />
+            {validationError && (
+              <p className="text-xs text-rose-500 font-bold mt-1">{validationError}</p>
+            )}
+          </div>
+          
+          <div className="flex gap-3 justify-end pt-4 border-t border-[var(--admin-border)]">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveModal(null);
+                setSelectedRequest(null);
+                setReasonText('');
+                setValidationError('');
+              }}
+              className="admin-btn-ghost py-2.5 px-5"
+              disabled={actionLoading !== null}
+            >
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              disabled={actionLoading !== null || (activeModal === 'reject' && !reasonText.trim())}
+              className={`rounded-2xl px-6 py-2.5 text-sm font-bold transition-all duration-200 ${
+                activeModal === 'approve'
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_12px_rgba(16,185,129,0.15)] disabled:opacity-50'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white shadow-[0_4px_12px_rgba(244,63,94,0.15)] disabled:opacity-50 disabled:cursor-not-allowed'
+              }`}
+            >
+              {actionLoading !== null ? 'جاري الحفظ...' : activeModal === 'approve' ? 'تأكيد القبول' : 'تأكيد الرفض'}
+            </button>
+          </div>
+        </form>
+      </AdminModal>
     </AdminShellChrome>
   );
 }

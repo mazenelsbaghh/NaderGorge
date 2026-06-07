@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
@@ -12,6 +13,7 @@ internal static class TestAppDbContextFactory
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(warnings => warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
 
         return new AppDbContext(options);

@@ -70,10 +70,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         var settings = await _cachedPlatformSettingsReader.GetAsync(ct);
         var thresholdPercentage = settings.VideoWatchThresholdPercentage;
 
-        var thresholdSeconds = Math.Max(
-            1,
-            VideoWatchThresholdCalculator.CalculateThresholdSeconds(request.TotalDurationSeconds, thresholdPercentage)
-        );
+        var thresholdSeconds = VideoWatchProgressCalculator.ResolveThresholdSeconds(request.TotalDurationSeconds, thresholdPercentage);
 
         int maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
 
@@ -90,31 +87,17 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             ));
         }
 
-        var reportedSecondsDelta = (int)Math.Max(0, Math.Round(request.SecondsWatched, MidpointRounding.AwayFromZero));
-        var maxPlausibleDelta = isNewWatchEvent
-            ? 30
-            : Math.Max(0, (int)Math.Ceiling((now - (watchEvent.UpdatedAt ?? watchEvent.CreatedAt)).TotalSeconds) + 5);
-        var trackedSecondsDelta = Math.Min(reportedSecondsDelta, Math.Min(maxPlausibleDelta, 30));
-        if (trackedSecondsDelta > 0)
-        {
-            watchEvent.TimeWatchedInSeconds += trackedSecondsDelta;
-        }
+        var trackedSecondsDelta = VideoWatchProgressCalculator.ResolveAcceptedSeconds(
+            request.SecondsWatched,
+            now,
+            watchEvent,
+            isNewWatchEvent);
 
-        var previousWatchCount = watchEvent.WatchCount;
-
-        while (watchEvent.TimeWatchedInSeconds >= (watchEvent.WatchCount + 1) * thresholdSeconds
-               && (maxLimit <= 0 || watchEvent.WatchCount < maxLimit))
-        {
-            watchEvent.WatchCount++;
-        }
-
-        var viewRegistered = watchEvent.WatchCount > previousWatchCount;
-
-        if (maxLimit > 0 && watchEvent.WatchCount >= maxLimit)
-        {
-            watchEvent.WatchCount = maxLimit;
-            watchEvent.IsLocked = true;
-        }
+        var progressResult = VideoWatchProgressCalculator.ApplyProgress(
+            watchEvent,
+            trackedSecondsDelta,
+            thresholdSeconds,
+            maxLimit);
 
         watchEvent.UpdatedAt = now;
 
@@ -125,7 +108,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             maxLimit > 0 ? Math.Min(watchEvent.WatchCount, maxLimit) : watchEvent.WatchCount,
             maxLimit,
             watchEvent.IsLocked,
-            viewRegistered,
+            progressResult.ViewRegistered,
             watchEvent.TimeWatchedInSeconds,
             thresholdSeconds
         ));

@@ -9,6 +9,8 @@
 ### Custom Forms API Payload Alignment (2026-06-07)
 - [x] Fix `updateAdminForm` in `frontend/src/services/forms-service.ts` to include the `id` field inside the request body to resolve the 400 Bad Request ID mismatch.
 - [x] Fix `updateSubmissionStatus` in `frontend/src/services/forms-service.ts` to include the `submissionId` field inside the request body to resolve the 400 Bad Request ID mismatch.
+- [x] Use `resolveMediaUrl` to prevent broken cover image previews in forms by resolving image paths relative to the correct public domain.
+- [x] Introduce `coverImageError` state in form creation (`new/page.tsx`) and form editing (`edit/page.tsx`) to catch failed image loads, unmount the failing img tag, and prevent infinite toast loops when images fail to load.
 
 ### Landing Page Dark Mode & Auto-Swiper Refinements (2026-06-06)
 - [x] Update `CircularGallerySection.tsx` to programmatically animate the student stack card's dragX to simulate manual dragging.

@@ -56,54 +56,45 @@ public class RecordVideoEventCommandHandler : IRequestHandler<RecordVideoEventCo
         if (trackEvent.IsLocked)
         {
             await transaction.CommitAsync(ct);
-            return ApiResponse<VideoTrackingContext>.Fail("Maximum watch limit reached. Video is locked.");
+            var lockedMaxLimit = trackEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
+            var lockedContext = new VideoTrackingContext(
+                lockedMaxLimit,
+                lockedMaxLimit > 0 ? Math.Min(trackEvent.WatchCount, lockedMaxLimit) : trackEvent.WatchCount,
+                true,
+                0);
+            return ApiResponse<VideoTrackingContext>.Fail(
+                "Maximum watch limit reached. Video is locked.",
+                new List<string> { "WATCH_LIMIT_REACHED" },
+                lockedContext);
         }
 
         var settings = await _cachedPlatformSettingsReader.GetAsync(ct);
         var thresholdPercentage = settings.VideoWatchThresholdPercentage;
-        var secondsThreshold = ResolveThresholdSeconds(request.TotalDurationSeconds, thresholdPercentage);
+        var secondsThreshold = VideoWatchProgressCalculator.ResolveThresholdSeconds(request.TotalDurationSeconds, thresholdPercentage);
 
-        var acceptedSeconds = ResolveAcceptedSeconds(request.WatchedSeconds, now, trackEvent, isNewTrackingEvent);
-        if (acceptedSeconds > 0)
-        {
-            trackEvent.TimeWatchedInSeconds += acceptedSeconds;
-        }
-
-        while (trackEvent.TimeWatchedInSeconds >= (trackEvent.WatchCount + 1) * secondsThreshold)
-        {
-            trackEvent.WatchCount++;
-        }
+        var acceptedSeconds = VideoWatchProgressCalculator.ResolveAcceptedSeconds(
+            request.WatchedSeconds,
+            now,
+            trackEvent,
+            isNewTrackingEvent);
 
         int maxLimit = trackEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
-        if (maxLimit > 0 && trackEvent.WatchCount >= maxLimit)
-        {
-            trackEvent.IsLocked = true;
-        }
+        var progressResult = VideoWatchProgressCalculator.ApplyProgress(
+            trackEvent,
+            acceptedSeconds,
+            secondsThreshold,
+            maxLimit);
 
         trackEvent.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
-        int remainingSeconds = ((trackEvent.WatchCount + 1) * secondsThreshold) - trackEvent.TimeWatchedInSeconds;
-
-        var ctx = new VideoTrackingContext(trackEvent.CustomMaxWatchCount ?? video.MaxWatchCount, trackEvent.WatchCount, trackEvent.IsLocked, remainingSeconds > 0 ? remainingSeconds : 0);
+        var ctx = new VideoTrackingContext(
+            trackEvent.CustomMaxWatchCount ?? video.MaxWatchCount,
+            maxLimit > 0 ? Math.Min(trackEvent.WatchCount, maxLimit) : trackEvent.WatchCount,
+            trackEvent.IsLocked,
+            progressResult.RemainingSecondsForNextWatch);
         return ApiResponse<VideoTrackingContext>.Ok(ctx, "Progress tracked");
-    }
-
-    private static int ResolveThresholdSeconds(int totalDurationSeconds, int thresholdPercentage)
-    {
-        var threshold = VideoWatchThresholdCalculator.CalculateThresholdSeconds(totalDurationSeconds, thresholdPercentage);
-        return Math.Max(1, threshold);
-    }
-
-    private static int ResolveAcceptedSeconds(int reportedSeconds, DateTime now, VideoWatchEvent trackEvent, bool isNewTrackingEvent)
-    {
-        var sanitizedReportedSeconds = Math.Max(0, reportedSeconds);
-        var maxByElapsedTime = isNewTrackingEvent
-            ? 30
-            : Math.Max(0, (int)Math.Ceiling((now - (trackEvent.UpdatedAt ?? trackEvent.CreatedAt)).TotalSeconds) + 5);
-
-        return Math.Min(sanitizedReportedSeconds, Math.Min(maxByElapsedTime, 30));
     }
 }

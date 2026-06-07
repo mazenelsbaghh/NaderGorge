@@ -36,7 +36,7 @@ public class TrackingController : ControllerBase
             if (response.Errors?.Contains("DURATION_REQUIRED") == true)
                 return BadRequest(response);
 
-            if (response.Errors!.Contains("Maximum watch limit reached"))
+            if (response.Errors?.Contains("WATCH_LIMIT_REACHED") == true)
                 return StatusCode(403, response);
 
             return NotFound(response);

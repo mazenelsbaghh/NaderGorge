@@ -579,8 +579,11 @@ public class AdminController : ControllerBase
     [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> RejectWatchRequest(Guid id, [FromBody] RejectWatchRequestBody? request, CancellationToken ct)
     {
-        var reason = request?.Reason ?? "تم الرفض بواسطة الإدارة";
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.RejectWatchRequestCommand(id, reason), ct);
+        if (request == null || string.IsNullOrWhiteSpace(request.Reason))
+        {
+            return BadRequest(NaderGorge.Application.Common.ApiResponse<bool>.Fail("Rejection reason is required.", new List<string> { "REJECTION_REASON_REQUIRED" }));
+        }
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.RejectWatchRequestCommand(id, request.Reason.Trim()), ct);
         if (result.Success) return Ok(result);
         return BadRequest(result);
     }
