@@ -47,6 +47,7 @@ public class AssistantController : ControllerBase
     }
 
     [HttpGet("my")]
+    [Authorize(Roles = "Admin,Supervisor,Assistant,Staff,AssistantAcademic,AssistantReviewer")]
     public async Task<IActionResult> GetMyTasks()
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -58,6 +59,7 @@ public class AssistantController : ControllerBase
     }
 
     [HttpGet("my/{id:guid}")]
+    [Authorize(Roles = "Admin,Supervisor,Assistant,Staff,AssistantAcademic,AssistantReviewer")]
     public async Task<IActionResult> GetTaskDetails(Guid id)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -71,6 +73,7 @@ public class AssistantController : ControllerBase
     }
 
     [HttpPost("my/{id:guid}/status")]
+    [Authorize(Roles = "Admin,Supervisor,Assistant,Staff,AssistantAcademic,AssistantReviewer")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusRequest request)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -82,6 +85,7 @@ public class AssistantController : ControllerBase
     }
 
     [HttpPost("my/{id:guid}/comments")]
+    [Authorize(Roles = "Admin,Supervisor,Assistant,Staff,AssistantAcademic,AssistantReviewer")]
     public async Task<IActionResult> AddComment(Guid id, [FromBody] AddCommentRequest request)
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);

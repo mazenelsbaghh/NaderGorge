@@ -70,4 +70,50 @@ public class StudentController : ControllerBase
 
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        var result = await _mediator.Send(new GetStudentProfileQuery(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateStudentProfileDto dto)
+    {
+        var result = await _mediator.Send(new UpdateStudentProfileCommand(
+            GetUserId(),
+            dto.Address,
+            dto.SecondaryPhone,
+            dto.ParentPhone,
+            dto.SecondaryParentPhone,
+            dto.MotherPhone,
+            dto.SchoolName
+        ));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("notifications")]
+    public async Task<IActionResult> GetNotifications()
+    {
+        var result = await _mediator.Send(new GetStudentNotificationsQuery(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("notifications/{id}/read")]
+    public async Task<IActionResult> MarkNotificationAsRead(Guid id)
+    {
+        var result = await _mediator.Send(new MarkNotificationAsReadCommand(id, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+}
+
+public class UpdateStudentProfileDto
+{
+    public string Address { get; set; } = string.Empty;
+    public string? SecondaryPhone { get; set; }
+    public string? ParentPhone { get; set; }
+    public string? SecondaryParentPhone { get; set; }
+    public string? MotherPhone { get; set; }
+    public string? SchoolName { get; set; }
 }

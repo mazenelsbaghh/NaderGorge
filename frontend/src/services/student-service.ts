@@ -147,6 +147,44 @@ export interface PublicTeacherDto {
   subjectNames: string[];
 }
 
+export interface StudentProfileDto {
+  userId: string;
+  fullName: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  gender: string;
+  governorate: string;
+  district: string | null;
+  address: string;
+  secondaryPhone: string | null;
+  parentPhone: string | null;
+  secondaryParentPhone: string | null;
+  motherPhone: string | null;
+  schoolName: string | null;
+  educationStage: string;
+  gradeLevel: string;
+  studyTrack: string | null;
+  deviceCount: number;
+  maxDevices: number;
+}
+
+export interface UpdateStudentProfileDto {
+  address: string;
+  secondaryPhone?: string | null;
+  parentPhone?: string | null;
+  secondaryParentPhone?: string | null;
+  motherPhone?: string | null;
+  schoolName?: string | null;
+}
+
+export interface StudentNotificationDto {
+  id: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export const studentService = {
   getDashboard: async (): Promise<DashboardDto> => {
     const res = await apiClient.get('/student/dashboard');
@@ -185,6 +223,26 @@ export const studentService = {
     avatarSlug?: string | null;
   }): Promise<StudentThemePreferencesDto> => {
     const res = await apiClient.put('/student/theme-preferences', payload);
+    return res.data?.data;
+  },
+
+  getProfile: async (): Promise<StudentProfileDto> => {
+    const res = await apiClient.get('/student/profile');
+    return res.data?.data;
+  },
+
+  updateProfile: async (payload: UpdateStudentProfileDto): Promise<void> => {
+    const res = await apiClient.put('/student/profile', payload);
+    return res.data?.data;
+  },
+
+  getNotifications: async (): Promise<StudentNotificationDto[]> => {
+    const res = await apiClient.get('/student/notifications');
+    return res.data?.data || [];
+  },
+
+  markNotificationAsRead: async (id: string): Promise<void> => {
+    const res = await apiClient.post(`/student/notifications/${id}/read`);
     return res.data?.data;
   }
 };

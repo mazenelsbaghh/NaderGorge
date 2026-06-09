@@ -72,6 +72,20 @@ public class AuthController : ControllerBase
             {
                 appSurface = "admin";
             }
+            else if (referer.Contains("teacher.", StringComparison.OrdinalIgnoreCase) ||
+                     host.Contains("teacher.", StringComparison.OrdinalIgnoreCase) ||
+                     referer.Contains("localhost:8741", StringComparison.OrdinalIgnoreCase) ||
+                     host.Contains("localhost:8741", StringComparison.OrdinalIgnoreCase))
+            {
+                appSurface = "teacher";
+            }
+            else if (referer.Contains("staff.", StringComparison.OrdinalIgnoreCase) ||
+                     host.Contains("staff.", StringComparison.OrdinalIgnoreCase) ||
+                     referer.Contains("localhost:8742", StringComparison.OrdinalIgnoreCase) ||
+                     host.Contains("localhost:8742", StringComparison.OrdinalIgnoreCase))
+            {
+                appSurface = "assistant";
+            }
             else
             {
                 appSurface = "student";

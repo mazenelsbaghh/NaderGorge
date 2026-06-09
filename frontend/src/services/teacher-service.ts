@@ -33,6 +33,36 @@ export interface TeacherDashboardStatsDto {
   pendingEssaysCount: number;
 }
 
+export interface TeacherActiveStudentDto {
+  studentId: string;
+  studentName: string;
+  lastActivityAt: string | null;
+  lastWatchedVideoTitle: string;
+  packageName: string;
+}
+
+export interface TeacherMostWatchedVideoDto {
+  videoId: string;
+  videoTitle: string;
+  lessonTitle: string;
+  totalWatchCount: number;
+  totalTimeWatchedSeconds: number;
+}
+
+export interface TeacherInactiveStudentAlertDto {
+  studentId: string;
+  studentName: string;
+  lastActivityAt: string | null;
+  packageName: string;
+  daysInactive: number;
+}
+
+export interface TeacherActivityDto {
+  activeStudents: TeacherActiveStudentDto[];
+  mostWatchedVideos: TeacherMostWatchedVideoDto[];
+  inactiveStudentAlerts: TeacherInactiveStudentAlertDto[];
+}
+
 export interface TeacherStudentDto {
   id: string;
   fullName: string;
@@ -118,4 +148,6 @@ export const teacherService = {
     apiClient.get<ApiResponse<TeacherProfileDto>>('/teacher/profile').then((res) => res.data),
   updateMyProfile: (data: { bio: string; specialization: string; contactInfo: string; profileImageUrl?: string }) =>
     apiClient.put<ApiResponse<void>>('/teacher/profile', data).then((res) => res.data),
+  getTeacherActivity: () =>
+    apiClient.get<ApiResponse<TeacherActivityDto>>('/teacher/activity').then((res) => res.data),
 };

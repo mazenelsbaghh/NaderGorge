@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Teacher;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -257,5 +258,130 @@ public class TeacherIsolationTests
         // Teacher A tries to grade -> succeeds
         var resultA = await handler.Handle(new GradeEssayCommand(submission.Id, 5m, "FB", userA.Id), CancellationToken.None);
         Assert.True(resultA.Success);
+    }
+
+    [Fact]
+    public async Task GetTeacherActivity_IsIsolatedAndFilteredByTeacherPackages()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var (userA, profileA) = await OnboardTeacherAsync(db, "Teacher A", "01011111111");
+        var (userB, profileB) = await OnboardTeacherAsync(db, "Teacher B", "01022222222");
+
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student A", "01099999999");
+
+        // 1. Create Package A for Teacher A
+        var programA = new Domain.Entities.Program
+        {
+            Id = Guid.NewGuid(),
+            Name = "Prog A",
+            TargetGrade = "3rd Secondary",
+            SubjectId = Guid.NewGuid()
+        };
+        var packageA = new Package
+        {
+            Id = Guid.NewGuid(),
+            Name = "Package A",
+            TeacherId = profileA.Id,
+            ProgramId = programA.Id
+        };
+        db.Programs.Add(programA);
+        db.Packages.Add(packageA);
+
+        // 2. Create Package B for Teacher B
+        var programB = new Domain.Entities.Program
+        {
+            Id = Guid.NewGuid(),
+            Name = "Prog B",
+            TargetGrade = "3rd Secondary",
+            SubjectId = Guid.NewGuid()
+        };
+        var packageB = new Package
+        {
+            Id = Guid.NewGuid(),
+            Name = "Package B",
+            TeacherId = profileB.Id,
+            ProgramId = programB.Id
+        };
+        db.Programs.Add(programB);
+        db.Packages.Add(packageB);
+
+        // 3. Create content items for Package A (Term, Section, Lesson, Video, Watch Event)
+        var termA = new Term { Id = Guid.NewGuid(), Title = "Term A", PackageId = packageA.Id };
+        var sectionA = new ContentSection { Id = Guid.NewGuid(), Title = "Sec A", TermId = termA.Id };
+        var lessonA = new Lesson { Id = Guid.NewGuid(), Title = "Lesson A", ContentSectionId = sectionA.Id };
+        var videoA = new LessonVideo { Id = Guid.NewGuid(), Title = "Video A", LessonId = lessonA.Id, Provider = "vk", ProviderVideoId = "vA" };
+        db.Terms.Add(termA);
+        db.ContentSections.Add(sectionA);
+        db.Lessons.Add(lessonA);
+        db.LessonVideos.Add(videoA);
+
+        // 4. Create content items for Package B
+        var termB = new Term { Id = Guid.NewGuid(), Title = "Term B", PackageId = packageB.Id };
+        var sectionB = new ContentSection { Id = Guid.NewGuid(), Title = "Sec B", TermId = termB.Id };
+        var lessonB = new Lesson { Id = Guid.NewGuid(), Title = "Lesson B", ContentSectionId = sectionB.Id };
+        var videoB = new LessonVideo { Id = Guid.NewGuid(), Title = "Video B", LessonId = lessonB.Id, Provider = "vk", ProviderVideoId = "vB" };
+        db.Terms.Add(termB);
+        db.ContentSections.Add(sectionB);
+        db.Lessons.Add(lessonB);
+        db.LessonVideos.Add(videoB);
+
+        // 5. Add Video Watch Events
+        var watchEventA = new VideoWatchEvent
+        {
+            Id = Guid.NewGuid(),
+            UserId = student.Id,
+            LessonVideoId = videoA.Id,
+            WatchCount = 3,
+            TimeWatchedInSeconds = 300,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        var watchEventB = new VideoWatchEvent
+        {
+            Id = Guid.NewGuid(),
+            UserId = student.Id,
+            LessonVideoId = videoB.Id,
+            WatchCount = 5,
+            TimeWatchedInSeconds = 500,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.VideoWatchEvents.AddRange(watchEventA, watchEventB);
+
+        // 6. Grant Student Access to Package A & B
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            Id = Guid.NewGuid(),
+            UserId = student.Id,
+            PackageId = packageA.Id,
+            IsActive = true
+        });
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            Id = Guid.NewGuid(),
+            UserId = student.Id,
+            PackageId = packageB.Id,
+            IsActive = true
+        });
+
+        await db.SaveChangesAsync();
+
+        // 7. Run GetTeacherActivityQuery for Teacher A
+        var handler = new GetTeacherActivityQueryHandler(db);
+        var result = await handler.Handle(new GetTeacherActivityQuery(userA.Id), CancellationToken.None);
+
+        // 8. Assertions
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+
+        // Active students should only include watch events on Package A (belonging to Teacher A)
+        Assert.Single(result.Data.ActiveStudents);
+        Assert.Equal("Video A", result.Data.ActiveStudents.First().LastWatchedVideoTitle);
+        Assert.Equal("Package A", result.Data.ActiveStudents.First().PackageName);
+
+        // Most watched videos should only include Package A video
+        Assert.Single(result.Data.MostWatchedVideos);
+        Assert.Equal("Video A", result.Data.MostWatchedVideos.First().VideoTitle);
+        Assert.Equal(3, result.Data.MostWatchedVideos.First().TotalWatchCount);
     }
 }

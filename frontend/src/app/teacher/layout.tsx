@@ -14,6 +14,11 @@ const teacherMenuItems = [
     icon: <LayoutDashboard className="h-4 w-4" />,
   },
   {
+    label: "نشاط الطلاب",
+    href: "/teacher/activity",
+    icon: <Users className="h-4 w-4" />,
+  },
+  {
     label: "المحتوى الدراسي",
     href: "/teacher/packages",
     icon: <BookOpen className="h-4 w-4" />,

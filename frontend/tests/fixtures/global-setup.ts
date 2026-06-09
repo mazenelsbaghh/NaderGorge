@@ -8,6 +8,7 @@ async function globalSetup() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-E2E-Token': process.env.E2E_TEST_TOKEN || 'E2eOnlyTestTokenValue123456789012345',
         },
         body: JSON.stringify({
           clearDatabase: true,

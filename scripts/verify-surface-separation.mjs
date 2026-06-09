@@ -171,6 +171,28 @@ function assertCors(config) {
   }
 }
 
+function assertNginxConfig() {
+  const confPath = resolve(process.cwd(), 'docker/nginx/massar.conf');
+  const content = readFileSync(confPath, 'utf8');
+
+  // Split the file into server blocks
+  const serverBlocks = content.split('server {');
+  
+  for (const block of serverBlocks) {
+    // Check if the server block proxies to landing, student, admin, teacher, assistant, or backend
+    const isProxyBlock = block.includes('proxy_pass') || block.includes('root /var/www/assets');
+    if (isProxyBlock) {
+      // It's an active proxy block, so it should NOT contain legacy domains in server_name
+      const lines = block.split('\n');
+      for (const line of lines) {
+        if (line.includes('server_name') && (line.includes('massarplatform.com') || line.includes('bsma-academy.com'))) {
+          fail(`Active server block in massar.conf contains legacy domain in server_name:\n${line}`);
+        }
+      }
+    }
+  }
+}
+
 function assertBrandStrings() {
   const forbidden = [/مسار أكاديمي/, /Massar Academy/, /MASSAR ACADEMY/, /Nader George/, /نادر جورج/];
   const files = new Set(checkedBrandFiles);
@@ -326,6 +348,47 @@ async function assertRuntimeHttp() {
   if (!landingAssistantLocation.startsWith(origins.assistant)) {
     fail(`landing /assistant redirects to wrong origin: ${landingAssistantLocation}`);
   }
+
+  // Verify headers and HTML data attributes for each surface
+  const surfaceNames = ['landing', 'student', 'admin', 'teacher', 'assistant'];
+  for (const name of surfaceNames) {
+    const origin = origins[name];
+    const res = await fetch(`${origin}/`);
+    
+    // 1. Verify response header
+    const responseSurface = res.headers.get('x-massar-surface');
+    if (responseSurface !== name) {
+      fail(`Expected x-massar-surface header to be "${name}" for ${origin}, got "${responseSurface}"`);
+    }
+
+    // 2. Verify HTML marker
+    const htmlText = await res.text();
+    const expectedAttr = `data-massar-surface="${name}"`;
+    if (!htmlText.includes(expectedAttr)) {
+      fail(`Expected HTML page on ${origin} to contain marker attribute '${expectedAttr}'`);
+    }
+  }
+
+  // Verify cross-surface forbidden redirects
+  const crossChecks = [
+    { from: 'student', to: 'admin', path: '/admin' },
+    { from: 'admin', to: 'student', path: '/student' },
+    { from: 'assistant', to: 'teacher', path: '/teacher' },
+  ];
+
+  for (const check of crossChecks) {
+    const fromOrigin = origins[check.from];
+    const toOrigin = origins[check.to];
+    
+    const response = await fetchManual(`${fromOrigin}${check.path}`);
+    if (![301, 302, 307, 308].includes(response.status)) {
+      fail(`Expected cross-surface request from ${check.from} to ${check.path} to redirect, got status ${response.status}`);
+    }
+    const location = response.headers.get('location') || '';
+    if (!location.startsWith(toOrigin)) {
+      fail(`Cross-surface redirect from ${check.from} to ${check.path} redirected to wrong origin: ${location} (expected starting with ${toOrigin})`);
+    }
+  }
 }
 
 async function main() {
@@ -336,6 +399,7 @@ async function main() {
   assertHealthchecks(config);
   assertFrontendEnvironment(config);
   assertCors(config);
+  assertNginxConfig();
   assertBrandStrings();
 
   if (!staticOnly) {

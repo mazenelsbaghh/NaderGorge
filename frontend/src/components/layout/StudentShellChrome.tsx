@@ -19,6 +19,7 @@ import { type CSSProperties, ReactNode, useEffect, useState, useCallback } from 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
+  Bell,
   Bug,
   BookMarked,
   ChartNoAxesColumn,
@@ -29,6 +30,7 @@ import {
   Menu,
   MessageSquareText,
   Settings,
+  User,
   Wallet,
   X,
 } from 'lucide-react';
@@ -42,6 +44,7 @@ import { useStudentTheme } from '@/hooks/useStudentTheme';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { studentService } from '@/services/student-service';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
@@ -51,7 +54,9 @@ type StudentShellRoute =
   | '/student/community'
   | '/student/balance'
   | '/student/code-redemption'
-  | '/student/mistakes';
+  | '/student/mistakes'
+  | '/student/notifications'
+  | '/student/profile';
 
 type StudentShellChromeProps = {
   children: ReactNode;
@@ -92,6 +97,8 @@ const secondaryNavItems: Array<{
 }> = [
     { href: '/student/mistakes', label: 'أخطائي', icon: Bug },
     { href: '/student/code-redemption', label: 'تفعيل كود', icon: KeyRound },
+    { href: '/student/notifications', label: 'الإشعارات', icon: Bell },
+    { href: '/student/profile', label: 'الملف الشخصي', icon: User },
     { href: '/student/balance', label: 'الرصيد', icon: Wallet },
   ];
 
@@ -122,10 +129,33 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
 
   useRootOverscrollBackground();
 
-  // Close drawer on route change
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(() => {
+    studentService.getNotifications()
+      .then((res) => {
+        const count = res.filter((n) => !n.isRead).length;
+        setUnreadCount(count);
+      })
+      .catch((err) => console.error("Error fetching notifications count:", err));
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadCount();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("notificationsUpdated", fetchUnreadCount);
+      return () => {
+        window.removeEventListener("notificationsUpdated", fetchUnreadCount);
+      };
+    }
+  }, [fetchUnreadCount]);
+
+  // Close drawer on route change and refresh unread count
   useEffect(() => {
     setIsDrawerOpen(false);
-  }, [pathname]);
+    fetchUnreadCount();
+  }, [pathname, fetchUnreadCount]);
 
   const handleLogout = () => {
     clearAuth();
@@ -146,6 +176,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         ? '/student/mistakes'
       : pathname.startsWith('/student/code-redemption')
         ? '/student/code-redemption'
+      : pathname.startsWith('/student/notifications')
+        ? '/student/notifications'
+      : pathname.startsWith('/student/profile')
+        ? '/student/profile'
         : '/student';
   const showAmbientBackground = !isFocusMode;
 
@@ -220,7 +254,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                       key={item.href}
                       href={item.href}
                       prefetch={false}
-                      className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
+                      className={`flex h-12 items-center justify-between pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
                         ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                         : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                         }`}
@@ -228,10 +262,22 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                       aria-label={item.label}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-                        {item.label}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Icon className="h-5 w-5 flex-shrink-0" />
+                          {item.href === '/student/notifications' && unreadCount > 0 && (
+                            <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
+                          )}
+                        </div>
+                        <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                          {item.label}
+                        </span>
+                      </div>
+                      {item.href === '/student/notifications' && unreadCount > 0 && (
+                        <span className="hidden group-hover/sidebar:flex mr-2 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-[10px] font-black h-5 px-1.5 rounded-full items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -308,6 +354,18 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 {/* Desktop-only header actions */}
                 <div className="hidden lg:flex items-center gap-3">
                   <SidebarBalance />
+                  <Link
+                    href="/student/notifications"
+                    className="relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                    title="الإشعارات"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 left-1 h-4.5 w-4.5 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-[9px] font-black rounded-full flex items-center justify-center">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Link>
                   <AnimatedThemeToggler
                     checked={isDark}
                     onToggle={toggleTheme}
@@ -398,17 +456,22 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 );
               })}
 
-              {/* Menu button — opens drawer */}
+               {/* Menu button — opens drawer */}
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
-                className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isDrawerOpen
+                className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] relative ${isDrawerOpen
                   ? 'text-[var(--admin-primary)]'
                   : 'text-[var(--admin-muted)]'
                   }`}
                 aria-label="القائمة"
               >
-                <Menu className="h-[22px] w-[22px]" />
+                <div className="relative">
+                  <Menu className="h-[22px] w-[22px]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -left-0.5 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
+                  )}
+                </div>
                 <span className="text-[10px] font-bold leading-none">القائمة</span>
               </button>
             </div>
@@ -484,13 +547,20 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                         key={item.href}
                         href={item.href}
                         onClick={closeDrawer}
-                        className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-all ${isActive
+                        className={`flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-bold transition-all ${isActive
                           ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                           : 'text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
                           }`}
                       >
-                        <Icon className="h-5 w-5 shrink-0" />
-                        <span>{item.label}</span>
+                        <div className="flex items-center gap-3">
+                          <Icon className="h-5 w-5 shrink-0" />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.href === '/student/notifications' && unreadCount > 0 && (
+                          <span className="bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-[10px] font-black h-5 px-2 rounded-full flex items-center justify-center">
+                            {unreadCount}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}

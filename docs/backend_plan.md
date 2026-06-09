@@ -6,6 +6,12 @@
 
 ## Active Plans
 
+### Role Pages and Permissions Completion (2026-06-09)
+- [x] Create MediatR queries/DTOs for teacher dashboard analytics in `TeacherActivity.cs`.
+- [x] Expose `GET /api/teacher/activity` inside `TeacherController.cs`.
+- [x] Create profile and notification Handlers (Queries/Commands) under `Features/Student/` and register them in `StudentController.cs`.
+- [x] Explicitly protect assistant tasks endpoints under `my/*` in `AssistantController.cs` using role authorize attributes.
+
 ### Update Default Role Permissions (2026-06-09)
 - [x] Create EF Core DB migration to update default roles (Supervisor, Staff, Assistant) with predefined permissions in the database.
 - [x] Update Seeder.cs to register these default roles with prefilled permissions.

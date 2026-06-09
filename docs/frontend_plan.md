@@ -6,6 +6,16 @@
 
 ## Active Plans
 
+### Role Pages and Permissions Completion (2026-06-09)
+- [x] Create dedicated teacher activity dashboard `/teacher/activity` rendering active student progress grids, watch stats, and alerts.
+- [x] Create student profile page `/student/profile` presenting personal details, device status, and profile update forms.
+- [x] Create student notifications page `/student/notifications` displaying in-app notification feeds.
+- [x] Update `StudentShellChrome.tsx` layout to include profile/notifications links, count unread notifications, and render notification count badges/dots.
+
+### Domain and Docker Isolation Finalization (2026-06-09)
+- [x] Configure fallback domain default to `massar-academy.net` in `frontend/src/packages/surface-runtime/config.ts`.
+- [x] Set `data-massar-surface` attribute on the `<html>` element in `frontend/src/app/layout.tsx`.
+
 ### Assistant Portal & Staff Surface (2026-06-09)
 - [x] Secure the `/assistant/*` routes and run them under AssistantGuard layout shell.
 - [x] Implement a responsive, Arabic-first sidebar/navbar in AssistantShellChrome containing Dashboard, Tasks, CRM, Chat, Attendance, Vacations, and Notifications.

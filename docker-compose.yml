@@ -23,7 +23,7 @@ x-frontend-environment: &frontend-environment
   ADMIN_PUBLIC_ORIGIN: ${ADMIN_PUBLIC_ORIGIN:-http://localhost:8740}
   TEACHER_PUBLIC_ORIGIN: ${TEACHER_PUBLIC_ORIGIN:-http://localhost:8741}
   ASSISTANT_PUBLIC_ORIGIN: ${ASSISTANT_PUBLIC_ORIGIN:-http://localhost:8742}
-  NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-massarplatform.com}
+  NEXT_PUBLIC_APP_DOMAIN: ${NEXT_PUBLIC_APP_DOMAIN:-massar-academy.net}
 
 
 
@@ -92,7 +92,7 @@ services:
       EvolutionApi__BaseUrl: ${EVOLUTION_API_BASE_URL:-}
       EvolutionApi__ApiKey: ${EVOLUTION_API_KEY:-}
       EvolutionApi__InstanceName: ${EVOLUTION_API_INSTANCE:-Massar}
-      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:8738,http://localhost:8739,http://localhost:8740,http://localhost:8741,http://localhost:8742,https://massar-academy.net,https://www.massar-academy.net,https://app.massar-academy.net,https://student.massar-academy.net,https://staff.massar-academy.net,https://super.massar-academy.net,https://teacher.massar-academy.net,https://admin.massar-academy.net,https://massarplatform.com,https://www.massarplatform.com,https://app.massarplatform.com,https://student.massarplatform.com,https://staff.massarplatform.com,https://super.massarplatform.com,https://teacher.massarplatform.com,https://bsma-academy.com,https://www.bsma-academy.com,https://app.bsma-academy.com,https://student.bsma-academy.com,https://staff.bsma-academy.com,https://super.bsma-academy.com,https://teacher.bsma-academy.com,https://admin.bsma-academy.com}
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:8738,http://localhost:8739,http://localhost:8740,http://localhost:8741,http://localhost:8742,https://massar-academy.net,https://www.massar-academy.net,https://app.massar-academy.net,https://student.massar-academy.net,https://staff.massar-academy.net,https://super.massar-academy.net,https://teacher.massar-academy.net,https://admin.massar-academy.net}
       CookieSettings__Domain: ${COOKIE_DOMAIN:-}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}

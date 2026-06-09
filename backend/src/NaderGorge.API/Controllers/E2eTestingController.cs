@@ -61,86 +61,138 @@ public class E2eTestingController : ControllerBase
 
             if (request.SeedAdmin)
             {
-                var adminUser = new User
+                var existingAdmin = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == "20000000000");
+                if (existingAdmin == null)
                 {
-                    Id = Guid.NewGuid(),
-                    FullName = "E2E Admin",
-                    PhoneNumber = "20000000000",
-                    PasswordHash = HashPassword("password"),
-                    IsActive = true,
-                    IsProfileComplete = true
-                };
-                _dbContext.Set<User>().Add(adminUser);
-                _dbContext.Set<UserRole>().Add(new UserRole { UserId = adminUser.Id, RoleId = adminRole.Id });
+                    var adminUser = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        FullName = "E2E Admin",
+                        PhoneNumber = "20000000000",
+                        PasswordHash = HashPassword("password"),
+                        IsActive = true,
+                        IsProfileComplete = true
+                    };
+                    _dbContext.Set<User>().Add(adminUser);
+                    _dbContext.Set<UserRole>().Add(new UserRole { UserId = adminUser.Id, RoleId = adminRole.Id });
+                }
+                else
+                {
+                    existingAdmin.PasswordHash = HashPassword("password");
+                    existingAdmin.IsActive = true;
+                    existingAdmin.IsProfileComplete = true;
+                }
             }
 
             if (request.SeedAssistant)
             {
-                var assistantUser = new User
+                var existingAssistant = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == "20000000003");
+                if (existingAssistant == null)
                 {
-                    Id = Guid.NewGuid(),
-                    FullName = "E2E Assistant",
-                    PhoneNumber = "20000000003",
-                    PasswordHash = HashPassword("password"),
-                    IsActive = true,
-                    IsProfileComplete = true
-                };
-                _dbContext.Set<User>().Add(assistantUser);
-                _dbContext.Set<UserRole>().Add(new UserRole { UserId = assistantUser.Id, RoleId = assistantRole.Id });
+                    var assistantUser = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        FullName = "E2E Assistant",
+                        PhoneNumber = "20000000003",
+                        PasswordHash = HashPassword("password"),
+                        IsActive = true,
+                        IsProfileComplete = true
+                    };
+                    _dbContext.Set<User>().Add(assistantUser);
+                    _dbContext.Set<UserRole>().Add(new UserRole { UserId = assistantUser.Id, RoleId = assistantRole.Id });
+                }
+                else
+                {
+                    existingAssistant.PasswordHash = HashPassword("password");
+                    existingAssistant.IsActive = true;
+                    existingAssistant.IsProfileComplete = true;
+                }
             }
 
             if (request.SeedTeacher)
             {
-                var teacherUser = new User
+                var existingTeacher = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == "20000000004");
+                if (existingTeacher == null)
                 {
-                    Id = Guid.NewGuid(),
-                    FullName = "E2E Teacher",
-                    PhoneNumber = "20000000004",
-                    PasswordHash = HashPassword("password"),
-                    IsActive = true,
-                    IsProfileComplete = true
-                };
-                _dbContext.Set<User>().Add(teacherUser);
-                _dbContext.Set<UserRole>().Add(new UserRole { UserId = teacherUser.Id, RoleId = teacherRole.Id });
+                    var teacherUser = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        FullName = "E2E Teacher",
+                        PhoneNumber = "20000000004",
+                        PasswordHash = HashPassword("password"),
+                        IsActive = true,
+                        IsProfileComplete = true
+                    };
+                    _dbContext.Set<User>().Add(teacherUser);
+                    _dbContext.Set<UserRole>().Add(new UserRole { UserId = teacherUser.Id, RoleId = teacherRole.Id });
 
-                var teacherProfile = new TeacherProfile
+                    var teacherProfile = new TeacherProfile
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = teacherUser.Id,
+                        CommissionRate = 0.20m,
+                        Bio = "E2E Teacher Bio",
+                        Specialization = "Physics"
+                    };
+                    _dbContext.Set<TeacherProfile>().Add(teacherProfile);
+                }
+                else
                 {
-                    Id = Guid.NewGuid(),
-                    UserId = teacherUser.Id,
-                    CommissionRate = 0.20m,
-                    Bio = "E2E Teacher Bio",
-                    Specialization = "Physics"
-                };
-                _dbContext.Set<TeacherProfile>().Add(teacherProfile);
+                    existingTeacher.PasswordHash = HashPassword("password");
+                    existingTeacher.IsActive = true;
+                    existingTeacher.IsProfileComplete = true;
+                }
             }
 
             if (request.SeedStudents)
             {
-                var student1 = new User
+                var existingStudent1 = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == "20000000001");
+                if (existingStudent1 == null)
                 {
-                    Id = Guid.NewGuid(),
-                    FullName = "E2E Student 1",
-                    PhoneNumber = "20000000001",
-                    PasswordHash = HashPassword("password"),
-                    IsActive = true,
-                    IsProfileComplete = true
-                };
-                var student2 = new User
+                    var student1 = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        FullName = "E2E Student 1",
+                        PhoneNumber = "20000000001",
+                        PasswordHash = HashPassword("password"),
+                        IsActive = true,
+                        IsProfileComplete = true
+                    };
+                    _dbContext.Set<User>().Add(student1);
+                    _dbContext.Set<UserRole>().Add(new UserRole { UserId = student1.Id, RoleId = studentRole.Id });
+                }
+                else
                 {
-                    Id = Guid.NewGuid(),
-                    FullName = "E2E Student MaxDevices",
-                    PhoneNumber = "20000000002",
-                    PasswordHash = HashPassword("password"),
-                    IsActive = true,
-                    IsProfileComplete = true
-                };
-                _dbContext.Set<User>().AddRange(student1, student2);
-                _dbContext.Set<UserRole>().Add(new UserRole { UserId = student1.Id, RoleId = studentRole.Id });
-                _dbContext.Set<UserRole>().Add(new UserRole { UserId = student2.Id, RoleId = studentRole.Id });
+                    existingStudent1.PasswordHash = HashPassword("password");
+                    existingStudent1.IsActive = true;
+                    existingStudent1.IsProfileComplete = true;
+                }
 
-                // Pre-register 2 devices for student2 to test device limits
-                _dbContext.Set<Device>().Add(new Device { UserId = student2.Id, DeviceFingerprint = "e2e-dev1", DeviceName = "Dev1", IpAddress = "127.0.0.1", IsActive = true, LastUsedAt = DateTime.UtcNow });
-                _dbContext.Set<Device>().Add(new Device { UserId = student2.Id, DeviceFingerprint = "e2e-dev2", DeviceName = "Dev2", IpAddress = "127.0.0.1", IsActive = true, LastUsedAt = DateTime.UtcNow });
+                var existingStudent2 = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == "20000000002");
+                if (existingStudent2 == null)
+                {
+                    var student2 = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        FullName = "E2E Student MaxDevices",
+                        PhoneNumber = "20000000002",
+                        PasswordHash = HashPassword("password"),
+                        IsActive = true,
+                        IsProfileComplete = true
+                    };
+                    _dbContext.Set<User>().Add(student2);
+                    _dbContext.Set<UserRole>().Add(new UserRole { UserId = student2.Id, RoleId = studentRole.Id });
+
+                    // Pre-register 2 devices for student2 to test device limits
+                    _dbContext.Set<Device>().Add(new Device { UserId = student2.Id, DeviceFingerprint = "e2e-dev1", DeviceName = "Dev1", IpAddress = "127.0.0.1", IsActive = true, LastUsedAt = DateTime.UtcNow });
+                    _dbContext.Set<Device>().Add(new Device { UserId = student2.Id, DeviceFingerprint = "e2e-dev2", DeviceName = "Dev2", IpAddress = "127.0.0.1", IsActive = true, LastUsedAt = DateTime.UtcNow });
+                }
+                else
+                {
+                    existingStudent2.PasswordHash = HashPassword("password");
+                    existingStudent2.IsActive = true;
+                    existingStudent2.IsProfileComplete = true;
+                }
             }
 
             await _dbContext.SaveChangesAsync();

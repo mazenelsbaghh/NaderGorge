@@ -6,6 +6,11 @@
 
 ## Active Plans
 
+### Deploy Domain and Docker Isolation Finalization (2026-06-09)
+- [x] Consolidate `Cors__AllowedOrigins` and `NEXT_PUBLIC_APP_DOMAIN` in `docker-compose.yml`.
+- [x] Configure 301 redirects and consolidate subdomains in `docker/nginx/massar.conf`.
+- [x] Add automated static and runtime tests to `scripts/verify-surface-separation.mjs`.
+
 ### Deploy Assistant Surface and Task Workflow (2026-06-09)
 - [x] Rebuild shared frontend docker image `massar_frontend:local`.
 - [x] Recreate and restart assistant container `massar_assistant` via docker compose.

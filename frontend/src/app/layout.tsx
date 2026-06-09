@@ -4,6 +4,7 @@ import { Tajawal, Montserrat } from "next/font/google";
 import "./globals.css";
 import { AuthBootstrap } from "@/components/layout/AuthBootstrap";
 import { GlobalNav } from "@/components/layout/GlobalNav";
+import { getSurfaceName } from "@/packages/surface-runtime/config";
 
 const tajawal = Tajawal({
   variable: "--font-tajawal",
@@ -47,10 +48,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const surface = getSurfaceName();
   return (
     <html
       lang="ar"
       dir="rtl"
+      data-massar-surface={surface}
       className={`${tajawal.variable} ${montserrat.variable} h-full antialiased`}
       suppressHydrationWarning
     >

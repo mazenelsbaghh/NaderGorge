@@ -49,6 +49,13 @@ public class TeacherController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("activity")]
+    public async Task<IActionResult> GetActivity()
+    {
+        var result = await _mediator.Send(new GetTeacherActivityQuery(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("profile")]
     public async Task<IActionResult> GetProfile()
     {
