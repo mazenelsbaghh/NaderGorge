@@ -50,7 +50,13 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
         var isStaff = roles.Any(r => !string.Equals(r, "Student", StringComparison.OrdinalIgnoreCase));
 
-        if (string.Equals(request.AppSurface, "admin", StringComparison.OrdinalIgnoreCase))
+        var isStaffSurface = 
+            string.Equals(request.AppSurface, "admin", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.AppSurface, "assistant", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.AppSurface, "staff", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(request.AppSurface, "teacher", StringComparison.OrdinalIgnoreCase);
+
+        if (isStaffSurface)
         {
             if (!isStaff)
             {
