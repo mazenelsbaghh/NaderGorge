@@ -7,6 +7,8 @@ import {
   replaceStoredTokens,
 } from '@/lib/auth-storage';
 
+import { getSurfaceName } from '@/packages/surface-runtime/config';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api';
 
 const apiClient = axios.create({
@@ -14,7 +16,6 @@ const apiClient = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
-    'X-App-Surface': process.env.NEXT_PUBLIC_APP_SURFACE || '',
   },
 });
 
@@ -22,9 +23,12 @@ const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/p
 const RATE_LIMIT_TOAST_COOLDOWN_MS = 4_000;
 let lastRateLimitToastAt = 0;
 
-// Request interceptor: attach JWT token
+// Request interceptor: attach JWT token and dynamic surface header
 apiClient.interceptors.request.use(
   (config) => {
+    config.headers = config.headers || {};
+    config.headers['X-App-Surface'] = getSurfaceName();
+
     const token = getStoredAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

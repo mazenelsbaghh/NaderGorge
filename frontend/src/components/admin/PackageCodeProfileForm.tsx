@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useId } from 'react';
 import type { ReactNode } from 'react';
 import { AlertTriangle, RotateCcw, Save, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -322,10 +322,11 @@ function InputField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const id = useId();
   return (
     <div className="space-y-2">
-      <label className="text-sm font-bold text-[var(--admin-text)]">{label}</label>
-      <input value={value} onChange={(e) => onChange(e.target.value)} className="admin-input" />
+      <label htmlFor={id} className="text-sm font-bold text-[var(--admin-text)]">{label}</label>
+      <input id={id} value={value} onChange={(e) => onChange(e.target.value)} className="admin-input" />
     </div>
   );
 }
@@ -341,10 +342,11 @@ function TextareaField({
   rows: number;
   onChange: (value: string) => void;
 }) {
+  const id = useId();
   return (
     <div className="space-y-2">
-      <label className="text-sm font-bold text-[var(--admin-text)]">{label}</label>
-      <textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} className="admin-input" />
+      <label htmlFor={id} className="text-sm font-bold text-[var(--admin-text)]">{label}</label>
+      <textarea id={id} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} className="admin-input" />
     </div>
   );
 }

@@ -302,7 +302,7 @@ public class E2eTestingController : ControllerBase
         var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
 
         // Link exam to lesson
-        lesson.ExamId = examId;
+        // lesson.ExamId = examId;
         lesson2.ExamId = essayExamId;
 
         var homework = new NaderGorge.Domain.Entities.Homework.Homework

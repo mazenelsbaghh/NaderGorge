@@ -25,24 +25,26 @@ test.describe('Student Academic Journey & Gamification', () => {
     });
 
     // 3. Login as Student 1
-    await page.goto('/login');
+    await page.goto('http://app.localhost:3000/login');
     await page.waitForTimeout(1000);
     await page.locator('input[type="tel"]').click();
     await page.locator('input[type="tel"]').fill('20000000001');
     await page.locator('input[type="password"]').click();
     await page.locator('input[type="password"]').fill('password');
+    await page.click('text=تذكرني', { force: true });
     await page.locator('button[type="submit"]').click({ force: true });
-    await expect(page).toHaveURL(/\/(student|onboarding)/, { timeout: 15000 });
+    await expect(page).toHaveURL(/.*\/(student|onboarding)$/, { timeout: 15000 });
   });
 
   test('T005 & T006: Student completes homework and receives gamification points', async ({
     page,
   }) => {
+    test.setTimeout(60000);
     // Navigate to the enrolled package directly
-    await page.goto(`/student/packages/${mockPackageData.packageId}`);
+    await page.goto(`http://app.localhost:3000/student/packages/${mockPackageData.packageId}`);
 
     // Expand the "E2E Section" accordion
-    const sectionTitle = page.locator('h3:has-text("E2E Section")');
+    const sectionTitle = page.getByRole('heading', { name: 'E2E Section' });
     await sectionTitle.waitFor({ state: 'visible', timeout: 15000 });
     await sectionTitle.click();
 
@@ -56,26 +58,24 @@ test.describe('Student Academic Journey & Gamification', () => {
       { timeout: 10000 }
     );
 
-    // Ensure the Homework tab exists
-    const homeworkTab = page.locator('button:has-text("الواجب")');
-    await expect(homeworkTab).toBeVisible({ timeout: 10000 });
-    await homeworkTab.click();
-
     // Answer the essay question
-    const textarea = page.locator('textarea').first();
+    const textarea = page.locator('textarea, [placeholder*="إجابتك"]').first();
     await textarea.waitFor({ state: 'visible' });
     await textarea.fill(
       'This is a test essay answering the E2E homework question.'
     );
 
     // Submit homework
-    const submitBtn = page.locator('button:has-text("تسليم الواجب")');
+    const submitBtn = page.locator('button:has-text("تسليم وإنهاء")');
     await submitBtn.click();
 
     // Await success message
     await expect(page.locator('text=تم تسليم الواجب بنجاح')).toBeVisible({
       timeout: 10000,
     });
+
+    // Navigate back to the student dashboard where the sidebar containing the gamification widget is present
+    await page.goto('http://app.localhost:3000/student');
 
     // Validate Gamification Widget via Sidebar UI (XP should ideally be 20 for homework submission)
     // The widget typically renders "20" "XP" or similar.

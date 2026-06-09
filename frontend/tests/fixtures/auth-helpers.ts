@@ -36,12 +36,13 @@ export async function authenticateE2E(
   isNewStudent = false,
   password = 'TestPass123!'
 ) {
-  await page.goto('/login');
+  await page.goto('http://app.localhost:3000/login');
 
   // Fill in credentials
   await page.fill('input[name="phoneNumber"]', phone);
   // Default to the common test password or one passed in
   await page.fill('input[name="password"]', password);
+  await page.click('text=تذكرني', { force: true });
   // Force click to bypass any animation overlays like feature-carousel intercepting pointer events
   await page.click('button[type="submit"]', { force: true });
 

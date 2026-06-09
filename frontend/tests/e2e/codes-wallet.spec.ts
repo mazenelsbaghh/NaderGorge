@@ -8,27 +8,41 @@ test.describe('US1: Codes & Wallet Lifecycle', () => {
   const student = generateStudentContext();
   let generatedCode = '';
 
+  test.beforeAll(async ({ request }) => {
+    // Destroy and recreate E2E DB state + seed teacher fallback and mock package
+    const setupResponse = await request.post(
+      'http://localhost:5245/api/e2e/setup-mock-package'
+    );
+    expect(setupResponse.ok()).toBeTruthy();
+
+    await request.post('http://localhost:5245/api/e2e/clear-devices', {
+      data: { phoneNumber: '20000000001' },
+    });
+  });
+
   test('T008: Admin Bulk Generation generates a 500 EGP balance code', async ({
     browser,
   }) => {
+    test.setTimeout(60000);
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
 
     // Admin login
-    await adminPage.goto('/login');
+    await adminPage.goto('http://admin.localhost:3000/login');
 
     // Fill admin phone and password (seeded from E2E Controller)
     await adminPage.fill('input[name="phoneNumber"]', '20000000000');
     await adminPage.fill('input[name="password"]', 'password');
+    await adminPage.click('text=تذكرني', { force: true });
     await adminPage.click('button[type="submit"]', { force: true });
 
     // Wait for dashboard Navigation
-    await expect(adminPage.locator('text=الرئيسية')).toBeVisible({
-      timeout: 10000,
+    await expect(adminPage.getByRole('heading', { name: 'الرئيسية' })).toBeVisible({
+      timeout: 15000,
     });
 
     // Navigate to code generation
-    await adminPage.goto('/admin/codes');
+    await adminPage.goto('http://admin.localhost:3000/admin/codes');
     
     // Open Generation Modal
     await adminPage.click('button:has-text("إنشاء دفعة جديدة")');
@@ -48,56 +62,54 @@ test.describe('US1: Codes & Wallet Lifecycle', () => {
     // Assuming the system redirects to code details or shows the code
     await expect(
       adminPage.locator('text=تم التوليد بنجاح!').first()
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
+    await adminPage.waitForTimeout(1000);
 
-    // The code isn't directly visible without clicking details in the new UI.
-    // We generated 1 bulk code and the backend API returned it. Since E2E does e2e,
-    // we should click the first "التفاصيل" (Details) to see it or bypass this part.
-    // For simplicity of E2E, assuming we injected a predictable code in Seed or we just mock test.
-    
-    // Instead of failing the next step, let's grab it via UI if it renders, otherwise rely on backend mock
-    const codeElements = await adminPage
-      .locator('span.font-mono')
-      .allInnerTexts();
-    if (codeElements.length > 0) {
-      generatedCode = codeElements[0];
-    } else {
-      // Fallback: the system may allow downloading a CSV or display it somewhere else.
-      // For the E2E framework simplicity, we will query the backend API directly to steal the last generated code
-      // if UI parsing is brittle.
+    // Navigate to code details to extract the generated code
+    await adminPage.locator('button[title="عرض التفاصيل والطباعة"]').first().click({ force: true });
+    await adminPage.waitForURL(/.*\/admin\/codes\/[0-9a-fA-F-]+$/, { timeout: 15000 });
 
-      // Since we generated just 1 code, let's just assert the generation worked for now
-      // In a real environment we'd fetch it deterministicly.
-      generatedCode = 'E2E-TEST-CODE';
-    }
+    // Extract generated code from table
+    const codeCell = adminPage.locator('tbody tr').first().locator('td').nth(1);
+    await expect(codeCell).toBeVisible({ timeout: 15000 });
+    generatedCode = (await codeCell.innerText()).trim();
+    console.log('--- EXTRACTED CODE FROM UI:', generatedCode);
 
     await adminContext.close();
   });
 
-  test('T009: Student Registration completes successfully', async ({
+  test('T009 & T010 & T011: Student Registration, Code Redemption, and Wallet Purchase', async ({
     page,
   }) => {
-    await page.goto('/register');
+    test.setTimeout(60000);
+    await page.goto('http://app.localhost:3000/register');
 
     // Step 1: Identity
     await page.fill(
       'input[name="fullName"]',
       `Student ${student.randomSuffix} test test`
     );
-    await page.fill('input[name="studentCode"]', 'STU' + student.randomSuffix);
     await page.fill('input[name="phoneNumber"]', student.phone);
     await page.fill('input[name="dateOfBirth"]', '2005-06-15');
     await page.selectOption('select[name="gender"]', 'Male');
+    await page.selectOption('select[name="nationality"]', 'مصري');
     await page.selectOption('select[name="governorate"]', 'القاهرة');
+    await page.selectOption('select[name="district"]', { index: 1 });
     await page.fill('input[name="address"]', '123 Test St');
     await page.click('button:has-text("التالي")');
 
     // Step 2: Guardian
     await page.fill('input[name="parentPhone"]', '010123456' + student.randomSuffix, { force: true });
+    await page.fill('input[name="fatherDateOfBirth"]', '1970-01-01', { force: true });
+    await page.fill('input[name="motherPhone"]', '010876543' + student.randomSuffix, { force: true });
+    await page.fill('input[name="motherDateOfBirth"]', '1975-01-01', { force: true });
+    await page.fill('input[name="secondaryParentPhone"]', '01011112222', { force: true });
     await page.click('button:has-text("التالي")', { force: true });
 
     // Step 3: Academic
     await expect(page.locator('select[name="educationStage"]')).toBeVisible();
+    await page.fill('input[name="schoolName"]', 'E2E School');
+    await page.selectOption('select[name="schoolType"]', { index: 1 });
     await page.selectOption('select[name="educationStage"]', 'Secondary', { force: true });
     await page.selectOption('select[name="gradeLevel"]', 'FirstSecondary', { force: true });
     await page.click('button:has-text("التالي")', { force: true });
@@ -110,30 +122,41 @@ test.describe('US1: Codes & Wallet Lifecycle', () => {
     // Submit final registration step
     await page.click('button[type="submit"]', { force: true });
     
-    // Wait for login redirection
-    await expect(page).toHaveURL(/.*\/login\?registered=true/);
-  });
+    // Wait for login redirection directly to student portal
+    await expect(page).toHaveURL(/.*\/student/, { timeout: 15000 });
 
-  test('T010 & T011: Code Redemption and Wallet Purchase', async ({ page }) => {
-    // 1. Authenticate as the generated student
-    await authenticateE2E(page, student.phone, false);
+    // Dismiss terms and conditions dialog
+    const termsBtn = page.locator('button:has-text("أوافق وأرغب في استكمال استخدام المنصة")');
+    await expect(termsBtn).toBeVisible({ timeout: 10000 });
+    await termsBtn.click({ force: true });
 
-    // 2. Navigate to Wallet (Assuming /student/balance or code-redemption)
-    await page.goto('/student/code-redemption');
+    // 2. Navigate to Wallet/Code Redemption page
+    await page.goto('http://app.localhost:3000/student/code-redemption');
 
-    // 3. Redeem code
-    await page.fill('input[name="code"]', generatedCode); // Changed to typical input name
-    await page.click('button:has-text("شحن الرصيد"), button[type="submit"]');
+    // 3. Redeem code using the student-code-activation-input ID
+    await page.fill('#student-code-activation-input', generatedCode);
+    await page.click('button:has-text("تفعيل الكود")');
 
-    // 4. Verify balance updated (mock code logic normally requires actual backend integration)
-    // If generatedCode was "E2E-TEST-CODE", backend might fail. For true E2E this is where we rely
-    // on fetching the DB code. Since we are specifying the tasks, we assume UI testing.
-    await expect(page.locator('text=تم')).toBeVisible();
+    // Confirm code activation on confirmation screen
+    await page.click('button:has-text("تأكيد التفعيل")');
+
+    // 4. Verify balance updated (success container is visible)
+    await expect(page.locator('#student-code-activation-success')).toBeVisible({ timeout: 10000 });
 
     // 5. Direct Purchase Check
-    await page.goto('/student/packages');
-    // Click on a package worth less than 500 (might need dynamic locator later)
-    await page.click('button:has-text("شراء"), button:has-text("اشترك")');
-    await expect(page.locator('text=نجاح')).toBeVisible();
+    await page.goto('http://app.localhost:3000/student/packages');
+    
+    // Click "استعرض الباقة" for the mock package
+    await page.locator('button:has-text("استعرض الباقة")').first().click();
+    await expect(page).toHaveURL(/.*\/packages\/.*/);
+
+    // Click "شراء الباقة" (Buy Package)
+    await page.click('button:has-text("شراء الباقة")');
+
+    // Click "تأكيد الخصم والشراء" inside the purchase modal
+    await page.click('button:has-text("تأكيد الخصم والشراء")');
+
+    // Verify successful purchase
+    await expect(page.locator('text=تم الشراء بنجاح!')).toBeVisible({ timeout: 10000 });
   });
 });

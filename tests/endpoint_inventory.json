@@ -10,7 +10,7 @@
   "endpointCount": 227,
   "frontendCallCount": 224,
   "missingFrontendRouteCount": 0,
-  "digest": "03c0cb520c0e3f9b6ab5dbc456dbfcfdb69bdd54af41cf7b7f33224ca3bb37cc",
+  "digest": "f682ce1e73279ba08173a970ff59aca8e5011da76d7522e79f3add7e939713a3",
   "endpoints": [
     {
       "controller": "AdminCommunityController",
@@ -4048,7 +4048,7 @@
       "rawExpression": "`${API_BASE_URL}/auth/refresh`",
       "source": {
         "file": "frontend/src/services/api-client.ts",
-        "line": 55
+        "line": 59
       }
     },
     {

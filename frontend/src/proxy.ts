@@ -3,19 +3,45 @@ import type { NextRequest } from 'next/server';
 
 import {
   getRouteBoundaryDecision,
-  getSurfaceName,
-  getSurfaceOrigins,
 } from '@/packages/surface-runtime/config';
+import type { SurfaceName } from '@/packages/surface-runtime/config';
 
 function withSurfaceHeader(response: NextResponse, surface: string) {
   response.headers.set('x-massar-surface', surface);
   return response;
 }
 
+function detectSurfaceFromRequest(request: NextRequest): SurfaceName {
+  const envSurface = process.env.APP_SURFACE || process.env.NEXT_PUBLIC_APP_SURFACE;
+  if (envSurface === 'landing' || envSurface === 'student' || envSurface === 'admin' || envSurface === 'teacher' || envSurface === 'assistant') {
+    return envSurface;
+  }
+
+  const hostname = request.headers.get('host') || '';
+  const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
+
+  if (isLocal) {
+    const port = request.nextUrl.port || new URL(request.url).port;
+    if (port === '8738') return 'landing';
+    if (port === '8739') return 'student';
+    if (port === '8740') return 'admin';
+    if (port === '8741') return 'teacher';
+    if (port === '8742') return 'assistant';
+  }
+
+  if (hostname.startsWith('admin.') || hostname.startsWith('super.')) return 'admin';
+  if (hostname.startsWith('app.') || hostname.startsWith('student.')) return 'student';
+  if (hostname.startsWith('teacher.')) return 'teacher';
+  if (hostname.startsWith('staff.') || hostname.startsWith('assistant.')) return 'assistant';
+
+  return 'landing';
+}
+
 export function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
   const hostname = request.headers.get('host') || '';
-  const surface = getSurfaceName();
+  const surface = detectSurfaceFromRequest(request);
+
   const surfaceDecision = getRouteBoundaryDecision({
     surface,
     pathname: url.pathname,
@@ -29,98 +55,28 @@ export function proxy(request: NextRequest) {
   }
 
   if (surfaceDecision.action === 'redirect' && surfaceDecision.destination) {
-    return withSurfaceHeader(NextResponse.redirect(surfaceDecision.destination), surfaceDecision.surface);
+    return withSurfaceHeader(NextResponse.redirect(new URL(surfaceDecision.destination, request.url)), surfaceDecision.surface);
   }
 
-  if (surface !== 'all') {
-    return withSurfaceHeader(NextResponse.next(), surface);
+  // Handle subdomain root rewrites (e.g. "/" on app.massar-academy.net goes to "/student")
+  if (surface === 'admin' && url.pathname === '/') {
+    url.pathname = '/admin';
+    return withSurfaceHeader(NextResponse.rewrite(url), 'admin');
+  }
+  if (surface === 'student' && url.pathname === '/') {
+    url.pathname = '/student';
+    return withSurfaceHeader(NextResponse.rewrite(url), 'student');
+  }
+  if (surface === 'teacher' && url.pathname === '/') {
+    url.pathname = '/teacher';
+    return withSurfaceHeader(NextResponse.rewrite(url), 'teacher');
+  }
+  if (surface === 'assistant' && url.pathname === '/') {
+    url.pathname = '/assistant';
+    return withSurfaceHeader(NextResponse.rewrite(url), 'assistant');
   }
 
-  const { mainDomain } = getSurfaceOrigins();
-  const isAdminSubdomain = hostname.startsWith('admin.') || hostname.startsWith('super.');
-  const isStudentSubdomain = hostname.startsWith('app.') || hostname.startsWith('student.');
-  const isTeacherSubdomain = hostname.startsWith('teacher.');
-  const isAssistantSubdomain = hostname.startsWith('staff.') || hostname.startsWith('assistant.');
-
-  const proto = request.headers.get('x-forwarded-proto') || 'https';
-
-  if (isAdminSubdomain) {
-    if (url.pathname === '/') {
-      url.pathname = '/admin';
-      return withSurfaceHeader(NextResponse.rewrite(url), 'admin');
-    }
-
-    if (url.pathname.startsWith('/student') || url.pathname.startsWith('/teacher') || url.pathname.startsWith('/assistant')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
-        'admin',
-      );
-    }
-  } else if (isStudentSubdomain) {
-    if (url.pathname === '/') {
-      url.pathname = '/student';
-      return withSurfaceHeader(NextResponse.rewrite(url), 'student');
-    }
-
-    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/teacher') || url.pathname.startsWith('/assistant')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
-        'student',
-      );
-    }
-  } else if (isTeacherSubdomain) {
-    if (url.pathname === '/') {
-      url.pathname = '/teacher';
-      return withSurfaceHeader(NextResponse.rewrite(url), 'teacher');
-    }
-
-    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/student') || url.pathname.startsWith('/assistant')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
-        'teacher',
-      );
-    }
-  } else if (isAssistantSubdomain) {
-    if (url.pathname === '/') {
-      url.pathname = '/assistant';
-      return withSurfaceHeader(NextResponse.rewrite(url), 'assistant');
-    }
-
-    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/student') || url.pathname.startsWith('/teacher')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
-        'assistant',
-      );
-    }
-  } else {
-    // If accessing landing domain with administrative/student paths, redirect to proper subdomains
-    if (url.pathname.startsWith('/admin')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://admin.${mainDomain}/admin`, request.url)),
-        'landing'
-      );
-    }
-    if (url.pathname.startsWith('/student')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://app.${mainDomain}/student`, request.url)),
-        'landing'
-      );
-    }
-    if (url.pathname.startsWith('/teacher')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://teacher.${mainDomain}/teacher`, request.url)),
-        'landing'
-      );
-    }
-    if (url.pathname.startsWith('/assistant')) {
-      return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://staff.${mainDomain}/assistant`, request.url)),
-        'landing'
-      );
-    }
-  }
-
-  return withSurfaceHeader(NextResponse.next(), 'all');
+  return withSurfaceHeader(NextResponse.next(), surface);
 }
 
 export const config = {

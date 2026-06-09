@@ -365,7 +365,7 @@ export default function AdminContentPage() {
     try {
       setLoading(true);
       const [packagesRes, subjectsRes, teachersRes, programsRes] = await Promise.all([
-        contentService.getPackages(),
+        contentService.getPackages({ force: true }),
         teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
         teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] })),
         adminService.listPrograms().catch(() => [] as AdminProgramDto[])

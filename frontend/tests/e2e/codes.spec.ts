@@ -21,19 +21,21 @@ test.describe('Access Codes Generation & Redemption Flow', () => {
     const page = await context.newPage();
 
     // Login as admin
-    await page.goto('/login');
-    await page.fill('input[type="tel"]', '20000000000');
-    await page.fill('input[type="password"]', 'password');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/admin/, { timeout: 15000 });
+    await page.goto('http://admin.localhost:3000/login');
+    await page.waitForTimeout(1000);
+    await page.fill('input[name="phoneNumber"]', '20000000000');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('text=تذكرني', { force: true });
+    await page.click('button[type="submit"]', { force: true });
+    await expect(page).toHaveURL(/.*\/admin$/, { timeout: 15000 });
 
     // Navigate to codes page
-    await page.goto('/admin/codes');
+    await page.goto('http://admin.localhost:3000/admin/codes');
     await expect(
-      page.getByRole('heading', { name: 'Access Codes' })
+      page.getByRole('heading', { name: 'مجموعات أكواد الوصول' })
     ).toBeVisible({ timeout: 10000 });
-    // "BullMQ Bulk Generate" button should exist
-    await expect(page.getByText('BullMQ Bulk Generate')).toBeVisible();
+    // "إنشاء دفعة جديدة" button should exist
+    await expect(page.getByText('إنشاء دفعة جديدة').first()).toBeVisible();
 
     await context.close();
   });
@@ -43,14 +45,16 @@ test.describe('Access Codes Generation & Redemption Flow', () => {
     const page = await context.newPage();
 
     // Login as student
-    await page.goto('/login');
-    await page.fill('input[type="tel"]', '20000000001');
-    await page.fill('input[type="password"]', 'password');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/student/, { timeout: 15000 });
+    await page.goto('http://app.localhost:3000/login');
+    await page.waitForTimeout(1000);
+    await page.fill('input[name="phoneNumber"]', '20000000001');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('text=تذكرني', { force: true });
+    await page.click('button[type="submit"]', { force: true });
+    await expect(page).toHaveURL(/.*\/student$/, { timeout: 15000 });
 
     // Navigate to code redemption page
-    await page.goto('/student/code-redemption');
+    await page.goto('http://app.localhost:3000/student/code-redemption');
     // Verify the page loads
     await expect(page).toHaveURL(/\/student\/code-redemption/);
 

@@ -6,6 +6,14 @@
 
 ## Active Plans
 
+### Surface Login and Access Contract (2026-06-09)
+- [ ] Create Next.js middleware `frontend/src/middleware.ts` to execute proxy boundaries.
+- [ ] Configure local dev port detection and cross-surface path restrictions (rewrite to 404) in `frontend/src/packages/surface-runtime/config.ts` and `frontend/src/proxy.ts`.
+- [ ] Add branded 404 error page at `frontend/src/app/not-found.tsx`.
+- [ ] Customize login titles and subtitles dynamically by surface in `frontend/src/app/(public)/login/page.tsx`.
+- [ ] Implement relative `returnUrl` validation in `LoginForm.tsx` and `login/page.tsx`.
+- [ ] Update boundary assertions in `scripts/verify-surface-separation.mjs`.
+
 ### Role Pages and Permissions Completion (2026-06-09)
 - [x] Create dedicated teacher activity dashboard `/teacher/activity` rendering active student progress grids, watch stats, and alerts.
 - [x] Create student profile page `/student/profile` presenting personal details, device status, and profile update forms.

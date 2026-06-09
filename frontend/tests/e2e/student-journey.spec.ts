@@ -20,18 +20,19 @@ test.describe('Student Lesson Consumption and Exams', () => {
     });
 
     // 3. Login as Student 1
-    await page.goto('/login');
+    await page.goto('http://app.localhost:3000/login');
     await page.waitForTimeout(1000);
     await page.locator('input[type="tel"]').click();
     await page.locator('input[type="tel"]').fill('20000000001');
     await page.locator('input[type="password"]').click();
     await page.locator('input[type="password"]').fill('password');
+    await page.click('text=تذكرني', { force: true });
     await page.locator('button[type="submit"]').click({ force: true });
-    await expect(page).toHaveURL(/\/student/, { timeout: 15000 });
+    await expect(page).toHaveURL(/.*\/student$/, { timeout: 15000 });
   });
 
   test('T012: Student can see enrolled package', async ({ page }) => {
-    await page.goto('/student/packages');
+    await page.goto('http://app.localhost:3000/student/packages');
 
     // Wait for packages to load
     await expect(page.locator('text=الباقات المفعّلة').first()).toBeVisible({
@@ -54,10 +55,12 @@ test.describe('Student Lesson Consumption and Exams', () => {
   });
 
   test('T013: Student dashboard loads correctly', async ({ page }) => {
-    await page.goto('/student');
+    await page.goto('http://app.localhost:3000/student');
     await expect(page.locator('text=بوابة الطالب').first()).toBeVisible({
       timeout: 10000,
     });
+    // Hover over the sidebar on desktop to make the labels visible
+    await page.locator('aside').first().hover();
     await expect(page.locator('text=باقاتي').first()).toBeVisible();
     await expect(page.locator('text=تفعيل كود').first()).toBeVisible();
   });

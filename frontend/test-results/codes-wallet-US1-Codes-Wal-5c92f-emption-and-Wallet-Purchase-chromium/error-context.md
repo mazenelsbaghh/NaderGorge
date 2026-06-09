@@ -1,0 +1,135 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - navigation "القائمة الرئيسية" [ref=e4]:
+      - generic [ref=e5]:
+        - button "فتح إعدادات مظهر الطالب" [ref=e6]:
+          - generic [ref=e8]: S7
+        - navigation [ref=e9]:
+          - link "لوحة التحكم" [ref=e10] [cursor=pointer]:
+            - /url: /student
+            - img [ref=e11]
+          - link "باقاتي" [ref=e14] [cursor=pointer]:
+            - /url: /student/packages
+            - img [ref=e17]
+          - link "المجتمع" [ref=e20] [cursor=pointer]:
+            - /url: /student/community
+            - img [ref=e23]
+          - link "أخطائي" [ref=e25] [cursor=pointer]:
+            - /url: /student/mistakes
+            - img [ref=e28]
+          - link "تفعيل كود" [ref=e37] [cursor=pointer]:
+            - /url: /student/code-redemption
+            - img [ref=e40]
+          - link "الإشعارات" [ref=e43] [cursor=pointer]:
+            - /url: /student/notifications
+            - img [ref=e46]
+          - link "الملف الشخصي" [ref=e49] [cursor=pointer]:
+            - /url: /student/profile
+            - img [ref=e52]
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - link "500 ج.م" [ref=e57] [cursor=pointer]:
+            - /url: /student/balance
+            - img [ref=e58]
+            - generic [ref=e61]: 500 ج.م
+          - 'generic "نقاطي: 0" [ref=e62]':
+            - img [ref=e63]
+            - generic [ref=e65]: "0"
+        - button "التحويل إلى الوضع الداكن" [ref=e67]:
+          - img [ref=e68]
+          - generic [ref=e70]: Toggle theme
+        - button "إعدادات الثيم" [ref=e71]:
+          - img [ref=e72]
+        - button "تسجيل الخروج" [ref=e75]:
+          - img [ref=e76]
+    - main [ref=e79]:
+      - generic [ref=e81]:
+        - navigation [ref=e82]:
+          - generic [ref=e83]: المساحة الدراسية
+          - img [ref=e84]
+          - generic [ref=e86]: بوابة الطالب
+        - generic [ref=e87]:
+          - link "500 ج.م" [ref=e88] [cursor=pointer]:
+            - /url: /student/balance
+            - img [ref=e89]
+            - generic [ref=e92]: 500 ج.م
+          - link "الإشعارات" [ref=e93] [cursor=pointer]:
+            - /url: /student/notifications
+            - img [ref=e94]
+          - button "التحويل إلى الوضع الداكن" [ref=e97]:
+            - img [ref=e98]
+            - generic [ref=e100]: Toggle theme
+          - button "S7" [ref=e101]:
+            - generic [ref=e103]: S7
+      - generic [ref=e104]:
+        - button "العودة إلى باقاتي" [ref=e105]:
+          - img [ref=e106]
+          - generic [ref=e108]: العودة إلى باقاتي
+        - generic [ref=e109]:
+          - img "E2E Student Package" [ref=e110]
+          - generic [ref=e112]:
+            - generic [ref=e113]:
+              - generic [ref=e114]: تحتاج تفعيل
+              - generic [ref=e115]: •
+              - generic [ref=e116]: 1 ترم
+              - generic [ref=e117]: •
+              - generic [ref=e118]: 100 ج.م
+            - heading "E2E Student Package" [level=1] [ref=e119]
+        - generic [ref=e120]:
+          - generic [ref=e122]:
+            - paragraph [ref=e124]: Test
+            - generic [ref=e125]:
+              - generic [ref=e126]:
+                - generic [ref=e127]: F
+                - generic [ref=e128]:
+                  - heading "أ. Fallback E2E Teacher" [level=4] [ref=e129]
+                  - paragraph [ref=e130]: Maths
+              - paragraph [ref=e131]: Fallback teacher
+          - generic [ref=e132]:
+            - button "شراء الباقة" [ref=e133]:
+              - img [ref=e134]
+              - text: شراء الباقة
+            - button "لدي كود تفعيل" [ref=e137]
+        - generic [ref=e138]:
+          - heading "اختر الترم" [level=2] [ref=e139]
+          - paragraph [ref=e140]: كل ترم يحتوي على أقسام وحصص. اختر الترم لتبدأ الدراسة.
+        - button "مقفول 01 E2E Term" [ref=e143] [cursor=pointer]:
+          - generic [ref=e144]:
+            - img [ref=e145]
+            - generic [ref=e147]: "1"
+            - generic [ref=e148]: مقفول
+            - generic [ref=e150]: "01"
+          - generic [ref=e152]:
+            - heading "E2E Term" [level=3] [ref=e153]
+            - img [ref=e155]
+        - dialog "تأكيد الشراء" [ref=e157]:
+          - generic [ref=e158]:
+            - heading "تأكيد الشراء" [level=3] [ref=e159]
+            - button "إغلاق نافذة الشراء" [active] [ref=e160]: ✕
+          - generic [ref=e161]:
+            - generic [ref=e162]:
+              - paragraph [ref=e163]: المحتوى المطلوب
+              - paragraph [ref=e164]: E2E Student Package
+              - generic [ref=e165]: 100 ج.م
+            - generic [ref=e166]:
+              - generic [ref=e167]:
+                - generic [ref=e168]: رصيد محفظتك
+                - generic [ref=e169]:
+                  - img [ref=e170]
+                  - text: 500 ج.م
+              - generic [ref=e173]:
+                - img [ref=e174]
+                - paragraph [ref=e177]: رصيدك يكفي لإتمام هذه العملية.
+            - alert [ref=e178]: "An internal error occurred. Reference: aad7a1059d0c4bb492a4a81602fff95e"
+            - generic [ref=e179]:
+              - button "إلغاء" [ref=e180]
+              - button "تأكيد الخصم والشراء" [ref=e181]:
+                - generic [ref=e182]: تأكيد الخصم والشراء
+      - paragraph [ref=e185]: منصة مسار
+  - button "Open Next.js Dev Tools" [ref=e191] [cursor=pointer]:
+    - img [ref=e192]
+  - alert [ref=e195]
+```

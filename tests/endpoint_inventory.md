@@ -8,7 +8,7 @@ Frontend API call count: **224**
 
 Missing frontend route count: **0**
 
-Digest: `03c0cb520c0e3f9b6ab5dbc456dbfcfdb69bdd54af41cf7b7f33224ca3bb37cc`
+Digest: `f682ce1e73279ba08173a970ff59aca8e5011da76d7522e79f3add7e939713a3`
 
 ## Route Findings
 
@@ -143,7 +143,7 @@ No missing frontend-called backend routes.
 
 | Method | Path | Origin | Query | Payload | Source |
 |---|---|---|---|---|---|
-| POST | `/api/auth/refresh` | backend-api | - | `{}` | frontend/src/services/api-client.ts:55 |
+| POST | `/api/auth/refresh` | backend-api | - | `{}` | frontend/src/services/api-client.ts:59 |
 
 ### frontend/src/services/assistant-service.ts
 

@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-18
+Auto-generated from all feature plans. Last updated: 2026-06-09
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -46,6 +46,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-18
 - PostgreSQL (named volume `pgdata`) + Redis (named volume `redisdata`) + Telegram Bot API (named volume `tgdata`) (064-full-docker-setup)
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + C# 13 (.NET 9.0) + Node.js worker (066-birthday-and-locked-videos)
 - PostgreSQL (StudentProfile, Users, NotificationEvent, LessonVideo, StudentExamAttempt) (066-birthday-and-locked-videos)
+- TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand (112-surface-login-access-contract)
+- N/A (Stateless cookie/Zustand validation) (112-surface-login-access-contract)
 
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + framer-motion ^12.38.0, lucide-react ^1.7.0, clsx + tailwind-merge (via `@/lib/utils`) (033-custom-video-player)
 
@@ -65,30 +67,12 @@ npm test && npm run lint
 TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 ## Recent Changes
+- 112-surface-login-access-contract: Added TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand
 - 066-birthday-and-locked-videos: Added Student Birthday Greetings (daily script using Evolution API) and Video Exam Progression locks (backend logic and frontend secure player overlays)
 - 064-full-docker-setup: Added PostgreSQL (named volume `pgdata`) + Redis (named volume `redisdata`) + Telegram Bot API (named volume `tgdata`)
-- 063-fix-logic-performance: Added C# 13 / .NET 9 backend, TypeScript 5.x / Next.js 16.2.1 frontend, Node.js worker present but not directly changed in this feature + ASP.NET Core Web API, MediatR, Entity Framework Core, PostgreSQL provider, in-process memory cache, existing frontend Axios service layer
-- 062-fix-data-integrity: Added C# / .NET 8 backend, TypeScript 5.x with Next.js 16.2.1 and React 19 frontend + ASP.NET Core Web API, MediatR, Entity Framework Core, PostgreSQL provider, Next.js App Router, Axios service layer, Tailwind CSS
 
 
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
-- [083-deep-audit-remediation](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/083-deep-audit-remediation/plan.md)
-- [074-misc-fixes-and-improvements](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/074-misc-fixes-and-improvements/plan.md)
-- [079-brand-identity-migration](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/079-brand-identity-migration/plan.md)
-- [081-surface-docker-separation](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/081-surface-docker-separation/plan.md)
-- [085-admin-roles-settings](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/085-admin-roles-settings/plan.md)
-- [087-fix-forms-id-mismatch](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/087-fix-forms-id-mismatch/plan.md)
-- [091-operations-task-manager](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/091-operations-task-manager/plan.md)
-- [092-multi-teacher-multi-subject-architecture](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/092-multi-teacher-multi-subject-architecture/plan.md)
-- [093-internal-chat-notifications](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/093-internal-chat-notifications/plan.md)
-- [094-call-center-crm](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/094-call-center-crm/plan.md)
-- [095-media-production-social-planner](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/095-media-production-social-planner/plan.md)
-- [096-payroll-accounting](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/096-payroll-accounting/plan.md)
-- [097-audit-and-reports](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/097-audit-and-reports/plan.md)
-- [101-full-frontend-api-contract-audit](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/101-full-frontend-api-contract-audit/plan.md)
-- [106-platform-guards-and-permissions](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/106-platform-guards-and-permissions/plan.md)
-- [107-assistant-surface-and-tasks](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/107-assistant-surface-and-tasks/plan.md)
-- [108-teacher-binding-and-completion](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/108-teacher-binding-and-completion/plan.md)
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

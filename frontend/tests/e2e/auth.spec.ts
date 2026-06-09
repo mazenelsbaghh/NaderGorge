@@ -1,8 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Auth and Access Flow', () => {
+  test.beforeEach(async ({ request }) => {
+    // Clear devices to avoid limits
+    await request.post('http://localhost:5245/api/e2e/clear-devices', {
+      data: { phoneNumber: '20000000001' },
+    });
+
+  });
+
   test('T007: Reject invalid password logins', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('http://app.localhost:3000/login');
     await page.waitForTimeout(1000);
 
     await page.locator('input[type="tel"]').click();
@@ -27,7 +35,7 @@ test.describe('Auth and Access Flow', () => {
   });
 
   test('T006: Successful login with valid seeded student', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('http://app.localhost:3000/login');
     await page.waitForTimeout(1000);
 
     await page.locator('input[type="tel"]').click();
@@ -37,11 +45,11 @@ test.describe('Auth and Access Flow', () => {
     await page.locator('button[type="submit"]').click({ force: true });
 
     // Student role → should redirect to /student
-    await expect(page).toHaveURL(/\/student/, { timeout: 15000 });
+    await expect(page).toHaveURL(/.*\/student$/, { timeout: 15000 });
   });
 
   test('T008: Block login when device limit exceeded', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('http://app.localhost:3000/login');
     await page.waitForTimeout(1000);
 
     await page.locator('input[type="tel"]').click();

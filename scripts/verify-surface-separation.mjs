@@ -369,24 +369,19 @@ async function assertRuntimeHttp() {
     }
   }
 
-  // Verify cross-surface forbidden redirects
+  // Verify cross-surface forbidden routes return 404 Not Found
   const crossChecks = [
-    { from: 'student', to: 'admin', path: '/admin' },
-    { from: 'admin', to: 'student', path: '/student' },
-    { from: 'assistant', to: 'teacher', path: '/teacher' },
+    { from: 'student', path: '/admin' },
+    { from: 'admin', path: '/student' },
+    { from: 'assistant', path: '/teacher' },
   ];
 
   for (const check of crossChecks) {
     const fromOrigin = origins[check.from];
-    const toOrigin = origins[check.to];
     
     const response = await fetchManual(`${fromOrigin}${check.path}`);
-    if (![301, 302, 307, 308].includes(response.status)) {
-      fail(`Expected cross-surface request from ${check.from} to ${check.path} to redirect, got status ${response.status}`);
-    }
-    const location = response.headers.get('location') || '';
-    if (!location.startsWith(toOrigin)) {
-      fail(`Cross-surface redirect from ${check.from} to ${check.path} redirected to wrong origin: ${location} (expected starting with ${toOrigin})`);
+    if (response.status !== 404) {
+      fail(`Expected cross-surface request from ${check.from} to ${check.path} to return 404 Not Found, got status ${response.status}`);
     }
   }
 }

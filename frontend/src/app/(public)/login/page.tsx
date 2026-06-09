@@ -27,23 +27,41 @@ import { RippleGrid } from '@/components/ui/ripple-grid';
 import { LoginForm } from '@/components/forms/LoginForm';
 import { FeatureCarousel } from '@/components/ui/feature-carousel';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
-import { getSurfaceOrigins } from '@/packages/surface-runtime/config';
+import { getSurfaceName, getSurfaceOrigins, isValidRedirectUrl } from '@/packages/surface-runtime/config';
 
-const LOGIN_STEPS = [
-  {
-    id: '1',
-    step: 1,
-    name: 'تسجيل الدخول',
-    title: 'مرحباً بعودتك',
-    description: 'ادخل مباشرة إلى دروسك، واجباتك، ومتابعة تقدمك.',
-  },
-];
+function getLoginSteps(surface: string) {
+  let title = 'بوابة الطالب';
+  let description = 'ادخل مباشرة إلى دروسك، واجباتك، ومتابعة تقدمك الدراسي.';
+
+  if (surface === 'teacher') {
+    title = 'بوابة المعلم';
+    description = 'إدارة المحاضرات، الامتحانات، ومتابعة تقارير الطلاب.';
+  } else if (surface === 'assistant') {
+    title = 'بوابة المساعدين والموظفين';
+    description = 'متابعة المهام اليومية، طلبات الحضور، وإدارة شؤون الطلاب.';
+  } else if (surface === 'admin') {
+    title = 'بوابة الإدارة';
+    description = 'إدارة المنصة بالكامل، إعدادات النظام، والصلاحيات.';
+  }
+
+  return [
+    {
+      id: '1',
+      step: 1,
+      name: 'تسجيل الدخول',
+      title,
+      description,
+    },
+  ];
+}
 
 export default function LoginPage() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
 
   const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
+  const surface = getSurfaceName();
+  const loginSteps = getLoginSteps(surface);
 
   useEffect(() => {
     loadFromStorage();
@@ -57,20 +75,29 @@ export default function LoginPage() {
         const params = new URLSearchParams(window.location.search);
         returnUrl = params.get('returnUrl') || '';
       }
-      if (returnUrl) {
+
+      const origins = getSurfaceOrigins();
+      const roles = user?.roles || [];
+
+      // Default destinations
+      let defaultDestination = `${origins.student}/student`;
+      if (roles.includes('Admin') || roles.includes('Supervisor')) {
+        defaultDestination = `${origins.admin}/admin`;
+      } else if (roles.includes('Teacher')) {
+        defaultDestination = `${origins.teacher}/teacher`;
+      } else if (roles.includes('Assistant') || roles.includes('Staff')) {
+        defaultDestination = `${origins.assistant}/assistant`;
+      }
+
+      // Validate returnUrl
+      if (returnUrl && isValidRedirectUrl(returnUrl, surface)) {
         window.location.replace(returnUrl);
         return;
       }
 
-      const origins = getSurfaceOrigins();
-      const hasAdmin = user?.roles?.length && !user.roles.includes('Student');
-      if (hasAdmin) {
-        window.location.replace(`${origins.admin}/admin`);
-      } else {
-        window.location.replace(`${origins.student}/student`);
-      }
+      window.location.replace(defaultDestination);
     }
-  }, [isAuthenticated, isLoading, user]);
+  }, [isAuthenticated, isLoading, user, surface]);
 
   if (isLoading || isAuthenticated) {
     return (
@@ -107,6 +134,15 @@ export default function LoginPage() {
         </section>
       </div>
     );
+  }
+
+  let welcomeText = 'دروس منظمة، امتحانات واضحة، وتقدم ظاهر في كل خطوة.';
+  if (surface === 'teacher') {
+    welcomeText = 'التحكم الكامل بمجموعاتك، طلابك، وتقارير أدائهم.';
+  } else if (surface === 'assistant') {
+    welcomeText = 'إدارة العمليات اليومية وتسهيل شؤون الطلاب.';
+  } else if (surface === 'admin') {
+    welcomeText = 'اللوحة القيادية المتكاملة لإدارة النظام والتحكم بالصلاحيات.';
   }
 
   return (
@@ -155,7 +191,7 @@ export default function LoginPage() {
         <FeatureCarousel
           clickToAdvance={false}
           autoPlay={false}
-          steps={LOGIN_STEPS}
+          steps={loginSteps}
           bgClass="!border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[500px] sm:min-h-[550px] shadow-[0_28px_70px_var(--admin-shadow)]"
         >
           <div className="relative z-10 mt-8 sm:mt-10 w-full pr-4 md:pr-0">
@@ -166,7 +202,7 @@ export default function LoginPage() {
                  <div className="space-y-2">
                    <h3 className="text-xl font-bold" style={{ color: 'var(--admin-text)' }}>منصة مسار</h3>
                    <p className="text-sm leading-relaxed" style={{ color: 'var(--admin-muted)' }}>
-                     دروس منظمة، امتحانات واضحة، وتقدم ظاهر في كل خطوة.
+                     {welcomeText}
                    </p>
                  </div>
               </div>
@@ -176,18 +212,22 @@ export default function LoginPage() {
                 <div className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
                   <LoginForm />
                   
-                  <div className="auth-divider my-6" />
-                  
-                  <p className="text-center text-sm" style={{ color: 'var(--admin-muted)' }}>
-                    ليس لديك حساب؟{' '}
-                    <Link
-                      href="/register"
-                      className="font-bold transition-colors hover:opacity-80"
-                      style={{ color: 'var(--admin-primary)' }}
-                    >
-                      إنشاء حساب طالب
-                    </Link>
-                  </p>
+                  {(surface === 'student' || surface === 'landing' || surface === 'all') && (
+                    <>
+                      <div className="auth-divider my-6" />
+                      
+                      <p className="text-center text-sm" style={{ color: 'var(--admin-muted)' }}>
+                        ليس لديك حساب؟{' '}
+                        <Link
+                          href="/register"
+                          className="font-bold transition-colors hover:opacity-80"
+                          style={{ color: 'var(--admin-primary)' }}
+                        >
+                          إنشاء حساب طالب
+                        </Link>
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
 

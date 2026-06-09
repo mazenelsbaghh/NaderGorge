@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-04
+Auto-generated from all feature plans. Last updated: 2026-06-09
 
 ## Active Technologies
 - C# (.NET 8), TypeScript 5.x (strict mode) + Next.js 14 (App Router), .NET Web API, Entity Framework Core, MediatR, React Query (TanStack Query v5), Zustand, Shadcn/UI, Tailwind CSS, Framer Motion, BullMQ (003-phase1-foundation-mvp)
@@ -44,6 +44,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-04
 - PostgreSQL (Ef Core Migrations) (031-unify-assessment-builder)
 - TypeScript (Next.js 14+), C# (.NET 8.0) + React, Tailwind CSS, Framer Motion, ASP.NET Core (032-assessment-ui-fixes)
 - PostgreSQL (Entity Framework Core) (032-assessment-ui-fixes)
+- TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand (112-surface-login-access-contract)
+- N/A (Stateless cookie/Zustand validation) (112-surface-login-access-contract)
 
 - Markdown (documentation-only phase — no application code) + N/A (no code dependencies) (001-phase0-discovery-blueprint)
 
@@ -63,9 +65,9 @@ tests/
 Markdown (documentation-only phase — no application code): Follow standard conventions
 
 ## Recent Changes
+- 112-surface-login-access-contract: Added TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand
 - 056-extra-watch-request: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 032-assessment-ui-fixes: Added TypeScript (Next.js 14+), C# (.NET 8.0) + React, Tailwind CSS, Framer Motion, ASP.NET Core
-- 031-unify-assessment-builder: Added C# 12 (.NET 8.0) & TypeScript (Next.js 14) + Entity Framework Core, React Hook Form, Framer Motion
 
 
 <!-- MANUAL ADDITIONS START -->

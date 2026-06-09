@@ -20,7 +20,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import { ShinyButton } from '@/components/ui/shiny-button';
-import { getSurfaceOrigins } from '@/packages/surface-runtime/config';
+import { getSurfaceOrigins, getSurfaceName, isValidRedirectUrl } from '@/packages/surface-runtime/config';
 
 export function LoginForm() {
   const { setAuth } = useAuthStore();
@@ -88,7 +88,7 @@ export function LoginForm() {
         targetUrl = params.get('returnUrl') || '';
       }
 
-      if (targetUrl) {
+      if (targetUrl && isValidRedirectUrl(targetUrl, getSurfaceName())) {
         window.location.replace(targetUrl);
       } else {
         window.location.replace(redirectDestination);

@@ -1,77 +1,131 @@
-# Implementation Plan: Endpoint Alignment and Sidebar Sync
+# Implementation Plan: [FEATURE]
 
-**Branch**: `100-endpoint-alignment-and-sidebar-sync` | **Date**: 2026-06-09 | **Spec**: [specs/100-endpoint-alignment-and-sidebar-sync/spec.md](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/100-endpoint-alignment-and-sidebar-sync/spec.md)
-**Input**: Feature specification from `/specs/100-endpoint-alignment-and-sidebar-sync/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
-Conduct a comprehensive review of all frontend and backend endpoints and DTO structures to align schemas and prevent serialization errors. Additionally, sync the admin dashboard sidebar navigation by adding the missing administrative routes and styling the mobile menu modal to support vertical scrolling.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-**Language/Version**: C# (.NET 9, C# 13), TypeScript 5.x, React 19, Next.js 16.2.1  
-**Primary Dependencies**: lucide-react, axios, MediatR, EF Core 9  
-**Storage**: PostgreSQL  
-**Testing**: pytest (local Python test harness)  
-**Target Platform**: Docker-compose stack (Linux containers)  
-**Project Type**: Monorepo Web Application  
-**Performance Goals**: N/A (Admin UX usability and backend alignment)  
-**Constraints**: RTL-first styling, standard permission checks, mobile responsiveness  
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- **Layer impact**: Backend Controllers (verification of DTO schema/routes), Frontend Components (`AdminShellChrome.tsx` sidebar sync), Frontend Services (confirm API mappings).
-- **Automated tests required**: Verify build completeness of frontend and backend. Run python endpoint tests in `tests/test_operations_tasks.py`.
-- **Manual QA flows**: Log in as Admin and verify sidebar links:
-  - "المواد الدراسية" (/admin/subjects)
-  - "المعلمين" (/admin/teachers)
-  - "المالية والرواتب" (/admin/finance)
-  - "الموارد البشرية" (/admin/hr)
-  - Verify that clicking each navigates successfully and that the mobile drawer menu scrolls vertically without clipping.
-  - Verify that students cannot view or access these pages.
+[Gates determined based on constitution file. For this project, every plan MUST
+document:
+- Layer impact across backend, frontend, worker, database, and Docker.
+- Automated tests required for the phase's critical paths.
+- Manual QA flows required from the product owner.
+- Docker gate commands (`docker compose config -q`, `make up`, `make migrate`
+  when schema changes exist, service health checks).
+- Explicit decision that the next phase cannot start until failed gates are
+  fixed or owner-approved risk is documented.]
 
----
+## Project Structure
 
-## Proposed Changes
+### Documentation (this feature)
 
-### [Frontend - Navigation]
+```text
+specs/[###-feature]/
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+```
 
-#### [MODIFY] [AdminShellChrome.tsx](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/frontend/src/components/admin/AdminShellChrome.tsx)
-- Import `Library`, `GraduationCap`, `Coins`, and `Users` from `lucide-react`.
-- Add route mapping for `/admin/subjects` (المواد الدراسية), `/admin/teachers` (المعلمين), `/admin/finance` (المالية والرواتب), and `/admin/hr` (الموارد البشرية) to the `AdminShellRoute` union type.
-- Add these entries to the `navItems` array with their corresponding icons and permissions:
-  - `/admin/subjects`: permission `content.manage`, icon `Library`
-  - `/admin/teachers`: permission `users.manage`, icon `GraduationCap`
-  - `/admin/finance`: permission `users.manage`, icon `Coins`
-  - `/admin/hr`: permission `hr.manage`, icon `Users`
-- Update the mobile menu `<aside>` container in the TSX (around line 491) by adding the Tailwind CSS classes `max-h-[80vh] overflow-y-auto` to ensure the menu can be scrolled on smaller screens when administrative items overflow.
+### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
-### [Frontend & Backend - Audit and Schema Alignment]
+```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
 
-#### [VERIFY] [API Endpoints Alignment]
-- Review properties and models returned by C# API responses vs TS type declarations:
-  - **HR**: Verify fields in `EmployeeDto`, `EmployeeProfileDto`, `AttendanceLogDto`, and `VacationDto` in `hr-service.ts` match property names in `AdminHrController.cs` and their MediatR query responses.
-  - **Finance**: Verify fields in `PayrollRecordDto`, `AdminPayoutDto`, `TeacherAccountDto`, and `TeacherPayoutDto` in `finance-service.ts` match `AdminFinanceController.cs` and `TeacherFinanceController.cs` DTO classes.
-  - **Subjects & Teachers**: Verify fields in `SubjectDto` and `TeacherDto` in `teacher-service.ts` match `AdminController.cs` responses.
-- Enums check: Since the backend serializes some enums as strings (due to `JsonStringEnumConverter`) and others as integers, ensure that components handling enums (e.g. status/priority badges) safely parse both string names and numeric values.
+tests/
+├── contract/
+├── integration/
+└── unit/
 
----
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
+backend/
+├── src/
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
 
-## Verification Plan
+frontend/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
 
-### Automated Tests
-- Run backend build verification:
-  `dotnet build backend/NaderGorge.sln`
-- Run frontend type check and build verification:
-  `cd frontend && npm run build`
-- Run python regression tests:
-  `python3 tests/test_operations_tasks.py`
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
 
-### Manual Verification
-- Rebuild/restart frontend containers:
-  `docker compose build admin student landing`
-- Log in as Admin (`20000000000`/`password`) and verify the new links appear in the sidebar with proper icons.
-- Verify mobile viewport: resize window to trigger bottom menu, click "المزيد", and confirm the modal displays all items and is scrollable.
-- Log in as Student (`20000000001`/`password`) and verify that none of the links are visible or accessible.
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
+```
+
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
+
+## Phase Closure & Verification Plan
+
+<!--
+  ACTION REQUIRED: Replace placeholders with the concrete close-out plan for
+  this feature/phase. A phase is not complete without evidence here.
+-->
+
+**Automated Tests Required**: [dotnet/frontend/worker/python/e2e commands and
+the critical paths they cover]
+
+**Docker Gate Required**: [docker compose config, make up, make migrate if
+needed, make ps, health URLs, surface verification]
+
+**Manual QA Required**: [role-by-role flows the product owner must test
+manually, including negative permission checks]
+
+**End-of-Phase Report Format**: [implemented scope, commands run, test results,
+Docker result, manual QA checklist, risks, go/no-go for next phase]
+
+## Complexity Tracking
+
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

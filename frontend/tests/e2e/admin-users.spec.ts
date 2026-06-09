@@ -7,9 +7,10 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
 
   test.beforeEach(async ({ page }) => {
     // 1. Authenticate as Admin
-    await page.goto('/login');
+    await page.goto('http://admin.localhost:3000/login');
     await page.fill('input[name="phoneNumber"]', adminPhone);
     await page.fill('input[name="password"]', adminPassword);
+    await page.click('text=تذكرني', { force: true });
     await page.click('button[type="submit"]', { force: true });
 
     // 2. Wait for successful login (navigates to dashboard or similar)
@@ -22,7 +23,7 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
     page,
   }) => {
     // Navigate to Students Management page
-    await page.goto('/admin/students');
+    await page.goto('http://admin.localhost:3000/admin/students');
 
     // Verify page loaded
     await expect(page.locator('text=إدارة الطلاب')).toBeVisible();
@@ -43,7 +44,7 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
   });
 
   test('T015: Row expansion metadata inspection', async ({ page }) => {
-    await page.goto('/admin/students');
+    await page.goto('http://admin.localhost:3000/admin/students');
     await expect(page.locator('text=إدارة الطلاب')).toBeVisible();
 
     // Click on the first row's expand/details button (eye icon or row itself)
@@ -55,8 +56,8 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
       await firstRowPhone.click();
 
       // Assume a dialog or expand panel appears with demographic details
-      await expect(page.locator('text=تفاصيل الطالب')).toBeVisible();
-      await expect(page.locator('text=رقم هاتف ولي الأمر')).toBeVisible();
+      await expect(page.locator('text=ملف الطالب الشامل')).toBeVisible();
+      await expect(page.locator('text=هاتف ولي الأمر (أب)')).toBeVisible();
     } else {
       console.warn(
         'No users found to expand. Seed may be empty or filtered out.'

@@ -39,6 +39,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { StudentThemeSettingsPanel } from '@/components/student/StudentThemeSettingsPanel';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { SidebarBalance } from '@/components/layout/SidebarBalance';
+import { SidebarGamification } from '@/components/layout/SidebarGamification';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { useStudentTheme } from '@/hooks/useStudentTheme';
 import { useAuthStore } from '@/stores/auth-store';
@@ -285,8 +286,9 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             </div>
 
             <div className="space-y-3 px-3">
-              <div className="flex justify-start px-4 transition-all duration-300 w-full">
+              <div className="flex flex-col gap-2 justify-start px-4 transition-all duration-300 w-full">
                 <SidebarBalance />
+                <SidebarGamification />
               </div>
               <div className="flex justify-start px-1 items-center transition-all duration-300">
                 <AnimatedThemeToggler
@@ -349,7 +351,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 <nav className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-[var(--admin-muted)]">
                   <span>المساحة الدراسية</span>
                   <ChevronLeft className="h-3 w-3" />
-                  <span className="text-[var(--admin-primary-strong)]">لوحة الطالب</span>
+                  <span className="text-[var(--admin-primary-strong)]">بوابة الطالب</span>
                 </nav>
                 {/* Desktop-only header actions */}
                 <div className="hidden lg:flex items-center gap-3">
@@ -528,9 +530,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   </button>
                 </div>
 
-                {/* Balance card */}
-                <div className="mb-5 rounded-2xl bg-[var(--admin-card-soft)] p-4">
+                {/* Balance & Gamification cards */}
+                <div className="mb-5 rounded-2xl bg-[var(--admin-card-soft)] p-4 flex flex-col gap-3">
                   <SidebarBalance />
+                  <SidebarGamification />
                 </div>
 
                 {/* Secondary nav links */}

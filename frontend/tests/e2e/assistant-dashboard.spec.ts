@@ -32,12 +32,13 @@ test.describe('Assistant Dashboard Task Queue', () => {
 
     // Login as Student to get token
     const loginRes = await request.post(
-      'http://localhost:5245/api/v1/auth/login',
+      'http://localhost:5245/api/auth/login',
       {
+        headers: { 'X-App-Surface': 'student' },
         data: {
           phoneNumber: '20000000001',
           password: 'password',
-          deviceId: 'e2e-dev11',
+          deviceFingerprint: 'e2e-dev11',
         },
       }
     );
@@ -67,14 +68,15 @@ test.describe('Assistant Dashboard Task Queue', () => {
     }
 
     // 4. Login as E2E Assistant
-    await page.goto('/login');
+    await page.goto('http://staff.localhost:3000/login');
     await page.locator('input[type="tel"]').fill('20000000003');
     await page.locator('input[type="password"]').fill('password');
+    await page.click('text=تذكرني', { force: true });
     await page.locator('button[type="submit"]').click({ force: true });
 
     // Assistant gets redirected to their dashboard or we force nav
     await page.waitForTimeout(2000);
-    await page.goto('/assistant/dashboard');
+    await page.goto('http://staff.localhost:3000/assistant/dashboard');
   });
 
   test('T008 & T009: Assistant resolves a pending submission', async ({
@@ -82,11 +84,11 @@ test.describe('Assistant Dashboard Task Queue', () => {
   }) => {
     // Wait for the Task board to load
     await expect(
-      page.locator('h1:has-text("Assistant Task Dashboard")')
+      page.locator('h1:has-text("لوحة مهام المساعد")')
     ).toBeVisible({ timeout: 15000 });
 
     // Switch to Grading
-    await page.locator('button:has-text("Grading")').click();
+    await page.locator('button:has-text("تصحيح")').click();
 
     // Choose a submission, check if visible
     const studentName = page.locator('h3:has-text("E2E Student 1")').first();
@@ -101,12 +103,12 @@ test.describe('Assistant Dashboard Task Queue', () => {
 
     if (await studentName.isVisible()) {
       // Resolve Task Modal
-      await page.locator('button:has-text("Resolve Task")').first().click();
+      await page.locator('button:has-text("حل المهمة")').first().click();
 
       const text = page.locator('textarea').first();
       await text.fill('Excellent Work!');
 
-      await page.locator('button:has-text("Confirm Resolution")').click();
+      await page.locator('button:has-text("تأكيد الحل")').click();
 
       // Try to find the same element again in pending, should wait for it to be removed
       await expect(studentName).not.toBeVisible({ timeout: 10000 });
