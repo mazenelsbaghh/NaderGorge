@@ -21,8 +21,8 @@ public sealed record CachedPlatformSettings(
 )
 {
     public static CachedPlatformSettings Default { get; } = new(
-        30, 
-        3, 
+        30,
+        3,
         25m,
         "منصة مسار التعليمية",
         "01000000000",

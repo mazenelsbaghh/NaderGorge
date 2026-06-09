@@ -3,7 +3,11 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-import { AdminShellChrome, AdminStatCard } from '@/components/admin';
+import {
+  AdminShellChrome,
+  AdminStatCard,
+  ClockInOutWidget,
+} from '@/components/admin';
 import { adminRootLinks, adminRootStats } from '@/packages/admin';
 
 export default function AdminRootPage() {
@@ -53,6 +57,10 @@ export default function AdminRootPage() {
         />
       </section>
 
+      <div className="mb-10">
+        <ClockInOutWidget />
+      </div>
+
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {adminRootLinks.map((item) => {
           const Icon = item.icon;
@@ -65,10 +73,16 @@ export default function AdminRootPage() {
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-black text-[var(--admin-text)]">{item.title}</h2>
-                  <p className="mt-2 text-sm leading-7 text-[var(--admin-muted)]">{item.body}</p>
+                  <h2 className="text-2xl font-black text-[var(--admin-text)]">
+                    {item.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-7 text-[var(--admin-muted)]">
+                    {item.body}
+                  </p>
                 </div>
-                <div className={`rounded-[1.25rem] bg-[var(--admin-primary)] p-4 text-[var(--admin-primary-contrast)] shadow-lg transition-transform group-hover:scale-110`}>
+                <div
+                  className={`rounded-[1.25rem] bg-[var(--admin-primary)] p-4 text-[var(--admin-primary-contrast)] shadow-lg transition-transform group-hover:scale-110`}
+                >
                   <Icon className="h-6 w-6" />
                 </div>
               </div>

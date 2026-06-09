@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion, useReducedMotion, useMotionValue, useTransform, AnimatePresence, animate } from "framer-motion";
 
-import { platformStats, teachers, topStudents } from "./data";
+import { platformStats, teachers as hardcodedTeachers, topStudents } from "./data";
+import { studentService } from "@/services/student-service";
 
 const medalStyles: Record<number, string> = {
   1: "bg-[#D4A017] text-white",
@@ -19,6 +20,30 @@ export function CircularGallerySection() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<"left" | "right">("left");
   const [isHovered, setIsHovered] = useState(false);
+  const [activeTeachers, setActiveTeachers] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadTeachers() {
+      try {
+        const list = await studentService.getPublicTeachers();
+        if (list && list.length > 0) {
+          setActiveTeachers(list.map((t) => ({
+            name: t.fullName,
+            subject: t.specialization || t.subjectNames.join(" - ") || "معلم المنصة",
+            rating: "4.9",
+            avatar: t.profileImageUrl || `https://avatar.vercel.sh/${encodeURIComponent(t.fullName)}`
+          })));
+        } else {
+          setActiveTeachers([...hardcodedTeachers]);
+        }
+      } catch {
+        setActiveTeachers([...hardcodedTeachers]);
+      }
+    }
+    void loadTeachers();
+  }, []);
+
+  const marqueeList = activeTeachers.length > 0 ? activeTeachers : hardcodedTeachers;
 
   // Motion values for swiping active card
   const dragX = useMotionValue(0);
@@ -336,7 +361,7 @@ export function CircularGallerySection() {
           {/* Infinite auto-scrolling marquee for teachers */}
           <div className="relative w-full overflow-hidden py-4">
             <div className="flex gap-6 w-max animate-marquee-horizontal hover:[animation-play-state:paused] [direction:ltr]">
-              {[...teachers, ...teachers, ...teachers].map((teacher, index) => (
+              {[...marqueeList, ...marqueeList, ...marqueeList].map((teacher, index) => (
                 <article
                   key={index}
                   className="landing-panel w-[240px] shrink-0 overflow-hidden text-center hover:scale-[1.03] transition-transform duration-300 border border-[var(--landing-line-strong)]"

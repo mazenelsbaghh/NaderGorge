@@ -39,7 +39,7 @@ public class AdjustGamificationPointsCommandHandler : IRequestHandler<AdjustGami
     {
         var gamification = await _context.StudentGamifications
             .FirstOrDefaultAsync(g => g.StudentId == request.UserId, cancellationToken);
-            
+
         if (gamification == null) return ApiResponse.Fail("Gamification profile not found.");
 
         int oldPoints = gamification.TotalPoints;

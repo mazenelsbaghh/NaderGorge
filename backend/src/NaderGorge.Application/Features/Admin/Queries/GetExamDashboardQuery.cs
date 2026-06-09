@@ -63,7 +63,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
         var attemptsDto = exam.Attempts
             .OrderByDescending(a => a.CreatedAt)
-            .Select(a => {
+            .Select(a =>
+            {
                 var isExpired = a.IsTimeExpired;
                 var eval = a.Evaluation ?? "لم يقيّم";
                 var score = a.ScoreAchieved;

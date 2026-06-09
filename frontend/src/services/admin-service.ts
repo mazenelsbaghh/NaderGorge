@@ -2,7 +2,7 @@ import apiClient from './api-client';
 
 export interface ApiResponse<T = any> {
   data: T;
-  isSuccess: boolean;
+  success: boolean;
   message: string;
 }
 
@@ -72,6 +72,7 @@ export interface CodeGroupDto {
   lessonId?: string;
   codeCount: number;
   usedCount: number;
+  teacherId: string;
 }
 
 export interface CodeDetailDto {
@@ -108,6 +109,8 @@ export interface QuestionBankItemDto {
   mistakeStartIndex?: number; // For FindTheMistake
   mistakeEndIndex?: number; // For FindTheMistake
   options: QuestionOptionDto[];
+  createdByTeacherId: string;
+  subjectId: string;
 }
 
 export interface StudentPackageDto {
@@ -425,6 +428,8 @@ export interface AdminCreateUserResult {
 export interface AdminPackageListItemDto {
   id: string;
   name: string;
+  teacherId: string;
+  subjectId: string;
 }
 
 export const adminService = {

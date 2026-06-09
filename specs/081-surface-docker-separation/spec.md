@@ -79,6 +79,43 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 - A user opens `/admin` on the landing surface or `/student` on the admin surface; the request must be redirected to the correct dedicated surface or produce a clear route boundary response.
 - Environment variables are missing for one surface; startup or tests must identify the affected surface by name.
 - Old brand names remain in internal namespaces or historical migration names; only user-visible copy, metadata, Docker service/container names, and operational docs are in scope for rename.
+- Subdomain Routing Fallbacks: If a request hits Nginx with an unrecognized subdomain, Nginx should route it to the landing page surface (`massaracademy.com`).
+- Localhost Cookie Limitations: In local development, cookies cannot be set to a wildcard domain `.localhost`. The system must detect this and fall back to omitting the domain parameter, ensuring local authentication continues to function on `localhost` port mappings.
+
+---
+
+### User Story 5 - Subdomain Separation & Nginx Reverse Proxy Routing (Priority: P1)
+
+An operator needs to host the platform in production using dedicated subdomains. Public traffic, student traffic, administrative/staff/teacher panels, the API, WebSockets, and assets must be routed to their respective services using Nginx.
+
+**Acceptance Scenarios**:
+1. **Given** Nginx is running as a reverse proxy, **When** traffic hits `massaracademy.com` or `www.massaracademy.com`, **Then** Nginx proxies it to the `landing` service.
+2. **Given** Nginx is running, **When** traffic hits `app.massaracademy.com` or `student.massaracademy.com`, **Then** Nginx proxies it to the `student` service.
+3. **Given** Nginx is running, **When** traffic hits `staff.massaracademy.com`, `super.massaracademy.com`, or `teacher.massaracademy.com`, **Then** Nginx proxies it to the `admin` service.
+4. **Given** Nginx is running, **When** traffic hits `api.massaracademy.com`, **Then** Nginx proxies it to the `backend` API.
+
+---
+
+### User Story 6 - Cross-Subdomain Session Sharing and CORS Security (Priority: P1)
+
+A student or administrator logs in from a frontend subdomain and needs their session to be authenticated seamlessly against the backend API subdomain. The browser must securely transmit and accept the HttpOnly refresh cookie across these subdomains.
+
+**Acceptance Scenarios**:
+1. **Given** a user logs in on `app.massaracademy.com`, **When** the backend sets the `ng_refresh` cookie, **Then** the cookie includes `Domain=.massaracademy.com` (or the configured root domain) and is sent to all subdomains.
+2. **Given** a user navigates to `teacher.massaracademy.com` or `staff.massaracademy.com`, **When** the frontend calls `/api/auth/refresh`, **Then** the browser includes the `ng_refresh` cookie.
+3. **Given** CORS allowed origins are configured, **When** an origin not in the allowed list (e.g. `untrusted.com`) calls the backend API, **Then** the backend rejects the request with a CORS error.
+
+---
+
+### User Story 7 - Separate SignalR WebSockets and Static Assets Hosting (Priority: P2)
+
+Real-time chat notifications must connect via `ws.massaracademy.com`, and static media files (PDFs, images, uploads, mindmaps, subtitles) must load via `assets.massaracademy.com`.
+
+**Acceptance Scenarios**:
+1. **Given** a chat client initiates a WebSocket connection to `ws.massaracademy.com`, **When** the request includes connection upgrade headers, **Then** Nginx routes it directly to the SignalR backend hub on `/hubs/chat` and successfully upgrades the connection.
+2. **Given** a client requests an asset on `assets.massaracademy.com`, **When** the path is `/uploads/image.png`, **Then** Nginx serves it directly from the shared assets storage volume without hitting the main backend or frontend containers.
+
+---
 
 ## Requirements *(mandatory)*
 
@@ -98,6 +135,12 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 - **FR-012**: The system MUST provide Make targets or documented commands to start, stop, rebuild, log, and verify each separated surface.
 - **FR-013**: Existing database, Redis, worker, and migration workflows MUST remain compatible with the separated runtime layout.
 - **FR-014**: Existing local development workflows MUST remain available, while Docker becomes the source of truth for separated runtime verification.
+- **FR-015**: The Nginx configuration MUST define virtual hosts routing subdomains (`massaracademy.com`, `www.massaracademy.com`, `app.massaracademy.com`, `staff.massaracademy.com`, `super.massaracademy.com`, `teacher.massaracademy.com`, `api.massaracademy.com`, `ws.massaracademy.com`, `assets.massaracademy.com`) to their respective Docker containers and ports.
+- **FR-016**: The C# backend API MUST read `CookieSettings:Domain` from configuration, and if set, apply it to the HttpOnly `ng_refresh` cookie options during login and token refresh, and also during cookie deletion.
+- **FR-017**: The backend API MUST allow CORS requests originating from all configured subdomain URLs.
+- **FR-018**: Nginx MUST support WebSockets for `ws.massaracademy.com`, passing `Upgrade` and `Connection` headers to `/hubs/chat` in the backend.
+- **FR-019**: Nginx MUST serve static assets (including `/uploads`, `/mindmaps`, and `/subtitles`) directly from the shared assets volume on the `assets.*` subdomain.
+- **FR-020**: Health checks for frontend surfaces, backend API, worker, DB, and Redis MUST be implemented in Docker Compose and verify readiness.
 
 ### Key Entities
 
@@ -106,6 +149,10 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 - **Surface Route Boundary**: The routing rule that determines which entry path belongs to which surface and what happens when a request enters the wrong surface.
 - **Platform Identity**: The user-facing Arabic and English brand names, metadata, and Docker runtime naming convention for Massar.
 - **Verification Suite**: Automated checks that validate Docker Compose structure, running HTTP endpoints, route boundaries, and brand consistency.
+- **Nginx Reverse Proxy**: Virtual host configurations and routing rules mapping external subdomains to internal Docker services.
+- **Shared Session Cookie**: A cookie set with a wildcard `Domain` (e.g., `.massaracademy.com`) allowing cross-subdomain API authentication.
+
+---
 
 ## Success Criteria *(mandatory)*
 
@@ -117,6 +164,10 @@ A developer needs repeatable tests that confirm the separation, ports, health ch
 - **SC-004**: 100% of changed user-facing UI metadata and Docker application service names use "منصة مسار", "Massar Platform", or `massar` naming.
 - **SC-005**: Existing backend, frontend, and Docker verification commands complete without new warnings caused by this feature.
 - **SC-006**: Route boundary tests prove that opening a surface root sends the user to that surface's expected entry point.
+- **SC-007**: Nginx configuration template successfully routes subdomain HTTP and WebSocket traffic.
+- **SC-008**: Backend API sets the refresh cookie with the configured root domain (e.g., `.massaracademy.com`) when configured.
+- **SC-009**: CORS headers are correctly returned for all subdomain origins, and rejected for unauthorized external domains.
+- **SC-010**: All service containers (database, Redis, backend, worker, landing, student, admin) pass healthchecks and show as healthy in `docker compose ps`.
 
 ## Assumptions
 

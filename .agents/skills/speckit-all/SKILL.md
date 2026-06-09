@@ -1,10 +1,6 @@
 ---
-name: "speckit-all"
-description: "Execute the complete Spec-Driven Development workflow from specification, planning, task breakdown for cheaper LLMs, implementation, to deep architectural review."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
-metadata:
-  author: "community"
-  source: "speckit-all/SKILL.md"
+name: speckit-all
+description: Execute the complete Spec-Driven Development workflow from feature specification, technical planning, cheaper-LLM task breakdown, implementation, deep review, mandatory clean-code-guard, mandatory test-guard, and final verification. Use when the user invokes $speckit-all or asks for an end-to-end Spec Kit feature workflow; always finish implementation work by running clean-code-guard before test-guard and before the final report.
 ---
 
 ## User Input
@@ -19,7 +15,13 @@ You **MUST** process the user's input as the feature description to begin the en
 
 ## SDD Automation Workflow
 
-When this skill is triggered, you must execute the following 6 phases sequentially, carrying over all context between them. Do not skip any phase unless explicitly instructed.
+When this skill is triggered, you must execute the following 8 phases sequentially, carrying over all context between them. Do not skip any phase unless explicitly instructed.
+
+**MANDATORY QUALITY GATE ORDER**:
+1. After implementation and deep critique fixes are complete, you MUST execute `clean-code-guard` before any final report.
+2. After `clean-code-guard` completes and all production-code findings are resolved, you MUST execute `test-guard`.
+3. `test-guard` runs even when no test files changed: in that case, record that no changed test files exist and do not invent unnecessary tests.
+4. The final verification phase MUST NOT be marked complete until both quality gates are complete and all of their findings are resolved and checked off.
 
 ### MANDATORY PROGRESS TRACKING (achievements.md)
 At the very beginning of the run (before starting Phase 1), you MUST create a progress tracking file named `achievements.md` in the root directory of the workspace. This file must list all the workflow phases as tasks.
@@ -37,7 +39,9 @@ The initial structure of `achievements.md` MUST be:
 - [ ] Phase 3: Detailed Task Breakdown (`speckit-tasks`)
 - [ ] Phase 4: Implementation (`speckit-implement`)
 - [ ] Phase 5: Deep Architectural, Code & UI/UX Critique
-- [ ] Phase 6: Final Verification & Summary Report
+- [ ] Phase 6: Clean Code Guard (`clean-code-guard`)
+- [ ] Phase 7: Test Guard (`test-guard`)
+- [ ] Phase 8: Final Verification & Summary Report
 ```
 
 ### Phase 1: Feature Specification (`speckit-specify`)
@@ -68,7 +72,8 @@ The initial structure of `achievements.md` MUST be:
    - Be self-contained: Each task must specify the exact file path, the required modification, and the expected code structure.
    - Leave zero ambiguity: Do not write vague tasks like "update the UI" or "add logging". Instead, write "In file `src/index.js`, add a try-catch block to the login function and log the error message using `console.error`."
    - Explicitly define checkpoints and testing commands for every user story.
-6. **Progress Update**: Mark Phase 3 as completed (`[x]`) in `achievements.md` before proceeding.
+6. **Mandatory Quality-Gate Tail Tasks**: Add final checklist items to `tasks.md` that require running `clean-code-guard` first and `test-guard` second after implementation and critique fixes. These tasks must specify that all findings are recorded, fixed, verified, and checked off before final reporting.
+7. **Progress Update**: Mark Phase 3 as completed (`[x]`) in `achievements.md` before proceeding.
 
 ### Phase 4: Implementation (`speckit-implement`)
 1. Execute the **`speckit-implement`** skill.
@@ -97,23 +102,56 @@ The initial structure of `achievements.md` MUST be:
    - You MUST also add them to the end of the `tasks.md` checklist as new unchecked items.
    - You MUST systematically correct the code, resolve all warnings, and fix the problems across Frontend, Backend, UI, and UX layers.
    - Mark the resolved items as completed (`[x]`) in both `achievements.md` and `tasks.md` only after they are fully resolved and verified.
-4. **Progress Update**: Mark Phase 5 as completed (`[x]`) in `achievements.md` before proceeding, and ensure that all recorded warnings, errors, and critique issues from both Phase 4 and Phase 5 have been fully resolved and checked off.
+4. **Progress Update**: Mark Phase 5 as completed (`[x]`) in `achievements.md` before proceeding to `clean-code-guard`, and ensure that all recorded warnings, errors, and critique issues from both Phase 4 and Phase 5 have been fully resolved and checked off.
 
-### Phase 6: Final Verification & Summary Report
+### Phase 6: Clean Code Guard (`clean-code-guard`)
+After Phase 5 is complete, you MUST run the `clean-code-guard` skill as a separate mandatory quality gate before any test guard or final report.
+
+1. Execute `clean-code-guard` in guard-pass mode against every changed production-code file from the feature implementation and critique fixes.
+2. Use the current diff plus `spec.md`, `plan.md`, and `tasks.md` to identify whether the changed production code still matches the intended behavior.
+3. Exclude test-only files from this phase; they are reviewed by `test-guard`.
+4. Check the implementation against the `clean-code-guard` imperatives, especially:
+   - clean names and focused functions,
+   - no speculative abstractions,
+   - no broad catch-all error swallowing,
+   - no hardcoded success responses or production fixtures,
+   - verified imports and external calls,
+   - behavior-preserving refactors.
+5. **RECORD & RESOLVE CLEAN CODE FINDINGS**: If any issue is found:
+   - Add a `### Clean Code Guard Findings / مشاكل جودة الكود` section to `achievements.md` with unchecked checklist items.
+   - Add matching unchecked checklist items to the end of `tasks.md`.
+   - Fix every finding, verify the fix, then mark each item checked (`[x]`) in both files.
+6. **Progress Update**: Mark Phase 6 as completed (`[x]`) in `achievements.md` only after all clean-code findings are resolved and checked off.
+
+### Phase 7: Test Guard (`test-guard`)
+After Phase 6 is complete, you MUST run the `test-guard` skill as the next mandatory quality gate.
+
+1. Execute `test-guard` against every changed test file from the feature implementation and critique fixes.
+2. If no test files changed, record `No changed test files; test-guard reviewed the diff and found no test-code surface to audit.` in `achievements.md`, then mark Phase 7 complete. Do not add tests solely to satisfy this gate.
+3. When test files exist, identify the test stack and apply the relevant `test-guard` reference (`pytest`, `phpunit`, `jest`, or `llm-app-testing`) only as needed.
+4. Check that tests verify behavior, avoid unjustified mocks, avoid duplicated scenarios, use real state/value objects, and do not test framework guarantees.
+5. **RECORD & RESOLVE TEST GUARD FINDINGS**: If any issue is found:
+   - Add a `### Test Guard Findings / مشاكل جودة الاختبارات` section to `achievements.md` with unchecked checklist items.
+   - Add matching unchecked checklist items to the end of `tasks.md`.
+   - Fix every finding, verify the fix, then mark each item checked (`[x]`) in both files.
+6. **Progress Update**: Mark Phase 7 as completed (`[x]`) in `achievements.md` only after all test-guard findings are resolved and checked off.
+
+### Phase 8: Final Verification & Summary Report
 Before finalizing the run and claiming completion, you MUST perform a final project-wide sweep:
 
 1. **FINAL WHOLE-PROJECT CRITIQUE & BUILD VERIFICATION**:
    - Conduct one final, comprehensive critique of the entire project to ensure absolutely no code smell, styling flaw, regression, or architectural gap exists.
    - Run a full build/compile check of both Frontend and Backend projects. You MUST resolve and eliminate any build warnings or compilation warnings (يحذف ويحل أي warning لأي build في المشروع) to guarantee a clean, warning-free build.
    - Record any final issues/warnings identified during this sweep and their resolutions in the `achievements.md` file under a final section.
+   - Confirm that Phase 6 (`clean-code-guard`) and Phase 7 (`test-guard`) are completed in order and that no unchecked findings remain.
 
 2. **Compile and Output the Markdown Report**:
    Once the project is 100% clean and warning-free, compile a report containing:
    - **Summary of Feature**: Short description and specs location.
    - **Implementation Log**: List of files created/modified.
-   - **Review Findings**: Quality assessment, plus a list of issues/bugs identified and how they were resolved.
+   - **Review Findings**: Quality assessment, clean-code-guard results, test-guard results, plus a list of issues/bugs identified and how they were resolved.
    - **Final Status**: Verification results (tests passed, runtime checks) and overall readiness of the feature.
 
 3. **Progress Update**:
-   - Mark the final phase as completed (`[x]`) in `achievements.md`.
+   - Mark Phase 8 as completed (`[x]`) in `achievements.md`.
    - Verify that all phases (including the core phases and any additional phase checkboxes added dynamically, or by custom workflows, or listed in the file) and all recorded warning/critique checklist items are fully checked off and marked as completed (`[x]`) across the entire file before ending your execution.

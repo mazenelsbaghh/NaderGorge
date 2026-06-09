@@ -18,6 +18,7 @@ using NaderGorge.Infrastructure.Repositories;
 using NaderGorge.Infrastructure.Services;
 using NaderGorge.Infrastructure.Providers;
 using StackExchange.Redis;
+using NaderGorge.API.Hubs;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
@@ -84,7 +85,9 @@ builder.Services.AddScoped<IJobEnqueuer, RedisJobEnqueuer>();
 builder.Services.AddScoped<ICachedPlatformSettingsReader, CachedPlatformSettingsReader>();
 builder.Services.AddScoped<BalanceService>();
 builder.Services.AddScoped<AcademicValidationService>();
+builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
+builder.Services.AddSignalR();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -102,6 +105,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
             ValidAudience = builder.Configuration["JwtSettings:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -171,6 +188,7 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 if (app.Environment.EnvironmentName != "E2e")
 {

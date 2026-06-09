@@ -1,31 +1,39 @@
 {
   "generatedBy": "scripts/generate-endpoint-inventory.mjs",
   "controllerDirectory": "backend/src/NaderGorge.API/Controllers",
-  "endpointCount": 146,
-  "digest": "b1a6357720a6e29a893042b6009409a47cab0c833ae474938ede9b618a3c38ab",
+  "frontendDirectories": [
+    "frontend/src/services",
+    "frontend/src/app/api",
+    "frontend/src/components",
+    "frontend/src/packages"
+  ],
+  "endpointCount": 215,
+  "frontendCallCount": 212,
+  "missingFrontendRouteCount": 0,
+  "digest": "0a67d455e999f4c90526a900a2f74f06fa936f8792769d15ae0ec014d1b5b4cc",
   "endpoints": [
     {
       "controller": "AdminCommunityController",
       "action": "ApproveComment",
       "method": "POST",
-      "path": "/api/admin/community/comments/{commentid:guid}/approve",
-      "routeTemplate": "/api/admin/community/comments/{commentId:guid}/approve",
+      "path": "/api/admin/community/comments/{commentid}/approve",
+      "routeTemplate": "/api/admin/community/comments/{commentId}/approve",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
-        "line": 70
+        "line": 71
       }
     },
     {
       "controller": "AdminCommunityController",
       "action": "RejectComment",
       "method": "POST",
-      "path": "/api/admin/community/comments/{commentid:guid}/reject",
-      "routeTemplate": "/api/admin/community/comments/{commentId:guid}/reject",
+      "path": "/api/admin/community/comments/{commentid}/reject",
+      "routeTemplate": "/api/admin/community/comments/{commentId}/reject",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
-        "line": 85
+        "line": 86
       }
     },
     {
@@ -37,7 +45,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
-        "line": 63
+        "line": 64
       }
     },
     {
@@ -49,43 +57,43 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
-        "line": 24
+        "line": 25
       }
     },
     {
       "controller": "AdminCommunityController",
       "action": "ApprovePost",
       "method": "POST",
-      "path": "/api/admin/community/posts/{postid:guid}/approve",
-      "routeTemplate": "/api/admin/community/posts/{postId:guid}/approve",
+      "path": "/api/admin/community/posts/{postid}/approve",
+      "routeTemplate": "/api/admin/community/posts/{postId}/approve",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
-        "line": 33
+        "line": 34
       }
     },
     {
       "controller": "AdminCommunityController",
       "action": "RejectPost",
       "method": "POST",
-      "path": "/api/admin/community/posts/{postid:guid}/reject",
-      "routeTemplate": "/api/admin/community/posts/{postId:guid}/reject",
+      "path": "/api/admin/community/posts/{postid}/reject",
+      "routeTemplate": "/api/admin/community/posts/{postId}/reject",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminCommunityController.cs",
-        "line": 48
+        "line": 49
       }
     },
     {
       "controller": "AdminController",
       "action": "RegenerateChapterMindmap",
       "method": "POST",
-      "path": "/api/admin/chapters/{chapterid:guid}/regenerate-mindmap",
-      "routeTemplate": "/api/admin/chapters/{chapterId:guid}/regenerate-mindmap",
+      "path": "/api/admin/chapters/{chapterid}/regenerate-mindmap",
+      "routeTemplate": "/api/admin/chapters/{chapterId}/regenerate-mindmap",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 313
+        "line": 373
       }
     },
     {
@@ -97,7 +105,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 460
+        "line": 562
       }
     },
     {
@@ -109,55 +117,55 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 120
+        "line": 148
       }
     },
     {
       "controller": "AdminController",
       "action": "GetCodeGroupDetails",
       "method": "GET",
-      "path": "/api/admin/codes/groups/{id:guid}/details",
-      "routeTemplate": "/api/admin/codes/groups/{id:guid}/details",
+      "path": "/api/admin/codes/groups/{id}/details",
+      "routeTemplate": "/api/admin/codes/groups/{id}/details",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 124
+        "line": 153
       }
     },
     {
       "controller": "AdminController",
       "action": "AttachHomework",
       "method": "POST",
-      "path": "/api/admin/content/lessons/{lessonid:guid}/homework",
-      "routeTemplate": "/api/admin/content/lessons/{lessonId:guid}/homework",
+      "path": "/api/admin/content/lessons/{lessonid}/homework",
+      "routeTemplate": "/api/admin/content/lessons/{lessonId}/homework",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 334
+        "line": 397
       }
     },
     {
       "controller": "AdminController",
       "action": "RemoveDevice",
       "method": "DELETE",
-      "path": "/api/admin/devices/{id:guid}",
-      "routeTemplate": "/api/admin/devices/{id:guid}",
+      "path": "/api/admin/devices/{id}",
+      "routeTemplate": "/api/admin/devices/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 112
+        "line": 139
       }
     },
     {
       "controller": "AdminController",
       "action": "GradeEssay",
       "method": "POST",
-      "path": "/api/admin/essays/{essaysubmissionid:guid}/grade",
-      "routeTemplate": "/api/admin/essays/{essaySubmissionId:guid}/grade",
+      "path": "/api/admin/essays/{essaysubmissionid}/grade",
+      "routeTemplate": "/api/admin/essays/{essaySubmissionId}/grade",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 411
+        "line": 485
       }
     },
     {
@@ -169,43 +177,43 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 419
+        "line": 494
       }
     },
     {
       "controller": "AdminController",
       "action": "GetExamDashboard",
       "method": "GET",
-      "path": "/api/admin/exams/{examid:guid}/dashboard",
-      "routeTemplate": "/api/admin/exams/{examId:guid}/dashboard",
+      "path": "/api/admin/exams/{examid}/dashboard",
+      "routeTemplate": "/api/admin/exams/{examId}/dashboard",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 372
+        "line": 441
       }
     },
     {
       "controller": "AdminController",
       "action": "AddQuestionsToExam",
       "method": "POST",
-      "path": "/api/admin/exams/{examid:guid}/questions",
-      "routeTemplate": "/api/admin/exams/{examId:guid}/questions",
+      "path": "/api/admin/exams/{examid}/questions",
+      "routeTemplate": "/api/admin/exams/{examId}/questions",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 365
+        "line": 433
       }
     },
     {
       "controller": "AdminController",
       "action": "DeleteExamQuestion",
       "method": "DELETE",
-      "path": "/api/admin/exams/{examid:guid}/questions/{questionid:guid}",
-      "routeTemplate": "/api/admin/exams/{examId:guid}/questions/{questionId:guid}",
+      "path": "/api/admin/exams/{examid}/questions/{questionid}",
+      "routeTemplate": "/api/admin/exams/{examId}/questions/{questionId}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 379
+        "line": 449
       }
     },
     {
@@ -217,7 +225,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 358
+        "line": 424
       }
     },
     {
@@ -229,31 +237,31 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 250
+        "line": 301
       }
     },
     {
       "controller": "AdminController",
       "action": "GetLessonCockpit",
       "method": "GET",
-      "path": "/api/admin/lessons/{lessonid:guid}/cockpit",
-      "routeTemplate": "/api/admin/lessons/{lessonId:guid}/cockpit",
+      "path": "/api/admin/lessons/{lessonid}/cockpit",
+      "routeTemplate": "/api/admin/lessons/{lessonId}/cockpit",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 257
+        "line": 309
       }
     },
     {
       "controller": "AdminController",
       "action": "LinkExam",
       "method": "PUT",
-      "path": "/api/admin/lessons/{lessonid:guid}/exam",
-      "routeTemplate": "/api/admin/lessons/{lessonId:guid}/exam",
+      "path": "/api/admin/lessons/{lessonid}/exam",
+      "routeTemplate": "/api/admin/lessons/{lessonId}/exam",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 351
+        "line": 416
       }
     },
     {
@@ -265,7 +273,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 445
+        "line": 545
       }
     },
     {
@@ -277,7 +285,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 452
+        "line": 553
       }
     },
     {
@@ -289,67 +297,79 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 161
+        "line": 200
       }
     },
     {
       "controller": "AdminController",
       "action": "GetPackageById",
       "method": "GET",
-      "path": "/api/admin/packages/{id:guid}",
-      "routeTemplate": "/api/admin/packages/{id:guid}",
+      "path": "/api/admin/packages/{id}",
+      "routeTemplate": "/api/admin/packages/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 168
+        "line": 208
       }
     },
     {
       "controller": "AdminController",
       "action": "UpdatePackage",
       "method": "PUT",
-      "path": "/api/admin/packages/{id:guid}",
-      "routeTemplate": "/api/admin/packages/{id:guid}",
+      "path": "/api/admin/packages/{id}",
+      "routeTemplate": "/api/admin/packages/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 172
+        "line": 213
       }
     },
     {
       "controller": "AdminController",
       "action": "ResetPackageCodeProfile",
       "method": "DELETE",
-      "path": "/api/admin/packages/{id:guid}/code-profile",
-      "routeTemplate": "/api/admin/packages/{id:guid}/code-profile",
+      "path": "/api/admin/packages/{id}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id}/code-profile",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 207
+        "line": 251
       }
     },
     {
       "controller": "AdminController",
       "action": "GetPackageCodeProfile",
       "method": "GET",
-      "path": "/api/admin/packages/{id:guid}/code-profile",
-      "routeTemplate": "/api/admin/packages/{id:guid}/code-profile",
+      "path": "/api/admin/packages/{id}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id}/code-profile",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 179
+        "line": 221
       }
     },
     {
       "controller": "AdminController",
       "action": "UpsertPackageCodeProfile",
       "method": "PUT",
-      "path": "/api/admin/packages/{id:guid}/code-profile",
-      "routeTemplate": "/api/admin/packages/{id:guid}/code-profile",
+      "path": "/api/admin/packages/{id}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id}/code-profile",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 186
+        "line": 229
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetPackagesList",
+      "method": "GET",
+      "path": "/api/admin/packages/list",
+      "routeTemplate": "/api/admin/packages/list",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 195
       }
     },
     {
@@ -361,7 +381,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 387
+        "line": 458
       }
     },
     {
@@ -373,19 +393,19 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 391
+        "line": 463
       }
     },
     {
       "controller": "AdminController",
       "action": "UploadQuestionAudio",
       "method": "POST",
-      "path": "/api/admin/questions/{id:guid}/audio",
-      "routeTemplate": "/api/admin/questions/{id:guid}/audio",
+      "path": "/api/admin/questions/{id}/audio",
+      "routeTemplate": "/api/admin/questions/{id}/audio",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 398
+        "line": 471
       }
     },
     {
@@ -397,7 +417,55 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 320
+        "line": 381
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "ListRoles",
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "routeTemplate": "/api/admin/roles",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 634
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateRole",
+      "method": "POST",
+      "path": "/api/admin/roles",
+      "routeTemplate": "/api/admin/roles",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 639
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DeleteRole",
+      "method": "DELETE",
+      "path": "/api/admin/roles/{id}",
+      "routeTemplate": "/api/admin/roles/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 655
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateRole",
+      "method": "PUT",
+      "path": "/api/admin/roles/{id}",
+      "routeTemplate": "/api/admin/roles/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 647
       }
     },
     {
@@ -409,19 +477,19 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 243
+        "line": 293
       }
     },
     {
       "controller": "AdminController",
       "action": "GetSectionById",
       "method": "GET",
-      "path": "/api/admin/sections/{id:guid}",
-      "routeTemplate": "/api/admin/sections/{id:guid}",
+      "path": "/api/admin/sections/{id}",
+      "routeTemplate": "/api/admin/sections/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 239
+        "line": 288
       }
     },
     {
@@ -433,7 +501,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 507
+        "line": 617
       }
     },
     {
@@ -445,7 +513,67 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 515
+        "line": 625
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetSubjects",
+      "method": "GET",
+      "path": "/api/admin/subjects",
+      "routeTemplate": "/api/admin/subjects",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 664
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateSubject",
+      "method": "POST",
+      "path": "/api/admin/subjects",
+      "routeTemplate": "/api/admin/subjects",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 674
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DeleteSubject",
+      "method": "DELETE",
+      "path": "/api/admin/subjects/{id}",
+      "routeTemplate": "/api/admin/subjects/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 690
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetSubjectById",
+      "method": "GET",
+      "path": "/api/admin/subjects/{id}",
+      "routeTemplate": "/api/admin/subjects/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 669
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateSubject",
+      "method": "PUT",
+      "path": "/api/admin/subjects/{id}",
+      "routeTemplate": "/api/admin/subjects/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 682
       }
     },
     {
@@ -457,7 +585,55 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 327
+        "line": 389
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetTeachers",
+      "method": "GET",
+      "path": "/api/admin/teachers",
+      "routeTemplate": "/api/admin/teachers",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 699
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateTeacher",
+      "method": "POST",
+      "path": "/api/admin/teachers",
+      "routeTemplate": "/api/admin/teachers",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 709
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetTeacherById",
+      "method": "GET",
+      "path": "/api/admin/teachers/{id}",
+      "routeTemplate": "/api/admin/teachers/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 704
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "UpdateTeacher",
+      "method": "PUT",
+      "path": "/api/admin/teachers/{id}",
+      "routeTemplate": "/api/admin/teachers/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 717
       }
     },
     {
@@ -469,43 +645,43 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 214
+        "line": 259
       }
     },
     {
       "controller": "AdminController",
       "action": "DeleteTerm",
       "method": "DELETE",
-      "path": "/api/admin/terms/{id:guid}",
-      "routeTemplate": "/api/admin/terms/{id:guid}",
+      "path": "/api/admin/terms/{id}",
+      "routeTemplate": "/api/admin/terms/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 232
+        "line": 280
       }
     },
     {
       "controller": "AdminController",
       "action": "GetTermById",
       "method": "GET",
-      "path": "/api/admin/terms/{id:guid}",
-      "routeTemplate": "/api/admin/terms/{id:guid}",
+      "path": "/api/admin/terms/{id}",
+      "routeTemplate": "/api/admin/terms/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 221
+        "line": 267
       }
     },
     {
       "controller": "AdminController",
       "action": "UpdateTerm",
       "method": "PUT",
-      "path": "/api/admin/terms/{id:guid}",
-      "routeTemplate": "/api/admin/terms/{id:guid}",
+      "path": "/api/admin/terms/{id}",
+      "routeTemplate": "/api/admin/terms/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 225
+        "line": 272
       }
     },
     {
@@ -517,63 +693,51 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 24
+        "line": 25
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "CreateUser",
+      "method": "POST",
+      "path": "/api/admin/users",
+      "routeTemplate": "/api/admin/users",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 39
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "GetUserAuditLogs",
+      "method": "GET",
+      "path": "/api/admin/users/{id}/audit-logs",
+      "routeTemplate": "/api/admin/users/{id}/audit-logs",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 118
       }
     },
     {
       "controller": "AdminController",
       "action": "GetUserDevices",
       "method": "GET",
-      "path": "/api/admin/users/{id:guid}/devices",
-      "routeTemplate": "/api/admin/users/{id:guid}/devices",
+      "path": "/api/admin/users/{id}/devices",
+      "routeTemplate": "/api/admin/users/{id}/devices",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 94
+        "line": 113
       }
     },
     {
       "controller": "AdminController",
       "action": "UpdateUserRoles",
       "method": "PUT",
-      "path": "/api/admin/users/{id:guid}/roles",
-      "routeTemplate": "/api/admin/users/{id:guid}/roles",
-      "authorization": "authorized",
-      "source": {
-        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 87
-      }
-    },
-    {
-      "controller": "AdminController",
-      "action": "UpdateUserStatus",
-      "method": "PUT",
-      "path": "/api/admin/users/{id:guid}/status",
-      "routeTemplate": "/api/admin/users/{id:guid}/status",
-      "authorization": "authorized",
-      "source": {
-        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 73
-      }
-    },
-    {
-      "controller": "AdminController",
-      "action": "AdjustBalance",
-      "method": "POST",
-      "path": "/api/admin/users/students/{userid:guid}/balance/adjust",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/balance/adjust",
-      "authorization": "authorized",
-      "source": {
-        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 146
-      }
-    },
-    {
-      "controller": "AdminController",
-      "action": "DisconnectAllDevices",
-      "method": "DELETE",
-      "path": "/api/admin/users/students/{userid:guid}/devices",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/devices",
+      "path": "/api/admin/users/{id}/roles",
+      "routeTemplate": "/api/admin/users/{id}/roles",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
@@ -582,122 +746,158 @@
     },
     {
       "controller": "AdminController",
-      "action": "DisconnectDevice",
-      "method": "DELETE",
-      "path": "/api/admin/users/students/{userid:guid}/devices/{deviceid:guid}",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/devices/{deviceId:guid}",
+      "action": "UpdateUserStatus",
+      "method": "PUT",
+      "path": "/api/admin/users/{id}/status",
+      "routeTemplate": "/api/admin/users/{id}/status",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 98
+        "line": 89
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "AdjustBalance",
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid}/balance/adjust",
+      "routeTemplate": "/api/admin/users/students/{userId}/balance/adjust",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 178
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DisconnectAllDevices",
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{userid}/devices",
+      "routeTemplate": "/api/admin/users/students/{userId}/devices",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 131
+      }
+    },
+    {
+      "controller": "AdminController",
+      "action": "DisconnectDevice",
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{userid}/devices/{deviceid}",
+      "routeTemplate": "/api/admin/users/students/{userId}/devices/{deviceId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
+        "line": 123
       }
     },
     {
       "controller": "AdminController",
       "action": "AdjustGamification",
       "method": "POST",
-      "path": "/api/admin/users/students/{userid:guid}/gamification/adjust",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/gamification/adjust",
+      "path": "/api/admin/users/students/{userid}/gamification/adjust",
+      "routeTemplate": "/api/admin/users/students/{userId}/gamification/adjust",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 139
+        "line": 170
       }
     },
     {
       "controller": "AdminController",
       "action": "AddStudentNote",
       "method": "POST",
-      "path": "/api/admin/users/students/{userid:guid}/notes",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/notes",
+      "path": "/api/admin/users/students/{userid}/notes",
+      "routeTemplate": "/api/admin/users/students/{userId}/notes",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 59
+        "line": 73
       }
     },
     {
       "controller": "AdminController",
       "action": "DeleteStudentNote",
       "method": "DELETE",
-      "path": "/api/admin/users/students/{userid:guid}/notes/{noteid:guid}",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/notes/{noteId:guid}",
+      "path": "/api/admin/users/students/{userid}/notes/{noteid}",
+      "routeTemplate": "/api/admin/users/students/{userId}/notes/{noteId}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 66
+        "line": 81
       }
     },
     {
       "controller": "AdminController",
       "action": "OverrideVideoLimit",
       "method": "POST",
-      "path": "/api/admin/users/students/{userid:guid}/overrides",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/overrides",
+      "path": "/api/admin/users/students/{userid}/overrides",
+      "routeTemplate": "/api/admin/users/students/{userId}/overrides",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 132
+        "line": 162
       }
     },
     {
       "controller": "AdminController",
       "action": "CancelPackage",
       "method": "POST",
-      "path": "/api/admin/users/students/{userid:guid}/packages/{accessgrantid:guid}/cancel",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/packages/{accessGrantId:guid}/cancel",
+      "path": "/api/admin/users/students/{userid}/packages/{accessgrantid}/cancel",
+      "routeTemplate": "/api/admin/users/students/{userId}/packages/{accessGrantId}/cancel",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 153
+        "line": 186
       }
     },
     {
       "controller": "AdminController",
       "action": "GetStudentProfile",
       "method": "GET",
-      "path": "/api/admin/users/students/{userid:guid}/profile",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/profile",
+      "path": "/api/admin/users/students/{userid}/profile",
+      "routeTemplate": "/api/admin/users/students/{userId}/profile",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 37
+        "line": 48
       }
     },
     {
       "controller": "AdminController",
       "action": "UpdateStudentProfile",
       "method": "PUT",
-      "path": "/api/admin/users/students/{userid:guid}/profile",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/profile",
+      "path": "/api/admin/users/students/{userid}/profile",
+      "routeTemplate": "/api/admin/users/students/{userId}/profile",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 41
+        "line": 53
       }
     },
     {
       "controller": "AdminController",
       "action": "AdminResetPassword",
       "method": "POST",
-      "path": "/api/admin/users/students/{userid:guid}/reset-password",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/reset-password",
+      "path": "/api/admin/users/students/{userid}/reset-password",
+      "routeTemplate": "/api/admin/users/students/{userId}/reset-password",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 52
+        "line": 65
       }
     },
     {
       "controller": "AdminController",
       "action": "ToggleStudentStatus",
       "method": "PATCH",
-      "path": "/api/admin/users/students/{userid:guid}/status",
-      "routeTemplate": "/api/admin/users/students/{userId:guid}/status",
+      "path": "/api/admin/users/students/{userid}/status",
+      "routeTemplate": "/api/admin/users/students/{userId}/status",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 80
+        "line": 97
       }
     },
     {
@@ -709,79 +909,79 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 264
+        "line": 317
       }
     },
     {
       "controller": "AdminController",
       "action": "DeleteVideo",
       "method": "DELETE",
-      "path": "/api/admin/videos/{id:guid}",
-      "routeTemplate": "/api/admin/videos/{id:guid}",
+      "path": "/api/admin/videos/{id}",
+      "routeTemplate": "/api/admin/videos/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 278
+        "line": 333
       }
     },
     {
       "controller": "AdminController",
       "action": "UpdateVideo",
       "method": "PUT",
-      "path": "/api/admin/videos/{id:guid}",
-      "routeTemplate": "/api/admin/videos/{id:guid}",
+      "path": "/api/admin/videos/{id}",
+      "routeTemplate": "/api/admin/videos/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 271
+        "line": 325
       }
     },
     {
       "controller": "AdminController",
       "action": "RequestAIAnalysis",
       "method": "POST",
-      "path": "/api/admin/videos/{videoid:guid}/analyze-ai",
-      "routeTemplate": "/api/admin/videos/{videoId:guid}/analyze-ai",
+      "path": "/api/admin/videos/{videoid}/analyze-ai",
+      "routeTemplate": "/api/admin/videos/{videoId}/analyze-ai",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 285
+        "line": 341
       }
     },
     {
       "controller": "AdminController",
       "action": "CancelAIAnalysis",
       "method": "POST",
-      "path": "/api/admin/videos/{videoid:guid}/cancel-ai",
-      "routeTemplate": "/api/admin/videos/{videoId:guid}/cancel-ai",
+      "path": "/api/admin/videos/{videoid}/cancel-ai",
+      "routeTemplate": "/api/admin/videos/{videoId}/cancel-ai",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 292
+        "line": 349
       }
     },
     {
       "controller": "AdminController",
       "action": "CancelMindmapGeneration",
       "method": "POST",
-      "path": "/api/admin/videos/{videoid:guid}/cancel-mindmap",
-      "routeTemplate": "/api/admin/videos/{videoId:guid}/cancel-mindmap",
+      "path": "/api/admin/videos/{videoid}/cancel-mindmap",
+      "routeTemplate": "/api/admin/videos/{videoId}/cancel-mindmap",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 299
+        "line": 357
       }
     },
     {
       "controller": "AdminController",
       "action": "RequestMindmapGeneration",
       "method": "POST",
-      "path": "/api/admin/videos/{videoid:guid}/generate-mindmaps",
-      "routeTemplate": "/api/admin/videos/{videoId:guid}/generate-mindmaps",
+      "path": "/api/admin/videos/{videoid}/generate-mindmaps",
+      "routeTemplate": "/api/admin/videos/{videoId}/generate-mindmaps",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 306
+        "line": 365
       }
     },
     {
@@ -793,7 +993,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 484
+        "line": 587
       }
     },
     {
@@ -805,7 +1005,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 491
+        "line": 595
       }
     },
     {
@@ -817,7 +1017,103 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminController.cs",
-        "line": 499
+        "line": 605
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "GetCodeAccounting",
+      "method": "GET",
+      "path": "/api/admin/finance/code-accounting",
+      "routeTemplate": "/api/admin/finance/code-accounting",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 74
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "GetPayouts",
+      "method": "GET",
+      "path": "/api/admin/finance/payouts",
+      "routeTemplate": "/api/admin/finance/payouts",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 60
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "ResolvePayout",
+      "method": "POST",
+      "path": "/api/admin/finance/payouts/{id}/resolve",
+      "routeTemplate": "/api/admin/finance/payouts/{id}/resolve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 67
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "GetPayroll",
+      "method": "GET",
+      "path": "/api/admin/finance/payroll",
+      "routeTemplate": "/api/admin/finance/payroll",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 25
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "AddPayrollAdjustment",
+      "method": "POST",
+      "path": "/api/admin/finance/payroll/{id}/adjustments",
+      "routeTemplate": "/api/admin/finance/payroll/{id}/adjustments",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 39
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "DeletePayrollAdjustment",
+      "method": "DELETE",
+      "path": "/api/admin/finance/payroll/{id}/adjustments/{adjustmentid}",
+      "routeTemplate": "/api/admin/finance/payroll/{id}/adjustments/{adjustmentId}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 46
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "ApprovePayroll",
+      "method": "POST",
+      "path": "/api/admin/finance/payroll/{id}/approve",
+      "routeTemplate": "/api/admin/finance/payroll/{id}/approve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 53
+      }
+    },
+    {
+      "controller": "AdminFinanceController",
+      "action": "GeneratePayroll",
+      "method": "POST",
+      "path": "/api/admin/finance/payroll/generate",
+      "routeTemplate": "/api/admin/finance/payroll/generate",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFinanceController.cs",
+        "line": 32
       }
     },
     {
@@ -829,7 +1125,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
-        "line": 23
+        "line": 26
       }
     },
     {
@@ -841,103 +1137,319 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
-        "line": 39
+        "line": 42
       }
     },
     {
       "controller": "AdminFormsController",
       "action": "DeleteForm",
       "method": "DELETE",
-      "path": "/api/admin/forms/{id:guid}",
-      "routeTemplate": "/api/admin/forms/{id:guid}",
+      "path": "/api/admin/forms/{id}",
+      "routeTemplate": "/api/admin/forms/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
-        "line": 56
+        "line": 59
       }
     },
     {
       "controller": "AdminFormsController",
       "action": "GetFormDetails",
       "method": "GET",
-      "path": "/api/admin/forms/{id:guid}",
-      "routeTemplate": "/api/admin/forms/{id:guid}",
+      "path": "/api/admin/forms/{id}",
+      "routeTemplate": "/api/admin/forms/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
-        "line": 31
+        "line": 34
       }
     },
     {
       "controller": "AdminFormsController",
       "action": "UpdateForm",
       "method": "PUT",
-      "path": "/api/admin/forms/{id:guid}",
-      "routeTemplate": "/api/admin/forms/{id:guid}",
+      "path": "/api/admin/forms/{id}",
+      "routeTemplate": "/api/admin/forms/{id}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
-        "line": 47
+        "line": 50
       }
     },
     {
       "controller": "AdminFormsController",
       "action": "GetFormSubmissions",
       "method": "GET",
-      "path": "/api/admin/forms/{id:guid}/submissions",
-      "routeTemplate": "/api/admin/forms/{id:guid}/submissions",
+      "path": "/api/admin/forms/{id}/submissions",
+      "routeTemplate": "/api/admin/forms/{id}/submissions",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
-        "line": 64
+        "line": 67
+      }
+    },
+    {
+      "controller": "AdminFormsController",
+      "action": "UploadCoverImage",
+      "method": "POST",
+      "path": "/api/admin/forms/cover/upload",
+      "routeTemplate": "/api/admin/forms/cover/upload",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
+        "line": 84
       }
     },
     {
       "controller": "AdminFormsController",
       "action": "UpdateSubmissionStatus",
       "method": "PUT",
-      "path": "/api/admin/forms/submissions/{submissionid:guid}/status",
-      "routeTemplate": "/api/admin/forms/submissions/{submissionId:guid}/status",
+      "path": "/api/admin/forms/submissions/{submissionid}/status",
+      "routeTemplate": "/api/admin/forms/submissions/{submissionId}/status",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminFormsController.cs",
-        "line": 72
+        "line": 75
+      }
+    },
+    {
+      "controller": "AdminHrController",
+      "action": "GetAttendance",
+      "method": "GET",
+      "path": "/api/admin/hr/attendance",
+      "routeTemplate": "/api/admin/hr/attendance",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminHrController.cs",
+        "line": 38
+      }
+    },
+    {
+      "controller": "AdminHrController",
+      "action": "GetEmployees",
+      "method": "GET",
+      "path": "/api/admin/hr/employees",
+      "routeTemplate": "/api/admin/hr/employees",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminHrController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "AdminHrController",
+      "action": "SaveEmployeeProfile",
+      "method": "POST",
+      "path": "/api/admin/hr/employees",
+      "routeTemplate": "/api/admin/hr/employees",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminHrController.cs",
+        "line": 31
+      }
+    },
+    {
+      "controller": "AdminHrController",
+      "action": "GetVacations",
+      "method": "GET",
+      "path": "/api/admin/hr/vacations",
+      "routeTemplate": "/api/admin/hr/vacations",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminHrController.cs",
+        "line": 48
+      }
+    },
+    {
+      "controller": "AdminHrController",
+      "action": "ApproveVacation",
+      "method": "POST",
+      "path": "/api/admin/hr/vacations/{id}/approve",
+      "routeTemplate": "/api/admin/hr/vacations/{id}/approve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminHrController.cs",
+        "line": 57
+      }
+    },
+    {
+      "controller": "AdminHrController",
+      "action": "RejectVacation",
+      "method": "POST",
+      "path": "/api/admin/hr/vacations/{id}/reject",
+      "routeTemplate": "/api/admin/hr/vacations/{id}/reject",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminHrController.cs",
+        "line": 70
       }
     },
     {
       "controller": "AdminLessonCommentsController",
       "action": "ApproveLessonComment",
       "method": "POST",
-      "path": "/api/admin/comments/{commentid:guid}/approve",
-      "routeTemplate": "/api/admin/comments/{commentId:guid}/approve",
+      "path": "/api/admin/comments/{commentid}/approve",
+      "routeTemplate": "/api/admin/comments/{commentId}/approve",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminLessonCommentsController.cs",
-        "line": 43
+        "line": 44
       }
     },
     {
       "controller": "AdminLessonCommentsController",
       "action": "RejectLessonComment",
       "method": "POST",
-      "path": "/api/admin/comments/{commentid:guid}/reject",
-      "routeTemplate": "/api/admin/comments/{commentId:guid}/reject",
+      "path": "/api/admin/comments/{commentid}/reject",
+      "routeTemplate": "/api/admin/comments/{commentId}/reject",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminLessonCommentsController.cs",
-        "line": 59
+        "line": 60
       }
     },
     {
       "controller": "AdminLessonCommentsController",
       "action": "GetLessonCommentsForModeration",
       "method": "GET",
-      "path": "/api/admin/lessons/{lessonid:guid}/comments",
-      "routeTemplate": "/api/admin/lessons/{lessonId:guid}/comments",
+      "path": "/api/admin/lessons/{lessonid}/comments",
+      "routeTemplate": "/api/admin/lessons/{lessonId}/comments",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AdminLessonCommentsController.cs",
-        "line": 24
+        "line": 25
+      }
+    },
+    {
+      "controller": "AdminMediaController",
+      "action": "GetPipelines",
+      "method": "GET",
+      "path": "/api/admin/media/pipelines",
+      "routeTemplate": "/api/admin/media/pipelines",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
+        "line": 30
+      }
+    },
+    {
+      "controller": "AdminMediaController",
+      "action": "CreatePipeline",
+      "method": "POST",
+      "path": "/api/admin/media/pipelines",
+      "routeTemplate": "/api/admin/media/pipelines",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
+        "line": 45
+      }
+    },
+    {
+      "controller": "AdminMediaController",
+      "action": "UpdatePipeline",
+      "method": "PUT",
+      "path": "/api/admin/media/pipelines/{id}",
+      "routeTemplate": "/api/admin/media/pipelines/{id}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
+        "line": 59
+      }
+    },
+    {
+      "controller": "AdminMediaController",
+      "action": "GetMediaKpis",
+      "method": "GET",
+      "path": "/api/admin/media/reports/kpis",
+      "routeTemplate": "/api/admin/media/reports/kpis",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
+        "line": 119
+      }
+    },
+    {
+      "controller": "AdminMediaController",
+      "action": "GetSocialPlans",
+      "method": "GET",
+      "path": "/api/admin/media/social-plans",
+      "routeTemplate": "/api/admin/media/social-plans",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
+        "line": 84
+      }
+    },
+    {
+      "controller": "AdminMediaController",
+      "action": "CreateSocialPlan",
+      "method": "POST",
+      "path": "/api/admin/media/social-plans",
+      "routeTemplate": "/api/admin/media/social-plans",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminMediaController.cs",
+        "line": 96
+      }
+    },
+    {
+      "controller": "AdminOperationsController",
+      "action": "GetTasks",
+      "method": "GET",
+      "path": "/api/admin/operations/tasks",
+      "routeTemplate": "/api/admin/operations/tasks",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminOperationsController.cs",
+        "line": 26
+      }
+    },
+    {
+      "controller": "AdminOperationsController",
+      "action": "CreateTask",
+      "method": "POST",
+      "path": "/api/admin/operations/tasks",
+      "routeTemplate": "/api/admin/operations/tasks",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminOperationsController.cs",
+        "line": 37
+      }
+    },
+    {
+      "controller": "AdminOperationsController",
+      "action": "ResolveApproval",
+      "method": "POST",
+      "path": "/api/admin/operations/tasks/{id}/resolve",
+      "routeTemplate": "/api/admin/operations/tasks/{id}/resolve",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminOperationsController.cs",
+        "line": 59
+      }
+    },
+    {
+      "controller": "AdminReportsController",
+      "action": "GetAuditLogs",
+      "method": "GET",
+      "path": "/api/admin/reports/audit",
+      "routeTemplate": "/api/admin/reports/audit",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminReportsController.cs",
+        "line": 23
+      }
+    },
+    {
+      "controller": "AdminReportsController",
+      "action": "GetKpiDashboard",
+      "method": "GET",
+      "path": "/api/admin/reports/kpi",
+      "routeTemplate": "/api/admin/reports/kpi",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AdminReportsController.cs",
+        "line": 37
       }
     },
     {
@@ -949,7 +1461,55 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
-        "line": 33
+        "line": 35
+      }
+    },
+    {
+      "controller": "AssistantController",
+      "action": "GetMyTasks",
+      "method": "GET",
+      "path": "/api/v1/assistant/tasks/my",
+      "routeTemplate": "/api/v1/assistant/tasks/my",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 49
+      }
+    },
+    {
+      "controller": "AssistantController",
+      "action": "GetTaskDetails",
+      "method": "GET",
+      "path": "/api/v1/assistant/tasks/my/{id}",
+      "routeTemplate": "/api/v1/assistant/tasks/my/{id}",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 60
+      }
+    },
+    {
+      "controller": "AssistantController",
+      "action": "AddComment",
+      "method": "POST",
+      "path": "/api/v1/assistant/tasks/my/{id}/comments",
+      "routeTemplate": "/api/v1/assistant/tasks/my/{id}/comments",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 78
+      }
+    },
+    {
+      "controller": "AssistantController",
+      "action": "UpdateStatus",
+      "method": "POST",
+      "path": "/api/v1/assistant/tasks/my/{id}/status",
+      "routeTemplate": "/api/v1/assistant/tasks/my/{id}/status",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
+        "line": 67
       }
     },
     {
@@ -961,7 +1521,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
-        "line": 23
+        "line": 25
       }
     },
     {
@@ -973,7 +1533,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 73
+        "line": 127
       }
     },
     {
@@ -985,7 +1545,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 47
+        "line": 56
       }
     },
     {
@@ -997,7 +1557,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 20
+        "line": 29
       }
     },
     {
@@ -1009,7 +1569,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 65
+        "line": 99
       }
     },
     {
@@ -1021,7 +1581,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 40
+        "line": 49
       }
     },
     {
@@ -1033,7 +1593,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 89
+        "line": 143
       }
     },
     {
@@ -1045,15 +1605,15 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AuthController.cs",
-        "line": 82
+        "line": 136
       }
     },
     {
       "controller": "BalanceController",
       "action": "GetBalance",
       "method": "GET",
-      "path": "/api/balance",
-      "routeTemplate": "/api/balance",
+      "path": "/api/student/balance",
+      "routeTemplate": "/api/student/balance",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/BalanceController.cs",
@@ -1064,8 +1624,8 @@
       "controller": "BalanceController",
       "action": "PurchaseContent",
       "method": "POST",
-      "path": "/api/balance/purchase",
-      "routeTemplate": "/api/balance/purchase",
+      "path": "/api/student/balance/purchase",
+      "routeTemplate": "/api/student/balance/purchase",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/BalanceController.cs",
@@ -1082,6 +1642,18 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/CodesController.cs",
         "line": 20
+      }
+    },
+    {
+      "controller": "CodesController",
+      "action": "Validate",
+      "method": "GET",
+      "path": "/api/codes/validate/{code}",
+      "routeTemplate": "/api/codes/validate/{code}",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CodesController.cs",
+        "line": 29
       }
     },
     {
@@ -1112,8 +1684,8 @@
       "controller": "CommunityController",
       "action": "GetPostComments",
       "method": "GET",
-      "path": "/api/community/posts/{postid:guid}/comments",
-      "routeTemplate": "/api/community/posts/{postId:guid}/comments",
+      "path": "/api/community/posts/{postid}/comments",
+      "routeTemplate": "/api/community/posts/{postId}/comments",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
@@ -1124,8 +1696,8 @@
       "controller": "CommunityController",
       "action": "CreatePostComment",
       "method": "POST",
-      "path": "/api/community/posts/{postid:guid}/comments",
-      "routeTemplate": "/api/community/posts/{postId:guid}/comments",
+      "path": "/api/community/posts/{postid}/comments",
+      "routeTemplate": "/api/community/posts/{postId}/comments",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
@@ -1136,8 +1708,8 @@
       "controller": "CommunityController",
       "action": "ToggleLike",
       "method": "POST",
-      "path": "/api/community/posts/{postid:guid}/likes/toggle",
-      "routeTemplate": "/api/community/posts/{postId:guid}/likes/toggle",
+      "path": "/api/community/posts/{postid}/likes/toggle",
+      "routeTemplate": "/api/community/posts/{postId}/likes/toggle",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
@@ -1148,8 +1720,8 @@
       "controller": "CommunityController",
       "action": "ToggleVote",
       "method": "POST",
-      "path": "/api/community/posts/{postid:guid}/polls/{optionid:guid}/vote",
-      "routeTemplate": "/api/community/posts/{postId:guid}/polls/{optionId:guid}/vote",
+      "path": "/api/community/posts/{postid}/polls/{optionid}/vote",
+      "routeTemplate": "/api/community/posts/{postId}/polls/{optionId}/vote",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/CommunityController.cs",
@@ -1172,8 +1744,8 @@
       "controller": "ContentController",
       "action": "GetLessonDetail",
       "method": "GET",
-      "path": "/api/content/lessons/{lessonid:guid}",
-      "routeTemplate": "/api/content/lessons/{lessonId:guid}",
+      "path": "/api/content/lessons/{lessonid}",
+      "routeTemplate": "/api/content/lessons/{lessonId}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
@@ -1184,8 +1756,8 @@
       "controller": "ContentController",
       "action": "GetLessonComments",
       "method": "GET",
-      "path": "/api/content/lessons/{lessonid:guid}/comments",
-      "routeTemplate": "/api/content/lessons/{lessonId:guid}/comments",
+      "path": "/api/content/lessons/{lessonid}/comments",
+      "routeTemplate": "/api/content/lessons/{lessonId}/comments",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
@@ -1196,20 +1768,20 @@
       "controller": "ContentController",
       "action": "CreateLessonComment",
       "method": "POST",
-      "path": "/api/content/lessons/{lessonid:guid}/comments",
-      "routeTemplate": "/api/content/lessons/{lessonId:guid}/comments",
+      "path": "/api/content/lessons/{lessonid}/comments",
+      "routeTemplate": "/api/content/lessons/{lessonId}/comments",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
-        "line": 120
+        "line": 119
       }
     },
     {
       "controller": "ContentController",
       "action": "GetMyLessonComments",
       "method": "GET",
-      "path": "/api/content/lessons/{lessonid:guid}/comments/mine",
-      "routeTemplate": "/api/content/lessons/{lessonId:guid}/comments/mine",
+      "path": "/api/content/lessons/{lessonid}/comments/mine",
+      "routeTemplate": "/api/content/lessons/{lessonId}/comments/mine",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
@@ -1232,8 +1804,8 @@
       "controller": "ContentController",
       "action": "GetPackageCodePage",
       "method": "GET",
-      "path": "/api/content/packages/{packageid:guid}/code-page",
-      "routeTemplate": "/api/content/packages/{packageId:guid}/code-page",
+      "path": "/api/content/packages/{packageid}/code-page",
+      "routeTemplate": "/api/content/packages/{packageId}/code-page",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
@@ -1244,8 +1816,8 @@
       "controller": "ContentController",
       "action": "GetTerms",
       "method": "GET",
-      "path": "/api/content/packages/{packageid:guid}/terms",
-      "routeTemplate": "/api/content/packages/{packageId:guid}/terms",
+      "path": "/api/content/packages/{packageid}/terms",
+      "routeTemplate": "/api/content/packages/{packageId}/terms",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
@@ -1256,8 +1828,8 @@
       "controller": "ContentController",
       "action": "GetLessons",
       "method": "GET",
-      "path": "/api/content/sections/{sectionid:guid}/lessons",
-      "routeTemplate": "/api/content/sections/{sectionId:guid}/lessons",
+      "path": "/api/content/sections/{sectionid}/lessons",
+      "routeTemplate": "/api/content/sections/{sectionId}/lessons",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
@@ -1268,12 +1840,72 @@
       "controller": "ContentController",
       "action": "GetSections",
       "method": "GET",
-      "path": "/api/content/terms/{termid:guid}/sections",
-      "routeTemplate": "/api/content/terms/{termId:guid}/sections",
+      "path": "/api/content/terms/{termid}/sections",
+      "routeTemplate": "/api/content/terms/{termId}/sections",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ContentController.cs",
         "line": 47
+      }
+    },
+    {
+      "controller": "CrmController",
+      "action": "GetPerformanceReport",
+      "method": "GET",
+      "path": "/api/crm/reports/performance",
+      "routeTemplate": "/api/crm/reports/performance",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CrmController.cs",
+        "line": 88
+      }
+    },
+    {
+      "controller": "CrmController",
+      "action": "GetStudents",
+      "method": "GET",
+      "path": "/api/crm/students",
+      "routeTemplate": "/api/crm/students",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CrmController.cs",
+        "line": 29
+      }
+    },
+    {
+      "controller": "CrmController",
+      "action": "AssignStudent",
+      "method": "POST",
+      "path": "/api/crm/students/{studentid}/assign",
+      "routeTemplate": "/api/crm/students/{studentId}/assign",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CrmController.cs",
+        "line": 48
+      }
+    },
+    {
+      "controller": "CrmController",
+      "action": "LogCall",
+      "method": "POST",
+      "path": "/api/crm/students/{studentid}/calls",
+      "routeTemplate": "/api/crm/students/{studentId}/calls",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CrmController.cs",
+        "line": 62
+      }
+    },
+    {
+      "controller": "CrmController",
+      "action": "GetHistory",
+      "method": "GET",
+      "path": "/api/crm/students/{studentid}/history",
+      "routeTemplate": "/api/crm/students/{studentId}/history",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/CrmController.cs",
+        "line": 75
       }
     },
     {
@@ -1285,7 +1917,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 239
+        "line": 360
       }
     },
     {
@@ -1297,7 +1929,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 186
+        "line": 303
       }
     },
     {
@@ -1309,7 +1941,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 274
+        "line": 395
       }
     },
     {
@@ -1321,7 +1953,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 252
+        "line": 373
       }
     },
     {
@@ -1345,15 +1977,15 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 106
+        "line": 156
       }
     },
     {
       "controller": "ExamsController",
       "action": "UseFiftyFifty",
       "method": "GET",
-      "path": "/api/exams/{id:guid}/attempts/{attemptid:guid}/questions/{questionid:guid}/fifty-fifty",
-      "routeTemplate": "/api/exams/{id:guid}/attempts/{attemptId:guid}/questions/{questionId:guid}/fifty-fifty",
+      "path": "/api/exams/{id}/attempts/{attemptid}/questions/{questionid}/fifty-fifty",
+      "routeTemplate": "/api/exams/{id}/attempts/{attemptId}/questions/{questionId}/fifty-fifty",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
@@ -1364,8 +1996,8 @@
       "controller": "ExamsController",
       "action": "SwapQuestion",
       "method": "POST",
-      "path": "/api/exams/{id:guid}/attempts/{attemptid:guid}/questions/{questionid:guid}/swap",
-      "routeTemplate": "/api/exams/{id:guid}/attempts/{attemptId:guid}/questions/{questionId:guid}/swap",
+      "path": "/api/exams/{id}/attempts/{attemptid}/questions/{questionid}/swap",
+      "routeTemplate": "/api/exams/{id}/attempts/{attemptId}/questions/{questionId}/swap",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
@@ -1376,8 +2008,8 @@
       "controller": "ExamsController",
       "action": "GetLatestPassedResult",
       "method": "GET",
-      "path": "/api/exams/{id:guid}/latest-passed-result",
-      "routeTemplate": "/api/exams/{id:guid}/latest-passed-result",
+      "path": "/api/exams/{id}/latest-passed-result",
+      "routeTemplate": "/api/exams/{id}/latest-passed-result",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
@@ -1388,8 +2020,8 @@
       "controller": "ExamsController",
       "action": "StartExamAttempt",
       "method": "POST",
-      "path": "/api/exams/{id:guid}/start",
-      "routeTemplate": "/api/exams/{id:guid}/start",
+      "path": "/api/exams/{id}/start",
+      "routeTemplate": "/api/exams/{id}/start",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
@@ -1400,8 +2032,8 @@
       "controller": "ExamsController",
       "action": "SubmitExam",
       "method": "POST",
-      "path": "/api/exams/{id:guid}/submit/{attemptid:guid}",
-      "routeTemplate": "/api/exams/{id:guid}/submit/{attemptId:guid}",
+      "path": "/api/exams/{id}/submit/{attemptid}",
+      "routeTemplate": "/api/exams/{id}/submit/{attemptId}",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
@@ -1412,8 +2044,8 @@
       "controller": "ExamsController",
       "action": "ManualUnlock",
       "method": "POST",
-      "path": "/api/exams/admin/lessons/{lessonid:guid}/students/{studentid:guid}/unlock",
-      "routeTemplate": "/api/exams/admin/lessons/{lessonId:guid}/students/{studentId:guid}/unlock",
+      "path": "/api/exams/admin/lessons/{lessonid}/students/{studentid}/unlock",
+      "routeTemplate": "/api/exams/admin/lessons/{lessonId}/students/{studentId}/unlock",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
@@ -1424,8 +2056,8 @@
       "controller": "ExamsController",
       "action": "GetGradingStatus",
       "method": "GET",
-      "path": "/api/exams/attempts/{attemptid:guid}/grading-status",
-      "routeTemplate": "/api/exams/attempts/{attemptId:guid}/grading-status",
+      "path": "/api/exams/attempts/{attemptid}/grading-status",
+      "routeTemplate": "/api/exams/attempts/{attemptId}/grading-status",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/ExamsController.cs",
@@ -1478,6 +2110,138 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/HomeworkController.cs",
         "line": 21
+      }
+    },
+    {
+      "controller": "HrController",
+      "action": "ClockIn",
+      "method": "POST",
+      "path": "/api/hr/attendance/clock-in",
+      "routeTemplate": "/api/hr/attendance/clock-in",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HrController.cs",
+        "line": 22
+      }
+    },
+    {
+      "controller": "HrController",
+      "action": "ClockOut",
+      "method": "POST",
+      "path": "/api/hr/attendance/clock-out",
+      "routeTemplate": "/api/hr/attendance/clock-out",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HrController.cs",
+        "line": 42
+      }
+    },
+    {
+      "controller": "HrController",
+      "action": "GetMyAttendance",
+      "method": "GET",
+      "path": "/api/hr/attendance/my",
+      "routeTemplate": "/api/hr/attendance/my",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HrController.cs",
+        "line": 56
+      }
+    },
+    {
+      "controller": "HrController",
+      "action": "SubmitVacation",
+      "method": "POST",
+      "path": "/api/hr/vacations",
+      "routeTemplate": "/api/hr/vacations",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HrController.cs",
+        "line": 69
+      }
+    },
+    {
+      "controller": "HrController",
+      "action": "GetMyVacations",
+      "method": "GET",
+      "path": "/api/hr/vacations/my",
+      "routeTemplate": "/api/hr/vacations/my",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/HrController.cs",
+        "line": 83
+      }
+    },
+    {
+      "controller": "InternalChatController",
+      "action": "TogglePin",
+      "method": "POST",
+      "path": "/api/chat/messages/{messageid}/pin",
+      "routeTemplate": "/api/chat/messages/{messageId}/pin",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalChatController.cs",
+        "line": 76
+      }
+    },
+    {
+      "controller": "InternalChatController",
+      "action": "GetRooms",
+      "method": "GET",
+      "path": "/api/chat/rooms",
+      "routeTemplate": "/api/chat/rooms",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalChatController.cs",
+        "line": 28
+      }
+    },
+    {
+      "controller": "InternalChatController",
+      "action": "CreateRoom",
+      "method": "POST",
+      "path": "/api/chat/rooms",
+      "routeTemplate": "/api/chat/rooms",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalChatController.cs",
+        "line": 50
+      }
+    },
+    {
+      "controller": "InternalChatController",
+      "action": "ArchiveRoom",
+      "method": "POST",
+      "path": "/api/chat/rooms/{roomid}/archive",
+      "routeTemplate": "/api/chat/rooms/{roomId}/archive",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalChatController.cs",
+        "line": 63
+      }
+    },
+    {
+      "controller": "InternalChatController",
+      "action": "GetRoomMessages",
+      "method": "GET",
+      "path": "/api/chat/rooms/{roomid}/messages",
+      "routeTemplate": "/api/chat/rooms/{roomId}/messages",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalChatController.cs",
+        "line": 38
+      }
+    },
+    {
+      "controller": "InternalChatController",
+      "action": "MarkRead",
+      "method": "POST",
+      "path": "/api/chat/rooms/{roomid}/read",
+      "routeTemplate": "/api/chat/rooms/{roomId}/read",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/InternalChatController.cs",
+        "line": 89
       }
     },
     {
@@ -1554,6 +2318,18 @@
     },
     {
       "controller": "PublicController",
+      "action": "GetPublicSettings",
+      "method": "GET",
+      "path": "/api/public/settings",
+      "routeTemplate": "/api/public/settings",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/PublicController.cs",
+        "line": 27
+      }
+    },
+    {
+      "controller": "PublicController",
       "action": "GetPlatformStats",
       "method": "GET",
       "path": "/api/public/stats",
@@ -1562,6 +2338,18 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/PublicController.cs",
         "line": 19
+      }
+    },
+    {
+      "controller": "PublicController",
+      "action": "GetTeachers",
+      "method": "GET",
+      "path": "/api/public/teachers",
+      "routeTemplate": "/api/public/teachers",
+      "authorization": "anonymous",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/PublicController.cs",
+        "line": 48
       }
     },
     {
@@ -1661,6 +2449,54 @@
       }
     },
     {
+      "controller": "TeacherFinanceController",
+      "action": "GetAccountSummary",
+      "method": "GET",
+      "path": "/api/teacher/finance/account",
+      "routeTemplate": "/api/teacher/finance/account",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherFinanceController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "TeacherFinanceController",
+      "action": "GetPayouts",
+      "method": "GET",
+      "path": "/api/teacher/finance/payouts",
+      "routeTemplate": "/api/teacher/finance/payouts",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherFinanceController.cs",
+        "line": 38
+      }
+    },
+    {
+      "controller": "TeacherFinanceController",
+      "action": "RequestPayout",
+      "method": "POST",
+      "path": "/api/teacher/finance/payouts",
+      "routeTemplate": "/api/teacher/finance/payouts",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherFinanceController.cs",
+        "line": 45
+      }
+    },
+    {
+      "controller": "TeacherFinanceController",
+      "action": "GetTransactions",
+      "method": "GET",
+      "path": "/api/teacher/finance/transactions",
+      "routeTemplate": "/api/teacher/finance/transactions",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherFinanceController.cs",
+        "line": 31
+      }
+    },
+    {
       "controller": "TrackingController",
       "action": "RecordVideoEvent",
       "method": "POST",
@@ -1722,18 +2558,6 @@
     },
     {
       "controller": "VideoSessionController",
-      "action": "GetEmbedMaterial",
-      "method": "GET",
-      "path": "/api/student/video-session/{sessionid:guid}/embed-material",
-      "routeTemplate": "/api/student/video-session/{sessionId:guid}/embed-material",
-      "authorization": "internal-token",
-      "source": {
-        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
-        "line": 81
-      }
-    },
-    {
-      "controller": "VideoSessionController",
       "action": "ConsumeSession",
       "method": "POST",
       "path": "/api/student/video-session/{sessionid}/consume",
@@ -1742,6 +2566,18 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
         "line": 57
+      }
+    },
+    {
+      "controller": "VideoSessionController",
+      "action": "GetEmbedMaterial",
+      "method": "GET",
+      "path": "/api/student/video-session/{sessionid}/embed-material",
+      "routeTemplate": "/api/student/video-session/{sessionId}/embed-material",
+      "authorization": "internal-token",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/VideoSessionController.cs",
+        "line": 81
       }
     },
     {
@@ -1756,5 +2592,3117 @@
         "line": 26
       }
     }
-  ]
+  ],
+  "frontendCalls": [
+    {
+      "method": "GET",
+      "path": "/api/student/video-session/{sessionid}/embed-material",
+      "routeTemplate": "/api/student/video-session/{sessionId}/embed-material",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`${API_URL}/student/video-session/${encodeURIComponent(sessionId)}/embed-material`",
+      "source": {
+        "file": "frontend/src/app/api/video/embed/route.ts",
+        "line": 70
+      }
+    },
+    {
+      "method": "GET",
+      "path": "<dynamic>",
+      "routeTemplate": "<dynamic>",
+      "origin": "worker-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "targetUrl",
+      "source": {
+        "file": "frontend/src/app/api/worker/[...path]/route.ts",
+        "line": 100
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "routeTemplate": "/api/auth/me",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`${API_URL}/auth/me`",
+      "source": {
+        "file": "frontend/src/app/api/worker/[...path]/route.ts",
+        "line": 39
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/homework/{id}/submit",
+      "routeTemplate": "/api/homework/{id}/submit",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "answersList",
+      "payloadFields": [],
+      "rawExpression": "`/homework/${lesson.homework.id}/submit`",
+      "source": {
+        "file": "frontend/src/components/content/LessonViewer.tsx",
+        "line": 53
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/settings",
+      "routeTemplate": "/api/public/settings",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/public/settings'",
+      "source": {
+        "file": "frontend/src/components/layout/MaintenanceGuard.tsx",
+        "line": 17
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/gamification/status",
+      "routeTemplate": "/api/gamification/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/gamification/status'",
+      "source": {
+        "file": "frontend/src/components/student-dashboard/GamificationWidget.tsx",
+        "line": 20
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/stats",
+      "routeTemplate": "/api/public/stats",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`${API_BASE_URL}/public/stats`",
+      "source": {
+        "file": "frontend/src/packages/landing/home.tsx",
+        "line": 24
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users",
+      "routeTemplate": "/api/admin/users",
+      "origin": "backend-api",
+      "queryParameters": [
+        "page",
+        "pageSize"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/users'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 447
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users",
+      "routeTemplate": "/api/admin/users",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ ...payload, packageIds: payload.packageIds ?? [] }",
+      "payloadFields": [
+        "packageIds"
+      ],
+      "rawExpression": "'/admin/users'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 463
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/packages/list",
+      "routeTemplate": "/api/admin/packages/list",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/packages/list'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 471
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/users/{id}/status",
+      "routeTemplate": "/api/admin/users/{id}/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ status }",
+      "payloadFields": [
+        "status"
+      ],
+      "rawExpression": "`/admin/users/${id}/status`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 476
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/users/{id}/roles",
+      "routeTemplate": "/api/admin/users/{id}/roles",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ roles }",
+      "payloadFields": [
+        "roles"
+      ],
+      "rawExpression": "`/admin/users/${id}/roles`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 481
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/teacher-photos/upload",
+      "routeTemplate": "/api/admin/teacher-photos/upload",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ teacherId, base64Image, fileName }",
+      "payloadFields": [
+        "teacherId",
+        "base64Image",
+        "fileName"
+      ],
+      "rawExpression": "'/admin/teacher-photos/upload'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 486
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/forms/cover/upload",
+      "routeTemplate": "/api/admin/forms/cover/upload",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ base64Image, fileName }",
+      "payloadFields": [
+        "base64Image",
+        "fileName"
+      ],
+      "rawExpression": "'/admin/forms/cover/upload'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 495
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/students/{id}/profile",
+      "routeTemplate": "/api/admin/users/students/{id}/profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/users/students/${id}/profile`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 503
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/{id}/devices",
+      "routeTemplate": "/api/admin/users/{id}/devices",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/users/${id}/devices`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 508
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/users/{id}/audit-logs",
+      "routeTemplate": "/api/admin/users/{id}/audit-logs",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/users/${id}/audit-logs`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 513
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{userid}/devices/{deviceid}",
+      "routeTemplate": "/api/admin/users/students/{userId}/devices/{deviceId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/users/students/${userId}/devices/${deviceId}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 518
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{userid}/devices",
+      "routeTemplate": "/api/admin/users/students/{userId}/devices",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/users/students/${userId}/devices`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 523
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/devices/{id}",
+      "routeTemplate": "/api/admin/devices/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/devices/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 528
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/users/students/{userid}/status",
+      "routeTemplate": "/api/admin/users/students/{userId}/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ isActive, reason }",
+      "payloadFields": [
+        "isActive",
+        "reason"
+      ],
+      "rawExpression": "`/admin/users/students/${userId}/status`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 533
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid}/overrides",
+      "routeTemplate": "/api/admin/users/students/{userId}/overrides",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ videoId, addedViews, reason }",
+      "payloadFields": [
+        "videoId",
+        "addedViews",
+        "reason"
+      ],
+      "rawExpression": "`/admin/users/students/${userId}/overrides`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 538
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid}/gamification/adjust",
+      "routeTemplate": "/api/admin/users/students/{userId}/gamification/adjust",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ points, reason }",
+      "payloadFields": [
+        "points",
+        "reason"
+      ],
+      "rawExpression": "`/admin/users/students/${userId}/gamification/adjust`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 543
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/codes/bulk-generate",
+      "routeTemplate": "/api/admin/codes/bulk-generate",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/codes/bulk-generate'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 549
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/codes/groups",
+      "routeTemplate": "/api/admin/codes/groups",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/codes/groups'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 568
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/codes/groups/{id}/details",
+      "routeTemplate": "/api/admin/codes/groups/{id}/details",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/codes/groups/${id}/details`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 583
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/questions",
+      "routeTemplate": "/api/admin/questions",
+      "origin": "backend-api",
+      "queryParameters": [
+        "page",
+        "pageSize",
+        "search"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/questions'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 589
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/questions",
+      "routeTemplate": "/api/admin/questions",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ ...payload, type: payload.type || 0 // Default to MCQ if omitted }",
+      "payloadFields": [
+        "type"
+      ],
+      "rawExpression": "'/admin/questions'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 607
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/questions/{questionid}/audio",
+      "routeTemplate": "/api/admin/questions/{questionId}/audio",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "formData",
+      "payloadFields": [],
+      "rawExpression": "`/admin/questions/${questionId}/audio`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 617
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/essays/pending",
+      "routeTemplate": "/api/admin/essays/pending",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/essays/pending'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 626
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/essays/{essaysubmissionid}/grade",
+      "routeTemplate": "/api/admin/essays/{essaySubmissionId}/grade",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ essaySubmissionId, teacherScore, teacherFeedback }",
+      "payloadFields": [
+        "essaySubmissionId",
+        "teacherScore",
+        "teacherFeedback"
+      ],
+      "rawExpression": "`/admin/essays/${essaySubmissionId}/grade`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 631
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/packages",
+      "routeTemplate": "/api/admin/packages",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/packages'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 641
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/packages/{id}",
+      "routeTemplate": "/api/admin/packages/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/packages/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 645
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/packages/{id}",
+      "routeTemplate": "/api/admin/packages/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/packages/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 649
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/packages/{id}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id}/code-profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/packages/${id}/code-profile`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 653
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/packages/{id}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id}/code-profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/packages/${id}/code-profile`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 657
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/packages/{id}/code-profile",
+      "routeTemplate": "/api/admin/packages/{id}/code-profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/packages/${id}/code-profile`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 661
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/terms",
+      "routeTemplate": "/api/admin/terms",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/terms'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 665
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/terms/{id}",
+      "routeTemplate": "/api/admin/terms/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/terms/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 669
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/terms/{id}",
+      "routeTemplate": "/api/admin/terms/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/terms/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 673
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/terms/{id}",
+      "routeTemplate": "/api/admin/terms/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/terms/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 677
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/sections/{id}",
+      "routeTemplate": "/api/admin/sections/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/sections/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 681
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/sections",
+      "routeTemplate": "/api/admin/sections",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/sections'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 685
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/lessons",
+      "routeTemplate": "/api/admin/lessons",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/lessons'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 689
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/lessons/{id}/cockpit",
+      "routeTemplate": "/api/admin/lessons/{id}/cockpit",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/lessons/${id}/cockpit`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 693
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/community/posts",
+      "routeTemplate": "/api/admin/community/posts",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:status"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/community/posts'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 697
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/community/posts/{postid}/approve",
+      "routeTemplate": "/api/admin/community/posts/{postId}/approve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/admin/community/posts/${postId}/approve`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 703
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/community/posts/{postid}/reject",
+      "routeTemplate": "/api/admin/community/posts/{postId}/reject",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/admin/community/posts/${postId}/reject`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 707
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/community/comments/pending",
+      "routeTemplate": "/api/admin/community/comments/pending",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/community/comments/pending'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 711
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/community/comments/{commentid}/approve",
+      "routeTemplate": "/api/admin/community/comments/{commentId}/approve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/admin/community/comments/${commentId}/approve`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 715
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/community/comments/{commentid}/reject",
+      "routeTemplate": "/api/admin/community/comments/{commentId}/reject",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ reason }",
+      "payloadFields": [
+        "reason"
+      ],
+      "rawExpression": "`/admin/community/comments/${commentId}/reject`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 719
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/lessons/{lessonid}/comments",
+      "routeTemplate": "/api/admin/lessons/{lessonId}/comments",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:status"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/lessons/${lessonId}/comments`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 723
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/comments/{commentid}/approve",
+      "routeTemplate": "/api/admin/comments/{commentId}/approve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/admin/comments/${commentId}/approve`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 729
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/comments/{commentid}/reject",
+      "routeTemplate": "/api/admin/comments/{commentId}/reject",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/admin/comments/${commentId}/reject`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 733
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/videos",
+      "routeTemplate": "/api/admin/videos",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/videos'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 737
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/videos/{videoid}",
+      "routeTemplate": "/api/admin/videos/{videoId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/videos/${videoId}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 741
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/videos/{videoid}",
+      "routeTemplate": "/api/admin/videos/{videoId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/videos/${videoId}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 745
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid}/analyze-ai",
+      "routeTemplate": "/api/admin/videos/{videoId}/analyze-ai",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/videos/${videoId}/analyze-ai`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 749
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid}/generate-mindmaps",
+      "routeTemplate": "/api/admin/videos/{videoId}/generate-mindmaps",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/videos/${videoId}/generate-mindmaps`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 753
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid}/cancel-ai",
+      "routeTemplate": "/api/admin/videos/{videoId}/cancel-ai",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/videos/${videoId}/cancel-ai`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 757
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/videos/{videoid}/cancel-mindmap",
+      "routeTemplate": "/api/admin/videos/{videoId}/cancel-mindmap",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/videos/${videoId}/cancel-mindmap`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 761
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/chapters/{chapterid}/regenerate-mindmap",
+      "routeTemplate": "/api/admin/chapters/{chapterId}/regenerate-mindmap",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/chapters/${chapterId}/regenerate-mindmap`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 765
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/resources",
+      "routeTemplate": "/api/admin/resources",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/resources'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 769
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/content/lessons/{lessonid}/homework",
+      "routeTemplate": "/api/admin/content/lessons/{lessonId}/homework",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/content/lessons/${lessonId}/homework`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 773
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/lessons/{lessonid}/exam",
+      "routeTemplate": "/api/admin/lessons/{lessonId}/exam",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ examId }",
+      "payloadFields": [
+        "examId"
+      ],
+      "rawExpression": "`/admin/lessons/${lessonId}/exam`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 777
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/exams/inline",
+      "routeTemplate": "/api/admin/exams/inline",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/exams/inline'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 781
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/exams/{examid}/questions",
+      "routeTemplate": "/api/admin/exams/{examId}/questions",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/exams/${examId}/questions`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 785
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/exams/{examid}/dashboard",
+      "routeTemplate": "/api/admin/exams/{examId}/dashboard",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/exams/${examId}/dashboard`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 790
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/exams/{examid}/questions/{examquestionid}",
+      "routeTemplate": "/api/admin/exams/{examId}/questions/{examQuestionId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/exams/${examId}/questions/${examQuestionId}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 795
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/exams/admin/lessons/{lessonid}/students/{studentid}/unlock",
+      "routeTemplate": "/api/exams/admin/lessons/{lessonId}/students/{studentId}/unlock",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/exams/admin/lessons/${lessonId}/students/${studentId}/unlock`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 801
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/overrides/reset-watch",
+      "routeTemplate": "/api/admin/overrides/reset-watch",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ lessonVideoId, studentId }",
+      "payloadFields": [
+        "lessonVideoId",
+        "studentId"
+      ],
+      "rawExpression": "'/admin/overrides/reset-watch'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 806
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/overrides/set-watch-count",
+      "routeTemplate": "/api/admin/overrides/set-watch-count",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ lessonVideoId, studentId, newWatchCount }",
+      "payloadFields": [
+        "lessonVideoId",
+        "studentId",
+        "newWatchCount"
+      ],
+      "rawExpression": "'/admin/overrides/set-watch-count'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 811
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/students/{studentid}/balance/adjust",
+      "routeTemplate": "/api/admin/users/students/{studentId}/balance/adjust",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ amount, reason }",
+      "payloadFields": [
+        "amount",
+        "reason"
+      ],
+      "rawExpression": "`/admin/users/students/${studentId}/balance/adjust`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 816
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/users/students/{studentid}/profile",
+      "routeTemplate": "/api/admin/users/students/{studentId}/profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "`/admin/users/students/${studentId}/profile`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 821
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/students/{studentid}/reset-password",
+      "routeTemplate": "/api/admin/users/students/{studentId}/reset-password",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ newPassword }",
+      "payloadFields": [
+        "newPassword"
+      ],
+      "rawExpression": "`/admin/users/students/${studentId}/reset-password`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 826
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/students/{studentid}/notes",
+      "routeTemplate": "/api/admin/users/students/{studentId}/notes",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ content, isPinned }",
+      "payloadFields": [
+        "content",
+        "isPinned"
+      ],
+      "rawExpression": "`/admin/users/students/${studentId}/notes`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 831
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/users/students/{studentid}/notes/{noteid}",
+      "routeTemplate": "/api/admin/users/students/{studentId}/notes/{noteId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/users/students/${studentId}/notes/${noteId}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 836
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/watch-requests",
+      "routeTemplate": "/api/admin/watch-requests",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/watch-requests'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 841
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/watch-requests/{id}/approve",
+      "routeTemplate": "/api/admin/watch-requests/{id}/approve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ reason }",
+      "payloadFields": [
+        "reason"
+      ],
+      "rawExpression": "`/admin/watch-requests/${id}/approve`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 846
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/watch-requests/{id}/reject",
+      "routeTemplate": "/api/admin/watch-requests/{id}/reject",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ reason }",
+      "payloadFields": [
+        "reason"
+      ],
+      "rawExpression": "`/admin/watch-requests/${id}/reject`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 851
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/users/students/{userid}/packages/{accessgrantid}/cancel",
+      "routeTemplate": "/api/admin/users/students/{userId}/packages/{accessGrantId}/cancel",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ refundBalance }",
+      "payloadFields": [
+        "refundBalance"
+      ],
+      "rawExpression": "`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 856
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/settings",
+      "routeTemplate": "/api/admin/settings",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/settings'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 861
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/settings",
+      "routeTemplate": "/api/admin/settings",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ settings }",
+      "payloadFields": [
+        "settings"
+      ],
+      "rawExpression": "'/admin/settings'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 866
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/roles",
+      "routeTemplate": "/api/admin/roles",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/roles'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 871
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/roles",
+      "routeTemplate": "/api/admin/roles",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/roles'",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 876
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/roles/{id}",
+      "routeTemplate": "/api/admin/roles/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/roles/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 881
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/roles/{id}",
+      "routeTemplate": "/api/admin/roles/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/roles/${id}`",
+      "source": {
+        "file": "frontend/src/services/admin-service.ts",
+        "line": 886
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "routeTemplate": "/api/auth/refresh",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`${API_BASE_URL}/auth/refresh`",
+      "source": {
+        "file": "frontend/src/services/api-client.ts",
+        "line": 55
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/operations/tasks",
+      "routeTemplate": "/api/admin/operations/tasks",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "taskData",
+      "payloadFields": [],
+      "rawExpression": "'/admin/operations/tasks'",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 104
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/operations/tasks/{taskid}/resolve",
+      "routeTemplate": "/api/admin/operations/tasks/{taskId}/resolve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ approve, rejectionReason }",
+      "payloadFields": [
+        "approve",
+        "rejectionReason"
+      ],
+      "rawExpression": "`/admin/operations/tasks/${taskId}/resolve`",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 108
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assistant/tasks/pending",
+      "routeTemplate": "/api/v1/assistant/tasks/pending",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:queryParams"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/v1/assistant/tasks/pending${queryParams}`",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 56
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assistant/tasks/{taskid}/resolve",
+      "routeTemplate": "/api/v1/assistant/tasks/{taskId}/resolve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ resolutionNotes }",
+      "payloadFields": [
+        "resolutionNotes"
+      ],
+      "rawExpression": "`/v1/assistant/tasks/${taskId}/resolve`",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 60
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assistant/tasks/my",
+      "routeTemplate": "/api/v1/assistant/tasks/my",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/v1/assistant/tasks/my'",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 65
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/assistant/tasks/my/{taskid}",
+      "routeTemplate": "/api/v1/assistant/tasks/my/{taskId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/v1/assistant/tasks/my/${taskId}`",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 69
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assistant/tasks/my/{taskid}/status",
+      "routeTemplate": "/api/v1/assistant/tasks/my/{taskId}/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ status }",
+      "payloadFields": [
+        "status"
+      ],
+      "rawExpression": "`/v1/assistant/tasks/my/${taskId}/status`",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 73
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/assistant/tasks/my/{taskid}/comments",
+      "routeTemplate": "/api/v1/assistant/tasks/my/{taskId}/comments",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ content, attachmentUrl }",
+      "payloadFields": [
+        "content",
+        "attachmentUrl"
+      ],
+      "rawExpression": "`/v1/assistant/tasks/my/${taskId}/comments`",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 77
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/operations/tasks",
+      "routeTemplate": "/api/admin/operations/tasks",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:query"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/operations/tasks${query}`",
+      "source": {
+        "file": "frontend/src/services/assistant-service.ts",
+        "line": 94
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "routeTemplate": "/api/auth/register",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/auth/register'",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 63
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "routeTemplate": "/api/auth/login",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/auth/login'",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 64
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "routeTemplate": "/api/auth/refresh",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "'/auth/refresh'",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 65
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/complete-profile",
+      "routeTemplate": "/api/auth/complete-profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/auth/complete-profile'",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 66
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/codes/activate",
+      "routeTemplate": "/api/codes/activate",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ code }",
+      "payloadFields": [
+        "code"
+      ],
+      "rawExpression": "'/codes/activate'",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 67
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/codes/validate/{code}",
+      "routeTemplate": "/api/codes/validate/{code}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/codes/validate/${code}`",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 68
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify-reset-fields",
+      "routeTemplate": "/api/auth/verify-reset-fields",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/auth/verify-reset-fields'",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 69
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/reset-password",
+      "routeTemplate": "/api/auth/reset-password",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/auth/reset-password'",
+      "source": {
+        "file": "frontend/src/services/auth-service.ts",
+        "line": 70
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/balance",
+      "routeTemplate": "/api/student/balance",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/balance'",
+      "source": {
+        "file": "frontend/src/services/balance-service.ts",
+        "line": 22
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/student/balance/purchase",
+      "routeTemplate": "/api/student/balance/purchase",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ contentType, contentId }",
+      "payloadFields": [
+        "contentType",
+        "contentId"
+      ],
+      "rawExpression": "'/student/balance/purchase'",
+      "source": {
+        "file": "frontend/src/services/balance-service.ts",
+        "line": 31
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/rooms",
+      "routeTemplate": "/api/chat/rooms",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/chat/rooms'",
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 48
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/chat/rooms/{roomid}/messages",
+      "routeTemplate": "/api/chat/rooms/{roomId}/messages",
+      "origin": "backend-api",
+      "queryParameters": [
+        "page",
+        "pageSize"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/chat/rooms/${roomId}/messages?page=${page}&pageSize=${pageSize}`",
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 51
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/rooms",
+      "routeTemplate": "/api/chat/rooms",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/chat/rooms'",
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 54
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/rooms/{roomid}/archive",
+      "routeTemplate": "/api/chat/rooms/{roomId}/archive",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ isArchived }",
+      "payloadFields": [
+        "isArchived"
+      ],
+      "rawExpression": "`/chat/rooms/${roomId}/archive`",
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 57
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/messages/{messageid}/pin",
+      "routeTemplate": "/api/chat/messages/{messageId}/pin",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/chat/messages/${messageId}/pin`",
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 60
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/chat/rooms/{roomid}/read",
+      "routeTemplate": "/api/chat/rooms/{roomId}/read",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/chat/rooms/${roomId}/read`",
+      "source": {
+        "file": "frontend/src/services/chat-service.ts",
+        "line": 63
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/codes/bulk-generate",
+      "routeTemplate": "/api/admin/codes/bulk-generate",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/admin/codes/bulk-generate'",
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 47
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/codes/groups",
+      "routeTemplate": "/api/admin/codes/groups",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/codes/groups'",
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 50
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/codes/groups/{groupid}/details",
+      "routeTemplate": "/api/admin/codes/groups/{groupId}/details",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/codes/groups/${groupId}/details`",
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 54
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/codes/activate",
+      "routeTemplate": "/api/codes/activate",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ code }",
+      "payloadFields": [
+        "code"
+      ],
+      "rawExpression": "'/codes/activate'",
+      "source": {
+        "file": "frontend/src/services/code-service.ts",
+        "line": 58
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/community/posts",
+      "routeTemplate": "/api/community/posts",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/community/posts'",
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 76
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/community/posts/mine",
+      "routeTemplate": "/api/community/posts/mine",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/community/posts/mine'",
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 77
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/posts",
+      "routeTemplate": "/api/community/posts",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ body, pollOptions }",
+      "payloadFields": [
+        "body",
+        "pollOptions"
+      ],
+      "rawExpression": "'/community/posts'",
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 79
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/community/posts/{postid}/comments",
+      "routeTemplate": "/api/community/posts/{postId}/comments",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/community/posts/${postId}/comments`",
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 81
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/posts/{postid}/comments",
+      "routeTemplate": "/api/community/posts/{postId}/comments",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ body }",
+      "payloadFields": [
+        "body"
+      ],
+      "rawExpression": "`/community/posts/${postId}/comments`",
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 83
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/posts/{postid}/likes/toggle",
+      "routeTemplate": "/api/community/posts/{postId}/likes/toggle",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/community/posts/${postId}/likes/toggle`",
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 85
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/community/posts/{postid}/polls/{optionid}/vote",
+      "routeTemplate": "/api/community/posts/{postId}/polls/{optionId}/vote",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/community/posts/${postId}/polls/${optionId}/vote`",
+      "source": {
+        "file": "frontend/src/services/community-service.ts",
+        "line": 87
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/packages",
+      "routeTemplate": "/api/content/packages",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/content/packages'",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 186
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/packages/{packageid}/terms",
+      "routeTemplate": "/api/content/packages/{packageId}/terms",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/content/packages/${packageId}/terms`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 200
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/packages/{packageid}/code-page",
+      "routeTemplate": "/api/content/packages/{packageId}/code-page",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/content/packages/${packageId}/code-page`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 201
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/terms/{termid}/sections",
+      "routeTemplate": "/api/content/terms/{termId}/sections",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/content/terms/${termId}/sections`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 202
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/sections/{sectionid}/lessons",
+      "routeTemplate": "/api/content/sections/{sectionId}/lessons",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/content/sections/${sectionId}/lessons`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 203
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/lessons/{lessonid}",
+      "routeTemplate": "/api/content/lessons/{lessonId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/content/lessons/${lessonId}`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 204
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/lessons/{lessonid}/comments",
+      "routeTemplate": "/api/content/lessons/{lessonId}/comments",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/content/lessons/${lessonId}/comments`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 205
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/content/lessons/{lessonid}/comments/mine",
+      "routeTemplate": "/api/content/lessons/{lessonId}/comments/mine",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/content/lessons/${lessonId}/comments/mine`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 206
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/content/lessons/{lessonid}/comments",
+      "routeTemplate": "/api/content/lessons/{lessonId}/comments",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ body }",
+      "payloadFields": [
+        "body"
+      ],
+      "rawExpression": "`/content/lessons/${lessonId}/comments`",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 208
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/tracking/video-event",
+      "routeTemplate": "/api/tracking/video-event",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ lessonVideoId, watchedSeconds, totalDurationSeconds }",
+      "payloadFields": [
+        "lessonVideoId",
+        "watchedSeconds",
+        "totalDurationSeconds"
+      ],
+      "rawExpression": "'/tracking/video-event'",
+      "source": {
+        "file": "frontend/src/services/content-service.ts",
+        "line": 210
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/crm/reports/performance",
+      "routeTemplate": "/api/crm/reports/performance",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/crm/reports/performance'",
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 103
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/crm/students",
+      "routeTemplate": "/api/crm/students",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:query"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/crm/students?${query.toString()}`",
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 86
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/crm/students/{studentid}/assign",
+      "routeTemplate": "/api/crm/students/{studentId}/assign",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/crm/students/${studentId}/assign`",
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 91
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/crm/students/{studentid}/calls",
+      "routeTemplate": "/api/crm/students/{studentId}/calls",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/crm/students/${studentId}/calls`",
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 95
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/crm/students/{studentid}/history",
+      "routeTemplate": "/api/crm/students/{studentId}/history",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/crm/students/${studentId}/history`",
+      "source": {
+        "file": "frontend/src/services/crm-service.ts",
+        "line": 99
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/exams/{examid}/attempts/{attemptid}/questions/{questionid}/fifty-fifty",
+      "routeTemplate": "/api/exams/{examId}/attempts/{attemptId}/questions/{questionId}/fifty-fifty",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/fifty-fifty`",
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 85
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/exams/{examid}/attempts/{attemptid}/questions/{questionid}/swap",
+      "routeTemplate": "/api/exams/{examId}/attempts/{attemptId}/questions/{questionId}/swap",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/swap`",
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 87
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/exams/{examid}/start",
+      "routeTemplate": "/api/exams/{examId}/start",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/exams/${examId}/start`",
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 88
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/exams/{examid}/latest-passed-result",
+      "routeTemplate": "/api/exams/{examId}/latest-passed-result",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/exams/${examId}/latest-passed-result`",
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 90
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/exams/attempts/{attemptid}/grading-status",
+      "routeTemplate": "/api/exams/attempts/{attemptId}/grading-status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/exams/attempts/${attemptId}/grading-status`",
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 92
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/exams/{examid}/submit/{attemptid}",
+      "routeTemplate": "/api/exams/{examId}/submit/{attemptId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "answers",
+      "payloadFields": [],
+      "rawExpression": "`/exams/${examId}/submit/${attemptId}`",
+      "source": {
+        "file": "frontend/src/services/exam-service.ts",
+        "line": 94
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/finance/payroll/generate",
+      "routeTemplate": "/api/admin/finance/payroll/generate",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ month, year }",
+      "payloadFields": [
+        "month",
+        "year"
+      ],
+      "rawExpression": "'/admin/finance/payroll/generate'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 107
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/finance/payroll/{payrollid}/adjustments",
+      "routeTemplate": "/api/admin/finance/payroll/{payrollId}/adjustments",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/finance/payroll/${payrollId}/adjustments`",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 118
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/finance/payroll/{payrollid}/adjustments/{adjustmentid}",
+      "routeTemplate": "/api/admin/finance/payroll/{payrollId}/adjustments/{adjustmentId}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/finance/payroll/${payrollId}/adjustments/${adjustmentId}`",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 129
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/finance/payroll/{payrollid}/approve",
+      "routeTemplate": "/api/admin/finance/payroll/{payrollId}/approve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/finance/payroll/${payrollId}/approve`",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 136
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/finance/payouts",
+      "routeTemplate": "/api/admin/finance/payouts",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:status"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/finance/payouts'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 144
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/finance/payouts/{payoutid}/resolve",
+      "routeTemplate": "/api/admin/finance/payouts/{payoutId}/resolve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/finance/payouts/${payoutId}/resolve`",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 155
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/finance/code-accounting",
+      "routeTemplate": "/api/admin/finance/code-accounting",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/finance/code-accounting'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 171
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teacher/finance/account",
+      "routeTemplate": "/api/teacher/finance/account",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/finance/account'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 180
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teacher/finance/transactions",
+      "routeTemplate": "/api/teacher/finance/transactions",
+      "origin": "backend-api",
+      "queryParameters": [
+        "page",
+        "pageSize"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/finance/transactions'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 190
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teacher/finance/payouts",
+      "routeTemplate": "/api/teacher/finance/payouts",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/finance/payouts'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 198
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/teacher/finance/payouts",
+      "routeTemplate": "/api/teacher/finance/payouts",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ amount }",
+      "payloadFields": [
+        "amount"
+      ],
+      "rawExpression": "'/teacher/finance/payouts'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 205
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/finance/payroll",
+      "routeTemplate": "/api/admin/finance/payroll",
+      "origin": "backend-api",
+      "queryParameters": [
+        "month",
+        "year"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/finance/payroll'",
+      "source": {
+        "file": "frontend/src/services/finance-service.ts",
+        "line": 99
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/forms/{id}",
+      "routeTemplate": "/api/admin/forms/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ ...form, id }",
+      "payloadFields": [
+        "id"
+      ],
+      "rawExpression": "`/admin/forms/${id}`",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 111
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/forms/{id}",
+      "routeTemplate": "/api/admin/forms/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/forms/${id}`",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 118
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/forms/{id}/submissions",
+      "routeTemplate": "/api/admin/forms/{id}/submissions",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/forms/${id}/submissions`",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 125
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/forms/submissions/{submissionid}/status",
+      "routeTemplate": "/api/admin/forms/submissions/{submissionId}/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ submissionId, status, adminNotes, }",
+      "payloadFields": [
+        "submissionId",
+        "status",
+        "adminNotes"
+      ],
+      "rawExpression": "`/admin/forms/submissions/${submissionId}/status`",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 137
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/forms/{slug}",
+      "routeTemplate": "/api/public/forms/{slug}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/public/forms/${slug}`",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 148
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/forms/{slug}/submit",
+      "routeTemplate": "/api/public/forms/{slug}/submit",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "answers",
+      "payloadFields": [],
+      "rawExpression": "`/public/forms/${slug}/submit`",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 156
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/forms",
+      "routeTemplate": "/api/admin/forms",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/forms'",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 66
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/forms/{id}",
+      "routeTemplate": "/api/admin/forms/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/forms/${id}`",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 74
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/forms",
+      "routeTemplate": "/api/admin/forms",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "form",
+      "payloadFields": [],
+      "rawExpression": "'/admin/forms'",
+      "source": {
+        "file": "frontend/src/services/forms-service.ts",
+        "line": 91
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/homework/pending",
+      "routeTemplate": "/api/homework/pending",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/homework/pending'",
+      "source": {
+        "file": "frontend/src/services/homework-service.ts",
+        "line": 26
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/homework/{homeworkid}/submit",
+      "routeTemplate": "/api/homework/{homeworkId}/submit",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "answers",
+      "payloadFields": [],
+      "rawExpression": "`/homework/${homeworkId}/submit`",
+      "source": {
+        "file": "frontend/src/services/homework-service.ts",
+        "line": 30
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/hr/attendance/my",
+      "routeTemplate": "/api/hr/attendance/my",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/hr/attendance/my'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 106
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/hr/attendance",
+      "routeTemplate": "/api/admin/hr/attendance",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/hr/attendance'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 115
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/hr/vacations",
+      "routeTemplate": "/api/hr/vacations",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/hr/vacations'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 134
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/hr/vacations/my",
+      "routeTemplate": "/api/hr/vacations/my",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/hr/vacations/my'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 143
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/hr/vacations",
+      "routeTemplate": "/api/admin/hr/vacations",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/hr/vacations'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 151
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/hr/vacations/{id}/approve",
+      "routeTemplate": "/api/admin/hr/vacations/{id}/approve",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/hr/vacations/${id}/approve`",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 164
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/hr/vacations/{id}/reject",
+      "routeTemplate": "/api/admin/hr/vacations/{id}/reject",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/hr/vacations/${id}/reject`",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 171
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/hr/employees",
+      "routeTemplate": "/api/admin/hr/employees",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:search"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/hr/employees'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 70
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/hr/employees",
+      "routeTemplate": "/api/admin/hr/employees",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/hr/employees'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 82
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/hr/attendance/clock-in",
+      "routeTemplate": "/api/hr/attendance/clock-in",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/hr/attendance/clock-in'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 91
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/hr/attendance/clock-out",
+      "routeTemplate": "/api/hr/attendance/clock-out",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/hr/attendance/clock-out'",
+      "source": {
+        "file": "frontend/src/services/hr-service.ts",
+        "line": 98
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/media/pipelines",
+      "routeTemplate": "/api/admin/media/pipelines",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/media/pipelines'",
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 103
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/media/pipelines/{id}",
+      "routeTemplate": "/api/admin/media/pipelines/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "`/admin/media/pipelines/${id}`",
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 107
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/media/social-plans",
+      "routeTemplate": "/api/admin/media/social-plans",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:query"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/media/social-plans?${query.toString()}`",
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 114
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/media/social-plans",
+      "routeTemplate": "/api/admin/media/social-plans",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/admin/media/social-plans'",
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 119
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/media/reports/kpis",
+      "routeTemplate": "/api/admin/media/reports/kpis",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/media/reports/kpis'",
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 123
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/media/pipelines",
+      "routeTemplate": "/api/admin/media/pipelines",
+      "origin": "backend-api",
+      "queryParameters": [
+        "dynamic:query"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/media/pipelines?${query.toString()}`",
+      "source": {
+        "file": "frontend/src/services/media-service.ts",
+        "line": 98
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/reports/audit",
+      "routeTemplate": "/api/admin/reports/audit",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/reports/audit'",
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 105
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/reports/kpi",
+      "routeTemplate": "/api/admin/reports/kpi",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/reports/kpi'",
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 118
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/parent/reports/{studentid}/summary",
+      "routeTemplate": "/api/parent/reports/{studentId}/summary",
+      "origin": "backend-api",
+      "queryParameters": [
+        "token"
+      ],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/parent/reports/${studentId}/summary`",
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 133
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/parent/reports/{studentid}/links",
+      "routeTemplate": "/api/parent/reports/{studentId}/links",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/parent/reports/${studentId}/links`",
+      "source": {
+        "file": "frontend/src/services/report-service.ts",
+        "line": 139
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/dashboard",
+      "routeTemplate": "/api/student/dashboard",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/dashboard'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 152
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/public/teachers",
+      "routeTemplate": "/api/public/teachers",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/public/teachers'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 157
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/dashboard/quick-access",
+      "routeTemplate": "/api/student/dashboard/quick-access",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/dashboard/quick-access'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 162
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/progress",
+      "routeTemplate": "/api/student/progress",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/progress'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 167
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/mistakes",
+      "routeTemplate": "/api/student/mistakes",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/mistakes'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 172
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/theme-preferences",
+      "routeTemplate": "/api/student/theme-preferences",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/theme-preferences'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 177
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/student/theme-preferences",
+      "routeTemplate": "/api/student/theme-preferences",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/student/theme-preferences'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 187
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/subjects",
+      "routeTemplate": "/api/admin/subjects",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/subjects'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 32
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/subjects/{id}",
+      "routeTemplate": "/api/admin/subjects/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/subjects/${id}`",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 34
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/subjects",
+      "routeTemplate": "/api/admin/subjects",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/admin/subjects'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 36
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/subjects/{id}",
+      "routeTemplate": "/api/admin/subjects/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "`/admin/subjects/${id}`",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 38
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/admin/subjects/{id}",
+      "routeTemplate": "/api/admin/subjects/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/subjects/${id}`",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 40
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/teachers",
+      "routeTemplate": "/api/admin/teachers",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/admin/teachers'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 44
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/teachers/{id}",
+      "routeTemplate": "/api/admin/teachers/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/admin/teachers/${id}`",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 46
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/teachers",
+      "routeTemplate": "/api/admin/teachers",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/admin/teachers'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 56
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/admin/teachers/{id}",
+      "routeTemplate": "/api/admin/teachers/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "`/admin/teachers/${id}`",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 68
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/student/video-session",
+      "routeTemplate": "/api/student/video-session",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ lessonVideoId, }",
+      "payloadFields": [
+        "lessonVideoId"
+      ],
+      "rawExpression": "'/student/video-session'",
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 30
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/student/video-session/{sessionid}/consume",
+      "routeTemplate": "/api/student/video-session/{sessionId}/consume",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/student/video-session/${sessionId}/consume`",
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 36
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/student/video-session/{lessonvideoid}/request-extra",
+      "routeTemplate": "/api/student/video-session/{lessonVideoId}/request-extra",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{}",
+      "payloadFields": [],
+      "rawExpression": "`/student/video-session/${lessonVideoId}/request-extra`",
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 40
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/video-session/{lessonvideoid}/request-status",
+      "routeTemplate": "/api/student/video-session/{lessonVideoId}/request-status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/student/video-session/${lessonVideoId}/request-status`",
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 44
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/student/video-session/{lessonvideoid}/track-progress",
+      "routeTemplate": "/api/student/video-session/{lessonVideoId}/track-progress",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ secondsWatched, totalDurationSeconds, registerView }",
+      "payloadFields": [
+        "secondsWatched",
+        "totalDurationSeconds",
+        "registerView"
+      ],
+      "rawExpression": "`/student/video-session/${lessonVideoId}/track-progress`",
+      "source": {
+        "file": "frontend/src/services/video-session-service.ts",
+        "line": 48
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/whatsapp/check",
+      "routeTemplate": "/api/whatsapp/check",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "{ phoneNumber, }",
+      "payloadFields": [
+        "phoneNumber"
+      ],
+      "rawExpression": "'/whatsapp/check'",
+      "source": {
+        "file": "frontend/src/services/whatsapp-service.ts",
+        "line": 15
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/worker/{path}",
+      "routeTemplate": "/api/worker/{path}",
+      "origin": "next-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "`/api/worker/${path.replace(/^\\/+/, '')}`",
+      "source": {
+        "file": "frontend/src/services/worker-service.ts",
+        "line": 16
+      }
+    }
+  ],
+  "routeFindings": []
 }

@@ -8,6 +8,7 @@ import {
 import { AdminShellChrome, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
+import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
@@ -321,14 +322,24 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminContentPage() {
   const [packages, setPackages] = useState<PackageDto[]>([]);
+  const [subjects, setSubjects] = useState<SubjectDto[]>([]);
+  const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('All');
 
   const loadPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await contentService.getPackages();
-      setPackages(res.data?.data ?? []);
+      const [packagesRes, subjectsRes, teachersRes] = await Promise.all([
+        contentService.getPackages(),
+        teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
+        teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] }))
+      ]);
+      setPackages(packagesRes.data?.data ?? []);
+      setSubjects(subjectsRes.data ?? []);
+      setTeachers(teachersRes.data ?? []);
     } catch {
       toast.error('تعذر تحميل الباقات.');
     } finally {
@@ -338,9 +349,12 @@ export default function AdminContentPage() {
 
   useEffect(() => { void loadPackages(); }, [loadPackages]);
 
-  const filtered = search.trim()
-    ? packages.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    : packages;
+  const filtered = packages.filter((p) => {
+    const matchesSearch = !search.trim() || p.name.toLowerCase().includes(search.toLowerCase());
+    const matchesSubject = selectedSubjectId === 'All' || p.subjectId === selectedSubjectId;
+    const matchesTeacher = selectedTeacherId === 'All' || p.teacherId === selectedTeacherId;
+    return matchesSearch && matchesSubject && matchesTeacher;
+  });
 
   return (
     <AdminShellChrome
@@ -360,9 +374,9 @@ export default function AdminContentPage() {
             <AdminStatCard variant="muted" icon={Video} label="نشطة" value={packages.length} />
           </div>
 
-          {/* Search */}
-          {packages.length > 3 && (
-            <div className="relative">
+          {/* Search & Filters */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="relative flex-1">
               <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
               <input
                 type="text"
@@ -372,7 +386,31 @@ export default function AdminContentPage() {
                 className="admin-input pr-11"
               />
             </div>
-          )}
+            
+            <div className="flex gap-3 min-w-[320px]">
+              <select
+                value={selectedSubjectId}
+                onChange={(e) => setSelectedSubjectId(e.target.value)}
+                className="admin-input flex-1"
+              >
+                <option value="All">كل المواد</option>
+                {subjects.map((sub) => (
+                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={selectedTeacherId}
+                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                className="admin-input flex-1"
+              >
+                <option value="All">كل المدرسين</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>{t.fullName}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           {/* Package list */}
           <div className="space-y-3">

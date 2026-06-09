@@ -25,7 +25,7 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
             .Include(v => v.VideoChapters)
             .FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
 
-        if (video == null) 
+        if (video == null)
             return ApiResponse.Fail("Video not found");
 
 
@@ -45,7 +45,7 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
             .Select(tp => tp.FileUrl)
             .FirstOrDefaultAsync(ct);
 
-        var chaptersData = video.VideoChapters.Select(c => new 
+        var chaptersData = video.VideoChapters.Select(c => new
         {
             title = c.Title,
             summaryText = c.SummaryText,

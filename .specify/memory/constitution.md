@@ -1,43 +1,35 @@
 <!--
   Sync Impact Report
   ───────────────────
-  Version change: 2.3.0 → 3.0.0 (MAJOR — Technology stack corrected to verified
-  source-of-truth values; 3 new principles added; stack table rewritten with
-  exact versions from csproj/package.json/Dockerfile; all entities, controllers,
-  and worker jobs enumerated. Updated to .NET 9 / C# 13 on 2026-06-01)
+  Version change: 3.0.0 → 3.1.0 (MINOR — Added mandatory phase verification,
+  per-phase automated/manual QA, Docker gates, and end-of-phase reporting for
+  platform expansion work. Updated on 2026-06-07)
 
   Modified principles:
-    - I. Modular Clean Architecture — Updated to reflect actual 4-project
-      structure with 16 feature modules, 116+ MediatR handlers, 40+ DbSets,
-      27 migrations, and complete middleware pipeline
-    - II. Provider Abstraction First — Expanded with 7 actually implemented
-      video providers (YouTube, Telegram embed+direct, Google Drive, VK,
-      Rutube, OK)
-    - III. Security & Access Control — Added exact package versions, rate
-      limiting policies (auth:10/min/IP, codes:5/min/user, video:10/min/user,
-      global:300/min/IP), CorrelationIdMiddleware
-    - V. Academic Content Integrity — Added AI chaptering, mindmap generation,
-      essay evaluation, FindTheMistakeQuestion entity
-    - VIII. Premium Editorial Design System — Corrected from "Manrope" to
-      "Cairo" font, updated color tokens to match globals.css and
-      .impeccable.md, added 9 student theme palettes, RTL-first, dark mode,
-      view transitions, admin design tokens
+    - IV. Phased Delivery with MVP Discipline — Expanded with explicit
+      phase-close gates and no-next-phase-until-verified rule
+    - VII. Observability & Operational Readiness — Expanded by requiring Docker
+      health verification at the end of every implementation phase
+    - Development Workflow & Quality Gates / Definition of Done — Expanded with
+      per-phase report, automated test evidence, Docker evidence, and manual QA
 
   Added sections:
-    - XII. Multi-Provider Video Architecture & Content Protection
-    - XIII. AI Worker Orchestration & Background Job Integrity
-    - XIV. Community, Comments & Social Features
+    - XV. Phase Verification, Docker Gates & Manual QA
 
   Removed sections: None
 
   Templates requiring updates:
-    - .specify/templates/plan-template.md       ✅ reviewed — Constitution Check
-      section aligns; no changes needed
-    - .specify/templates/spec-template.md        ✅ reviewed — scope/requirements
-      sections align with updated principles
-    - .specify/templates/tasks-template.md       ✅ reviewed — task categorization
-      aligns; new principle-driven categories (video provider, AI worker,
-      community) are compatible with existing phase structure
+    - .specify/templates/plan-template.md       ✅ updated — Constitution Check
+      now requires phase tests, Docker gate, and manual QA plan
+    - .specify/templates/spec-template.md        ✅ updated — User Scenarios now
+      capture manual QA and Docker acceptance expectations
+    - .specify/templates/tasks-template.md       ✅ updated — Tests are mandatory
+      for phase work; every phase includes an end-of-phase Docker/report gate
+    - .specify/templates/commands/*.md           ✅ reviewed — directory not
+      present in this project
+    - AGENTS.md                                  ✅ reviewed — no change needed
+    - PRODUCT.md                                 ✅ updated — removed legacy
+      visible brand strings so surface verification can pass
 
   Follow-up TODOs: None
 -->
@@ -622,6 +614,44 @@ Social features MUST maintain strict moderation boundaries:
 moderation. Unmoderated social features would expose students to inappropriate
 content and create legal liability.
 
+### XV. Phase Verification, Docker Gates & Manual QA
+
+Every implementation phase MUST close with evidence that it works in the real
+project structure, not only in isolated code:
+
+- **Phase Scope**: Each phase MUST define its backend, frontend, worker,
+  database, and Docker impact before implementation starts. Work outside that
+  scope MUST be deferred to a later phase or documented as an explicit
+  exception.
+- **Automated Tests**: Each phase MUST include automated tests for its critical
+  paths. Backend changes require `dotnet test` coverage where business logic is
+  introduced. Frontend user journeys require Playwright or equivalent E2E
+  coverage. Worker changes require at least build verification and job-level
+  tests or documented stubs. Python smoke/API tests MUST be added when the
+  phase introduces cross-service workflows.
+- **Existing Regression**: Existing relevant tests MUST pass before the phase is
+  marked complete. Failing tests cannot be waived without a documented reason
+  and a follow-up issue tied to the phase.
+- **Docker Gate**: Every phase MUST run `docker compose config -q`, start the
+  Docker stack with `make up`, apply migrations with `make migrate` when schema
+  changes exist, and verify service health (`backend`, `worker`, and each
+  frontend surface). If a required external secret is unavailable locally, the
+  blocked check MUST be documented and the remaining Docker checks MUST still
+  run.
+- **Manual QA**: Each phase MUST list the exact flows the product owner must
+  test manually, including user role, URL/surface, action, expected result, and
+  any negative permission test.
+- **End-of-Phase Report**: Each phase MUST end with a report containing:
+  implemented scope, commands run, automated test results, Docker gate result,
+  manual QA checklist, known risks, and whether the next phase may start.
+- **No Hidden Failure Rule**: A failed phase gate MUST be fixed inside the same
+  phase. Later phases MUST NOT be used to hide, skip, or normalize unresolved
+  failures from earlier phases.
+
+**Rationale**: The platform is now large enough that feature work can appear
+complete while breaking Docker, role boundaries, or cross-service workflows.
+Phase-close evidence prevents silent regressions before the next scope begins.
+
 ## Technology Stack & Constraints
 
 ### Mandatory Stack (Verified from Source — 2026-06-01)
@@ -774,6 +804,10 @@ A feature is considered "done" when:
 4. API documentation is updated (Swagger auto-generated).
 5. Database migrations are included (if applicable).
 6. The feature works in Docker environment (`make up && make migrate`).
+7. The phase report documents automated tests, Docker gate results, and manual
+   QA still required from the product owner.
+8. The next phase is not started until the current phase's failed gates are
+   fixed or explicitly documented with owner-approved risk.
 
 ## Governance
 
@@ -795,4 +829,4 @@ A feature is considered "done" when:
 - Use `.specify/memory/constitution.md` as the single source of truth for
   governance.
 
-**Version**: 3.0.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-06-01
+**Version**: 3.1.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-06-07

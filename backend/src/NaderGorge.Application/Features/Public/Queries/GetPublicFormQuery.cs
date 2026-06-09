@@ -33,7 +33,7 @@ public class GetPublicFormQueryHandler : IRequestHandler<GetPublicFormQuery, Api
             .Where(f => f.Slug == lowerSlug)
             .FirstOrDefaultAsync(ct);
 
-        if (form == null || !form.IsActive) 
+        if (form == null || !form.IsActive)
             return ApiResponse<PublicFormDto>.Fail("النموذج المطلوب غير موجود أو غير مفعل حالياً.");
 
         var now = DateTime.UtcNow;

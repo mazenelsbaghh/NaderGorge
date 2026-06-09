@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Auth.Commands;
 
@@ -14,8 +15,13 @@ namespace NaderGorge.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IConfiguration _configuration;
 
-    public AuthController(IMediator mediator) => _mediator = mediator;
+    public AuthController(IMediator mediator, IConfiguration configuration)
+    {
+        _mediator = mediator;
+        _configuration = configuration;
+    }
 
     private const string RefreshCookieName = "ng_refresh";
 
@@ -59,9 +65,9 @@ public class AuthController : ControllerBase
         {
             var referer = HttpContext.Request.Headers["Referer"].ToString() ?? string.Empty;
             var host = HttpContext.Request.Headers["Host"].ToString() ?? string.Empty;
-            if (referer.Contains("admin.", StringComparison.OrdinalIgnoreCase) || 
+            if (referer.Contains("admin.", StringComparison.OrdinalIgnoreCase) ||
                 host.Contains("admin.", StringComparison.OrdinalIgnoreCase) ||
-                referer.Contains("localhost:8740", StringComparison.OrdinalIgnoreCase) || 
+                referer.Contains("localhost:8740", StringComparison.OrdinalIgnoreCase) ||
                 host.Contains("localhost:8740", StringComparison.OrdinalIgnoreCase))
             {
                 appSurface = "admin";
@@ -108,6 +114,7 @@ public class AuthController : ControllerBase
         var result = await _mediator.Send(command);
         if (!result.Success || result.Data == null)
         {
+            // Note: Clear the cookie with the same domain configuration it was set with
             ClearRefreshCookie();
             return Unauthorized(result);
         }
@@ -149,24 +156,40 @@ public class AuthController : ControllerBase
 
     private void SetRefreshCookie(string refreshToken)
     {
-        Response.Cookies.Append(RefreshCookieName, refreshToken, new CookieOptions
+        var cookieDomain = _configuration["CookieSettings:Domain"];
+        var cookieOptions = new CookieOptions
         {
             HttpOnly = true,
             Secure = Request.IsHttps,
             SameSite = SameSiteMode.Lax,
             Path = "/api/auth/refresh",
             Expires = DateTimeOffset.UtcNow.AddDays(30)
-        });
+        };
+
+        if (!string.IsNullOrWhiteSpace(cookieDomain))
+        {
+            cookieOptions.Domain = cookieDomain;
+        }
+
+        Response.Cookies.Append(RefreshCookieName, refreshToken, cookieOptions);
     }
 
     private void ClearRefreshCookie()
     {
-        Response.Cookies.Delete(RefreshCookieName, new CookieOptions
+        var cookieDomain = _configuration["CookieSettings:Domain"];
+        var cookieOptions = new CookieOptions
         {
             Secure = Request.IsHttps,
             SameSite = SameSiteMode.Lax,
             Path = "/api/auth/refresh"
-        });
+        };
+
+        if (!string.IsNullOrWhiteSpace(cookieDomain))
+        {
+            cookieOptions.Domain = cookieDomain;
+        }
+
+        Response.Cookies.Delete(RefreshCookieName, cookieOptions);
     }
 }
 

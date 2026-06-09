@@ -20,7 +20,7 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
         var now = DateTime.UtcNow;
 
         var grants = await _db.StudentAccessGrants
-            .Where(g => g.UserId == request.UserId && g.IsActive && 
+            .Where(g => g.UserId == request.UserId && g.IsActive &&
                         (g.ExpiresAt == null || g.ExpiresAt > now) &&
                         g.GrantType != CodeType.Package)
             .OrderByDescending(g => g.GrantedAt)
@@ -35,7 +35,7 @@ public class GetQuickAccessQueryHandler : IRequestHandler<GetQuickAccessQuery, A
                 var term = await _db.Terms
                     .Include(t => t.Package)
                     .FirstOrDefaultAsync(t => t.Id == grant.TermId.Value, ct);
-                
+
                 if (term != null)
                 {
                     list.Add(new QuickAccessItemDto(

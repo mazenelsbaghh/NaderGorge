@@ -62,7 +62,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
             width={80}
             height={80}
             className="h-20 w-auto mx-auto drop-shadow-[0_0_15px_rgba(14,143,143,0.3)]" 
-            alt="مسار أكاديمي" 
+            alt="منصة مسار"
             priority
           />
         </div>
@@ -85,7 +85,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
           </p>
 
           <div className="relative pt-5 border-t border-white/5 flex flex-col items-center justify-center gap-1.5 text-xs text-slate-400 font-bold">
-            <span className="text-[#0E8F8F]">مسار أكاديمي — شريك تفوقك الدراسي</span>
+            <span className="text-[#0E8F8F]">منصة مسار — شريك تفوقك الدراسي</span>
             <span className="opacity-75 font-normal">شكراً لتفهمكم ونعتذر عن هذا العطل المؤقت.</span>
           </div>
         </div>

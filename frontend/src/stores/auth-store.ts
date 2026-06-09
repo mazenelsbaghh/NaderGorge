@@ -12,6 +12,7 @@ interface User {
   fullName: string;
   phone: string;
   roles: string[];
+  permissions: string[];
   profileComplete: boolean;
   avatarSlug?: string | null;
 }

@@ -7,5 +7,7 @@ public enum RoleType
     Assistant = 3,
     Student = 4,
     AssistantReviewer = 5,
-    AssistantAcademic = 6
+    AssistantAcademic = 6,
+    Supervisor = 7,
+    Staff = 8
 }

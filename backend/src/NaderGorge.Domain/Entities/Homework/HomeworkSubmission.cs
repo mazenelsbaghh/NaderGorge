@@ -21,12 +21,12 @@ public class HomeworkSubmission
     public DateTime? SubmittedAt { get; set; }
     public DateTime? GradedAt { get; set; }
     public SubmissionStatus Status { get; set; } = SubmissionStatus.InProgress;
-    
+
     // The Assistant who reviewed this, nullable.
     public Guid? AssistantReviewerId { get; set; }
     public string? AssistantNotes { get; set; }
     public decimal OverallScore { get; set; }
-    
+
     // Auto-calculated evaluation string (e.g. "ممتاز")
     public string? Evaluation { get; set; }
 

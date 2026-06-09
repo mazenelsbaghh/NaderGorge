@@ -34,14 +34,14 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
         }
 
         var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
-        if (video == null) 
+        if (video == null)
             return ApiResponse.Fail("Video not found");
 
         // The URL extraction here assumes standard embed code implies the backend 
         // has access to the raw URL or the FFmpeg extractor can download the video.
         // For standard standard provider extraction we use string extraction if not full remote MP4.
-        
-        string sourceUrl = video.ProviderVideoId ?? "https://example.com/mock.mp4"; 
+
+        string sourceUrl = video.ProviderVideoId ?? "https://example.com/mock.mp4";
         // In real life context, if this is a vimeo ID, we'd resolve it to a CDN link.
 
         var teacherPhotoUrl = await _db.TeacherPhotos

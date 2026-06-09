@@ -148,32 +148,52 @@
 - [x] T045 Fix Docker build failure by ensuring only one frontend service builds `massar_frontend:local` while the other frontend surfaces reuse that image.
 - [x] T046 Suppress non-actionable third-party npm deprecation notices in Docker install steps by using npm error-level logging in `frontend/Dockerfile` and `worker/Dockerfile`.
 
+## Phase 8: Subdomains, Cookies, Nginx Reverse Proxy, and Docker Hardening
+
+**Goal**: Implement production-grade subdomain Nginx reverse proxy routing, C# backend cookie domain config, SignalR WebSockets upgrade, and shared Docker assets volume.
+
+- [x] T048 [US6] Modify `AuthController.cs` to inject `IConfiguration` and retrieve `CookieSettings:Domain`. Apply this setting to `CookieOptions.Domain` in both `SetRefreshCookie` and `ClearRefreshCookie` methods.
+- [x] T049 [US5] Create Nginx configuration template in `docker/nginx/massar.conf` defining virtual server blocks for all subdomains and proxying them to internal Docker containers.
+- [x] T050 [US5] Create `docker/nginx/Dockerfile` copying the custom `massar.conf` configuration into Nginx's default config path.
+- [x] T051 [US5] Update `docker-compose.yml` to define the `nginx` container, expose ports `80` and `443` (commented), mount the shared volume at `/var/www/assets`, and depend on all frontend/backend services.
+- [x] T052 [US7] Define and declare a named Docker volume `massar_assets` in `docker-compose.yml`. Mount it in:
+  - `backend` at `/app/wwwroot`
+  - `worker` at `/backend/src/NaderGorge.API/wwwroot`
+  - `nginx` at `/var/www/assets`
+  - Set the `SUBTITLE_STORAGE_PATH` on the worker service to `/backend/src/NaderGorge.API/wwwroot/subtitles`.
+- [x] T053 [US2] Update `docker-compose.yml` backend and frontend settings to include subdomain-specific `Cors__AllowedOrigins` and `CookieSettings__Domain` configurations.
+- [x] T054 [US1] Add robust, explicit healthcheck configurations for `landing`, `student`, and `admin` services in `docker-compose.yml`.
+- [x] T055 [US4] Update `scripts/verify-surface-separation.mjs` to include runtime healthcheck state inspections, Nginx subdomain headers validation, and CORS allowed origin checks.
+
+---
+
+## Phase 9: Quality Gates & Verification
+
+- [x] T056 [P] Run `clean-code-guard` against all modified production C# and TypeScript code.
+- [x] T057 [P] Run `test-guard` against C# test files (verify if any tests are affected).
+- [x] T058 Run all backend tests: `dotnet test backend/NaderGorge.sln` to confirm no auth regressions.
+- [x] T059 Perform Docker cold start: run `make down`, `docker compose build --no-cache`, `make up`, and check `docker compose ps` to ensure all 8 services are healthy.
+- [x] T060 Execute the runtime verification script `node scripts/verify-surface-separation.mjs` and check that all checks pass.
+
+### Critique & Architectural Issues / مشاكل الانتقاد والبنية
+
+- [x] C001 Install `curl` in Nginx Dockerfile to prevent healthcheck failure.
+- [x] C002 Add `admin.massaracademy.com` and `admin.massarplatform.com` to Nginx administrative server block to support default surface redirections.
+
 ---
 
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: Starts immediately.
-- **Foundational (Phase 2)**: Depends on Phase 1 and blocks all Docker service changes.
-- **US1 (Phase 3)**: Depends on foundational route/API primitives.
-- **US2 (Phase 4)**: Can run after US1 compose service structure exists.
-- **US3 (Phase 5)**: Can run after compose naming exists and can overlap with US2 except for shared docs.
-- **US4 (Phase 6)**: Depends on verification script and final URLs from US1/US2.
-- **Polish (Phase 7)**: Depends on all user stories.
+- **Setup & Foundational (Phases 1-7)**: Completed.
+- **Backend & Config (Phase 8)**: Depends on completed setup. AuthController cookie updates must be done before Docker Compose runs.
+- **Nginx configuration (Phase 8)**: Can be written concurrently.
+- **Docker Compose Updates (Phase 8)**: Integrates the Nginx proxy, shared assets volumes, healthchecks, and environment variables.
+- **Verification & Quality Gates (Phase 9)**: Must run after all implementation work is complete.
 
 ### Parallel Opportunities
 
-- T002 and T003 can run in parallel with T001.
-- T010, T011, and T012 can run in parallel after the verification script exists.
-- T020 and T021 can run in parallel after compose services exist.
-- T026 and T027 can run in parallel after brand/name targets are known.
-- T034 and T035 can run in parallel after static verification is complete.
-
-## Implementation Strategy
-
-1. Complete setup and foundational frontend routing/API URL separation.
-2. Deliver MVP with US1: separated Docker services and unique ports.
-3. Add US2 to make backend/browser/internal URL behavior correct.
-4. Add US3 to finish Massar visible/runtime identity.
-5. Add US4 and polish verification.
+- T048, T049 can run in parallel.
+- T052, T053 and T054 environment adjustments can run in parallel once Nginx configuration template is finalized.
+- T056, T057 (Quality gates) can run in parallel after all changes are implemented.

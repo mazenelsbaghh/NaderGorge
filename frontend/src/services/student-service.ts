@@ -8,6 +8,11 @@ export interface ActivePackageDto {
   totalLessons: number;
   progressPercent: number;
   imageUrl?: string;
+  teacherId: string;
+  teacherName: string;
+  teacherProfileImageUrl?: string;
+  subjectId: string;
+  subjectName: string;
 }
 
 export interface ResumePointDto {
@@ -133,10 +138,24 @@ export interface StudentThemePreferencesDto {
   availableDarkPalettes: ThemePaletteOptionDto[];
 }
 
+export interface PublicTeacherDto {
+  id: string;
+  fullName: string;
+  bio: string;
+  specialization: string;
+  profileImageUrl?: string;
+  subjectNames: string[];
+}
+
 export const studentService = {
   getDashboard: async (): Promise<DashboardDto> => {
     const res = await apiClient.get('/student/dashboard');
     return res.data?.data;
+  },
+
+  getPublicTeachers: async (): Promise<PublicTeacherDto[]> => {
+    const res = await apiClient.get('/public/teachers');
+    return res.data?.data || [];
   },
 
   getQuickAccess: async (): Promise<QuickAccessItemDto[]> => {

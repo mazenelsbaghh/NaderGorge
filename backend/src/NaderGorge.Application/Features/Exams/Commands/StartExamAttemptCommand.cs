@@ -119,7 +119,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 // Note: we take the full set randomly shuffled, then take N
                 allQuestions = allQuestions.Take(exam.DisplayQuestionCount.Value);
             }
-            
+
             selectedQuestions = allQuestions.ToList();
 
             // Create a fresh attempt
@@ -162,14 +162,14 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         {
             baseQuery = baseQuery.OrderBy(q => q.Order);
         }
-        
-        var questionDtos = baseQuery.Select(eq => 
+
+        var questionDtos = baseQuery.Select(eq =>
         {
             var options = eq.Question.Options
                 .OrderBy(x => random.Next()) // Shuffle options
                 .Select(o => new QuestionOptionViewDto(o.Id, o.Text))
                 .ToList();
-                
+
             string? baseText = null;
             int? mistakeStartIndex = null;
             int? mistakeEndIndex = null;
@@ -179,7 +179,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 mistakeStartIndex = ftm.MistakeStartIndex;
                 mistakeEndIndex = ftm.MistakeEndIndex;
             }
-                
+
             return new ExamQuestionViewDto(eq.Id, eq.Question.Text, eq.Question.Type.ToString(), eq.Points, eq.Question.HintText, baseText, mistakeStartIndex, mistakeEndIndex, options);
         }).ToList();
 
@@ -206,7 +206,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             lesson?.ContentSection?.Term?.PackageId,
             questionDtos
         );
-        
+
         return ApiResponse<ActiveExamAttemptDto>.Ok(dto);
     }
 }

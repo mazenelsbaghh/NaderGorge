@@ -61,7 +61,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .CountAsync(ct);
 
         var allLessonIds = packages.SelectMany(p => p.Terms.SelectMany(t => t.Sections)).SelectMany(s => s.Lessons).Select(l => l.Id).ToList();
-        
+
         var mandatoryHomeworks = await _db.Homeworks
             .Where(h => allLessonIds.Contains(h.LessonId) && h.IsMandatory)
             .ToListAsync(ct);

@@ -19,7 +19,7 @@ public class CancelAnalyzeVideoAICommandHandler : IRequestHandler<CancelAnalyzeV
     public async Task<bool> Handle(CancelAnalyzeVideoAICommand request, CancellationToken cancellationToken)
     {
         var video = await _context.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, cancellationToken);
-        
+
         if (video == null)
             return false;
 

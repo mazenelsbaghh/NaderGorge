@@ -27,7 +27,7 @@ public class GetTermByIdQueryHandler : IRequestHandler<GetTermByIdQuery, ApiResp
             return ApiResponse<TermDetailDto>.Fail("Term not found");
 
         var dto = new TermDetailDto(term.Id, term.Title, term.Order, term.PackageId, term.Price);
-        
+
         return ApiResponse<TermDetailDto>.Ok(dto);
     }
 }

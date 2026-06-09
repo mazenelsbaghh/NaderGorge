@@ -33,7 +33,7 @@ public class UpdateUserRoleCommandHandler : IRequestHandler<UpdateUserRoleComman
             .Include(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
-            
+
         if (user == null) return ApiResponse.Fail("User not found");
 
         // Identify requested role entities

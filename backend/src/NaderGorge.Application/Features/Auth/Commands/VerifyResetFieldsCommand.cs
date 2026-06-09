@@ -83,8 +83,8 @@ public class VerifyResetFieldsCommandHandler : IRequestHandler<VerifyResetFields
 
         // Generate a temporary 10-minute JWT token with "PasswordReset" role/claim
         var resetToken = _tokens.GenerateAccessToken(
-            user, 
-            new[] { "PasswordReset" }, 
+            user,
+            new[] { "PasswordReset" },
             TimeSpan.FromMinutes(10)
         );
 

@@ -5,6 +5,7 @@ import os
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5245")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8738")
 E2E_TEST_TOKEN = os.environ.get("E2E_TEST_TOKEN", "E2eOnlyTestTokenValue123456789012345")
+INTERNAL_SECRET = os.environ.get("API_CALLBACK_SECRET", "zXcVbNmQweRtyUiOpAsDfGhJkL1234567890ZaSdfGhjKlQwe")
 
 
 def e2e_headers():
@@ -50,12 +51,19 @@ class NaderGorgeClient:
             req_headers.update(headers)
         return self.session.delete(f"{BASE_URL}{path}", headers=req_headers)
 
-    def login(self, phone, password):
+    def login(self, phone, password, app_surface=None):
+        if app_surface is None:
+            if phone in ["20000000000", "20000000003", "20000000004"]:
+                app_surface = "admin"
+            else:
+                app_surface = "student"
         res = self.post("/api/auth/login", json={
             "phoneNumber": phone,
             "password": password,
             "deviceFingerprint": self.fingerprint,
             "deviceName": self.device_name
+        }, headers={
+            "X-App-Surface": app_surface
         })
         if res.status_code == 200:
             data = res.json().get("data", {})
@@ -70,7 +78,8 @@ def clean_db():
         "clearDatabase": True,
         "seedAdmin": True,
         "seedStudents": True,
-        "seedAssistant": True
+        "seedAssistant": True,
+        "seedTeacher": True
     }, headers=e2e_headers())
     assert res.status_code == 200
     return res.json()

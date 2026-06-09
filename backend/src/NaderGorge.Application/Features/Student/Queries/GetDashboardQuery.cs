@@ -19,7 +19,19 @@ public record DashboardDto(
     string? AvatarSlug
 );
 
-public record ActivePackageDto(Guid Id, string Name, string Description, int LessonsCompleted, int TotalLessons, int ProgressPercent);
+public record ActivePackageDto(
+    Guid Id, 
+    string Name, 
+    string Description, 
+    int LessonsCompleted, 
+    int TotalLessons, 
+    int ProgressPercent,
+    Guid TeacherId,
+    string TeacherName,
+    string? TeacherProfileImageUrl,
+    Guid SubjectId,
+    string SubjectName
+);
 public record ResumePointDto(Guid PackageId, string PackageName, Guid LessonId, string LessonTitle, int LessonOrder);
 public record UpcomingExamDto(Guid ExamId, string ExamTitle, string LessonTitle);
 
@@ -46,6 +58,8 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         // Get packages with section/lesson counts
         var packages = await _db.Packages
             .Where(p => packageIds.Contains(p.Id))
+            .Include(p => p.Program).ThenInclude(pr => pr.Subject)
+            .Include(p => p.Teacher).ThenInclude(t => t.User)
             .Include(p => p.Terms).ThenInclude(t => t.Sections).ThenInclude(s => s.Lessons)
             .ToListAsync(ct);
 
@@ -74,7 +88,19 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             totalCompletedAll += completed;
 
             var pct = total > 0 ? (int)Math.Round((double)completed / total * 100) : 0;
-            activePackages.Add(new ActivePackageDto(pkg.Id, pkg.Name, pkg.Description, completed, total, pct));
+            activePackages.Add(new ActivePackageDto(
+                pkg.Id, 
+                pkg.Name, 
+                pkg.Description, 
+                completed, 
+                total, 
+                pct,
+                pkg.TeacherId,
+                pkg.Teacher?.User?.FullName ?? "Unknown",
+                pkg.Teacher?.ProfileImageUrl,
+                pkg.Program != null ? pkg.Program.SubjectId : Guid.Empty,
+                pkg.Program?.Subject?.Name ?? "Unknown"
+            ));
 
             // Find resume point: first incomplete lesson in order
             if (resumeLessonId == null)

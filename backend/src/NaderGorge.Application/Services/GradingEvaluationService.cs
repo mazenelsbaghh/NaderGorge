@@ -10,12 +10,12 @@ public static class GradingEvaluationService
     public static decimal CalculateScaledScore(decimal rawPointsEarned, decimal rawPointsPossible, decimal targetTotalScore)
     {
         if (rawPointsPossible == 0 || targetTotalScore == 0) return 0;
-        
+
         // Example: 15 earned out of 20 possible, scale is 100
         // (15 / 20) * 100 = 75
         var ratio = rawPointsEarned / rawPointsPossible;
         var scaled = ratio * targetTotalScore;
-        
+
         return Math.Round(scaled, 2);
     }
 
@@ -30,13 +30,13 @@ public static class GradingEvaluationService
         {
             return "ضعيف";
         }
-        
+
         var percentage = (scaledScore / totalScore) * 100;
-        
+
         if (percentage >= 90) return "ممتاز";
         if (percentage >= 80) return "جيد جداً";
         if (percentage >= 65) return "جيد";
-        
+
         return "مقبول";
     }
 }

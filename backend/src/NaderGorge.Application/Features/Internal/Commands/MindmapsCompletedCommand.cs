@@ -36,7 +36,7 @@ public class MindmapsCompletedCommandHandler : IRequestHandler<MindmapsCompleted
         }
 
         video.IsProcessingMindmaps = false;
-        
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse.Ok("Mindmaps updated successfully");

@@ -37,13 +37,13 @@ public class CreateCommunityPostCommandHandler : IRequestHandler<CreateCommunity
             return ApiResponse<CreateCommunityPostResponse>.Fail($"Post body must be {MaxPostLength} characters or fewer.", new List<string> { "VALIDATION_BODY_TOO_LONG" });
 
         var isPoll = request.PollOptions != null && request.PollOptions.Count > 0;
-        var validPollOptions = isPoll 
-            ? request.PollOptions!.Select(o => o.Trim()).Where(o => !string.IsNullOrWhiteSpace(o)).ToList() 
+        var validPollOptions = isPoll
+            ? request.PollOptions!.Select(o => o.Trim()).Where(o => !string.IsNullOrWhiteSpace(o)).ToList()
             : new List<string>();
 
         if (isPoll && validPollOptions.Count < 2)
             return ApiResponse<CreateCommunityPostResponse>.Fail("A poll must have at least two options.", new List<string> { "VALIDATION_POLL_TOO_FEW_OPTIONS" });
-            
+
         if (isPoll && validPollOptions.Count > 10)
             return ApiResponse<CreateCommunityPostResponse>.Fail("A poll cannot have more than 10 options.", new List<string> { "VALIDATION_POLL_TOO_MANY_OPTIONS" });
 

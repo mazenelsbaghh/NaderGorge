@@ -2,15 +2,16 @@
 
 import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import http from 'node:http';
 import { extname, join, resolve } from 'node:path';
 
 const args = new Set(process.argv.slice(2));
 const staticOnly = args.has('--static-only');
 
-const requiredServices = ['landing', 'student', 'admin', 'backend', 'worker', 'db', 'redis'];
+const requiredServices = ['landing', 'student', 'admin', 'backend', 'worker', 'db', 'redis', 'nginx'];
 const frontendServices = ['landing', 'student', 'admin'];
-const appServices = ['landing', 'student', 'admin', 'backend'];
-const healthcheckServices = ['landing', 'student', 'admin', 'backend', 'worker', 'db', 'redis'];
+const appServices = ['landing', 'student', 'admin', 'backend', 'nginx'];
+const healthcheckServices = ['landing', 'student', 'admin', 'backend', 'worker', 'db', 'redis', 'nginx'];
 const checkedBrandFiles = [
   'frontend/src/app/layout.tsx',
   'frontend/src/app/(public)/login/page.tsx',
@@ -205,6 +206,40 @@ function assertBrandStrings() {
   }
 }
 
+async function fetch(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const headers = options.headers || {};
+    const reqOptions = {
+      method: options.method || 'GET',
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      headers,
+    };
+    const req = http.request(reqOptions, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          headers: {
+            get: (name) => {
+              const val = res.headers[name.toLowerCase()];
+              return Array.isArray(val) ? val.join(', ') : val;
+            },
+          },
+          text: async () => data,
+        });
+      });
+    });
+    req.on('error', (err) => reject(err));
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
 async function fetchManual(url) {
   return fetch(url, { redirect: 'manual' });
 }
@@ -215,6 +250,7 @@ async function assertRuntimeHttp() {
     student: process.env.STUDENT_PUBLIC_ORIGIN || 'http://localhost:8739',
     admin: process.env.ADMIN_PUBLIC_ORIGIN || 'http://localhost:8740',
     backend: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5245',
+    nginx: process.env.MASSAR_NGINX_URL || 'http://localhost',
   };
 
   const checks = [
@@ -222,12 +258,30 @@ async function assertRuntimeHttp() {
     ['student', `${origins.student}/`],
     ['admin', `${origins.admin}/`],
     ['backend', `${origins.backend}/api/health`],
+    ['nginx', `${origins.nginx}/`],
   ];
 
   for (const [name, url] of checks) {
     const response = await fetch(url);
     if (!response.ok) {
       fail(`${name} runtime check failed for ${url}: ${response.status}`);
+    }
+  }
+
+  // Subdomain routing smoke-checks via Host headers
+  const subdomainChecks = [
+    ['landing subdomain', 'massaracademy.com', '/'],
+    ['student subdomain', 'app.massaracademy.com', '/'],
+    ['admin subdomain', 'staff.massaracademy.com', '/'],
+    ['api subdomain', 'api.massaracademy.com', '/api/health'],
+  ];
+
+  for (const [name, host, path] of subdomainChecks) {
+    const response = await fetch(`${origins.nginx}${path}`, {
+      headers: { 'Host': host }
+    });
+    if (!response.ok) {
+      fail(`Nginx subdomain routing check failed for ${host}${path}: ${response.status}`);
     }
   }
 

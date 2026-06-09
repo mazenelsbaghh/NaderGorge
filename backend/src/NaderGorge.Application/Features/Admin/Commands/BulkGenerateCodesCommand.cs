@@ -60,6 +60,98 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         if (validationError != null)
             return ApiResponse<BulkGenerateCodesResponse>.Fail(validationError);
 
+        // Resolve user role
+        var user = await _db.Users
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.TeacherProfile)
+            .FirstOrDefaultAsync(u => u.Id == request.AdminId, ct);
+
+        var isTeacher = user?.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher) ?? false;
+        var teacherProfileId = user?.TeacherProfile?.Id;
+
+        if (isTeacher)
+        {
+            var authService = new TeacherAuthorizationService(_db);
+            bool isAuthorized = false;
+
+            if (request.CodeType == CodeType.Package && request.PackageId.HasValue)
+                isAuthorized = await authService.CanAccessPackageAsync(request.AdminId, request.PackageId.Value, ct);
+            else if (request.CodeType == CodeType.Term && request.TermId.HasValue)
+                isAuthorized = await authService.CanAccessTermAsync(request.AdminId, request.TermId.Value, ct);
+            else if (request.CodeType == CodeType.Month && request.ContentSectionId.HasValue)
+                isAuthorized = await authService.CanAccessSectionAsync(request.AdminId, request.ContentSectionId.Value, ct);
+            else if (request.CodeType == CodeType.Lesson && request.LessonId.HasValue)
+                isAuthorized = await authService.CanAccessLessonAsync(request.AdminId, request.LessonId.Value, ct);
+            else if (request.CodeType == CodeType.Exam && request.ExamId.HasValue)
+                isAuthorized = await authService.CanAccessExamAsync(request.AdminId, request.ExamId.Value, ct);
+            else if (request.CodeType == CodeType.Video && request.VideoTargetIds != null && request.VideoTargetIds.Any())
+            {
+                isAuthorized = true;
+                foreach (var vidId in request.VideoTargetIds)
+                {
+                    var video = await _db.LessonVideos.FindAsync(new object[] { vidId }, ct);
+                    if (video == null || !await authService.CanAccessLessonAsync(request.AdminId, video.LessonId, ct))
+                    {
+                        isAuthorized = false;
+                        break;
+                    }
+                }
+            }
+            else if (request.CodeType == CodeType.Balance)
+                isAuthorized = true;
+
+            if (!isAuthorized)
+            {
+                return ApiResponse<BulkGenerateCodesResponse>.Fail("Unauthorized: You do not own the target resource.");
+            }
+        }
+
+        Guid groupTeacherId = Guid.Empty;
+        if (isTeacher && teacherProfileId.HasValue)
+        {
+            groupTeacherId = teacherProfileId.Value;
+        }
+        else
+        {
+            // Resolve teacher from target
+            if (request.PackageId.HasValue)
+            {
+                var pkg = await _db.Packages.FindAsync(new object[] { request.PackageId.Value }, ct);
+                if (pkg != null) groupTeacherId = pkg.TeacherId;
+            }
+            else if (request.TermId.HasValue)
+            {
+                var term = await _db.Terms.Include(t => t.Package).FirstOrDefaultAsync(t => t.Id == request.TermId.Value, ct);
+                if (term?.Package != null) groupTeacherId = term.Package.TeacherId;
+            }
+            else if (request.ContentSectionId.HasValue)
+            {
+                var sec = await _db.ContentSections.Include(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(s => s.Id == request.ContentSectionId.Value, ct);
+                if (sec?.Term?.Package != null) groupTeacherId = sec.Term.Package.TeacherId;
+            }
+            else if (request.LessonId.HasValue)
+            {
+                var les = await _db.Lessons.Include(l => l.ContentSection).ThenInclude(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(l => l.Id == request.LessonId.Value, ct);
+                if (les?.ContentSection?.Term?.Package != null) groupTeacherId = les.ContentSection.Term.Package.TeacherId;
+            }
+            else if (request.ExamId.HasValue)
+            {
+                var exam = await _db.Exams.FindAsync(new object[] { request.ExamId.Value }, ct);
+                if (exam != null) groupTeacherId = exam.CreatedByTeacherId;
+            }
+            else if (request.CodeType == CodeType.Video && request.VideoTargetIds != null && request.VideoTargetIds.Any())
+            {
+                var vid = await _db.LessonVideos.Include(v => v.Lesson).ThenInclude(l => l.ContentSection).ThenInclude(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(v => v.Id == request.VideoTargetIds.First(), ct);
+                if (vid?.Lesson?.ContentSection?.Term?.Package != null) groupTeacherId = vid.Lesson.ContentSection.Term.Package.TeacherId;
+            }
+
+            if (groupTeacherId == Guid.Empty)
+            {
+                var defaultTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
+                groupTeacherId = defaultTeacher?.Id ?? Guid.Parse("b4b82937-293e-48a3-a002-decf9a1efab8");
+            }
+        }
+
         // Create code group
         var group = new CodeGroup
         {
@@ -76,6 +168,7 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
             DiscountPercentage = request.DiscountPercentage,
             ExpiresAt = request.ExpiresAt,
             CreatedByUserId = request.AdminId,
+            TeacherId = groupTeacherId
         };
         _db.CodeGroups.Add(group);
 

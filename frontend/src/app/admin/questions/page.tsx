@@ -14,14 +14,19 @@ import {
 } from '@/components/admin';
 import { FindTheMistakeBuilder } from '@/components/admin/FindTheMistakeBuilder';
 import { adminService, QuestionBankItemDto, QuestionOptionDto } from '@/services/admin-service';
+import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
 export default function AdminQuestionsPage() {
   const [questions, setQuestions] = useState<QuestionBankItemDto[]>([]);
+  const [subjects, setSubjects] = useState<SubjectDto[]>([]);
+  const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('All');
   const [qText, setQText] = useState('');
   const [qPoints, setQPoints] = useState(1);
   const [qTags, setQTags] = useState('');
@@ -48,8 +53,14 @@ export default function AdminQuestionsPage() {
   async function loadQuestions() {
     try {
       setLoading(true);
-      const data = await adminService.listQuestions(1, 100, '');
-      setQuestions(data.items);
+      const [data, subjectsRes, teachersRes] = await Promise.all([
+        adminService.listQuestions(1, 100, ''),
+        teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
+        teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] }))
+      ]);
+      setQuestions(data.items || []);
+      setSubjects(subjectsRes.data ?? []);
+      setTeachers(teachersRes.data ?? []);
     } catch (error) {
       devConsole.error(error);
     } finally {
@@ -137,15 +148,27 @@ export default function AdminQuestionsPage() {
   }
 
   const filteredQuestions = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return questions;
+    let list = questions;
 
-    return questions.filter(
+    // Filter by Subject
+    if (selectedSubjectId !== 'All') {
+      list = list.filter((q) => q.subjectId === selectedSubjectId);
+    }
+
+    // Filter by Teacher
+    if (selectedTeacherId !== 'All') {
+      list = list.filter((q) => q.createdByTeacherId === selectedTeacherId);
+    }
+
+    const term = search.trim().toLowerCase();
+    if (!term) return list;
+
+    return list.filter(
       (question) =>
         question.text.toLowerCase().includes(term) ||
         question.tags.toLowerCase().includes(term),
     );
-  }, [questions, search]);
+  }, [questions, search, selectedSubjectId, selectedTeacherId]);
 
   const correctOptionsCount = questions.reduce(
     (sum, question) => sum + question.options.filter((option) => option.isCorrect).length,
@@ -244,11 +267,39 @@ export default function AdminQuestionsPage() {
         />
       </section>
 
-      <AdminSearchToolbar
-        value={search}
-        onChange={setSearch}
-        placeholder="ابحث في نص السؤال أو التصنيف..."
-      />
+      <div className="mb-6 flex flex-col md:flex-row gap-4 items-center mr-auto w-full max-w-3xl">
+        <div className="flex-1 w-full">
+          <AdminSearchToolbar
+            value={search}
+            onChange={setSearch}
+            placeholder="ابحث في نص السؤال أو التصنيف..."
+          />
+        </div>
+        
+        <div className="flex gap-3 w-full md:w-auto">
+          <select
+            value={selectedSubjectId}
+            onChange={(e) => setSelectedSubjectId(e.target.value)}
+            className="admin-input flex-1 md:w-44"
+          >
+            <option value="All">كل المواد</option>
+            {subjects.map((sub) => (
+              <option key={sub.id} value={sub.id}>{sub.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedTeacherId}
+            onChange={(e) => setSelectedTeacherId(e.target.value)}
+            className="admin-input flex-1 md:w-44"
+          >
+            <option value="All">كل المدرسين</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>{t.fullName}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <AdminDataTable
         data={filteredQuestions}

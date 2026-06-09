@@ -5,6 +5,7 @@ using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Exams.Queries;
 using NaderGorge.Application.Features.Webhooks.Commands;
 using NaderGorge.Application.Interfaces;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Infrastructure.Data;
 
@@ -59,7 +60,8 @@ public class EssayGradingWorkflowTests
 
         var essay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
 
-        var gradeBeforeAi = await new GradeEssayCommandHandler(db)
+        var auth = new TeacherAuthorizationService(db);
+        var gradeBeforeAi = await new GradeEssayCommandHandler(db, auth)
             .Handle(new GradeEssayCommand(essay.Id, 7m, "Teacher review"), CancellationToken.None);
         Assert.False(gradeBeforeAi.Success);
 
@@ -71,7 +73,7 @@ public class EssayGradingWorkflowTests
         essay.Status = EssaySubmissionStatus.WaitTeacher;
         await db.SaveChangesAsync();
 
-        var gradeResult = await new GradeEssayCommandHandler(db)
+        var gradeResult = await new GradeEssayCommandHandler(db, auth)
             .Handle(new GradeEssayCommand(essay.Id, 8m, "Teacher final"), CancellationToken.None);
 
         Assert.True(gradeResult.Success);

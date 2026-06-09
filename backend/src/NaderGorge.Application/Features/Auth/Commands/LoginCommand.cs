@@ -11,7 +11,7 @@ namespace NaderGorge.Application.Features.Auth.Commands;
 // ---- Login Command ----
 public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName, string? IpAddress, string? AppSurface = null) : IRequest<ApiResponse<LoginResponse>>;
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
-public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, bool ProfileComplete, string? AvatarSlug);
+public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, string[] Permissions, bool ProfileComplete, string? AvatarSlug);
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
@@ -117,12 +117,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         }
 
         // --- Generate tokens ---
-        var accessToken = isStaff 
+        var accessToken = isStaff
             ? _tokens.GenerateAccessToken(user, roles)
             : _tokens.GenerateAccessToken(user, roles, TimeSpan.FromDays(365));
         var refreshToken = _tokens.GenerateRefreshToken();
 
-        var refreshDays = isStaff 
+        var refreshDays = isStaff
             ? int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30")
             : 365;
         _db.RefreshTokens.Add(new RefreshToken
@@ -135,7 +135,25 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
 
         await _db.SaveChangesAsync(ct);
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
+        var permissionsList = new List<string>();
+        foreach (var ur in user.UserRoles)
+        {
+            if (ur.Role != null && !string.IsNullOrEmpty(ur.Role.PermissionsJson))
+            {
+                try
+                {
+                    var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
+                    if (perms != null)
+                    {
+                        permissionsList.AddRange(perms);
+                    }
+                }
+                catch { /* ignore invalid JSON */ }
+            }
+        }
+        var permissions = permissionsList.Distinct().ToArray();
+
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(accessToken, refreshToken, userDto));
     }
 }

@@ -1,21 +1,34 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record GradeEssayCommand(Guid EssaySubmissionId, decimal TeacherScore, string? TeacherFeedback) : IRequest<ApiResponse<bool>>;
+public record GradeEssayCommand(Guid EssaySubmissionId, decimal TeacherScore, string? TeacherFeedback, Guid? CurrentUserId = null) : IRequest<ApiResponse<bool>>;
 
 public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiResponse<bool>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public GradeEssayCommandHandler(IAppDbContext db) => _db = db;
+    public GradeEssayCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<bool>> Handle(GradeEssayCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessEssaySubmissionAsync(request.CurrentUserId.Value, request.EssaySubmissionId, ct);
+            if (!canAccess) return ApiResponse<bool>.Fail("Unauthorized access to grade this essay submission.");
+        }
+
         var submission = await _db.EssaySubmissions.FindAsync(new object[] { request.EssaySubmissionId }, ct);
         if (submission == null) return ApiResponse<bool>.Fail("Essay submission not found.");
 
@@ -24,9 +37,27 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             return ApiResponse<bool>.Fail("Essay is not ready for teacher grading.");
         }
 
+        Guid? teacherId = null;
+        if (request.CurrentUserId.HasValue)
+        {
+            var user = await _db.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .Include(u => u.TeacherProfile)
+                .FirstOrDefaultAsync(u => u.Id == request.CurrentUserId.Value, ct);
+
+            if (user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher))
+            {
+                if (user.TeacherProfile != null)
+                {
+                    teacherId = user.TeacherProfile.Id;
+                }
+            }
+        }
+
         submission.TeacherFinalScore = request.TeacherScore;
         submission.TeacherFeedback = request.TeacherFeedback;
         submission.Status = EssaySubmissionStatus.TeacherGraded;
+        submission.GradedByTeacherId = teacherId;
 
         await _db.SaveChangesAsync(ct);
 
@@ -72,7 +103,7 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
                 attempt.Evaluation = NaderGorge.Application.Services.GradingEvaluationService.DetermineEvaluation(scaledScore, exam.PassingScore, exam.TotalScore);
             }
         }
-        
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse<bool>.Ok(true);
     }

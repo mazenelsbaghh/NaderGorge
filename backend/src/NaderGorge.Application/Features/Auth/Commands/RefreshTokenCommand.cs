@@ -43,12 +43,12 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
         var isStaff = roles.Any(r => !string.Equals(r, "Student", StringComparison.OrdinalIgnoreCase));
 
-        var newAccessToken = isStaff 
+        var newAccessToken = isStaff
             ? _tokens.GenerateAccessToken(user, roles)
             : _tokens.GenerateAccessToken(user, roles, TimeSpan.FromDays(365));
         var newRefreshToken = _tokens.GenerateRefreshToken();
 
-        var refreshDays = isStaff 
+        var refreshDays = isStaff
             ? int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30")
             : 365;
         _db.RefreshTokens.Add(new Domain.Entities.RefreshToken
@@ -61,7 +61,25 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
 
         await _db.SaveChangesAsync(ct);
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
+        var permissionsList = new List<string>();
+        foreach (var ur in user.UserRoles)
+        {
+            if (ur.Role != null && !string.IsNullOrEmpty(ur.Role.PermissionsJson))
+            {
+                try
+                {
+                    var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
+                    if (perms != null)
+                    {
+                        permissionsList.AddRange(perms);
+                    }
+                }
+                catch { /* ignore invalid JSON */ }
+            }
+        }
+        var permissions = permissionsList.Distinct().ToArray();
+
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(newAccessToken, newRefreshToken, userDto));
     }
 }

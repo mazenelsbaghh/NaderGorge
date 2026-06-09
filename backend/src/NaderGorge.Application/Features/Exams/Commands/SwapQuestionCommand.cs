@@ -67,7 +67,7 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
         // Allowed to swap only if un-answered? Usually lifelines can be used any time, but if they already answered, swapping destroys the answer. We allow it anyway.
 
         var usedQuestionIds = attempt.Answers.Select(a => a.ExamQuestionId).ToHashSet();
-        
+
         var availableExtraQuestions = exam.ExamQuestions
             .Where(eq => !usedQuestionIds.Contains(eq.Id))
             .ToList();
@@ -113,14 +113,14 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
         }
 
         var dto = new ExamQuestionViewDto(
-            newExamQuestion.Id, 
-            newExamQuestion.Question.Text, 
-            newExamQuestion.Question.Type.ToString(), 
-            newExamQuestion.Points, 
-            newExamQuestion.Question.HintText, 
-            baseText, 
-            mistakeStartIndex, 
-            mistakeEndIndex, 
+            newExamQuestion.Id,
+            newExamQuestion.Question.Text,
+            newExamQuestion.Question.Type.ToString(),
+            newExamQuestion.Points,
+            newExamQuestion.Question.HintText,
+            baseText,
+            mistakeStartIndex,
+            mistakeEndIndex,
             options);
 
         return ApiResponse<ExamQuestionViewDto>.Ok(dto, "تم تبديل السؤال بنجاح.");

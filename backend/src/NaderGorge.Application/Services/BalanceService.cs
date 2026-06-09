@@ -80,7 +80,7 @@ public class BalanceService
         _db.BalanceTransactions.Add(tx);
         await _db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Added {Amount} credit to user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}", 
+        _logger.LogInformation("Added {Amount} credit to user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
             amount, userId, balance.CurrentBalance, description);
 
         return tx;
@@ -125,7 +125,7 @@ public class BalanceService
         _db.BalanceTransactions.Add(tx);
         await _db.SaveChangesAsync(ct);
 
-        _logger.LogInformation("Deducted {Amount} from user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}", 
+        _logger.LogInformation("Deducted {Amount} from user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
             amount, userId, balance.CurrentBalance, description);
 
         return tx;

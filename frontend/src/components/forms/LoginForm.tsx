@@ -64,6 +64,7 @@ export function LoginForm() {
           phone: user.phone,
           roles: user.roles,
           profileComplete: user.profileComplete,
+          permissions: user.permissions || [],
         },
         accessToken,
         rememberMe

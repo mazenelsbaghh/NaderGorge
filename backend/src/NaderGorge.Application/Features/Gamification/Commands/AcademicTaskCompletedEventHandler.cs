@@ -59,7 +59,7 @@ public class AcademicTaskCompletedEventHandler : INotificationHandler<AcademicTa
                 });
             }
         }
-        
+
         // Level up
         if (gamification.TotalPoints > 2000 && gamification.LevelName != "Master")
             gamification.LevelName = "Master";

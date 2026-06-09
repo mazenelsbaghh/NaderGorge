@@ -381,6 +381,7 @@ export function RegistrationForm() {
           roles: user.roles,
           profileComplete: user.profileComplete,
           avatarSlug: user.avatarSlug,
+          permissions: user.permissions || [],
         },
         accessToken,
         true // rememberMe: true ensures session persistence

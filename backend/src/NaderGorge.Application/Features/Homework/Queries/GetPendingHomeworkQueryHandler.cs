@@ -20,7 +20,7 @@ public class GetPendingHomeworkQueryHandler : IRequestHandler<GetPendingHomework
         // or have an "InProgress" submission. Or simply, assigned homeworks for the active package.
         // We'll approximate this by finding homeworks assigned to lessons the student has access to
         // that are not fully submitted yet.
-        
+
         // This is a simplified version. A real version might use a StudentSession concept.
         var pendingSubmissions = await _dbContext.HomeworkSubmissions
             .Include(s => s.Homework)

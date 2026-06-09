@@ -1,10 +1,14 @@
 # Operations Master Plan
 
-**Last Updated**: 2026-06-06
+**Last Updated**: 2026-06-09
 
 ---
 
 ## Active Plans
+
+### Deploy Default Role Permissions (2026-06-09)
+- [ ] Run EF Core DB migrations on the production server.
+- [ ] Rebuild and deploy backend container.
 
 ### Rebuild and Deploy Auto-Cycle Swiper Updates (2026-06-06)
 - [x] Rebuild shared frontend docker image `massar_frontend:local` via `make build-frontend`.

@@ -1,10 +1,14 @@
 # Backend Master Plan
 
-**Last Updated**: 2026-06-07
+**Last Updated**: 2026-06-09
 
 ---
 
 ## Active Plans
+
+### Update Default Role Permissions (2026-06-09)
+- [x] Create EF Core DB migration to update default roles (Supervisor, Staff, Assistant) with predefined permissions in the database.
+- [x] Update Seeder.cs to register these default roles with prefilled permissions.
 
 ### Custom Forms API Payload Alignment (2026-06-07)
 - [x] Ensure and document that backend `PUT` endpoints (`PUT /api/admin/forms/{id}` and `PUT /api/admin/forms/submissions/{submissionId}/status`) successfully receive matched IDs from the body payload as well.

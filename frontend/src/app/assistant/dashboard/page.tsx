@@ -1,4 +1,4 @@
-import { AssistantTaskBoard } from '@/components/assistant/AssistantTaskBoard';
+import { AssistantDashboardTabs } from '@/components/assistant/AssistantDashboardTabs';
 
 export const metadata = {
   title: 'Assistant Dashboard | Massar Platform',
@@ -8,7 +8,7 @@ export const metadata = {
 export default function AssistantDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black py-12 px-4 sm:px-6 lg:px-8">
-      <AssistantTaskBoard />
+      <AssistantDashboardTabs />
     </div>
   );
 }

@@ -47,3 +47,8 @@ export * from './AdminTeacherPhotoUpload';
 export * from './ContentHierarchyPanel';
 export * from './EntityOverviewDashboard';
 export * from './AttachedExamViewer';
+export * from './EmployeeProfileDrawer';
+export * from './ClockInOutWidget';
+export * from './AttendanceLogTable';
+export * from './VacationRequestModal';
+

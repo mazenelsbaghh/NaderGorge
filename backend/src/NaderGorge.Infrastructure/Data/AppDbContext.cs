@@ -28,6 +28,9 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<StudentAccessGrant> StudentAccessGrants => Set<StudentAccessGrant>();
 
     // Content
+    public DbSet<Subject> Subjects => Set<Subject>();
+    public DbSet<TeacherProfile> TeacherProfiles => Set<TeacherProfile>();
+    public DbSet<TeacherSubject> TeacherSubjects => Set<TeacherSubject>();
     public DbSet<Program> Programs => Set<Program>();
     public DbSet<Package> Packages => Set<Package>();
     public DbSet<PackageCodePageProfile> PackageCodePageProfiles => Set<PackageCodePageProfile>();
@@ -51,14 +54,14 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<StudentBalance> StudentBalances => Set<StudentBalance>();
     public DbSet<BalanceTransaction> BalanceTransactions => Set<BalanceTransaction>();
     public DbSet<CodeVideoTarget> CodeVideoTargets => Set<CodeVideoTarget>();
-    
+
     // Tracking
     public DbSet<VideoWatchEvent> VideoWatchEvents => Set<VideoWatchEvent>();
     public DbSet<ExtraWatchRequest> ExtraWatchRequests => Set<ExtraWatchRequest>();
     public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
     public DbSet<VideoPlaybackSession> VideoPlaybackSessions => Set<VideoPlaybackSession>();
     public DbSet<VideoOverride> VideoOverrides => Set<VideoOverride>();
-    
+
     // Exams
     public DbSet<Exam> Exams => Set<Exam>();
     public DbSet<QuestionBankItem> QuestionBankItems => Set<QuestionBankItem>();
@@ -91,6 +94,35 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
     public DbSet<StudentNote> StudentNotes => Set<StudentNote>();
 
+    // Phase 2: HR Core
+    public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
+    public DbSet<AttendanceLog> AttendanceLogs => Set<AttendanceLog>();
+    public DbSet<EmployeeVacation> EmployeeVacations => Set<EmployeeVacation>();
+
+    public DbSet<TaskItem> TaskItems => Set<TaskItem>();
+    public DbSet<TaskComment> TaskComments => Set<TaskComment>();
+
+    // Phase 5: Internal Chat
+    public DbSet<ChatRoom> ChatRooms => Set<ChatRoom>();
+    public DbSet<ChatParticipant> ChatParticipants => Set<ChatParticipant>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<ChatMessageReadState> ChatMessageReadStates => Set<ChatMessageReadState>();
+
+    // Phase 6: Call Center CRM
+    public DbSet<CrmStudentStatus> CrmStudentStatuses => Set<CrmStudentStatus>();
+    public DbSet<CrmCallLog> CrmCallLogs => Set<CrmCallLog>();
+
+    // Phase 8: Media Production & Social Planner
+    public DbSet<MediaProductionPipeline> MediaProductionPipelines => Set<MediaProductionPipeline>();
+    public DbSet<SocialMediaPlan> SocialMediaPlans => Set<SocialMediaPlan>();
+
+    // Phase 9: Payroll & Teacher Finance
+    public DbSet<PayrollRecord> PayrollRecords => Set<PayrollRecord>();
+    public DbSet<PayrollAdjustment> PayrollAdjustments => Set<PayrollAdjustment>();
+    public DbSet<TeacherAccount> TeacherAccounts => Set<TeacherAccount>();
+    public DbSet<TeacherPayout> TeacherPayouts => Set<TeacherPayout>();
+    public DbSet<AccessCodeActivationLog> AccessCodeActivationLogs => Set<AccessCodeActivationLog>();
+
     public Task<StudentAnswer?> FindStudentAnswerAsync(
         Guid studentExamAttemptId,
         Guid examQuestionId,
@@ -121,6 +153,38 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(u => u.FullName).HasMaxLength(200).IsRequired();
             e.Property(u => u.PhoneNumber).HasMaxLength(20).IsRequired();
             e.Property(u => u.PasswordHash).IsRequired();
+        });
+
+        // Subject
+        modelBuilder.Entity<Subject>(e =>
+        {
+            e.ToTable("subjects");
+            e.HasKey(s => s.Id);
+            e.Property(s => s.Name).HasMaxLength(200).IsRequired();
+            e.Property(s => s.NormalizedName).HasMaxLength(200).IsRequired();
+            e.HasIndex(s => s.NormalizedName).IsUnique();
+        });
+
+        // TeacherProfile
+        modelBuilder.Entity<TeacherProfile>(e =>
+        {
+            e.ToTable("teacher_profiles");
+            e.HasKey(tp => tp.Id);
+            e.HasIndex(tp => tp.UserId).IsUnique();
+            e.HasOne(tp => tp.User).WithOne(u => u.TeacherProfile).HasForeignKey<TeacherProfile>(tp => tp.UserId);
+            e.Property(tp => tp.Specialization).HasMaxLength(200).IsRequired();
+            e.Property(tp => tp.ProfileImageUrl).HasMaxLength(1000);
+            e.Property(tp => tp.ContactInfo).HasMaxLength(500).IsRequired();
+            e.Property(tp => tp.CommissionRate).HasPrecision(18, 2);
+        });
+
+        // TeacherSubject
+        modelBuilder.Entity<TeacherSubject>(e =>
+        {
+            e.ToTable("teacher_subjects");
+            e.HasKey(ts => new { ts.TeacherId, ts.SubjectId });
+            e.HasOne(ts => ts.Teacher).WithMany(t => t.TeacherSubjects).HasForeignKey(ts => ts.TeacherId);
+            e.HasOne(ts => ts.Subject).WithMany(s => s.TeacherSubjects).HasForeignKey(ts => ts.SubjectId);
         });
 
         // Role
@@ -208,6 +272,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(c => c.DiscountPercentage).HasColumnType("decimal(18,2)");
             e.Property(c => c.BalanceAmount).HasColumnType("decimal(18,2)");
             e.HasOne(c => c.CreatedByUser).WithMany().HasForeignKey(c => c.CreatedByUserId);
+            e.HasOne(c => c.Teacher).WithMany(t => t.CodeGroups).HasForeignKey(c => c.TeacherId);
         });
 
         // AccessCode
@@ -237,6 +302,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("programs");
             e.HasKey(p => p.Id);
             e.Property(p => p.Name).HasMaxLength(200).IsRequired();
+            e.HasOne(p => p.Subject).WithMany(s => s.Programs).HasForeignKey(p => p.SubjectId);
         });
 
         // Package
@@ -246,6 +312,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(p => p.Id);
             e.Property(p => p.Name).HasMaxLength(200).IsRequired();
             e.HasOne(p => p.Program).WithMany(pr => pr.Packages).HasForeignKey(p => p.ProgramId);
+            e.HasOne(p => p.Teacher).WithMany(t => t.Packages).HasForeignKey(p => p.TeacherId);
         });
 
         modelBuilder.Entity<PackageCodePageProfile>(e =>
@@ -498,6 +565,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Title).HasMaxLength(200).IsRequired();
             e.Property(x => x.PassingScore).HasColumnType("decimal(18,2)");
             e.Property(x => x.TotalScore).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.CreatedByTeacher).WithMany(t => t.Exams).HasForeignKey(x => x.CreatedByTeacherId);
         });
 
         // QuestionBankItem
@@ -508,6 +576,8 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(q => q.Text).IsRequired();
             e.Property(q => q.DefaultPoints).HasColumnType("decimal(18,2)");
             e.Property(q => q.Tags).HasMaxLength(500);
+            e.HasOne(q => q.CreatedByTeacher).WithMany(t => t.QuestionBankItems).HasForeignKey(q => q.CreatedByTeacherId);
+            e.HasOne(q => q.Subject).WithMany(s => s.QuestionBankItems).HasForeignKey(q => q.SubjectId);
 
             e.HasDiscriminator(q => q.Type)
              .HasValue<QuestionBankItem>(NaderGorge.Domain.Entities.QuestionType.MCQ)
@@ -574,10 +644,11 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(es => es.Student).WithMany().HasForeignKey(es => es.StudentId);
             e.HasOne(es => es.Question).WithMany().HasForeignKey(es => es.QuestionId);
             e.HasOne(es => es.Attempt).WithMany().HasForeignKey(es => es.StudentExamAttemptId);
+            e.HasOne(es => es.GradedByTeacher).WithMany(t => t.EssaySubmissions).HasForeignKey(es => es.GradedByTeacherId);
         });
 
         // Phase 2
-        
+
         modelBuilder.Entity<Homework>(e =>
         {
             e.ToTable("homeworks");
@@ -730,6 +801,347 @@ public class AppDbContext : DbContext, IAppDbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // EmployeeProfile
+        modelBuilder.Entity<EmployeeProfile>(e =>
+        {
+            e.ToTable("employee_profiles");
+            e.HasKey(ep => ep.Id);
+            e.HasIndex(ep => ep.UserId).IsUnique();
+            e.HasOne(ep => ep.User)
+             .WithOne(u => u.EmployeeProfile)
+             .HasForeignKey<EmployeeProfile>(ep => ep.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(ep => ep.BasicSalary).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(ep => ep.StandardStartTime).IsRequired();
+            e.Property(ep => ep.TargetDailyHours).IsRequired();
+        });
+
+        // AttendanceLog
+        modelBuilder.Entity<AttendanceLog>(e =>
+        {
+            e.ToTable("attendance_logs");
+            e.HasKey(al => al.Id);
+            e.HasIndex(al => al.EmployeeId);
+            e.HasIndex(al => al.Date);
+            e.HasOne(al => al.Employee)
+             .WithMany()
+             .HasForeignKey(al => al.EmployeeId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(al => al.Status).HasConversion<int>();
+            e.Property(al => al.IpAddress).HasMaxLength(45);
+            e.Property(al => al.UserAgent).HasMaxLength(500);
+        });
+
+        // EmployeeVacation
+        modelBuilder.Entity<EmployeeVacation>(e =>
+        {
+            e.ToTable("employee_vacations");
+            e.HasKey(ev => ev.Id);
+            e.HasIndex(ev => ev.EmployeeId);
+            e.HasOne(ev => ev.Employee)
+             .WithMany()
+             .HasForeignKey(ev => ev.EmployeeId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(ev => ev.HandledByUser)
+             .WithMany()
+             .HasForeignKey(ev => ev.HandledBy)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.Property(ev => ev.Status).HasConversion<int>();
+            e.Property(ev => ev.Reason).HasMaxLength(2000).IsRequired();
+        });
+
+        // TaskItem
+        modelBuilder.Entity<TaskItem>(e =>
+        {
+            e.ToTable("task_items");
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Title).HasMaxLength(255).IsRequired();
+            e.Property(t => t.Description).HasMaxLength(4000);
+            e.Property(t => t.Status).HasConversion<int>();
+            e.Property(t => t.Priority).HasConversion<int>();
+            e.HasOne(t => t.Assignee)
+             .WithMany()
+             .HasForeignKey(t => t.AssigneeId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(t => t.CreatedBy)
+             .WithMany()
+             .HasForeignKey(t => t.CreatedById)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(t => t.ApprovedBy)
+             .WithMany()
+             .HasForeignKey(t => t.ApprovedById)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(t => t.MediaPipeline)
+             .WithMany(mp => mp.Tasks)
+             .HasForeignKey(t => t.MediaPipelineId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // TaskComment
+        modelBuilder.Entity<TaskComment>(e =>
+        {
+            e.ToTable("task_comments");
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Content).HasMaxLength(4000).IsRequired();
+            e.Property(c => c.AttachmentUrl).HasMaxLength(2048);
+            e.HasOne(c => c.Task)
+             .WithMany(t => t.Comments)
+             .HasForeignKey(c => c.TaskId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.User)
+             .WithMany()
+             .HasForeignKey(c => c.UserId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ChatRoom
+        modelBuilder.Entity<ChatRoom>(e =>
+        {
+            e.ToTable("chat_rooms");
+            e.HasKey(r => r.Id);
+            e.Property(r => r.Name).HasMaxLength(100);
+            e.Property(r => r.Type).HasConversion<int>();
+            e.HasOne(r => r.TaskItem)
+             .WithMany()
+             .HasForeignKey(r => r.TaskItemId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.CreatedByUser)
+             .WithMany()
+             .HasForeignKey(r => r.CreatedByUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ChatParticipant
+        modelBuilder.Entity<ChatParticipant>(e =>
+        {
+            e.ToTable("chat_participants");
+            e.HasKey(p => new { p.ChatRoomId, p.UserId });
+            e.HasOne(p => p.ChatRoom)
+             .WithMany(r => r.ChatParticipants)
+             .HasForeignKey(p => p.ChatRoomId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(p => p.LastReadMessage)
+             .WithMany()
+             .HasForeignKey(p => p.LastReadMessageId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ChatMessage
+        modelBuilder.Entity<ChatMessage>(e =>
+        {
+            e.ToTable("chat_messages");
+            e.HasKey(m => m.Id);
+            e.Property(m => m.Content).HasMaxLength(4000).IsRequired();
+            e.Property(m => m.Type).HasConversion<int>();
+            e.Property(m => m.MediaUrl).HasMaxLength(2048);
+            e.Property(m => m.MediaMetadata).HasMaxLength(4000);
+            e.HasOne(m => m.ChatRoom)
+             .WithMany(r => r.ChatMessages)
+             .HasForeignKey(m => m.ChatRoomId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(m => m.SenderUser)
+             .WithMany()
+             .HasForeignKey(m => m.SenderUserId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(m => m.ChatRoomId);
+            e.HasIndex(m => m.CreatedAt);
+        });
+
+        // ChatMessageReadState
+        modelBuilder.Entity<ChatMessageReadState>(e =>
+        {
+            e.ToTable("chat_message_read_states");
+            e.HasKey(rs => new { rs.MessageId, rs.UserId });
+            e.HasOne(rs => rs.Message)
+             .WithMany()
+             .HasForeignKey(rs => rs.MessageId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(rs => rs.User)
+             .WithMany()
+             .HasForeignKey(rs => rs.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // CrmStudentStatus
+        modelBuilder.Entity<CrmStudentStatus>(e =>
+        {
+            e.ToTable("crm_student_statuses");
+            e.HasKey(s => s.StudentId);
+            e.Property(s => s.Status).HasConversion<int>();
+            e.Property(s => s.Priority).HasConversion<int>();
+            e.Property(s => s.Notes).HasMaxLength(4000);
+            
+            e.HasOne(s => s.Student)
+             .WithOne()
+             .HasForeignKey<CrmStudentStatus>(s => s.StudentId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(s => s.AssignedAgent)
+             .WithMany()
+             .HasForeignKey(s => s.AssignedAgentId)
+             .OnDelete(DeleteBehavior.SetNull);
+
+            e.HasIndex(s => s.AssignedAgentId);
+            e.HasIndex(s => s.NextFollowUpDate);
+        });
+
+        // CrmCallLog
+        modelBuilder.Entity<CrmCallLog>(e =>
+        {
+            e.ToTable("crm_call_logs");
+            e.HasKey(l => l.Id);
+            e.Property(l => l.Notes).HasMaxLength(4000);
+            e.Property(l => l.Outcome).HasConversion<int>();
+            
+            e.HasOne(l => l.Student)
+             .WithMany()
+             .HasForeignKey(l => l.StudentId)
+             .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(l => l.Agent)
+             .WithMany()
+             .HasForeignKey(l => l.AgentId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasIndex(l => l.StudentId);
+            e.HasIndex(l => l.CallDate);
+        });
+
+        // MediaProductionPipeline
+        modelBuilder.Entity<MediaProductionPipeline>(e =>
+        {
+            e.ToTable("media_production_pipelines");
+            e.HasKey(mp => mp.Id);
+            e.Property(mp => mp.Title).HasMaxLength(250).IsRequired();
+            e.Property(mp => mp.Description).HasMaxLength(2000);
+            e.Property(mp => mp.AssetFolderUrl).HasMaxLength(2000);
+            e.Property(mp => mp.Stage).HasConversion<int>();
+            e.HasOne(mp => mp.AssignedAgent)
+             .WithMany()
+             .HasForeignKey(mp => mp.AssignedAgentId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(mp => mp.AssignedAgentId);
+            e.HasIndex(mp => mp.Stage);
+        });
+
+        // SocialMediaPlan
+        modelBuilder.Entity<SocialMediaPlan>(e =>
+        {
+            e.ToTable("social_media_plans");
+            e.HasKey(sm => sm.Id);
+            e.Property(sm => sm.Title).HasMaxLength(250).IsRequired();
+            e.Property(sm => sm.Description).HasMaxLength(2000);
+            e.Property(sm => sm.Script).HasMaxLength(4000);
+            e.Property(sm => sm.Platform).HasConversion<int>();
+            e.Property(sm => sm.Status).HasConversion<int>();
+            e.HasOne(sm => sm.MediaProductionPipeline)
+             .WithMany(mp => mp.SocialMediaPlans)
+             .HasForeignKey(sm => sm.MediaProductionPipelineId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(sm => sm.ScheduledDate);
+            e.HasIndex(sm => sm.MediaProductionPipelineId);
+        });
+
+        // PayrollRecord
+        modelBuilder.Entity<PayrollRecord>(e =>
+        {
+            e.ToTable("payroll_records");
+            e.HasKey(pr => pr.Id);
+            e.Property(pr => pr.BasicSalary).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(pr => pr.Status).HasConversion<int>();
+            e.HasOne(pr => pr.EmployeeProfile)
+             .WithMany()
+             .HasForeignKey(pr => pr.EmployeeProfileId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(pr => pr.ApprovedByUser)
+             .WithMany()
+             .HasForeignKey(pr => pr.ApprovedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(pr => new { pr.EmployeeProfileId, pr.Month, pr.Year }).IsUnique();
+        });
+
+        // PayrollAdjustment
+        modelBuilder.Entity<PayrollAdjustment>(e =>
+        {
+            e.ToTable("payroll_adjustments");
+            e.HasKey(pa => pa.Id);
+            e.Property(pa => pa.Amount).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(pa => pa.Type).HasConversion<int>();
+            e.Property(pa => pa.Reason).HasMaxLength(2000).IsRequired();
+            e.HasOne(pa => pa.PayrollRecord)
+             .WithMany(pr => pr.Adjustments)
+             .HasForeignKey(pa => pa.PayrollRecordId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // TeacherAccount
+        modelBuilder.Entity<TeacherAccount>(e =>
+        {
+            e.ToTable("teacher_accounts");
+            e.HasKey(ta => ta.Id);
+            e.Property(ta => ta.TotalEarnings).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(ta => ta.CurrentBalance).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(ta => ta.CommissionRate).HasColumnType("decimal(18,2)").IsRequired();
+            e.HasOne(ta => ta.Teacher)
+             .WithOne()
+             .HasForeignKey<TeacherAccount>(ta => ta.TeacherId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(ta => ta.TeacherId).IsUnique();
+        });
+
+        // TeacherPayout
+        modelBuilder.Entity<TeacherPayout>(e =>
+        {
+            e.ToTable("teacher_payouts");
+            e.HasKey(tp => tp.Id);
+            e.Property(tp => tp.Amount).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(tp => tp.Status).HasConversion<int>();
+            e.Property(tp => tp.RejectionReason).HasMaxLength(2000);
+            e.HasOne(tp => tp.Teacher)
+             .WithMany()
+             .HasForeignKey(tp => tp.TeacherId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(tp => tp.HandledByUser)
+             .WithMany()
+             .HasForeignKey(tp => tp.HandledByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(tp => tp.TeacherId);
+            e.HasIndex(tp => tp.Status);
+        });
+
+        // AccessCodeActivationLog
+        modelBuilder.Entity<AccessCodeActivationLog>(e =>
+        {
+            e.ToTable("access_code_activation_logs");
+            e.HasKey(al => al.Id);
+            e.Property(al => al.Price).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(al => al.CommissionRate).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(al => al.CommissionEarned).HasColumnType("decimal(18,2)").IsRequired();
+            e.HasOne(al => al.AccessCode)
+             .WithMany()
+             .HasForeignKey(al => al.AccessCodeId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(al => al.Student)
+             .WithMany()
+             .HasForeignKey(al => al.StudentId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(al => al.Package)
+             .WithMany()
+             .HasForeignKey(al => al.PackageId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(al => al.Teacher)
+             .WithMany()
+             .HasForeignKey(al => al.TeacherId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(al => al.AccessCodeId).IsUnique();
+            e.HasIndex(al => al.TeacherId);
+            e.HasIndex(al => al.StudentId);
+        });
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

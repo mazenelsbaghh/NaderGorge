@@ -31,7 +31,7 @@ public class ConsumeVideoSessionCommandHandler : IRequestHandler<ConsumeVideoSes
             return ApiResponse<bool>.Fail("Session expired", new List<string> { "SESSION_EXPIRED" });
 
         session.IsConsumed = true;
-        
+
         // Minor optimization: could delete here instead of marking consumed
         // but keeping it consumed helps audit tracking vs immediate deletion
 

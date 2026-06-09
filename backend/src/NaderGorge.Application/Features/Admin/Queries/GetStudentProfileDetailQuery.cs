@@ -44,7 +44,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var gamification = await _context.StudentGamifications
             .FirstOrDefaultAsync(g => g.StudentId == request.UserId, cancellationToken);
-            
+
         var rankPosition = gamification != null ? await _context.StudentGamifications
             .CountAsync(g => g.TotalPoints > gamification.TotalPoints, cancellationToken) + 1 : 0;
 

@@ -51,7 +51,7 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
         }
 
         int oldLimit = watchEvent.CustomMaxWatchCount ?? watchEvent.LessonVideo.MaxWatchCount;
-        
+
         // "Adding views" increases the maximum watch count for this student.
         watchEvent.CustomMaxWatchCount = oldLimit + request.AddedViews;
         watchEvent.IsLocked = false;

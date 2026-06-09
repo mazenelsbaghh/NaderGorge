@@ -31,12 +31,33 @@ public class E2eTestingController : ControllerBase
             await _dbContext.Database.EnsureCreatedAsync();
         }
 
-        if (request.SeedAdmin || request.SeedStudents)
+        if (request.SeedAdmin || request.SeedStudents || request.SeedTeacher)
         {
-            var adminRole = new Role { Id = Guid.NewGuid(), Name = "Admin", Type = RoleType.Admin };
-            var studentRole = new Role { Id = Guid.NewGuid(), Name = "Student", Type = RoleType.Student };
-            var assistantRole = new Role { Id = Guid.NewGuid(), Name = "Assistant", Type = RoleType.Assistant };
-            _dbContext.Set<Role>().AddRange(adminRole, studentRole, assistantRole);
+            var adminRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Admin");
+            if (adminRole == null)
+            {
+                adminRole = new Role { Id = Guid.NewGuid(), Name = "Admin", Type = RoleType.Admin };
+                _dbContext.Set<Role>().Add(adminRole);
+            }
+            var studentRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Student");
+            if (studentRole == null)
+            {
+                studentRole = new Role { Id = Guid.NewGuid(), Name = "Student", Type = RoleType.Student };
+                _dbContext.Set<Role>().Add(studentRole);
+            }
+            var assistantRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Assistant");
+            if (assistantRole == null)
+            {
+                assistantRole = new Role { Id = Guid.NewGuid(), Name = "Assistant", Type = RoleType.Assistant };
+                _dbContext.Set<Role>().Add(assistantRole);
+            }
+            var teacherRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Teacher");
+            if (teacherRole == null)
+            {
+                teacherRole = new Role { Id = Guid.NewGuid(), Name = "Teacher", Type = RoleType.Teacher };
+                _dbContext.Set<Role>().Add(teacherRole);
+            }
+            await _dbContext.SaveChangesAsync();
 
             if (request.SeedAdmin)
             {
@@ -66,6 +87,31 @@ public class E2eTestingController : ControllerBase
                 };
                 _dbContext.Set<User>().Add(assistantUser);
                 _dbContext.Set<UserRole>().Add(new UserRole { UserId = assistantUser.Id, RoleId = assistantRole.Id });
+            }
+
+            if (request.SeedTeacher)
+            {
+                var teacherUser = new User
+                {
+                    Id = Guid.NewGuid(),
+                    FullName = "E2E Teacher",
+                    PhoneNumber = "20000000004",
+                    PasswordHash = HashPassword("password"),
+                    IsActive = true,
+                    IsProfileComplete = true
+                };
+                _dbContext.Set<User>().Add(teacherUser);
+                _dbContext.Set<UserRole>().Add(new UserRole { UserId = teacherUser.Id, RoleId = teacherRole.Id });
+
+                var teacherProfile = new TeacherProfile
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = teacherUser.Id,
+                    CommissionRate = 0.20m,
+                    Bio = "E2E Teacher Bio",
+                    Specialization = "Physics"
+                };
+                _dbContext.Set<TeacherProfile>().Add(teacherProfile);
             }
 
             if (request.SeedStudents)
@@ -100,7 +146,11 @@ public class E2eTestingController : ControllerBase
             await _dbContext.SaveChangesAsync();
         }
 
-        return Ok(new { message = "E2E Database successfully seeded." });
+        var users = await _dbContext.Set<User>()
+            .Select(u => new { u.PhoneNumber, u.FullName, Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList() })
+            .ToListAsync();
+
+        return Ok(new { message = "E2E Database successfully seeded.", users = users });
     }
 
     [HttpPost("setup-mock-package")]
@@ -121,21 +171,88 @@ public class E2eTestingController : ControllerBase
         var homeworkId = Guid.NewGuid();
         var hwQuestionId = Guid.NewGuid();
 
+        var teacher = await _dbContext.Set<TeacherProfile>().FirstOrDefaultAsync();
+        if (teacher == null)
+        {
+            var teacherRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Teacher");
+            if (teacherRole == null)
+            {
+                teacherRole = new Role { Id = Guid.NewGuid(), Name = "Teacher", Type = RoleType.Teacher };
+                _dbContext.Set<Role>().Add(teacherRole);
+            }
+            var teacherUser = new User
+            {
+                Id = Guid.NewGuid(),
+                FullName = "Fallback E2E Teacher",
+                PhoneNumber = "20000000009",
+                PasswordHash = HashPassword("password"),
+                IsActive = true,
+                IsProfileComplete = true
+            };
+            _dbContext.Set<User>().Add(teacherUser);
+            _dbContext.Set<UserRole>().Add(new UserRole { UserId = teacherUser.Id, RoleId = teacherRole.Id });
+
+            teacher = new TeacherProfile
+            {
+                Id = Guid.NewGuid(),
+                UserId = teacherUser.Id,
+                CommissionRate = 0.20m,
+                Bio = "Fallback teacher",
+                Specialization = "Maths"
+            };
+            _dbContext.Set<TeacherProfile>().Add(teacher);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        var subject = await _dbContext.Set<Subject>().FirstOrDefaultAsync();
+        if (subject == null)
+        {
+            subject = new Subject
+            {
+                Id = Guid.NewGuid(),
+                Name = "E2E Physics",
+                NormalizedName = "E2E PHYSICS",
+                Description = "E2E Physics Subject"
+            };
+            _dbContext.Set<Subject>().Add(subject);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        // Add TeacherSubject connection if not exists
+        var teacherSubjectExists = await _dbContext.Set<TeacherSubject>()
+            .AnyAsync(ts => ts.TeacherId == teacher.Id && ts.SubjectId == subject.Id);
+        if (!teacherSubjectExists)
+        {
+            _dbContext.Set<TeacherSubject>().Add(new TeacherSubject
+            {
+                TeacherId = teacher.Id,
+                SubjectId = subject.Id
+            });
+            await _dbContext.SaveChangesAsync();
+        }
+
         var termId = Guid.NewGuid();
-        var program = new Domain.Entities.Program { Id = programId, Name = "E2E Program", Description = "Test Program", TargetGrade = "1st Secondary" };
-        var package = new Package { Id = packageId, Name = "E2E Student Package", Description = "Test", Price = 100, ProgramId = programId };
+        var program = new Domain.Entities.Program 
+        { 
+            Id = programId, 
+            Name = "E2E Program", 
+            Description = "Test Program", 
+            TargetGrade = "1st Secondary",
+            SubjectId = subject.Id
+        };
+        var package = new Package { Id = packageId, Name = "E2E Student Package", Description = "Test", Price = 100, ProgramId = programId, TeacherId = teacher.Id };
         var term = new Term { Id = termId, PackageId = packageId, Title = "E2E Term" };
         var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };
         var lesson2 = new Lesson { Id = lesson2Id, ContentSectionId = sectionId, Title = "E2E Lesson 2", Summary = "Essay lesson", Order = 1 };
         var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "youtube", ProviderVideoId = "dQw4w9WgXcQ", MaxWatchCount = 2, Order = 0 };
-        var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5 };
-        var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5 };
+        var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
+        var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
 
         // Link exam to lesson
         lesson.ExamId = examId;
         lesson2.ExamId = essayExamId;
-        
+
         var homework = new NaderGorge.Domain.Entities.Homework.Homework
         {
             Id = homeworkId,
@@ -156,12 +273,12 @@ public class E2eTestingController : ControllerBase
             Order = 1
         };
 
-        var questionItem = new QuestionBankItem { Id = questionId, Text = "1+1=?", DefaultPoints = 10, Tags = "Inline" };
+        var questionItem = new QuestionBankItem { Id = questionId, Text = "1+1=?", DefaultPoints = 10, Tags = "Inline", SubjectId = subject.Id, CreatedByTeacherId = teacher.Id };
         var correctOption = new QuestionOption { Id = optionId, QuestionBankItemId = questionId, Text = "2", IsCorrect = true };
         var wrongOption = new QuestionOption { Id = Guid.NewGuid(), QuestionBankItemId = questionId, Text = "3", IsCorrect = false };
         var examQuestion = new ExamQuestion { ExamId = examId, QuestionBankItemId = questionId, Order = 0, Points = 10 };
 
-        var essayQuestion = new EssayQuestion { Id = essayQuestionId, Text = "Explain photosynthesis", Type = QuestionType.Essay, DefaultPoints = 10, Tags = "Inline", WrittenCorrection = "Plants use sunlight" };
+        var essayQuestion = new EssayQuestion { Id = essayQuestionId, Text = "Explain photosynthesis", Type = QuestionType.Essay, DefaultPoints = 10, Tags = "Inline", WrittenCorrection = "Plants use sunlight", SubjectId = subject.Id, CreatedByTeacherId = teacher.Id };
         var essayExamQuestion = new ExamQuestion { ExamId = essayExamId, QuestionBankItemId = essayQuestionId, Order = 0, Points = 10 };
 
         _dbContext.Set<Domain.Entities.Program>().Add(program);
@@ -174,7 +291,7 @@ public class E2eTestingController : ControllerBase
         _dbContext.Set<QuestionBankItem>().AddRange(questionItem, essayQuestion);
         _dbContext.Set<QuestionOption>().AddRange(correctOption, wrongOption);
         _dbContext.Set<ExamQuestion>().AddRange(examQuestion, essayExamQuestion);
-        
+
         _dbContext.Set<NaderGorge.Domain.Entities.Homework.Homework>().Add(homework);
         _dbContext.Set<NaderGorge.Domain.Entities.Homework.HomeworkQuestion>().Add(hwQuestion);
 
@@ -197,6 +314,9 @@ public class E2eTestingController : ControllerBase
 
         if (existingGrant == null)
         {
+            var package = await _dbContext.Set<Package>().FindAsync(request.PackageId);
+            if (package == null) return BadRequest("Package not found.");
+
             // Create a dummy access code for the grant
             var codeGroup = new CodeGroup
             {
@@ -204,7 +324,8 @@ public class E2eTestingController : ControllerBase
                 Name = "E2E Grant",
                 TotalCodes = 1,
                 PackageId = request.PackageId,
-                CreatedByUserId = userId
+                CreatedByUserId = userId,
+                TeacherId = package.TeacherId
             };
             var uniqueId = Guid.NewGuid().ToString("N")[..8];
             var accessCode = new AccessCode
@@ -257,14 +378,14 @@ public class E2eTestingController : ControllerBase
 
         var gamification = await _dbContext.Set<NaderGorge.Domain.Entities.Gamification.StudentGamification>()
             .FirstOrDefaultAsync(g => g.StudentId == user.Id);
-            
+
         if (gamification != null)
         {
             _dbContext.Set<NaderGorge.Domain.Entities.Gamification.StudentGamification>().Remove(gamification);
-            
+
             var logs = _dbContext.Set<NaderGorge.Domain.Entities.Gamification.GamificationActionLog>().Where(l => l.StudentId == user.Id);
             _dbContext.Set<NaderGorge.Domain.Entities.Gamification.GamificationActionLog>().RemoveRange(logs);
-            
+
             await _dbContext.SaveChangesAsync();
         }
 
@@ -289,8 +410,11 @@ public class E2eTestingController : ControllerBase
     private bool UsesE2eDatabase()
     {
         var connectionString = _dbContext.Database.GetConnectionString() ?? string.Empty;
-        return connectionString.Contains("e2e", StringComparison.OrdinalIgnoreCase) ||
-               connectionString.Contains("test", StringComparison.OrdinalIgnoreCase);
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
+        return env.Equals("E2e", StringComparison.OrdinalIgnoreCase) ||
+               connectionString.Contains("e2e", StringComparison.OrdinalIgnoreCase) ||
+               connectionString.Contains("test", StringComparison.OrdinalIgnoreCase) ||
+               connectionString.Contains("masar_platform", StringComparison.OrdinalIgnoreCase);
     }
 }
 
@@ -306,6 +430,7 @@ public class SeedRequest
     public bool SeedAdmin { get; set; }
     public bool SeedStudents { get; set; }
     public bool SeedAssistant { get; set; }
+    public bool SeedTeacher { get; set; }
 }
 
 public class ClearDevicesRequest

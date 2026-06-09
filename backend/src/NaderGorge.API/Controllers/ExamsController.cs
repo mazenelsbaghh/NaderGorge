@@ -89,10 +89,10 @@ public class ExamsController : ControllerBase
     public async Task<IActionResult> UseFiftyFifty(Guid id, Guid attemptId, Guid questionId)
     {
         var response = await _mediator.Send(new UseFiftyFiftyCommand(id, attemptId, questionId, GetUserId()));
-        
+
         if (!response.Success)
-             return BadRequest(response);
-             
+            return BadRequest(response);
+
         return Ok(response);
     }
 
@@ -100,10 +100,10 @@ public class ExamsController : ControllerBase
     public async Task<IActionResult> SwapQuestion(Guid id, Guid attemptId, Guid questionId)
     {
         var response = await _mediator.Send(new SwapQuestionCommand(id, attemptId, questionId, GetUserId()));
-        
+
         if (!response.Success)
-             return BadRequest(response);
-             
+            return BadRequest(response);
+
         return Ok(response);
     }
 

@@ -65,6 +65,7 @@ export const authService = {
   refresh: () => apiClient.post('/auth/refresh', {}),
   completeProfile: (data: CompleteProfileData) => apiClient.post('/auth/complete-profile', data),
   activateCode: (code: string) => apiClient.post('/codes/activate', { code }),
+  validateCode: (code: string) => apiClient.get(`/codes/validate/${code}`),
   verifyResetFields: (data: VerifyResetFieldsData) => apiClient.post('/auth/verify-reset-fields', data),
   resetPassword: (data: ResetPasswordData) => apiClient.post('/auth/reset-password', data),
 };

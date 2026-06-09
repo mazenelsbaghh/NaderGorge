@@ -88,7 +88,7 @@ public class CommunityController : ControllerBase
         {
             if (response.Errors?.Contains("NOT_FOUND") == true)
                 return NotFound(response);
-                
+
             return BadRequest(response);
         }
 

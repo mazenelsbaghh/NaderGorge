@@ -35,6 +35,8 @@ public class EssaySubmission : BaseEntity
     // Teacher grading fields
     public decimal? TeacherFinalScore { get; set; }
     public string? TeacherFeedback { get; set; }
+    public Guid? GradedByTeacherId { get; set; }
+    public TeacherProfile? GradedByTeacher { get; set; }
 
     public EssaySubmissionStatus Status { get; set; } = EssaySubmissionStatus.WaitAI;
 }

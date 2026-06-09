@@ -9,12 +9,12 @@ namespace NaderGorge.Application.Features.Assistant.Queries;
 public record GetPendingTasksQuery(AssistantTaskType? TypeFilter) : IRequest<ApiResponse<List<AssistantTaskDto>>>;
 
 public record AssistantTaskDto(
-    Guid Id, 
-    AssistantTaskType TaskType, 
-    Guid? StudentId, 
-    string StudentName, 
-    Guid? ReferenceEntityId, 
-    string Status, 
+    Guid Id,
+    AssistantTaskType TaskType,
+    Guid? StudentId,
+    string StudentName,
+    Guid? ReferenceEntityId,
+    string Status,
     DateTime CreatedAt);
 
 public class GetPendingTasksQueryHandler : IRequestHandler<GetPendingTasksQuery, ApiResponse<List<AssistantTaskDto>>>

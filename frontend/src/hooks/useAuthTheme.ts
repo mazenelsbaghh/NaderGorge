@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * useAuthTheme mirrors the global Massar Academy admin tokens on public auth
+ * useAuthTheme mirrors the global Massar Platform admin tokens on public auth
  * routes while keeping the persisted admin theme mode.
  */
 

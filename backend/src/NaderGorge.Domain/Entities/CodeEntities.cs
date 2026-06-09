@@ -27,6 +27,9 @@ public class CodeGroup : BaseEntity
     public Guid CreatedByUserId { get; set; }
     public User CreatedByUser { get; set; } = null!;
 
+    public Guid TeacherId { get; set; }
+    public TeacherProfile Teacher { get; set; } = null!;
+
     // Navigation
     public ICollection<AccessCode> AccessCodes { get; set; } = new List<AccessCode>();
     public ICollection<CodeVideoTarget> CodeVideoTargets { get; set; } = new List<CodeVideoTarget>();

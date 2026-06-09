@@ -53,7 +53,7 @@ def test_birthday_congratulations_sweep(clean_db):
     # This should congratulate both Student A (Feb 29) and Student B (March 1)
     env = os.environ.copy()
     env["OVERRIDE_DATE"] = "2026-03-01"
-    env["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5435/nadergorge?schema=public"
+    env["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5435/masar_platform?schema=public"
 
     worker_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "worker"))
     result = subprocess.run(
@@ -91,7 +91,7 @@ def test_birthday_congratulations_sweep(clean_db):
     # Run sweep for June 2nd, which should congratulate Student C
     env_c = os.environ.copy()
     env_c["OVERRIDE_DATE"] = "2026-06-02"
-    env_c["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5435/nadergorge?schema=public"
+    env_c["DATABASE_URL"] = "postgresql://postgres:postgres@localhost:5435/masar_platform?schema=public"
     
     result_c = subprocess.run(
         ["npx", "tsx", "src/scripts/birthday-congratulator.ts"],

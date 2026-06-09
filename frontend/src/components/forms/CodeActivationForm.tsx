@@ -6,6 +6,7 @@ import type { FormEvent } from "react";
 import { AxiosError } from "axios";
 import { ArrowUpLeft, KeyRound } from "lucide-react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 import { authService } from "@/services/auth-service";
 
@@ -18,21 +19,55 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
   const hintId = "student-code-activation-hint";
   const errorId = "student-code-activation-error";
   const successId = "student-code-activation-success";
+
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [preview, setPreview] = useState<{
+    code: string;
+    codeType: string;
+    targetName: string;
+    teacherName: string;
+    teacherProfileImageUrl?: string;
+  } | null>(null);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleValidate = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (code.length < 6) return;
+
+    try {
+      setLoading(true);
+      const res = await authService.validateCode(code);
+      if (res.data?.success) {
+        setPreview(res.data.data);
+      } else {
+        setError(res.data?.message || "الكود غير صحيح أو تم استخدامه من قبل");
+      }
+    } catch (err) {
+      const message =
+        err instanceof AxiosError
+          ? err.response?.data?.message
+          : "تعذر التحقق من الكود حاليًا";
+      setError(message || "تعذر التحقق من الكود حاليًا");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmActivate = async () => {
+    if (!preview) return;
     setError("");
     setSuccess("");
     setLoading(true);
 
     try {
-      const { data } = await authService.activateCode(code);
-      setSuccess(data.data.message || "تم تفعيل الكود بنجاح.");
+      const { data } = await authService.activateCode(preview.code);
+      setSuccess(data.message || "تم تفعيل الكود بنجاح.");
       setCode("");
+      setPreview(null);
       onSuccess();
     } catch (err) {
       const message =
@@ -45,9 +80,79 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
     }
   };
 
+  if (preview) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="space-y-6 text-center py-4"
+      >
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+          <KeyRound className="h-6 w-6 animate-pulse" />
+        </div>
+
+        <div className="space-y-1">
+          <h3 className="text-xl font-black text-[var(--admin-text)]">تأكيد تفعيل الكود</h3>
+          <p className="text-xs text-[var(--admin-muted)] leading-relaxed">
+            الكود ده هيتفعل على حسابك ويفتح لك:
+          </p>
+        </div>
+
+        {/* Target metadata card */}
+        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 space-y-4 shadow-sm max-w-md mx-auto">
+          <div className="space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-[var(--admin-primary)]">المحتوى</span>
+            <p className="text-base font-bold text-[var(--admin-text)]">{preview.targetName}</p>
+          </div>
+
+          <div className="flex flex-col items-center justify-center gap-3 border-t border-[var(--admin-border)] pt-4">
+            <span className="text-[10px] font-black uppercase tracking-wider text-[var(--admin-muted)]">مع المعلم</span>
+            <div className="flex items-center gap-3">
+              <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-strong)]">
+                <Image
+                  src={preview.teacherProfileImageUrl || `https://avatar.vercel.sh/${encodeURIComponent(preview.teacherName)}`}
+                  alt={preview.teacherName}
+                  fill
+                  className="object-cover"
+                  sizes="36px"
+                  unoptimized
+                />
+              </div>
+              <span className="text-xs font-bold text-[var(--admin-text)]">{preview.teacherName}</span>
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div role="alert" className="rounded-[22px] border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-xs font-semibold text-[var(--admin-danger)]">
+            {error}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row justify-center pt-2">
+          <button
+            onClick={() => setPreview(null)}
+            className="rounded-2xl border border-[var(--admin-border)] bg-transparent px-6 py-3.5 text-xs font-extrabold text-[var(--admin-text)] transition hover:bg-[var(--admin-card-strong)] cursor-pointer"
+          >
+            إلغاء
+          </button>
+
+          <button
+            onClick={() => void handleConfirmActivate()}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-8 py-3.5 text-xs font-extrabold text-[var(--admin-primary-contrast)] shadow-lg transition hover:scale-[1.02] hover:bg-[var(--admin-primary-strong)] cursor-pointer"
+          >
+            {loading ? "جارٍ التفعيل..." : "تأكيد التفعيل"}
+            <ArrowUpLeft className="h-4 w-4" />
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.form
-      onSubmit={handleSubmit}
+      onSubmit={handleValidate}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -90,7 +195,7 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
             disabled={loading || code.length < 6}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-extrabold text-[var(--admin-primary-contrast)] shadow-[0_12px_24px_rgba(145,95,42,0.24)] transition hover:-translate-y-0.5 hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "جارٍ التفعيل..." : "تفعيل الكود"}
+            {loading ? "جارٍ التحقق..." : "تفعيل الكود"}
             <ArrowUpLeft className="h-4 w-4" />
           </button>
         </div>

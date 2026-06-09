@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
@@ -18,6 +20,7 @@ public class CreateInlineExamCommand : IRequest<ApiResponse<Guid>>
     public int? DisplayQuestionCount { get; set; }
     public ExamTargetDto Target { get; set; } = new();
     public List<InlineExamQuestionDto> Questions { get; set; } = new();
+    public Guid? CurrentUserId { get; set; }
 }
 
 public class ExamTargetDto
@@ -50,8 +53,13 @@ public class InlineExamOptionDto
 public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public CreateInlineExamCommandHandler(IAppDbContext db) => _db = db;
+    public CreateInlineExamCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(CreateInlineExamCommand request, CancellationToken ct)
     {
@@ -63,11 +71,23 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
         {
             lesson = await _db.Lessons.FindAsync(new object[] { request.Target.Id }, ct);
             if (lesson == null) return ApiResponse<Guid>.Fail("Lesson not found");
+
+            if (request.CurrentUserId.HasValue)
+            {
+                var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, lesson.Id, ct);
+                if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this lesson.");
+            }
         }
         else if (request.Target.Type.Equals("Video", StringComparison.OrdinalIgnoreCase))
         {
             video = await _db.LessonVideos.FindAsync(new object[] { request.Target.Id }, ct);
             if (video == null) return ApiResponse<Guid>.Fail("Video not found");
+
+            if (request.CurrentUserId.HasValue)
+            {
+                var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, video.LessonId, ct);
+                if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this video's lesson.");
+            }
         }
         else
         {
@@ -79,6 +99,68 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             return ApiResponse<Guid>.Fail("Passing score cannot be greater than the total score.");
         }
 
+        // 2. Resolve Teacher and Subject Context
+        var teacherId = Guid.Empty;
+        if (request.CurrentUserId.HasValue)
+        {
+            var user = await _db.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .Include(u => u.TeacherProfile)
+                .FirstOrDefaultAsync(u => u.Id == request.CurrentUserId.Value, ct);
+
+            if (user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher))
+            {
+                if (user.TeacherProfile == null)
+                    return ApiResponse<Guid>.Fail("Teacher profile not onboarded.");
+                teacherId = user.TeacherProfile.Id;
+            }
+        }
+
+        if (teacherId == Guid.Empty)
+        {
+            var targetLessonId = lesson?.Id ?? video?.LessonId;
+            if (targetLessonId.HasValue)
+            {
+                var targetLesson = await _db.Lessons
+                    .Include(l => l.ContentSection)
+                        .ThenInclude(s => s.Term)
+                            .ThenInclude(t => t.Package)
+                    .FirstOrDefaultAsync(l => l.Id == targetLessonId.Value, ct);
+                if (targetLesson?.ContentSection?.Term?.Package != null)
+                {
+                    teacherId = targetLesson.ContentSection.Term.Package.TeacherId;
+                }
+            }
+        }
+
+        if (teacherId == Guid.Empty)
+        {
+            var defaultTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
+            teacherId = defaultTeacher?.Id ?? Guid.Parse("b4b82937-293e-48a3-a002-decf9a1efab8");
+        }
+
+        var subjectId = Guid.Empty;
+        var targetLessonIdForSubject = lesson?.Id ?? video?.LessonId;
+        if (targetLessonIdForSubject.HasValue)
+        {
+            var targetLesson = await _db.Lessons
+                .Include(l => l.ContentSection)
+                    .ThenInclude(s => s.Term)
+                        .ThenInclude(t => t.Package)
+                            .ThenInclude(p => p.Program)
+                .FirstOrDefaultAsync(l => l.Id == targetLessonIdForSubject.Value, ct);
+            if (targetLesson?.ContentSection?.Term?.Package?.Program != null)
+            {
+                subjectId = targetLesson.ContentSection.Term.Package.Program.SubjectId;
+            }
+        }
+
+        if (subjectId == Guid.Empty)
+        {
+            var firstSubject = await _db.Subjects.FirstOrDefaultAsync(ct);
+            subjectId = firstSubject?.Id ?? Guid.Parse("d9b8a342-990a-4286-905e-fdebb2e3895e");
+        }
+
         var exam = new Exam
         {
             Title = request.Title,
@@ -88,7 +170,8 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
             DurationMinutes = request.DurationMinutes,
             IsMandatory = request.IsMandatory,
             IsRandomized = request.IsRandomized,
-            DisplayQuestionCount = request.DisplayQuestionCount
+            DisplayQuestionCount = request.DisplayQuestionCount,
+            CreatedByTeacherId = teacherId
         };
 
         _db.Exams.Add(exam);
@@ -119,7 +202,9 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                     BaseText = q.BaseText ?? string.Empty,
                     MistakeStartIndex = q.MistakeStartIndex ?? 0,
                     MistakeEndIndex = q.MistakeEndIndex ?? 0,
-                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>()
+                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>(),
+                    CreatedByTeacherId = teacherId,
+                    SubjectId = subjectId
                 };
             }
             else
@@ -135,6 +220,8 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                         AudioUrl = q.AudioUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
+                        CreatedByTeacherId = teacherId,
+                        SubjectId = subjectId
                     };
                 }
                 else
@@ -148,6 +235,8 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                         AudioUrl = q.AudioUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
+                        CreatedByTeacherId = teacherId,
+                        SubjectId = subjectId
                     };
                 }
             }
@@ -201,18 +290,66 @@ public class AddQuestionsToExamCommand : IRequest<ApiResponse<Guid>>
 {
     public Guid ExamId { get; set; }
     public List<InlineExamQuestionDto> Questions { get; set; } = new();
+    public Guid? CurrentUserId { get; set; }
 }
 
 public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToExamCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public AddQuestionsToExamCommandHandler(IAppDbContext db) => _db = db;
+    public AddQuestionsToExamCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(AddQuestionsToExamCommand request, CancellationToken ct)
     {
         var exam = await _db.Exams.FindAsync(new object[] { request.ExamId }, ct);
         if (exam == null) return ApiResponse<Guid>.Fail("Exam not found");
+
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId, ct);
+            if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this exam.");
+        }
+
+        var teacherId = exam.CreatedByTeacherId;
+        
+        var subjectId = Guid.Empty;
+        var referencingLesson = await _db.Lessons
+            .Include(l => l.ContentSection)
+                .ThenInclude(s => s.Term)
+                    .ThenInclude(t => t.Package)
+                        .ThenInclude(p => p.Program)
+            .FirstOrDefaultAsync(l => l.ExamId == exam.Id, ct);
+
+        if (referencingLesson?.ContentSection?.Term?.Package?.Program != null)
+        {
+            subjectId = referencingLesson.ContentSection.Term.Package.Program.SubjectId;
+        }
+        else
+        {
+            var referencingVideo = await _db.LessonVideos
+                .Include(v => v.Lesson)
+                    .ThenInclude(l => l.ContentSection)
+                        .ThenInclude(s => s.Term)
+                            .ThenInclude(t => t.Package)
+                                .ThenInclude(p => p.Program)
+                .FirstOrDefaultAsync(v => v.ExamId == exam.Id, ct);
+
+            if (referencingVideo?.Lesson?.ContentSection?.Term?.Package?.Program != null)
+            {
+                subjectId = referencingVideo.Lesson.ContentSection.Term.Package.Program.SubjectId;
+            }
+        }
+
+        if (subjectId == Guid.Empty)
+        {
+            var firstSubject = await _db.Subjects.FirstOrDefaultAsync(ct);
+            subjectId = firstSubject?.Id ?? Guid.Parse("d9b8a342-990a-4286-905e-fdebb2e3895e");
+        }
 
         foreach (var q in request.Questions)
         {
@@ -239,7 +376,9 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                     BaseText = q.BaseText ?? string.Empty,
                     MistakeStartIndex = q.MistakeStartIndex ?? 0,
                     MistakeEndIndex = q.MistakeEndIndex ?? 0,
-                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>()
+                    Options = q.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>(),
+                    CreatedByTeacherId = teacherId,
+                    SubjectId = subjectId
                 };
             }
             else
@@ -255,6 +394,8 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                         AudioUrl = q.AudioUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
+                        CreatedByTeacherId = teacherId,
+                        SubjectId = subjectId
                     };
                 }
                 else
@@ -268,6 +409,8 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                         AudioUrl = q.AudioUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
+                        CreatedByTeacherId = teacherId,
+                        SubjectId = subjectId
                     };
                 }
             }
@@ -304,16 +447,27 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
     }
 }
 
-public record DeleteExamQuestionCommand(Guid ExamId, Guid ExamQuestionId) : IRequest<ApiResponse<bool>>;
+public record DeleteExamQuestionCommand(Guid ExamId, Guid ExamQuestionId, Guid? CurrentUserId = null) : IRequest<ApiResponse<bool>>;
 
 public class DeleteExamQuestionCommandHandler : IRequestHandler<DeleteExamQuestionCommand, ApiResponse<bool>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public DeleteExamQuestionCommandHandler(IAppDbContext db) => _db = db;
+    public DeleteExamQuestionCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<bool>> Handle(DeleteExamQuestionCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId, ct);
+            if (!canAccess) return ApiResponse<bool>.Fail("Unauthorized access to this exam.");
+        }
+
         var examQuestion = await _db.ExamQuestions
             .Include(eq => eq.Question)
             .FirstOrDefaultAsync(eq => eq.Id == request.ExamQuestionId && eq.ExamId == request.ExamId, ct);
@@ -330,3 +484,4 @@ public class DeleteExamQuestionCommandHandler : IRequestHandler<DeleteExamQuesti
         return ApiResponse<bool>.Ok(true);
     }
 }
+

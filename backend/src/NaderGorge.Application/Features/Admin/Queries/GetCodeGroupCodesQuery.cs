@@ -8,10 +8,10 @@ namespace NaderGorge.Application.Features.Admin.Queries;
 public record GetCodeGroupCodesQuery(Guid GroupId) : IRequest<ApiResponse<List<CodeDetailDto>>>;
 
 public record CodeDetailDto(
-    string Code, 
+    string Code,
     long SerialNumber,
-    bool IsUsed, 
-    DateTime? UsedAt, 
+    bool IsUsed,
+    DateTime? UsedAt,
     Guid? UsedByUserId,
     string? UsedByStudentName,
     string? UsedByStudentPhone);

@@ -8,7 +8,10 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: Tests are MANDATORY for this project when a phase changes behavior,
+data, permissions, API contracts, worker jobs, or user-visible UI. Include
+backend, frontend, worker, Python smoke/API, and E2E tests as applicable to the
+phase scope.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -79,9 +82,11 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1 (MANDATORY for behavior-changing phase work)
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+> **NOTE: For platform phase work, write these tests FIRST and ensure they FAIL
+> before implementation unless updating legacy behavior makes test-first
+> impossible; document that exception in the phase report.**
 
 - [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
@@ -105,7 +110,7 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 2 (MANDATORY for behavior-changing phase work)
 
 - [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
@@ -127,7 +132,7 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 3 (MANDATORY for behavior-changing phase work)
 
 - [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
@@ -153,9 +158,31 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Documentation updates in docs/
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
+- [ ] TXXX [P] Additional regression/unit tests in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+
+---
+
+## Phase N+1: End-of-Phase Verification, Docker Gate & Manual QA Report
+
+**Purpose**: Prove the phase is complete in the real project environment before
+starting the next phase.
+
+- [ ] TXXX Run backend build/test commands and record results
+- [ ] TXXX Run frontend lint/build and relevant Playwright specs
+- [ ] TXXX Run worker build and relevant job tests/stubs
+- [ ] TXXX Run Python smoke/API tests for cross-service workflows
+- [ ] TXXX Run `docker compose config -q`
+- [ ] TXXX Run `make up`
+- [ ] TXXX Run `make migrate` if schema changed
+- [ ] TXXX Run `make ps` and service health checks
+- [ ] TXXX Run surface verification scripts when frontend/Docker surfaces changed
+- [ ] TXXX Complete manual QA checklist with role, URL/surface, action, expected
+      result, and pass/fail status
+- [ ] TXXX Write end-of-phase report with implemented scope, commands run,
+      automated results, Docker result, manual QA status, risks, and go/no-go
+      for the next phase
 
 ---
 
@@ -169,6 +196,9 @@ Examples of foundational tasks (adjust based on your project):
   - User stories can then proceed in parallel (if staffed)
   - Or sequentially in priority order (P1 → P2 → P3)
 - **Polish (Final Phase)**: Depends on all desired user stories being complete
+- **End-of-Phase Verification**: Depends on all implementation and polish tasks;
+  blocks the next feature/phase until failed gates are fixed or documented with
+  owner-approved risk
 
 ### User Story Dependencies
 
@@ -248,4 +278,6 @@ With multiple developers:
 - Verify tests fail before implementing
 - Commit after each task or logical group
 - Stop at any checkpoint to validate story independently
+- Do not start the next phase until the end-of-phase Docker/manual QA gate is
+  complete
 - Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence

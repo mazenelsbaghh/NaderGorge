@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
@@ -24,8 +25,8 @@ public class AdminController : ControllerBase
     [HttpGet("users")]
     [HasPermission("users.manage")]
     public async Task<IActionResult> ListUsers(
-        [FromQuery] int page = 1, 
-        [FromQuery] int pageSize = 20, 
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
         [FromQuery] string? search = null,
         [FromQuery] string? educationStage = null,
         [FromQuery] string? gradeLevel = null,
@@ -147,7 +148,7 @@ public class AdminController : ControllerBase
     [HttpGet("codes/groups")]
     [HasPermission("codes.manage")]
     public async Task<IActionResult> ListCodeGroups()
-        => Ok(await _mediator.Send(new ListCodeGroupsQuery()));
+        => Ok(await _mediator.Send(new ListCodeGroupsQuery(GetUserId())));
 
     [HttpGet("codes/groups/{id:guid}/details")]
     [HasPermission("codes.manage")]
@@ -194,13 +195,13 @@ public class AdminController : ControllerBase
     [HttpGet("packages/list")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackagesList()
-        => Ok(await _mediator.Send(new GetAdminPackagesListQuery()));
+        => Ok(await _mediator.Send(new GetAdminPackagesListQuery(GetUserId())));
 
     [HttpPost("packages")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreatePackage(CreatePackageCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreatePackage), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -259,7 +260,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateTerm(CreateTermCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateTerm), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -272,7 +273,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateTermDto dto)
     {
-        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price));
+        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -280,7 +281,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> DeleteTerm(Guid id)
     {
-        var result = await _mediator.Send(new DeleteTermCommand(id));
+        var result = await _mediator.Send(new DeleteTermCommand(id, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -293,7 +294,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateSection(CreateSectionCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateSection), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -301,7 +302,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateLesson(CreateLessonCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateLesson), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -317,7 +318,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateVideo(CreateVideoCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateVideo), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -325,7 +326,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoRequest dto)
     {
-        var result = await _mediator.Send(new UpdateVideoCommand(id, dto.Title, dto.Provider, dto.UrlOrEmbedCode, dto.Order, dto.Limit));
+        var result = await _mediator.Send(new UpdateVideoCommand(id, dto.Title, dto.Provider, dto.UrlOrEmbedCode, dto.Order, dto.Limit, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -333,7 +334,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> DeleteVideo(Guid id)
     {
-        var result = await _mediator.Send(new DeleteVideoCommand(id));
+        var result = await _mediator.Send(new DeleteVideoCommand(id, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -381,7 +382,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateResource(CreateLessonResourceCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateResource), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -398,15 +399,16 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> AttachHomework(Guid lessonId, [FromBody] AttachHomeworkRequest dto)
     {
         var cmd = new AttachHomeworkCommand(
-            lessonId, 
-            dto.Title, 
-            dto.Instructions, 
+            lessonId,
+            dto.Title,
+            dto.Instructions,
             dto.IsMandatory,
             dto.IsRandomized,
-            dto.RequiredPointsToPass, 
+            dto.RequiredPointsToPass,
             dto.TotalScore,
-            dto.Questions);
-            
+            dto.Questions,
+            GetUserId());
+
         var result = await _mediator.Send(cmd);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -415,7 +417,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> LinkExam(Guid lessonId, [FromBody] LinkLessonExamRequest dto)
     {
-        var result = await _mediator.Send(new LinkLessonExamCommand(lessonId, dto.ExamId));
+        var result = await _mediator.Send(new LinkLessonExamCommand(lessonId, dto.ExamId, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -423,18 +425,19 @@ public class AdminController : ControllerBase
     [HasPermission("exams.manage")]
     public async Task<IActionResult> CreateInlineExam([FromBody] CreateInlineExamCommand command)
     {
+        command.CurrentUserId = GetUserId();
         var result = await _mediator.Send(command);
         return result.Success ? Ok(result) : BadRequest(result);
     }
-    
+
     [HttpPost("exams/{examId:guid}/questions")]
     [HasPermission("exams.manage")]
     public async Task<IActionResult> AddQuestionsToExam(Guid examId, [FromBody] AddQuestionsToExamRequest dto)
     {
-        var result = await _mediator.Send(new AddQuestionsToExamCommand { ExamId = examId, Questions = dto.Questions });
+        var result = await _mediator.Send(new AddQuestionsToExamCommand { ExamId = examId, Questions = dto.Questions, CurrentUserId = GetUserId() });
         return result.Success ? Ok(result) : BadRequest(result);
     }
-    
+
     [HttpGet("exams/{examId:guid}/dashboard")]
     [HasPermission("exams.manage")]
     public async Task<IActionResult> GetExamDashboard(Guid examId)
@@ -447,7 +450,7 @@ public class AdminController : ControllerBase
     [HasPermission("exams.manage")]
     public async Task<IActionResult> DeleteExamQuestion(Guid examId, Guid questionId)
     {
-        var result = await _mediator.Send(new DeleteExamQuestionCommand(examId, questionId));
+        var result = await _mediator.Send(new DeleteExamQuestionCommand(examId, questionId, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -455,13 +458,13 @@ public class AdminController : ControllerBase
     [HttpGet("questions")]
     [HasPermission("exams.manage")]
     public async Task<IActionResult> ListQuestions([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
-        => Ok(await _mediator.Send(new ListQuestionsQuery(page, pageSize, search)));
+        => Ok(await _mediator.Send(new ListQuestionsQuery(page, pageSize, search, GetUserId())));
 
     [HttpPost("questions")]
     [HasPermission("exams.manage")]
     public async Task<IActionResult> CreateQuestion(CreateQuestionCommand command)
     {
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateQuestion), new { id = result.Data }, result) : BadRequest(result);
     }
 
@@ -470,12 +473,12 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UploadQuestionAudio(Guid id, [FromForm] Microsoft.AspNetCore.Http.IFormFile audio)
     {
         if (audio == null || audio.Length == 0) return BadRequest(new { Success = false, Message = "No file uploaded" });
-        
+
         using var ms = new MemoryStream();
         await audio.CopyToAsync(ms);
         var base64 = Convert.ToBase64String(ms.ToArray());
-        
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.UploadQuestionAudioCommand(id, base64, audio.FileName));
+
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.UploadQuestionAudioCommand(id, base64, audio.FileName, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -484,7 +487,7 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GradeEssay(Guid essaySubmissionId, [FromBody] NaderGorge.Application.Features.Admin.Commands.GradeEssayCommand command)
     {
         if (essaySubmissionId != command.EssaySubmissionId) return BadRequest();
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -492,7 +495,25 @@ public class AdminController : ControllerBase
     [HasPermission("exams.manage")]
     public async Task<IActionResult> GetPendingEssays([FromServices] NaderGorge.Domain.Interfaces.IAppDbContext db)
     {
-        var aiScored = db.EssaySubmissions
+        Guid? teacherId = null;
+        var userId = GetUserId();
+        var user = db.Users
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .Include(u => u.TeacherProfile)
+            .FirstOrDefault(u => u.Id == userId);
+
+        if (user != null && user.UserRoles.Any(ur => ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Teacher))
+        {
+            teacherId = user.TeacherProfile?.Id;
+        }
+
+        var aiQuery = db.EssaySubmissions.AsQueryable();
+        if (teacherId.HasValue)
+        {
+            aiQuery = aiQuery.Where(e => e.Question.CreatedByTeacherId == teacherId.Value);
+        }
+
+        var aiScored = aiQuery
             .Where(e => e.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.AIScored)
             .ToList();
 
@@ -506,7 +527,13 @@ public class AdminController : ControllerBase
             await db.SaveChangesAsync();
         }
 
-        var list = db.EssaySubmissions
+        var listQuery = db.EssaySubmissions.AsQueryable();
+        if (teacherId.HasValue)
+        {
+            listQuery = listQuery.Where(e => e.Question.CreatedByTeacherId == teacherId.Value);
+        }
+
+        var list = listQuery
             .Where(e => e.Status != NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded)
             .OrderBy(e => e.CreatedAt)
             .Select(e => new { e.Id, e.StudentId, e.QuestionId, e.AnswerText, e.AiInitialScore, e.AiFeedback, e.Status })
@@ -633,7 +660,79 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    // --- Subjects ---
+    [HttpGet("subjects")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetSubjects()
+        => Ok(await _mediator.Send(new GetSubjectsQuery()));
+
+    [HttpGet("subjects/{id:guid}")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetSubjectById(Guid id)
+        => Ok(await _mediator.Send(new GetSubjectByIdQuery(id)));
+
+    [HttpPost("subjects")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> CreateSubject([FromBody] CreateSubjectCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.Success ? CreatedAtAction(nameof(CreateSubject), new { id = result.Data }, result) : BadRequest(result);
+    }
+
+    [HttpPut("subjects/{id:guid}")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> UpdateSubject(Guid id, [FromBody] UpdateSubjectRequest dto)
+    {
+        var result = await _mediator.Send(new UpdateSubjectCommand(id, dto.Name, dto.Description));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("subjects/{id:guid}")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> DeleteSubject(Guid id)
+    {
+        var result = await _mediator.Send(new DeleteSubjectCommand(id));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    // --- Teachers ---
+    [HttpGet("teachers")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> GetTeachers()
+        => Ok(await _mediator.Send(new GetTeachersQuery()));
+
+    [HttpGet("teachers/{id:guid}")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> GetTeacherById(Guid id)
+        => Ok(await _mediator.Send(new GetTeacherByIdQuery(id)));
+
+    [HttpPost("teachers")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> CreateTeacher([FromBody] CreateTeacherProfileCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return result.Success ? CreatedAtAction(nameof(CreateTeacher), new { id = result.Data }, result) : BadRequest(result);
+    }
+
+    [HttpPut("teachers/{id:guid}")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> UpdateTeacher(Guid id, [FromBody] UpdateTeacherProfileRequestDto dto)
+    {
+        var result = await _mediator.Send(new UpdateTeacherProfileCommand(
+            id, dto.Bio, dto.Specialization, dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
 }
+
+public record UpdateSubjectRequest(string Name, string Description);
+public record UpdateTeacherProfileRequestDto(
+    string Bio,
+    string Specialization,
+    decimal CommissionRate,
+    string? ProfileImageUrl,
+    string ContactInfo,
+    List<Guid> SubjectIds);
 
 public record CreateRoleDto(string Name, List<string> Permissions);
 public record UpdateRoleDto(string Name, List<string> Permissions);

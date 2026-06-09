@@ -12,7 +12,7 @@ public class VideoWatchEvent : BaseEntity
 
     // Cumulative time watched in seconds
     public int TimeWatchedInSeconds { get; set; }
-    
+
     public int WatchCount { get; set; }
     public bool IsLocked { get; set; }
     public int? CustomMaxWatchCount { get; set; }
@@ -27,7 +27,7 @@ public class LessonProgress : BaseEntity
     public Lesson Lesson { get; set; } = null!;
 
     public bool IsCompleted { get; set; }
-    
+
     // Support Teacher/Assistant-Controlled Gating
     public bool IsManuallyUnlocked { get; set; }
 }

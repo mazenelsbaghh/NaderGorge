@@ -191,6 +191,13 @@ Achievement:     #D4A017
 - Locked/inactive: Soft Gray with Dark Gray text.
 - Dangerous/destructive states: use red sparingly and consistently.
 
+### Reports and KPI Cockpits
+
+- Dashboard statistics cards must display primary KPI metrics using `AdminStatCard` with Teal or Deep Navy icons.
+- Visual status distributions (like attendance rates, CRM outcomes) should use custom, responsive SVG layouts to present metrics cleanly without introducing bloated charting dependencies.
+- Audit logs displaying payload differences must use a distinct monospace layout with clear color-coded indicators for old values (rose/red) and new values (emerald/green).
+- All detail view overlays must use accessible modal structures with proper closing controls.
+
 ---
 
 ## 7. Motion

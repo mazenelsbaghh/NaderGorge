@@ -14,7 +14,7 @@ public class YouTubeVideoProvider : IVideoProvider
 
         var regex = new Regex(@"(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^""&?\/\s]{11})", RegexOptions.IgnoreCase);
         var match = regex.Match(url);
-        
+
         return match.Success ? match.Groups[1].Value : url; // fallback mapping if what's passed is already an ID
     }
 
@@ -22,7 +22,7 @@ public class YouTubeVideoProvider : IVideoProvider
     {
         if (string.IsNullOrWhiteSpace(videoId))
             return string.Empty;
-            
+
         return $"https://www.youtube.com/embed/{videoId}?rel=0&modestbranding=1";
     }
 }

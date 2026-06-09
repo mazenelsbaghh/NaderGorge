@@ -23,7 +23,7 @@ public class InternalController : ControllerBase
     {
         var cmd = new AiAnalysisCompletedCommand(request.VideoId, request.SubtitleUrl, request.Chapters);
         var result = await _mediator.Send(cmd);
-        
+
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -33,7 +33,7 @@ public class InternalController : ControllerBase
     {
         var cmd = new MindmapsCompletedCommand(request.VideoId, request.Mindmaps);
         var result = await _mediator.Send(cmd);
-        
+
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -53,7 +53,7 @@ public class InternalController : ControllerBase
     {
         var cmd = new WebhookEssayGradedCommand(request.EssaySubmissionId, request.AiScore, request.AiFeedback);
         var result = await _mediator.Send(cmd);
-        
+
         return result.Success ? Ok(result) : BadRequest(result);
     }
 }

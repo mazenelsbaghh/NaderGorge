@@ -88,20 +88,28 @@ Data model is captured in [data-model.md](./data-model.md). Runtime contract is 
 
 ## Implementation Strategy
 
-1. Add `frontend/src/packages/surface-runtime/config.ts` with typed surface names, default ports, public origin environment variables, and route-boundary decisions.
-2. Update `frontend/src/proxy.ts` to use the surface runtime package:
-   - landing root stays landing
-   - student root rewrites to `/student`
-   - admin root rewrites to `/admin`
-   - wrong-surface `/student` or `/admin` requests redirect to the configured surface origin
-   - existing admin subdomain behavior is preserved as the default fallback
-3. Update frontend API URL handling:
-   - browser code uses `NEXT_PUBLIC_API_URL`, defaulting to a host-reachable backend URL
-   - server code uses `INTERNAL_API_URL` / `INTERNAL_BACKEND_URL`, defaulting to Docker DNS
-4. Replace user-visible `مسار أكاديمي` and `Massar Academy` copy touched by this feature with `منصة مسار` and `Massar Platform`.
-5. Replace root Docker Compose application container/service naming with `massar_*`, add `landing`, `student`, and `admin` services, and publish unique configurable ports.
-6. Update Makefile commands for per-surface logs/build/shell and add `verify-surfaces`.
-7. Add a static/runtime verification script to validate unique ports, required services, health checks, Massar naming, and optional running HTTP endpoints.
+1. **Foundational Package Updates**:
+   - Update `frontend/src/packages/surface-runtime/config.ts` to support subdomain detection for `massaracademy.com`, `app.massaracademy.com`, `staff.massaracademy.com`, etc.
+   - Update `frontend/src/proxy.ts` to utilize these subdomain origins and route incoming traffic properly.
+
+2. **Backend Cookie Domain Sharing**:
+   - Modify `AuthController.cs` to inject `IConfiguration`.
+   - Update `SetRefreshCookie` and `ClearRefreshCookie` to set `Domain` to `CookieSettings:Domain` from configuration when it is provided.
+
+3. **Docker Compose & Volumes Hardening**:
+   - Add `nginx` service routing subdomain requests to internal container ports.
+   - Define named volume `massar_assets`. Mount it as:
+     - `backend`: `/app/wwwroot`
+     - `worker`: `/backend/src/NaderGorge.API/wwwroot` (so relative lookups inside worker container resolve correctly)
+     - `nginx`: `/var/www/assets` (so assets subdomain hosts them directly)
+   - Expose `EvolutionApi` and custom settings required by recent features.
+   - Configure healthcheck test scripts for all services.
+
+4. **Nginx Configuration Template**:
+   - Add Nginx virtual host configs inside `docker/nginx/massar.conf` supporting WebSocket upgrade headers on `ws.massaracademy.com` and static assets hosting on `assets.massaracademy.com`.
+
+5. **Polish and Verification**:
+   - Update `verify-surface-separation.mjs` to validate the additional health checks, Nginx configurations, and CORS origin setup.
 
 ## UI/UX Planning Notes
 
@@ -112,4 +120,6 @@ Data model is captured in [data-model.md](./data-model.md). Runtime contract is 
 
 ## Complexity Tracking
 
-No constitution violations. The additional frontend containers are runtime instances of the same image, not new frontend apps.
+- No constitution violations. The additional frontend containers are runtime instances of the same image, not new frontend apps.
+- Nginx reverse proxy keeps subdomain routing logic out of Next.js middleware, reducing routing overhead and securing internal backend endpoints.
+- Cookie Domain configuration is non-breaking and falls back to standard behavior in local environments.

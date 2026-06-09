@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   BookOpenText,
+  Briefcase,
   ClipboardList,
   Home,
   KeyRound,
@@ -18,6 +19,13 @@ import {
   UserCog,
   Wrench,
   X,
+  PhoneCall,
+  Video,
+  BarChart3,
+  Library,
+  GraduationCap,
+  Coins,
+  Users,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -26,18 +34,37 @@ import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground
 import { useAuthStore } from '@/stores/auth-store';
 import { RippleGrid } from '@/components/ui/ripple-grid';
 import { AdminBreadcrumbs } from './AdminBreadcrumbs';
+import { useHasPermission } from '@/hooks/useHasPermission';
 
 type AdminShellRoute =
   | '/admin'
   | '/admin/users'
+  | '/admin/teachers'
   | '/admin/content'
+  | '/admin/subjects'
   | '/admin/ai-monitor'
   | '/admin/codes'
   | '/admin/community'
   | '/admin/questions'
   | '/admin/overrides'
   | '/admin/watch-requests'
-  | '/admin/forms';
+  | '/admin/forms'
+  | '/admin/hr'
+  | '/admin/hr/my-attendance'
+  | '/admin/operations'
+  | '/admin/finance'
+  | '/teacher'
+  | '/teacher/packages'
+  | '/teacher/codes'
+  | '/teacher/exams'
+  | '/teacher/finance'
+  | '/admin/chat'
+  | '/teacher/chat'
+  | '/assistant/chat'
+  | '/admin/crm'
+  | '/assistant/crm'
+  | '/admin/reports'
+  | '/admin/media';
 
 type AdminShellChromeProps = {
   activePath: AdminShellRoute;
@@ -55,17 +82,116 @@ const navItems: Array<{
   href: AdminShellRoute;
   label: string;
   icon: typeof UserCog;
+  permission?: string;
 }> = [
-    { href: '/admin/users', label: 'المستخدمين', icon: UserCog },
-    { href: '/admin/content', label: 'المحتوى', icon: BookOpenText },
-    { href: '/admin/community', label: 'المجتمع', icon: MessageSquareText },
-    { href: '/admin/ai-monitor', label: 'تحليل AI', icon: Sparkles },
-    { href: '/admin/codes', label: 'الأكواد', icon: KeyRound },
-    { href: '/admin/questions', label: 'الأسئلة', icon: Shield },
-    { href: '/admin/overrides', label: 'التعديلات', icon: Wrench },
-    { href: '/admin/watch-requests', label: 'طلبات المشاهدة', icon: Star },
-    { href: '/admin/forms', label: 'النماذج', icon: ClipboardList },
-  ];
+  {
+    href: '/admin/users',
+    label: 'المستخدمين',
+    icon: UserCog,
+    permission: 'users.manage',
+  },
+  {
+    href: '/admin/teachers',
+    label: 'المعلمين',
+    icon: GraduationCap,
+    permission: 'users.manage',
+  },
+  {
+    href: '/admin/content',
+    label: 'المحتوى',
+    icon: BookOpenText,
+    permission: 'content.manage',
+  },
+  {
+    href: '/admin/subjects',
+    label: 'المواد الدراسية',
+    icon: Library,
+    permission: 'content.manage',
+  },
+  {
+    href: '/admin/community',
+    label: 'المجتمع',
+    icon: MessageSquareText,
+    permission: 'community.manage',
+  },
+  {
+    href: '/admin/ai-monitor',
+    label: 'تحليل AI',
+    icon: Sparkles,
+    permission: 'reports.manage',
+  },
+  {
+    href: '/admin/codes',
+    label: 'الأكواد',
+    icon: KeyRound,
+    permission: 'codes.manage',
+  },
+  {
+    href: '/admin/questions',
+    label: 'الأسئلة',
+    icon: Shield,
+    permission: 'exams.manage',
+  },
+  {
+    href: '/admin/overrides',
+    label: 'التعديلات',
+    icon: Wrench,
+    permission: 'users.manage',
+  },
+  {
+    href: '/admin/watch-requests',
+    label: 'طلبات المشاهدة',
+    icon: Star,
+    permission: 'watch_requests.manage',
+  },
+  {
+    href: '/admin/forms',
+    label: 'النماذج',
+    icon: ClipboardList,
+    permission: 'content.manage',
+  },
+  {
+    href: '/admin/operations',
+    label: 'العمليات',
+    icon: Briefcase,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/hr',
+    label: 'الموارد البشرية',
+    icon: Users,
+    permission: 'hr.manage',
+  },
+  {
+    href: '/admin/finance',
+    label: 'المالية والرواتب',
+    icon: Coins,
+    permission: 'users.manage',
+  },
+  {
+    href: '/admin/chat',
+    label: 'التواصل الداخلي',
+    icon: MessageSquareText,
+  },
+  {
+    href: '/admin/crm',
+    label: 'الكول سنتر',
+    icon: PhoneCall,
+    permission: 'crm.manage',
+  },
+  {
+    href: '/admin/media',
+    label: 'الإنتاج والنشر',
+    icon: Video,
+    permission: 'media.manage',
+  },
+  {
+    href: '/admin/reports',
+    label: 'سجل الأمان والتقارير',
+    icon: BarChart3,
+    permission: 'reports.manage',
+  },
+];
 
 export function AdminShellChrome({
   activePath,
@@ -80,11 +206,30 @@ export function AdminShellChrome({
 }: AdminShellChromeProps) {
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const user = useAuthStore((state) => state.user);
+  const { hasPermission } = useHasPermission();
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
   const [showBackdrop, setShowBackdrop] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useRootOverscrollBackground();
+
+  const resolvedNavItems = navItems.map((item) => {
+    if (item.href === '/admin/crm') {
+      const isCrmAgent =
+        user?.roles?.includes('Assistant') &&
+        !user?.roles?.includes('Admin') &&
+        !user?.roles?.includes('Supervisor');
+      if (isCrmAgent) {
+        return { ...item, href: '/assistant/crm' as const };
+      }
+    }
+    return item;
+  });
+
+  const filteredNavItems = resolvedNavItems.filter((item) =>
+    hasPermission(item.permission)
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -101,8 +246,8 @@ export function AdminShellChrome({
     router.replace('/login');
   };
 
-  const mobilePrimaryItems = navItems.slice(0, 3);
-  const mobileMoreItems = navItems.slice(3);
+  const mobilePrimaryItems = filteredNavItems.slice(0, 3);
+  const mobileMoreItems = filteredNavItems.slice(3);
   const isMoreActive = mobileMoreItems.some((item) => item.href === activePath);
 
   return (
@@ -112,7 +257,9 @@ export function AdminShellChrome({
       style={themeVars}
     >
       <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.16),transparent_48%),linear-gradient(180deg,transparent,rgba(100,116,139,0.06))]" />
-      <div className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}>
+      <div
+        className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}
+      >
         {showBackdrop ? (
           <RippleGrid
             gridColor={isDark ? '#64748b' : '#94a3b8'}
@@ -126,9 +273,13 @@ export function AdminShellChrome({
           />
         ) : null}
       </div>
-      <aside className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex group/sidebar transition-all duration-300 ease-in-out hover:w-64" role="navigation" aria-label="القائمة الرئيسية">
-        <div className="space-y-7">
-          <div className="flex justify-start pr-5 items-center transition-all duration-300">
+      <aside
+        className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex group/sidebar transition-all duration-300 ease-in-out hover:w-64"
+        role="navigation"
+        aria-label="القائمة الرئيسية"
+      >
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex justify-start pr-5 items-center transition-all duration-300 mb-7 flex-shrink-0">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-lg flex-shrink-0">
               <BookOpenText className="h-5 w-5" />
             </div>
@@ -137,16 +288,17 @@ export function AdminShellChrome({
             </span>
           </div>
 
-          <nav className="space-y-3 px-3">
+          <nav className="space-y-3 px-3 overflow-y-auto flex-1 min-h-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <Link
               href="/admin"
               prefetch={false}
               aria-label="الرئيسية"
               aria-current={activePath === '/admin' ? 'page' : undefined}
-              className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${activePath === '/admin'
-                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-                }`}
+              className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${
+                activePath === '/admin'
+                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                  : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+              }`}
             >
               <Home className="h-5 w-5 flex-shrink-0" />
               <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
@@ -154,7 +306,7 @@ export function AdminShellChrome({
               </span>
             </Link>
 
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = item.href === activePath;
 
@@ -163,10 +315,11 @@ export function AdminShellChrome({
                   key={item.href}
                   href={item.href}
                   prefetch={false}
-                  className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${isActive
-                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                    : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-                    }`}
+                  className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                      : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                  }`}
                   title={item.label}
                   aria-label={item.label}
                   aria-current={isActive ? 'page' : undefined}
@@ -178,29 +331,39 @@ export function AdminShellChrome({
                 </Link>
               );
             })}
-
           </nav>
         </div>
 
-        <div className="space-y-3 px-3">
+        <div className="space-y-3 px-3 flex-shrink-0 mt-4">
           <div className="flex justify-start px-1 items-center transition-all duration-300">
             <AnimatedThemeToggler
               checked={isDark}
               onToggle={toggleTheme}
-              aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
-              title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+              aria-label={
+                isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
+              }
+              title={
+                isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
+              }
               className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
             />
             <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-muted)] self-center mr-3 truncate whitespace-nowrap">
               {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
             </span>
           </div>
-          <Link href="/admin/settings" className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
-            <Settings className="h-5 w-5 flex-shrink-0" />
-            <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-              الإعدادات
-            </span>
-          </Link>
+          {hasPermission('settings.manage') && (
+            <Link
+              href="/admin/settings"
+              className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]"
+              aria-label="الإعدادات"
+              title="الإعدادات"
+            >
+              <Settings className="h-5 w-5 flex-shrink-0" />
+              <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                الإعدادات
+              </span>
+            </Link>
+          )}
           <button
             onClick={handleLogout}
             className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 hover:bg-[var(--admin-hover)]"
@@ -222,12 +385,23 @@ export function AdminShellChrome({
               <AnimatedThemeToggler
                 checked={isDark}
                 onToggle={toggleTheme}
-                aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+                aria-label={
+                  isDark
+                    ? 'التحويل إلى الوضع الفاتح'
+                    : 'التحويل إلى الوضع الداكن'
+                }
                 className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
               />
-              <Link href="/admin/settings" className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]" aria-label="الإعدادات" title="الإعدادات">
-                <Settings className="h-4 w-4" />
-              </Link>
+              {hasPermission('settings.manage') && (
+                <Link
+                  href="/admin/settings"
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                  aria-label="الإعدادات"
+                  title="الإعدادات"
+                >
+                  <Settings className="h-4 w-4" />
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-danger)] transition hover:bg-[var(--admin-hover)]"
@@ -247,7 +421,11 @@ export function AdminShellChrome({
                 <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-[var(--admin-text)] lg:text-4xl">
                   {pageTitle}
                 </h1>
-                {subtitle ? <p className="max-w-3xl text-sm font-medium leading-6 text-[var(--admin-muted)]">{subtitle}</p> : null}
+                {subtitle ? (
+                  <p className="max-w-3xl text-sm font-medium leading-6 text-[var(--admin-muted)]">
+                    {subtitle}
+                  </p>
+                ) : null}
               </div>
               {headerAccessory}
             </div>
@@ -268,18 +446,25 @@ export function AdminShellChrome({
         </footer>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)]/90 px-3 py-3 backdrop-blur-xl lg:hidden" role="navigation" aria-label="القائمة السفلية">
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--admin-border)] bg-[var(--admin-sidebar)]/90 px-3 py-3 backdrop-blur-xl lg:hidden"
+        role="navigation"
+        aria-label="القائمة السفلية"
+      >
         <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-2">
           <Link
             href="/admin"
             aria-current={activePath === '/admin' ? 'page' : undefined}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${activePath === '/admin'
-              ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
-              : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
-              }`}
+            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${
+              activePath === '/admin'
+                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
+                : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+            }`}
           >
             <Home className="h-5 w-5" />
-            <span className="truncate w-full" style={{ lineHeight: 1 }}>الرئيسية</span>
+            <span className="truncate w-full" style={{ lineHeight: 1 }}>
+              الرئيسية
+            </span>
           </Link>
 
           {mobilePrimaryItems.map((item) => {
@@ -291,27 +476,33 @@ export function AdminShellChrome({
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${isActive
-                  ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
-                  : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
-                  }`}
+                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
+                    : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
+                }`}
               >
                 <Icon className="h-5 w-5" />
-                <span className="truncate w-full" style={{ lineHeight: 1 }}>{item.label}</span>
+                <span className="truncate w-full" style={{ lineHeight: 1 }}>
+                  {item.label}
+                </span>
               </Link>
             );
           })}
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] border p-2 text-center text-[10px] font-black transition-all ${isMoreActive || isMobileMenuOpen
-              ? 'border-transparent bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md'
-              : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'
-              }`}
+            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] border p-2 text-center text-[10px] font-black transition-all ${
+              isMoreActive || isMobileMenuOpen
+                ? 'border-transparent bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md'
+                : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'
+            }`}
             aria-label="المزيد من صفحات الإدارة"
           >
             <Menu className="h-5 w-5" />
-            <span className="truncate w-full" style={{ lineHeight: 1 }}>المزيد</span>
+            <span className="truncate w-full" style={{ lineHeight: 1 }}>
+              المزيد
+            </span>
           </button>
         </div>
       </nav>
@@ -325,11 +516,13 @@ export function AdminShellChrome({
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <aside
-            className="fixed bottom-0 right-0 z-[60] w-full rounded-t-[24px] border border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_70px_var(--admin-shadow)] lg:hidden"
+            className="fixed bottom-0 right-0 z-[60] w-full max-h-[80vh] overflow-y-auto rounded-t-[24px] border border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0_-24px_70px_var(--admin-shadow)] lg:hidden"
             aria-label="قائمة الإدارة الإضافية"
           >
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-black text-[var(--admin-text)]">صفحات الإدارة</p>
+              <p className="text-sm font-black text-[var(--admin-text)]">
+                صفحات الإدارة
+              </p>
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -350,24 +543,27 @@ export function AdminShellChrome({
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`flex min-h-12 items-center gap-3 rounded-[16px] border px-3 py-2 text-sm font-bold transition ${isActive
-                      ? 'border-transparent bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
-                      : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
-                      }`}
+                    className={`flex min-h-12 items-center gap-3 rounded-[16px] border px-3 py-2 text-sm font-bold transition ${
+                      isActive
+                        ? 'border-transparent bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                        : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                    }`}
                   >
                     <Icon className="h-5 w-5 shrink-0" />
                     <span className="min-w-0 truncate">{item.label}</span>
                   </Link>
                 );
               })}
-              <Link
-                href="/admin/settings"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex min-h-12 items-center gap-3 rounded-[16px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
-              >
-                <Settings className="h-5 w-5 shrink-0" />
-                <span>الإعدادات</span>
-              </Link>
+              {hasPermission('settings.manage') && (
+                <Link
+                  href="/admin/settings"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex min-h-12 items-center gap-3 rounded-[16px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+                >
+                  <Settings className="h-5 w-5 shrink-0" />
+                  <span>الإعدادات</span>
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={handleLogout}

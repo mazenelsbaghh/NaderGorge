@@ -75,6 +75,19 @@
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
 
+### Manual QA & Docker Acceptance *(mandatory)*
+
+<!--
+  ACTION REQUIRED: Define what the product owner must test manually and what
+  Docker evidence is required before this feature/phase can be considered done.
+-->
+
+- **Manual QA Role/Flow 1**: [role, URL/surface, action, expected result]
+- **Manual QA Negative Check**: [role/action that must be denied or blocked]
+- **Docker Acceptance**: [required compose/migration/health/surface checks]
+- **External Dependencies**: [secrets, APIs, gateways, or devices required for
+  full validation; mark unavailable items explicitly]
+
 ## Requirements *(mandatory)*
 
 <!--

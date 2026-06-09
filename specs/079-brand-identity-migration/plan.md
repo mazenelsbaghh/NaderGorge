@@ -31,7 +31,15 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+[Gates determined based on constitution file. For this project, every plan MUST
+document:
+- Layer impact across backend, frontend, worker, database, and Docker.
+- Automated tests required for the phase's critical paths.
+- Manual QA flows required from the product owner.
+- Docker gate commands (`docker compose config -q`, `make up`, `make migrate`
+  when schema changes exist, service health checks).
+- Explicit decision that the next phase cannot start until failed gates are
+  fixed or owner-approved risk is documented.]
 
 ## Project Structure
 
@@ -93,6 +101,25 @@ ios/ or android/
 
 **Structure Decision**: [Document the selected structure and reference the real
 directories captured above]
+
+## Phase Closure & Verification Plan
+
+<!--
+  ACTION REQUIRED: Replace placeholders with the concrete close-out plan for
+  this feature/phase. A phase is not complete without evidence here.
+-->
+
+**Automated Tests Required**: [dotnet/frontend/worker/python/e2e commands and
+the critical paths they cover]
+
+**Docker Gate Required**: [docker compose config, make up, make migrate if
+needed, make ps, health URLs, surface verification]
+
+**Manual QA Required**: [role-by-role flows the product owner must test
+manually, including negative permission checks]
+
+**End-of-Phase Report Format**: [implemented scope, commands run, test results,
+Docker result, manual QA checklist, risks, go/no-go for next phase]
 
 ## Complexity Tracking
 

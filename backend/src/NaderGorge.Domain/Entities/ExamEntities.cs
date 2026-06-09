@@ -13,21 +13,24 @@ public class Exam : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    
+
     // Passing score criteria
     public decimal PassingScore { get; set; }
-    
+
     // Total possible score
     public decimal TotalScore { get; set; }
-    
+
     // Timer properties
     public int? DurationMinutes { get; set; }
-    
+
     // Config properties
     public bool IsMandatory { get; set; } = true;
     public bool IsRandomized { get; set; } = false;
     public int? DisplayQuestionCount { get; set; }
-    
+
+    public Guid CreatedByTeacherId { get; set; }
+    public TeacherProfile CreatedByTeacher { get; set; } = null!;
+
     public ICollection<ExamQuestion> ExamQuestions { get; set; } = new List<ExamQuestion>();
     public ICollection<StudentExamAttempt> Attempts { get; set; } = new List<StudentExamAttempt>();
 }
@@ -37,7 +40,7 @@ public class QuestionBankItem : BaseEntity
     public string Text { get; set; } = string.Empty;
     public QuestionType Type { get; set; } = QuestionType.MCQ;
     public decimal DefaultPoints { get; set; } = 1.0m;
-    
+
     // Tags for categorization
     public string Tags { get; set; } = string.Empty;
 
@@ -47,6 +50,12 @@ public class QuestionBankItem : BaseEntity
     public string? WrittenCorrection { get; set; }
     // Optional hint to display without penalty
     public string? HintText { get; set; }
+
+    public Guid SubjectId { get; set; }
+    public Subject Subject { get; set; } = null!;
+
+    public Guid CreatedByTeacherId { get; set; }
+    public TeacherProfile CreatedByTeacher { get; set; } = null!;
 
     public ICollection<QuestionOption> Options { get; set; } = new List<QuestionOption>();
 }
@@ -59,7 +68,7 @@ public class QuestionOption : BaseEntity
 {
     public string Text { get; set; } = string.Empty;
     public bool IsCorrect { get; set; }
-    
+
     public Guid QuestionBankItemId { get; set; }
     public QuestionBankItem Question { get; set; } = null!;
 }
@@ -87,10 +96,10 @@ public class StudentExamAttempt : BaseEntity
 
     public decimal ScoreAchieved { get; set; }
     public bool IsPassed { get; set; }
-    
+
     // Auto-calculated evaluation string (e.g. "ممتاز")
     public string? Evaluation { get; set; }
-    
+
     // Timer enforcement
     public DateTime? StartedAt { get; set; }
     public bool IsTimeExpired { get; set; }

@@ -29,14 +29,14 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             return ApiResponse<PackageDetailDto>.Fail("Package not found");
 
         var dtos = package.Terms.OrderBy(t => t.Order).Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price)).ToList();
-        
+
         var packageDto = new PackageDetailDto(
-            package.Id, 
-            package.Name, 
-            package.Description, 
-            package.Price, 
-            package.ProgramId, 
-            package.IsActive, 
+            package.Id,
+            package.Name,
+            package.Description,
+            package.Price,
+            package.ProgramId,
+            package.IsActive,
             dtos);
 
         return ApiResponse<PackageDetailDto>.Ok(packageDto);

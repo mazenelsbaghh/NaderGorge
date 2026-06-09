@@ -19,16 +19,16 @@ public enum NotificationStatus
 public class NotificationEvent
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    
+
     // Can be Student, Parent, or Assistant
     public Guid UserId { get; set; }
-    
+
     public NotificationChannelType ChannelType { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Body { get; set; } = string.Empty;
-    
+
     public NotificationStatus Status { get; set; } = NotificationStatus.Pending;
-    
+
     public DateTime? ReadAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

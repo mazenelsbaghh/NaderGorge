@@ -9,6 +9,11 @@ export interface PackageDto {
   programId: string;
   isEnrolled: boolean;
   imageUrl?: string;
+  teacherId?: string;
+  subjectId?: string;
+  teacherName?: string;
+  teacherProfileImageUrl?: string;
+  subjectName?: string;
 }
 
 export interface TermDto {

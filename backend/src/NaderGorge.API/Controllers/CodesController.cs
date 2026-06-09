@@ -25,6 +25,13 @@ public class CodesController : ControllerBase
         var result = await _mediator.Send(command);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("validate/{code}")]
+    public async Task<IActionResult> Validate(string code)
+    {
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Codes.Queries.ValidateCodeQuery(code));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }
 
 public record ActivateCodeRequest(string Code);

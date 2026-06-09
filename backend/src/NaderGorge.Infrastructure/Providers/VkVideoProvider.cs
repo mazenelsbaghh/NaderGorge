@@ -25,7 +25,7 @@ public class VkVideoProvider : IVideoProvider
         {
             return $"oid={urlMatch.Groups[1].Value}&id={urlMatch.Groups[2].Value}";
         }
-        
+
         return url; // fallback mapping if what's passed is already an ID (though unlikely for VK as it requires both)
     }
 
@@ -33,7 +33,7 @@ public class VkVideoProvider : IVideoProvider
     {
         if (string.IsNullOrWhiteSpace(videoId))
             return string.Empty;
-            
+
         // videoId is already stored as "oid=-22822305&id=456241864" based on the frontend logic
         return $"https://vk.com/video_ext.php?{videoId}&hd=2&js_api=1";
     }

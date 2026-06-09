@@ -26,7 +26,7 @@ public class GetUserDevicesQueryHandler : IRequestHandler<GetUserDevicesQuery, A
             .ToListAsync(ct);
 
         var dtos = devices.Select(d => new DeviceDto(d.Id, d.DeviceFingerprint, d.DeviceName ?? "Unknown", d.IpAddress ?? "Unknown", d.LastUsedAt, d.IsActive)).ToList();
-        
+
         return ApiResponse<List<DeviceDto>>.Ok(dtos);
     }
 }

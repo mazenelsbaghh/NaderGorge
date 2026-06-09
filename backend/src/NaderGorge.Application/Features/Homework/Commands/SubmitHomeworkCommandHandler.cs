@@ -23,14 +23,14 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.Id == request.HomeworkId, cancellationToken);
 
-        if (homework == null) 
+        if (homework == null)
             return ApiResponse<bool>.Fail("Homework not found");
 
         // Check if a submission already exists
         var submission = await _dbContext.HomeworkSubmissions
             .Include(s => s.Answers)
             .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, cancellationToken);
-            
+
         if (submission != null && submission.Status != SubmissionStatus.InProgress)
         {
             return ApiResponse<bool>.Fail("Homework already submitted.");
@@ -48,10 +48,10 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         }
 
         // Process answers.
-        
+
         // Remove existing answers to replace them.
         submission.Answers.Clear();
-        
+
         foreach (var answerInput in request.Answers)
         {
             if (homework.Questions.Any(q => q.Id == answerInput.QuestionId))
@@ -63,7 +63,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 });
             }
         }
-        
+
         submission.Status = SubmissionStatus.PendingReview;
         submission.SubmittedAt = DateTime.UtcNow;
 
@@ -71,7 +71,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
         // At this point, Domain Events or background job enqueuing to BullMQ should ideally be triggered
         // for AI auto-grading (Task T019 for AI pipeline). For now, it stays PendingReview.
-        
+
         await _publisher.Publish(new NaderGorge.Application.Features.Gamification.Commands.AcademicTaskCompletedEvent(request.StudentId, NaderGorge.Domain.Entities.Gamification.GamificationEventType.HomeworkSubmittedOnTime, 20), cancellationToken);
 
         return ApiResponse<bool>.Ok(true, "Homework submitted successfully.");

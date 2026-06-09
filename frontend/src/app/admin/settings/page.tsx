@@ -38,7 +38,15 @@ const PERMISSION_DEFINITIONS = [
   { key: 'watch_requests.manage', label: 'إدارة طلبات إعادة المشاهدة', desc: 'الموافقة أو الرفض على طلبات زيادة مرات مشاهدة الفيديوهات' },
   { key: 'comments.manage', label: 'إدارة تعليقات الدروس', desc: 'الرد على أسئلة الطلاب على الدروس وحذف التعليقات غير اللائقة' },
   { key: 'community.manage', label: 'إدارة مجتمع الطلاب', desc: 'نشر منشورات عامة في مجتمع المنصة وإدارتها' },
-  { key: 'settings.manage', label: 'إعدادات المنصة والأدوار', desc: 'التحكم باللوحة الفنية، الصيانة، الصلاحيات، وإعدادات الفيديو العامة' }
+  { key: 'settings.manage', label: 'إعدادات المنصة والأدوار', desc: 'التحكم باللوحة الفنية، الصيانة، الصلاحيات، وإعدادات الفيديو العامة' },
+  { key: 'hr.manage', label: 'إدارة الموارد البشرية والموظفين', desc: 'تسجيل الحضور والانصراف، مراجعة الإجازات، والتحكم بملفات الموظفين' },
+  { key: 'tasks.manage', label: 'إدارة العمليات والمهام المساعدة', desc: 'إسناد المهام للمساعدين، ومتابعة التنفيذ، واعتماد الطلبات التشغيلية' },
+  { key: 'chat.manage', label: 'إدارة غرف المحادثات الداخلية', desc: 'التواصل الفوري بين الموظفين وفريق الإنتاج وإرسال الإشعارات والـ Mentions' },
+  { key: 'crm.manage', label: 'إدارة علاقات الطلاب والمكالمات', desc: 'توزيع قوائم الطلاب على موظفي الكول سنتر، وتسجيل نتائج المكالمات والمتابعات' },
+  { key: 'payments.manage', label: 'مطابقة شحن رصيد الطلاب تلقائياً', desc: 'استلام وقراءة رسائل الـ SMS، شحن أرصدة الطلاب، ومعالجة الحالات المعلقة' },
+  { key: 'media.manage', label: 'إدارة خط إنتاج ونشر المحتوى', desc: 'متابعة مراحل تصوير ومونتاج ورفع المحاضرات وجدولة النشر على السوشيال ميديا' },
+  { key: 'finance.manage', label: 'الحسابات المالية للمدرسين والموظفين', desc: 'حساب أرباح وعمولات المدرسين وأكواد التفعيل وصرف رواتب الموظفين' },
+  { key: 'reports.manage', label: 'سجلات المراقبة والتقارير التشغيلية', desc: 'عرض الـ Audit logs، وإحصائيات أداء الموظفين، والمؤشرات العامة للمنصة' }
 ];
 
 export default function AdminSettingsPage() {
@@ -51,7 +59,7 @@ export default function AdminSettingsPage() {
     VideoWatchThresholdPercentage: '30',
     MaxExtraWatchRequestsPerVideo: '1',
     HintPenaltyPercentage: '20',
-    PlatformName: 'نادر جورج',
+    PlatformName: 'منصة مسار',
     SupportPhoneNumber: '',
     SupportWhatsAppUrl: '',
     YouTubeChannelUrl: '',

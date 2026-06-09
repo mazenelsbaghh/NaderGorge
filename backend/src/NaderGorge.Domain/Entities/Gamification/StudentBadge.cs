@@ -7,7 +7,7 @@ public class StudentBadge
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid StudentId { get; set; }
-    
+
     public string BadgeName { get; set; } = string.Empty;
     public DateTime UnlockedAt { get; set; } = DateTime.UtcNow;
 

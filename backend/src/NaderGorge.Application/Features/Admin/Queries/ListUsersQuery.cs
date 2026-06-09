@@ -17,13 +17,13 @@ public record ListUsersQuery(
 ) : IRequest<ApiResponse<PagedResult<AdminUserListDto>>>;
 
 public record AdminUserListDto(
-    Guid Id, 
-    string PhoneNumber, 
-    string Status, 
-    string FullName, 
-    string Grade, 
-    string Track, 
-    DateTime CreatedAt, 
+    Guid Id,
+    string PhoneNumber,
+    string Status,
+    string FullName,
+    string Grade,
+    string Track,
+    DateTime CreatedAt,
     string[] Roles,
     string StudentCode,
     DateTime? DateOfBirth,
@@ -69,11 +69,11 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
-             query = query.Where(u => u.PhoneNumber.Contains(request.Search) || 
-                                      u.FullName.Contains(request.Search) ||
-                                      (u.StudentProfile != null && u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(request.Search)));
+            query = query.Where(u => u.PhoneNumber.Contains(request.Search) ||
+                                     u.FullName.Contains(request.Search) ||
+                                     (u.StudentProfile != null && u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(request.Search)));
         }
-        
+
         if (!string.IsNullOrWhiteSpace(request.EducationStage) && Enum.TryParse<NaderGorge.Domain.Enums.EducationStage>(request.EducationStage, true, out var stage))
         {
             query = query.Where(u => u.StudentProfile != null && u.StudentProfile.EducationStage == stage);
@@ -88,15 +88,15 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
         {
             query = query.Where(u => u.StudentProfile != null && u.StudentProfile.StudyTrack == track);
         }
-        
+
         if (!string.IsNullOrWhiteSpace(request.Gender) && Enum.TryParse<NaderGorge.Domain.Enums.Gender>(request.Gender, true, out var gender))
         {
             query = query.Where(u => u.StudentProfile != null && u.StudentProfile.Gender == gender);
         }
-        
+
         if (!string.IsNullOrWhiteSpace(request.Governorate))
         {
-             query = query.Where(u => u.StudentProfile != null && u.StudentProfile.Governorate.Contains(request.Governorate));
+            query = query.Where(u => u.StudentProfile != null && u.StudentProfile.Governorate.Contains(request.Governorate));
         }
 
         var total = await query.CountAsync(ct);

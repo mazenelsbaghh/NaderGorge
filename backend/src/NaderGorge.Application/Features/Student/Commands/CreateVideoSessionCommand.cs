@@ -101,7 +101,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         else
         {
             var user = await _db.Users.FindAsync(new object[] { request.UserId }, ct);
-            
+
             // Create new session
             session = new VideoPlaybackSession
             {
@@ -114,7 +114,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                 IsConsumed = false,
                 IpAddress = request.IpAddress
             };
-            
+
             // Generate the encrypted token
             string studentName = user?.FullName ?? "Unknown";
             string studentPhone = user?.PhoneNumber ?? "Unknown";

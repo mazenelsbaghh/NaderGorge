@@ -27,7 +27,7 @@ public class GetSectionByIdQueryHandler : IRequestHandler<GetSectionByIdQuery, A
             return ApiResponse<SectionDetailDto>.Fail("Section not found");
 
         var dto = new SectionDetailDto(section.Id, section.Title, section.Order, section.TermId, section.Price);
-        
+
         return ApiResponse<SectionDetailDto>.Ok(dto);
     }
 }

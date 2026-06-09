@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Assistant.Commands;
 using NaderGorge.Application.Features.Assistant.Queries;
+using NaderGorge.Application.Features.Operations.Commands;
+using NaderGorge.Application.Features.Operations.Queries;
 using NaderGorge.Domain.Entities.Assistant;
 using System.Security.Claims;
 
@@ -43,6 +45,57 @@ public class AssistantController : ControllerBase
 
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("my")]
+    public async Task<IActionResult> GetMyTasks()
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return Unauthorized();
+
+        var response = await _mediator.Send(new GetMyTasksQuery(userId));
+        return Ok(response);
+    }
+
+    [HttpGet("my/{id:guid}")]
+    public async Task<IActionResult> GetTaskDetails(Guid id)
+    {
+        var response = await _mediator.Send(new GetTaskDetailsQuery(id));
+        return Ok(response);
+    }
+
+    [HttpPost("my/{id:guid}/status")]
+    public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusRequest request)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return Unauthorized();
+
+        var response = await _mediator.Send(new UpdateTaskStatusCommand(id, request.Status, userId));
+        return Ok(response);
+    }
+
+    [HttpPost("my/{id:guid}/comments")]
+    public async Task<IActionResult> AddComment(Guid id, [FromBody] AddCommentRequest request)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return Unauthorized();
+
+        var response = await _mediator.Send(new AddTaskCommentCommand(id, userId, request.Content, request.AttachmentUrl));
+        return Ok(response);
+    }
+}
+
+public class UpdateStatusRequest
+{
+    public NaderGorge.Domain.Enums.TaskStatus Status { get; set; }
+}
+
+public class AddCommentRequest
+{
+    public string Content { get; set; } = string.Empty;
+    public string? AttachmentUrl { get; set; }
 }
 
 public class ResolveTaskRequest

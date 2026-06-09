@@ -55,10 +55,10 @@ public class UseFiftyFiftyCommandHandler : IRequestHandler<UseFiftyFiftyCommand,
             .Include(eq => eq.Question)
             .ThenInclude(q => q.Options)
             .FirstOrDefaultAsync(eq => eq.Id == request.QuestionId && eq.ExamId == request.ExamId, cancellationToken);
-            
+
         if (examQuestion == null)
             return ApiResponse<List<Guid>>.Fail("Question not found");
-            
+
         if (examQuestion.Question.Type != NaderGorge.Domain.Entities.QuestionType.MCQ)
             return ApiResponse<List<Guid>>.Fail("Fifty fifty can only be used on Multiple Choice questions");
 

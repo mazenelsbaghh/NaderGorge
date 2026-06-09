@@ -44,4 +44,12 @@ public class PublicController : ControllerBase
             WatermarkOpacity = settings.WatermarkOpacity
         });
     }
+
+    [HttpGet("teachers")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetTeachers(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetActiveTeachersQuery(), ct);
+        return Ok(result);
+    }
 }

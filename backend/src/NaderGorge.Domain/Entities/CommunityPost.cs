@@ -17,7 +17,7 @@ public class CommunityPost : BaseEntity
 
     public ICollection<CommunityPostComment> Comments { get; set; } = new List<CommunityPostComment>();
     public ICollection<CommunityPostLike> Likes { get; set; } = new List<CommunityPostLike>();
-    
+
     public bool IsPoll { get; set; }
     public ICollection<CommunityPostPollOption> PollOptions { get; set; } = new List<CommunityPostPollOption>();
     public ICollection<CommunityPostPollVote> PollVotes { get; set; } = new List<CommunityPostPollVote>();

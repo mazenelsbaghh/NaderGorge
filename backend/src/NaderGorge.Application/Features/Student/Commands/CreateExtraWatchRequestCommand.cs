@@ -24,7 +24,7 @@ public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtra
         var video = await _context.LessonVideos
             .AsNoTracking()
             .FirstOrDefaultAsync(v => v.Id == request.LessonVideoId, cancellationToken);
-            
+
         if (video == null)
             return ApiResponse<Guid>.Fail("Video not found", new List<string> { "VIDEO_NOT_FOUND" });
 

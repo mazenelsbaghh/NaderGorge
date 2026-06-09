@@ -9,18 +9,45 @@ public static class Seeder
     public static async Task SeedAsync(AppDbContext db, bool seedDefaultUsers = false)
     {
         var rolesByName = await db.Roles.ToDictionaryAsync(r => r.Name);
-        if (rolesByName.Count == 0)
+        var defaultRoles = new[]
         {
-            var roles = new[]
+            new Role { Name = "Admin", Type = RoleType.Admin },
+            new Role { Name = "Teacher", Type = RoleType.Teacher },
+            new Role 
+            { 
+                Name = "Assistant", 
+                Type = RoleType.Assistant,
+                PermissionsJson = "[\"comments.manage\",\"community.manage\",\"exams.manage\",\"watch_requests.manage\",\"tasks.manage\",\"chat.manage\"]"
+            },
+            new Role { Name = "Student", Type = RoleType.Student },
+            new Role 
+            { 
+                Name = "Supervisor", 
+                Type = RoleType.Supervisor,
+                PermissionsJson = "[\"users.manage\",\"content.manage\",\"exams.manage\",\"codes.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"hr.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"media.manage\",\"finance.manage\",\"reports.manage\"]"
+            },
+            new Role 
+            { 
+                Name = "Staff", 
+                Type = RoleType.Staff,
+                PermissionsJson = "[\"users.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\"]"
+            }
+        };
+
+        var addedAny = false;
+        foreach (var defaultRole in defaultRoles)
+        {
+            if (!rolesByName.ContainsKey(defaultRole.Name))
             {
-                new Role { Name = "Admin", Type = RoleType.Admin },
-                new Role { Name = "Teacher", Type = RoleType.Teacher },
-                new Role { Name = "Assistant", Type = RoleType.Assistant },
-                new Role { Name = "Student", Type = RoleType.Student }
-            };
-            db.Roles.AddRange(roles);
+                db.Roles.Add(defaultRole);
+                addedAny = true;
+            }
+        }
+
+        if (addedAny)
+        {
             await db.SaveChangesAsync();
-            rolesByName = roles.ToDictionary(r => r.Name);
+            rolesByName = await db.Roles.ToDictionaryAsync(r => r.Name);
         }
 
         if (!seedDefaultUsers) return;

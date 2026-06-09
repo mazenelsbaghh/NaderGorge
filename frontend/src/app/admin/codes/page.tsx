@@ -16,6 +16,7 @@ import {
 import { formatCompactNumber, formatDate } from '@/components/admin/admin-utils';
 import { adminService, CodeGroupDto } from '@/services/admin-service';
 import { PackageDto, contentService } from '@/services/content-service';
+import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import { codeService } from '@/services/code-service';
 import { CodeTypeSelector, CodeTypeSelection } from '@/components/codes/CodeTypeSelector';
 import toast from 'react-hot-toast';
@@ -23,9 +24,13 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 
 export default function AdminCodesPage() {
   const [groups, setGroups] = useState<CodeGroupDto[]>([]);
+  const [subjects, setSubjects] = useState<SubjectDto[]>([]);
+  const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGenModal, setShowGenModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('All');
   
   // Generation Form State
   const [genCount, setGenCount] = useState(10);
@@ -48,12 +53,16 @@ export default function AdminCodesPage() {
     const request = (async () => {
       try {
         setLoading(true);
-        const [groupsData, packagesResponse] = await Promise.all([
+        const [groupsData, packagesResponse, subjectsRes, teachersRes] = await Promise.all([
           adminService.listCodeGroups({ force: options?.force }),
           contentService.getPackages({ force: options?.force }),
+          teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
+          teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] }))
         ]);
         setGroups(groupsData || []);
         setPackages((packagesResponse.data?.data || []) as PackageDto[]);
+        setSubjects(subjectsRes.data ?? []);
+        setTeachers(teachersRes.data ?? []);
       } catch (error) {
         if (!isAxiosError(error) || error.response?.status !== 429) {
           devConsole.error(error);
@@ -118,15 +127,31 @@ export default function AdminCodesPage() {
   }, [packages]);
 
   const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) return groups;
+    let list = groups;
+
+    // Filter by Subject
+    if (selectedSubjectId !== 'All') {
+      list = list.filter((g) => {
+        if (!g.packageId) return false;
+        const pkg = packages.find((p) => p.id === g.packageId);
+        return pkg?.subjectId === selectedSubjectId;
+      });
+    }
+
+    // Filter by Teacher
+    if (selectedTeacherId !== 'All') {
+      list = list.filter((g) => g.teacherId === selectedTeacherId);
+    }
+
+    if (!searchQuery.trim()) return list;
     const q = searchQuery.toLowerCase().trim();
-    return groups.filter((g) => 
+    return list.filter((g) => 
       g.name.toLowerCase().includes(q) || 
       g.id.toLowerCase().includes(q) ||
       (g.packageId && (packageNameMap[g.packageId] || g.packageId).toLowerCase().includes(q)) ||
       (g.lessonId && g.lessonId.toLowerCase().includes(q))
     );
-  }, [groups, searchQuery, packageNameMap]);
+  }, [groups, searchQuery, packageNameMap, selectedSubjectId, selectedTeacherId, packages]);
 
   const totalCodes = groups.reduce((sum, group) => sum + group.codeCount, 0);
   const usedCodes = groups.reduce((sum, group) => sum + group.usedCount, 0);
@@ -245,16 +270,42 @@ export default function AdminCodesPage() {
       </section>
 
       {/* Search and Filters */}
-      <div className="mb-6 flex items-center bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] px-4 py-3 shadow-sm max-w-md mr-auto">
-        <Search className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
-        <input
-          type="text"
-          placeholder="ابحث عن اسم دفعة، ID، أو باقة مربوطة..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-transparent border-none outline-none text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] w-full text-right"
-          dir="rtl"
-        />
+      <div className="mb-6 flex flex-col md:flex-row gap-4 items-center mr-auto w-full max-w-3xl">
+        <div className="flex flex-1 items-center bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] px-4 py-3 shadow-sm w-full">
+          <Search className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
+          <input
+            type="text"
+            placeholder="ابحث عن اسم دفعة، ID، أو باقة مربوطة..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-transparent border-none outline-none text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] w-full text-right"
+            dir="rtl"
+          />
+        </div>
+        
+        <div className="flex gap-3 w-full md:w-auto">
+          <select
+            value={selectedSubjectId}
+            onChange={(e) => setSelectedSubjectId(e.target.value)}
+            className="admin-input flex-1 md:w-44"
+          >
+            <option value="All">كل المواد</option>
+            {subjects.map((sub) => (
+              <option key={sub.id} value={sub.id}>{sub.name}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedTeacherId}
+            onChange={(e) => setSelectedTeacherId(e.target.value)}
+            className="admin-input flex-1 md:w-44"
+          >
+            <option value="All">كل المدرسين</option>
+            {teachers.map((t) => (
+              <option key={t.id} value={t.id}>{t.fullName}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Code Groups Table */}

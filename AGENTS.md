@@ -79,5 +79,13 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - [081-surface-docker-separation](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/081-surface-docker-separation/plan.md)
 - [085-admin-roles-settings](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/085-admin-roles-settings/plan.md)
 - [087-fix-forms-id-mismatch](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/087-fix-forms-id-mismatch/plan.md)
+- [091-operations-task-manager](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/091-operations-task-manager/plan.md)
+- [092-multi-teacher-multi-subject-architecture](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/092-multi-teacher-multi-subject-architecture/plan.md)
+- [093-internal-chat-notifications](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/093-internal-chat-notifications/plan.md)
+- [094-call-center-crm](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/094-call-center-crm/plan.md)
+- [095-media-production-social-planner](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/095-media-production-social-planner/plan.md)
+- [096-payroll-accounting](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/096-payroll-accounting/plan.md)
+- [097-audit-and-reports](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/097-audit-and-reports/plan.md)
+- [101-full-frontend-api-contract-audit](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/101-full-frontend-api-contract-audit/plan.md)
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

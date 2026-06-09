@@ -1,4 +1,4 @@
-# Impeccable Design Context - Massar Academy / مسار أكاديمي
+# Impeccable Design Context - Massar Platform / منصة مسار
 
 > "تعلم. نتطور. نحقق."
 
@@ -10,7 +10,19 @@ Source of truth: `/Users/mazenelsbagh/Downloads/brand identyty.pdf`, a 7-page vi
 
 **Register:** product
 
-Massar Academy is an Arabic-first learning platform. The design serves student progress, parent/assistant follow-up, and admin control. It should feel like a disciplined educational system with a strong visual identity, not a generic course marketplace.
+Massar Platform is an Arabic-first learning platform. The design serves student progress, parent/assistant follow-up, and admin control. It should feel like a disciplined educational system with a strong visual identity, not a generic course marketplace.
+
+---
+
+## Product Features (Phase 10: Audit Trail, KPI Dashboards, and Reports)
+
+- **Central Security Audit Trail**: Captures and displays all state-changing activities in CRM, HR, Tasks, Payments, Media, and Payroll with sensitive payload redaction.
+- **Reports & Analytics Cockpit**: Real-time business intelligence dashboard displaying employee attendance, task ratios, CRM outcome trends, media publication delays, and payment wallet metrics.
+- **Dynamic Cockpit Filtering**: Supports interactive queries filtered by date ranges, role scopes, and specific employees.
+- **Employee Payroll Cockpit**: Allows administrators to track monthly basic salaries, post addition/deduction adjustments, and lock monthly sheets.
+- **Teacher Earnings & Commissions**: Automatically credits teacher accounts when access codes are redeemed.
+- **Teacher Self-Service Dashboard**: Shows balance tracking, commission history ledger, and withdrawal requests.
+- **Payout Approvals & Reconciliations**: Provides admins/supervisors with payout resolve tools and a paginated activation audit ledger.
 
 ---
 
@@ -18,8 +30,8 @@ Massar Academy is an Arabic-first learning platform. The design serves student p
 
 ### Brand Names
 
-- Arabic: **مسار أكاديمي**
-- English: **Massar Academy**
+- Arabic: **منصة مسار**
+- English: **Massar Platform**
 - Short name in product copy: **مسار**
 
 ### Core Idea

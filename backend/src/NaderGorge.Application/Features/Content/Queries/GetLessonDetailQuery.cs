@@ -8,9 +8,9 @@ namespace NaderGorge.Application.Features.Content.Queries;
 public record GetLessonDetailQuery(Guid LessonId, Guid UserId) : IRequest<ApiResponse<LessonDetailDto>>;
 
 public record LessonDetailDto(
-    Guid Id, 
-    string Title, 
-    string Summary, 
+    Guid Id,
+    string Title,
+    string Summary,
     Guid PackageId,
     Guid? ExamId,
     LessonHomeworkDto? Homework,
@@ -27,18 +27,18 @@ public record LessonHomeworkQuestionDto(Guid Id, string Text, int Order, int Max
 
 public record VideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
 public record VideoDto(
-    Guid Id, 
-    string Title, 
-    string Provider, 
-    int Order, 
-    int Limit, 
-    int Watched, 
-    bool IsLocked, 
-    int WatchedSeconds, 
-    DateTime? LastWatchedAt, 
-    string? SubtitleUrl, 
-    bool IsProcessingAI, 
-    bool IsProcessingMindmaps, 
+    Guid Id,
+    string Title,
+    string Provider,
+    int Order,
+    int Limit,
+    int Watched,
+    bool IsLocked,
+    int WatchedSeconds,
+    DateTime? LastWatchedAt,
+    string? SubtitleUrl,
+    bool IsProcessingAI,
+    bool IsProcessingMindmaps,
     Guid? ExamId,
     bool ExamPassed,
     bool IsExamLocked,
@@ -91,7 +91,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 .Where(s => s.TermId == lesson.ContentSection.TermId && s.Order < lesson.ContentSection.Order)
                 .OrderByDescending(s => s.Order)
                 .FirstOrDefaultAsync(ct);
-                
+
             if (previousSection != null)
             {
                 previousLesson = await _db.Lessons
@@ -118,7 +118,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     lockedReason = $"يجب إتمام واجب '{prevHomework.Title}' التابع للحصة '{previousLesson.Title}' أولاً.";
                     blockingHomeworkLessonId = previousLesson.Id;
                 }
-                else if (submission.Status != NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded && 
+                else if (submission.Status != NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded &&
                          submission.OverallScore < (prevHomework.PassingScoreThreshold ?? 0))
                 {
                     isLocked = true;
@@ -137,7 +137,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             if (!isLocked && previousLesson.ExamId.HasValue)
             {
                 var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
-                
+
                 if (exam != null && exam.IsMandatory)
                 {
                     var passedExam = await _db.StudentExamAttempts
@@ -185,12 +185,12 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             bool isExamLocked = anyPrecedingExamNotPassed;
 
             videoDtos.Add(new VideoDto(
-                v.Id, 
-                v.Title, 
-                v.Provider, 
-                v.Order, 
-                watchEvent?.CustomMaxWatchCount ?? v.MaxWatchCount, 
-                watchEvent?.WatchCount ?? 0, 
+                v.Id,
+                v.Title,
+                v.Provider,
+                v.Order,
+                watchEvent?.CustomMaxWatchCount ?? v.MaxWatchCount,
+                watchEvent?.WatchCount ?? 0,
                 watchEvent?.IsLocked ?? false,
                 watchEvent?.TimeWatchedInSeconds ?? 0,
                 watchEvent?.UpdatedAt,
@@ -214,7 +214,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         var hw = await _db.Homeworks
             .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
-            
+
         LessonHomeworkDto? homeworkDto = null;
         if (hw != null)
         {
@@ -227,11 +227,11 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             {
                 baseQuery = baseQuery.OrderBy(q => q.Order);
             }
-            
-            var hwQuestions = baseQuery.Select(q => 
+
+            var hwQuestions = baseQuery.Select(q =>
                 new LessonHomeworkQuestionDto(q.Id, q.BodyText, q.Order, q.PointsActive)
             ).ToList();
-            
+
             homeworkDto = new LessonHomeworkDto(hw.Id, hw.Title, hw.Description ?? "", hw.IsMandatory, hw.PassingScoreThreshold, hwQuestions);
         }
         var detail = new LessonDetailDto(

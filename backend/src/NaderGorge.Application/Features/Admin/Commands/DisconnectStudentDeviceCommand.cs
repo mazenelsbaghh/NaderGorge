@@ -37,14 +37,14 @@ public class DisconnectStudentDeviceCommandHandler : IRequestHandler<DisconnectS
     public async Task<ApiResponse> Handle(DisconnectStudentDeviceCommand request, CancellationToken cancellationToken)
     {
         var devicesQuery = _context.Devices.Where(d => d.UserId == request.UserId);
-        
+
         if (request.DeviceId.HasValue)
         {
             devicesQuery = devicesQuery.Where(d => d.Id == request.DeviceId.Value);
         }
 
         var devices = await devicesQuery.ToListAsync(cancellationToken);
-        
+
         if (!devices.Any())
             return ApiResponse.Fail("No devices found.");
 

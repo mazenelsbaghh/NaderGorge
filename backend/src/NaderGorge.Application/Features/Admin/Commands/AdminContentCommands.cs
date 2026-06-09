@@ -1,18 +1,25 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CreatePackageCommand(string Name, string Description, decimal Price, Guid? ProgramId) : IRequest<ApiResponse<Guid>>;
+public record CreatePackageCommand(string Name, string Description, decimal Price, Guid? ProgramId, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public CreatePackageCommandHandler(IAppDbContext db) => _db = db;
+    public CreatePackageCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(CreatePackageCommand request, CancellationToken ct)
     {
@@ -29,12 +36,40 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             pId = prog.Id;
         }
 
+        var teacherId = Guid.Empty;
+        if (request.CurrentUserId.HasValue)
+        {
+            var user = await _db.Users
+                .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+                .Include(u => u.TeacherProfile)
+                .FirstOrDefaultAsync(u => u.Id == request.CurrentUserId.Value, ct);
+
+            if (user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher))
+            {
+                if (user.TeacherProfile == null)
+                    return ApiResponse<Guid>.Fail("Teacher profile not onboarded.");
+                teacherId = user.TeacherProfile.Id;
+
+                // Verify the teacher can access the program
+                var canAccessProgram = await _auth.CanAccessProgramAsync(request.CurrentUserId.Value, pId, ct);
+                if (!canAccessProgram)
+                    return ApiResponse<Guid>.Fail("Unauthorized access to this program.");
+            }
+        }
+
+        if (teacherId == Guid.Empty)
+        {
+            var defaultTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
+            teacherId = defaultTeacher?.Id ?? Guid.Parse("b4b82937-293e-48a3-a002-decf9a1efab8");
+        }
+
         var pkg = new Package
         {
             Name = request.Name,
             Description = request.Description,
             Price = request.Price,
-            ProgramId = pId
+            ProgramId = pId,
+            TeacherId = teacherId
         };
         _db.Packages.Add(pkg);
         await _db.SaveChangesAsync(ct);
@@ -43,15 +78,27 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 }
 
 // --- Terms ---
-public record CreateTermCommand(string Title, int Order, Guid PackageId, decimal Price) : IRequest<ApiResponse<Guid>>;
+public record CreateTermCommand(string Title, int Order, Guid PackageId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
-    public CreateTermCommandHandler(IAppDbContext db) => _db = db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public CreateTermCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(CreateTermCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessPackageAsync(request.CurrentUserId.Value, request.PackageId, ct);
+            if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this package.");
+        }
+
         var term = new Term
         {
             Title = request.Title,
@@ -65,15 +112,27 @@ public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiRe
     }
 }
 
-public record UpdateTermCommand(Guid Id, string Title, int Order, decimal Price) : IRequest<ApiResponse>;
+public record UpdateTermCommand(Guid Id, string Title, int Order, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
 
 public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiResponse>
 {
     private readonly IAppDbContext _db;
-    public UpdateTermCommandHandler(IAppDbContext db) => _db = db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public UpdateTermCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse> Handle(UpdateTermCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessTermAsync(request.CurrentUserId.Value, request.Id, ct);
+            if (!canAccess) return ApiResponse.Fail("Unauthorized access to this term.");
+        }
+
         var term = await _db.Terms.FindAsync(new object[] { request.Id }, ct);
         if (term == null) return ApiResponse.Fail("Term not found");
 
@@ -85,15 +144,27 @@ public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiRe
     }
 }
 
-public record DeleteTermCommand(Guid Id) : IRequest<ApiResponse>;
+public record DeleteTermCommand(Guid Id, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
 
 public class DeleteTermCommandHandler : IRequestHandler<DeleteTermCommand, ApiResponse>
 {
     private readonly IAppDbContext _db;
-    public DeleteTermCommandHandler(IAppDbContext db) => _db = db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public DeleteTermCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse> Handle(DeleteTermCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessTermAsync(request.CurrentUserId.Value, request.Id, ct);
+            if (!canAccess) return ApiResponse.Fail("Unauthorized access to this term.");
+        }
+
         var term = await _db.Terms.Include(t => t.Sections).FirstOrDefaultAsync(t => t.Id == request.Id, ct);
         if (term == null) return ApiResponse.Fail("Term not found");
 
@@ -107,16 +178,27 @@ public class DeleteTermCommandHandler : IRequestHandler<DeleteTermCommand, ApiRe
 }
 
 // --- Sections ---
-public record CreateSectionCommand(string Title, int Order, Guid TermId, decimal Price) : IRequest<ApiResponse<Guid>>;
+public record CreateSectionCommand(string Title, int Order, Guid TermId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public CreateSectionCommandHandler(IAppDbContext db) => _db = db;
+    public CreateSectionCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(CreateSectionCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessTermAsync(request.CurrentUserId.Value, request.TermId, ct);
+            if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this term.");
+        }
+
         var sec = new ContentSection
         {
             Title = request.Title,
@@ -130,16 +212,27 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
     }
 }
 
-public record CreateLessonCommand(string Title, string Summary, int Order, Guid SectionId, Guid? ExamId, decimal Price) : IRequest<ApiResponse<Guid>>;
+public record CreateLessonCommand(string Title, string Summary, int Order, Guid SectionId, Guid? ExamId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public CreateLessonCommandHandler(IAppDbContext db) => _db = db;
+    public CreateLessonCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(CreateLessonCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessSectionAsync(request.CurrentUserId.Value, request.SectionId, ct);
+            if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this section.");
+        }
+
         var lesson = new Lesson
         {
             Title = request.Title,
@@ -155,21 +248,29 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
     }
 }
 
-public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId) : IRequest<ApiResponse<Guid>>;
+public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
     private readonly IEnumerable<IVideoProvider> _providers;
+    private readonly TeacherAuthorizationService _auth;
 
-    public CreateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers)
+    public CreateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers, TeacherAuthorizationService auth)
     {
         _db = db;
         _providers = providers;
+        _auth = auth;
     }
 
     public async Task<ApiResponse<Guid>> Handle(CreateVideoCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.LessonId, ct);
+            if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this lesson.");
+        }
+
         if (!string.Equals(request.Provider, "youtube", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(request.Provider, "vk", StringComparison.OrdinalIgnoreCase))
         {
@@ -198,29 +299,37 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
     }
 }
 
-public record UpdateVideoCommand(Guid Id, string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit) : IRequest<ApiResponse>;
+public record UpdateVideoCommand(Guid Id, string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
 
 public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
 {
     private readonly IAppDbContext _db;
     private readonly IEnumerable<IVideoProvider> _providers;
+    private readonly TeacherAuthorizationService _auth;
 
-    public UpdateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers)
+    public UpdateVideoCommandHandler(IAppDbContext db, IEnumerable<IVideoProvider> providers, TeacherAuthorizationService auth)
     {
         _db = db;
         _providers = providers;
+        _auth = auth;
     }
 
     public async Task<ApiResponse> Handle(UpdateVideoCommand request, CancellationToken ct)
     {
+        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.Id, ct);
+        if (video == null) return ApiResponse.Fail("Video not found");
+
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, video.LessonId, ct);
+            if (!canAccess) return ApiResponse.Fail("Unauthorized access to this video.");
+        }
+
         if (!string.Equals(request.Provider, "youtube", StringComparison.OrdinalIgnoreCase) &&
             !string.Equals(request.Provider, "vk", StringComparison.OrdinalIgnoreCase))
         {
             return ApiResponse.Fail("Invalid provider. Supported: youtube, vk");
         }
-
-        var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.Id, ct);
-        if (video == null) return ApiResponse.Fail("Video not found");
 
         var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(request.Provider, StringComparison.OrdinalIgnoreCase));
         var extractedId = request.UrlOrEmbedCode;
@@ -240,18 +349,29 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
     }
 }
 
-public record DeleteVideoCommand(Guid Id) : IRequest<ApiResponse>;
+public record DeleteVideoCommand(Guid Id, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
 
 public class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoCommand, ApiResponse>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public DeleteVideoCommandHandler(IAppDbContext db) => _db = db;
+    public DeleteVideoCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse> Handle(DeleteVideoCommand request, CancellationToken ct)
     {
         var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.Id, ct);
         if (video == null) return ApiResponse.Fail("Video not found");
+
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, video.LessonId, ct);
+            if (!canAccess) return ApiResponse.Fail("Unauthorized access to this video.");
+        }
 
         _db.LessonVideos.Remove(video);
         await _db.SaveChangesAsync(ct);
@@ -267,27 +387,39 @@ public record AttachHomeworkCommand(
     bool IsRandomized,
     int RequiredPointsToPass,
     decimal TotalScore,
-    List<AttachHomeworkQuestionDto> Questions) : IRequest<ApiResponse<Guid>>;
+    List<AttachHomeworkQuestionDto> Questions,
+    Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public record AttachHomeworkQuestionDto(string Text, int Order, int MaxPoints);
 
 public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public AttachHomeworkCommandHandler(IAppDbContext db) => _db = db;
+    public AttachHomeworkCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(AttachHomeworkCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.LessonId, ct);
+            if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this lesson.");
+        }
+
         var lesson = await _db.Lessons
             .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
-            
+
         if (lesson == null) return ApiResponse<Guid>.Fail("Lesson not found");
 
         var hw = await _db.Homeworks
             .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
-            
+
         if (hw == null)
         {
             hw = new NaderGorge.Domain.Entities.Homework.Homework
@@ -330,16 +462,27 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
     }
 }
 
-public record CreateLessonResourceCommand(Guid LessonId, string Title, string FileUrl, string ResourceType) : IRequest<ApiResponse<Guid>>;
+public record CreateLessonResourceCommand(Guid LessonId, string Title, string FileUrl, string ResourceType, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateLessonResourceCommandHandler : IRequestHandler<CreateLessonResourceCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public CreateLessonResourceCommandHandler(IAppDbContext db) => _db = db;
+    public CreateLessonResourceCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse<Guid>> Handle(CreateLessonResourceCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.LessonId, ct);
+            if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this lesson.");
+        }
+
         var resource = new LessonResource
         {
             LessonId = request.LessonId,
@@ -355,16 +498,33 @@ public class CreateLessonResourceCommandHandler : IRequestHandler<CreateLessonRe
     }
 }
 
-public record LinkLessonExamCommand(Guid LessonId, Guid? ExamId) : IRequest<ApiResponse>;
+public record LinkLessonExamCommand(Guid LessonId, Guid? ExamId, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
 
 public class LinkLessonExamCommandHandler : IRequestHandler<LinkLessonExamCommand, ApiResponse>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public LinkLessonExamCommandHandler(IAppDbContext db) => _db = db;
+    public LinkLessonExamCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
 
     public async Task<ApiResponse> Handle(LinkLessonExamCommand request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccessLesson = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.LessonId, ct);
+            if (!canAccessLesson) return ApiResponse.Fail("Unauthorized access to this lesson.");
+
+            if (request.ExamId.HasValue)
+            {
+                var canAccessExam = await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId.Value, ct);
+                if (!canAccessExam) return ApiResponse.Fail("Unauthorized access to this exam.");
+            }
+        }
+
         var lesson = await _db.Lessons.FindAsync(new object[] { request.LessonId }, ct);
         if (lesson == null) return ApiResponse.Fail("Lesson not found");
 
