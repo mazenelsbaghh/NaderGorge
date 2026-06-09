@@ -26,6 +26,44 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface TeacherDashboardStatsDto {
+  activeStudentsCount: number;
+  packagesCount: number;
+  examsCount: number;
+  pendingEssaysCount: number;
+}
+
+export interface TeacherStudentDto {
+  id: string;
+  fullName: string;
+  phoneNumber: string;
+  activatedPackageName: string;
+  activatedAt: string;
+}
+
+export interface PendingEssayDto {
+  id: string;
+  studentName: string;
+  questionText: string;
+  examTitle: string;
+  submittedAt: string;
+  status: string;
+  answerText: string;
+  audioUrl?: string;
+  aiInitialScore?: number;
+  aiFeedback?: string;
+  maxPoints: number;
+}
+
+export interface TeacherProfileDto {
+  id: string;
+  userId: string;
+  bio: string;
+  specialization: string;
+  profileImageUrl?: string;
+  contactInfo: string;
+}
+
 export const teacherService = {
   // Subjects CRUD
   getSubjects: () =>
@@ -66,4 +104,18 @@ export const teacherService = {
     }
   ) =>
     apiClient.put<ApiResponse<void>>(`/admin/teachers/${id}`, data).then((res) => res.data),
+
+  // Teacher Workspace Surface
+  getDashboardStats: () =>
+    apiClient.get<ApiResponse<TeacherDashboardStatsDto>>('/teacher/dashboard/stats').then((res) => res.data),
+  getStudents: () =>
+    apiClient.get<ApiResponse<TeacherStudentDto[]>>('/teacher/students').then((res) => res.data),
+  getEssays: () =>
+    apiClient.get<ApiResponse<PendingEssayDto[]>>('/teacher/essays').then((res) => res.data),
+  gradeEssay: (id: string, data: { score: number; feedback: string }) =>
+    apiClient.post<ApiResponse<void>>(`/teacher/essays/${id}/grade`, data).then((res) => res.data),
+  getMyProfile: () =>
+    apiClient.get<ApiResponse<TeacherProfileDto>>('/teacher/profile').then((res) => res.data),
+  updateMyProfile: (data: { bio: string; specialization: string; contactInfo: string; profileImageUrl?: string }) =>
+    apiClient.put<ApiResponse<void>>('/teacher/profile', data).then((res) => res.data),
 };

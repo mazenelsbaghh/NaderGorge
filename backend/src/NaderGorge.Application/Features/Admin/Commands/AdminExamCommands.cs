@@ -135,8 +135,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
 
         if (teacherId == Guid.Empty)
         {
-            var defaultTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
-            teacherId = defaultTeacher?.Id ?? Guid.Parse("b4b82937-293e-48a3-a002-decf9a1efab8");
+            return ApiResponse<Guid>.Fail("Could not resolve teacher context for the exam.");
         }
 
         var subjectId = Guid.Empty;
@@ -158,7 +157,15 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
         if (subjectId == Guid.Empty)
         {
             var firstSubject = await _db.Subjects.FirstOrDefaultAsync(ct);
-            subjectId = firstSubject?.Id ?? Guid.Parse("d9b8a342-990a-4286-905e-fdebb2e3895e");
+            if (firstSubject != null)
+            {
+                subjectId = firstSubject.Id;
+            }
+        }
+
+        if (subjectId == Guid.Empty)
+        {
+            return ApiResponse<Guid>.Fail("Could not resolve subject context for the exam.");
         }
 
         var exam = new Exam
@@ -348,7 +355,15 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
         if (subjectId == Guid.Empty)
         {
             var firstSubject = await _db.Subjects.FirstOrDefaultAsync(ct);
-            subjectId = firstSubject?.Id ?? Guid.Parse("d9b8a342-990a-4286-905e-fdebb2e3895e");
+            if (firstSubject != null)
+            {
+                subjectId = firstSubject.Id;
+            }
+        }
+
+        if (subjectId == Guid.Empty)
+        {
+            return ApiResponse<Guid>.Fail("Could not resolve subject context for adding questions.");
         }
 
         foreach (var q in request.Questions)

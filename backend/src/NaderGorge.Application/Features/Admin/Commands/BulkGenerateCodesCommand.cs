@@ -147,8 +147,16 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
 
             if (groupTeacherId == Guid.Empty)
             {
-                var defaultTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
-                groupTeacherId = defaultTeacher?.Id ?? Guid.Parse("b4b82937-293e-48a3-a002-decf9a1efab8");
+                var firstTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
+                if (firstTeacher != null)
+                {
+                    groupTeacherId = firstTeacher.Id;
+                }
+            }
+
+            if (groupTeacherId == Guid.Empty)
+            {
+                return ApiResponse<BulkGenerateCodesResponse>.Fail("Could not resolve teacher context for the access codes.");
             }
         }
 

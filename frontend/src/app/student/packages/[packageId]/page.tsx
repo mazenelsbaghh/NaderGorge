@@ -189,14 +189,49 @@ export default function PackageProfilePage() {
       </div>
 
       {/* ── Info strip + CTA ── */}
-      <motion.div variants={fadeUp} className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="max-w-2xl">
-          <p className="text-sm leading-7 text-[var(--admin-muted)] sm:text-base">
-            {pkg?.description || "تفاصيل هذه الباقة غير متوفرة حالياً."}
-          </p>
+      <motion.div variants={fadeUp} className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex-1 max-w-4xl">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {/* Description */}
+            <div className="md:col-span-2">
+              <p className="text-sm leading-7 text-[var(--admin-muted)] sm:text-base">
+                {pkg?.description || "تفاصيل هذه الباقة غير متوفرة حالياً."}
+              </p>
+            </div>
+            {/* Teacher Card */}
+            {pkg?.teacherName && (
+              <div className="rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/60 p-5 shadow-sm backdrop-blur-md flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  {pkg.teacherProfileImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={pkg.teacherProfileImageUrl}
+                      alt={pkg.teacherName}
+                      className="h-12 w-12 rounded-xl object-cover border border-[var(--admin-border)] shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-base">
+                      {pkg.teacherName.charAt(0)}
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="font-black text-sm text-[var(--admin-text)]">أ. {pkg.teacherName}</h4>
+                    {pkg.teacherSpecialization && (
+                      <p className="text-[11px] text-[var(--admin-primary)] font-black mt-0.5">{pkg.teacherSpecialization}</p>
+                    )}
+                  </div>
+                </div>
+                {pkg.teacherBio && (
+                  <p className="text-[11px] text-[var(--admin-muted)] leading-relaxed border-t border-[var(--admin-border)]/10 pt-2 font-medium">
+                    {pkg.teacherBio}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         {!isEnrolled && (
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:self-start lg:mt-0 mt-4">
             <button
               type="button"
               onClick={() => setIsPurchaseModalOpen(true)}

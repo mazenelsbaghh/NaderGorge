@@ -198,6 +198,9 @@ public class TeacherIsolationTests
         var (userA, profileA) = await OnboardTeacherAsync(db, "Teacher A", "01011111111");
         var (userB, profileB) = await OnboardTeacherAsync(db, "Teacher B", "01022222222");
 
+        var subject = new Subject { Id = Guid.NewGuid(), Name = "Math" };
+        db.Subjects.Add(subject);
+
         var examA = new Exam { Id = Guid.NewGuid(), Title = "Exam A", CreatedByTeacherId = profileA.Id };
         db.Exams.Add(examA);
         await db.SaveChangesAsync();

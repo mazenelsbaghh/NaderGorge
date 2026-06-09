@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 216,
-  "frontendCallCount": 213,
+  "endpointCount": 222,
+  "frontendCallCount": 219,
   "missingFrontendRouteCount": 0,
-  "digest": "18fd9d2efc2e78ae8d9c74b5077cda3574d8439e495bc8360bb15b1df790d713",
+  "digest": "558fae396f8ba3c4e0dad04f9def3eae812f5c4cde5a988bad699880c3e07c26",
   "endpoints": [
     {
       "controller": "AdminCommunityController",
@@ -1509,7 +1509,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
-        "line": 78
+        "line": 84
       }
     },
     {
@@ -1521,7 +1521,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/AssistantController.cs",
-        "line": 67
+        "line": 73
       }
     },
     {
@@ -2458,6 +2458,78 @@
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
         "line": 64
+      }
+    },
+    {
+      "controller": "TeacherController",
+      "action": "GetDashboardStats",
+      "method": "GET",
+      "path": "/api/teacher/dashboard/stats",
+      "routeTemplate": "/api/teacher/dashboard/stats",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
+        "line": 24
+      }
+    },
+    {
+      "controller": "TeacherController",
+      "action": "GetEssays",
+      "method": "GET",
+      "path": "/api/teacher/essays",
+      "routeTemplate": "/api/teacher/essays",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
+        "line": 38
+      }
+    },
+    {
+      "controller": "TeacherController",
+      "action": "GradeEssay",
+      "method": "POST",
+      "path": "/api/teacher/essays/{id}/grade",
+      "routeTemplate": "/api/teacher/essays/{id}/grade",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
+        "line": 45
+      }
+    },
+    {
+      "controller": "TeacherController",
+      "action": "GetProfile",
+      "method": "GET",
+      "path": "/api/teacher/profile",
+      "routeTemplate": "/api/teacher/profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
+        "line": 52
+      }
+    },
+    {
+      "controller": "TeacherController",
+      "action": "UpdateProfile",
+      "method": "PUT",
+      "path": "/api/teacher/profile",
+      "routeTemplate": "/api/teacher/profile",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
+        "line": 59
+      }
+    },
+    {
+      "controller": "TeacherController",
+      "action": "GetStudents",
+      "method": "GET",
+      "path": "/api/teacher/students",
+      "routeTemplate": "/api/teacher/students",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
+        "line": 31
       }
     },
     {
@@ -4465,7 +4537,7 @@
       "rawExpression": "'/content/packages'",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 186
+        "line": 188
       }
     },
     {
@@ -4479,7 +4551,7 @@
       "rawExpression": "`/content/packages/${packageId}/terms`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 200
+        "line": 202
       }
     },
     {
@@ -4493,7 +4565,7 @@
       "rawExpression": "`/content/packages/${packageId}/code-page`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 201
+        "line": 203
       }
     },
     {
@@ -4507,7 +4579,7 @@
       "rawExpression": "`/content/terms/${termId}/sections`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 202
+        "line": 204
       }
     },
     {
@@ -4521,7 +4593,7 @@
       "rawExpression": "`/content/sections/${sectionId}/lessons`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 203
+        "line": 205
       }
     },
     {
@@ -4535,7 +4607,7 @@
       "rawExpression": "`/content/lessons/${lessonId}`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 204
+        "line": 206
       }
     },
     {
@@ -4549,7 +4621,7 @@
       "rawExpression": "`/content/lessons/${lessonId}/comments`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 205
+        "line": 207
       }
     },
     {
@@ -4563,7 +4635,7 @@
       "rawExpression": "`/content/lessons/${lessonId}/comments/mine`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 206
+        "line": 208
       }
     },
     {
@@ -4579,7 +4651,7 @@
       "rawExpression": "`/content/lessons/${lessonId}/comments`",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 208
+        "line": 210
       }
     },
     {
@@ -4597,7 +4669,7 @@
       "rawExpression": "'/tracking/video-event'",
       "source": {
         "file": "frontend/src/services/content-service.ts",
-        "line": 210
+        "line": 212
       }
     },
     {
@@ -5498,6 +5570,104 @@
       }
     },
     {
+      "method": "PUT",
+      "path": "/api/admin/teachers/{id}",
+      "routeTemplate": "/api/admin/teachers/{id}",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "`/admin/teachers/${id}`",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 106
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teacher/dashboard/stats",
+      "routeTemplate": "/api/teacher/dashboard/stats",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/dashboard/stats'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 110
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teacher/students",
+      "routeTemplate": "/api/teacher/students",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/students'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 112
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teacher/essays",
+      "routeTemplate": "/api/teacher/essays",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/essays'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 114
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/teacher/essays/{id}/grade",
+      "routeTemplate": "/api/teacher/essays/{id}/grade",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "`/teacher/essays/${id}/grade`",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 116
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/teacher/profile",
+      "routeTemplate": "/api/teacher/profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/profile'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 118
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/teacher/profile",
+      "routeTemplate": "/api/teacher/profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "data",
+      "payloadFields": [],
+      "rawExpression": "'/teacher/profile'",
+      "source": {
+        "file": "frontend/src/services/teacher-service.ts",
+        "line": 120
+      }
+    },
+    {
       "method": "GET",
       "path": "/api/admin/subjects",
       "routeTemplate": "/api/admin/subjects",
@@ -5508,7 +5678,7 @@
       "rawExpression": "'/admin/subjects'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 32
+        "line": 70
       }
     },
     {
@@ -5522,7 +5692,7 @@
       "rawExpression": "`/admin/subjects/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 34
+        "line": 72
       }
     },
     {
@@ -5536,7 +5706,7 @@
       "rawExpression": "'/admin/subjects'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 36
+        "line": 74
       }
     },
     {
@@ -5550,7 +5720,7 @@
       "rawExpression": "`/admin/subjects/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 38
+        "line": 76
       }
     },
     {
@@ -5564,7 +5734,7 @@
       "rawExpression": "`/admin/subjects/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 40
+        "line": 78
       }
     },
     {
@@ -5578,7 +5748,7 @@
       "rawExpression": "'/admin/teachers'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 44
+        "line": 82
       }
     },
     {
@@ -5592,7 +5762,7 @@
       "rawExpression": "`/admin/teachers/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 46
+        "line": 84
       }
     },
     {
@@ -5606,21 +5776,7 @@
       "rawExpression": "'/admin/teachers'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 56
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/api/admin/teachers/{id}",
-      "routeTemplate": "/api/admin/teachers/{id}",
-      "origin": "backend-api",
-      "queryParameters": [],
-      "payloadHint": "data",
-      "payloadFields": [],
-      "rawExpression": "`/admin/teachers/${id}`",
-      "source": {
-        "file": "frontend/src/services/teacher-service.ts",
-        "line": 68
+        "line": 94
       }
     },
     {

@@ -19,7 +19,9 @@ public record PackageDto(
     Guid SubjectId,
     string TeacherName,
     string? TeacherProfileImageUrl,
-    string SubjectName
+    string SubjectName,
+    string? TeacherBio,
+    string? TeacherSpecialization
 );
 
 public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResponse<List<PackageDto>>>
@@ -73,7 +75,9 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.Program != null ? pk.Program.SubjectId : Guid.Empty,
                 pk.Teacher?.User?.FullName ?? "Unknown",
                 pk.Teacher?.ProfileImageUrl,
-                pk.Program?.Subject?.Name ?? "Unknown"
+                pk.Program?.Subject?.Name ?? "Unknown",
+                pk.Teacher?.Bio,
+                pk.Teacher?.Specialization
             ));
         }
 

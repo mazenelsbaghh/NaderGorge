@@ -89,5 +89,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - [101-full-frontend-api-contract-audit](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/101-full-frontend-api-contract-audit/plan.md)
 - [106-platform-guards-and-permissions](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/106-platform-guards-and-permissions/plan.md)
 - [107-assistant-surface-and-tasks](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/107-assistant-surface-and-tasks/plan.md)
+- [108-teacher-binding-and-completion](file:///Users/mazenelsbagh/mazen%20mac/apps/nader%20gorge/specs/108-teacher-binding-and-completion/plan.md)
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

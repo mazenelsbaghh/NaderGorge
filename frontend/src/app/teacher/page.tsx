@@ -1,15 +1,30 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, KeyRound, Shield, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, KeyRound, Shield, Sparkles, Users, GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { AdminStatCard } from "@/components/admin";
+import { teacherService, TeacherDashboardStatsDto } from "@/services/teacher-service";
 
 export default function TeacherDashboardPage() {
   const { user } = useAuthStore();
+  const [stats, setStats] = useState<TeacherDashboardStatsDto | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    teacherService.getDashboardStats()
+      .then((res) => {
+        if (res.success) {
+          setStats(res.data);
+        }
+      })
+      .catch((err) => console.error("Error fetching stats:", err))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
-    <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]">
+    <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]" dir="rtl">
       {/* Welcome Section */}
       <div className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
@@ -30,27 +45,34 @@ export default function TeacherDashboardPage() {
       </div>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <AdminStatCard
           variant="light"
-          icon={BookOpen}
-          label="الباقات الخاصة بك"
-          value="إدارة"
-          subtitle="الباقات والدروس والفيديوهات"
+          icon={Users}
+          label="الطلاب المشتركون"
+          value={loading ? "..." : stats?.activeStudentsCount.toString() ?? "0"}
+          subtitle="عدد الطلاب النشطين"
         />
         <AdminStatCard
           variant="accent"
-          icon={KeyRound}
-          label="أكواد الوصول"
-          value="توليد"
-          subtitle="توليد وتصدير أكواد الاشتراك"
+          icon={BookOpen}
+          label="الباقات الدراسية"
+          value={loading ? "..." : stats?.packagesCount.toString() ?? "0"}
+          subtitle="إجمالي الباقات النشطة"
+        />
+        <AdminStatCard
+          variant="light"
+          icon={Shield}
+          label="الامتحانات"
+          value={loading ? "..." : stats?.examsCount.toString() ?? "0"}
+          subtitle="عدد الامتحانات المنشأة"
         />
         <AdminStatCard
           variant="muted"
-          icon={Shield}
-          label="بنك الأسئلة"
-          value="الامتحانات"
-          subtitle="إنشاء الأسئلة وتصحيح المقالي"
+          icon={GraduationCap}
+          label="إجابات معلقة"
+          value={loading ? "..." : stats?.pendingEssaysCount.toString() ?? "0"}
+          subtitle="بانتظار تصحيح المعلم"
         />
       </div>
 

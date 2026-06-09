@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { BookOpen, KeyRound, LayoutDashboard, Shield, MessageSquare, Coins } from "lucide-react";
+import { BookOpen, KeyRound, LayoutDashboard, Shield, MessageSquare, Coins, Users, GraduationCap, User } from "lucide-react";
 
 import { TeacherGuard } from "@/components/layout/TeacherGuard";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -29,9 +29,24 @@ const teacherMenuItems = [
     icon: <Shield className="h-4 w-4" />,
   },
   {
+    label: "تصحيح المقالي",
+    href: "/teacher/essays",
+    icon: <GraduationCap className="h-4 w-4" />,
+  },
+  {
+    label: "قائمة الطلاب",
+    href: "/teacher/students",
+    icon: <Users className="h-4 w-4" />,
+  },
+  {
     label: "المالية والأرباح",
     href: "/teacher/finance",
     icon: <Coins className="h-4 w-4" />,
+  },
+  {
+    label: "الملف الشخصي",
+    href: "/teacher/profile",
+    icon: <User className="h-4 w-4" />,
   },
   {
     label: "التواصل الداخلي",
