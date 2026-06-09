@@ -64,6 +64,11 @@ export interface AdminVacationDto extends VacationDto {
   employeePhone: string;
 }
 
+export interface MyAttendanceStatusDto {
+  hasProfile: boolean;
+  logs: AttendanceLogDto[];
+}
+
 export const hrService = {
   // US1: Employee Profile Setup & Management
   listEmployees: async (search?: string): Promise<EmployeeDto[]> => {
@@ -101,10 +106,10 @@ export const hrService = {
     return res.data;
   },
 
-  getMyAttendance: async (): Promise<AttendanceLogDto[]> => {
+  getMyAttendance: async (): Promise<MyAttendanceStatusDto> => {
     const res =
-      await apiClient.get<ApiResponse<AttendanceLogDto[]>>('/hr/attendance/my');
-    return res.data?.data ?? [];
+      await apiClient.get<ApiResponse<MyAttendanceStatusDto>>('/hr/attendance/my');
+    return res.data?.data ?? { hasProfile: false, logs: [] };
   },
 
   getAttendance: async (

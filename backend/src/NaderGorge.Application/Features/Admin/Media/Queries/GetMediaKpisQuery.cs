@@ -50,17 +50,30 @@ public class GetMediaKpisQueryHandler : IRequestHandler<GetMediaKpisQuery, ApiRe
         }
 
         // Editor Leaderboard
-        var editorStats = await _db.MediaProductionPipelines
+        var stats = await _db.MediaProductionPipelines
             .Where(mp => mp.AssignedAgentId != null)
-            .GroupBy(mp => new { mp.AssignedAgentId, Name = mp.AssignedAgent != null ? mp.AssignedAgent.FullName : "محرر غير معروف" })
-            .Select(g => new EditorKpiDto(
-                g.Key.AssignedAgentId!.Value,
-                g.Key.Name,
-                g.Count(),
-                g.Sum(mp => mp.EditingErrorCount)
-            ))
-            .OrderByDescending(e => e.TotalProduced)
+            .GroupBy(mp => mp.AssignedAgentId)
+            .Select(g => new {
+                EditorId = g.Key!.Value,
+                TotalProduced = g.Count(),
+                TotalErrors = g.Sum(mp => mp.EditingErrorCount)
+            })
             .ToListAsync(ct);
+
+        var editorIds = stats.Select(s => s.EditorId).ToList();
+        var editors = await _db.Users
+            .Where(u => editorIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, ct);
+
+        var editorStats = stats.Select(s => new EditorKpiDto(
+            s.EditorId,
+            editors.TryGetValue(s.EditorId, out var name) ? name : "محرر غير معروف",
+            s.TotalProduced,
+            s.TotalErrors
+        ))
+        .OrderByDescending(e => e.TotalProduced)
+        .ToList();
 
         var response = new MediaKpiResponse(totalPublished, averageEditingDays, editorStats);
         return ApiResponse<MediaKpiResponse>.Ok(response);

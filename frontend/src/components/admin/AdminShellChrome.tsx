@@ -26,6 +26,7 @@ import {
   GraduationCap,
   Coins,
   Users,
+  ChevronDown,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -39,6 +40,9 @@ import { useHasPermission } from '@/hooks/useHasPermission';
 type AdminShellRoute =
   | '/admin'
   | '/admin/users'
+  | '/admin/students'
+  | '/admin/assistants'
+  | '/admin/admins'
   | '/admin/teachers'
   | '/admin/content'
   | '/admin/subjects'
@@ -85,8 +89,20 @@ const navItems: Array<{
   permission?: string;
 }> = [
   {
-    href: '/admin/users',
-    label: 'المستخدمين',
+    href: '/admin/students',
+    label: 'الطلاب',
+    icon: Users,
+    permission: 'users.manage',
+  },
+  {
+    href: '/admin/assistants',
+    label: 'المساعدين',
+    icon: Briefcase,
+    permission: 'users.manage',
+  },
+  {
+    href: '/admin/admins',
+    label: 'المديرين',
     icon: UserCog,
     permission: 'users.manage',
   },
@@ -193,6 +209,45 @@ const navItems: Array<{
   },
 ];
 
+const GROUP_CONFIG = [
+  {
+    id: 'users',
+    label: 'شؤون الأعضاء',
+    icon: Users,
+    hrefs: ['/admin/students', '/admin/teachers', '/admin/assistants', '/admin/admins'],
+  },
+  {
+    id: 'academic',
+    label: 'التعليم والمحتوى',
+    icon: Library,
+    hrefs: ['/admin/subjects', '/admin/content', '/admin/questions', '/admin/forms'],
+  },
+  {
+    id: 'operations',
+    label: 'العمليات والتحكم',
+    icon: Wrench,
+    hrefs: ['/admin/watch-requests', '/admin/overrides', '/admin/codes', '/admin/community', '/admin/media'],
+  },
+  {
+    id: 'admin_hr_finance',
+    label: 'الإدارة والمالية',
+    icon: Briefcase,
+    hrefs: ['/admin/operations', '/admin/hr', '/admin/finance'],
+  },
+  {
+    id: 'crm_chat',
+    label: 'الاتصال والتواصل',
+    icon: PhoneCall,
+    hrefs: ['/admin/crm', '/assistant/crm', '/admin/chat'],
+  },
+  {
+    id: 'reports',
+    label: 'التقارير والمراقبة',
+    icon: BarChart3,
+    hrefs: ['/admin/ai-monitor', '/admin/reports'],
+  },
+];
+
 export function AdminShellChrome({
   activePath,
   sectionLabel,
@@ -211,6 +266,22 @@ export function AdminShellChrome({
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
   const [showBackdrop, setShowBackdrop] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    GROUP_CONFIG.forEach((group) => {
+      if (group.hrefs.includes(activePath)) {
+        initial[group.id] = true;
+      }
+    });
+    return initial;
+  });
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
 
   useRootOverscrollBackground();
 
@@ -230,6 +301,14 @@ export function AdminShellChrome({
   const filteredNavItems = resolvedNavItems.filter((item) =>
     hasPermission(item.permission)
   );
+
+  const navGroups = GROUP_CONFIG.map((group) => {
+    const items = filteredNavItems.filter((item) => group.hrefs.includes(item.href));
+    return {
+      ...group,
+      items,
+    };
+  }).filter((group) => group.items.length > 0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -306,29 +385,66 @@ export function AdminShellChrome({
               </span>
             </Link>
 
-            {filteredNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.href === activePath;
+            {navGroups.map((group) => {
+              const GroupIcon = group.icon;
+              const isExpanded = !!expandedGroups[group.id];
+              const isGroupActive = group.hrefs.includes(activePath);
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  prefetch={false}
-                  className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                      : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
-                  }`}
-                  title={item.label}
-                  aria-label={item.label}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-                    {item.label}
-                  </span>
-                </Link>
+                <div key={group.id} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    className={`flex h-12 w-full items-center justify-between pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 outline-none ${
+                      isGroupActive
+                        ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold border border-[var(--admin-primary)]/10 shadow-[0_2px_8px_var(--admin-shadow)]'
+                        : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                    }`}
+                    title={group.label}
+                  >
+                    <div className="flex items-center gap-3">
+                      <GroupIcon className="h-5 w-5 flex-shrink-0" />
+                      <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                        {group.label}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`hidden group-hover/sidebar:block h-4 w-4 transition-transform duration-200 flex-shrink-0 ${
+                        isExpanded ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {isExpanded && (
+                    <div className="space-y-1 mt-1 transition-all duration-300 pr-3 group-hover/sidebar:pr-5">
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = item.href === activePath;
+
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            prefetch={false}
+                            className={`flex h-10 items-center justify-start pr-[14px] pl-4 rounded-full transition-all duration-300 gap-3 ${
+                              isActive
+                                ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_4px_12px_var(--admin-shadow)]'
+                                : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                            }`}
+                            title={item.label}
+                            aria-label={item.label}
+                            aria-current={isActive ? 'page' : undefined}
+                          >
+                            <Icon className="h-4.5 w-4.5 flex-shrink-0" />
+                            <span className="hidden group-hover/sidebar:block text-xs font-bold truncate whitespace-nowrap">
+                              {item.label}
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>

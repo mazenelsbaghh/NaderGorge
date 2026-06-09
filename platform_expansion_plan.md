@@ -1222,3 +1222,132 @@ node scripts/verify-surface-separation.mjs
 لو Phase فشلت في اختبار Docker أو manual QA، لا يتم تعديل المرحلة التالية لإخفاء
 الفشل. يتم فتح bug/fix داخل نفس Phase، إعادة تشغيل الاختبارات، ثم إعادة Docker
 gate من البداية.
+
+---
+
+## تقرير مراجعة التنفيذ - 2026-06-09
+
+### قرار المراجعة
+
+الحالة العامة: **Not Ready / غير مقفولة للإطلاق الكامل**.
+
+السبب: أغلب backend/frontend/Docker surface core موجودة وتنجح في build/tests،
+لكن تحويل المنصة لمنصة متعددة المدرسين ما زال **جزئيا** بسبب أن بعض شاشات
+الإنشاء في الواجهة لا تجبر المستخدم على اختيار المدرس/المادة وقت الإضافة، بل
+تعتمد على default/first teacher في backend. كذلك Full Regression/Launch Drill
+لم يكتمل بعد لأنه لم يتم تشغيل E2E كامل ولا cold-start migration drill ولا manual
+QA لكل الأدوار.
+
+
+
+### أوامر التحقق التي تم تشغيلها
+
+- `dotnet build backend/NaderGorge.sln`: pass.
+- `dotnet test backend/NaderGorge.sln --no-build`: pass، عدد الاختبارات 77/77.
+- `cd frontend && npm run lint`: pass.
+- `cd frontend && npm run build`: pass.
+- `cd worker && npm run build`: pass.
+- `node scripts/generate-endpoint-inventory.mjs --check`: pass، inventory current
+  وفيه 215 backend endpoints و212 frontend calls.
+- `node scripts/verify-surface-separation.mjs --static-only`: pass.
+- `docker compose config -q`: pass.
+- `node scripts/verify-surface-separation.mjs`: pass على الخدمات الشغالة حاليا.
+- Health checks الحالية:
+  - `http://localhost:5245/api/health`: pass.
+  - `http://localhost:3001/health`: pass.
+  - `http://localhost:8738`: pass.
+  - `http://localhost:8739`: pass.
+  - `http://localhost:8740`: pass.
+- `docker compose ps`: كل الخدمات الحالية healthy:
+  `landing`, `student`, `admin`, `backend`, `worker`, `db`, `redis`, `nginx`.
+- `/tmp/nadergorge-pytest-venv/bin/python -m pytest tests -q`: pass، 35/35.
+- `/tmp/nadergorge-pytest-venv/bin/python -m pytest -q`: fail أثناء collection
+  لأن `scratch/test_nginx_routing.py` يحتاج `paramiko`. هذا لا يكسر اختبارات
+  `tests/` الرسمية، لكنه يكسر أمر pytest العام من جذر الريبو.
+
+لم يتم تشغيل:
+
+- `make down && docker compose build --no-cache && make up && make migrate` من
+  cold start داخل هذه المراجعة.
+- Playwright E2E كامل.
+- Manual QA لكل الأدوار.
+
+### مراجعة المراحل
+
+| Phase | الحالة | ما تم | الناقص قبل اعتبارها مقفولة |
+| --- | --- | --- | --- |
+| Phase 0 - Baseline/Specs | مكتملة جزئيا | Specs موجودة لـ 088..101، endpoint inventory current، surface verification scripts موجودة. | إصلاح أمر `pytest -q` العام أو حصره على `tests/`، وتوثيق baseline manual QA. |
+| Phase 1 - Access/Permissions | مكتملة جزئيا | `RoleType` يحتوي Admin/Teacher/Assistant/Supervisor/Staff، و`Role.PermissionsJson` موجود، وصفحة settings/roles موجودة، و`HasPermission` مستخدم. | `HasPermission` و`useHasPermission` يسمحان لـ Teacher بتجاوز كل permission checks؛ لازم مراجعة لأن teacher endpoints تعتمد على handlers للعزل. `TeacherAuthorizationService` يسمح لغير المدرس بالمرور، فلازم الاعتماد على endpoint role guards يكون موثق ومختبر. |
+| Phase 2 - HR Core | مكتملة وظيفيا | كيانات HR، controllers، services، صفحات admin/hr وmy-attendance، واختبارات Attendance/Employee/Vacation موجودة. | Playwright `admin-hr.spec.ts` غير موجود، وmanual QA لم يوثق في التقرير. |
+| Phase 3 - Operations Tasks | مكتملة وظيفيا | `TaskItem`/`TaskComment`، admin operations controller، assistant/admin task UI، واختبارات backend وPython operations موجودة وناجحة. | لا يوجد E2E مخصص مثبت للـ approval flow، وnotifications الخاصة بالمهام تحتاج manual verification. |
+| Phase 4 - Multi-Teacher/Multi-Subject | غير مكتملة | كيانات `Subject`, `TeacherProfile`, `TeacherSubject` موجودة، و`Package.TeacherId`, `CodeGroup.TeacherId`, `Exam.CreatedByTeacherId`, `QuestionBankItem.SubjectId/CreatedByTeacherId` موجودة، واختبارات العزل backend ناجحة. صفحات `/teacher`, `/admin/teachers`, `/admin/subjects` موجودة. | أهم نقص: الإضافة من الواجهة لا تجبر اختيار مدرس/مادة في كل المسارات. `CreatePackageRow` في admin/teacher يرسل name/description/price فقط، و`CreatePackageCommand` لا يقبل `TeacherId` صريحا من Admin ويقع على default teacher. صفحة questions تستخدم المدرسين/المواد للفلترة فقط ولا ترسل `subjectId` عند إنشاء السؤال، والـ backend يقع على first/default subject/teacher. Teacher dashboard لا يعرض طلاب المدرس أو watch stats فعليا. Landing ما زالت تستخدم fallback static teachers وFAQ ما زال يقول إن المنصة تغطي التاريخ فقط. |
+| Phase 5 - Internal Chat/Notifications | مكتملة جزئيا | كيانات chat، `InternalChatController`, `ChatHub`, chat services/components، read/archive/pin وmentions موجودة. | `notification-sender` ما زال stub/generic، ولا يوجد E2E realtime موثق. يجب تجربة مستخدمين في متصفحين وتوثيق delivery/read states. |
+| Phase 6 - CRM | مكتملة وظيفيا | كيانات CRM، controller، services، admin/assistant CRM UI، backend CRM tests موجودة. | ملف `tests/test_crm.py` المذكور في الخطة غير موجود. يلزم manual QA لعزل Agent A/B وتقارير performance. |
+| Phase 8 - Media Pipeline | مكتملة جزئيا | كيانات media/social plan، controller، services، UI board/planner/kpis، واختبار backend media موجود. | لم يتم تشغيل E2E في هذه المراجعة، وملف `admin-content.spec.ts` الموجود لا يثبت وحده تدفقات media-specific. approval بين Review/Published يحتاج manual QA لأنه ظاهر كتحكم supervisor/task أكثر من workflow مستقل مغلق. |
+| Phase 9 - Payroll/Teacher Finance | مكتملة وظيفيا | Payroll, adjustments, teacher accounts, payouts, activated code accounting موجودة، و`tests/test_teacher_finance.py` نجح ضمن 35/35. | يلزم manual QA لتفعيل كود حقيقي ومراجعة teacher balance/payout بعد الاعتماد. |
+| Phase 10 - Audit/Reports | مكتملة وظيفيا | Audit logs وKPI reports موجودة، `AdminReportsController` وخدمة report UI موجودين، واختبارات reports نجحت. | تغطية audit ليست شاملة لكل command قديم، ويجب مراجعة عدم تسريب secrets يدويا على بيانات واقعية. |
+| Phase 11 - Surface/Docker | مكتملة محليا جزئيا | compose config، nginx، surfaces landing/student/admin/backend/worker healthy، وstatic/runtime verification نجح. | لم يتم تنفيذ cold-start `make down/build/up/migrate` في هذه المراجعة، ولا يوجد توثيق نهائي لـ production subdomains/SSL/cookie domain. |
+| Phase 12 - Full Regression/Launch Drill | غير مكتملة | build/lint/unit/API smoke الحالي نجح. | Playwright E2E كامل، cold DB migration drill، backup/restore، rollback plan، security checklist، وmanual QA النهائي لم يتم توثيقهم. |
+
+### مراجعة شرط ربط أي إضافة بالمدرس
+
+الحكم: **غير مكتمل**.
+
+المطلوب من الآن: أي شاشة Frontend تنشئ محتوى أكاديمي أو أكواد أو أسئلة أو امتحان
+لازم يكون عندها واحد من الآتي:
+
+- اختيار `teacherId` صريح من Admin عند الإنشاء.
+- أو استنتاج teacher من parent resource مثبت مسبقا، مثل lesson داخل package
+  مرتبط بمدرس.
+- أو Teacher surface يستخدم teacher من current user فقط، مع منع تغيير teacher.
+
+المخالفات الحالية التي يجب إصلاحها:
+
+- `frontend/src/app/admin/content/page.tsx`: نموذج إضافة الباقة لا يحتوي teacher
+  selector ولا subject/program selector، ويرسل فقط `name`, `description`, `price`.
+- `frontend/src/app/teacher/packages/page.tsx`: يستخدم نفس `adminService.createPackage`
+  بدون `programId`/`subjectId` واضح؛ backend يربطه بمدرس المستخدم لو كان Teacher،
+  لكنه قد يقع على أول/default program.
+- `backend/src/NaderGorge.Application/Features/Admin/Commands/AdminContentCommands.cs`:
+  `CreatePackageCommand` لا يقبل `TeacherId` من Admin، ويستخدم first/default teacher
+  عندما لا يكون current user Teacher.
+- `frontend/src/app/admin/questions/page.tsx`: شاشة إضافة السؤال لا تختار subject
+  ولا teacher، رغم وجود فلاتر subject/teacher في نفس الصفحة.
+- `frontend/src/services/admin-service.ts`: `createQuestion` payload لا يحتوي
+  `subjectId`، و`createPackage` typed as `any` بدون عقد واضح يلزم teacher/subject.
+- `backend/src/NaderGorge.Application/Features/Admin/Commands/AdminQuestionCommands.cs`:
+  `SubjectId` اختياري، وعند غيابه يستخدم first/default subject ثم default teacher.
+- `backend/src/NaderGorge.Application/Features/Admin/Commands/BulkGenerateCodesCommand.cs`:
+  الأكواد المرتبطة بهدف package/term/lesson/video/exam تستنتج teacher من الهدف،
+  لكن balance/non-target fallback يستخدم default teacher، وهذا لا يحقق شرط
+  "وأنا بضيفها" لو Admin هو المنشئ.
+- `frontend/src/app/faq/page.tsx`: ما زال يوجد نص "المنصة بتغطي محتوى التاريخ"،
+  وهذا يخالف التحويل لمواد ومدرسين متعددين.
+- `frontend/src/components/landing/CircularGallerySection.tsx`: يجلب المدرسين من
+  `/public/teachers` لكنه يرجع إلى hardcoded teachers عند عدم وجود بيانات. هذا
+  مقبول كfallback تشغيلي فقط، وليس كإغلاق كامل لمطلب dynamic teachers.
+
+### المطلوب إضافته قبل الإغلاق
+
+1. تعديل `CreatePackageCommand` وAPI request ليقبلا `TeacherId` صريحا من Admin،
+   والتحقق أن المدرس يدرس مادة البرنامج المختار.
+2. تعديل Admin content creation UI لإجبار اختيار المدرس والمادة/البرنامج عند
+   إنشاء package، مع منع الحفظ بدونهم.
+3. تعديل Teacher package creation ليختار مادة/برنامج من المواد التي يدرسها المدرس
+   فقط، ولا يستخدم default program عشوائي.
+4. تعديل question creation UI/API ليجبر اختيار `subjectId`; Admin يختار teacher
+   أو يختار subject ثم teacher مناسب، وTeacher يأخذ teacher من current user.
+5. منع fallback إلى hardcoded default teacher/subject في production paths؛ يسمح به
+   فقط في seed/e2e migration واضح.
+6. إضافة اختبارات backend تغطي أن Admin package/question creation لا يقبل payload
+   ناقص teacher/subject.
+7. إضافة E2E يغطي:
+   - Admin ينشئ مدرس ومادة.
+   - Admin ينشئ package مربوط بمدرس ومادة.
+   - Admin ينشئ سؤال مربوط بمادة ومدرس.
+   - Teacher A لا يرى أو يعدل بيانات Teacher B.
+   - Student يرى package مع اسم وصورة المدرس.
+8. تحديث FAQ وحذف أي نص يحصر المنصة في التاريخ.
+9. تشغيل Launch Drill كامل:
+   `make down`, `docker compose build --no-cache`, `make up`, `make migrate`,
+   health checks، Playwright، `pytest tests -q`، وتقرير manual QA.

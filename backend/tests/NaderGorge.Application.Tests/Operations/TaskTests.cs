@@ -231,4 +231,101 @@ public class TaskTests
         Assert.Contains("Task completion rejected by Admin User", comment.Content);
         Assert.Contains("Reason: Fix typo", comment.Content);
     }
+
+    [Fact]
+    public async Task GetTaskDetailsQuery_ThrowsException_ForUnauthorizedAssistant()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+
+        // 1. Seed Assistant User
+        var assistantUser = await TestAppDbContextFactory.SeedUserAsync(db, "Assistant User", "01099999999");
+        var assistantRole = new Role { Id = Guid.NewGuid(), Name = "Assistant", Type = RoleType.Assistant };
+        db.Roles.Add(assistantRole);
+        db.UserRoles.Add(new UserRole { UserId = assistantUser.Id, RoleId = assistantRole.Id });
+
+        // 2. Seed other users for Assignee and Creator
+        var otherAssignee = await TestAppDbContextFactory.SeedUserAsync(db, "Other Assignee", "01099999991");
+        var otherCreator = await TestAppDbContextFactory.SeedUserAsync(db, "Other Creator", "01099999992");
+
+        // 3. Seed Task assigned to someone else
+        var task = new TaskItem
+        {
+            Title = "Task For Someone Else",
+            AssigneeId = otherAssignee.Id,
+            CreatedById = otherCreator.Id,
+            Status = TaskStatus.New
+        };
+        db.TaskItems.Add(task);
+        await db.SaveChangesAsync();
+
+        var handler = new GetTaskDetailsQueryHandler(db);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        {
+            await handler.Handle(new GetTaskDetailsQuery(task.Id, assistantUser.Id, IsAdminOrSupervisor: false), CancellationToken.None);
+        });
+    }
+
+    [Fact]
+    public async Task AddTaskCommentCommand_ThrowsException_ForUnauthorizedAssistant()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+
+        // 1. Seed Assistant User
+        var assistantUser = await TestAppDbContextFactory.SeedUserAsync(db, "Assistant User", "01100000000");
+        var assistantRole = new Role { Id = Guid.NewGuid(), Name = "Assistant", Type = RoleType.Assistant };
+        db.Roles.Add(assistantRole);
+        db.UserRoles.Add(new UserRole { UserId = assistantUser.Id, RoleId = assistantRole.Id });
+
+        // 2. Seed Task assigned to someone else
+        var task = new TaskItem
+        {
+            Title = "Task For Someone Else",
+            AssigneeId = Guid.NewGuid(),
+            CreatedById = Guid.NewGuid(),
+            Status = TaskStatus.New
+        };
+        db.TaskItems.Add(task);
+        await db.SaveChangesAsync();
+
+        var handler = new AddTaskCommentCommandHandler(db);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        {
+            await handler.Handle(new AddTaskCommentCommand(task.Id, assistantUser.Id, "Hello"), CancellationToken.None);
+        });
+    }
+
+    [Fact]
+    public async Task UpdateTaskStatus_ThrowsException_ForUnauthorizedAssistantUpdatingOtherTask()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+
+        // 1. Seed Assistant User
+        var assistantUser = await TestAppDbContextFactory.SeedUserAsync(db, "Assistant User", "01122222222");
+        var assistantRole = new Role { Id = Guid.NewGuid(), Name = "Assistant", Type = RoleType.Assistant };
+        db.Roles.Add(assistantRole);
+        db.UserRoles.Add(new UserRole { UserId = assistantUser.Id, RoleId = assistantRole.Id });
+
+        // 2. Seed Task assigned to someone else
+        var task = new TaskItem
+        {
+            Title = "Task For Someone Else",
+            AssigneeId = Guid.NewGuid(),
+            CreatedById = Guid.NewGuid(),
+            Status = TaskStatus.InProgress
+        };
+        db.TaskItems.Add(task);
+        await db.SaveChangesAsync();
+
+        var handler = new UpdateTaskStatusCommandHandler(db);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+        {
+            await handler.Handle(new UpdateTaskStatusCommand(task.Id, TaskStatus.Review, assistantUser.Id), CancellationToken.None);
+        });
+    }
 }

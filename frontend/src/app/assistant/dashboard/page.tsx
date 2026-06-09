@@ -1,14 +1,19 @@
-import { AssistantDashboardTabs } from '@/components/assistant/AssistantDashboardTabs';
+'use client';
 
-export const metadata = {
-  title: 'Assistant Dashboard | Massar Platform',
-  description: 'Manage and resolve student issues and academic tasks.',
-};
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import { AssistantDashboardTabs } from '@/components/assistant/AssistantDashboardTabs';
 
 export default function AssistantDashboardPage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black py-12 px-4 sm:px-6 lg:px-8">
-      <AssistantDashboardTabs />
-    </div>
+    <AssistantShellChrome
+      activePath="/assistant/dashboard"
+      sectionLabel="لوحة التحكم"
+      pageTitle="مساحة العمل الأكاديمية والتشغيلية"
+      subtitle="إدارة مهام الطلاب والعمليات اليومية المسندة إليك ومتابعة الأداء أولاً بأول."
+    >
+      <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]" dir="rtl">
+        <AssistantDashboardTabs />
+      </div>
+    </AssistantShellChrome>
   );
 }

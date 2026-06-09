@@ -1,10 +1,17 @@
 # Frontend Master Plan
 
-**Last Updated**: 2026-06-07
+**Last Updated**: 2026-06-09
 
 ---
 
 ## Active Plans
+
+### Assistant Portal & Staff Surface (2026-06-09)
+- [x] Secure the `/assistant/*` routes and run them under AssistantGuard layout shell.
+- [x] Implement a responsive, Arabic-first sidebar/navbar in AssistantShellChrome containing Dashboard, Tasks, CRM, Chat, Attendance, Vacations, and Notifications.
+- [x] Create Tasks view pages at tasks/page.tsx and tasks/[id]/page.tsx with status transitions and comment feeds.
+- [x] Integrate Attendance and Vacation pages in assistant portal.
+- [x] Add root redirection inside assistant portal to map / to /assistant/dashboard to avoid 404 errors.
 
 ### Custom Forms API Payload Alignment (2026-06-07)
 - [x] Fix `updateAdminForm` in `frontend/src/services/forms-service.ts` to include the `id` field inside the request body to resolve the 400 Bad Request ID mismatch.

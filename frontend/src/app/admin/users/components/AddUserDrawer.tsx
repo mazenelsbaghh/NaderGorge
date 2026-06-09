@@ -16,6 +16,7 @@ interface AddUserDrawerProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  defaultRole?: 'Student' | 'Assistant' | 'Admin';
 }
 
 const ROLES: { value: string; label: string; icon: React.ReactNode; desc: string }[] = [
@@ -46,8 +47,8 @@ interface FieldError {
   general?: string;
 }
 
-export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) {
-  const [role, setRole] = useState<Role>('Student');
+export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUserDrawerProps) {
+  const [role, setRole] = useState<Role>(defaultRole || 'Student');
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
@@ -75,7 +76,7 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
   // Reset form when drawer closes
   useEffect(() => {
     if (!open) {
-      setRole('Student');
+      setRole(defaultRole || 'Student');
       setFullName('');
       setPhoneNumber('');
       setPassword('');
@@ -84,7 +85,7 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
       setErrors({});
       setSelectedAssistantRole('');
     }
-  }, [open]);
+  }, [open, defaultRole]);
 
   // Load dynamic roles on open
   useEffect(() => {
@@ -245,57 +246,59 @@ export function AddUserDrawer({ open, onClose, onSuccess }: AddUserDrawerProps) 
                 <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
 
                 {/* Role Selector */}
-                <div>
-                  <label className="mb-3 block text-sm font-bold text-[var(--admin-text)]">
-                    الدور
-                  </label>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    {ROLES.map((r) => (
-                      <button
-                        key={r.value}
-                        type="button"
-                        onClick={() => setRole(r.value)}
-                        className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-all duration-200 ${
-                          role === r.value
-                            ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)] shadow-[0_0_0_1px_var(--admin-primary)]'
-                            : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/40 hover:text-[var(--admin-text)]'
-                        }`}
-                      >
-                        {r.icon}
-                        <span className="text-xs font-bold">{r.label}</span>
-                        <span className="text-[10px] opacity-70 leading-tight">{r.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Custom Assistant Role Dropdown */}
-                  {role === 'Assistant' && (
-                    <div className="mt-4 space-y-2">
-                      <label className="block text-sm font-bold text-[var(--admin-text)] text-right">
-                        اختر دور المساعد المخصص
-                      </label>
-                      {dynamicRoles.filter((r: any) => r.name !== 'Admin' && r.name !== 'Student' && r.name !== 'Teacher').length === 0 ? (
-                        <div className="text-sm text-amber-500 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-3 text-right">
-                          لا توجد أدوار مساعد مخصصة حالياً. يرجى إنشاء دور جديد في صفحة الإعدادات أولاً.
-                        </div>
-                      ) : (
-                        <select
-                          value={selectedAssistantRole}
-                          onChange={(e) => setSelectedAssistantRole(e.target.value)}
-                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none text-sm text-[var(--admin-text)]"
+                {!defaultRole && (
+                  <div>
+                    <label className="mb-3 block text-sm font-bold text-[var(--admin-text)]">
+                      الدور
+                    </label>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {ROLES.map((r) => (
+                        <button
+                          key={r.value}
+                          type="button"
+                          onClick={() => setRole(r.value)}
+                          className={`flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-center transition-all duration-200 ${
+                            role === r.value
+                              ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] text-[var(--admin-primary)] shadow-[0_0_0_1px_var(--admin-primary)]'
+                              : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/40 hover:text-[var(--admin-text)]'
+                          }`}
                         >
-                          {dynamicRoles
-                            .filter((r: any) => r.name !== 'Admin' && r.name !== 'Student' && r.name !== 'Teacher')
-                            .map((r: any) => (
-                              <option key={r.id} value={r.name}>
-                                {r.name}
-                              </option>
-                            ))}
-                        </select>
-                      )}
+                          {r.icon}
+                          <span className="text-xs font-bold">{r.label}</span>
+                          <span className="text-[10px] opacity-70 leading-tight">{r.desc}</span>
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {/* Custom Assistant Role Dropdown */}
+                {role === 'Assistant' && (
+                  <div className="mt-4 space-y-2">
+                    <label className="block text-sm font-bold text-[var(--admin-text)] text-right">
+                      اختر دور المساعد المخصص
+                    </label>
+                    {dynamicRoles.filter((r: any) => r.name !== 'Admin' && r.name !== 'Student' && r.name !== 'Teacher').length === 0 ? (
+                      <div className="text-sm text-amber-500 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-3 text-right">
+                        لا توجد أدوار مساعد مخصصة حالياً. يرجى إنشاء دور جديد في صفحة الإعدادات أولاً.
+                      </div>
+                    ) : (
+                      <select
+                        value={selectedAssistantRole}
+                        onChange={(e) => setSelectedAssistantRole(e.target.value)}
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none text-sm text-[var(--admin-text)]"
+                      >
+                        {dynamicRoles
+                          .filter((r: any) => r.name !== 'Admin' && r.name !== 'Student' && r.name !== 'Teacher')
+                          .map((r: any) => (
+                            <option key={r.id} value={r.name}>
+                              {r.name}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                  </div>
+                )}
 
                 {/* Full Name */}
                 <div>

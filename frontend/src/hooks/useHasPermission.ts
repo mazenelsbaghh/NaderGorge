@@ -7,9 +7,9 @@ export function useHasPermission() {
     if (!permission) return true;
     if (!user) return false;
 
-    // Admin and Teacher roles bypass all permission restrictions
+    // Admin role bypasses all permission restrictions
     const roles = user.roles || [];
-    if (roles.includes("Admin") || roles.includes("Teacher")) {
+    if (roles.includes("Admin")) {
       return true;
     }
 

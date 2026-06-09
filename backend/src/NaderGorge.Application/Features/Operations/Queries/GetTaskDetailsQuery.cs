@@ -19,7 +19,7 @@ public record TaskDetailsDto(
     List<CommentDto> Comments
 );
 
-public record GetTaskDetailsQuery(Guid TaskId) : IRequest<ApiResponse<TaskDetailsDto>>;
+public record GetTaskDetailsQuery(Guid TaskId, Guid UserId, bool IsAdminOrSupervisor) : IRequest<ApiResponse<TaskDetailsDto>>;
 
 public class GetTaskDetailsQueryHandler : IRequestHandler<GetTaskDetailsQuery, ApiResponse<TaskDetailsDto>>
 {
@@ -43,6 +43,11 @@ public class GetTaskDetailsQueryHandler : IRequestHandler<GetTaskDetailsQuery, A
         if (task == null)
         {
             throw new KeyNotFoundException("Task not found.");
+        }
+
+        if (!request.IsAdminOrSupervisor && task.AssigneeId != request.UserId && task.CreatedById != request.UserId)
+        {
+            throw new UnauthorizedAccessException("You are not authorized to view this task's details.");
         }
 
         var taskDto = new TaskDto(

@@ -37,7 +37,12 @@ export function proxy(request: NextRequest) {
   }
 
   const { mainDomain } = getSurfaceOrigins();
-  const isAdminSubdomain = hostname.startsWith('admin.');
+  const isAdminSubdomain = hostname.startsWith('admin.') || hostname.startsWith('super.');
+  const isStudentSubdomain = hostname.startsWith('app.') || hostname.startsWith('student.');
+  const isTeacherSubdomain = hostname.startsWith('teacher.');
+  const isAssistantSubdomain = hostname.startsWith('staff.') || hostname.startsWith('assistant.');
+
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
 
   if (isAdminSubdomain) {
     if (url.pathname === '/') {
@@ -45,18 +50,73 @@ export function proxy(request: NextRequest) {
       return withSurfaceHeader(NextResponse.rewrite(url), 'admin');
     }
 
-    if (url.pathname.startsWith('/student')) {
-      const proto = request.headers.get('x-forwarded-proto') || 'https';
+    if (url.pathname.startsWith('/student') || url.pathname.startsWith('/teacher') || url.pathname.startsWith('/assistant')) {
       return withSurfaceHeader(
-        NextResponse.redirect(new URL(`${proto}://${mainDomain}/student`, request.url)),
+        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
         'admin',
       );
     }
-  } else if (url.pathname.startsWith('/admin')) {
-    const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1');
-    if (!isLocal) {
-      url.pathname = '/_not-found';
-      return withSurfaceHeader(NextResponse.rewrite(url), 'landing');
+  } else if (isStudentSubdomain) {
+    if (url.pathname === '/') {
+      url.pathname = '/student';
+      return withSurfaceHeader(NextResponse.rewrite(url), 'student');
+    }
+
+    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/teacher') || url.pathname.startsWith('/assistant')) {
+      return withSurfaceHeader(
+        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
+        'student',
+      );
+    }
+  } else if (isTeacherSubdomain) {
+    if (url.pathname === '/') {
+      url.pathname = '/teacher';
+      return withSurfaceHeader(NextResponse.rewrite(url), 'teacher');
+    }
+
+    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/student') || url.pathname.startsWith('/assistant')) {
+      return withSurfaceHeader(
+        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
+        'teacher',
+      );
+    }
+  } else if (isAssistantSubdomain) {
+    if (url.pathname === '/') {
+      url.pathname = '/assistant';
+      return withSurfaceHeader(NextResponse.rewrite(url), 'assistant');
+    }
+
+    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/student') || url.pathname.startsWith('/teacher')) {
+      return withSurfaceHeader(
+        NextResponse.redirect(new URL(`${proto}://${mainDomain}${url.pathname}`, request.url)),
+        'assistant',
+      );
+    }
+  } else {
+    // If accessing landing domain with administrative/student paths, redirect to proper subdomains
+    if (url.pathname.startsWith('/admin')) {
+      return withSurfaceHeader(
+        NextResponse.redirect(new URL(`${proto}://admin.${mainDomain}/admin`, request.url)),
+        'landing'
+      );
+    }
+    if (url.pathname.startsWith('/student')) {
+      return withSurfaceHeader(
+        NextResponse.redirect(new URL(`${proto}://app.${mainDomain}/student`, request.url)),
+        'landing'
+      );
+    }
+    if (url.pathname.startsWith('/teacher')) {
+      return withSurfaceHeader(
+        NextResponse.redirect(new URL(`${proto}://teacher.${mainDomain}/teacher`, request.url)),
+        'landing'
+      );
+    }
+    if (url.pathname.startsWith('/assistant')) {
+      return withSurfaceHeader(
+        NextResponse.redirect(new URL(`${proto}://staff.${mainDomain}/assistant`, request.url)),
+        'landing'
+      );
     }
   }
 

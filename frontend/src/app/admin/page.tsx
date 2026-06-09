@@ -17,19 +17,6 @@ export default function AdminRootPage() {
       sectionLabel="لوحة الإدارة"
       pageTitle="الرئيسية"
       subtitle="بوابة الإدارة المركزية لكل أدوات النظام بدون أي تحويلات إلى صفحات الطالب أو المساعد."
-      action={
-        <div className="flex flex-wrap items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-2 shadow-sm backdrop-blur-xl">
-          {adminRootLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="inline-flex min-h-11 items-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)]"
-            >
-              {item.title}
-            </Link>
-          ))}
-        </div>
-      }
     >
       <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
         <AdminStatCard

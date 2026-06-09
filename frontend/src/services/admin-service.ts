@@ -425,6 +425,15 @@ export interface AdminCreateUserResult {
   role: string;
 }
 
+export interface AdminProgramDto {
+  id: string;
+  name: string;
+  description: string;
+  targetGrade: string;
+  subjectId: string;
+  subjectName: string;
+}
+
 export interface AdminPackageListItemDto {
   id: string;
   name: string;
@@ -469,6 +478,11 @@ export const adminService = {
 
   listAllPackages: async (): Promise<AdminPackageListItemDto[]> => {
     const res = await apiClient.get<ApiResponse<AdminPackageListItemDto[]>>('/admin/packages/list');
+    return res.data?.data ?? [];
+  },
+
+  listPrograms: async (): Promise<AdminProgramDto[]> => {
+    const res = await apiClient.get<ApiResponse<AdminProgramDto[]>>('/admin/programs');
     return res.data?.data ?? [];
   },
 
@@ -603,6 +617,8 @@ export const adminService = {
     mistakeStartIndex?: number;
     mistakeEndIndex?: number;
     options: { text: string; isCorrect: boolean }[];
+    subjectId: string;
+    teacherId?: string;
   }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/questions', {
       ...payload,
@@ -637,7 +653,13 @@ export const adminService = {
   },
 
   // Content Creators (Simplified)
-  createPackage: async (payload: any) => {
+  createPackage: async (payload: {
+    name: string;
+    description: string;
+    price: number;
+    programId: string;
+    teacherId?: string;
+  }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);
     return res.data?.data;
   },

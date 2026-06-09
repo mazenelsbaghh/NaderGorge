@@ -68,7 +68,7 @@ export default function MediaPipelineBoard() {
       const employeesData = await hrService.listEmployees();
       setEmployees(employeesData || []);
     } catch {
-      toast.error('حدث خطأ أثناء تحميل البيانات');
+      // API client global interceptor handles error notifications
     }
   }, []);
 
@@ -97,8 +97,8 @@ export default function MediaPipelineBoard() {
       } else {
         toast.error(res.message || 'تعذر إضافة المادة');
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء الإضافة');
+    } catch {
+      // API client global interceptor handles error notifications
     }
   };
 
@@ -121,8 +121,8 @@ export default function MediaPipelineBoard() {
       } else {
         toast.error(res.message || 'تعذر تعديل المادة');
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء التعديل');
+    } catch {
+      // API client global interceptor handles error notifications
     }
   };
 
@@ -167,8 +167,8 @@ export default function MediaPipelineBoard() {
       } else {
         toast.error(res.message || 'فشل نقل المادة');
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء النقل');
+    } catch {
+      // API client global interceptor handles error notifications
     }
   };
 
@@ -197,8 +197,8 @@ export default function MediaPipelineBoard() {
       } else {
         toast.error(res.message || 'فشل إرسال المادة للمراجعة');
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء الإرسال');
+    } catch {
+      // API client global interceptor handles error notifications
     }
   };
 

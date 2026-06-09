@@ -38,6 +38,8 @@ export default function AdminQuestionsPage() {
   const [baseText, setBaseText] = useState('');
   const [mistakeStartIndex, setMistakeStartIndex] = useState<number | null>(null);
   const [mistakeEndIndex, setMistakeEndIndex] = useState<number | null>(null);
+  const [selectedCreateSubjectId, setSelectedCreateSubjectId] = useState('');
+  const [selectedCreateTeacherId, setSelectedCreateTeacherId] = useState('');
 
   const [options, setOptions] = useState<{ text: string; isCorrect: boolean }[]>([
     { text: '', isCorrect: true },
@@ -83,6 +85,10 @@ export default function AdminQuestionsPage() {
 
   async function handleSave(event: FormEvent) {
     event.preventDefault();
+    if (!selectedCreateSubjectId || !selectedCreateTeacherId) {
+      toast.error('يرجى اختيار المادة والمعلم أولاً.');
+      return;
+    }
     if (qType === 0 && options.filter((option) => option.text.trim()).length < 2) {
       toast.error('أدخل على الأقل اختيارين');
       return;
@@ -101,6 +107,8 @@ export default function AdminQuestionsPage() {
         tags: qTags,
         hintText,
         writtenCorrection,
+        subjectId: selectedCreateSubjectId,
+        teacherId: selectedCreateTeacherId,
       };
 
       if (qType === 2) {
@@ -138,6 +146,8 @@ export default function AdminQuestionsPage() {
         { text: '', isCorrect: false },
         { text: '', isCorrect: false },
       ]);
+      setSelectedCreateSubjectId('');
+      setSelectedCreateTeacherId('');
       await loadQuestions();
     } catch (error) {
       devConsole.error(error);
@@ -328,6 +338,38 @@ export default function AdminQuestionsPage() {
             </label>
           </div>
 
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div>
+              <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">المادة</label>
+              <select
+                value={selectedCreateSubjectId}
+                onChange={(e) => setSelectedCreateSubjectId(e.target.value)}
+                className="admin-input w-full"
+                required
+              >
+                <option value="">اختر المادة...</option>
+                {subjects.map((sub) => (
+                  <option key={sub.id} value={sub.id}>{sub.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">المعلم</label>
+              <select
+                value={selectedCreateTeacherId}
+                onChange={(e) => setSelectedCreateTeacherId(e.target.value)}
+                className="admin-input w-full"
+                required
+              >
+                <option value="">اختر المعلم...</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>{t.fullName}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {qType === 2 ? (
             <FindTheMistakeBuilder 
               baseText={baseText} 
@@ -418,7 +460,7 @@ export default function AdminQuestionsPage() {
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)] mt-4">
             <NeumorphButton type="button" onClick={() => setShowModal(false)} intent="ghost" size="md">إلغاء</NeumorphButton>
-            <NeumorphButton type="submit" disabled={saving} loading={saving} intent="primary" size="md" pill>
+            <NeumorphButton type="submit" disabled={saving || !selectedCreateSubjectId || !selectedCreateTeacherId} loading={saving} intent="primary" size="md" pill>
               حفظ
             </NeumorphButton>
           </div>

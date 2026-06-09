@@ -367,8 +367,8 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
 
   return (
     <AdminShellChrome
-       activePath="/admin/users"
-       sectionLabel="إدارة المستخدمين"
+       activePath="/admin/students"
+       sectionLabel="الطلاب"
        pageTitle="ملف الطالب الشامل"
        subtitle="تفاصيل شاملة للمنهج، الأجهزة، والماليات"
        action={
@@ -417,7 +417,7 @@ export default function AdminStudentProfile({ params }: { params: Promise<{ id: 
                {studentData?.isActive ? 'إيقاف الحساب' : 'تفعيل الحساب'}
             </button>
             <button 
-               onClick={() => router.push('/admin/users')}
+               onClick={() => router.push('/admin/students')}
                className="flex items-center gap-2 rounded-2xl bg-[var(--admin-surface-low)] px-4 py-2 text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-border)]"
             >
                <Users size={20} />

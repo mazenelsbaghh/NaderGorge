@@ -6,9 +6,14 @@
 
 ## Active Plans
 
+### Deploy Assistant Surface and Task Workflow (2026-06-09)
+- [x] Rebuild shared frontend docker image `massar_frontend:local`.
+- [x] Recreate and restart assistant container `massar_assistant` via docker compose.
+- [x] Verify Nginx reverse proxy routing for `staff.massar-academy.net` to the assistant container.
+
 ### Deploy Default Role Permissions (2026-06-09)
-- [ ] Run EF Core DB migrations on the production server.
-- [ ] Rebuild and deploy backend container.
+- [x] Run EF Core DB migrations on the production server.
+- [x] Rebuild and deploy backend container.
 
 ### Rebuild and Deploy Auto-Cycle Swiper Updates (2026-06-06)
 - [x] Rebuild shared frontend docker image `massar_frontend:local` via `make build-frontend`.

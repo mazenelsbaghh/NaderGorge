@@ -5,7 +5,9 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.HR.Queries;
 
-public record GetMyAttendanceQuery(Guid UserId) : IRequest<ApiResponse<List<AttendanceLogDto>>>;
+public record GetMyAttendanceQuery(Guid UserId) : IRequest<ApiResponse<MyAttendanceStatusDto>>;
+
+public record MyAttendanceStatusDto(bool HasProfile, List<AttendanceLogDto> Logs);
 
 public record AttendanceLogDto(
     Guid Id,
@@ -19,7 +21,7 @@ public record AttendanceLogDto(
     double? DurationMinutes
 );
 
-public class GetMyAttendanceQueryHandler : IRequestHandler<GetMyAttendanceQuery, ApiResponse<List<AttendanceLogDto>>>
+public class GetMyAttendanceQueryHandler : IRequestHandler<GetMyAttendanceQuery, ApiResponse<MyAttendanceStatusDto>>
 {
     private readonly IAppDbContext _db;
 
@@ -28,14 +30,14 @@ public class GetMyAttendanceQueryHandler : IRequestHandler<GetMyAttendanceQuery,
         _db = db;
     }
 
-    public async Task<ApiResponse<List<AttendanceLogDto>>> Handle(GetMyAttendanceQuery request, CancellationToken ct)
+    public async Task<ApiResponse<MyAttendanceStatusDto>> Handle(GetMyAttendanceQuery request, CancellationToken ct)
     {
         var profile = await _db.EmployeeProfiles
             .FirstOrDefaultAsync(ep => ep.UserId == request.UserId, ct);
 
         if (profile == null)
         {
-            return ApiResponse<List<AttendanceLogDto>>.Ok(new List<AttendanceLogDto>());
+            return ApiResponse<MyAttendanceStatusDto>.Ok(new MyAttendanceStatusDto(false, new List<AttendanceLogDto>()));
         }
 
         var logs = await _db.AttendanceLogs
@@ -56,6 +58,6 @@ public class GetMyAttendanceQueryHandler : IRequestHandler<GetMyAttendanceQuery,
             al.ClockOut.HasValue ? (al.ClockOut.Value - al.ClockIn).TotalMinutes : null
         )).ToList();
 
-        return ApiResponse<List<AttendanceLogDto>>.Ok(dtos);
+        return ApiResponse<MyAttendanceStatusDto>.Ok(new MyAttendanceStatusDto(true, dtos));
     }
 }

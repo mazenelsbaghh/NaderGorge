@@ -23,6 +23,7 @@ public record CreateQuestionCommand(
     int? MistakeStartIndex = null, 
     int? MistakeEndIndex = null,
     Guid? SubjectId = null,
+    Guid? TeacherId = null,
     Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionCommand, ApiResponse<Guid>>
@@ -39,9 +40,19 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
         if (request.Type == QuestionType.MCQ && !request.Options.Any(o => o.IsCorrect))
             return ApiResponse<Guid>.Fail("At least one option must be marked as correct.");
 
-        Guid? teacherId = null;
-        Guid? subjectId = request.SubjectId;
+        var subjectId = request.SubjectId ?? Guid.Empty;
+        if (subjectId == Guid.Empty)
+        {
+            return ApiResponse<Guid>.Fail("Subject is required.");
+        }
 
+        var subjectExists = await _db.Subjects.AnyAsync(s => s.Id == subjectId, ct);
+        if (!subjectExists)
+        {
+            return ApiResponse<Guid>.Fail("Subject not found.");
+        }
+
+        var teacherId = Guid.Empty;
         if (request.CurrentUserId.HasValue)
         {
             var user = await _db.Users
@@ -54,26 +65,27 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                 if (user.TeacherProfile == null)
                     return ApiResponse<Guid>.Fail("Teacher profile not onboarded.");
                 teacherId = user.TeacherProfile.Id;
-
-                if (subjectId.HasValue && subjectId != Guid.Empty)
-                {
-                    var teachesSubject = await _db.TeacherSubjects.AnyAsync(ts => ts.TeacherId == teacherId.Value && ts.SubjectId == subjectId.Value, ct);
-                    if (!teachesSubject)
-                        return ApiResponse<Guid>.Fail("Unauthorized: You do not teach this subject.");
-                }
             }
         }
 
-        if (!subjectId.HasValue || subjectId == Guid.Empty)
+        if (teacherId == Guid.Empty)
         {
-            var firstSubject = await _db.Subjects.FirstOrDefaultAsync(ct);
-            subjectId = firstSubject?.Id ?? Guid.Parse("d9b8a342-990a-4286-905e-fdebb2e3895e");
+            if (!request.TeacherId.HasValue || request.TeacherId.Value == Guid.Empty)
+            {
+                return ApiResponse<Guid>.Fail("Teacher is required.");
+            }
+
+            var teacherExists = await _db.TeacherProfiles.AnyAsync(tp => tp.Id == request.TeacherId.Value, ct);
+            if (!teacherExists)
+                return ApiResponse<Guid>.Fail("Selected teacher not found.");
+
+            teacherId = request.TeacherId.Value;
         }
 
-        if (!teacherId.HasValue || teacherId == Guid.Empty)
+        var teachesSubject = await _db.TeacherSubjects.AnyAsync(ts => ts.TeacherId == teacherId && ts.SubjectId == subjectId, ct);
+        if (!teachesSubject)
         {
-            var defaultTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
-            teacherId = defaultTeacher?.Id ?? Guid.Parse("b4b82937-293e-48a3-a002-decf9a1efab8");
+            return ApiResponse<Guid>.Fail("Selected teacher does not teach this subject.");
         }
 
         QuestionBankItem question;
@@ -93,8 +105,8 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                 MistakeStartIndex = request.MistakeStartIndex ?? 0,
                 MistakeEndIndex = request.MistakeEndIndex ?? 0,
                 Options = request.Options?.Select(o => new QuestionOption { Text = o.Text, IsCorrect = o.IsCorrect }).ToList() ?? new List<QuestionOption>(),
-                CreatedByTeacherId = teacherId.Value,
-                SubjectId = subjectId.Value
+                CreatedByTeacherId = teacherId,
+                SubjectId = subjectId
             };
         }
         else
@@ -115,8 +127,8 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                         Text = o.Text,
                         IsCorrect = o.IsCorrect
                     }).ToList() ?? new List<QuestionOption>(),
-                    CreatedByTeacherId = teacherId.Value,
-                    SubjectId = subjectId.Value
+                    CreatedByTeacherId = teacherId,
+                    SubjectId = subjectId
                 };
             }
             else
@@ -135,8 +147,8 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                         Text = o.Text,
                         IsCorrect = o.IsCorrect
                     }).ToList() ?? new List<QuestionOption>(),
-                    CreatedByTeacherId = teacherId.Value,
-                    SubjectId = subjectId.Value
+                    CreatedByTeacherId = teacherId,
+                    SubjectId = subjectId
                 };
             }
         }

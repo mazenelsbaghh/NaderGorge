@@ -7,26 +7,34 @@ import {
 } from 'lucide-react';
 import { AdminShellChrome, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
-import { adminService } from '@/services/admin-service';
+import { adminService, AdminProgramDto } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
 // ─── Create Package Inline Form ───────────────────────────────────────────────
-function CreatePackageRow({ onSuccess }: { onSuccess: () => void }) {
+function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => void; teachers: TeacherDto[]; programs: AdminProgramDto[] }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [selectedProgramId, setSelectedProgramId] = useState('');
   const [saving, setSaving] = useState(false);
 
   async function handleCreate() {
-    if (!name.trim()) return;
+    if (!name.trim() || !selectedProgramId || !selectedTeacherId) return;
     try {
       setSaving(true);
-      await adminService.createPackage({ name: name.trim(), description: description.trim(), price: Number(price) || 0 });
+      await adminService.createPackage({
+        name: name.trim(),
+        description: description.trim(),
+        price: Number(price) || 0,
+        programId: selectedProgramId,
+        teacherId: selectedTeacherId
+      });
       toast.success('تمت إضافة الباقة بنجاح.');
-      setName(''); setDescription(''); setPrice('');
+      setName(''); setDescription(''); setPrice(''); setSelectedTeacherId(''); setSelectedProgramId('');
       setOpen(false);
       onSuccess();
     } catch {
@@ -76,6 +84,29 @@ function CreatePackageRow({ onSuccess }: { onSuccess: () => void }) {
         placeholder="السعر (جنيه مصري)"
         className="admin-input"
       />
+      
+      <select
+        value={selectedProgramId}
+        onChange={(e) => setSelectedProgramId(e.target.value)}
+        className="admin-input"
+      >
+        <option value="">اختر البرنامج الدراسي...</option>
+        {programs.map((p) => (
+          <option key={p.id} value={p.id}>{p.name} ({p.subjectName})</option>
+        ))}
+      </select>
+
+      <select
+        value={selectedTeacherId}
+        onChange={(e) => setSelectedTeacherId(e.target.value)}
+        className="admin-input"
+      >
+        <option value="">اختر المدرس...</option>
+        {teachers.map((t) => (
+          <option key={t.id} value={t.id}>{t.fullName}</option>
+        ))}
+      </select>
+
       <div className="flex justify-end gap-2 pt-1">
         <button
           onClick={() => setOpen(false)}
@@ -85,7 +116,7 @@ function CreatePackageRow({ onSuccess }: { onSuccess: () => void }) {
         </button>
         <NeumorphButton
           onClick={() => void handleCreate()}
-          disabled={saving || !name.trim()}
+          disabled={saving || !name.trim() || !selectedProgramId || !selectedTeacherId}
           loading={saving}
           intent="primary"
           size="md"
@@ -324,6 +355,7 @@ export default function AdminContentPage() {
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
+  const [programs, setPrograms] = useState<AdminProgramDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
@@ -332,14 +364,16 @@ export default function AdminContentPage() {
   const loadPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const [packagesRes, subjectsRes, teachersRes] = await Promise.all([
+      const [packagesRes, subjectsRes, teachersRes, programsRes] = await Promise.all([
         contentService.getPackages(),
         teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
-        teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] }))
+        teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] })),
+        adminService.listPrograms().catch(() => [] as AdminProgramDto[])
       ]);
       setPackages(packagesRes.data?.data ?? []);
       setSubjects(subjectsRes.data ?? []);
       setTeachers(teachersRes.data ?? []);
+      setPrograms(programsRes);
     } catch {
       toast.error('تعذر تحميل الباقات.');
     } finally {
@@ -415,7 +449,7 @@ export default function AdminContentPage() {
           {/* Package list */}
           <div className="space-y-3">
             {filtered.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} />)}
-            <CreatePackageRow onSuccess={loadPackages} />
+            <CreatePackageRow onSuccess={loadPackages} teachers={teachers} programs={programs} />
           </div>
         </div>
       )}

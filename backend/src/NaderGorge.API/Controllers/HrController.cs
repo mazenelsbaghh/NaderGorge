@@ -2,6 +2,7 @@ using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.HR.Commands;
 using NaderGorge.Application.Features.HR.Queries;
 
@@ -54,7 +55,7 @@ public class HrController : ControllerBase
     }
 
     [HttpGet("attendance/my")]
-    public async Task<IActionResult> GetMyAttendance()
+    public async Task<ActionResult<ApiResponse<MyAttendanceStatusDto>>> GetMyAttendance()
     {
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdStr, out var userId))

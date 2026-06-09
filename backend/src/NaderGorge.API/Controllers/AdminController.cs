@@ -660,6 +660,12 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    // --- Programs ---
+    [HttpGet("programs")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetPrograms()
+        => Ok(await _mediator.Send(new GetAdminProgramsQuery(GetUserId())));
+
     // --- Subjects ---
     [HttpGet("subjects")]
     [HasPermission("content.manage")]

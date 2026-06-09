@@ -33,8 +33,8 @@ public class PermissionFilter : IAsyncAuthorizationFilter
             return Task.CompletedTask;
         }
 
-        // Admins and Teachers bypass all checks
-        if (user.IsInRole("Admin") || user.IsInRole("Teacher"))
+        // Admins bypass all checks
+        if (user.IsInRole("Admin"))
         {
             return Task.CompletedTask;
         }

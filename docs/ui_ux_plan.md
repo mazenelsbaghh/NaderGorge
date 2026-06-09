@@ -1,10 +1,16 @@
 # UI/UX Master Plan
 
-**Last Updated**: 2026-06-06
+**Last Updated**: 2026-06-09
 
 ---
 
 ## Active Plans
+
+### Assistant Surface Layout & Design (2026-06-09)
+- [x] Implement AssistantShellChrome with Arabic-first RTL support, Sand/Gold tones, ambient shadows, and Cairo/Tajawal fonts.
+- [x] Create premium task board cards with dynamic priority badges (High, Critical, Medium, Low) and task status indicators.
+- [x] Integrate responsive drawer menu for mobile assistant surfaces.
+
 
 ### Landing Page Dark Mode & Auto-Swiper Refinements (2026-06-06)
 - [x] Refine `CircularGallerySection.tsx` to make the student stack auto-move on its own (simulating mouse drags).

@@ -11,12 +11,23 @@ def test_question_bank_isolation(mock_package):
     assert initial_res.status_code == 200
     initial_count = initial_res.json().get("data", {}).get("totalCount", 0)
 
+    # Fetch a valid teacher and subject to satisfy validation rules
+    teachers_res = admin.get("/api/admin/teachers")
+    assert teachers_res.status_code == 200
+    valid_teacher_id = teachers_res.json().get("data", [])[0].get("id")
+
+    subjects_res = admin.get("/api/admin/subjects")
+    assert subjects_res.status_code == 200
+    valid_subject_id = subjects_res.json().get("data", [])[0].get("id")
+
     # 3. Create a global Question Bank question
     create_res = admin.post("/api/admin/questions", json={
         "text": "What is the capital of Egypt?",
         "type": 0,
         "defaultPoints": 5,
         "tags": "geography",
+        "subjectId": valid_subject_id,
+        "teacherId": valid_teacher_id,
         "options": [
             {"text": "Cairo", "isCorrect": True},
             {"text": "Alexandria", "isCorrect": False}

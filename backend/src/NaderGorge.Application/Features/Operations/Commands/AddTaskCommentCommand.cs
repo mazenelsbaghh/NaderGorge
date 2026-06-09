@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Operations.Commands;
@@ -36,16 +37,27 @@ public class AddTaskCommentCommandHandler : IRequestHandler<AddTaskCommentComman
 
     public async Task<ApiResponse<Guid>> Handle(AddTaskCommentCommand request, CancellationToken ct)
     {
-        var taskExists = await _db.TaskItems.AnyAsync(t => t.Id == request.TaskId, ct);
-        if (!taskExists)
+        var task = await _db.TaskItems.FirstOrDefaultAsync(t => t.Id == request.TaskId, ct);
+        if (task == null)
         {
             throw new KeyNotFoundException("Task not found.");
         }
 
-        var userExists = await _db.Users.AnyAsync(u => u.Id == request.UserId, ct);
-        if (!userExists)
+        var user = await _db.Users
+            .Include(u => u.UserRoles)
+            .ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
+
+        if (user == null)
         {
             throw new KeyNotFoundException("User not found.");
+        }
+
+        var isManager = user.UserRoles.Any(ur => ur.Role.Type == RoleType.Admin || ur.Role.Type == RoleType.Supervisor);
+
+        if (!isManager && task.AssigneeId != request.UserId && task.CreatedById != request.UserId)
+        {
+            throw new UnauthorizedAccessException("You are not authorized to comment on this task.");
         }
 
         var comment = new TaskComment

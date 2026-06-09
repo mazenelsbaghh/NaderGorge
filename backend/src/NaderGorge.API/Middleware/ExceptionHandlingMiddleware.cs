@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 
 namespace NaderGorge.API.Middleware;
@@ -43,7 +44,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (KeyNotFoundException ex)
         {
-            _logger.LogWarning("Not found: {Message}", ex.Message);
+            _logger.LogWarning("Not found at {Method} {Path}: {Message}", context.Request.Method, context.Request.Path, ex.Message);
             context.Response.StatusCode = (int)HttpStatusCode.NotFound;
             context.Response.ContentType = "application/json";
 
@@ -58,6 +59,25 @@ public class ExceptionHandlingMiddleware
 
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsJsonAsync(response);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.GetType().Name == "PostgresException")
+        {
+            var inner = ex.InnerException;
+            var sqlState = inner.GetType().GetProperty("SqlState")?.GetValue(inner)?.ToString();
+            var constraintName = inner.GetType().GetProperty("ConstraintName")?.GetValue(inner)?.ToString();
+
+            if (sqlState == "23503" && constraintName == "FK_audit_logs_users_PerformedByUserId")
+            {
+                _logger.LogWarning("Stale user session detected via FK_audit_logs_users_PerformedByUserId. Action: {Method} {Path}", context.Request.Method, context.Request.Path);
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                context.Response.ContentType = "application/json";
+
+                var response = ApiResponse.Fail("Your session is invalid or has expired. Please log out and log in again.");
+                await context.Response.WriteAsJsonAsync(response);
+                return;
+            }
+
+            throw;
         }
         catch (Exception ex)
         {

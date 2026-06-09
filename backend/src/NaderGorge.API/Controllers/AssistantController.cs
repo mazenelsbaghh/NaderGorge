@@ -60,7 +60,13 @@ public class AssistantController : ControllerBase
     [HttpGet("my/{id:guid}")]
     public async Task<IActionResult> GetTaskDetails(Guid id)
     {
-        var response = await _mediator.Send(new GetTaskDetailsQuery(id));
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return Unauthorized();
+
+        var isAdminOrSupervisor = User.IsInRole("Admin") || User.IsInRole("Supervisor");
+
+        var response = await _mediator.Send(new GetTaskDetailsQuery(id, userId, isAdminOrSupervisor));
         return Ok(response);
     }
 

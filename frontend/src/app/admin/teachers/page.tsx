@@ -1,25 +1,412 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
-  Search, 
   Edit, 
   GraduationCap, 
   X, 
   Check, 
   User, 
   Phone, 
-  Percent, 
   Mail, 
   Image as ImageIcon,
-  BookOpen
+  BookOpen,
+  Eye,
+  EyeOff,
+  Activity,
+  Database,
+  Loader2,
+  Lock,
 } from 'lucide-react';
-import { AdminShellChrome } from '@/components/admin';
+import { 
+  AdminShellChrome, 
+  AdminDataTable, 
+  AdminColumn, 
+  AdminStatCard, 
+  AdminSearchToolbar, 
+  AdminPageSkeleton,
+} from '@/components/admin';
+import { 
+  formatRelativeDate, 
+  getInitials 
+} from '@/components/admin/admin-utils';
 import { teacherService, type TeacherDto, type SubjectDto } from '@/services/teacher-service';
-import { adminService } from '@/services/admin-service';
+import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
+import NeumorphButton from '@/components/ui/neumorph-button';
+
+const GRADE_NAMES: Record<string, string> = {
+  FirstSecondary: 'الأول الثانوي',
+  SecondSecondary: 'الثاني الثانوي',
+  SecondaryGrade3: 'الثالث الثانوي',
+  FirstBaccalaureate: 'الأول بكالوريا',
+  SecondBaccalaureate: 'الثاني بكالوريا',
+  PrimaryGrade1: 'الأول الابتدائي',
+  PrimaryGrade2: 'الثاني الابتدائي',
+  PrimaryGrade3: 'الثالث الابتدائي',
+  PrimaryGrade4: 'الرابع الابتدائي',
+  PrimaryGrade5: 'الخامس الابتدائي',
+  PrimaryGrade6: 'السادس الابتدائي',
+  PrepGrade1: 'الأول الإعدادي',
+  PrepGrade2: 'الثاني الإعدادي',
+  PrepGrade3: 'الثالث الإعدادي',
+  AzhariPrimary1: 'الأول الابتدائي الأزهري',
+  AzhariPrep1: 'الأول الإعدادي الأزهري',
+  AzhariSecondary1: 'الأول الثانوي الأزهري',
+  AmericanGrade9: 'Grade 9',
+  AmericanGrade10: 'Grade 10',
+  AmericanGrade11: 'Grade 11',
+  AmericanGrade12: 'Grade 12',
+};
+
+const GRADE_GROUPS = [
+  {
+    label: 'المرحلة الثانوية العامة',
+    grades: [
+      { value: 'FirstSecondary', label: 'الأول الثانوي' },
+      { value: 'SecondSecondary', label: 'الثاني الثانوي' },
+      { value: 'SecondaryGrade3', label: 'الثالث الثانوي' },
+    ]
+  },
+  {
+    label: 'بكالوريا',
+    grades: [
+      { value: 'FirstBaccalaureate', label: 'الأول بكالوريا' },
+      { value: 'SecondBaccalaureate', label: 'الثاني بكالوريا' },
+    ]
+  },
+  {
+    label: 'المرحلة الإعدادية',
+    grades: [
+      { value: 'PrepGrade1', label: 'الأول الإعدادي' },
+      { value: 'PrepGrade2', label: 'الثاني الإعدادي' },
+      { value: 'PrepGrade3', label: 'الثالث الإعدادي' },
+    ]
+  },
+  {
+    label: 'المرحلة الابتدائية',
+    grades: [
+      { value: 'PrimaryGrade1', label: 'الأول الابتدائي' },
+      { value: 'PrimaryGrade2', label: 'الثاني الابتدائي' },
+      { value: 'PrimaryGrade3', label: 'الثالث الابتدائي' },
+      { value: 'PrimaryGrade4', label: 'الرابع الابتدائي' },
+      { value: 'PrimaryGrade5', label: 'الخامس الابتدائي' },
+      { value: 'PrimaryGrade6', label: 'السادس الابتدائي' },
+    ]
+  },
+  {
+    label: 'التعليم الأزهري',
+    grades: [
+      { value: 'AzhariPrimary1', label: 'الأول الابتدائي الأزهري' },
+      { value: 'AzhariPrep1', label: 'الأول الإعدادي الأزهري' },
+      { value: 'AzhariSecondary1', label: 'الأول الثانوي الأزهري' },
+    ]
+  },
+  {
+    label: 'التعليم الأمريكي (American)',
+    grades: [
+      { value: 'AmericanGrade9', label: 'Grade 9' },
+      { value: 'AmericanGrade10', label: 'Grade 10' },
+      { value: 'AmericanGrade11', label: 'Grade 11' },
+      { value: 'AmericanGrade12', label: 'Grade 12' },
+    ]
+  }
+];
+
+// Helper for rendering audit action translations
+function translateAction(action: string): string {
+  const map: Record<string, string> = {
+    AdjustBalance: 'تعديل رصيد الطالب',
+    OverrideVideoLimit: 'تجاوز حد مشاهدة الفيديو',
+    ToggleStudentSystemAccess: 'تعديل صلاحية وصول الطالب',
+    ResetWatchLimit: 'إعادة تعيين حد مشاهدة الفيديو',
+    AdjustGamificationPoints: 'تعديل نقاط الطالب',
+    ApproveWatchRequest: 'الموافقة على طلب مشاهدة إضافية',
+    AddStudentNote: 'إضافة ملاحظة للطالب',
+    DeleteStudentNote: 'حذف ملاحظة الطالب',
+    UpdateStudentProfile: 'تحديث الملف الشخصي لطالب',
+    DisconnectStudentDevice: 'فصل جهاز الطالب',
+    RemoveDevice: 'حذف جهاز مسجل',
+    CreateUser: 'إنشاء مستخدم جديد',
+    UpdateUserStatus: 'تحديث حالة المستخدم',
+    UpdateUserRoles: 'تحديث أدوار المستخدم',
+  };
+  return map[action] || action;
+}
+
+// Helper for parsing json differences in audit logs
+function renderChangedValues(oldVal?: string, newVal?: string) {
+  try {
+    if (!oldVal && !newVal) return null;
+    const oldObj = oldVal ? JSON.parse(oldVal) : null;
+    const newObj = newVal ? JSON.parse(newVal) : null;
+
+    const keys = Array.from(new Set([...Object.keys(oldObj || {}), ...Object.keys(newObj || {})]));
+    const changes = keys.filter(key => {
+      const o = oldObj ? oldObj[key] : undefined;
+      const n = newObj ? newObj[key] : undefined;
+      return o !== n;
+    });
+
+    if (changes.length === 0) return null;
+
+    return (
+      <div className="mt-2 space-y-1 text-xs text-[var(--admin-muted)] bg-[var(--admin-hover)]/30 px-3 py-2 rounded-xl border border-[var(--admin-border)]/5 outline-none">
+        {changes.map(key => {
+          const o = oldObj ? oldObj[key] : undefined;
+          const n = newObj ? newObj[key] : undefined;
+          return (
+            <div key={key} className="flex flex-wrap items-center gap-1.5">
+              <span className="font-bold text-[var(--admin-text)]">{key}:</span>
+              {o !== undefined && <span className="line-through text-red-500/80">{String(o)}</span>}
+              {o !== undefined && <span className="opacity-40">←</span>}
+              {n !== undefined && <span className="text-emerald-500 font-bold">{String(n)}</span>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  } catch {
+    return null;
+  }
+}
+
+interface TeacherProfileModalProps {
+  open: boolean;
+  onClose: () => void;
+  teacher: TeacherDto | null;
+}
+
+function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProps) {
+  const [logs, setLogs] = useState<UserAuditLogDto[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && teacher) {
+      setLoading(true);
+      adminService.getUserAuditLogs(teacher.userId)
+        .then(data => {
+          setLogs(data || []);
+        })
+        .catch(err => {
+          console.error("Failed to load audit logs", err);
+          toast.error("فشل في تحميل سجل النشاطات");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLogs([]);
+    }
+  }, [open, teacher]);
+
+  if (!teacher) return null;
+
+  const gradeList = teacher.specialization ? teacher.specialization.split(',') : [];
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={onClose}
+            className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm"
+          />
+
+          {/* Modal */}
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
+            dir="rtl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="teacher-profile-title"
+          >
+            <div className="flex max-h-[min(880px,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl">
+              
+              {/* Header */}
+              <div className="flex shrink-0 items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5">
+                <div className="flex items-center gap-4">
+                  {teacher.profileImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={teacher.profileImageUrl}
+                      alt={teacher.fullName}
+                      className="h-12 w-12 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-lg shadow-sm">
+                      {getInitials(teacher.fullName)}
+                    </div>
+                  )}
+                  <div>
+                    <h2
+                      id="teacher-profile-title"
+                      className="text-lg font-black text-[var(--admin-text)] tracking-tight"
+                    >
+                      {teacher.fullName}
+                    </h2>
+                    <p className="text-xs text-[var(--admin-muted)] mt-0.5">الملف التعريفي الكامل للمعلم وسجل العمليات</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="إغلاق الملف التعريفي"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6">
+                
+                {/* Info Block */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-[var(--admin-card)] p-5 rounded-3xl">
+                  <div className="flex items-center gap-3">
+                    <User className="h-5 w-5 text-[var(--admin-primary)]" />
+                    <div>
+                      <p className="text-xs text-[var(--admin-muted)]">رقم الهاتف</p>
+                      <p className="text-sm font-bold text-[var(--admin-text)] font-mono">{teacher.phoneNumber}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-[var(--admin-primary)]" />
+                    <div>
+                      <p className="text-xs text-[var(--admin-muted)]">معلومات الاتصال / البريد</p>
+                      <p className="text-sm font-bold text-[var(--admin-text)] truncate max-w-[200px]" title={teacher.contactInfo}>
+                        {teacher.contactInfo || '—'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bio & Subjects Section */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 md:col-span-1">
+                    <h4 className="text-sm font-black text-[var(--admin-text)] mb-3 flex items-center gap-2">
+                      <User className="h-4 w-4 text-[var(--admin-primary)]" />
+                      السيرة الذاتية (البيو)
+                    </h4>
+                    <p className="text-sm text-[var(--admin-muted)] leading-relaxed whitespace-pre-wrap">
+                      {teacher.bio || 'لا توجد سيرة ذاتية مسجلة حالياً.'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 md:col-span-1">
+                    <h4 className="text-sm font-black text-[var(--admin-text)] mb-3 flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4 text-[var(--admin-primary)]" />
+                      المراحل والصفوف الدراسية
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {gradeList.length > 0 ? (
+                        gradeList.map((val, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
+                          >
+                            {GRADE_NAMES[val] || val}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-xs text-red-500 font-bold">غير محدد</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 md:col-span-1">
+                    <h4 className="text-sm font-black text-[var(--admin-text)] mb-3 flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-[var(--admin-primary)]" />
+                      المواد الدراسية التابعة له
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {teacher.subjectNames && teacher.subjectNames.length > 0 ? (
+                        teacher.subjectNames.map((name, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
+                          >
+                            <BookOpen className="h-3 w-3" />
+                            {name}
+                          </span>
+                        ))
+                      ) : (
+                        <p className="text-xs text-red-500 font-bold">لم يتم تعيين أي مادة بعد</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audit logs Timeline Section */}
+                <div>
+                  <h3 className="text-sm font-black text-[var(--admin-text)] mb-4 flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-[var(--admin-primary)]" />
+                    سجل نشاطات المعلم
+                  </h3>
+
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-[var(--admin-muted)] gap-3">
+                      <Loader2 className="h-8 w-8 animate-spin text-[var(--admin-primary)]" />
+                      <p className="text-sm font-bold">جاري تحميل سجل النشاطات...</p>
+                    </div>
+                  ) : logs.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-[var(--admin-muted)] bg-[var(--admin-card)]/50 rounded-3xl">
+                      <Database className="h-10 w-10 mb-3 opacity-40 text-[var(--admin-primary)]" />
+                      <p className="text-sm font-bold">لا يوجد أي نشاطات مسجلة لهذا الحساب حالياً.</p>
+                    </div>
+                  ) : (
+                    <div className="relative border-r border-[var(--admin-border)]/60 mr-3 pr-6 space-y-6">
+                      {logs.map((log) => (
+                        <div key={log.id} className="relative group">
+                          {/* Timeline node */}
+                          <div className="absolute right-[-31px] top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 border-[var(--admin-bg)] bg-[var(--admin-primary)] ring-4 ring-[var(--admin-primary-15)]" />
+                          
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5">
+                            <div>
+                              <p className="text-sm font-bold text-[var(--admin-text)]">
+                                {translateAction(log.action)}
+                              </p>
+                              <p className="text-xs text-[var(--admin-muted)] mt-0.5">
+                                الكيان المتأثر: <span className="font-mono text-[var(--admin-text)]">{log.entityType}</span>
+                                {log.ipAddress && <> | عنوان الـ IP: <span className="font-mono">{log.ipAddress}</span></>}
+                              </p>
+                            </div>
+                            <span className="text-xs text-[var(--admin-muted)] font-medium shrink-0">
+                              {formatRelativeDate(log.createdAt)}
+                            </span>
+                          </div>
+
+                          {/* Changed values visualization */}
+                          {renderChangedValues(log.oldValues, log.newValues)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Footer */}
+              <div className="shrink-0 border-t border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
+                >
+                  إغلاق
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
 
 export default function AdminTeachersPage() {
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
@@ -28,20 +415,20 @@ export default function AdminTeachersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<TeacherDto | null>(null);
+  const [selectedTeacherProfile, setSelectedTeacherProfile] = useState<TeacherDto | null>(null);
 
-  // User search states for onboarding new teachers
-  const [userSearchText, setUserSearchText] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
-  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<{ id: string; fullName: string; phoneNumber: string } | null>(null);
+  // Direct onboarding form states
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form states
   const [bio, setBio] = useState('');
-  const [specialization, setSpecialization] = useState('');
-  const [commissionRate, setCommissionRate] = useState(0);
   const [contactInfo, setContactInfo] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const loadData = useCallback(async () => {
@@ -70,50 +457,27 @@ export default function AdminTeachersPage() {
     loadData();
   }, [loadData]);
 
-  // Search users in DB to bind them to a Teacher Profile
-  const handleUserSearch = async () => {
-    if (!userSearchText.trim()) return;
-    setIsSearchingUsers(true);
-    try {
-      const res = await adminService.listUsers(1, 10, userSearchText.trim());
-      if (res && res.items) {
-        setUserSearchResults(res.items || []);
-      } else {
-        setUserSearchResults([]);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('فشل في البحث عن المستخدمين');
-    } finally {
-      setIsSearchingUsers(false);
-    }
-  };
-
   const handleOpenModal = (teacher: TeacherDto | null = null) => {
     if (teacher) {
       setEditingTeacher(teacher);
-      setSelectedUser({
-        id: teacher.userId,
-        fullName: teacher.fullName,
-        phoneNumber: teacher.phoneNumber,
-      });
-      setBio(teacher.bio);
-      setSpecialization(teacher.specialization);
-      setCommissionRate(teacher.commissionRate);
-      setContactInfo(teacher.contactInfo);
+      setFullName(teacher.fullName);
+      setPhoneNumber(teacher.phoneNumber);
+      setPassword('');
+      setBio(teacher.bio || '');
+      setContactInfo(teacher.contactInfo || '');
       setProfileImageUrl(teacher.profileImageUrl || '');
       setSelectedSubjectIds(teacher.subjectIds || []);
+      setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
     } else {
       setEditingTeacher(null);
-      setSelectedUser(null);
-      setUserSearchText('');
-      setUserSearchResults([]);
+      setFullName('');
+      setPhoneNumber('');
+      setPassword('');
       setBio('');
-      setSpecialization('');
-      setCommissionRate(0);
       setContactInfo('');
       setProfileImageUrl('');
       setSelectedSubjectIds([]);
+      setSelectedGrades([]);
     }
     setIsModalOpen(true);
   };
@@ -121,9 +485,9 @@ export default function AdminTeachersPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingTeacher(null);
-    setSelectedUser(null);
-    setUserSearchText('');
-    setUserSearchResults([]);
+    setFullName('');
+    setPhoneNumber('');
+    setPassword('');
   };
 
   const handleSubjectToggle = (subjectId: string) => {
@@ -134,20 +498,56 @@ export default function AdminTeachersPage() {
     );
   };
 
+  const validate = (): boolean => {
+    if (!fullName.trim()) {
+      toast.error('الاسم الكامل مطلوب');
+      return false;
+    }
+    if (fullName.trim().split(/\s+/).length < 2) {
+      toast.error('الاسم يجب أن يكون كلمتين على الأقل');
+      return false;
+    }
+    if (!phoneNumber.trim()) {
+      toast.error('رقم الهاتف مطلوب');
+      return false;
+    }
+    if (!/^01[0125]\d{8}$/.test(phoneNumber.trim())) {
+      toast.error('رقم الهاتف يجب أن يكون رقم مصري صحيح (01x xxxxxxxx)');
+      return false;
+    }
+    if (!editingTeacher && (!password || password.length < 6)) {
+      toast.error('كلمة السر مطلوبة ويجب أن تكون 6 أحرف على الأقل');
+      return false;
+    }
+    if (!contactInfo.trim()) {
+      toast.error('معلومات الاتصال / البريد الإلكتروني مطلوبة');
+      return false;
+    }
+    if (selectedGrades.length === 0) {
+      toast.error('يرجى تحديد صف دراسي واحد على الأقل يدرّسه المعلم');
+      return false;
+    }
+    if (selectedSubjectIds.length === 0) {
+      toast.error('يرجى تحديد مادة دراسية واحدة على الأقل');
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) {
-      toast.error('يرجى تحديد حساب المستخدم أولاً');
-      return;
-    }
+    if (!validate()) return;
 
     setIsSaving(true);
     try {
+      const gradesString = selectedGrades.join(',');
+
       if (editingTeacher) {
+        // 1. Edit existing teacher profile (User edits are read-only here)
         const res = await teacherService.updateTeacher(editingTeacher.id, {
           bio: bio.trim(),
-          specialization: specialization.trim(),
-          commissionRate: Number(commissionRate),
+          specialization: gradesString, // Store selected grades as specialization
+          commissionRate: 0, 
           contactInfo: contactInfo.trim(),
           profileImageUrl: profileImageUrl.trim() || undefined,
           subjectIds: selectedSubjectIds,
@@ -161,27 +561,43 @@ export default function AdminTeachersPage() {
           toast.error(res.message || 'فشل في تحديث ملف المعلم');
         }
       } else {
-        const res = await teacherService.createTeacher({
-          userId: selectedUser.id,
-          bio: bio.trim(),
-          specialization: specialization.trim(),
-          commissionRate: Number(commissionRate),
-          contactInfo: contactInfo.trim(),
-          profileImageUrl: profileImageUrl.trim() || undefined,
-          subjectIds: selectedSubjectIds,
-        });
+        // 2. Direct onboarding: create User account first, then create Teacher Profile
+        const userPayload = {
+          fullName: fullName.trim(),
+          phoneNumber: phoneNumber.trim(),
+          password,
+          role: 'Teacher',
+        };
 
-        if (res.success) {
-          toast.success('تم إنشاء ملف المعلم بنجاح وتعيين الصلاحيات ✅');
-          handleCloseModal();
-          loadData();
+        const userRes = await adminService.createUser(userPayload);
+        if (userRes && userRes.success && userRes.data?.id) {
+          const userId = userRes.data.id;
+          
+          const teacherRes = await teacherService.createTeacher({
+            userId,
+            bio: bio.trim(),
+            specialization: gradesString, // Store selected grades as specialization
+            commissionRate: 0, 
+            contactInfo: contactInfo.trim(),
+            profileImageUrl: profileImageUrl.trim() || undefined,
+            subjectIds: selectedSubjectIds,
+          });
+
+          if (teacherRes.success) {
+            toast.success('تم إنشاء حساب المعلم وتهيئة ملفه الأكاديمي بنجاح ✅');
+            handleCloseModal();
+            loadData();
+          } else {
+            toast.error(teacherRes.message || 'فشل في تهيئة الملف التعريفي للمعلم');
+          }
         } else {
-          toast.error(res.message || 'فشل في إنشاء ملف المعلم');
+          toast.error(userRes?.message || 'فشل في إنشاء حساب مستخدم المعلم');
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('حدث خطأ أثناء حفظ الملف');
+      const errMsg = err?.response?.data?.message || 'حدث خطأ أثناء حفظ البيانات';
+      toast.error(errMsg);
     } finally {
       setIsSaving(false);
     }
@@ -193,390 +609,439 @@ export default function AdminTeachersPage() {
       t.specialization.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const columns: AdminColumn<TeacherDto>[] = [
+    {
+      key: 'teacher',
+      label: 'المعلم',
+      render: (t) => (
+        <div className="flex items-center gap-4">
+          {t.profileImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={t.profileImageUrl}
+              alt={t.fullName}
+              className="h-12 w-12 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-primary-15)] font-bold text-[var(--admin-primary)] shadow-sm">
+              {getInitials(t.fullName)}
+            </div>
+          )}
+          <div>
+            <div className="font-bold text-[var(--admin-text)]">
+              {t.fullName}
+            </div>
+            <div className="text-xs text-[var(--admin-muted)] mt-1 font-mono tracking-wider">
+              {t.phoneNumber}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'grades',
+      label: 'المراحل والصفوف الدراسية',
+      render: (t) => {
+        const gradeList = t.specialization ? t.specialization.split(',') : [];
+        return (
+          <div className="flex flex-wrap gap-1 max-w-[250px]">
+            {gradeList.length > 0 ? (
+              gradeList.map((val, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
+                >
+                  {GRADE_NAMES[val] || val}
+                </span>
+              ))
+            ) : (
+              <span className="text-[10px] font-bold text-red-500">غير محدد</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'subjects',
+      label: 'المواد الدراسية',
+      render: (t) => (
+        <div className="flex flex-wrap gap-1 max-w-[200px]">
+          {t.subjectNames && t.subjectNames.length > 0 ? (
+            t.subjectNames.map((name, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
+              >
+                {name}
+              </span>
+            ))
+          ) : (
+            <span className="text-[10px] font-bold text-red-500">لا يوجد مواد</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'الإجراءات',
+      align: 'left',
+      render: (t) => (
+        <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+          <NeumorphButton
+            type="button"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              setSelectedTeacherProfile(t);
+            }}
+            intent="primary"
+            size="icon"
+            title="الملف التعريفي الكامل"
+          >
+            <User className="h-5 w-5" />
+          </NeumorphButton>
+          <NeumorphButton
+            type="button"
+            onClick={(e: React.MouseEvent) => {
+              e.stopPropagation();
+              handleOpenModal(t);
+            }}
+            intent="primary"
+            size="icon"
+            title="تعديل ملف المعلم"
+          >
+            <Edit className="h-5 w-5" />
+          </NeumorphButton>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <AdminShellChrome
       activePath="/admin/teachers"
       sectionLabel="المستخدمين"
       pageTitle="المعلمين"
-      subtitle="إدارة الحسابات التعليمية المعتمدة وتعيين تخصصاتهم ونسب عمولاتهم والمواد الدراسية التابعة لهم."
+      subtitle="إدارة الحسابات التعليمية المعتمدة وتعيين المراحل والصفوف الدراسية والمواد التابعة لهم."
       action={
-        <button
+        <NeumorphButton
+          intent="primary"
+          size="lg"
+          pill
           onClick={() => handleOpenModal()}
-          className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary)] px-5 py-2.5 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-lg transition hover:scale-105 hover:opacity-90 active:scale-95"
         >
           <Plus className="h-4 w-4" />
           إضافة معلم جديد
-        </button>
+        </NeumorphButton>
       }
     >
-      {/* Search Bar */}
-      <div className="relative mb-8 max-w-md">
-        <input
-          type="text"
-          placeholder="ابحث عن معلم بالاسم أو التخصص..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/80 py-3.5 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none backdrop-blur-xl transition focus:border-[var(--admin-primary)]"
+      {/* Stats Strip */}
+      <section className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+        <AdminStatCard
+          variant="light"
+          icon={GraduationCap}
+          label="إجمالي المعلمين"
+          value={teachers.length}
+          subtitle="إجمالي معلمي المنصة المسجلين"
         />
-        <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--admin-muted)]" />
-      </div>
+        <AdminStatCard
+          variant="accent"
+          icon={BookOpen}
+          label="المواد النشطة"
+          value={subjects.length}
+          subtitle="إجمالي المواد الأكاديمية المهيأة"
+        />
+      </section>
+
+      {/* Search Bar */}
+      <AdminSearchToolbar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="ابحث عن معلم بالاسم أو التخصص..."
+      />
 
       {isLoading ? (
-        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--admin-primary)] border-t-transparent"></div>
-          <p className="text-sm text-[var(--admin-muted)]">جاري تحميل المعلمين...</p>
-        </div>
-      ) : filteredTeachers.length === 0 ? (
-        <div className="flex min-h-[300px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/50 p-8 text-center backdrop-blur-xl">
-          <GraduationCap className="mb-4 h-12 w-12 text-[var(--admin-muted)]" />
-          <h3 className="text-lg font-bold text-[var(--admin-text)]">لا يوجد معلمون</h3>
-          <p className="mt-2 text-sm text-[var(--admin-muted)]">
-            {searchQuery ? 'لم يتم العثور على نتائج تطابق بحثك' : 'ابدأ بتهيئة أول حساب معلم في المنصة'}
-          </p>
-        </div>
+        <AdminPageSkeleton />
       ) : (
-        <motion.div 
-          layout
-          className="grid grid-cols-1 gap-6 lg:grid-cols-2"
-        >
-          <AnimatePresence mode="popLayout">
-            {filteredTeachers.map((teacher) => (
-              <motion.div
-                key={teacher.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-md transition hover:shadow-xl"
-              >
-                <div>
-                  <div className="flex items-start gap-4">
-                    {teacher.profileImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={teacher.profileImageUrl}
-                        alt={teacher.fullName}
-                        className="h-16 w-16 rounded-[1.25rem] object-cover border border-[var(--admin-border)] shadow"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] border border-[var(--admin-border)]">
-                        <GraduationCap className="h-8 w-8" />
-                      </div>
-                    )}
-
-                    <div className="flex-1">
-                      <h2 className="text-lg font-extrabold text-[var(--admin-text)] group-hover:text-[var(--admin-primary)] transition">
-                        {teacher.fullName}
-                      </h2>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--admin-muted)]">
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {teacher.phoneNumber}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Percent className="h-3 w-3" />
-                          العمولة: {teacher.commissionRate}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bio & Subjects */}
-                  <p className="mt-4 text-sm text-[var(--admin-muted)] line-clamp-2">
-                    {teacher.bio || 'لم يتم كتابة سيرة ذاتية بعد.'}
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap gap-1.5">
-                    {teacher.subjectNames && teacher.subjectNames.length > 0 ? (
-                      teacher.subjectNames.map((name, i) => (
-                        <span
-                          key={i}
-                          className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-primary)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--admin-primary)]"
-                        >
-                          <BookOpen className="h-3 w-3" />
-                          {name}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-red-500">لم يتم تعيين أي مادة بعد</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between border-t border-[var(--admin-border)] pt-4">
-                  <span className="text-xs text-[var(--admin-muted)]">
-                    التخصص: <strong className="text-[var(--admin-text)]">{teacher.specialization || 'غير محدد'}</strong>
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenModal(teacher)}
-                      className="inline-flex h-9 px-4 items-center gap-2 rounded-xl bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition active:scale-95 text-xs font-bold"
-                    >
-                      <Edit className="h-4 w-4" />
-                      تعديل الملف
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+        <AdminDataTable
+          data={filteredTeachers}
+          columns={columns}
+          loading={isLoading}
+          rowKey={(t) => t.id}
+          emptyMessage="لا توجد نتائج مطابقة لفلترة المعلمين."
+          onRowClick={(t) => {
+            setSelectedTeacherProfile(t);
+          }}
+        />
       )}
 
-      {/* Onboarding / Edit Modal */}
+      {/* Onboarding / Edit Drawer Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               onClick={handleCloseModal}
-              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             />
             {/* Modal Box */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl overflow-y-auto max-h-[90vh] rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-2xl backdrop-blur-3xl"
+            <div
+              className="relative w-full max-w-2xl overflow-y-auto max-h-[90vh] rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-8 shadow-2xl"
+              dir="rtl"
             >
               <button
                 onClick={handleCloseModal}
-                className="absolute left-6 top-6 rounded-xl border border-[var(--admin-border)] p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"
+                disabled={isSaving}
+                className="absolute left-6 top-6 rounded-xl border border-[var(--admin-border)] p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] disabled:opacity-50"
               >
                 <X className="h-4 w-4" />
               </button>
 
               <h2 className="text-xl font-black text-[var(--admin-text)]">
-                {editingTeacher ? 'تعديل ملف المعلم' : 'تهيئة حساب معلم جديد'}
+                {editingTeacher ? 'تعديل ملف المعلم' : 'إضافة معلم جديد'}
               </h2>
               <p className="mt-1 text-sm text-[var(--admin-muted)]">
-                يرجى ربط ملف المعلم بحساب مستخدم مسجل بالمنصة وتحديد الصلاحيات والمواد.
+                {editingTeacher 
+                  ? 'قم بتعديل تخصص المعلم ومعلومات التواصل والمواد الدراسية المرتبطة بملفه.' 
+                  : 'أدخل بيانات المعلم لإنشاء حساب مستخدم وتهيئة ملفه الأكاديمي مباشرة.'}
               </p>
 
-              {/* Step 1: Select User (Only for New Onboarding) */}
-              {!editingTeacher && !selectedUser ? (
-                <div className="mt-6 space-y-4">
-                  <label className="block text-xs font-bold text-[var(--admin-text)]">البحث عن حساب المستخدم *</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="ابحث بالاسم أو برقم الهاتف..."
-                      value={userSearchText}
-                      onChange={(e) => setUserSearchText(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleUserSearch()}
-                      className="flex-1 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleUserSearch}
-                      disabled={isSearchingUsers}
-                      className="rounded-2xl bg-[var(--admin-primary)] px-6 text-sm font-bold text-[var(--admin-primary-contrast)] transition hover:opacity-90 active:scale-95"
-                    >
-                      {isSearchingUsers ? 'جاري البحث...' : 'بحث'}
-                    </button>
-                  </div>
+              <form onSubmit={handleSave} className="mt-6 space-y-6">
+                
+                {/* Account Details (Create Mode: Input, Edit Mode: Readonly) */}
+                <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-[var(--admin-primary)]" />
+                    بيانات حساب الدخول للمنصة
+                  </h4>
 
-                  {/* Search Results list */}
-                  <div className="mt-2 divide-y divide-[var(--admin-border)] rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] max-h-60 overflow-y-auto">
-                    {userSearchResults.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-[var(--admin-muted)]">
-                        {userSearchText ? 'لا توجد نتائج بحث' : 'اكتب الاسم أو الهاتف للبحث عن حساب المستخدم'}
-                      </div>
-                    ) : (
-                      userSearchResults.map((userItem) => (
-                        <div
-                          key={userItem.id}
-                          onClick={() => {
-                            setSelectedUser({
-                              id: userItem.id,
-                              fullName: userItem.fullName,
-                              phoneNumber: userItem.phoneNumber,
-                            });
-                          }}
-                          className="flex items-center justify-between p-3.5 hover:bg-[var(--admin-hover)] cursor-pointer transition"
-                        >
-                          <div>
-                            <div className="text-sm font-bold text-[var(--admin-text)]">{userItem.fullName}</div>
-                            <div className="text-xs text-[var(--admin-muted)]">{userItem.phoneNumber}</div>
-                          </div>
-                          <div className="text-xs font-semibold rounded-full bg-[var(--admin-bg)] px-3 py-1 text-[var(--admin-primary)] border border-[var(--admin-border)]">
-                            {userItem.roles?.join(', ') || 'طالب/عام'}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Onboarding Form */
-                <form onSubmit={handleSave} className="mt-6 space-y-6">
-                  {/* Readonly Selected User Display */}
-                  <div className="flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                      <div className="text-xs text-[var(--admin-muted)] mb-1">المستخدم المربوط بالحساب</div>
-                      <div className="text-sm font-bold text-[var(--admin-text)] flex items-center gap-1.5">
-                        <User className="h-4 w-4 text-[var(--admin-primary)]" />
-                        {selectedUser?.fullName}
-                      </div>
-                      <div className="text-xs text-[var(--admin-muted)] flex items-center gap-1 mt-0.5">
-                        <Phone className="h-3 w-3" />
-                        {selectedUser?.phoneNumber}
-                      </div>
-                    </div>
-                    {!editingTeacher && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedUser(null)}
-                        className="text-xs font-bold text-red-500 hover:underline"
-                      >
-                        تغيير الحساب
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Form fields */}
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">التخصص التعليمي *</label>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">الاسم الكامل *</label>
                       <input
                         type="text"
                         required
-                        value={specialization}
-                        onChange={(e) => setSpecialization(e.target.value)}
-                        placeholder="مثال: مدرس أول فيزياء، خبير اللغة الإنجليزية..."
-                        className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] transition"
+                        disabled={!!editingTeacher || isSaving}
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="أحمد محمد علي"
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نسبة العمولة (%) *</label>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رقم الهاتف *</label>
                       <div className="relative">
                         <input
-                          type="number"
+                          type="tel"
                           required
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={commissionRate}
-                          onChange={(e) => setCommissionRate(Number(e.target.value))}
-                          placeholder="مثال: 12.5"
-                          className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] transition"
+                          maxLength={11}
+                          disabled={!!editingTeacher || isSaving}
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                          placeholder="01xxxxxxxxx"
+                          dir="ltr"
+                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
                         />
-                        <Percent className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                        <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {!editingTeacher && (
                     <div>
-                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نقاط الاتصال / البريد الإلكتروني *</label>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">كلمة السر *</label>
                       <div className="relative">
                         <input
-                          type="text"
+                          type={showPassword ? 'text' : 'password'}
                           required
-                          value={contactInfo}
-                          onChange={(e) => setContactInfo(e.target.value)}
-                          placeholder="معلومات التواصل أو إيميل المعلم..."
-                          className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] transition"
+                          disabled={isSaving}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="6 أحرف على الأقل"
+                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-12 pr-4 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
                         />
-                        <Mail className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--admin-muted)] transition hover:text-[var(--admin-text)]"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                     </div>
+                  )}
+                  {editingTeacher && (
+                    <p className="text-[10px] text-[var(--admin-muted)] flex items-center gap-1.5 mt-1.5">
+                      <Lock className="h-3 w-3" />
+                      بيانات تسجيل الدخول مدارة من قبل قسم شؤون المستخدمين ولا يمكن تعديلها من هنا.
+                    </p>
+                  )}
+                </div>
 
-                    <div>
-                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط الصورة الشخصية (اختياري)</label>
-                      <div className="relative">
-                        <input
-                          type="url"
-                          value={profileImageUrl}
-                          onChange={(e) => setProfileImageUrl(e.target.value)}
-                          placeholder="https://example.com/avatar.jpg"
-                          className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] transition"
-                        />
-                        <ImageIcon className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
-                      </div>
+                {/* Profile Details */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نقاط الاتصال / البريد الإلكتروني *</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        disabled={isSaving}
+                        value={contactInfo}
+                        onChange={(e) => setContactInfo(e.target.value)}
+                        placeholder="إيميل المعلم أو الهاتف البديل..."
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                      <Mail className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">السيرة الذاتية (البيو)</label>
-                    <textarea
-                      rows={3}
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      placeholder="اكتب نبذة ترويجية قصيرة تظهر للطلاب في صفحة الباقات..."
-                      className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] transition resize-none"
-                    />
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط الصورة الشخصية (اختياري)</label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        disabled={isSaving}
+                        value={profileImageUrl}
+                        onChange={(e) => setProfileImageUrl(e.target.value)}
+                        placeholder="https://example.com/avatar.jpg"
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                      <ImageIcon className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                    </div>
                   </div>
+                </div>
 
-                  {/* Subjects checkboxes */}
-                  <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-3">المواد الدراسية التي يدرسها المعلم *</label>
-                    {subjects.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-[var(--admin-border)] p-4 text-center text-xs text-[var(--admin-muted)]">
-                        لم يتم إضافة أي مواد دراسية بعد. يرجى تهيئة المواد من قسم إدارة المواد أولاً.
+                <div>
+                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">السيرة الذاتية (البيو)</label>
+                  <textarea
+                    rows={3}
+                    disabled={isSaving}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="اكتب نبذة ترويجية قصيرة تظهر للطلاب في صفحة الباقات..."
+                    className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition resize-none"
+                  />
+                </div>
+
+                {/* Grade levels checkbox checklist */}
+                <div>
+                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-3">المراحل والصفوف الدراسية التي يدرّسها المعلم *</label>
+                  <div className="space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 max-h-60 overflow-y-auto">
+                    {GRADE_GROUPS.map((group, gIdx) => (
+                      <div key={gIdx} className="space-y-2">
+                        <h5 className="text-xs font-black text-[var(--admin-text)] border-b border-[var(--admin-border)]/30 pb-1">{group.label}</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {group.grades.map((grade) => {
+                            const isChecked = selectedGrades.includes(grade.value);
+                            const toggleGrade = () => {
+                              setSelectedGrades(prev => 
+                                prev.includes(grade.value)
+                                  ? prev.filter(v => v !== grade.value)
+                                  : [...prev, grade.value]
+                              );
+                            };
+                            return (
+                              <div
+                                key={grade.value}
+                                onClick={() => !isSaving && toggleGrade()}
+                                className={`flex items-center gap-3 rounded-xl border p-2.5 cursor-pointer transition select-none ${
+                                  isChecked
+                                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 text-[var(--admin-text)]'
+                                    : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                                } ${isSaving ? 'pointer-events-none opacity-60' : ''}`}
+                              >
+                                <div
+                                  className={`flex h-4 w-4 items-center justify-center rounded border transition ${
+                                    isChecked
+                                      ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                                      : 'border-[var(--admin-border)] bg-[var(--admin-bg)]'
+                                  }`}
+                                >
+                                  {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                                </div>
+                                <span className="text-xs font-bold">{grade.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3 max-h-40 overflow-y-auto rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
-                        {subjects.map((sub) => {
-                          const isChecked = selectedSubjectIds.includes(sub.id);
-                          return (
+                    ))}
+                  </div>
+                </div>
+
+                {/* Subjects checkboxes */}
+                <div>
+                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-3">المواد الدراسية التي يدرسها المعلم *</label>
+                  {subjects.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-[var(--admin-border)] p-4 text-center text-xs text-[var(--admin-muted)]">
+                      لم يتم إضافة أي مواد دراسية بعد. يرجى تهيئة المواد من قسم إدارة المواد أولاً.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 max-h-40 overflow-y-auto rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
+                      {subjects.map((sub) => {
+                        const isChecked = selectedSubjectIds.includes(sub.id);
+                        return (
+                          <div
+                            key={sub.id}
+                            onClick={() => !isSaving && handleSubjectToggle(sub.id)}
+                            className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition select-none ${
+                              isChecked
+                                ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 text-[var(--admin-text)]'
+                                : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                            } ${isSaving ? 'pointer-events-none opacity-60' : ''}`}
+                          >
                             <div
-                              key={sub.id}
-                              onClick={() => handleSubjectToggle(sub.id)}
-                              className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition select-none ${
+                              className={`flex h-4 w-4 items-center justify-center rounded border transition ${
                                 isChecked
-                                  ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 text-[var(--admin-text)]'
-                                  : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'
+                                  ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                                  : 'border-[var(--admin-border)] bg-[var(--admin-bg)]'
                               }`}
                             >
-                              <div
-                                className={`flex h-4 w-4 items-center justify-center rounded border transition ${
-                                  isChecked
-                                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
-                                    : 'border-[var(--admin-muted)]'
-                                }`}
-                              >
-                                {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
-                              </div>
-                              <span className="text-xs font-bold">{sub.name}</span>
+                              {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                            <span className="text-xs font-bold">{sub.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
 
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--admin-border)]">
-                    <button
-                      type="button"
-                      onClick={handleCloseModal}
-                      className="rounded-full border border-[var(--admin-border)] px-6 py-2.5 text-sm font-bold text-[var(--admin-text)] hover:bg-[var(--admin-hover)]"
-                    >
-                      إلغاء
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSaving}
-                      className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary)] px-6 py-2.5 text-sm font-bold text-[var(--admin-primary-contrast)] shadow-lg hover:opacity-90 active:scale-95 disabled:opacity-50"
-                    >
-                      {isSaving ? (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--admin-primary-contrast)] border-t-transparent"></div>
-                      ) : (
-                        <Check className="h-4 w-4" />
-                      )}
-                      حفظ البيانات
-                    </button>
-                  </div>
-                </form>
-              )}
-            </motion.div>
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--admin-border)]">
+                  <NeumorphButton
+                    type="button"
+                    onClick={handleCloseModal}
+                    disabled={isSaving}
+                    intent="primary"
+                    size="md"
+                    pill
+                  >
+                    إلغاء
+                  </NeumorphButton>
+                  <NeumorphButton
+                    type="submit"
+                    disabled={isSaving}
+                    intent="primary"
+                    size="md"
+                    pill
+                  >
+                    {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                    حفظ البيانات
+                  </NeumorphButton>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Teacher Profile details modal */}
+      <TeacherProfileModal
+        open={!!selectedTeacherProfile}
+        onClose={() => setSelectedTeacherProfile(null)}
+        teacher={selectedTeacherProfile}
+      />
     </AdminShellChrome>
   );
 }

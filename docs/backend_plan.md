@@ -10,6 +10,11 @@
 - [x] Create EF Core DB migration to update default roles (Supervisor, Staff, Assistant) with predefined permissions in the database.
 - [x] Update Seeder.cs to register these default roles with prefilled permissions.
 
+### Assistant Surface Security & Task Ownership Checks (2026-06-09)
+- [x] Secure GetTaskDetailsQuery to validate if user is Assignee, Creator, Admin, or Supervisor.
+- [x] Secure AddTaskCommentCommand to enforce task ownership access before adding comment.
+- [x] Secure UpdateTaskStatusCommand to block regular assistants from completing tasks without supervisor approval, and restrict modifying other users' tasks.
+
 ### Custom Forms API Payload Alignment (2026-06-07)
 - [x] Ensure and document that backend `PUT` endpoints (`PUT /api/admin/forms/{id}` and `PUT /api/admin/forms/submissions/{submissionId}/status`) successfully receive matched IDs from the body payload as well.
 

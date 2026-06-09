@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Library,
   Coins,
+  Briefcase,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -26,7 +27,9 @@ export interface AdminRootLink {
 export const adminMenuItems = [
   { label: 'المستندات والمواد', href: '/admin/subjects', icon: <Library className="h-4 w-4" />, permission: 'content.manage' },
   { label: 'المعلمين', href: '/admin/teachers', icon: <GraduationCap className="h-4 w-4" />, permission: 'users.manage' },
-  { label: 'المستخدمين', href: '/admin/users', icon: <Users className="h-4 w-4" />, permission: 'users.manage' },
+  { label: 'الطلاب', href: '/admin/students', icon: <Users className="h-4 w-4" />, permission: 'users.manage' },
+  { label: 'المساعدين', href: '/admin/assistants', icon: <Briefcase className="h-4 w-4" />, permission: 'users.manage' },
+  { label: 'المديرين', href: '/admin/admins', icon: <UserCog className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'المحتوى', href: '/admin/content', icon: <BookOpen className="h-4 w-4" />, permission: 'content.manage' },
   { label: 'المجتمع', href: '/admin/community', icon: <MessageSquareText className="h-4 w-4" />, permission: 'community.manage' },
   { label: 'تحليل AI', href: '/admin/ai-monitor', icon: <Sparkles className="h-4 w-4" />, permission: 'reports.manage' },
@@ -51,9 +54,21 @@ export const adminRootLinks: AdminRootLink[] = [
     icon: GraduationCap,
   },
   {
-    href: '/admin/users',
-    title: 'إدارة المستخدمين',
-    body: 'الحسابات والصلاحيات والحالات وأجهزة الدخول.',
+    href: '/admin/students',
+    title: 'إدارة الطلاب',
+    body: 'الحسابات والصلاحيات والحالات والأجهزة للطلاب.',
+    icon: Users,
+  },
+  {
+    href: '/admin/assistants',
+    title: 'إدارة المساعدين',
+    body: 'إدارة حسابات المساعدين والملفات الشخصية والوصول.',
+    icon: Briefcase,
+  },
+  {
+    href: '/admin/admins',
+    title: 'إدارة المديرين',
+    body: 'إدارة حسابات مديري النظام وصلاحياتهم.',
     icon: UserCog,
   },
   {

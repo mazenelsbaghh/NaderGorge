@@ -8,7 +8,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CreatePackageCommand(string Name, string Description, decimal Price, Guid? ProgramId, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreatePackageCommand(string Name, string Description, decimal Price, Guid? ProgramId, Guid? TeacherId = null, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand, ApiResponse<Guid>>
 {
@@ -26,14 +26,13 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
         var pId = request.ProgramId ?? Guid.Empty;
         if (pId == Guid.Empty)
         {
-            var prog = await _db.Programs.FirstOrDefaultAsync(ct);
-            if (prog == null)
-            {
-                prog = new Program { Name = "General Program", Description = "Default Program", TargetGrade = "All grades" };
-                _db.Programs.Add(prog);
-                await _db.SaveChangesAsync(ct);
-            }
-            pId = prog.Id;
+            return ApiResponse<Guid>.Fail("Program is required.");
+        }
+
+        var program = await _db.Programs.FindAsync(new object[] { pId }, ct);
+        if (program == null)
+        {
+            return ApiResponse<Guid>.Fail("Program not found.");
         }
 
         var teacherId = Guid.Empty;
@@ -59,8 +58,23 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 
         if (teacherId == Guid.Empty)
         {
-            var defaultTeacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
-            teacherId = defaultTeacher?.Id ?? Guid.Parse("b4b82937-293e-48a3-a002-decf9a1efab8");
+            if (!request.TeacherId.HasValue || request.TeacherId.Value == Guid.Empty)
+            {
+                return ApiResponse<Guid>.Fail("Teacher is required.");
+            }
+
+            var teacherExists = await _db.TeacherProfiles.AnyAsync(tp => tp.Id == request.TeacherId.Value, ct);
+            if (!teacherExists)
+                return ApiResponse<Guid>.Fail("Selected teacher not found.");
+
+            teacherId = request.TeacherId.Value;
+        }
+
+        // Verify that the resolved teacher actually teaches the subject of the selected program
+        var teachesSubject = await _db.TeacherSubjects.AnyAsync(ts => ts.TeacherId == teacherId && ts.SubjectId == program.SubjectId, ct);
+        if (!teachesSubject)
+        {
+            return ApiResponse<Guid>.Fail("Selected teacher does not teach this program's subject.");
         }
 
         var pkg = new Package

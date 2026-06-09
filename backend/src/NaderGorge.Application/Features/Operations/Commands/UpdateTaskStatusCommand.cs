@@ -57,6 +57,11 @@ public class UpdateTaskStatusCommandHandler : IRequestHandler<UpdateTaskStatusCo
         // Enforce restrictions for non-managers
         if (!isManager)
         {
+            if (task.AssigneeId != request.UserId)
+            {
+                throw new UnauthorizedAccessException("You are not authorized to update this task.");
+            }
+
             // 1. Cannot transition out of Completed or Review
             if (task.Status == TaskStatus.Completed || task.Status == TaskStatus.Review)
             {

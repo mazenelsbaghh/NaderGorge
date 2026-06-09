@@ -69,17 +69,30 @@ public class GetCrmPerformanceReportQueryHandler : IRequestHandler<GetCrmPerform
         }
 
         // 4. Fetch agent logs breakdown
-        var agentStats = await _db.CrmCallLogs
-            .Include(l => l.Agent)
-            .GroupBy(l => new { l.AgentId, l.Agent.FullName })
-            .Select(g => new AgentPerformanceDto(
-                g.Key.AgentId,
-                g.Key.FullName,
-                g.Count(),
-                g.Count(l => l.Outcome == CallOutcome.Completed),
-                g.Count(l => l.Outcome == CallOutcome.NoAnswer)
-            ))
+        var stats = await _db.CrmCallLogs
+            .GroupBy(l => l.AgentId)
+            .Select(g => new {
+                AgentId = g.Key,
+                CallsMade = g.Count(),
+                CompletedCalls = g.Count(l => l.Outcome == CallOutcome.Completed),
+                NoAnswerCalls = g.Count(l => l.Outcome == CallOutcome.NoAnswer)
+            })
             .ToListAsync(ct);
+
+        var agentIds = stats.Select(s => s.AgentId).ToList();
+        var agents = await _db.Users
+            .Where(u => agentIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, ct);
+
+        var agentStats = stats.Select(s => new AgentPerformanceDto(
+            s.AgentId,
+            agents.TryGetValue(s.AgentId, out var name) ? name : "وكيل غير معروف",
+            s.CallsMade,
+            s.CompletedCalls,
+            s.NoAnswerCalls
+        ))
+        .ToList();
 
         var report = new CrmPerformanceReportDto(totalCalls, outcomeBreakdown, agentStats);
         return ApiResponse<CrmPerformanceReportDto>.Ok(report);

@@ -12,6 +12,7 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 
 export default function MyAttendancePage() {
   const [logs, setLogs] = useState<AttendanceLogDto[]>([]);
+  const [hasProfile, setHasProfile] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
   const [showVacationModal, setShowVacationModal] = useState<boolean>(false);
@@ -20,8 +21,9 @@ export default function MyAttendancePage() {
     setLoading(true);
     setError(false);
     try {
-      const data = await hrService.getMyAttendance();
-      setLogs(data);
+      const response = await hrService.getMyAttendance();
+      setLogs(response.logs);
+      setHasProfile(response.hasProfile);
     } catch {
       setError(true);
     } finally {
@@ -51,15 +53,17 @@ export default function MyAttendancePage() {
       subtitle="عرض وتدقيق كافة عمليات تسجيل الحضور والانصراف والمدد الزمنية الخاصة بك."
       action={
         <div className="flex gap-2">
-          <NeumorphButton
-            intent="primary"
-            size="lg"
-            pill
-            onClick={() => setShowVacationModal(true)}
-          >
-            <Coffee className="h-4 w-4" />
-            طلب إجازة
-          </NeumorphButton>
+          {hasProfile && (
+            <NeumorphButton
+              intent="primary"
+              size="lg"
+              pill
+              onClick={() => setShowVacationModal(true)}
+            >
+              <Coffee className="h-4 w-4" />
+              طلب إجازة
+            </NeumorphButton>
+          )}
           <NeumorphButton
             intent="primary"
             size="lg"
@@ -78,6 +82,23 @@ export default function MyAttendancePage() {
         onClose={() => setShowVacationModal(false)}
         onSuccess={fetchLogs}
       />
+
+      {!hasProfile && (
+        <div className="mb-6 rounded-[24px] border border-amber-500/30 bg-amber-500/5 p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4 text-right">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+              <Clock className="h-6 w-6" />
+            </div>
+            <div>
+              <h4 className="text-lg font-bold text-amber-500">ملف الموظف غير مهيأ في النظام</h4>
+              <p className="text-sm text-[var(--admin-muted)] mt-1 font-bold">
+                حسابك الحالي لا يمتلك ملف موظف نشط. يرجى التواصل مع المسؤول أو تهيئة ملف الموظف لتتمكن من تسجيل حضورك ومتابعة إجازاتك.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Summary Cards */}
       <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="relative overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-sm">

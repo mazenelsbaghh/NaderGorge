@@ -1,4 +1,4 @@
-export type SurfaceName = 'landing' | 'student' | 'admin' | 'all';
+export type SurfaceName = 'landing' | 'student' | 'admin' | 'teacher' | 'assistant' | 'all';
 
 export type RouteBoundaryAction = 'next' | 'rewrite' | 'redirect';
 
@@ -6,6 +6,8 @@ export interface SurfaceOrigins {
   landing: string;
   student: string;
   admin: string;
+  teacher: string;
+  assistant: string;
   mainDomain: string;
 }
 
@@ -29,7 +31,7 @@ function normalizeOrigin(origin: string) {
 }
 
 export function getSurfaceName(value = process.env.APP_SURFACE || process.env.NEXT_PUBLIC_APP_SURFACE): SurfaceName {
-  if (value === 'landing' || value === 'student' || value === 'admin' || value === 'all') {
+  if (value === 'landing' || value === 'student' || value === 'admin' || value === 'teacher' || value === 'assistant' || value === 'all') {
     return value;
   }
 
@@ -52,6 +54,8 @@ export function getSurfaceOrigins(): SurfaceOrigins {
         landing: `${protocol}//${detectedDomain}`,
         student: `${protocol}//app.${detectedDomain}`,
         admin: `${protocol}//admin.${detectedDomain}`,
+        teacher: `${protocol}//teacher.${detectedDomain}`,
+        assistant: `${protocol}//staff.${detectedDomain}`,
         mainDomain: detectedDomain,
       };
     }
@@ -60,6 +64,8 @@ export function getSurfaceOrigins(): SurfaceOrigins {
       landing: `${protocol}//${hostname}:8738`,
       student: `${protocol}//${hostname}:8739`,
       admin: `${protocol}//${hostname}:8740`,
+      teacher: `${protocol}//${hostname}:8741`,
+      assistant: `${protocol}//${hostname}:8742`,
       mainDomain,
     };
   }
@@ -68,6 +74,8 @@ export function getSurfaceOrigins(): SurfaceOrigins {
     landing: normalizeOrigin(process.env.LANDING_PUBLIC_ORIGIN || 'http://localhost:8738'),
     student: normalizeOrigin(process.env.STUDENT_PUBLIC_ORIGIN || 'http://localhost:8739'),
     admin: normalizeOrigin(process.env.ADMIN_PUBLIC_ORIGIN || 'http://localhost:8740'),
+    teacher: normalizeOrigin(process.env.TEACHER_PUBLIC_ORIGIN || 'http://localhost:8741'),
+    assistant: normalizeOrigin(process.env.ASSISTANT_PUBLIC_ORIGIN || 'http://localhost:8742'),
     mainDomain,
   };
 }
@@ -98,6 +106,22 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       };
     }
 
+    if (pathname.startsWith('/teacher')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.teacher, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/assistant')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.assistant, pathname, search),
+        surface,
+      };
+    }
+
     if (AUTH_PATHS.has(pathname)) {
       return {
         action: 'redirect',
@@ -122,6 +146,22 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       };
     }
 
+    if (pathname.startsWith('/teacher')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.teacher, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/assistant')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.assistant, pathname, search),
+        surface,
+      };
+    }
+
     return { action: 'next', surface };
   }
 
@@ -138,10 +178,90 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       };
     }
 
+    if (pathname.startsWith('/teacher')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.teacher, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/assistant')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.assistant, pathname, search),
+        surface,
+      };
+    }
+
     if (pathname === '/register') {
       return {
         action: 'redirect',
         destination: createRedirectUrl(origins.student, pathname, search),
+        surface,
+      };
+    }
+
+    return { action: 'next', surface };
+  }
+
+  if (surface === 'teacher') {
+    if (pathname === '/') {
+      return { action: 'rewrite', destination: '/teacher', surface };
+    }
+
+    if (pathname.startsWith('/student')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.student, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/admin')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.admin, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/assistant')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.assistant, pathname, search),
+        surface,
+      };
+    }
+
+    return { action: 'next', surface };
+  }
+
+  if (surface === 'assistant') {
+    if (pathname === '/') {
+      return { action: 'rewrite', destination: '/assistant', surface };
+    }
+
+    if (pathname.startsWith('/student')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.student, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/admin')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.admin, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/teacher')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.teacher, pathname, search),
         surface,
       };
     }

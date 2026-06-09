@@ -21,11 +21,11 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
   test('T013 & T014: Navigate to users and filter by Educational Stage', async ({
     page,
   }) => {
-    // Navigate to Users Management page
-    await page.goto('/admin/users');
+    // Navigate to Students Management page
+    await page.goto('/admin/students');
 
     // Verify page loaded
-    await expect(page.locator('text=قائمة المستخدمين')).toBeVisible();
+    await expect(page.locator('text=إدارة الطلاب')).toBeVisible();
 
     // Click the filter toggle button to show advanced filters
     await page.click('button:has-text("تصفية")');
@@ -43,8 +43,8 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
   });
 
   test('T015: Row expansion metadata inspection', async ({ page }) => {
-    await page.goto('/admin/users');
-    await expect(page.locator('text=قائمة المستخدمين')).toBeVisible();
+    await page.goto('/admin/students');
+    await expect(page.locator('text=إدارة الطلاب')).toBeVisible();
 
     // Click on the first row's expand/details button (eye icon or row itself)
     // Here we'll just try to click the first cell that contains a phone number

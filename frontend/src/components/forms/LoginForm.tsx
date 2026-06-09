@@ -70,6 +70,18 @@ export function LoginForm() {
         rememberMe
       );
 
+      const roles = user.roles || [];
+      const origins = getSurfaceOrigins();
+      let redirectDestination = `${origins.student}/student`;
+
+      if (roles.includes('Admin') || roles.includes('Supervisor')) {
+        redirectDestination = `${origins.admin}/admin`;
+      } else if (roles.includes('Teacher')) {
+        redirectDestination = `${origins.teacher}/teacher`;
+      } else if (roles.includes('Assistant') || roles.includes('Staff')) {
+        redirectDestination = `${origins.assistant}/assistant`;
+      }
+
       let targetUrl = '';
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
@@ -79,8 +91,7 @@ export function LoginForm() {
       if (targetUrl) {
         window.location.replace(targetUrl);
       } else {
-        const origins = getSurfaceOrigins();
-        window.location.replace(isStaff ? `${origins.admin}/admin` : `${origins.student}/student`);
+        window.location.replace(redirectDestination);
       }
     } catch (error: unknown) {
       const message = isAxiosError<{ message?: string }>(error)

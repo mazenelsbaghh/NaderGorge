@@ -9,6 +9,7 @@ export function ClockInOutWidget() {
   const [activeSession, setActiveSession] = useState<AttendanceLogDto | null>(
     null
   );
+  const [hasProfile, setHasProfile] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
@@ -19,8 +20,9 @@ export function ClockInOutWidget() {
   // Load active session
   const checkActiveSession = async () => {
     try {
-      const logs = await hrService.getMyAttendance();
-      const active = logs.find((log) => !log.clockOut);
+      const response = await hrService.getMyAttendance();
+      setHasProfile(response.hasProfile);
+      const active = response.logs.find((log) => !log.clockOut);
       setActiveSession(active || null);
     } catch {
       // API client will toast error if status is not 401
@@ -80,10 +82,8 @@ export function ClockInOutWidget() {
       } else {
         toast.error(res.message || 'فشل تسجيل الحضور');
       }
-    } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message || 'حدث خطأ أثناء محاولة تسجيل الحضور.'
-      );
+    } catch {
+      // Axios global interceptor handles displaying error messages
     } finally {
       setActionLoading(false);
     }
@@ -100,10 +100,8 @@ export function ClockInOutWidget() {
       } else {
         toast.error(res.message || 'فشل تسجيل الانصراف');
       }
-    } catch (err: any) {
-      toast.error(
-        err?.response?.data?.message || 'حدث خطأ أثناء محاولة تسجيل الانصراف.'
-      );
+    } catch {
+      // Axios global interceptor handles displaying error messages
     } finally {
       setActionLoading(false);
     }
@@ -133,6 +131,25 @@ export function ClockInOutWidget() {
         <span className="mr-2 text-sm font-bold">
           جاري تحميل بيانات الحضور...
         </span>
+      </div>
+    );
+  }
+
+  if (!hasProfile) {
+    return (
+      <div className="relative overflow-hidden rounded-[28px] border border-amber-500/30 bg-amber-500/5 p-6 shadow-md transition-all duration-300">
+        <div className="absolute -left-16 -top-16 h-32 w-32 rounded-full bg-amber-500/5 blur-2xl" />
+        <div className="flex flex-col items-center text-center gap-3">
+          <div className="flex items-center justify-center h-12 w-12 rounded-full bg-amber-500/10 text-amber-500">
+            <Clock className="h-6 w-6" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-amber-500">ملف الموظف غير مهيأ</h3>
+            <p className="text-sm text-[var(--admin-muted)] mt-2 max-w-md font-bold">
+              حسابك الحالي لا يمتلك ملف موظف نشط في النظام. يرجى التواصل مع المسؤول أو تهيئة ملف الموظف الخاص بك لتتمكن من تسجيل الحضور والانصراف.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }

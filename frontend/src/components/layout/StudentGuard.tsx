@@ -5,9 +5,13 @@ import { useRouter } from "next/navigation";
 
 import { useAuthStore } from "@/stores/auth-store";
 
+function hasStudentAccess(roles: string[] | undefined) {
+  return !!roles?.length && (roles.includes("Student") || roles.includes("Admin"));
+}
+
 export function StudentGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
+  const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
 
   useEffect(() => {
     loadFromStorage();
@@ -18,10 +22,15 @@ export function StudentGuard({ children }: { children: React.ReactNode }) {
 
     if (!isAuthenticated) {
       router.replace("/login");
+      return;
     }
-  }, [isAuthenticated, isLoading, router]);
 
-  if (isLoading || !isAuthenticated) {
+    if (!hasStudentAccess(user?.roles)) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, isLoading, router, user?.roles]);
+
+  if (isLoading || !isAuthenticated || !hasStudentAccess(user?.roles)) {
     return (
       <div
         dir="rtl"

@@ -8,10 +8,10 @@ import { extname, join, resolve } from 'node:path';
 const args = new Set(process.argv.slice(2));
 const staticOnly = args.has('--static-only');
 
-const requiredServices = ['landing', 'student', 'admin', 'backend', 'worker', 'db', 'redis', 'nginx'];
-const frontendServices = ['landing', 'student', 'admin'];
-const appServices = ['landing', 'student', 'admin', 'backend', 'nginx'];
-const healthcheckServices = ['landing', 'student', 'admin', 'backend', 'worker', 'db', 'redis', 'nginx'];
+const requiredServices = ['landing', 'student', 'admin', 'teacher', 'assistant', 'backend', 'worker', 'db', 'redis', 'nginx'];
+const frontendServices = ['landing', 'student', 'admin', 'teacher', 'assistant'];
+const appServices = ['landing', 'student', 'admin', 'teacher', 'assistant', 'backend', 'nginx'];
+const healthcheckServices = ['landing', 'student', 'admin', 'teacher', 'assistant', 'backend', 'worker', 'db', 'redis', 'nginx'];
 const checkedBrandFiles = [
   'frontend/src/app/layout.tsx',
   'frontend/src/app/(public)/login/page.tsx',
@@ -164,7 +164,7 @@ function assertFrontendEnvironment(config) {
 function assertCors(config) {
   const env = getEnvironment(config.services.backend);
   const cors = String(env.Cors__AllowedOrigins || '');
-  for (const origin of ['http://localhost:8738', 'http://localhost:8739', 'http://localhost:8740']) {
+  for (const origin of ['http://localhost:8738', 'http://localhost:8739', 'http://localhost:8740', 'http://localhost:8741', 'http://localhost:8742']) {
     if (!cors.includes(origin)) {
       fail(`Backend CORS defaults missing ${origin}`);
     }
@@ -249,6 +249,8 @@ async function assertRuntimeHttp() {
     landing: process.env.LANDING_PUBLIC_ORIGIN || 'http://localhost:8738',
     student: process.env.STUDENT_PUBLIC_ORIGIN || 'http://localhost:8739',
     admin: process.env.ADMIN_PUBLIC_ORIGIN || 'http://localhost:8740',
+    teacher: process.env.TEACHER_PUBLIC_ORIGIN || 'http://localhost:8741',
+    assistant: process.env.ASSISTANT_PUBLIC_ORIGIN || 'http://localhost:8742',
     backend: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5245',
     nginx: process.env.MASSAR_NGINX_URL || 'http://localhost',
   };
@@ -257,6 +259,8 @@ async function assertRuntimeHttp() {
     ['landing', `${origins.landing}/`],
     ['student', `${origins.student}/`],
     ['admin', `${origins.admin}/`],
+    ['teacher', `${origins.teacher}/`],
+    ['assistant', `${origins.assistant}/`],
     ['backend', `${origins.backend}/api/health`],
     ['nginx', `${origins.nginx}/`],
   ];
@@ -270,10 +274,12 @@ async function assertRuntimeHttp() {
 
   // Subdomain routing smoke-checks via Host headers
   const subdomainChecks = [
-    ['landing subdomain', 'massaracademy.com', '/'],
-    ['student subdomain', 'app.massaracademy.com', '/'],
-    ['admin subdomain', 'staff.massaracademy.com', '/'],
-    ['api subdomain', 'api.massaracademy.com', '/api/health'],
+    ['landing subdomain', 'massar-academy.net', '/'],
+    ['student subdomain', 'app.massar-academy.net', '/'],
+    ['admin subdomain', 'admin.massar-academy.net', '/'],
+    ['teacher subdomain', 'teacher.massar-academy.net', '/'],
+    ['staff subdomain', 'staff.massar-academy.net', '/'],
+    ['api subdomain', 'api.massar-academy.net', '/api/health'],
   ];
 
   for (const [name, host, path] of subdomainChecks) {
@@ -301,6 +307,24 @@ async function assertRuntimeHttp() {
   const landingAdminLocation = landingAdmin.headers.get('location') || '';
   if (!landingAdminLocation.startsWith(origins.admin)) {
     fail(`landing /admin redirects to wrong origin: ${landingAdminLocation}`);
+  }
+
+  const landingTeacher = await fetchManual(`${origins.landing}/teacher`);
+  if (![301, 302, 307, 308].includes(landingTeacher.status)) {
+    fail(`landing /teacher must redirect, got ${landingTeacher.status}`);
+  }
+  const landingTeacherLocation = landingTeacher.headers.get('location') || '';
+  if (!landingTeacherLocation.startsWith(origins.teacher)) {
+    fail(`landing /teacher redirects to wrong origin: ${landingTeacherLocation}`);
+  }
+
+  const landingAssistant = await fetchManual(`${origins.landing}/assistant`);
+  if (![301, 302, 307, 308].includes(landingAssistant.status)) {
+    fail(`landing /assistant must redirect, got ${landingAssistant.status}`);
+  }
+  const landingAssistantLocation = landingAssistant.headers.get('location') || '';
+  if (!landingAssistantLocation.startsWith(origins.assistant)) {
+    fail(`landing /assistant redirects to wrong origin: ${landingAssistantLocation}`);
   }
 }
 
