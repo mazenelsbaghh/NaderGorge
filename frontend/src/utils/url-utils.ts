@@ -30,6 +30,6 @@ export function getAbsoluteLandingUrl(path: string): string {
     return `${protocol}//${mainHost}${normalizedPath}`;
   }
 
-  const mainDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'bsma-academy.com';
+  const mainDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'massar-academy.net';
   return `${protocol}//${mainDomain}${normalizedPath}`;
 }

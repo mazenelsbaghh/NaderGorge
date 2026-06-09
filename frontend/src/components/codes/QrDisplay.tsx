@@ -19,7 +19,7 @@ interface QrDisplayProps {
 
 export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProps) {
   const printRef = useRef<HTMLDivElement>(null);
-  const effectiveBaseUrl = process.env.NEXT_PUBLIC_APP_URL || baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://massaracademy.com');
+  const effectiveBaseUrl = process.env.NEXT_PUBLIC_APP_URL || baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://massar-academy.net');
   const isLocalhost = effectiveBaseUrl.includes('localhost') || effectiveBaseUrl.includes('0.0.0.0') || effectiveBaseUrl.includes('127.0.0.1');
 
   const handlePrint = () => {

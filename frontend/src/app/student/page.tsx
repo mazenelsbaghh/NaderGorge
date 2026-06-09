@@ -42,8 +42,8 @@ export default function StudentDashboard() {
 
   const setOnboardingCookie = () => {
     if (typeof document === 'undefined') return;
-    const domain = window.location.hostname.includes('bsma-academy.com')
-      ? '.bsma-academy.com'
+    const domain = window.location.hostname.includes('massar-academy.net')
+      ? '.massar-academy.net'
       : window.location.hostname;
     const expires = new Date();
     expires.setFullYear(expires.getFullYear() + 1);
