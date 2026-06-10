@@ -12,7 +12,12 @@ public static class Seeder
         var defaultRoles = new[]
         {
             new Role { Name = "Admin", Type = RoleType.Admin },
-            new Role { Name = "Teacher", Type = RoleType.Teacher },
+            new Role 
+            { 
+                Name = "Teacher", 
+                Type = RoleType.Teacher,
+                PermissionsJson = "[\"content.manage\",\"exams.manage\",\"comments.manage\"]"
+            },
             new Role 
             { 
                 Name = "Assistant", 
