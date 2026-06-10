@@ -10,6 +10,7 @@ export function ClockInOutWidget() {
     null
   );
   const [hasProfile, setHasProfile] = useState<boolean>(true);
+  const [targetDailyHours, setTargetDailyHours] = useState<number>(8);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
 
@@ -22,6 +23,7 @@ export function ClockInOutWidget() {
     try {
       const response = await hrService.getMyAttendance();
       setHasProfile(response.hasProfile);
+      setTargetDailyHours(response.targetDailyHours ?? 8);
       const active = response.logs.find((log) => !log.clockOut);
       setActiveSession(active || null);
     } catch {
@@ -90,6 +92,17 @@ export function ClockInOutWidget() {
   };
 
   const handleClockOut = async () => {
+    if (activeSession) {
+      const clockInTime = new Date(activeSession.clockIn).getTime();
+      const elapsedMs = Date.now() - clockInTime;
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
+      if (elapsedHours < targetDailyHours) {
+        const confirmText = `تحذير: لم تكمل ساعات العمل المطلوبة اليوم بعد (${targetDailyHours} ساعات). هل أنت متأكد من تسجيل الانصراف؟`;
+        if (!window.confirm(confirmText)) {
+          return;
+        }
+      }
+    }
     setActionLoading(true);
     try {
       const res = await hrService.clockOut();

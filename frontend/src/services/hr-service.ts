@@ -67,6 +67,7 @@ export interface AdminVacationDto extends VacationDto {
 export interface MyAttendanceStatusDto {
   hasProfile: boolean;
   logs: AttendanceLogDto[];
+  targetDailyHours?: number;
 }
 
 export const hrService = {

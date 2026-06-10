@@ -16,6 +16,7 @@ import {
 import { AddUserDrawer } from '../users/components/AddUserDrawer';
 import { AssistantProfileModal } from '../users/components/AssistantProfileModal';
 
+import { useRouter } from 'next/navigation';
 import {
   AdminShellChrome,
   AdminDataTable,
@@ -52,6 +53,7 @@ function getStatusClasses(status: string) {
 }
 
 export default function AdminAssistantsPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<AdminUserListDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -375,7 +377,7 @@ export default function AdminAssistantsPage() {
             rowKey={(u) => u.id}
             emptyMessage="لا توجد نتائج مطابقة لفلترة المساعدين."
             onRowClick={(u) => {
-              setSelectedAssistant(u);
+              router.push(`/admin/assistants/${u.id}`);
             }}
           />
 

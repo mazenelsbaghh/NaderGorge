@@ -184,4 +184,69 @@ public class AttendanceTests
                 CancellationToken.None);
         });
     }
+
+    [Fact]
+    public async Task ClockIn_ThrowsInvalidOperationException_WhenCheckingInTwiceOnSameCalendarDay()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Test Employee 7", "01234567901");
+
+        var profile = new EmployeeProfile
+        {
+            UserId = user.Id,
+            BasicSalary = 5000,
+            StandardStartTime = new TimeSpan(9, 0, 0),
+            TargetDailyHours = 8
+        };
+        db.EmployeeProfiles.Add(profile);
+        await db.SaveChangesAsync();
+
+        var clockInHandler = new ClockInCommandHandler(db);
+        var clockOutHandler = new ClockOutCommandHandler(db);
+
+        // First Clock In
+        await clockInHandler.Handle(
+            new ClockInCommand(user.Id, "127.0.0.1", "TestAgent"),
+            CancellationToken.None);
+
+        // Clock Out to complete the first session
+        await clockOutHandler.Handle(
+            new ClockOutCommand(user.Id),
+            CancellationToken.None);
+
+        // Attempt Second Clock In on the same day
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await clockInHandler.Handle(
+                new ClockInCommand(user.Id, "127.0.0.1", "TestAgent"),
+                CancellationToken.None);
+        });
+
+        Assert.Equal("لقد قمت بتسجيل الحضور بالفعل اليوم.", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetMyAttendance_ReturnsTargetDailyHours()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Test Employee 8", "01234567902");
+
+        var profile = new EmployeeProfile
+        {
+            UserId = user.Id,
+            BasicSalary = 5500,
+            StandardStartTime = new TimeSpan(8, 30, 0),
+            TargetDailyHours = 7
+        };
+        db.EmployeeProfiles.Add(profile);
+        await db.SaveChangesAsync();
+
+        var queryHandler = new GetMyAttendanceQueryHandler(db);
+        var result = await queryHandler.Handle(new GetMyAttendanceQuery(user.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+        Assert.True(result.Data!.HasProfile);
+        Assert.Equal(7, result.Data.TargetDailyHours);
+    }
 }

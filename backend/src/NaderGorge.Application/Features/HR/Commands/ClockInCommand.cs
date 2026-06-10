@@ -66,6 +66,15 @@ public class ClockInCommandHandler : IRequestHandler<ClockInCommand, ApiResponse
         var localDate = DateOnly.FromDateTime(localTime);
         var localTimeOfDay = localTime.TimeOfDay;
 
+        // Prevent multiple check-ins on the same calendar day
+        var alreadyRegisteredToday = await _db.AttendanceLogs
+            .AnyAsync(al => al.EmployeeId == profile.Id && al.Date == localDate, ct);
+
+        if (alreadyRegisteredToday)
+        {
+            throw new InvalidOperationException("لقد قمت بتسجيل الحضور بالفعل اليوم.");
+        }
+
         var lateMinutes = 0;
         if (localTimeOfDay > profile.StandardStartTime)
         {
