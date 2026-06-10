@@ -125,7 +125,7 @@ run_migrations() {
   MIGRATION_RESULT=$(remote "
     cd ${SERVER_APP_DIR}
     # Run migrator and capture output
-    docker compose --profile migration run --rm migrator 2>&1
+    docker compose --profile migration run --build --rm migrator 2>&1
   ")
 
   echo "$MIGRATION_RESULT"
