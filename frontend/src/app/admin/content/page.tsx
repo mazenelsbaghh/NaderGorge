@@ -86,25 +86,37 @@ function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => 
       />
       
       <select
-        value={selectedProgramId}
-        onChange={(e) => setSelectedProgramId(e.target.value)}
-        className="admin-input"
-      >
-        <option value="">اختر البرنامج الدراسي...</option>
-        {programs.map((p) => (
-          <option key={p.id} value={p.id}>{p.name} ({p.subjectName})</option>
-        ))}
-      </select>
-
-      <select
         value={selectedTeacherId}
-        onChange={(e) => setSelectedTeacherId(e.target.value)}
+        onChange={(e) => {
+          setSelectedTeacherId(e.target.value);
+          setSelectedProgramId('');
+        }}
         className="admin-input"
       >
         <option value="">اختر المدرس...</option>
         {teachers.map((t) => (
           <option key={t.id} value={t.id}>{t.fullName}</option>
         ))}
+      </select>
+
+      <select
+        value={selectedProgramId}
+        onChange={(e) => setSelectedProgramId(e.target.value)}
+        className="admin-input"
+        disabled={!selectedTeacherId}
+      >
+        <option value="">
+          {selectedTeacherId ? 'اختر البرنامج الدراسي...' : 'يرجى اختيار المدرس أولاً...'}
+        </option>
+        {(() => {
+          const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
+          const filteredPrograms = selectedTeacher
+            ? programs.filter(p => selectedTeacher.subjectIds?.includes(p.subjectId))
+            : [];
+          return filteredPrograms.map((p) => (
+            <option key={p.id} value={p.id}>{p.name} ({p.subjectName})</option>
+          ));
+        })()}
       </select>
 
       <div className="flex justify-end gap-2 pt-1">
