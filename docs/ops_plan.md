@@ -6,6 +6,12 @@
 
 ## Active Plans
 
+### Performance Audit Remediation (2026-06-11)
+- [x] Configure Brotli response compression and output caching configurations in C# backend.
+- [x] Clean and optimize Turbopack dev cache (`rm -rf frontend/.next`).
+- [x] Document static-route validations and timing benchmarks for endpoints in local env.
+
+
 ### Telegram Bot Audio Extraction Integration (2026-06-11)
 - [x] Install `telegram` (GramJS) npm package in the worker.
 - [x] Add Telegram configuration variables (`TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_STRING_SESSION`, `TELEGRAM_DOWNLOADER_BOT`) to `.env.example`, `.env`, and the `worker` service in `docker-compose.yml`.

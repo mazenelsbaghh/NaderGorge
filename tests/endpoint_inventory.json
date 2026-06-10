@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 234,
+  "endpointCount": 235,
   "frontendCallCount": 228,
   "missingFrontendRouteCount": 0,
-  "digest": "dd1032c31f84abff140a7ea3ab9906e0f3c99ca6f65f4e4b4b763364543964bd",
+  "digest": "df12a4f523f8726bdfbca15db898c680fe786774f4474baaf6cc389c631b4f8b",
   "endpoints": [
     {
       "controller": "AdminCommunityController",
@@ -2349,7 +2349,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/PublicController.cs",
-        "line": 27
+        "line": 29
       }
     },
     {
@@ -2361,7 +2361,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/PublicController.cs",
-        "line": 19
+        "line": 20
       }
     },
     {
@@ -2373,7 +2373,7 @@
       "authorization": "anonymous",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/PublicController.cs",
-        "line": 48
+        "line": 51
       }
     },
     {
@@ -2421,7 +2421,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 43
+        "line": 50
       }
     },
     {
@@ -2433,7 +2433,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 50
+        "line": 57
       }
     },
     {
@@ -2445,7 +2445,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 96
+        "line": 103
       }
     },
     {
@@ -2457,7 +2457,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 103
+        "line": 110
       }
     },
     {
@@ -2469,7 +2469,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 74
+        "line": 81
       }
     },
     {
@@ -2481,7 +2481,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 81
+        "line": 88
       }
     },
     {
@@ -2490,6 +2490,18 @@
       "method": "GET",
       "path": "/api/student/progress",
       "routeTemplate": "/api/student/progress",
+      "authorization": "authorized",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
+        "line": 43
+      }
+    },
+    {
+      "controller": "StudentController",
+      "action": "GetShellBootstrap",
+      "method": "GET",
+      "path": "/api/student/shell-bootstrap",
+      "routeTemplate": "/api/student/shell-bootstrap",
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
@@ -2505,7 +2517,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 57
+        "line": 64
       }
     },
     {
@@ -2517,7 +2529,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/StudentController.cs",
-        "line": 64
+        "line": 71
       }
     },
     {
@@ -2890,20 +2902,6 @@
       "source": {
         "file": "frontend/src/components/layout/MaintenanceGuard.tsx",
         "line": 17
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/api/gamification/status",
-      "routeTemplate": "/api/gamification/status",
-      "origin": "backend-api",
-      "queryParameters": [],
-      "payloadHint": "",
-      "payloadFields": [],
-      "rawExpression": "'/gamification/status'",
-      "source": {
-        "file": "frontend/src/components/layout/SidebarGamification.tsx",
-        "line": 15
       }
     },
     {
@@ -5644,7 +5642,21 @@
       "rawExpression": "'/student/dashboard'",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 190
+        "line": 205
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/shell-bootstrap",
+      "routeTemplate": "/api/student/shell-bootstrap",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/shell-bootstrap'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 210
       }
     },
     {
@@ -5658,7 +5670,7 @@
       "rawExpression": "'/public/teachers'",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 195
+        "line": 215
       }
     },
     {
@@ -5672,7 +5684,7 @@
       "rawExpression": "'/student/dashboard/quick-access'",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 200
+        "line": 220
       }
     },
     {
@@ -5686,7 +5698,7 @@
       "rawExpression": "'/student/progress'",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 205
+        "line": 225
       }
     },
     {
@@ -5700,52 +5712,52 @@
       "rawExpression": "'/student/mistakes'",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 210
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/api/student/theme-preferences",
-      "routeTemplate": "/api/student/theme-preferences",
-      "origin": "backend-api",
-      "queryParameters": [],
-      "payloadHint": "",
-      "payloadFields": [],
-      "rawExpression": "'/student/theme-preferences'",
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 215
-      }
-    },
-    {
-      "method": "PUT",
-      "path": "/api/student/theme-preferences",
-      "routeTemplate": "/api/student/theme-preferences",
-      "origin": "backend-api",
-      "queryParameters": [],
-      "payloadHint": "payload",
-      "payloadFields": [],
-      "rawExpression": "'/student/theme-preferences'",
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
-        "line": 225
-      }
-    },
-    {
-      "method": "GET",
-      "path": "/api/student/profile",
-      "routeTemplate": "/api/student/profile",
-      "origin": "backend-api",
-      "queryParameters": [],
-      "payloadHint": "",
-      "payloadFields": [],
-      "rawExpression": "'/student/profile'",
-      "source": {
-        "file": "frontend/src/services/student-service.ts",
         "line": 230
       }
     },
     {
+      "method": "GET",
+      "path": "/api/student/theme-preferences",
+      "routeTemplate": "/api/student/theme-preferences",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/theme-preferences'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 235
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/student/theme-preferences",
+      "routeTemplate": "/api/student/theme-preferences",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "payload",
+      "payloadFields": [],
+      "rawExpression": "'/student/theme-preferences'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 245
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/student/profile",
+      "routeTemplate": "/api/student/profile",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/student/profile'",
+      "source": {
+        "file": "frontend/src/services/student-service.ts",
+        "line": 250
+      }
+    },
+    {
       "method": "PUT",
       "path": "/api/student/profile",
       "routeTemplate": "/api/student/profile",
@@ -5756,7 +5768,7 @@
       "rawExpression": "'/student/profile'",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 235
+        "line": 255
       }
     },
     {
@@ -5770,7 +5782,7 @@
       "rawExpression": "'/student/notifications'",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 240
+        "line": 260
       }
     },
     {
@@ -5784,7 +5796,7 @@
       "rawExpression": "`/student/notifications/${id}/read`",
       "source": {
         "file": "frontend/src/services/student-service.ts",
-        "line": 245
+        "line": 265
       }
     },
     {

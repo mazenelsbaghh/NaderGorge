@@ -185,9 +185,29 @@ export interface StudentNotificationDto {
   createdAt: string;
 }
 
+export interface StudentGamificationDto {
+  totalPoints: number;
+  currentStreakCount: number;
+  longestStreakCount: number;
+  levelName: string;
+}
+
+export interface ShellBootstrapDto {
+  unreadNotificationsCount: number;
+  currentBalance: number;
+  gamification: StudentGamificationDto;
+  themePreferences: StudentThemePreferencesDto;
+  avatarSlug?: string | null;
+}
+
 export const studentService = {
   getDashboard: async (): Promise<DashboardDto> => {
     const res = await apiClient.get('/student/dashboard');
+    return res.data?.data;
+  },
+
+  getShellBootstrap: async (): Promise<ShellBootstrapDto> => {
+    const res = await apiClient.get('/student/shell-bootstrap');
     return res.data?.data;
   },
 
@@ -246,3 +266,4 @@ export const studentService = {
     return res.data?.data;
   }
 };
+

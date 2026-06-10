@@ -71,6 +71,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             return ApiResponse<LessonDetailDto>.Fail("Unauthorized access to this lesson.");
 
         var lesson = await _db.Lessons
+            .AsNoTracking()
             .Include(l => l.Videos)
                 .ThenInclude(v => v.VideoChapters)
             .Include(l => l.Resources)
@@ -161,6 +162,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         }
 
         var watchEvents = await _db.VideoWatchEvents
+            .AsNoTracking()
             .Where(v => v.UserId == request.UserId && lesson.Videos.Select(x => x.Id).Contains(v.LessonVideoId))
             .ToListAsync(ct);
 

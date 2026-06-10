@@ -1,39 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Wallet } from 'lucide-react';
-import { balanceService } from '@/services/balance-service';
 import Link from 'next/link';
+import { useStudentShellStore } from '@/stores/student-shell-store';
 
 export function SidebarBalance() {
-  const [balance, setBalance] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const balance = useStudentShellStore((state) => state.currentBalance);
+  const loading = useStudentShellStore((state) => state.isLoading && useStudentShellStore.getState().lastFetchedAt === null);
+  const fetchBootstrap = useStudentShellStore((state) => state.fetchBootstrap);
 
   useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const data = await balanceService.getBalance();
-        setBalance(data.currentBalance);
-      } catch {
-        // Silent fail for sidebar
-        setBalance(0);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    // Custom event listener for balance refresh (dispatched by CodeActivationForm)
+    void fetchBootstrap();
+
     const handleBalanceRefresh = () => {
-      void fetchBalance();
+      void fetchBootstrap(true);
     };
-    
+
     window.addEventListener('refresh-student-balance', handleBalanceRefresh);
-    void fetchBalance();
-    
     return () => {
       window.removeEventListener('refresh-student-balance', handleBalanceRefresh);
     };
-  }, []);
+  }, [fetchBootstrap]);
 
   return (
     <Link 
@@ -57,3 +45,4 @@ export function SidebarBalance() {
     </Link>
   );
 }
+

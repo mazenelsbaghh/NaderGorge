@@ -44,27 +44,41 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
     public async Task<ApiResponse<DashboardDto>> Handle(GetDashboardQuery request, CancellationToken ct)
     {
         var user = await _db.Users
-            .Include(u => u.StudentProfile)
-            .FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
+            .AsNoTracking()
+            .Where(u => u.Id == request.UserId)
+            .Select(u => new { u.FullName, AvatarSlug = u.StudentProfile != null ? u.StudentProfile.AvatarSlug : null })
+            .FirstOrDefaultAsync(ct);
         if (user == null) return ApiResponse<DashboardDto>.Fail("User not found");
 
-        // Get all access grants for user
+        // Get all active access grants for user
         var grants = await _db.StudentAccessGrants
+            .AsNoTracking()
             .Where(g => g.UserId == request.UserId && g.IsActive)
+            .Select(g => new { g.PackageId })
             .ToListAsync(ct);
 
         var packageIds = grants.Where(g => g.PackageId.HasValue).Select(g => g.PackageId!.Value).Distinct().ToList();
 
-        // Get packages with section/lesson counts
+        // Get packages with flat lesson list projected
         var packages = await _db.Packages
+            .AsNoTracking()
             .Where(p => packageIds.Contains(p.Id))
-            .Include(p => p.Subject)
-            .Include(p => p.Teacher).ThenInclude(t => t.User)
-            .Include(p => p.Terms).ThenInclude(t => t.Sections).ThenInclude(s => s.Lessons)
+            .Select(p => new {
+                p.Id,
+                p.Name,
+                p.Description,
+                p.TeacherId,
+                TeacherName = p.Teacher != null && p.Teacher.User != null ? p.Teacher.User.FullName : "Unknown",
+                TeacherProfileImageUrl = p.Teacher != null ? p.Teacher.ProfileImageUrl : null,
+                p.SubjectId,
+                SubjectName = p.Subject != null ? p.Subject.Name : "Unknown",
+                Lessons = p.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).Select(l => new { l.Id, l.Title, l.Order }).ToList()
+            })
             .ToListAsync(ct);
 
-        // Get all lesson progress for this user
+        // Get completed lessons count
         var completedLessonIds = await _db.LessonProgresses
+            .AsNoTracking()
             .Where(lp => lp.UserId == request.UserId && lp.IsCompleted)
             .Select(lp => lp.LessonId)
             .ToListAsync(ct);
@@ -81,7 +95,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         foreach (var pkg in packages)
         {
-            var allLessons = pkg.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).ToList();
+            var allLessons = pkg.Lessons;
             var completed = allLessons.Count(l => completedLessonIds.Contains(l.Id));
             var total = allLessons.Count;
             totalLessonsAll += total;
@@ -96,10 +110,10 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
                 total, 
                 pct,
                 pkg.TeacherId,
-                pkg.Teacher?.User?.FullName ?? "Unknown",
-                pkg.Teacher?.ProfileImageUrl,
+                pkg.TeacherName,
+                pkg.TeacherProfileImageUrl,
                 pkg.SubjectId,
-                pkg.Subject?.Name ?? "Unknown"
+                pkg.SubjectName
             ));
 
             // Find resume point: first incomplete lesson in order
@@ -120,24 +134,38 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         // Upcoming exams: lessons with exams that haven't been passed yet
         var upcomingExams = new List<UpcomingExamDto>();
-        var allLessonIds = packages.SelectMany(p => p.Terms.SelectMany(t => t.Sections.SelectMany(s => s.Lessons.Select(l => l.Id)))).ToList();
+        var allLessonIds = packages.SelectMany(p => p.Lessons.Select(l => l.Id)).ToList();
+        
         var lessonsWithExams = await _db.Lessons
+            .AsNoTracking()
             .Where(l => allLessonIds.Contains(l.Id) && l.ExamId != null)
+            .Select(l => new { l.Id, l.Title, l.ExamId })
             .ToListAsync(ct);
 
         var passedExamIds = await _db.StudentExamAttempts
+            .AsNoTracking()
             .Where(a => a.UserId == request.UserId && a.IsPassed)
             .Select(a => a.ExamId)
             .Distinct()
             .ToListAsync(ct);
 
+        var examIdsToCheck = lessonsWithExams
+            .Where(l => l.ExamId.HasValue && !passedExamIds.Contains(l.ExamId.Value))
+            .Select(l => l.ExamId!.Value)
+            .Distinct()
+            .ToList();
+
+        var exams = await _db.Exams
+            .AsNoTracking()
+            .Where(e => examIdsToCheck.Contains(e.Id))
+            .Select(e => new { e.Id, e.Title })
+            .ToDictionaryAsync(e => e.Id, e => e.Title, ct);
+
         foreach (var lesson in lessonsWithExams)
         {
-            if (!passedExamIds.Contains(lesson.ExamId!.Value))
+            if (lesson.ExamId.HasValue && exams.TryGetValue(lesson.ExamId.Value, out var examTitle))
             {
-                var exam = await _db.Exams.FirstOrDefaultAsync(e => e.Id == lesson.ExamId!.Value, ct);
-                if (exam != null)
-                    upcomingExams.Add(new UpcomingExamDto(exam.Id, exam.Title, lesson.Title));
+                upcomingExams.Add(new UpcomingExamDto(lesson.ExamId.Value, examTitle, lesson.Title));
             }
         }
 
@@ -157,7 +185,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             totalCompletedAll,
             totalLessonsAll,
             codesRedeemed,
-            user.StudentProfile?.AvatarSlug
+            user.AvatarSlug
         ));
     }
 }

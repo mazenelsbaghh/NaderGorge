@@ -39,21 +39,20 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
             query = query.Where(cg => cg.TeacherId == teacherId.Value);
         }
 
-        var groups = await query
-            .Include(cg => cg.AccessCodes)
+        var dtos = await query
+            .AsNoTracking()
             .OrderByDescending(cg => cg.CreatedAt)
+            .Select(cg => new CodeGroupDto(
+                cg.Id,
+                cg.Name,
+                cg.CreatedAt,
+                cg.PackageId,
+                cg.LessonId,
+                cg.AccessCodes.Count,
+                cg.AccessCodes.Count(c => c.IsConsumed),
+                cg.TeacherId
+            ))
             .ToListAsync(ct);
-
-        var dtos = groups.Select(cg => new CodeGroupDto(
-            cg.Id,
-            cg.Name,
-            cg.CreatedAt,
-            cg.PackageId,
-            cg.LessonId,
-            cg.AccessCodes.Count,
-            cg.AccessCodes.Count(c => c.IsConsumed),
-            cg.TeacherId
-        )).ToList();
 
         return ApiResponse<List<CodeGroupDto>>.Ok(dtos);
     }

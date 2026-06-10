@@ -5,7 +5,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Queries;
 
-public record GetMistakesQuery(Guid UserId) : IRequest<ApiResponse<StudentMistakesDto>>;
+public record GetMistakesQuery(Guid UserId, int Skip = 0, int Take = 10) : IRequest<ApiResponse<StudentMistakesDto>>;
 
 public record StudentMistakesDto(
     int TotalExamMistakes,
@@ -66,28 +66,74 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
 
     public async Task<ApiResponse<StudentMistakesDto>> Handle(GetMistakesQuery request, CancellationToken ct)
     {
-        var attempts = await _db.StudentExamAttempts
+        // 1. Direct counts on DB
+        var totalExamMistakes = await _db.StudentAnswers
             .AsNoTracking()
-            .Where(a => a.UserId == request.UserId)
+            .CountAsync(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect, ct);
+
+        var examsWithMistakes = await _db.StudentAnswers
+            .AsNoTracking()
+            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect)
+            .Select(sa => sa.Attempt.ExamId)
+            .Distinct()
+            .CountAsync(ct);
+
+        var weakHomeworkCount = await _db.HomeworkSubmissions
+            .AsNoTracking()
+            .CountAsync(s => s.StudentId == request.UserId &&
+                (s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Missed ||
+                (s.Homework.PassingScoreThreshold.HasValue &&
+                 s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded &&
+                 s.OverallScore < s.Homework.PassingScoreThreshold.Value)), ct);
+
+        // 2. Fetch only paged exam IDs that have mistakes
+        var pagedExamIds = await _db.StudentAnswers
+            .AsNoTracking()
+            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect)
+            .Select(sa => sa.Attempt.ExamId)
+            .Distinct()
+            .OrderByDescending(id => id)
+            .Skip(request.Skip)
+            .Take(request.Take)
             .ToListAsync(ct);
 
-        var examIds = attempts.Select(a => a.ExamId).Distinct().ToList();
+        var attempts = await _db.StudentExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == request.UserId && pagedExamIds.Contains(a.ExamId))
+            .ToListAsync(ct);
+
         var attemptIds = attempts.Select(a => a.Id).ToList();
 
         var exams = await _db.Exams
             .AsNoTracking()
-            .Include(e => e.ExamQuestions)
-            .ThenInclude(eq => eq.Question)
-            .ThenInclude(q => q.Options)
-            .Where(e => examIds.Contains(e.Id))
+            .Where(e => pagedExamIds.Contains(e.Id))
+            .Select(e => new {
+                e.Id,
+                e.Title,
+                e.TotalScore,
+                Questions = e.ExamQuestions.Select(eq => new {
+                    eq.Id,
+                    eq.Order,
+                    QuestionText = eq.Question.Text,
+                    Options = eq.Question.Options.Select(o => new {
+                        o.Id,
+                        o.Text,
+                        o.IsCorrect
+                    }).ToList()
+                }).ToList()
+            })
             .ToListAsync(ct);
 
         var lessons = await _db.Lessons
             .AsNoTracking()
-            .Include(l => l.ContentSection)
-            .ThenInclude(cs => cs.Term)
-            .ThenInclude(t => t.Package)
-            .Where(l => l.ExamId.HasValue && examIds.Contains(l.ExamId.Value))
+            .Where(l => l.ExamId.HasValue && pagedExamIds.Contains(l.ExamId.Value))
+            .Select(l => new {
+                l.Id,
+                l.Title,
+                l.ExamId,
+                PackageId = l.ContentSection.Term.PackageId,
+                PackageName = l.ContentSection.Term.Package != null ? l.ContentSection.Term.Package.Name : "بدون باقة"
+            })
             .ToListAsync(ct);
 
         var answers = attemptIds.Count == 0
@@ -103,7 +149,13 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
             .GroupBy(l => l.ExamId!.Value)
             .ToDictionary(g => g.Key, g => g.First());
         var attemptsById = attempts.ToDictionary(a => a.Id);
-        var passedExamIds = attempts.Where(a => a.IsPassed).Select(a => a.ExamId).ToHashSet();
+        var passedExamIds = await _db.StudentExamAttempts
+            .AsNoTracking()
+            .Where(a => a.UserId == request.UserId && a.IsPassed && pagedExamIds.Contains(a.ExamId))
+            .Select(a => a.ExamId)
+            .Distinct()
+            .ToListAsync(ct);
+        var passedExamsSet = passedExamIds.ToHashSet();
 
         var examMistakeGroups = answers
             .Where(a => !a.IsCorrect && attemptsById.ContainsKey(a.StudentExamAttemptId))
@@ -123,7 +175,7 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                     .GroupBy(answer => answer.ExamQuestionId)
                     .Select(questionGroup =>
                     {
-                        var examQuestion = exam.ExamQuestions.FirstOrDefault(q => q.Id == questionGroup.Key);
+                        var examQuestion = exam.Questions.FirstOrDefault(q => q.Id == questionGroup.Key);
                         if (examQuestion == null)
                             return null;
 
@@ -131,20 +183,20 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                             .OrderByDescending(answer => attemptsById[answer.StudentExamAttemptId].UpdatedAt ?? attemptsById[answer.StudentExamAttemptId].CreatedAt)
                             .First();
 
-                        var selectedOption = examQuestion.Question.Options.FirstOrDefault(option => option.Id == latestWrongAnswer.SelectedOptionId);
-                        var correctOption = examQuestion.Question.Options.FirstOrDefault(option => option.IsCorrect);
+                        var selectedOption = examQuestion.Options.FirstOrDefault(option => option.Id == latestWrongAnswer.SelectedOptionId);
+                        var correctOption = examQuestion.Options.FirstOrDefault(option => option.IsCorrect);
                         var lastMissedAt = attemptsById[latestWrongAnswer.StudentExamAttemptId].UpdatedAt
                             ?? attemptsById[latestWrongAnswer.StudentExamAttemptId].CreatedAt;
 
                         return new ExamMistakeItemDto(
                             examQuestion.Id,
                             examQuestion.Order,
-                            examQuestion.Question.Text,
+                            examQuestion.QuestionText,
                             selectedOption?.Text,
-                            passedExamIds.Contains(group.Key) ? correctOption?.Text : null,
+                            passedExamsSet.Contains(group.Key) ? correctOption?.Text : null,
                             questionGroup.Count(),
                             lastMissedAt,
-                            passedExamIds.Contains(group.Key)
+                            passedExamsSet.Contains(group.Key)
                         );
                     })
                     .Where(item => item != null)
@@ -159,11 +211,11 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 return new ExamMistakeGroupDto(
                     group.Key,
                     exam.Title,
-                    lesson?.ContentSection?.Term?.PackageId,
-                    lesson?.ContentSection?.Term?.Package?.Name ?? "بدون باقة",
+                    lesson?.PackageId,
+                    lesson?.PackageName ?? "بدون باقة",
                     lesson?.Id,
                     lesson?.Title ?? "بدون درس",
-                    passedExamIds.Contains(group.Key),
+                    passedExamsSet.Contains(group.Key),
                     items.Max(item => item.LastMissedAt),
                     items.Sum(item => item.TimesMissed),
                     latestAttempt?.ScoreAchieved,
@@ -177,56 +229,69 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
             .OrderByDescending(group => group.LastMistakeAt)
             .ToList();
 
+        // 3. Fetch homework weaknesses with pagination using projections
         var homeworkSubmissions = await _db.HomeworkSubmissions
             .AsNoTracking()
-            .Include(s => s.Homework)
             .Where(s => s.StudentId == request.UserId)
+            .Select(s => new {
+                s.HomeworkId,
+                HomeworkTitle = s.Homework.Title,
+                HomeworkLessonId = s.Homework.LessonId,
+                HomeworkPassingScoreThreshold = s.Homework.PassingScoreThreshold,
+                s.OverallScore,
+                s.Status,
+                s.AssistantNotes
+            })
             .ToListAsync(ct);
 
-        var homeworkLessonIds = homeworkSubmissions.Select(s => s.Homework.LessonId).Distinct().ToList();
+        var homeworkLessonIds = homeworkSubmissions.Select(s => s.HomeworkLessonId).Distinct().ToList();
         var homeworkLessons = homeworkLessonIds.Count == 0
-            ? new List<NaderGorge.Domain.Entities.Lesson>()
-            : await _db.Lessons
+            ? new Dictionary<Guid, (Guid? PackageId, string PackageName, string LessonTitle)>()
+            : (await _db.Lessons
                 .AsNoTracking()
-                .Include(l => l.ContentSection)
-                .ThenInclude(cs => cs.Term)
-                .ThenInclude(t => t.Package)
                 .Where(l => homeworkLessonIds.Contains(l.Id))
-                .ToListAsync(ct);
-
-        var homeworkLessonMap = homeworkLessons.ToDictionary(l => l.Id);
+                .Select(l => new {
+                    l.Id,
+                    l.Title,
+                    PackageId = l.ContentSection.Term.PackageId,
+                    PackageName = l.ContentSection.Term.Package != null ? l.ContentSection.Term.Package.Name : "بدون باقة"
+                })
+                .ToListAsync(ct))
+                .ToDictionary(l => l.Id, l => (PackageId: (Guid?)l.PackageId, PackageName: l.PackageName, LessonTitle: l.Title));
 
         var weakHomework = homeworkSubmissions
             .Where(s =>
                 s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Missed ||
-                (s.Homework.PassingScoreThreshold.HasValue &&
+                (s.HomeworkPassingScoreThreshold.HasValue &&
                  s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded &&
-                 s.OverallScore < s.Homework.PassingScoreThreshold.Value))
+                 s.OverallScore < s.HomeworkPassingScoreThreshold.Value))
             .Select(s =>
             {
-                homeworkLessonMap.TryGetValue(s.Homework.LessonId, out var lesson);
+                homeworkLessons.TryGetValue(s.HomeworkLessonId, out var lessonInfo);
 
                 return new HomeworkWeaknessDto(
                     s.HomeworkId,
-                    s.Homework.Title,
-                    lesson?.ContentSection?.Term?.PackageId,
-                    lesson?.ContentSection?.Term?.Package?.Name ?? "بدون باقة",
-                    s.Homework.LessonId,
-                    lesson?.Title ?? "بدون درس",
+                    s.HomeworkTitle,
+                    lessonInfo.PackageId,
+                    lessonInfo.PackageName ?? "بدون باقة",
+                    s.HomeworkLessonId,
+                    lessonInfo.LessonTitle ?? "بدون درس",
                     s.OverallScore,
-                    s.Homework.PassingScoreThreshold,
+                    s.HomeworkPassingScoreThreshold,
                     s.Status.ToString(),
                     s.AssistantNotes
                 );
             })
             .OrderByDescending(item => item.Status == "Missed")
             .ThenByDescending(item => item.Score)
+            .Skip(request.Skip)
+            .Take(request.Take)
             .ToList();
 
         return ApiResponse<StudentMistakesDto>.Ok(new StudentMistakesDto(
-            examMistakeGroups.Sum(group => group.MistakesCount),
-            examMistakeGroups.Count,
-            weakHomework.Count,
+            totalExamMistakes,
+            examsWithMistakes,
+            weakHomeworkCount,
             examMistakeGroups,
             weakHomework
         ));

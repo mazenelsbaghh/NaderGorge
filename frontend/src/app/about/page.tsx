@@ -1,6 +1,3 @@
-'use client';
-
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { BadgeCheck, GraduationCap, Users, Award, ArrowUpLeft } from 'lucide-react';
@@ -19,7 +16,7 @@ export default function AboutPage() {
       <div className="landing-page__texture" />
 
       <div className="relative z-10 mx-auto max-w-4xl px-6 pt-28 pb-16">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="animate-fade-in">
           {/* Header */}
           <div className="mb-16 text-center">
             <div className="landing-chip mx-auto mb-5">
@@ -64,12 +61,8 @@ export default function AboutPage() {
             {stats.map((s, i) => {
               const Icon = s.icon;
               return (
-                <motion.div
+                <div
                   key={i}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
                   className="landing-panel flex flex-col items-center rounded-[24px] p-6 text-center"
                 >
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--landing-card-strong)] text-[var(--landing-accent)]">
@@ -77,7 +70,7 @@ export default function AboutPage() {
                   </div>
                   <div className="text-3xl font-black text-[var(--landing-accent)]">{s.num}</div>
                   <div className="mt-1 text-sm font-bold text-[var(--landing-muted)]">{s.label}</div>
-                </motion.div>
+                </div>
               );
             })}
           </div>
@@ -92,8 +85,9 @@ export default function AboutPage() {
               <ArrowUpLeft className="h-5 w-5" />
             </Link>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );
 }
+

@@ -106,7 +106,7 @@ export function HeroSection({
       className="landing-hero relative min-h-screen overflow-hidden px-5 pb-9 pt-28 text-[var(--landing-ink)] md:px-12 md:pb-12 md:pt-32 lg:px-16"
       style={{
         backgroundImage: `linear-gradient(90deg, var(--hero-overlay-start) 0%, var(--hero-overlay-mid) 32%, var(--hero-overlay-subtle) 58%, var(--hero-overlay-end) 100%), url('${
-          isDark ? "/images/landing-hero-dark.png" : "/images/landing-hero.png"
+          isDark ? "/images/landing-hero-dark.webp" : "/images/landing-hero.webp"
         }')`,
         backgroundSize: "cover",
         backgroundPosition: "center center",

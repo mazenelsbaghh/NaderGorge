@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using NaderGorge.Application.Features.Public.Queries;
 
 namespace NaderGorge.API.Controllers;
@@ -18,6 +19,7 @@ public class PublicController : ControllerBase
 
     [HttpGet("stats")]
     [AllowAnonymous]
+    [OutputCache(Duration = 300)]
     public async Task<IActionResult> GetPlatformStats(CancellationToken ct)
     {
         var result = await _mediator.Send(new GetPlatformStatsQuery(), ct);
@@ -26,6 +28,7 @@ public class PublicController : ControllerBase
 
     [HttpGet("settings")]
     [AllowAnonymous]
+    [OutputCache(Duration = 300)]
     public async Task<IActionResult> GetPublicSettings(
         [FromServices] NaderGorge.Application.Common.ICachedPlatformSettingsReader settingsReader,
         CancellationToken ct)
@@ -47,6 +50,7 @@ public class PublicController : ControllerBase
 
     [HttpGet("teachers")]
     [AllowAnonymous]
+    [OutputCache(Duration = 300)]
     public async Task<IActionResult> GetTeachers(CancellationToken ct)
     {
         var result = await _mediator.Send(new GetActiveTeachersQuery(), ct);

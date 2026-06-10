@@ -33,6 +33,13 @@ public class StudentController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("shell-bootstrap")]
+    public async Task<IActionResult> GetShellBootstrap()
+    {
+        var result = await _mediator.Send(new GetShellBootstrapQuery(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("progress")]
     public async Task<IActionResult> GetProgress()
     {

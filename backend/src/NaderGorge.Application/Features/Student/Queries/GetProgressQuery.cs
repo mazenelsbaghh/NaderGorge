@@ -28,45 +28,59 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
     public async Task<ApiResponse<ProgressDto>> Handle(GetProgressQuery request, CancellationToken ct)
     {
         var grants = await _db.StudentAccessGrants
+            .AsNoTracking()
             .Where(g => g.UserId == request.UserId && g.IsActive)
+            .Select(g => new { g.PackageId })
             .ToListAsync(ct);
 
         var packageIds = grants.Where(g => g.PackageId.HasValue).Select(g => g.PackageId!.Value).Distinct().ToList();
 
         var packages = await _db.Packages
+            .AsNoTracking()
             .Where(p => packageIds.Contains(p.Id))
-            .Include(p => p.Terms).ThenInclude(t => t.Sections).ThenInclude(s => s.Lessons)
+            .Select(p => new {
+                p.Id,
+                p.Name,
+                Lessons = p.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).Select(l => new { l.Id, l.Title, l.Order, l.ExamId }).ToList()
+            })
             .ToListAsync(ct);
 
         var completedLessonIds = await _db.LessonProgresses
+            .AsNoTracking()
             .Where(lp => lp.UserId == request.UserId && lp.IsCompleted)
             .Select(lp => lp.LessonId)
             .ToListAsync(ct);
 
         var manuallyUnlockedIds = await _db.LessonProgresses
+            .AsNoTracking()
             .Where(lp => lp.UserId == request.UserId && lp.IsManuallyUnlocked)
             .Select(lp => lp.LessonId)
             .ToListAsync(ct);
 
         var passedExamIds = await _db.StudentExamAttempts
+            .AsNoTracking()
             .Where(a => a.UserId == request.UserId && a.IsPassed)
             .Select(a => a.ExamId)
             .Distinct()
             .ToListAsync(ct);
 
         var failedExamCount = await _db.StudentExamAttempts
+            .AsNoTracking()
             .Where(a => a.UserId == request.UserId && !a.IsPassed)
             .Select(a => a.ExamId)
             .Distinct()
             .CountAsync(ct);
 
-        var allLessonIds = packages.SelectMany(p => p.Terms.SelectMany(t => t.Sections)).SelectMany(s => s.Lessons).Select(l => l.Id).ToList();
+        var allLessonIds = packages.SelectMany(p => p.Lessons).Select(l => l.Id).ToList();
 
         var mandatoryHomeworks = await _db.Homeworks
+            .AsNoTracking()
             .Where(h => allLessonIds.Contains(h.LessonId) && h.IsMandatory)
+            .Select(h => new { h.Id, h.LessonId })
             .ToListAsync(ct);
 
         var submittedHomeworkIds = await _db.HomeworkSubmissions
+            .AsNoTracking()
             .Where(s => s.StudentId == request.UserId && s.Status != Domain.Entities.Homework.SubmissionStatus.InProgress)
             .Select(s => s.HomeworkId)
             .ToListAsync(ct);
@@ -79,7 +93,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
         foreach (var pkg in packages)
         {
             var lessonItems = new List<LessonProgressItemDto>();
-            var orderedLessons = pkg.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).OrderBy(l => l.Order).ToList();
+            var orderedLessons = pkg.Lessons.OrderBy(l => l.Order).ToList();
 
             for (int i = 0; i < orderedLessons.Count; i++)
             {

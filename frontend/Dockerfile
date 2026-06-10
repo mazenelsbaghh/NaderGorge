@@ -43,7 +43,12 @@ COPY --from=builder /app/.next/static ./.next/static
 # Copy public assets (images, fonts, etc.)
 COPY --from=builder /app/public ./public
 
+# Startup validation script
+COPY --from=builder /app/docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
+
 EXPOSE 8738
 
-# next/standalone produces a self-contained server.js.
+# Validate APP_SURFACE before starting Next.js
+ENTRYPOINT ["./docker-entrypoint.sh"]
 CMD ["node", "server.js"]

@@ -4,29 +4,52 @@ import { Tajawal, Montserrat } from "next/font/google";
 import "./globals.css";
 import { AuthBootstrap } from "@/components/layout/AuthBootstrap";
 import { GlobalNav } from "@/components/layout/GlobalNav";
-import { getSurfaceName } from "@/packages/surface-runtime/config";
-import { headers } from "next/headers";
+import { Toaster } from "react-hot-toast";
 
 const tajawal = Tajawal({
   variable: "--font-tajawal",
   subsets: ["arabic"],
-  weight: ["300", "400", "500", "700", "800", "900"],
+  weight: ["400", "500", "700", "800"],
 });
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  weight: ["500", "700"],
 });
-
-export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "منصة مسار | Massar Platform",
   description: "المنصة المتكاملة للتعليم الثانوي - منصة مسار",
 };
 
-import { Toaster } from "react-hot-toast";
+const surfaceInitScript = `
+  (function () {
+    try {
+      var surface = '${process.env.NEXT_PUBLIC_APP_SURFACE || ""}';
+      if (!surface || surface === 'all') {
+        surface = 'landing';
+        var host = window.location.host;
+        if (host) {
+          var port = host.split(':')[1];
+          if (port === '8738') surface = 'landing';
+          else if (port === '8739') surface = 'student';
+          else if (port === '8740') surface = 'admin';
+          else if (port === '8741') surface = 'teacher';
+          else if (port === '8742') surface = 'assistant';
+          else {
+            var domainOnly = host.split(':')[0];
+            if (domainOnly.startsWith('admin.') || domainOnly.startsWith('super.')) surface = 'admin';
+            else if (domainOnly.startsWith('app.') || domainOnly.startsWith('student.')) surface = 'student';
+            else if (domainOnly.startsWith('teacher.')) surface = 'teacher';
+            else if (domainOnly.startsWith('staff.') || domainOnly.startsWith('assistant.')) surface = 'assistant';
+          }
+        }
+      }
+      document.documentElement.setAttribute('data-massar-surface', surface);
+    } catch (_) {}
+  })();
+`;
 
 const themeInitScript = `
   (function () {
@@ -46,14 +69,13 @@ const themeInitScript = `
   })();
 `;
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headersList = await headers();
-  const host = headersList.get("host") || "";
-  const surface = getSurfaceName(host);
+  const surface = process.env.NEXT_PUBLIC_APP_SURFACE || 'landing';
+
   return (
     <html
       lang="ar"
@@ -63,6 +85,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        <script dangerouslySetInnerHTML={{ __html: surfaceInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body
@@ -77,3 +100,4 @@ export default async function RootLayout({
     </html>
   );
 }
+

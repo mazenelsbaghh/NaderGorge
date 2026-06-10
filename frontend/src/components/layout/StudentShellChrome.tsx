@@ -46,7 +46,7 @@ import { useStudentTheme } from '@/hooks/useStudentTheme';
 import { useAuthStore } from '@/stores/auth-store';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
-import { studentService } from '@/services/student-service';
+import { useStudentShellStore } from '@/stores/student-shell-store';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
@@ -133,33 +133,28 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
 
   useRootOverscrollBackground();
 
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const fetchUnreadCount = useCallback(() => {
-    studentService.getNotifications()
-      .then((res) => {
-        const count = res.filter((n) => !n.isRead).length;
-        setUnreadCount(count);
-      })
-      .catch((err) => console.error("Error fetching notifications count:", err));
-  }, []);
+  const unreadCount = useStudentShellStore((state) => state.unreadNotificationsCount);
+  const fetchBootstrap = useStudentShellStore((state) => state.fetchBootstrap);
 
   useEffect(() => {
-    fetchUnreadCount();
+    void fetchBootstrap();
+
+    const handleNotificationsUpdated = () => {
+      void fetchBootstrap(true);
+    };
 
     if (typeof window !== "undefined") {
-      window.addEventListener("notificationsUpdated", fetchUnreadCount);
+      window.addEventListener("notificationsUpdated", handleNotificationsUpdated);
       return () => {
-        window.removeEventListener("notificationsUpdated", fetchUnreadCount);
+        window.removeEventListener("notificationsUpdated", handleNotificationsUpdated);
       };
     }
-  }, [fetchUnreadCount]);
+  }, [fetchBootstrap]);
 
-  // Close drawer on route change and refresh unread count
+  // Close drawer on route change
   useEffect(() => {
     setIsDrawerOpen(false);
-    fetchUnreadCount();
-  }, [pathname, fetchUnreadCount]);
+  }, [pathname]);
 
   const handleLogout = () => {
     clearAuth();

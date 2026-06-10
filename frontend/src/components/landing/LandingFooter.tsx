@@ -100,7 +100,7 @@ export function LandingFooter() {
 
             <div className="relative mx-auto aspect-[1.25] w-full max-w-lg">
               <Image
-                src={isDark ? "/images/landing-hero-dark.png" : "/images/landing-hero.png"}
+                src={isDark ? "/images/landing-hero-dark.webp" : "/images/landing-hero.webp"}
                 alt="منصة مسار على جهاز تعليمي"
                 fill
                 sizes="(max-width: 1024px) 92vw, 42vw"

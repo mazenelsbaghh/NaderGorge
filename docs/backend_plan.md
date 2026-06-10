@@ -1,10 +1,19 @@
 # Backend Master Plan
 
-**Last Updated**: 2026-06-09
+**Last Updated**: 2026-06-11
 
 ---
 
 ## Active Plans
+
+### Performance Audit Remediation (2026-06-11)
+- [x] Implement `GET /api/student/shell-bootstrap` endpoint and MediatR query `GetShellBootstrapQuery` to retrieve notifications, balance, gamification points/streak in a single DB roundtrip.
+- [x] Optimize `GetDashboardQuery.cs` to use `.AsNoTracking()`, flat SQL aggregates, and `.Select()` projections instead of full entity includes and memory loops.
+- [x] Optimize `ListCodeGroupsQuery.cs` to query access code count directly in SQL projection.
+- [x] Add pagination and direct projections to `GetMistakesQuery.cs` and `GetProgressQuery.cs`.
+- [x] Add Brotli/Gzip response compression in `Program.cs`.
+- [x] Add output caching for public GET endpoints in `Program.cs`.
+
 
 ### Role Pages and Permissions Completion (2026-06-09)
 - [x] Create MediatR queries/DTOs for teacher dashboard analytics in `TeacherActivity.cs`.

@@ -1,39 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Star } from 'lucide-react';
-import apiClient from '@/services/api-client';
+import { useStudentShellStore } from '@/stores/student-shell-store';
 
 export function SidebarGamification() {
-  const [points, setPoints] = useState<number | null>(null);
-  const [level, setLevel] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const points = useStudentShellStore((state) => state.gamificationPoints);
+  const level = useStudentShellStore((state) => state.gamificationLevel);
+  const loading = useStudentShellStore((state) => state.isLoading && useStudentShellStore.getState().lastFetchedAt === null);
+  const fetchBootstrap = useStudentShellStore((state) => state.fetchBootstrap);
 
   useEffect(() => {
-    async function fetchStatus() {
-      try {
-        const res = await apiClient.get<{ data: { totalPoints: number; currentLevel: string } }>('/gamification/status');
-        setPoints(res.data.data.totalPoints);
-        setLevel(res.data.data.currentLevel);
-      } catch {
-        setPoints(0);
-        setLevel('طالب');
-      } finally {
-        setLoading(false);
-      }
-    }
+    void fetchBootstrap();
 
     const handleRefresh = () => {
-      void fetchStatus();
+      void fetchBootstrap(true);
     };
 
     window.addEventListener('refresh-student-points', handleRefresh);
-    void fetchStatus();
-
     return () => {
       window.removeEventListener('refresh-student-points', handleRefresh);
     };
-  }, []);
+  }, [fetchBootstrap]);
 
   return (
     <div 
@@ -56,3 +44,4 @@ export function SidebarGamification() {
     </div>
   );
 }
+

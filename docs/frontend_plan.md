@@ -1,10 +1,21 @@
 # Frontend Master Plan
 
-**Last Updated**: 2026-06-09
+**Last Updated**: 2026-06-11
 
 ---
 
 ## Active Plans
+
+### Performance Audit Remediation (2026-06-11)
+- [x] Optimize `frontend/src/app/layout.tsx` to remove `force-dynamic` and `headers()`.
+- [x] Add inline head script in root layout to set `data-massar-surface` dynamically from `window.location.host` without making layout dynamic.
+- [x] Reduce font weights loaded for Tajawal and Montserrat in root layout.
+- [x] Convert read-heavy pages (like student dashboard `app/student/page.tsx`, `/about`, `/faq`) to Next.js Server Components.
+- [x] Remove global `framer-motion` page transition wrapper from `frontend/src/app/template.tsx` and replace with pure CSS transitions.
+- [x] Integrate Axios service layer call to `/api/student/shell-bootstrap` to fetch student balance, notifications, and gamification in one request.
+- [x] Refactor `StudentShellChrome.tsx`, `SidebarBalance.tsx`, and `SidebarGamification.tsx` to prevent waterfall requests on navigation.
+- [x] Optimize and compress all logo SVGs under `frontend/public/images/` to under 50KB.
+
 
 ### Surface Login and Access Contract (2026-06-09)
 - [ ] Create Next.js middleware `frontend/src/middleware.ts` to execute proxy boundaries.

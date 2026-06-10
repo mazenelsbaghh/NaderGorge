@@ -1,10 +1,16 @@
 # UI/UX Master Plan
 
-**Last Updated**: 2026-06-09
+**Last Updated**: 2026-06-11
 
 ---
 
 ## Active Plans
+
+### Performance Audit Remediation (2026-06-11)
+- [x] Remove heavy global template animation wrappers.
+- [x] Optimize font weights (Tajawal, Montserrat) loaded on layout.
+- [x] Compress SVG logos (logo.svg, logo-mark.svg, etc.) to under 50KB.
+
 
 ### Assistant Surface Layout & Design (2026-06-09)
 - [x] Implement AssistantShellChrome with Arabic-first RTL support, Sand/Gold tones, ambient shadows, and Cairo/Tajawal fonts.
