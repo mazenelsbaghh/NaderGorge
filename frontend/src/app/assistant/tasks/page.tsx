@@ -2,8 +2,16 @@
 
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { AssistantOperationsTaskBoard } from '@/components/assistant/AssistantOperationsTaskBoard';
+import { useHasPermission } from '@/hooks/useHasPermission';
+import NotFoundPage from '@/app/not-found';
 
 export default function AssistantTasksPage() {
+  const { hasPermission } = useHasPermission();
+
+  if (!hasPermission('tasks.manage')) {
+    return <NotFoundPage />;
+  }
+
   return (
     <AssistantShellChrome
       activePath="/assistant/tasks"

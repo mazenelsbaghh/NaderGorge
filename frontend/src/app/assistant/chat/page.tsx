@@ -2,8 +2,16 @@
 
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { ChatContainer } from '@/components/chat/ChatContainer';
+import { useHasPermission } from '@/hooks/useHasPermission';
+import NotFoundPage from '@/app/not-found';
 
 export default function AssistantChatPage() {
+  const { hasPermission } = useHasPermission();
+
+  if (!hasPermission('chat.manage')) {
+    return <NotFoundPage />;
+  }
+
   return (
     <AssistantShellChrome
       activePath="/assistant/chat"

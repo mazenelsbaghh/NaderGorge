@@ -58,6 +58,7 @@ const navItems: Array<{
     href: '/assistant/tasks',
     label: 'المهام والعمليات',
     icon: ClipboardList,
+    permission: 'tasks.manage',
   },
   {
     href: '/assistant/crm',
@@ -69,6 +70,7 @@ const navItems: Array<{
     href: '/assistant/chat',
     label: 'التواصل الداخلي',
     icon: MessageSquareText,
+    permission: 'chat.manage',
   },
   {
     href: '/assistant/attendance',
