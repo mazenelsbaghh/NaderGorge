@@ -66,7 +66,13 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
     // extension itself. Passing '.mp3' causes double-extension bugs (uuid.mp3.mp3).
     // Also: remove --no-warnings so errors surface in stderr.
     const outputTemplate = path.join(tempDir, outputFileName);
-    const cookiesPath = path.join(workerRoot, 'cookies.txt');
+    const cookiesPaths = [
+        path.join(workerRoot, 'cookies.txt'),
+        path.join(workerRoot, 'host-worker/cookies.txt'),
+        '/backend/src/NaderGorge.API/wwwroot/cookies.txt'
+    ];
+    const cookiesPath = cookiesPaths.find(p => fs.existsSync(p));
+
     const args = [
         url,
         '--extract-audio',
@@ -82,7 +88,7 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
         '--js-runtimes', `node:${process.execPath}`,
     ];
 
-    if (fs.existsSync(cookiesPath)) {
+    if (cookiesPath) {
         args.push('--cookies', cookiesPath);
         console.log(`[Youtube-DL] Found cookies.txt at ${cookiesPath}, passing to yt-dlp.`);
     }

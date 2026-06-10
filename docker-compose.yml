@@ -137,6 +137,7 @@ services:
       - "${MASSAR_WORKER_PORT:-3001}:3001"
     volumes:
       - massar_assets:/backend/src/NaderGorge.API/wwwroot
+      - ./worker:/app/host-worker
     networks:
       - massar_net
     depends_on:
