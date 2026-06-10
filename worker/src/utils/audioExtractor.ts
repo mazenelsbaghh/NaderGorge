@@ -90,6 +90,10 @@ async function extractAudioViaTelegram(
         const eventBuilder = new NewMessage({ incoming: true });
         client.addEventHandler(handler, eventBuilder);
 
+        console.log(`[Telegram-DL] Initializing chat by sending /start...`);
+        await client.sendMessage(botEntity, { message: '/start' });
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
         console.log(`[Telegram-DL] Sending YouTube link: ${youtubeUrl}`);
         await client.sendMessage(botEntity, { message: youtubeUrl });
 

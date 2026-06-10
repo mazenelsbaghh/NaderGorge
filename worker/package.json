@@ -10,6 +10,7 @@
     "congratulate-birthdays": "tsc -p tsconfig.json && node dist/scripts/birthday-congratulator.js",
     "telegram-login": "tsc -p tsconfig.json && node dist/scripts/telegram-login.js",
     "test-telegram-download": "tsc -p tsconfig.json && node dist/scripts/test-telegram-download.js",
+    "dump-tg-history": "tsc -p tsconfig.json && node dist/scripts/dump-tg-history.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
