@@ -125,10 +125,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAssistantReviewer", policy =>
-        policy.RequireRole("Admin", "Assistant", "AssistantReviewer"));
+        policy.RequireRole("Admin", "Assistant", "AssistantReviewer", "Staff"));
 
     options.AddPolicy("RequireAcademicAssistant", policy =>
-        policy.RequireRole("Admin", "Teacher", "AssistantAcademic"));
+        policy.RequireRole("Admin", "Teacher", "AssistantAcademic", "Assistant", "Staff"));
 
     options.AddPolicy("RequireStudent", policy =>
         policy.RequireRole("Student"));

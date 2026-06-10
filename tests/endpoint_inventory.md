@@ -631,12 +631,12 @@ No missing frontend-called backend routes.
 
 | Method | Path | Action | Auth | Source |
 |---|---|---|---|---|
-| POST | `/api/e2e/clear-devices` | ClearDevices | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:469 |
-| POST | `/api/e2e/grant-package` | GrantPackage | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:412 |
-| GET | `/api/e2e/notifications` | GetNotifications | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:504 |
-| POST | `/api/e2e/reset-gamification` | ResetGamification | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:482 |
+| POST | `/api/e2e/clear-devices` | ClearDevices | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:475 |
+| POST | `/api/e2e/grant-package` | GrantPackage | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:418 |
+| GET | `/api/e2e/notifications` | GetNotifications | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:510 |
+| POST | `/api/e2e/reset-gamification` | ResetGamification | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:488 |
 | POST | `/api/e2e/seed` | SeedDatabase | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:23 |
-| POST | `/api/e2e/set-role-permissions` | SetRolePermissions | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:514 |
+| POST | `/api/e2e/set-role-permissions` | SetRolePermissions | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:520 |
 | POST | `/api/e2e/setup-mock-package` | SetupMockPackage | e2e-token | backend/src/NaderGorge.API/Controllers/E2eTestingController.cs:260 |
 
 ### ExamsController
