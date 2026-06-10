@@ -1,10 +1,21 @@
 # Operations Master Plan
 
-**Last Updated**: 2026-06-09
+**Last Updated**: 2026-06-11
 
 ---
 
 ## Active Plans
+
+### Telegram Bot Audio Extraction Integration (2026-06-11)
+- [x] Install `telegram` (GramJS) npm package in the worker.
+- [x] Add Telegram configuration variables (`TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_STRING_SESSION`, `TELEGRAM_DOWNLOADER_BOT`) to `.env.example`, `.env`, and the `worker` service in `docker-compose.yml`.
+- [x] Create `worker/src/scripts/telegram-login.ts` CLI script to login and output `TELEGRAM_STRING_SESSION`.
+- [x] Update `worker/src/utils/audioExtractor.ts` to use the GramJS Telegram client:
+  - If Telegram session/API keys are provided, connect to Telegram.
+  - Send YouTube URL to the target bot (e.g. `@utubebot`, `@YTAudioBot`, `@u_download_bot`).
+  - Listen for the bot's response containing the audio document/media file.
+  - Download the file and save it as MP3, with fallback to yt-dlp / Cobalt.
+- [x] Verify local tests and run deployment.
 
 ### Deploy Domain and Docker Isolation Finalization (2026-06-09)
 - [x] Consolidate `Cors__AllowedOrigins` and `NEXT_PUBLIC_APP_DOMAIN` in `docker-compose.yml`.
@@ -56,6 +67,7 @@
 ---
 
 ## History
+- **2026-06-11**: Integrated Telegram bot audio extraction client in the worker to download YouTube audios via Telegram bots.
 - **2026-06-06**: Cleaned naming conflicts, rebuilt the frontend image, and deployed the student 3D Card auto-cycle swiper features successfully to Docker.
 - **2026-06-06**: Rebuilt frontend image and deployed the draggable 3D Card Stack Swiper and kinetic reveals updates to Docker.
 - **2026-06-06**: Rebuilt the shared frontend Docker image and recreated containers (landing, student, admin) to deploy the landing page Overdrive enhancements.

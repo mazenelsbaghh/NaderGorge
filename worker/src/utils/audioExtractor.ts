@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import ytDlp from 'youtube-dl-exec';
+import { TelegramClient } from 'telegram';
+import { StringSession } from 'telegram/sessions/index.js';
+import { NewMessage } from 'telegram/events/index.js';
 
 const execFileAsync = util.promisify(execFile);
 const ytDlpPath = (ytDlp as any).constants.YOUTUBE_DL_PATH;
@@ -21,16 +24,162 @@ function sanitizeProcessOutput(value: unknown): string {
     return text.length > 500 ? `${text.substring(0, 500)}...` : text;
 }
 
+async function extractAudioViaTelegram(
+    youtubeUrl: string,
+    tempDir: string,
+    outputFileName: string,
+    expectedMp3: string
+): Promise<boolean> {
+    const apiIdStr = process.env.TELEGRAM_API_ID;
+    const apiHash = process.env.TELEGRAM_API_HASH;
+    const stringSession = process.env.TELEGRAM_STRING_SESSION;
+    const botUsername = process.env.TELEGRAM_DOWNLOADER_BOT || 'utubebot';
+
+    if (!apiIdStr || !apiHash || !stringSession) {
+        console.log('[Telegram-DL] Telegram downloader is not fully configured (missing API ID, API Hash or Session).');
+        return false;
+    }
+
+    const apiId = parseInt(apiIdStr, 10);
+    if (isNaN(apiId)) {
+        console.warn('[Telegram-DL] Invalid TELEGRAM_API_ID.');
+        return false;
+    }
+
+    console.log(`[Telegram-DL] Connecting to Telegram client to download via @${botUsername}...`);
+    const session = new StringSession(stringSession);
+    const client = new TelegramClient(session, apiId, apiHash, {
+        connectionRetries: 3,
+    });
+
+    try {
+        await client.connect();
+        console.log(`[Telegram-DL] Logged in successfully. Resolving bot entity: @${botUsername}`);
+
+        const botEntity = await client.getEntity(botUsername);
+
+        let audioMessage: any = null;
+        let resolveMessage: (msg: any) => void;
+        let rejectTimeout: (reason: Error) => void;
+
+        const responsePromise = new Promise<any>((resolve, reject) => {
+            resolveMessage = resolve;
+            rejectTimeout = reject;
+        });
+
+        const handler = async (event: any) => {
+            const message = event.message;
+            if (!message || !message.senderId) return;
+
+            try {
+                const sender = await message.getSender();
+                if (sender && sender.username && sender.username.toLowerCase() === botUsername.toLowerCase()) {
+                    console.log(`[Telegram-DL] Incoming message from bot: "${message.message || ''}"`);
+                    
+                    if (message.media && (message.media.document || message.media.audio)) {
+                        console.log('[Telegram-DL] Media document found in bot message.');
+                        audioMessage = message;
+                        resolveMessage(message);
+                    }
+                }
+            } catch (err) {
+                // ignore
+            }
+        };
+
+        const eventBuilder = new NewMessage({ incoming: true });
+        client.addEventHandler(handler, eventBuilder);
+
+        console.log(`[Telegram-DL] Sending YouTube link: ${youtubeUrl}`);
+        await client.sendMessage(botEntity, { message: youtubeUrl });
+
+        // Wait up to 150 seconds for the bot to fetch, download, convert, and upload the audio back to us
+        const timeoutId = setTimeout(() => {
+            rejectTimeout(new Error('Timeout of 150s exceeded waiting for Telegram bot audio response.'));
+        }, 150000);
+
+        try {
+            await responsePromise;
+        } finally {
+            clearTimeout(timeoutId);
+            client.removeEventHandler(handler, eventBuilder);
+        }
+
+        if (!audioMessage || !audioMessage.media) {
+            throw new Error('No audio media received.');
+        }
+
+        // Detect extension from document attributes
+        let extension = 'mp3';
+        const doc = audioMessage.media.document;
+        if (doc && doc.attributes) {
+            for (const attr of doc.attributes) {
+                if (attr.className === 'DocumentAttributeFilename' && attr.fileName) {
+                    const ext = path.extname(attr.fileName).replace('.', '');
+                    if (ext) {
+                        extension = ext.toLowerCase();
+                    }
+                    break;
+                }
+            }
+        }
+
+        const tempFile = path.join(tempDir, `${outputFileName}.downloaded.${extension}`);
+        console.log(`[Telegram-DL] Downloading media to: ${tempFile}`);
+
+        await client.downloadMedia(audioMessage.media, {
+            outputFile: tempFile,
+            workers: 4,
+            progressCallback: (received: any, total: any) => {
+                const totalBytes = Number(total || 0);
+                const recBytes = Number(received || 0);
+                const percent = totalBytes ? Math.round((recBytes / totalBytes) * 100) : 0;
+                console.log(`[Telegram-DL] Download progress: ${recBytes}/${totalBytes} bytes (${percent}%)`);
+            }
+        } as any);
+
+        if (!fs.existsSync(tempFile)) {
+            throw new Error('Downloaded file was not created.');
+        }
+
+        if (extension === 'mp3') {
+            fs.renameSync(tempFile, expectedMp3);
+            console.log(`[Telegram-DL] Saved MP3 file directly.`);
+        } else {
+            console.log(`[Telegram-DL] Converting ${extension} to MP3 via ffmpeg...`);
+            await execFileAsync('ffmpeg', [
+                '-i', tempFile,
+                '-vn',
+                '-ar', '16000',
+                '-ac', '1',
+                '-b:a', '48k',
+                '-y',
+                expectedMp3
+            ]);
+            try { fs.unlinkSync(tempFile); } catch {}
+            console.log(`[Telegram-DL] Successfully converted media to standard MP3.`);
+        }
+
+        return true;
+    } catch (err: any) {
+        console.error(`[Telegram-DL] Failed extraction step: ${err.message || err}`);
+        throw err;
+    } finally {
+        try {
+            await client.disconnect();
+            console.log('[Telegram-DL] Disconnected client.');
+        } catch (e) {}
+    }
+}
+
 /**
  * Downloads a remote video and extracts a compressed MP3 audio track
  * for speech recognition by the Gemini API.
  *
  * Strategy:
- *   1. Snapshot .tmp contents before running yt-dlp
- *   2. Run yt-dlp with the canonical output template
- *   3. Find ANY new file that appeared in .tmp (yt-dlp may name it from URL, not template)
- *   4. If the new file is not .mp3, convert it to .mp3 via ffmpeg
- *   5. Surface yt-dlp errors loudly (no --no-warnings)
+ *   1. Try Telegram bot extraction first if environment variables are set.
+ *   2. Try Cobalt API fallback.
+ *   3. Try local yt-dlp extraction with cookies fallback.
  */
 export async function extractAudioFromVideo(sourceUrl: string, outputFileName: string): Promise<string> {
     const tempDir = path.join(workerRoot, '.tmp');
@@ -56,6 +205,23 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
     let url = sourceUrl;
     if (url.length === 11 && !url.includes('http')) {
         url = `https://www.youtube.com/watch?v=${url}`;
+    }
+
+    // ── Try Telegram Downloader First (If fully configured) ──
+    const apiIdStr = process.env.TELEGRAM_API_ID;
+    const apiHash = process.env.TELEGRAM_API_HASH;
+    const stringSession = process.env.TELEGRAM_STRING_SESSION;
+    if (apiIdStr && apiHash && stringSession) {
+        try {
+            console.log(`[Youtube-DL] Attempting Telegram bot download for: ${url}`);
+            const tgSuccess = await extractAudioViaTelegram(url, tempDir, outputFileName, expectedMp3);
+            if (tgSuccess && fs.existsSync(expectedMp3)) {
+                console.log(`[Youtube-DL] ✅ Successfully extracted audio via Telegram bot!`);
+                return expectedMp3;
+            }
+        } catch (tgErr: any) {
+            console.warn(`[Youtube-DL] Telegram bot download failed: ${tgErr.message || tgErr}. Proceeding to fallbacks...`);
+        }
     }
 
     // ── Try Cobalt API First (Bypasses YouTube bot block without cookies/local binaries) ──
