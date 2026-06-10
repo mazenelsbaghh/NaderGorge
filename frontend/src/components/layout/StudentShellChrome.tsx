@@ -24,6 +24,7 @@ import {
   BookMarked,
   ChartNoAxesColumn,
   ChevronLeft,
+  GraduationCap,
   Home,
   KeyRound,
   LogOut,
@@ -57,7 +58,8 @@ type StudentShellRoute =
   | '/student/code-redemption'
   | '/student/mistakes'
   | '/student/notifications'
-  | '/student/profile';
+  | '/student/profile'
+  | '/student/teachers';
 
 type StudentShellChromeProps = {
   children: ReactNode;
@@ -88,6 +90,7 @@ const primaryNavItems: Array<{
 }> = [
     { href: '/student/packages', label: 'باقاتي', icon: BookMarked },
     { href: '/student/community', label: 'المجتمع', icon: MessageSquareText },
+    { href: '/student/teachers', label: 'المدرسين', icon: GraduationCap },
   ];
 
 /** Secondary: visible only inside the drawer on mobile */
@@ -171,6 +174,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       ? '/student/packages'
       : pathname.startsWith('/student/community')
         ? '/student/community'
+      : pathname.startsWith('/student/teachers')
+        ? '/student/teachers'
       : pathname.startsWith('/student/balance')
         ? '/student/balance'
       : pathname.startsWith('/student/mistakes')

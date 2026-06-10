@@ -66,6 +66,7 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
     // extension itself. Passing '.mp3' causes double-extension bugs (uuid.mp3.mp3).
     // Also: remove --no-warnings so errors surface in stderr.
     const outputTemplate = path.join(tempDir, outputFileName);
+    const cookiesPath = path.join(workerRoot, 'cookies.txt');
     const args = [
         url,
         '--extract-audio',
@@ -74,13 +75,17 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
         '-o',              outputTemplate,
         '--no-check-certificates',
         '--no-playlist',
-        '--prefer-ffmpeg',
         '--newline',
         // yt-dlp 2026+ requires a JS runtime to process YouTube's player API.
         // Pointing it to the system Node binary fixes the "no JS runtime" warning
         // that causes all YouTube formats to be invisible.
         '--js-runtimes', `node:${process.execPath}`,
     ];
+
+    if (fs.existsSync(cookiesPath)) {
+        args.push('--cookies', cookiesPath);
+        console.log(`[Youtube-DL] Found cookies.txt at ${cookiesPath}, passing to yt-dlp.`);
+    }
 
     console.log(`[Youtube-DL] Running yt-dlp...`);
     try {

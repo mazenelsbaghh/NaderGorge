@@ -17,6 +17,31 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
+
+const GRADE_NAMES: Record<string, string> = {
+  FirstSecondary: 'الأول الثانوي',
+  SecondSecondary: 'الثاني الثانوي',
+  SecondaryGrade3: 'الثالث الثانوي',
+  FirstBaccalaureate: 'الأول بكالوريا',
+  SecondBaccalaureate: 'الثاني بكالوريا',
+  PrimaryGrade1: 'الأول الابتدائي',
+  PrimaryGrade2: 'الثاني الابتدائي',
+  PrimaryGrade3: 'الثالث الابتدائي',
+  PrimaryGrade4: 'الرابع الابتدائي',
+  PrimaryGrade5: 'الخامس الابتدائي',
+  PrimaryGrade6: 'السادس الابتدائي',
+  PrepGrade1: 'الأول الإعدادي',
+  PrepGrade2: 'الثاني الإعدادي',
+  PrepGrade3: 'الثالث الإعدادي',
+  AzhariPrimary1: 'الأول الابتدائي الأزهري',
+  AzhariPrep1: 'الأول الإعدادي الأزهري',
+  AzhariSecondary1: 'الأول الثانوي الأزهري',
+  AmericanGrade9: 'Grade 9',
+  AmericanGrade10: 'Grade 10',
+  AmericanGrade11: 'Grade 11',
+  AmericanGrade12: 'Grade 12',
+};
 import {
   ArrowRight,
   ChevronLeft,
@@ -205,7 +230,7 @@ export default function PackageProfilePage() {
                   {pkg.teacherProfileImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={pkg.teacherProfileImageUrl}
+                      src={resolveMediaUrl(pkg.teacherProfileImageUrl)}
                       alt={pkg.teacherName}
                       className="h-12 w-12 rounded-xl object-cover border border-[var(--admin-border)] shadow-sm"
                     />
@@ -217,7 +242,12 @@ export default function PackageProfilePage() {
                   <div>
                     <h4 className="font-black text-sm text-[var(--admin-text)]">أ. {pkg.teacherName}</h4>
                     {pkg.teacherSpecialization && (
-                      <p className="text-[11px] text-[var(--admin-primary)] font-black mt-0.5">{pkg.teacherSpecialization}</p>
+                      <p className="text-[11px] text-[var(--admin-primary)] font-black mt-0.5">
+                        {pkg.teacherSpecialization
+                          .split(",")
+                          .map((s) => GRADE_NAMES[s.trim()] || s.trim())
+                          .join(" ، ")}
+                      </p>
                     )}
                   </div>
                 </div>
