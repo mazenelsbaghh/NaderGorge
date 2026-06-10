@@ -1,9 +1,12 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Features.Teacher;
 using NaderGorge.Application.Features.Admin.Commands;
+using NaderGorge.Application.Features.Admin.Queries;
+using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.API.Controllers;
 
@@ -13,10 +16,12 @@ namespace NaderGorge.API.Controllers;
 public class TeacherController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IAppDbContext _db;
 
-    public TeacherController(IMediator mediator)
+    public TeacherController(IMediator mediator, IAppDbContext db)
     {
         _mediator = mediator;
+        _db = db;
     }
 
     private Guid GetUserId() => User.RequireUserId();
@@ -73,6 +78,56 @@ public class TeacherController : ControllerBase
             dto.ContactInfo,
             dto.ProfileImageUrl
         ));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("programs")]
+    public async Task<IActionResult> GetPrograms()
+        => Ok(await _mediator.Send(new GetAdminProgramsQuery(GetUserId())));
+
+    [HttpGet("codes/groups")]
+    public async Task<IActionResult> ListCodeGroups()
+        => Ok(await _mediator.Send(new ListCodeGroupsQuery(GetUserId())));
+
+    [HttpGet("codes/groups/{id:guid}/details")]
+    public async Task<IActionResult> GetCodeGroupDetails(Guid id)
+    {
+        var group = await _db.CodeGroups.FindAsync(id);
+        if (group == null) return NotFound();
+
+        var user = await _db.Users
+            .Include(u => u.TeacherProfile)
+            .FirstOrDefaultAsync(u => u.Id == GetUserId());
+
+        if (user?.TeacherProfile == null || group.TeacherId != user.TeacherProfile.Id)
+        {
+            return Forbid();
+        }
+
+        var result = await _mediator.Send(new GetCodeGroupCodesQuery(id));
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
+    [HttpPost("codes/bulk-generate")]
+    public async Task<IActionResult> BulkGenerateCodes([FromBody] BulkGenerateRequest dto)
+    {
+        var result = await _mediator.Send(new BulkGenerateCodesCommand(
+            GroupName: dto.GroupName,
+            CodeType: dto.CodeType,
+            Count: dto.Count,
+            CodeLength: dto.CodeLength,
+            AdminId: GetUserId(),
+            PackageId: dto.PackageId,
+            TermId: dto.TermId,
+            ContentSectionId: dto.ContentSectionId,
+            LessonId: dto.LessonId,
+            ExamId: dto.ExamId,
+            VideoTargetIds: dto.VideoTargetIds,
+            BalanceAmount: dto.BalanceAmount,
+            DiscountPercentage: dto.DiscountPercentage,
+            ExpiresAt: dto.ExpiresAt
+        ));
+
         return result.Success ? Ok(result) : BadRequest(result);
     }
 }

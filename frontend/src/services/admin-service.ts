@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { getSurfaceName } from '@/packages/surface-runtime/config';
 
 export interface ApiResponse<T = any> {
   data: T;
@@ -482,7 +483,9 @@ export const adminService = {
   },
 
   listPrograms: async (): Promise<AdminProgramDto[]> => {
-    const res = await apiClient.get<ApiResponse<AdminProgramDto[]>>('/admin/programs');
+    const isTeacher = getSurfaceName() === 'teacher';
+    const path = isTeacher ? '/teacher/programs' : '/admin/programs';
+    const res = await apiClient.get<ApiResponse<AdminProgramDto[]>>(path);
     return res.data?.data ?? [];
   },
 
@@ -560,7 +563,9 @@ export const adminService = {
 
   // Codes
   bulkGenerateCodes: async (payload: { packageId?: string; lessonId?: string; count: number; codeLength: number }) => {
-    const res = await apiClient.post('/admin/codes/bulk-generate', payload);
+    const isTeacher = getSurfaceName() === 'teacher';
+    const path = isTeacher ? '/teacher/codes/bulk-generate' : '/admin/codes/bulk-generate';
+    const res = await apiClient.post(path, payload);
     return res.data?.data;
   },
 
@@ -579,8 +584,11 @@ export const adminService = {
       return codeGroupsInFlight;
     }
 
+    const isTeacher = getSurfaceName() === 'teacher';
+    const path = isTeacher ? '/teacher/codes/groups' : '/admin/codes/groups';
+
     codeGroupsInFlight = apiClient
-      .get<ApiResponse<CodeGroupDto[]>>('/admin/codes/groups')
+      .get<ApiResponse<CodeGroupDto[]>>(path)
       .then((res) => {
         codeGroupsCache = res.data?.data;
         codeGroupsCacheAt = Date.now();
@@ -594,7 +602,9 @@ export const adminService = {
   },
 
   getCodeGroupDetails: async (id: string) => {
-    const res = await apiClient.get<ApiResponse<CodeDetailDto[]>>(`/admin/codes/groups/${id}/details`);
+    const isTeacher = getSurfaceName() === 'teacher';
+    const path = isTeacher ? `/teacher/codes/groups/${id}/details` : `/admin/codes/groups/${id}/details`;
+    const res = await apiClient.get<ApiResponse<CodeDetailDto[]>>(path);
     return res.data?.data;
   },
 
