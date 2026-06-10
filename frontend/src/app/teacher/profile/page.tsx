@@ -5,6 +5,7 @@ import { User, Sparkles, Loader2, Save, FileText, Bookmark, Phone, Mail, Upload,
 import { teacherService } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
+import { compressImage } from "@/utils/image-compressor";
 
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 
@@ -275,31 +276,23 @@ export default function TeacherProfilePage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      if (file.size > 5 * 1024 * 1024) {
-                        toast.error("حجم الصورة يجب أن يكون أقل من 5 ميجابايت");
-                        return;
-                      }
                       setIsUploadingProfile(true);
-                      const reader = new FileReader();
-                      reader.onload = async () => {
-                        try {
-                          const base64 = reader.result as string;
-                          setProfileImagePreview(base64);
-                          const res = await teacherService.uploadMyProfileImage(base64, file.name);
-                          if (res.success && res.data) {
-                            setProfileImageUrl(res.data);
-                            toast.success("تم رفع الصورة الشخصية بنجاح ✅");
-                          } else {
-                            toast.error(res.message || "فشل رفع الصورة الشخصية");
-                          }
-                        } catch (err) {
-                          console.error(err);
-                          toast.error("حدث خطأ أثناء رفع الصورة الشخصية");
-                        } finally {
-                          setIsUploadingProfile(false);
+                      try {
+                        const base64 = await compressImage(file);
+                        setProfileImagePreview(base64);
+                        const res = await teacherService.uploadMyProfileImage(base64, file.name);
+                        if (res.success && res.data) {
+                          setProfileImageUrl(res.data);
+                          toast.success("تم رفع الصورة الشخصية بنجاح ✅");
+                        } else {
+                          toast.error(res.message || "فشل رفع الصورة الشخصية");
                         }
-                      };
-                      reader.readAsDataURL(file);
+                      } catch (err) {
+                        console.error(err);
+                        toast.error("حدث خطأ أثناء معالجة ورفع الصورة الشخصية");
+                      } finally {
+                        setIsUploadingProfile(false);
+                      }
                     }}
                   />
                   {profileImagePreview ? (
@@ -335,30 +328,22 @@ export default function TeacherProfilePage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      if (file.size > 5 * 1024 * 1024) {
-                        toast.error("حجم الصورة يجب أن يكون أقل من 5 ميجابايت");
-                        return;
-                      }
                       setIsUploadingAi(true);
-                      const reader = new FileReader();
-                      reader.onload = async () => {
-                        try {
-                          const base64 = reader.result as string;
-                          setAiPhotoPreview(base64);
-                          const res = await teacherService.uploadMyAiPhoto(base64, file.name);
-                          if (res.success) {
-                            toast.success("تم رفع صورة تحليل الـ AI بنجاح ✅");
-                          } else {
-                            toast.error(res.message || "فشل رفع صورة تحليل الـ AI");
-                          }
-                        } catch (err) {
-                          console.error(err);
-                          toast.error("حدث خطأ أثناء رفع صورة التحليل");
-                        } finally {
-                          setIsUploadingAi(false);
+                      try {
+                        const base64 = await compressImage(file);
+                        setAiPhotoPreview(base64);
+                        const res = await teacherService.uploadMyAiPhoto(base64, file.name);
+                        if (res.success) {
+                          toast.success("تم رفع صورة تحليل الـ AI بنجاح ✅");
+                        } else {
+                          toast.error(res.message || "فشل رفع صورة تحليل الـ AI");
                         }
-                      };
-                      reader.readAsDataURL(file);
+                      } catch (err) {
+                        console.error(err);
+                        toast.error("حدث خطأ أثناء معالجة ورفع صورة التحليل");
+                      } finally {
+                        setIsUploadingAi(false);
+                      }
                     }}
                   />
                   {aiPhotoPreview ? (

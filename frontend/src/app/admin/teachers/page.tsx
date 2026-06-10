@@ -40,6 +40,7 @@ import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { compressImage } from '@/utils/image-compressor';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -1124,37 +1125,29 @@ export default function AdminTeachersPage() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
-                            return;
-                          }
                           setIsUploadingProfile(true);
-                          const reader = new FileReader();
-                          reader.onload = async () => {
-                            try {
-                              const base64 = reader.result as string;
-                              setProfileImagePreview(base64);
-                              if (editingTeacher) {
-                                const res = await adminService.uploadTeacherProfileImage(editingTeacher.id, base64, file.name);
-                                if (res.success && res.data) {
-                                  setProfileImageUrl(res.data);
-                                  toast.success('تم رفع الصورة الشخصية بنجاح ✅');
-                                  loadData();
-                                } else {
-                                  toast.error(res.message || 'فشل رفع الصورة الشخصية');
-                                }
+                          try {
+                            const base64 = await compressImage(file);
+                            setProfileImagePreview(base64);
+                            if (editingTeacher) {
+                              const res = await adminService.uploadTeacherProfileImage(editingTeacher.id, base64, file.name);
+                              if (res.success && res.data) {
+                                setProfileImageUrl(res.data);
+                                toast.success('تم رفع الصورة الشخصية بنجاح ✅');
+                                loadData();
                               } else {
-                                setPendingProfileImage({ base64, name: file.name });
-                                toast.success('تم اختيار الصورة الشخصية بنجاح (سيتم حفظها عند إرسال النموذج) 📸');
+                                toast.error(res.message || 'فشل رفع الصورة الشخصية');
                               }
-                            } catch (err) {
-                              console.error(err);
-                              toast.error('حدث خطأ أثناء رفع الصورة الشخصية');
-                            } finally {
-                              setIsUploadingProfile(false);
+                            } else {
+                              setPendingProfileImage({ base64, name: file.name });
+                              toast.success('تم اختيار الصورة الشخصية بنجاح (سيتم حفظها عند إرسال النموذج) 📸');
                             }
-                          };
-                          reader.readAsDataURL(file);
+                          } catch (err) {
+                            console.error(err);
+                            toast.error('حدث خطأ أثناء معالجة ورفع الصورة الشخصية');
+                          } finally {
+                            setIsUploadingProfile(false);
+                          }
                         }}
                       />
                       {profileImagePreview ? (
@@ -1190,35 +1183,27 @@ export default function AdminTeachersPage() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          if (file.size > 5 * 1024 * 1024) {
-                            toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
-                            return;
-                          }
                           setIsUploadingAi(true);
-                          const reader = new FileReader();
-                          reader.onload = async () => {
-                            try {
-                              const base64 = reader.result as string;
-                              setAiPhotoPreview(base64);
-                              if (editingTeacher) {
-                                const res = await adminService.uploadTeacherPhoto(editingTeacher.userId, base64, file.name);
-                                if (res.success) {
-                                  toast.success('تم رفع صورة تحليل الـ AI بنجاح ✅');
-                                } else {
-                                  toast.error(res.message || 'فشل رفع صورة تحليل الـ AI');
-                                }
+                          try {
+                            const base64 = await compressImage(file);
+                            setAiPhotoPreview(base64);
+                            if (editingTeacher) {
+                              const res = await adminService.uploadTeacherPhoto(editingTeacher.userId, base64, file.name);
+                              if (res.success) {
+                                toast.success('تم رفع صورة تحليل الـ AI بنجاح ✅');
                               } else {
-                                setPendingAiPhoto({ base64, name: file.name });
-                                toast.success('تم اختيار صورة تحليل الـ AI بنجاح (سيتم حفظها عند إرسال النموذج) 🤖');
+                                toast.error(res.message || 'فشل رفع صورة تحليل الـ AI');
                               }
-                            } catch (err) {
-                              console.error(err);
-                              toast.error('حدث خطأ أثناء رفع صورة التحليل');
-                            } finally {
-                              setIsUploadingAi(false);
+                            } else {
+                              setPendingAiPhoto({ base64, name: file.name });
+                              toast.success('تم اختيار صورة تحليل الـ AI بنجاح (سيتم حفظها عند إرسال النموذج) 🤖');
                             }
-                          };
-                          reader.readAsDataURL(file);
+                          } catch (err) {
+                            console.error(err);
+                            toast.error('حدث خطأ أثناء معالجة ورفع صورة التحليل');
+                          } finally {
+                            setIsUploadingAi(false);
+                          }
                         }}
                       />
                       {aiPhotoPreview ? (
