@@ -106,7 +106,7 @@ function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => 
         disabled={!selectedTeacherId}
       >
         <option value="">
-          {selectedTeacherId ? 'اختر البرنامج الدراسي...' : 'يرجى اختيار المدرس أولاً...'}
+          {selectedTeacherId ? 'اختر المادة...' : 'يرجى اختيار المدرس أولاً...'}
         </option>
         {(() => {
           const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
@@ -114,7 +114,7 @@ function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => 
             ? programs.filter(p => selectedTeacher.subjectIds?.includes(p.subjectId))
             : [];
           return filteredPrograms.map((p) => (
-            <option key={p.id} value={p.id}>{p.name} ({p.subjectName})</option>
+            <option key={p.id} value={p.id}>{p.name}</option>
           ));
         })()}
       </select>

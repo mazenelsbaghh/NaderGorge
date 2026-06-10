@@ -32,6 +32,19 @@ public class CreateSubjectCommandHandler : IRequestHandler<CreateSubjectCommand,
         };
 
         _db.Subjects.Add(subject);
+
+        // Auto-create a default Program for this subject
+        var program = new Program
+        {
+            Id = Guid.NewGuid(),
+            Name = subject.Name,
+            Description = subject.Description,
+            TargetGrade = "عام",
+            Subject = subject,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.Programs.Add(program);
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<Guid>.Ok(subject.Id);

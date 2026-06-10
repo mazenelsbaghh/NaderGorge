@@ -86,9 +86,9 @@ function CreatePackageRow({ onSuccess, programs }: { onSuccess: () => void; prog
         onChange={(e) => setSelectedProgramId(e.target.value)}
         className="admin-input"
       >
-        <option value="">اختر البرنامج الدراسي...</option>
+        <option value="">اختر المادة...</option>
         {programs.map((p) => (
-          <option key={p.id} value={p.id}>{p.name} ({p.subjectName})</option>
+          <option key={p.id} value={p.id}>{p.name}</option>
         ))}
       </select>
 
