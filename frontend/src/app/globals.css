@@ -545,6 +545,23 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     cursor: not-allowed;
   }
 
+  select.admin-input {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 1rem center;
+    background-size: 1.25rem;
+    padding-left: 2.5rem;
+    cursor: pointer;
+  }
+
+  select.admin-input option {
+    background-color: var(--admin-bg);
+    color: var(--admin-text);
+  }
+
   /* ─── Primary Button (Neumorphic Gold) ─── */
   .admin-btn-primary {
     display: inline-flex;
