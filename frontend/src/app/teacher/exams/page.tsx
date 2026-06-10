@@ -5,7 +5,6 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { CircleCheck, Plus, Shield, Tags, ClipboardList } from "lucide-react";
 
 import {
-  AdminShellChrome,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
@@ -14,6 +13,7 @@ import {
   AdminTabBar,
   AdminTab,
 } from "@/components/admin";
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { FindTheMistakeBuilder } from "@/components/admin/FindTheMistakeBuilder";
 import { EssayGradingView } from "@/components/admin/EssayGradingView";
 import { adminService, QuestionBankItemDto, QuestionOptionDto } from "@/services/admin-service";
@@ -206,7 +206,7 @@ export default function TeacherExamsPage() {
   ];
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/exams"
       sectionLabel="بنك الأسئلة"
       pageTitle="إدارة الامتحانات والأسئلة"
@@ -406,6 +406,6 @@ export default function TeacherExamsPage() {
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

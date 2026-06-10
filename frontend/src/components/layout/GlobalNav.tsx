@@ -62,10 +62,19 @@ export function GlobalNav() {
   const isLanding = pathname === "/";
   const isStudentArea = pathname.startsWith("/student");
   const isAdminArea = pathname.startsWith("/admin");
+  const isTeacherArea = pathname.startsWith("/teacher");
+  const isAssistantArea = pathname.startsWith("/assistant");
   const isAuthRoute = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password";
   const isFormsPage = pathname.startsWith("/forms");
 
-  if (isStudentArea || isAdminArea || isAuthRoute || isFormsPage) {
+  if (
+    isStudentArea ||
+    isAdminArea ||
+    isTeacherArea ||
+    isAssistantArea ||
+    isAuthRoute ||
+    isFormsPage
+  ) {
     return null;
   }
 

@@ -2,8 +2,16 @@
 
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { CrmStudentQueue } from '@/components/crm/CrmStudentQueue';
+import { useHasPermission } from '@/hooks/useHasPermission';
+import NotFoundPage from '@/app/not-found';
 
 export default function AssistantCrmPage() {
+  const { hasPermission } = useHasPermission();
+
+  if (!hasPermission('crm.manage')) {
+    return <NotFoundPage />;
+  }
+
   return (
     <AssistantShellChrome
       activePath="/assistant/crm"

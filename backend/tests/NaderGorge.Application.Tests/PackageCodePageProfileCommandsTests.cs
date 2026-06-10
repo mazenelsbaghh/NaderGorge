@@ -1,5 +1,6 @@
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Infrastructure.Data;
 
@@ -33,7 +34,8 @@ public class PackageCodePageProfileCommandsTests
 
         Assert.True(saveResult.Success);
 
-        var queryHandler = new GetPackageCodeProfileQueryHandler(db);
+        var authService = new TeacherAuthorizationService(db);
+        var queryHandler = new GetPackageCodeProfileQueryHandler(db, authService);
         var queryResult = await queryHandler.Handle(new GetPackageCodeProfileQuery(packageId), CancellationToken.None);
 
         Assert.True(queryResult.Success);
@@ -68,7 +70,8 @@ public class PackageCodePageProfileCommandsTests
                 Guid.NewGuid()),
             CancellationToken.None);
 
-        var queryHandler = new GetPackageCodeProfileQueryHandler(db);
+        var authService = new TeacherAuthorizationService(db);
+        var queryHandler = new GetPackageCodeProfileQueryHandler(db, authService);
         var packageOneResult = await queryHandler.Handle(new GetPackageCodeProfileQuery(packageOneId), CancellationToken.None);
         var packageTwoResult = await queryHandler.Handle(new GetPackageCodeProfileQuery(packageTwoId), CancellationToken.None);
 

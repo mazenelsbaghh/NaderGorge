@@ -64,4 +64,18 @@ test.describe('Student Lesson Consumption and Exams', () => {
     await expect(page.locator('text=باقاتي').first()).toBeVisible();
     await expect(page.locator('text=تفعيل كود').first()).toBeVisible();
   });
+
+  test('T014: Student cannot access Admin, Teacher, or Assistant pages', async ({ page }) => {
+    // Attempt to access admin dashboard
+    await page.goto('http://app.localhost:3000/admin');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Attempt to access teacher portal
+    await page.goto('http://app.localhost:3000/teacher');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Attempt to access assistant portal
+    await page.goto('http://app.localhost:3000/assistant');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+  });
 });

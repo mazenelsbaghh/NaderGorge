@@ -51,7 +51,7 @@ export function LoginForm() {
       const isStaff = user.roles.length > 0 && !user.roles.includes('Student');
 
       // On landing surface: block staff — they must use the admin portal
-      const surface = process.env.NEXT_PUBLIC_APP_SURFACE;
+      const surface = getSurfaceName();
       if (isStaff && surface === 'landing') {
         setError('هذا الحساب مخصص للإدارة فقط. يرجى تسجيل الدخول من بوابة الإدارة.');
         return;

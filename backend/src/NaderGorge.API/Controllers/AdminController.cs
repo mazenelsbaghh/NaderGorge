@@ -208,7 +208,7 @@ public class AdminController : ControllerBase
     [HttpGet("packages/{id:guid}")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackageById(Guid id)
-        => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetPackageByIdQuery(id)));
+        => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetPackageByIdQuery(id, GetUserId())));
 
     [HttpPut("packages/{id:guid}")]
     [HasPermission("content.manage")]
@@ -222,7 +222,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackageCodeProfile(Guid id)
     {
-        var result = await _mediator.Send(new GetPackageCodeProfileQuery(id));
+        var result = await _mediator.Send(new GetPackageCodeProfileQuery(id, GetUserId()));
         return result.Success ? Ok(result) : NotFound(result);
     }
 

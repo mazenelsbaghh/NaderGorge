@@ -12,6 +12,7 @@ namespace NaderGorge.API.Controllers;
 [E2eOnly]
 public class E2eTestingController : ControllerBase
 {
+    private static readonly System.Threading.SemaphoreSlim _semaphore = new(1, 1);
     private readonly DbContext _dbContext;
 
     public E2eTestingController(IAppDbContext dbContext)
@@ -22,16 +23,20 @@ public class E2eTestingController : ControllerBase
     [HttpPost("seed")]
     public async Task<IActionResult> SeedDatabase([FromBody] SeedRequest request)
     {
+        await _semaphore.WaitAsync();
+        try
+        {
         if (request.ClearDatabase)
         {
             if (!UsesE2eDatabase())
                 return BadRequest("E2E destructive reset requires an E2E/test database connection string.");
 
             await _dbContext.Database.EnsureDeletedAsync();
+            Npgsql.NpgsqlConnection.ClearAllPools();
             await _dbContext.Database.EnsureCreatedAsync();
         }
 
-        if (request.SeedAdmin || request.SeedStudents || request.SeedTeacher)
+        if (request.SeedAdmin || request.SeedStudents || request.SeedTeacher || request.SeedAssistant)
         {
             var adminRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Admin");
             if (adminRole == null)
@@ -54,8 +59,18 @@ public class E2eTestingController : ControllerBase
             var teacherRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Teacher");
             if (teacherRole == null)
             {
-                teacherRole = new Role { Id = Guid.NewGuid(), Name = "Teacher", Type = RoleType.Teacher };
+                teacherRole = new Role
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Teacher",
+                    Type = RoleType.Teacher,
+                    PermissionsJson = "[\"content.manage\",\"exams.manage\",\"comments.manage\"]"
+                };
                 _dbContext.Set<Role>().Add(teacherRole);
+            }
+            else
+            {
+                teacherRole.PermissionsJson = "[\"content.manage\",\"exams.manage\",\"comments.manage\"]";
             }
             await _dbContext.SaveChangesAsync();
 
@@ -142,6 +157,38 @@ public class E2eTestingController : ControllerBase
                     existingTeacher.IsActive = true;
                     existingTeacher.IsProfileComplete = true;
                 }
+
+                var existingTeacherB = await _dbContext.Set<User>().FirstOrDefaultAsync(u => u.PhoneNumber == "20000000005");
+                if (existingTeacherB == null)
+                {
+                    var teacherUserB = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        FullName = "E2E Teacher B",
+                        PhoneNumber = "20000000005",
+                        PasswordHash = HashPassword("password"),
+                        IsActive = true,
+                        IsProfileComplete = true
+                    };
+                    _dbContext.Set<User>().Add(teacherUserB);
+                    _dbContext.Set<UserRole>().Add(new UserRole { UserId = teacherUserB.Id, RoleId = teacherRole.Id });
+
+                    var teacherProfileB = new TeacherProfile
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = teacherUserB.Id,
+                        CommissionRate = 0.20m,
+                        Bio = "E2E Teacher B Bio",
+                        Specialization = "Maths"
+                    };
+                    _dbContext.Set<TeacherProfile>().Add(teacherProfileB);
+                }
+                else
+                {
+                    existingTeacherB.PasswordHash = HashPassword("password");
+                    existingTeacherB.IsActive = true;
+                    existingTeacherB.IsProfileComplete = true;
+                }
             }
 
             if (request.SeedStudents)
@@ -203,6 +250,11 @@ public class E2eTestingController : ControllerBase
             .ToListAsync();
 
         return Ok(new { message = "E2E Database successfully seeded.", users = users });
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     [HttpPost("setup-mock-package")]
@@ -214,6 +266,7 @@ public class E2eTestingController : ControllerBase
         var sectionId = Guid.NewGuid();
         var lessonId = Guid.NewGuid();
         var lesson2Id = Guid.NewGuid();
+        var lesson3Id = Guid.NewGuid();
         var videoId = Guid.NewGuid();
         var examId = Guid.NewGuid();
         var essayExamId = Guid.NewGuid();
@@ -223,7 +276,13 @@ public class E2eTestingController : ControllerBase
         var homeworkId = Guid.NewGuid();
         var hwQuestionId = Guid.NewGuid();
 
-        var teacher = await _dbContext.Set<TeacherProfile>().FirstOrDefaultAsync();
+        var teacher = await _dbContext.Set<TeacherProfile>()
+            .Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.User.PhoneNumber == "20000000004");
+        if (teacher == null)
+        {
+            teacher = await _dbContext.Set<TeacherProfile>().FirstOrDefaultAsync();
+        }
         if (teacher == null)
         {
             var teacherRole = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == "Teacher");
@@ -270,18 +329,22 @@ public class E2eTestingController : ControllerBase
             await _dbContext.SaveChangesAsync();
         }
 
-        // Add TeacherSubject connection if not exists
-        var teacherSubjectExists = await _dbContext.Set<TeacherSubject>()
-            .AnyAsync(ts => ts.TeacherId == teacher.Id && ts.SubjectId == subject.Id);
-        if (!teacherSubjectExists)
+        // Add TeacherSubject connections for all teachers if they don't exist
+        var allTeachers = await _dbContext.Set<TeacherProfile>().ToListAsync();
+        foreach (var t in allTeachers)
         {
-            _dbContext.Set<TeacherSubject>().Add(new TeacherSubject
+            var exists = await _dbContext.Set<TeacherSubject>()
+                .AnyAsync(ts => ts.TeacherId == t.Id && ts.SubjectId == subject.Id);
+            if (!exists)
             {
-                TeacherId = teacher.Id,
-                SubjectId = subject.Id
-            });
-            await _dbContext.SaveChangesAsync();
+                _dbContext.Set<TeacherSubject>().Add(new TeacherSubject
+                {
+                    TeacherId = t.Id,
+                    SubjectId = subject.Id
+                });
+            }
         }
+        await _dbContext.SaveChangesAsync();
 
         var termId = Guid.NewGuid();
         var program = new Domain.Entities.Program 
@@ -297,12 +360,12 @@ public class E2eTestingController : ControllerBase
         var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };
         var lesson2 = new Lesson { Id = lesson2Id, ContentSectionId = sectionId, Title = "E2E Lesson 2", Summary = "Essay lesson", Order = 1 };
+        var lesson3 = new Lesson { Id = lesson3Id, ContentSectionId = sectionId, Title = "E2E Lesson 3", Summary = "Exam lesson", Order = 2, ExamId = examId };
         var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "youtube", ProviderVideoId = "dQw4w9WgXcQ", MaxWatchCount = 2, Order = 0 };
         var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
         var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
 
         // Link exam to lesson
-        // lesson.ExamId = examId;
         lesson2.ExamId = essayExamId;
 
         var homework = new NaderGorge.Domain.Entities.Homework.Homework
@@ -338,7 +401,7 @@ public class E2eTestingController : ControllerBase
         _dbContext.Set<Term>().Add(term);
         _dbContext.Set<ContentSection>().Add(section);
         _dbContext.Set<Exam>().AddRange(exam, essayExam);
-        _dbContext.Set<Lesson>().AddRange(lesson, lesson2);
+        _dbContext.Set<Lesson>().AddRange(lesson, lesson2, lesson3);
         _dbContext.Set<LessonVideo>().Add(video);
         _dbContext.Set<QuestionBankItem>().AddRange(questionItem, essayQuestion);
         _dbContext.Set<QuestionOption>().AddRange(correctOption, wrongOption);
@@ -349,7 +412,7 @@ public class E2eTestingController : ControllerBase
 
         await _dbContext.SaveChangesAsync();
 
-        return Ok(new { PackageId = packageId, LessonId = lessonId, Lesson2Id = lesson2Id, ExamId = examId, EssayExamId = essayExamId, HomeworkId = homeworkId });
+        return Ok(new { PackageId = packageId, LessonId = lessonId, Lesson2Id = lesson2Id, ExamId = examId, EssayExamId = essayExamId, HomeworkId = homeworkId, TeacherId = teacher.Id, TeacherPhone = teacher.User?.PhoneNumber });
     }
 
     [HttpPost("grant-package")]
@@ -454,6 +517,18 @@ public class E2eTestingController : ControllerBase
         return Ok(notifications);
     }
 
+    [HttpPost("set-role-permissions")]
+    public async Task<IActionResult> SetRolePermissions([FromBody] SetRolePermissionsRequest request)
+    {
+        var role = await _dbContext.Set<Role>().FirstOrDefaultAsync(r => r.Name == request.RoleName);
+        if (role == null) return BadRequest($"Role '{request.RoleName}' not found.");
+
+        role.PermissionsJson = System.Text.Json.JsonSerializer.Serialize(request.Permissions);
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(new { message = $"Permissions for role '{request.RoleName}' updated successfully.", permissions = request.Permissions });
+    }
+
     private static string HashPassword(string password)
     {
         return BCrypt.Net.BCrypt.HashPassword(password);
@@ -489,3 +564,10 @@ public class ClearDevicesRequest
 {
     public string PhoneNumber { get; set; } = "";
 }
+
+public class SetRolePermissionsRequest
+{
+    public string RoleName { get; set; } = "";
+    public List<string> Permissions { get; set; } = new();
+}
+

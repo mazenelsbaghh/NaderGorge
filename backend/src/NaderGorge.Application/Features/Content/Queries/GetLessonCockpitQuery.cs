@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
@@ -22,19 +23,30 @@ public record LessonCockpitDto(
     LessonCockpitCommentSummaryDto CommentsSummary
 );
 
-public record GetLessonCockpitQuery(Guid LessonId) : IRequest<ApiResponse<LessonCockpitDto>>;
+public record GetLessonCockpitQuery(Guid LessonId, Guid? CurrentUserId = null) : IRequest<ApiResponse<LessonCockpitDto>>;
 
 public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuery, ApiResponse<LessonCockpitDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public GetLessonCockpitQueryHandler(IAppDbContext db)
+    public GetLessonCockpitQueryHandler(IAppDbContext db, TeacherAuthorizationService auth)
     {
         _db = db;
+        _auth = auth;
     }
 
     public async Task<ApiResponse<LessonCockpitDto>> Handle(GetLessonCockpitQuery request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.LessonId, ct);
+            if (!canAccess)
+            {
+                return ApiResponse<LessonCockpitDto>.Fail("Unauthorized access to this lesson.");
+            }
+        }
+
         var lesson = await _db.Lessons
             .Include(l => l.Videos)
                 .ThenInclude(v => v.VideoChapters)

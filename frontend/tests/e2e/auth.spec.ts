@@ -72,4 +72,73 @@ test.describe('Auth and Access Flow', () => {
     await page.waitForTimeout(500);
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test('T009: Prevent Student from accessing Admin, Teacher, or Assistant routes', async ({ page }) => {
+    // Login as student first
+    await page.goto('http://app.localhost:3000/login');
+    await page.waitForTimeout(1000);
+    await page.fill('input[name="phoneNumber"]', '20000000001');
+    await page.fill('input[name="password"]', 'password');
+    await page.click('text=تذكرني', { force: true });
+    await page.click('button[type="submit"]', { force: true });
+    await expect(page).toHaveURL(/.*\/student$/, { timeout: 15000 });
+
+    // Try to access admin route on the student domain
+    await page.goto('http://app.localhost:3000/admin');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Try to access teacher route on student domain
+    await page.goto('http://app.localhost:3000/teacher');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Try to access assistant route on student domain
+    await page.goto('http://app.localhost:3000/assistant');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('T010: Prevent Teacher from accessing Admin, Student, or Assistant routes', async ({ page }) => {
+    // Login as teacher first
+    await page.goto('http://teacher.localhost:3000/login');
+    await page.waitForTimeout(1000);
+    await page.fill('input[name="phoneNumber"]', '20000000004'); // seeded teacher
+    await page.fill('input[name="password"]', 'password');
+    await page.click('text=تذكرني', { force: true });
+    await page.click('button[type="submit"]', { force: true });
+    await expect(page).toHaveURL(/.*\/teacher$/, { timeout: 15000 });
+
+    // Try to access admin route on teacher domain
+    await page.goto('http://teacher.localhost:3000/admin');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Try to access student route on teacher domain
+    await page.goto('http://teacher.localhost:3000/student');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Try to access assistant route on teacher domain
+    await page.goto('http://teacher.localhost:3000/assistant');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+  });
+
+  test('T011: Prevent Assistant from accessing Admin, Student, or Teacher routes', async ({ page }) => {
+    // Login as assistant first
+    await page.goto('http://staff.localhost:3000/login');
+    await page.waitForTimeout(1000);
+    await page.fill('input[name="phoneNumber"]', '20000000003'); // seeded assistant
+    await page.fill('input[name="password"]', 'password');
+    await page.click('text=تذكرني', { force: true });
+    await page.click('button[type="submit"]', { force: true });
+    await expect(page).toHaveURL(/.*\/assistant(\/dashboard)?$/, { timeout: 15000 });
+
+    // Try to access admin route on assistant domain
+    await page.goto('http://staff.localhost:3000/admin');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Try to access student route on assistant domain
+    await page.goto('http://staff.localhost:3000/student');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+
+    // Try to access teacher route on assistant domain
+    await page.goto('http://staff.localhost:3000/teacher');
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب').first()).toBeVisible({ timeout: 10000 });
+  });
 });

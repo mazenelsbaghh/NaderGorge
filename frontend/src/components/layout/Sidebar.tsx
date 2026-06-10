@@ -22,26 +22,29 @@ interface SidebarProps {
 
 export function Sidebar({ items, title }: SidebarProps) {
   const pathname = usePathname();
+  const isTeacher = pathname.startsWith("/teacher");
+  const isAdmin = pathname.startsWith("/admin");
+  const areaLabel = isAdmin ? "ADMIN AREA" : isTeacher ? "TEACHER AREA" : "STUDENT AREA";
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-e border-[var(--landing-line)] bg-[color:rgba(255,249,239,0.76)] px-4 py-5 backdrop-blur md:flex">
+    <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-e border-[var(--admin-border)] bg-[var(--admin-sidebar)] px-4 py-5 backdrop-blur md:flex">
       {title && (
-        <div className="landing-panel mb-4 rounded-[28px] p-4">
+        <div className="mb-4 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--landing-card-strong)] text-[var(--landing-accent)]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
               <GraduationCap className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-xs font-black tracking-[0.26em] text-[var(--landing-muted)]">
-                STUDENT AREA
+              <p className="text-xs font-black tracking-[0.26em] text-[var(--admin-primary)]">
+                {areaLabel}
               </p>
-              <h2 className="mt-1 text-lg font-black text-[var(--landing-ink)]">{title}</h2>
+              <h2 className="mt-1 text-lg font-black text-[var(--admin-text)]">{title}</h2>
             </div>
           </div>
         </div>
       )}
 
-      <nav className="landing-panel flex-1 space-y-2 rounded-[30px] p-3">
+      <nav className="flex-1 space-y-2 rounded-[30px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-3 shadow-sm">
         {items.map((item) => (
           <Link
             key={item.href}
@@ -50,11 +53,16 @@ export function Sidebar({ items, title }: SidebarProps) {
             className={cn(
               "flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-bold transition-all",
               pathname === item.href
-                ? "bg-[var(--landing-card-strong)] text-[var(--landing-accent)] shadow-[0_10px_24px_rgba(88,55,18,0.08)]"
-                : "text-[var(--landing-muted)] hover:bg-[var(--landing-bg-soft)] hover:text-[var(--landing-ink)]"
+                ? "bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_4px_12px_var(--admin-shadow)]"
+                : "text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)]"
             )}
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/70">
+            <span className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-xl transition-colors",
+              pathname === item.href
+                ? "bg-white/10 text-[var(--admin-primary-contrast)]"
+                : "bg-[var(--admin-hover)] text-[var(--admin-muted)]"
+            )}>
               {item.icon}
             </span>
             <span>{item.label}</span>

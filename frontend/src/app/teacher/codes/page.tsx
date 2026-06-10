@@ -7,12 +7,12 @@ import { Eye, KeyRound, Plus, Sparkles, Search } from "lucide-react";
 import Link from "next/link";
 
 import {
-  AdminShellChrome,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
   AdminModal,
 } from "@/components/admin";
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { formatCompactNumber, formatDate } from "@/components/admin/admin-utils";
 import { adminService, CodeGroupDto } from "@/services/admin-service";
 import { PackageDto, contentService } from "@/services/content-service";
@@ -198,7 +198,7 @@ export default function TeacherCodesPage() {
   ];
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/codes"
       sectionLabel="إدارة الأكواد"
       pageTitle="مجموعات أكواد الوصول"
@@ -318,6 +318,6 @@ export default function TeacherCodesPage() {
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

@@ -7,10 +7,10 @@
     "frontend/src/components",
     "frontend/src/packages"
   ],
-  "endpointCount": 227,
-  "frontendCallCount": 224,
+  "endpointCount": 228,
+  "frontendCallCount": 225,
   "missingFrontendRouteCount": 0,
-  "digest": "f682ce1e73279ba08173a970ff59aca8e5011da76d7522e79f3add7e939713a3",
+  "digest": "7ce4627da5d32c577ae630bf0b69bd0fb16586631850f97a3cb1019d5bac259c",
   "endpoints": [
     {
       "controller": "AdminCommunityController",
@@ -1929,7 +1929,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 412
+        "line": 469
       }
     },
     {
@@ -1941,7 +1941,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 355
+        "line": 412
       }
     },
     {
@@ -1953,7 +1953,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 447
+        "line": 504
       }
     },
     {
@@ -1965,7 +1965,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 425
+        "line": 482
       }
     },
     {
@@ -1977,7 +1977,19 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 22
+        "line": 23
+      }
+    },
+    {
+      "controller": "E2eTestingController",
+      "action": "SetRolePermissions",
+      "method": "POST",
+      "path": "/api/e2e/set-role-permissions",
+      "routeTemplate": "/api/e2e/set-role-permissions",
+      "authorization": "e2e-token",
+      "source": {
+        "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
+        "line": 514
       }
     },
     {
@@ -1989,7 +2001,7 @@
       "authorization": "e2e-token",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/E2eTestingController.cs",
-        "line": 208
+        "line": 260
       }
     },
     {
@@ -2806,6 +2818,20 @@
       "source": {
         "file": "frontend/src/components/layout/MaintenanceGuard.tsx",
         "line": 17
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/gamification/status",
+      "routeTemplate": "/api/gamification/status",
+      "origin": "backend-api",
+      "queryParameters": [],
+      "payloadHint": "",
+      "payloadFields": [],
+      "rawExpression": "'/gamification/status'",
+      "source": {
+        "file": "frontend/src/components/layout/SidebarGamification.tsx",
+        "line": 15
       }
     },
     {

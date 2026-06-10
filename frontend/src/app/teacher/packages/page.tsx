@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText } from "lucide-react";
-import { AdminShellChrome, AdminPageSkeleton, AdminStatCard } from "@/components/admin";
+import { AdminPageSkeleton, AdminStatCard } from "@/components/admin";
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from "@/services/content-service";
 import { adminService, AdminProgramDto } from "@/services/admin-service";
 import NeumorphButton from "@/components/ui/neumorph-button";
@@ -359,7 +360,7 @@ export default function TeacherContentPage() {
     : packages;
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى"
       pageTitle="الباقات التعليمية"
@@ -397,6 +398,6 @@ export default function TeacherContentPage() {
           </div>
         </div>
       )}
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

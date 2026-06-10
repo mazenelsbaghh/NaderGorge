@@ -45,8 +45,8 @@ export function Breadcrumbs() {
   };
 
   return (
-    <nav className="landing-panel flex max-w-full flex-wrap items-center gap-2 overflow-hidden rounded-[24px] px-3 py-2.5 text-sm text-[var(--landing-muted)] sm:rounded-full sm:px-4">
-      <Link href="/" className="flex shrink-0 items-center gap-2 font-bold transition hover:text-[var(--landing-accent)]">
+    <nav className="flex max-w-full flex-wrap items-center gap-2 overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/60 px-3 py-2.5 text-sm text-[var(--admin-muted)] shadow-sm backdrop-blur-sm sm:rounded-full sm:px-4">
+      <Link href="/" className="flex shrink-0 items-center gap-2 font-bold transition hover:text-[var(--admin-text)] hover:underline">
         <House className="h-4 w-4" />
         <span>الرئيسية</span>
       </Link>
@@ -57,13 +57,13 @@ export function Breadcrumbs() {
 
         return (
           <span key={href} className="flex min-w-0 items-center gap-2">
-            <ChevronLeft className="h-4 w-4 shrink-0 text-[var(--landing-muted)]/50" />
+            <ChevronLeft className="h-4 w-4 shrink-0 text-[var(--admin-muted)]/50" />
             {isLast ? (
-              <span className="truncate font-black text-[var(--landing-ink)]">{label}</span>
+              <span className="truncate font-black text-[var(--admin-text)]">{label}</span>
             ) : (
               <Link
                 href={href}
-                className="truncate font-semibold transition hover:text-[var(--landing-accent)]"
+                className="truncate font-semibold transition hover:text-[var(--admin-text)] hover:underline"
               >
                 {label}
               </Link>

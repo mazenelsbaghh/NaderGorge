@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText } from "lucide-react";
-import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, LessonHomeworkList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer } from "@/components/admin";
+import { AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, LessonHomeworkList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer } from "@/components/admin";
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { adminService, type LessonCockpitDto } from "@/services/admin-service";
 import toast from "react-hot-toast";
 
@@ -27,10 +28,11 @@ export default function TeacherLessonProfilePage(props: { params: Promise<{ id: 
 
   const loadData = useCallback(async () => {
     try {
-      const response = await adminService.getLessonCockpit(params.id);
-      setLesson(response.data?.data);
+      setLoading(true);
+      const res = await adminService.getLessonCockpit(params.id);
+      setLesson(res.data?.data);
     } catch {
-      toast.error("تعذر تحميل تفاصيل الحصة");
+      toast.error("تعذر تحميل بيانات الحصة");
     } finally {
       setLoading(false);
     }
@@ -42,20 +44,20 @@ export default function TeacherLessonProfilePage(props: { params: Promise<{ id: 
 
   if (loading) {
     return (
-      <AdminShellChrome
+      <TeacherShellChrome
         activePath="/teacher/packages"
         sectionLabel="إدارة المحتوى"
         pageTitle="جاري التحميل..."
         subtitle="الرجاء الانتظار"
       >
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </TeacherShellChrome>
     );
   }
 
   if (!lesson) {
      return (
-        <AdminShellChrome
+        <TeacherShellChrome
             activePath="/teacher/packages"
             sectionLabel="إدارة المحتوى"
             pageTitle="خطأ"
@@ -64,12 +66,12 @@ export default function TeacherLessonProfilePage(props: { params: Promise<{ id: 
             <div className="p-8 text-center text-[var(--admin-muted)]">
                 لا يمكن العثور على الحصة المطلوبة
             </div>
-        </AdminShellChrome>
+        </TeacherShellChrome>
      )
   }
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى ▸ الحصص"
       pageTitle={lesson.title}
@@ -168,6 +170,6 @@ export default function TeacherLessonProfilePage(props: { params: Promise<{ id: 
           )}
         </div>
       )}
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

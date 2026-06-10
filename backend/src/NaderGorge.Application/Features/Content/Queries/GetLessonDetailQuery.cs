@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
@@ -50,11 +51,13 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 {
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
+    private readonly TeacherAuthorizationService _auth;
 
-    public GetLessonDetailQueryHandler(IAppDbContext db, IAccessCheckService access)
+    public GetLessonDetailQueryHandler(IAppDbContext db, IAccessCheckService access, TeacherAuthorizationService auth)
     {
         _db = db;
         _access = access;
+        _auth = auth;
     }
 
     public async Task<ApiResponse<LessonDetailDto>> Handle(GetLessonDetailQuery request, CancellationToken ct)
@@ -62,6 +65,10 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, request.LessonId, ct);
         if (!hasAccess)
             return ApiResponse<LessonDetailDto>.Fail("You do not have access to this lesson.");
+
+        var isAuthorizedTeacher = await _auth.CanAccessLessonAsync(request.UserId, request.LessonId, ct);
+        if (!isAuthorizedTeacher)
+            return ApiResponse<LessonDetailDto>.Fail("Unauthorized access to this lesson.");
 
         var lesson = await _db.Lessons
             .Include(l => l.Videos)

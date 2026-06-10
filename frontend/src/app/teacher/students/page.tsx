@@ -12,6 +12,8 @@ import {
 import { teacherService, TeacherStudentDto } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+
 export default function TeacherStudentsPage() {
   const [students, setStudents] = useState<TeacherStudentDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,58 +88,50 @@ export default function TeacherStudentsPage() {
   ];
 
   return (
-    <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]" dir="rtl">
-      {/* Header Section */}
-      <div className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-3xl font-black text-[var(--admin-text)] md:text-4xl">
-              قائمة الطلاب النشطين
-            </h1>
-            <p className="mt-2 text-sm text-[var(--admin-muted)]">
-              استعرض جميع الطلاب المشتركين والمفعلين لباقاتك الدراسية وتتبع تواريخ انضمامهم.
-            </p>
-          </div>
-        </div>
+    <TeacherShellChrome
+      activePath="/teacher/students"
+      sectionLabel="قائمة الطلاب"
+      pageTitle="الطلاب النشطون"
+      subtitle="استعرض جميع الطلاب المشتركين والمفعلين لباقاتك الدراسية وتتبع تواريخ انضمامهم."
+    >
+      <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]" dir="rtl">
+        {/* Stats Strip */}
+        <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <AdminStatCard
+            variant="light"
+            icon={Users}
+            label="إجمالي طلابك"
+            value={students.length}
+            subtitle="الطلاب المشتركون في باقاتك الدراسية"
+          />
+          <AdminStatCard
+            variant="accent"
+            icon={GraduationCap}
+            label="الباقات النشطة"
+            value={new Set(students.map((s) => s.activatedPackageName)).size}
+            subtitle="عدد الباقات الفريدة التي تم تفعيلها"
+          />
+        </section>
+
+        {/* Search Bar */}
+        <AdminSearchToolbar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="ابحث عن طالب بالاسم، الهاتف، أو اسم الباقة الدراسي..."
+        />
+
+        {loading ? (
+          <AdminPageSkeleton />
+        ) : (
+          <AdminDataTable
+            data={filteredStudents}
+            columns={columns}
+            loading={loading}
+            rowKey={(s) => s.id}
+            emptyMessage="لا يوجد طلاب مشتركون بعد أو لا توجد نتائج مطابقة لبحثك."
+          />
+        )}
       </div>
-
-      {/* Stats Strip */}
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <AdminStatCard
-          variant="light"
-          icon={Users}
-          label="إجمالي طلابك"
-          value={students.length}
-          subtitle="الطلاب المشتركون في باقاتك الدراسية"
-        />
-        <AdminStatCard
-          variant="accent"
-          icon={GraduationCap}
-          label="الباقات النشطة"
-          value={new Set(students.map((s) => s.activatedPackageName)).size}
-          subtitle="عدد الباقات الفريدة التي تم تفعيلها"
-        />
-      </section>
-
-      {/* Search Bar */}
-      <AdminSearchToolbar
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder="ابحث عن طالب بالاسم، الهاتف، أو اسم الباقة الدراسي..."
-      />
-
-      {loading ? (
-        <AdminPageSkeleton />
-      ) : (
-        <AdminDataTable
-          data={filteredStudents}
-          columns={columns}
-          loading={loading}
-          rowKey={(s) => s.id}
-          emptyMessage="لا يوجد طلاب مشتركون بعد أو لا توجد نتائج مطابقة لبحثك."
-        />
-      )}
-    </div>
+    </TeacherShellChrome>
   );
 }

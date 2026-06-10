@@ -157,6 +157,7 @@ services:
     image: massar_frontend:local
     build: *frontend-build
     container_name: massar_landing
+    hostname: landing
     environment:
       <<: *frontend-environment
       APP_SURFACE: landing
@@ -180,6 +181,7 @@ services:
   student:
     image: massar_frontend:local
     container_name: massar_student
+    hostname: student
     environment:
       <<: *frontend-environment
       APP_SURFACE: student
@@ -203,6 +205,7 @@ services:
   admin:
     image: massar_frontend:local
     container_name: massar_admin
+    hostname: admin
     environment:
       <<: *frontend-environment
       APP_SURFACE: admin
@@ -226,6 +229,7 @@ services:
   teacher:
     image: massar_frontend:local
     container_name: massar_teacher
+    hostname: teacher
     environment:
       <<: *frontend-environment
       APP_SURFACE: teacher
@@ -249,6 +253,7 @@ services:
   assistant:
     image: massar_frontend:local
     container_name: massar_assistant
+    hostname: assistant
     environment:
       <<: *frontend-environment
       APP_SURFACE: assistant

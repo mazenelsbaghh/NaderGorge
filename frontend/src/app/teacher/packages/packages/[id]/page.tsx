@@ -4,11 +4,12 @@ import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight } from "lucide-react";
 import {
-  AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab,
+  AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
   PackageCodeProfileSummary
 } from "@/components/admin";
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
 import { contentService, TermDto } from "@/services/content-service";
@@ -26,7 +27,7 @@ const TABS: AdminTab<ActiveTab>[] = [
 export default function TeacherPackageProfilePage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<ActiveTab>("terms");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("overview");
   const [pkg, setPkg] = useState<any>(null);
   const [pkgLoading, setPkgLoading] = useState(true);
   const [codeProfileSummary, setCodeProfileSummary] = useState<PackageCodeProfileSummary | null>(null);
@@ -66,22 +67,22 @@ export default function TeacherPackageProfilePage(props: { params: Promise<{ id:
 
   if (pkgLoading) {
     return (
-      <AdminShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </TeacherShellChrome>
     );
   }
 
   if (!pkg) {
     return (
-      <AdminShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
+      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على الباقة المطلوبة.</p>
           <NeumorphButton onClick={() => router.push("/teacher/packages")} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة للباقات
           </NeumorphButton>
         </div>
-      </AdminShellChrome>
+      </TeacherShellChrome>
     );
   }
 
@@ -94,7 +95,7 @@ export default function TeacherPackageProfilePage(props: { params: Promise<{ id:
   }));
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى ▸ الباقات"
       pageTitle={pkg.name}
@@ -182,6 +183,6 @@ export default function TeacherPackageProfilePage(props: { params: Promise<{ id:
           />
         </div>
       )}
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

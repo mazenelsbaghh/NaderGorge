@@ -3,7 +3,8 @@
 import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Folder, ChevronRight, BookOpenText } from "lucide-react";
-import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from "@/components/admin";
+import { AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from "@/components/admin";
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { ContentHierarchyPanel, HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
 import { contentService, ContentSectionDto } from "@/services/content-service";
@@ -57,22 +58,22 @@ export default function TeacherTermProfilePage(props: { params: Promise<{ id: st
 
   if (termLoading) {
     return (
-      <AdminShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </TeacherShellChrome>
     );
   }
 
   if (!term) {
     return (
-      <AdminShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الترم غير موجود">
+      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الترم غير موجود">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على الترم المطلوب.</p>
           <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة
           </NeumorphButton>
         </div>
-      </AdminShellChrome>
+      </TeacherShellChrome>
     );
   }
 
@@ -85,7 +86,7 @@ export default function TeacherTermProfilePage(props: { params: Promise<{ id: st
   }));
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى ▸ الباقات ▸ الأترام"
       pageTitle={term.title}
@@ -127,6 +128,6 @@ export default function TeacherTermProfilePage(props: { params: Promise<{ id: st
           />
         </div>
       )}
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

@@ -7,12 +7,12 @@ import { ArrowRight, Download, KeyRound, Printer, Search, Sparkles, User as User
 import Link from "next/link";
 
 import {
-  AdminShellChrome,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
   AdminPageSkeleton,
 } from "@/components/admin";
+import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { formatDate } from "@/components/admin/admin-utils";
 import { adminService, CodeDetailDto, CodeGroupDto } from "@/services/admin-service";
 import { PackageDto, contentService } from "@/services/content-service";
@@ -171,19 +171,19 @@ export default function TeacherCodeGroupDetailsPage() {
 
   if (loading) {
     return (
-      <AdminShellChrome
+      <TeacherShellChrome
         activePath="/teacher/codes"
         sectionLabel="إدارة الأكواد"
         pageTitle="تفاصيل مجموعة الأكواد"
         subtitle="جاري تحميل البيانات..."
       >
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </TeacherShellChrome>
     );
   }
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/codes"
       sectionLabel="إدارة الأكواد"
       pageTitle={group ? `تفاصيل: ${group.name || "دفعة أكواد"}` : "تفاصيل المجموعة"}
@@ -290,6 +290,6 @@ export default function TeacherCodeGroupDetailsPage() {
           />
         )}
       </div>
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

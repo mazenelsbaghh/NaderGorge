@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthBootstrap } from "@/components/layout/AuthBootstrap";
 import { GlobalNav } from "@/components/layout/GlobalNav";
 import { getSurfaceName } from "@/packages/surface-runtime/config";
+import { headers } from "next/headers";
 
 const tajawal = Tajawal({
   variable: "--font-tajawal",
@@ -17,6 +18,8 @@ const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
+
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "منصة مسار | Massar Platform",
@@ -43,12 +46,14 @@ const themeInitScript = `
   })();
 `;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const surface = getSurfaceName();
+  const headersList = await headers();
+  const host = headersList.get("host") || "";
+  const surface = getSurfaceName(host);
   return (
     <html
       lang="ar"

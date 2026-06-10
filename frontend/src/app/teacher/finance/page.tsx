@@ -15,12 +15,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 import {
-  AdminShellChrome,
   AdminDataTable,
   AdminColumn,
   AdminModal,
   AdminStatCard,
 } from '@/components/admin';
+import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import {
   financeService,
   TeacherAccountDto,
@@ -267,7 +267,7 @@ export default function TeacherFinancePage() {
   ];
 
   return (
-    <AdminShellChrome
+    <TeacherShellChrome
       activePath="/teacher/finance"
       sectionLabel="المالية والأرباح"
       pageTitle="سجل الأرباح والمسحوبات الخاصة بك"
@@ -467,6 +467,6 @@ export default function TeacherFinancePage() {
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+    </TeacherShellChrome>
   );
 }

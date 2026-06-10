@@ -14,6 +14,8 @@ async function globalSetup() {
           clearDatabase: true,
           seedAdmin: true,
           seedStudents: true,
+          seedTeacher: true,
+          seedAssistant: true,
         }),
       });
 

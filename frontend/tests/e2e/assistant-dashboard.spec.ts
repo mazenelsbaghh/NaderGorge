@@ -115,3 +115,66 @@ test.describe('Assistant Dashboard Task Queue', () => {
     }
   });
 });
+
+test.describe('Assistant Permissions Matrix', () => {
+  test.beforeEach(async ({ request }) => {
+    // Seed Database to ensure Assistant account exists
+    await request.post('http://localhost:5245/api/e2e/seed', {
+      data: {
+        clearDatabase: false,
+        seedAdmin: false,
+        seedStudents: false,
+        seedAssistant: true,
+      },
+    });
+  });
+
+  test('T008: Assistant without crm.manage is blocked from CRM page', async ({ page, request }) => {
+    // 1. Remove crm.manage permission from Assistant role
+    await request.post('http://localhost:5245/api/e2e/set-role-permissions', {
+      data: {
+        roleName: 'Assistant',
+        permissions: [] // no permissions
+      }
+    });
+
+    // 2. Login as E2E Assistant
+    await page.goto('http://staff.localhost:3000/login');
+    await page.locator('input[type="tel"]').fill('20000000003');
+    await page.locator('input[type="password"]').fill('password');
+    await page.click('button[type="submit"]', { force: true });
+
+    await page.waitForTimeout(2000);
+
+    // 3. Try to navigate to CRM page
+    await page.goto('http://staff.localhost:3000/assistant/crm');
+    
+    // 4. Assert they see the NotFoundPage / 404 message
+    await expect(page.locator('text=الصفحة غير موجودة أو لا تخص هذا الحساب')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('T008: Assistant with crm.manage can access CRM page', async ({ page, request }) => {
+    // 1. Grant crm.manage permission to Assistant role
+    await request.post('http://localhost:5245/api/e2e/set-role-permissions', {
+      data: {
+        roleName: 'Assistant',
+        permissions: ['crm.manage']
+      }
+    });
+
+    // 2. Login as E2E Assistant
+    await page.goto('http://staff.localhost:3000/login');
+    await page.locator('input[type="tel"]').fill('20000000003');
+    await page.locator('input[type="password"]').fill('password');
+    await page.click('button[type="submit"]', { force: true });
+
+    await page.waitForTimeout(2000);
+
+    // 3. Try to navigate to CRM page
+    await page.goto('http://staff.localhost:3000/assistant/crm');
+
+    // 4. Assert they see the CRM page content
+    await expect(page.locator('text=قائمة الاتصال اليومية').first()).toBeVisible({ timeout: 10000 });
+  });
+});
+

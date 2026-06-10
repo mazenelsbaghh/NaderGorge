@@ -1,12 +1,13 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
-public record GetPackageCodeProfileQuery(Guid PackageId) : IRequest<ApiResponse<AdminPackageCodePageProfileDto>>;
+public record GetPackageCodeProfileQuery(Guid PackageId, Guid? CurrentUserId = null) : IRequest<ApiResponse<AdminPackageCodePageProfileDto>>;
 
 public record AdminPackageCodePageProfileDto(
     Guid PackageId,
@@ -30,14 +31,25 @@ public record AdminPackageCodePageProfileDto(
 public class GetPackageCodeProfileQueryHandler : IRequestHandler<GetPackageCodeProfileQuery, ApiResponse<AdminPackageCodePageProfileDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
 
-    public GetPackageCodeProfileQueryHandler(IAppDbContext db)
+    public GetPackageCodeProfileQueryHandler(IAppDbContext db, TeacherAuthorizationService auth)
     {
         _db = db;
+        _auth = auth;
     }
 
     public async Task<ApiResponse<AdminPackageCodePageProfileDto>> Handle(GetPackageCodeProfileQuery request, CancellationToken ct)
     {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessPackageAsync(request.CurrentUserId.Value, request.PackageId, ct);
+            if (!canAccess)
+            {
+                return ApiResponse<AdminPackageCodePageProfileDto>.Fail("Unauthorized access to this package.");
+            }
+        }
+
         var package = await _db.Packages
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == request.PackageId, ct);
