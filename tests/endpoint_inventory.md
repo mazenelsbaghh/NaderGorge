@@ -8,7 +8,7 @@ Frontend API call count: **228**
 
 Missing frontend route count: **0**
 
-Digest: `0830ae73e6d281e955c498b0cf29ff318be2cb9bc0a6daed45e5accdc2148000`
+Digest: `dd1032c31f84abff140a7ea3ab9906e0f3c99ca6f65f4e4b4b763364543964bd`
 
 ## Route Findings
 
@@ -347,25 +347,25 @@ No missing frontend-called backend routes.
 
 | Method | Path | Origin | Query | Payload | Source |
 |---|---|---|---|---|---|
-| GET | `/api/admin/subjects` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:110 |
-| GET | `/api/admin/subjects/{id}` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:112 |
-| POST | `/api/admin/subjects` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:114 |
-| PUT | `/api/admin/subjects/{id}` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:116 |
-| DELETE | `/api/admin/subjects/{id}` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:118 |
-| GET | `/api/admin/teachers` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:122 |
-| GET | `/api/admin/teachers/{id}` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:124 |
-| POST | `/api/admin/teachers` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:139 |
-| PUT | `/api/admin/teachers/{id}` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:156 |
-| GET | `/api/teacher/dashboard/stats` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:160 |
-| GET | `/api/teacher/students` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:162 |
-| GET | `/api/teacher/essays` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:164 |
-| POST | `/api/teacher/essays/{id}/grade` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:166 |
-| GET | `/api/teacher/profile` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:168 |
-| PUT | `/api/teacher/profile` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:180 |
-| POST | `/api/teacher/profile/upload-image` | backend-api | - | `{ base64Image, fileName }` | frontend/src/services/teacher-service.ts:182 |
-| POST | `/api/teacher/profile/upload-ai-photo` | backend-api | - | `{ base64Image, fileName }` | frontend/src/services/teacher-service.ts:184 |
-| GET | `/api/teacher/activity` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:186 |
-| GET | `/api/teacher/subjects` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:188 |
+| GET | `/api/admin/subjects` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:108 |
+| GET | `/api/admin/subjects/{id}` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:110 |
+| POST | `/api/admin/subjects` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:112 |
+| PUT | `/api/admin/subjects/{id}` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:114 |
+| DELETE | `/api/admin/subjects/{id}` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:116 |
+| GET | `/api/admin/teachers` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:120 |
+| GET | `/api/admin/teachers/{id}` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:122 |
+| POST | `/api/admin/teachers` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:136 |
+| PUT | `/api/admin/teachers/{id}` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:152 |
+| GET | `/api/teacher/dashboard/stats` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:156 |
+| GET | `/api/teacher/students` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:158 |
+| GET | `/api/teacher/essays` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:160 |
+| POST | `/api/teacher/essays/{id}/grade` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:162 |
+| GET | `/api/teacher/profile` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:164 |
+| PUT | `/api/teacher/profile` | backend-api | - | `data` | frontend/src/services/teacher-service.ts:175 |
+| POST | `/api/teacher/profile/upload-image` | backend-api | - | `{ base64Image, fileName }` | frontend/src/services/teacher-service.ts:177 |
+| POST | `/api/teacher/profile/upload-ai-photo` | backend-api | - | `{ base64Image, fileName }` | frontend/src/services/teacher-service.ts:179 |
+| GET | `/api/teacher/activity` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:181 |
+| GET | `/api/teacher/subjects` | backend-api | - | `-` | frontend/src/services/teacher-service.ts:183 |
 
 ### frontend/src/services/video-session-service.ts
 
@@ -745,18 +745,18 @@ No missing frontend-called backend routes.
 | Method | Path | Action | Auth | Source |
 |---|---|---|---|---|
 | GET | `/api/teacher/activity` | GetActivity | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:57 |
-| POST | `/api/teacher/codes/bulk-generate` | BulkGenerateCodes | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:130 |
-| GET | `/api/teacher/codes/groups` | ListCodeGroups | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:107 |
-| GET | `/api/teacher/codes/groups/{id}/details` | GetCodeGroupDetails | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:111 |
+| POST | `/api/teacher/codes/bulk-generate` | BulkGenerateCodes | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:129 |
+| GET | `/api/teacher/codes/groups` | ListCodeGroups | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:106 |
+| GET | `/api/teacher/codes/groups/{id}/details` | GetCodeGroupDetails | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:110 |
 | GET | `/api/teacher/dashboard/stats` | GetDashboardStats | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:29 |
 | GET | `/api/teacher/essays` | GetEssays | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:43 |
 | POST | `/api/teacher/essays/{id}/grade` | GradeEssay | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:50 |
 | GET | `/api/teacher/profile` | GetProfile | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:64 |
 | PUT | `/api/teacher/profile` | UpdateProfile | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:71 |
-| POST | `/api/teacher/profile/upload-ai-photo` | UploadAiPhoto | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:96 |
-| POST | `/api/teacher/profile/upload-image` | UploadProfileImage | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:89 |
+| POST | `/api/teacher/profile/upload-ai-photo` | UploadAiPhoto | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:95 |
+| POST | `/api/teacher/profile/upload-image` | UploadProfileImage | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:88 |
 | GET | `/api/teacher/students` | GetStudents | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:36 |
-| GET | `/api/teacher/subjects` | GetSubjects | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:103 |
+| GET | `/api/teacher/subjects` | GetSubjects | authorized | backend/src/NaderGorge.API/Controllers/TeacherController.cs:102 |
 
 ### TeacherFinanceController
 

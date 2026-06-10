@@ -288,21 +288,12 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
               <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6">
                 
                 {/* Info Block */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 bg-[var(--admin-card)] p-5 rounded-3xl">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-[var(--admin-card)] p-5 rounded-3xl">
                   <div className="flex items-center gap-3">
                     <User className="h-5 w-5 text-[var(--admin-primary)]" />
                     <div>
                       <p className="text-xs text-[var(--admin-muted)]">رقم الهاتف</p>
                       <p className="text-sm font-bold text-[var(--admin-text)] font-mono">{teacher.phoneNumber}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-[var(--admin-primary)]" />
-                    <div>
-                      <p className="text-xs text-[var(--admin-muted)]">البريد الإلكتروني الرسمي</p>
-                      <p className="text-sm font-bold text-[var(--admin-text)] truncate max-w-[200px] font-mono" title={teacher.email}>
-                        {teacher.email || '—'}
-                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -315,9 +306,9 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-[var(--admin-primary)]" />
+                    <Phone className="h-5 w-5 text-[var(--admin-primary)]" />
                     <div>
-                      <p className="text-xs text-[var(--admin-muted)]">معلومات الاتصال الإضافية</p>
+                      <p className="text-xs text-[var(--admin-muted)]">معلومات الاتصال المباشر</p>
                       <p className="text-sm font-bold text-[var(--admin-text)] truncate max-w-[200px]" title={teacher.contactInfo}>
                         {teacher.contactInfo || '—'}
                       </p>
@@ -516,7 +507,6 @@ export default function AdminTeachersPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // New fields states
-  const [email, setEmail] = useState('');
   const [assistantPhoneNumbers, setAssistantPhoneNumbers] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
   const [youtubeUrl, setYouTubeUrl] = useState('');
@@ -527,6 +517,10 @@ export default function AdminTeachersPage() {
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   const [aiPhotoPreview, setAiPhotoPreview] = useState<string | null>(null);
   const [isUploadingAi, setIsUploadingAi] = useState(false);
+
+  // Pending uploads for create mode
+  const [pendingProfileImage, setPendingProfileImage] = useState<{ base64: string; name: string } | null>(null);
+  const [pendingAiPhoto, setPendingAiPhoto] = useState<{ base64: string; name: string } | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -565,13 +559,14 @@ export default function AdminTeachersPage() {
       setProfileImageUrl(teacher.profileImageUrl || '');
       setSelectedSubjectIds(teacher.subjectIds || []);
       setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
-      setEmail(teacher.email || '');
       setAssistantPhoneNumbers(teacher.assistantPhoneNumbers || '');
       setFacebookUrl(teacher.facebookUrl || '');
       setYouTubeUrl(teacher.youtubeUrl || '');
       setTelegramUrl(teacher.telegramUrl || '');
       setProfileImagePreview(teacher.profileImageUrl || null);
       setAiPhotoPreview(null);
+      setPendingProfileImage(null);
+      setPendingAiPhoto(null);
     } else {
       setEditingTeacher(null);
       setFullName('');
@@ -582,13 +577,14 @@ export default function AdminTeachersPage() {
       setProfileImageUrl('');
       setSelectedSubjectIds([]);
       setSelectedGrades([]);
-      setEmail('');
       setAssistantPhoneNumbers('');
       setFacebookUrl('');
       setYouTubeUrl('');
       setTelegramUrl('');
       setProfileImagePreview(null);
       setAiPhotoPreview(null);
+      setPendingProfileImage(null);
+      setPendingAiPhoto(null);
     }
     setIsModalOpen(true);
   };
@@ -604,13 +600,14 @@ export default function AdminTeachersPage() {
     setProfileImageUrl('');
     setSelectedSubjectIds([]);
     setSelectedGrades([]);
-    setEmail('');
     setAssistantPhoneNumbers('');
     setFacebookUrl('');
     setYouTubeUrl('');
     setTelegramUrl('');
     setProfileImagePreview(null);
     setAiPhotoPreview(null);
+    setPendingProfileImage(null);
+    setPendingAiPhoto(null);
   };
 
   const handleSubjectToggle = (subjectId: string) => {
@@ -674,7 +671,6 @@ export default function AdminTeachersPage() {
           contactInfo: contactInfo.trim(),
           profileImageUrl: profileImageUrl.trim() || undefined,
           subjectIds: selectedSubjectIds,
-          email: email.trim() || undefined,
           assistantPhoneNumbers: assistantPhoneNumbers.trim() || undefined,
           facebookUrl: facebookUrl.trim() || undefined,
           youtubeUrl: youtubeUrl.trim() || undefined,
@@ -709,7 +705,6 @@ export default function AdminTeachersPage() {
             contactInfo: contactInfo.trim(),
             profileImageUrl: profileImageUrl.trim() || undefined,
             subjectIds: selectedSubjectIds,
-            email: email.trim() || undefined,
             assistantPhoneNumbers: assistantPhoneNumbers.trim() || undefined,
             facebookUrl: facebookUrl.trim() || undefined,
             youtubeUrl: youtubeUrl.trim() || undefined,
@@ -717,6 +712,29 @@ export default function AdminTeachersPage() {
           });
 
           if (teacherRes.success) {
+            // Sequential uploads for pending images in Create Mode
+            if (pendingProfileImage) {
+              try {
+                const uploadProfileRes = await adminService.uploadTeacherProfileImage(userId, pendingProfileImage.base64, pendingProfileImage.name);
+                if (!uploadProfileRes.success) {
+                  toast.error('فشل في رفع الصورة الشخصية المحددة');
+                }
+              } catch (e) {
+                console.error('Error uploading profile image during create:', e);
+              }
+            }
+
+            if (pendingAiPhoto) {
+              try {
+                const uploadAiRes = await adminService.uploadTeacherPhoto(userId, pendingAiPhoto.base64, pendingAiPhoto.name);
+                if (!uploadAiRes.success) {
+                  toast.error('فشل في رفع صورة الـ AI المحددة');
+                }
+              } catch (e) {
+                console.error('Error uploading AI photo during create:', e);
+              }
+            }
+
             toast.success('تم إنشاء حساب المعلم وتهيئة ملفه الأكاديمي بنجاح ✅');
             handleCloseModal();
             loadData();
@@ -1014,7 +1032,7 @@ export default function AdminTeachersPage() {
                 {/* Profile Details */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نقاط الاتصال / البريد الإلكتروني الإضافي *</label>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">معلومات الاتصال المباشر للطلاب *</label>
                     <div className="relative">
                       <input
                         type="text"
@@ -1022,43 +1040,10 @@ export default function AdminTeachersPage() {
                         disabled={isSaving}
                         value={contactInfo}
                         onChange={(e) => setContactInfo(e.target.value)}
-                        placeholder="رقم هاتف إضافي أو عنوان الاتصال..."
+                        placeholder="رقم هاتف إضافي، حساب الدعم الفني، إلخ..."
                         className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
                       />
-                      <Mail className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط الصورة الشخصية (اختياري)</label>
-                    <div className="relative">
-                      <input
-                        type="url"
-                        disabled={isSaving}
-                        value={profileImageUrl}
-                        onChange={(e) => setProfileImageUrl(e.target.value)}
-                        placeholder="https://example.com/avatar.jpg"
-                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
-                      />
-                      <ImageIcon className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Official Email & Assistants' Phone Numbers */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">البريد الإلكتروني الرسمي (اختياري)</label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        disabled={isSaving}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="teacher@example.com"
-                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
-                      />
-                      <Mail className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                      <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
                     </div>
                   </div>
 
@@ -1121,34 +1106,34 @@ export default function AdminTeachersPage() {
                   </div>
                 </div>
 
-                {/* Images Upload Area (Only in Edit Mode) */}
-                {editingTeacher && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
-                    {/* Main Profile Image Upload */}
-                    <div className="space-y-3">
-                      <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
-                        <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
-                        الصورة الشخصية الأساسية
-                      </label>
-                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          disabled={isUploadingProfile}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            if (file.size > 5 * 1024 * 1024) {
-                              toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
-                              return;
-                            }
-                            setIsUploadingProfile(true);
-                            const reader = new FileReader();
-                            reader.onload = async () => {
-                              try {
-                                const base64 = reader.result as string;
-                                setProfileImagePreview(base64);
+                {/* Images Upload Area */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
+                  {/* Main Profile Image Upload */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+                      الصورة الشخصية الأساسية
+                    </label>
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        disabled={isUploadingProfile}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+                            return;
+                          }
+                          setIsUploadingProfile(true);
+                          const reader = new FileReader();
+                          reader.onload = async () => {
+                            try {
+                              const base64 = reader.result as string;
+                              setProfileImagePreview(base64);
+                              if (editingTeacher) {
                                 const res = await adminService.uploadTeacherProfileImage(editingTeacher.id, base64, file.name);
                                 if (res.success && res.data) {
                                   setProfileImageUrl(res.data);
@@ -1157,94 +1142,102 @@ export default function AdminTeachersPage() {
                                 } else {
                                   toast.error(res.message || 'فشل رفع الصورة الشخصية');
                                 }
-                              } catch (err) {
-                                console.error(err);
-                                toast.error('حدث خطأ أثناء رفع الصورة الشخصية');
-                              } finally {
-                                setIsUploadingProfile(false);
+                              } else {
+                                setPendingProfileImage({ base64, name: file.name });
+                                toast.success('تم اختيار الصورة الشخصية بنجاح (سيتم حفظها عند إرسال النموذج) 📸');
                               }
-                            };
-                            reader.readAsDataURL(file);
-                          }}
-                        />
-                        {profileImagePreview ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={profileImagePreview}
-                            alt="Profile Preview"
-                            className="h-24 w-24 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
-                          />
-                        ) : (
-                          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-xl">
-                            {getInitials(fullName)}
-                          </div>
-                        )}
-                        <span className="text-[10px] text-[var(--admin-muted)] mt-2">
-                          {isUploadingProfile ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* AI Photo Upload */}
-                    <div className="space-y-3">
-                      <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-[var(--admin-primary)]" />
-                        صورة التحليل للذكاء الاصطناعي (AI)
-                      </label>
-                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                          disabled={isUploadingAi}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            if (file.size > 5 * 1024 * 1024) {
-                              toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
-                              return;
+                            } catch (err) {
+                              console.error(err);
+                              toast.error('حدث خطأ أثناء رفع الصورة الشخصية');
+                            } finally {
+                              setIsUploadingProfile(false);
                             }
-                            setIsUploadingAi(true);
-                            const reader = new FileReader();
-                            reader.onload = async () => {
-                              try {
-                                const base64 = reader.result as string;
-                                setAiPhotoPreview(base64);
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                      {profileImagePreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={profileImagePreview}
+                          alt="Profile Preview"
+                          className="h-24 w-24 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
+                        />
+                      ) : (
+                        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-xl">
+                          {getInitials(fullName || 'معلم')}
+                        </div>
+                      )}
+                      <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                        {isUploadingProfile ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AI Photo Upload */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-[var(--admin-primary)]" />
+                      صورة التحليل للذكاء الاصطناعي (AI)
+                    </label>
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        disabled={isUploadingAi}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+                            return;
+                          }
+                          setIsUploadingAi(true);
+                          const reader = new FileReader();
+                          reader.onload = async () => {
+                            try {
+                              const base64 = reader.result as string;
+                              setAiPhotoPreview(base64);
+                              if (editingTeacher) {
                                 const res = await adminService.uploadTeacherPhoto(editingTeacher.userId, base64, file.name);
                                 if (res.success) {
                                   toast.success('تم رفع صورة تحليل الـ AI بنجاح ✅');
                                 } else {
                                   toast.error(res.message || 'فشل رفع صورة تحليل الـ AI');
                                 }
-                              } catch (err) {
-                                console.error(err);
-                                toast.error('حدث خطأ أثناء رفع صورة التحليل');
-                              } finally {
-                                setIsUploadingAi(false);
+                              } else {
+                                setPendingAiPhoto({ base64, name: file.name });
+                                toast.success('تم اختيار صورة تحليل الـ AI بنجاح (سيتم حفظها عند إرسال النموذج) 🤖');
                               }
-                            };
-                            reader.readAsDataURL(file);
-                          }}
+                            } catch (err) {
+                              console.error(err);
+                              toast.error('حدث خطأ أثناء رفع صورة التحليل');
+                            } finally {
+                              setIsUploadingAi(false);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                      {aiPhotoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={aiPhotoPreview}
+                          alt="AI Preview"
+                          className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
                         />
-                        {aiPhotoPreview ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={aiPhotoPreview}
-                            alt="AI Preview"
-                            className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
-                          />
-                        ) : (
-                          <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[var(--admin-hover)] text-[var(--admin-muted)]">
-                            <Sparkles className="h-8 w-8" />
-                          </div>
-                        )}
-                        <span className="text-[10px] text-[var(--admin-muted)] mt-2">
-                          {isUploadingAi ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[var(--admin-hover)] text-[var(--admin-muted)]">
+                          <Sparkles className="h-8 w-8" />
+                        </div>
+                      )}
+                      <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                        {isUploadingAi ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
+                      </span>
                     </div>
                   </div>
-                )}
+                </div>
 
                 <div>
                   <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">الوصف</label>

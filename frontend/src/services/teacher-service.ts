@@ -18,7 +18,6 @@ export interface TeacherDto {
   contactInfo: string;
   subjectIds: string[];
   subjectNames: string[];
-  email?: string;
   assistantPhoneNumbers?: string;
   facebookUrl?: string;
   youtubeUrl?: string;
@@ -97,7 +96,6 @@ export interface TeacherProfileDto {
   specialization: string;
   profileImageUrl?: string;
   contactInfo: string;
-  email?: string;
   assistantPhoneNumbers?: string;
   facebookUrl?: string;
   youtubeUrl?: string;
@@ -130,7 +128,6 @@ export const teacherService = {
     profileImageUrl?: string;
     contactInfo: string;
     subjectIds: string[];
-    email?: string;
     assistantPhoneNumbers?: string;
     facebookUrl?: string;
     youtubeUrl?: string;
@@ -146,7 +143,6 @@ export const teacherService = {
       profileImageUrl?: string;
       contactInfo: string;
       subjectIds: string[];
-      email?: string;
       assistantPhoneNumbers?: string;
       facebookUrl?: string;
       youtubeUrl?: string;
@@ -171,7 +167,6 @@ export const teacherService = {
     specialization: string;
     contactInfo: string;
     profileImageUrl?: string;
-    email?: string;
     assistantPhoneNumbers?: string;
     facebookUrl?: string;
     youtubeUrl?: string;

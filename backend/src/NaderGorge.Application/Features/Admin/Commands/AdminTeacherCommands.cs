@@ -15,7 +15,6 @@ public record CreateTeacherProfileCommand(
     string? ProfileImageUrl,
     string ContactInfo,
     List<Guid> SubjectIds,
-    string? Email,
     string? AssistantPhoneNumbers,
     string? FacebookUrl,
     string? YouTubeUrl,
@@ -57,7 +56,6 @@ public class CreateTeacherProfileCommandHandler : IRequestHandler<CreateTeacherP
             CommissionRate = request.CommissionRate,
             ProfileImageUrl = request.ProfileImageUrl,
             ContactInfo = request.ContactInfo ?? string.Empty,
-            Email = request.Email,
             AssistantPhoneNumbers = request.AssistantPhoneNumbers,
             FacebookUrl = request.FacebookUrl,
             YouTubeUrl = request.YouTubeUrl,
@@ -96,7 +94,6 @@ public record UpdateTeacherProfileCommand(
     string? ProfileImageUrl,
     string ContactInfo,
     List<Guid> SubjectIds,
-    string? Email,
     string? AssistantPhoneNumbers,
     string? FacebookUrl,
     string? YouTubeUrl,
@@ -134,7 +131,6 @@ public class UpdateTeacherProfileCommandHandler : IRequestHandler<UpdateTeacherP
         profile.CommissionRate = request.CommissionRate;
         profile.ProfileImageUrl = request.ProfileImageUrl;
         profile.ContactInfo = request.ContactInfo ?? string.Empty;
-        profile.Email = request.Email;
         profile.AssistantPhoneNumbers = request.AssistantPhoneNumbers;
         profile.FacebookUrl = request.FacebookUrl;
         profile.YouTubeUrl = request.YouTubeUrl;

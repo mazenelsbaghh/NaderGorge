@@ -36,7 +36,6 @@ export default function TeacherProfilePage() {
   const [specialization, setSpecialization] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState("");
-  const [email, setEmail] = useState("");
   const [assistantPhoneNumbers, setAssistantPhoneNumbers] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
   const [youtubeUrl, setYouTubeUrl] = useState("");
@@ -56,7 +55,6 @@ export default function TeacherProfilePage() {
           setSpecialization(res.data.specialization || "");
           setContactInfo(res.data.contactInfo || "");
           setProfileImageUrl(res.data.profileImageUrl || "");
-          setEmail(res.data.email || "");
           setAssistantPhoneNumbers(res.data.assistantPhoneNumbers || "");
           setFacebookUrl(res.data.facebookUrl || "");
           setYouTubeUrl(res.data.youtubeUrl || "");
@@ -80,7 +78,6 @@ export default function TeacherProfilePage() {
         specialization,
         contactInfo,
         profileImageUrl: profileImageUrl || undefined,
-        email: email || undefined,
         assistantPhoneNumbers: assistantPhoneNumbers || undefined,
         facebookUrl: facebookUrl || undefined,
         youtubeUrl: youtubeUrl || undefined,
@@ -184,18 +181,18 @@ export default function TeacherProfilePage() {
                 />
               </div>
 
-              {/* Avatar image url */}
+              {/* Assistant numbers */}
               <div className="space-y-2">
-                <label htmlFor="profileImageUrl" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
-                  <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
-                  رابط الصورة الشخصية (أو ارفعها بالأسفل)
+                <label htmlFor="assistantPhoneNumbers" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
+                  <Phone className="h-4 w-4 text-[var(--admin-primary)]" />
+                  أرقام هواتف المساعدين (اختياري)
                 </label>
                 <input
-                  id="profileImageUrl"
-                  type="url"
-                  value={profileImageUrl}
-                  onChange={(e) => setProfileImageUrl(e.target.value)}
-                  placeholder="https://example.com/avatar.jpg"
+                  id="assistantPhoneNumbers"
+                  type="text"
+                  value={assistantPhoneNumbers}
+                  onChange={(e) => setAssistantPhoneNumbers(e.target.value)}
+                  placeholder="01xxxxxxxxx, 01xxxxxxxxx"
                   className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
                 />
               </div>
@@ -216,39 +213,6 @@ export default function TeacherProfilePage() {
                 className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
                 required
               />
-            </div>
-
-            {/* Email & Assistant numbers */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="space-y-2">
-                <label htmlFor="email" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
-                  <Mail className="h-4 w-4 text-[var(--admin-primary)]" />
-                  البريد الإلكتروني الرسمي (اختياري)
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="teacher@example.com"
-                  className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="assistantPhoneNumbers" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
-                  <Phone className="h-4 w-4 text-[var(--admin-primary)]" />
-                  أرقام هواتف المساعدين (اختياري)
-                </label>
-                <input
-                  id="assistantPhoneNumbers"
-                  type="text"
-                  value={assistantPhoneNumbers}
-                  onChange={(e) => setAssistantPhoneNumbers(e.target.value)}
-                  placeholder="01xxxxxxxxx, 01xxxxxxxxx"
-                  className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
-                />
-              </div>
             </div>
 
             <div className="rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-6 space-y-4">

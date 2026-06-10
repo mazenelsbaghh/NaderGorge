@@ -51,7 +51,6 @@ public record TeacherProfileDto(
     string Specialization,
     string? ProfileImageUrl,
     string ContactInfo,
-    string? Email,
     string? AssistantPhoneNumbers,
     string? FacebookUrl,
     string? YouTubeUrl,
@@ -64,7 +63,6 @@ public record UpdateTeacherProfileCommand(
     string Specialization,
     string ContactInfo,
     string? ProfileImageUrl,
-    string? Email,
     string? AssistantPhoneNumbers,
     string? FacebookUrl,
     string? YouTubeUrl,
@@ -220,7 +218,6 @@ public class GetTeacherProfileQueryHandler : IRequestHandler<GetTeacherProfileQu
             teacherProfile.Specialization,
             teacherProfile.ProfileImageUrl,
             teacherProfile.ContactInfo,
-            teacherProfile.Email,
             teacherProfile.AssistantPhoneNumbers,
             teacherProfile.FacebookUrl,
             teacherProfile.YouTubeUrl,
@@ -254,7 +251,6 @@ public class UpdateTeacherProfileCommandHandler : IRequestHandler<UpdateTeacherP
         teacherProfile.Specialization = request.Specialization;
         teacherProfile.ContactInfo = request.ContactInfo;
         teacherProfile.ProfileImageUrl = request.ProfileImageUrl;
-        teacherProfile.Email = request.Email;
         teacherProfile.AssistantPhoneNumbers = request.AssistantPhoneNumbers;
         teacherProfile.FacebookUrl = request.FacebookUrl;
         teacherProfile.YouTubeUrl = request.YouTubeUrl;

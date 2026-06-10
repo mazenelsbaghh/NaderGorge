@@ -10,7 +10,7 @@
   "endpointCount": 234,
   "frontendCallCount": 228,
   "missingFrontendRouteCount": 0,
-  "digest": "0830ae73e6d281e955c498b0cf29ff318be2cb9bc0a6daed45e5accdc2148000",
+  "digest": "dd1032c31f84abff140a7ea3ab9906e0f3c99ca6f65f4e4b4b763364543964bd",
   "endpoints": [
     {
       "controller": "AdminCommunityController",
@@ -2541,7 +2541,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
-        "line": 130
+        "line": 129
       }
     },
     {
@@ -2553,7 +2553,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
-        "line": 107
+        "line": 106
       }
     },
     {
@@ -2565,7 +2565,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
-        "line": 111
+        "line": 110
       }
     },
     {
@@ -2637,7 +2637,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
-        "line": 96
+        "line": 95
       }
     },
     {
@@ -2649,7 +2649,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
-        "line": 89
+        "line": 88
       }
     },
     {
@@ -2673,7 +2673,7 @@
       "authorization": "authorized",
       "source": {
         "file": "backend/src/NaderGorge.API/Controllers/TeacherController.cs",
-        "line": 103
+        "line": 102
       }
     },
     {
@@ -5798,7 +5798,7 @@
       "rawExpression": "'/admin/subjects'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 110
+        "line": 108
       }
     },
     {
@@ -5812,7 +5812,7 @@
       "rawExpression": "`/admin/subjects/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 112
+        "line": 110
       }
     },
     {
@@ -5826,7 +5826,7 @@
       "rawExpression": "'/admin/subjects'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 114
+        "line": 112
       }
     },
     {
@@ -5840,7 +5840,7 @@
       "rawExpression": "`/admin/subjects/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 116
+        "line": 114
       }
     },
     {
@@ -5854,7 +5854,7 @@
       "rawExpression": "`/admin/subjects/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 118
+        "line": 116
       }
     },
     {
@@ -5868,7 +5868,7 @@
       "rawExpression": "'/admin/teachers'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 122
+        "line": 120
       }
     },
     {
@@ -5882,7 +5882,7 @@
       "rawExpression": "`/admin/teachers/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 124
+        "line": 122
       }
     },
     {
@@ -5896,7 +5896,7 @@
       "rawExpression": "'/admin/teachers'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 139
+        "line": 136
       }
     },
     {
@@ -5910,7 +5910,7 @@
       "rawExpression": "`/admin/teachers/${id}`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 156
+        "line": 152
       }
     },
     {
@@ -5924,7 +5924,7 @@
       "rawExpression": "'/teacher/dashboard/stats'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 160
+        "line": 156
       }
     },
     {
@@ -5938,7 +5938,7 @@
       "rawExpression": "'/teacher/students'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 162
+        "line": 158
       }
     },
     {
@@ -5952,7 +5952,7 @@
       "rawExpression": "'/teacher/essays'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 164
+        "line": 160
       }
     },
     {
@@ -5966,7 +5966,7 @@
       "rawExpression": "`/teacher/essays/${id}/grade`",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 166
+        "line": 162
       }
     },
     {
@@ -5980,7 +5980,7 @@
       "rawExpression": "'/teacher/profile'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 168
+        "line": 164
       }
     },
     {
@@ -5994,7 +5994,7 @@
       "rawExpression": "'/teacher/profile'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 180
+        "line": 175
       }
     },
     {
@@ -6011,7 +6011,7 @@
       "rawExpression": "'/teacher/profile/upload-image'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 182
+        "line": 177
       }
     },
     {
@@ -6028,7 +6028,7 @@
       "rawExpression": "'/teacher/profile/upload-ai-photo'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 184
+        "line": 179
       }
     },
     {
@@ -6042,7 +6042,7 @@
       "rawExpression": "'/teacher/activity'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 186
+        "line": 181
       }
     },
     {
@@ -6056,7 +6056,7 @@
       "rawExpression": "'/teacher/subjects'",
       "source": {
         "file": "frontend/src/services/teacher-service.ts",
-        "line": 188
+        "line": 183
       }
     },
     {

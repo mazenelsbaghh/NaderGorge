@@ -728,7 +728,7 @@ public class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new UpdateTeacherProfileCommand(
             id, dto.Bio, dto.Specialization, dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds,
-            dto.Email, dto.AssistantPhoneNumbers, dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl));
+            dto.AssistantPhoneNumbers, dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -742,7 +742,6 @@ public record UpdateTeacherProfileRequestDto(
     string? ProfileImageUrl,
     string ContactInfo,
     List<Guid> SubjectIds,
-    string? Email = null,
     string? AssistantPhoneNumbers = null,
     string? FacebookUrl = null,
     string? YouTubeUrl = null,
