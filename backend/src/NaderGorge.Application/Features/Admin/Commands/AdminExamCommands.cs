@@ -146,11 +146,10 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                 .Include(l => l.ContentSection)
                     .ThenInclude(s => s.Term)
                         .ThenInclude(t => t.Package)
-                            .ThenInclude(p => p.Program)
                 .FirstOrDefaultAsync(l => l.Id == targetLessonIdForSubject.Value, ct);
-            if (targetLesson?.ContentSection?.Term?.Package?.Program != null)
+            if (targetLesson?.ContentSection?.Term?.Package != null)
             {
-                subjectId = targetLesson.ContentSection.Term.Package.Program.SubjectId;
+                subjectId = targetLesson.ContentSection.Term.Package.SubjectId;
             }
         }
 
@@ -329,12 +328,11 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
             .Include(l => l.ContentSection)
                 .ThenInclude(s => s.Term)
                     .ThenInclude(t => t.Package)
-                        .ThenInclude(p => p.Program)
             .FirstOrDefaultAsync(l => l.ExamId == exam.Id, ct);
 
-        if (referencingLesson?.ContentSection?.Term?.Package?.Program != null)
+        if (referencingLesson?.ContentSection?.Term?.Package != null)
         {
-            subjectId = referencingLesson.ContentSection.Term.Package.Program.SubjectId;
+            subjectId = referencingLesson.ContentSection.Term.Package.SubjectId;
         }
         else
         {
@@ -343,12 +341,11 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                     .ThenInclude(l => l.ContentSection)
                         .ThenInclude(s => s.Term)
                             .ThenInclude(t => t.Package)
-                                .ThenInclude(p => p.Program)
                 .FirstOrDefaultAsync(v => v.ExamId == exam.Id, ct);
 
-            if (referencingVideo?.Lesson?.ContentSection?.Term?.Package?.Program != null)
+            if (referencingVideo?.Lesson?.ContentSection?.Term?.Package != null)
             {
-                subjectId = referencingVideo.Lesson.ContentSection.Term.Package.Program.SubjectId;
+                subjectId = referencingVideo.Lesson.ContentSection.Term.Package.SubjectId;
             }
         }
 

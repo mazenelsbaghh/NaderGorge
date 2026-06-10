@@ -31,7 +31,6 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<TeacherProfile> TeacherProfiles => Set<TeacherProfile>();
     public DbSet<TeacherSubject> TeacherSubjects => Set<TeacherSubject>();
-    public DbSet<Program> Programs => Set<Program>();
     public DbSet<Package> Packages => Set<Package>();
     public DbSet<PackageCodePageProfile> PackageCodePageProfiles => Set<PackageCodePageProfile>();
     public DbSet<ContentSection> ContentSections => Set<ContentSection>();
@@ -296,23 +295,15 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(s => s.AccessCode).WithMany().HasForeignKey(s => s.AccessCodeId);
         });
 
-        // Program
-        modelBuilder.Entity<Program>(e =>
-        {
-            e.ToTable("programs");
-            e.HasKey(p => p.Id);
-            e.Property(p => p.Name).HasMaxLength(200).IsRequired();
-            e.HasOne(p => p.Subject).WithMany(s => s.Programs).HasForeignKey(p => p.SubjectId);
-        });
-
         // Package
         modelBuilder.Entity<Package>(e =>
         {
             e.ToTable("packages");
             e.HasKey(p => p.Id);
             e.Property(p => p.Name).HasMaxLength(200).IsRequired();
-            e.HasOne(p => p.Program).WithMany(pr => pr.Packages).HasForeignKey(p => p.ProgramId);
+            e.HasOne(p => p.Subject).WithMany(s => s.Packages).HasForeignKey(p => p.SubjectId);
             e.HasOne(p => p.Teacher).WithMany(t => t.Packages).HasForeignKey(p => p.TeacherId);
+            e.Property(p => p.TargetGrade).HasMaxLength(100).IsRequired().HasDefaultValue("All");
         });
 
         modelBuilder.Entity<PackageCodePageProfile>(e =>

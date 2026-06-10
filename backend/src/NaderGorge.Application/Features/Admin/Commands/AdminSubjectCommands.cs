@@ -33,18 +33,6 @@ public class CreateSubjectCommandHandler : IRequestHandler<CreateSubjectCommand,
 
         _db.Subjects.Add(subject);
 
-        // Auto-create a default Program for this subject
-        var program = new Program
-        {
-            Id = Guid.NewGuid(),
-            Name = subject.Name,
-            Description = subject.Description,
-            TargetGrade = "عام",
-            Subject = subject,
-            CreatedAt = DateTime.UtcNow
-        };
-        _db.Programs.Add(program);
-
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<Guid>.Ok(subject.Id);
@@ -97,10 +85,10 @@ public class DeleteSubjectCommandHandler : IRequestHandler<DeleteSubjectCommand,
         if (subject == null)
             return ApiResponse.Fail("Subject not found");
 
-        // Verify if linked to programs
-        var linkedToProgram = await _db.Programs.AnyAsync(p => p.SubjectId == request.Id, ct);
-        if (linkedToProgram)
-            return ApiResponse.Fail("Cannot delete subject because it is linked to one or more programs.");
+        // Verify if linked to packages
+        var linkedToPackage = await _db.Packages.AnyAsync(p => p.SubjectId == request.Id, ct);
+        if (linkedToPackage)
+            return ApiResponse.Fail("Cannot delete subject because it is linked to one or more packages.");
 
         _db.Subjects.Remove(subject);
         await _db.SaveChangesAsync(ct);

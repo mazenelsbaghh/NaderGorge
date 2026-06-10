@@ -40,7 +40,6 @@ public class GetAdminPackagesListQueryHandler : IRequestHandler<GetAdminPackages
         }
 
         var query = _context.Packages
-            .Include(p => p.Program)
             .Where(p => p.IsActive);
 
         if (teacherId.HasValue)
@@ -54,7 +53,7 @@ public class GetAdminPackagesListQueryHandler : IRequestHandler<GetAdminPackages
                 p.Id, 
                 p.Name, 
                 p.TeacherId, 
-                p.Program != null ? p.Program.SubjectId : Guid.Empty
+                p.SubjectId
             ))
             .ToListAsync(cancellationToken);
 

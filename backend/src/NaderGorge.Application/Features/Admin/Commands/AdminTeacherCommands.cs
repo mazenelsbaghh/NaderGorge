@@ -14,7 +14,12 @@ public record CreateTeacherProfileCommand(
     decimal CommissionRate,
     string? ProfileImageUrl,
     string ContactInfo,
-    List<Guid> SubjectIds) : IRequest<ApiResponse<Guid>>;
+    List<Guid> SubjectIds,
+    string? Email,
+    string? AssistantPhoneNumbers,
+    string? FacebookUrl,
+    string? YouTubeUrl,
+    string? TelegramUrl) : IRequest<ApiResponse<Guid>>;
 
 public class CreateTeacherProfileCommandHandler : IRequestHandler<CreateTeacherProfileCommand, ApiResponse<Guid>>
 {
@@ -51,7 +56,12 @@ public class CreateTeacherProfileCommandHandler : IRequestHandler<CreateTeacherP
             Specialization = request.Specialization ?? string.Empty,
             CommissionRate = request.CommissionRate,
             ProfileImageUrl = request.ProfileImageUrl,
-            ContactInfo = request.ContactInfo ?? string.Empty
+            ContactInfo = request.ContactInfo ?? string.Empty,
+            Email = request.Email,
+            AssistantPhoneNumbers = request.AssistantPhoneNumbers,
+            FacebookUrl = request.FacebookUrl,
+            YouTubeUrl = request.YouTubeUrl,
+            TelegramUrl = request.TelegramUrl
         };
 
         foreach (var subId in request.SubjectIds)
@@ -85,7 +95,12 @@ public record UpdateTeacherProfileCommand(
     decimal CommissionRate,
     string? ProfileImageUrl,
     string ContactInfo,
-    List<Guid> SubjectIds) : IRequest<ApiResponse>;
+    List<Guid> SubjectIds,
+    string? Email,
+    string? AssistantPhoneNumbers,
+    string? FacebookUrl,
+    string? YouTubeUrl,
+    string? TelegramUrl) : IRequest<ApiResponse>;
 
 public class UpdateTeacherProfileCommandHandler : IRequestHandler<UpdateTeacherProfileCommand, ApiResponse>
 {
@@ -119,6 +134,11 @@ public class UpdateTeacherProfileCommandHandler : IRequestHandler<UpdateTeacherP
         profile.CommissionRate = request.CommissionRate;
         profile.ProfileImageUrl = request.ProfileImageUrl;
         profile.ContactInfo = request.ContactInfo ?? string.Empty;
+        profile.Email = request.Email;
+        profile.AssistantPhoneNumbers = request.AssistantPhoneNumbers;
+        profile.FacebookUrl = request.FacebookUrl;
+        profile.YouTubeUrl = request.YouTubeUrl;
+        profile.TelegramUrl = request.TelegramUrl;
 
         // Sync subjects
         var toRemove = profile.TeacherSubjects.Where(ts => !request.SubjectIds.Contains(ts.SubjectId)).ToList();

@@ -27,7 +27,12 @@ public class TeacherProfileTests
             10.5m,
             "http://image.url",
             "contact@teacher.com",
-            new List<Guid> { subject1.Id, subject2.Id }
+            new List<Guid> { subject1.Id, subject2.Id },
+            "teacher@example.com",
+            "01012345678,01098765432",
+            "https://facebook.com",
+            "https://youtube.com",
+            "https://telegram.me"
         );
 
         var result = await handler.Handle(command, CancellationToken.None);
@@ -46,6 +51,11 @@ public class TeacherProfileTests
         Assert.Equal(10.5m, profile.CommissionRate);
         Assert.Equal("http://image.url", profile.ProfileImageUrl);
         Assert.Equal("contact@teacher.com", profile.ContactInfo);
+        Assert.Equal("teacher@example.com", profile.Email);
+        Assert.Equal("01012345678,01098765432", profile.AssistantPhoneNumbers);
+        Assert.Equal("https://facebook.com", profile.FacebookUrl);
+        Assert.Equal("https://youtube.com", profile.YouTubeUrl);
+        Assert.Equal("https://telegram.me", profile.TelegramUrl);
         Assert.Equal(2, profile.TeacherSubjects.Count);
         Assert.Contains(profile.TeacherSubjects, ts => ts.SubjectId == subject1.Id);
         Assert.Contains(profile.TeacherSubjects, ts => ts.SubjectId == subject2.Id);
@@ -85,7 +95,12 @@ public class TeacherProfileTests
             8.5m,
             "http://new.image",
             "new@contact.com",
-            new List<Guid> { subject2.Id, subject3.Id } // Removing subject1, adding subject3
+            new List<Guid> { subject2.Id, subject3.Id }, // Removing subject1, adding subject3
+            "newteacher@example.com",
+            "01088888888",
+            "https://new.facebook.com",
+            "https://new.youtube.com",
+            "https://new.telegram.me"
         );
 
         var result = await handler.Handle(command, CancellationToken.None);
@@ -102,6 +117,11 @@ public class TeacherProfileTests
         Assert.Equal(8.5m, updatedProfile.CommissionRate);
         Assert.Equal("http://new.image", updatedProfile.ProfileImageUrl);
         Assert.Equal("new@contact.com", updatedProfile.ContactInfo);
+        Assert.Equal("newteacher@example.com", updatedProfile.Email);
+        Assert.Equal("01088888888", updatedProfile.AssistantPhoneNumbers);
+        Assert.Equal("https://new.facebook.com", updatedProfile.FacebookUrl);
+        Assert.Equal("https://new.youtube.com", updatedProfile.YouTubeUrl);
+        Assert.Equal("https://new.telegram.me", updatedProfile.TelegramUrl);
         Assert.Equal(2, updatedProfile.TeacherSubjects.Count);
         Assert.Contains(updatedProfile.TeacherSubjects, ts => ts.SubjectId == subject2.Id);
         Assert.Contains(updatedProfile.TeacherSubjects, ts => ts.SubjectId == subject3.Id);

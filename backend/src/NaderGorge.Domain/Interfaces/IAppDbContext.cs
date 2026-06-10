@@ -27,7 +27,6 @@ public interface IAppDbContext
     DbSet<Subject> Subjects { get; }
     DbSet<TeacherProfile> TeacherProfiles { get; }
     DbSet<TeacherSubject> TeacherSubjects { get; }
-    DbSet<Program> Programs { get; }
     DbSet<Package> Packages { get; }
     DbSet<PackageCodePageProfile> PackageCodePageProfiles { get; }
     DbSet<ContentSection> ContentSections { get; }

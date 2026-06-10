@@ -7,34 +7,111 @@ import {
 } from 'lucide-react';
 import { AdminShellChrome, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
-import { adminService, AdminProgramDto } from '@/services/admin-service';
+import { adminService } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
+const GRADE_NAMES: Record<string, string> = {
+  FirstSecondary: 'الأول الثانوي',
+  SecondSecondary: 'الثاني الثانوي',
+  SecondaryGrade3: 'الثالث الثانوي',
+  FirstBaccalaureate: 'الأول بكالوريا',
+  SecondBaccalaureate: 'الثاني بكالوريا',
+  PrimaryGrade1: 'الأول الابتدائي',
+  PrimaryGrade2: 'الثاني الابتدائي',
+  PrimaryGrade3: 'الثالث الابتدائي',
+  PrimaryGrade4: 'الرابع الابتدائي',
+  PrimaryGrade5: 'الخامس الابتدائي',
+  PrimaryGrade6: 'السادس الابتدائي',
+  PrepGrade1: 'الأول الإعدادي',
+  PrepGrade2: 'الثاني الإعدادي',
+  PrepGrade3: 'الثالث الإعدادي',
+  AzhariPrimary1: 'الأول الابتدائي الأزهري',
+  AzhariPrep1: 'الأول الإعدادي الأزهري',
+  AzhariSecondary1: 'الأول الثانوي الأزهري',
+  AmericanGrade9: 'Grade 9',
+  AmericanGrade10: 'Grade 10',
+  AmericanGrade11: 'Grade 11',
+  AmericanGrade12: 'Grade 12',
+};
+
+function getTeacherPackageGrades(teacher: TeacherDto | undefined): { value: string; label: string }[] {
+  if (!teacher || !teacher.specialization) return [];
+  const specs = teacher.specialization.split(',');
+  const list: { value: string; label: string }[] = [];
+  
+  const mapping: Record<string, { value: string; label: string }> = {
+    'FirstSecondary': { value: '1st Secondary', label: 'الصف الأول الثانوي' },
+    'SecondSecondary': { value: '2nd Secondary', label: 'الصف الثاني الثانوي' },
+    'SecondaryGrade3': { value: '3rd Secondary', label: 'الصف الثالث الثانوي' },
+    '1st Secondary': { value: '1st Secondary', label: 'الصف الأول الثانوي' },
+    '2nd Secondary': { value: '2nd Secondary', label: 'الصف الثاني الثانوي' },
+    '3rd Secondary': { value: '3rd Secondary', label: 'الصف الثالث الثانوي' },
+  };
+
+  specs.forEach(spec => {
+    const trimmed = spec.trim();
+    if (mapping[trimmed]) {
+      list.push(mapping[trimmed]);
+    } else {
+      list.push({ value: trimmed, label: GRADE_NAMES[trimmed] || trimmed });
+    }
+  });
+
+  // Always include 'All' as a fallback package target
+  if (!list.some(item => item.value === 'All')) {
+    list.push({ value: 'All', label: 'عام' });
+  }
+
+  return list;
+}
+
 // ─── Create Package Inline Form ───────────────────────────────────────────────
-function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => void; teachers: TeacherDto[]; programs: AdminProgramDto[] }) {
+function CreatePackageRow({ 
+  onSuccess, 
+  teachers, 
+  subjects,
+  activeTeacherId
+}: { 
+  onSuccess: () => void; 
+  teachers: TeacherDto[]; 
+  subjects: SubjectDto[]; 
+  activeTeacherId?: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [selectedTeacherId, setSelectedTeacherId] = useState('');
-  const [selectedProgramId, setSelectedProgramId] = useState('');
+  const [selectedTeacherId, setSelectedTeacherId] = useState(activeTeacherId || '');
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [selectedGrade, setSelectedGrade] = useState('');
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (activeTeacherId) {
+      setSelectedTeacherId(activeTeacherId);
+    } else {
+      setSelectedTeacherId('');
+    }
+  }, [activeTeacherId]);
+
   async function handleCreate() {
-    if (!name.trim() || !selectedProgramId || !selectedTeacherId) return;
+    if (!name.trim() || !selectedSubjectId || !selectedTeacherId || !selectedGrade) return;
     try {
       setSaving(true);
       await adminService.createPackage({
         name: name.trim(),
         description: description.trim(),
         price: Number(price) || 0,
-        programId: selectedProgramId,
+        subjectId: selectedSubjectId,
+        targetGrade: selectedGrade,
         teacherId: selectedTeacherId
       });
       toast.success('تمت إضافة الباقة بنجاح.');
-      setName(''); setDescription(''); setPrice(''); setSelectedTeacherId(''); setSelectedProgramId('');
+      setName(''); setDescription(''); setPrice(''); 
+      if (!activeTeacherId) setSelectedTeacherId('');
+      setSelectedSubjectId(''); setSelectedGrade('');
       setOpen(false);
       onSuccess();
     } catch {
@@ -85,23 +162,29 @@ function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => 
         className="admin-input"
       />
       
-      <select
-        value={selectedTeacherId}
-        onChange={(e) => {
-          setSelectedTeacherId(e.target.value);
-          setSelectedProgramId('');
-        }}
-        className="admin-input"
-      >
-        <option value="">اختر المدرس...</option>
-        {teachers.map((t) => (
-          <option key={t.id} value={t.id}>{t.fullName}</option>
-        ))}
-      </select>
+      {!activeTeacherId && (
+        <select
+          value={selectedTeacherId}
+          onChange={(e) => {
+            setSelectedTeacherId(e.target.value);
+            setSelectedSubjectId('');
+            setSelectedGrade('');
+          }}
+          className="admin-input"
+        >
+          <option value="">اختر المدرس...</option>
+          {teachers.map((t) => (
+            <option key={t.id} value={t.id}>{t.fullName}</option>
+          ))}
+        </select>
+      )}
 
       <select
-        value={selectedProgramId}
-        onChange={(e) => setSelectedProgramId(e.target.value)}
+        value={selectedSubjectId}
+        onChange={(e) => {
+          setSelectedSubjectId(e.target.value);
+          setSelectedGrade('');
+        }}
         className="admin-input"
         disabled={!selectedTeacherId}
       >
@@ -110,11 +193,27 @@ function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => 
         </option>
         {(() => {
           const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
-          const filteredPrograms = selectedTeacher
-            ? programs.filter(p => selectedTeacher.subjectIds?.includes(p.subjectId))
+          const filteredSubjects = selectedTeacher
+            ? subjects.filter(s => selectedTeacher.subjectIds?.includes(s.id))
             : [];
-          return filteredPrograms.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+          return filteredSubjects.map((s) => (
+            <option key={s.id} value={s.id}>{s.name}</option>
+          ));
+        })()}
+      </select>
+
+      <select
+        value={selectedGrade}
+        onChange={(e) => setSelectedGrade(e.target.value)}
+        className="admin-input"
+        disabled={!selectedSubjectId}
+      >
+        <option value="">اختر الصف الدراسي...</option>
+        {(() => {
+          const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
+          const teacherGrades = getTeacherPackageGrades(selectedTeacher);
+          return teacherGrades.map((g) => (
+            <option key={g.value} value={g.value}>{g.label}</option>
           ));
         })()}
       </select>
@@ -128,7 +227,7 @@ function CreatePackageRow({ onSuccess, teachers, programs }: { onSuccess: () => 
         </button>
         <NeumorphButton
           onClick={() => void handleCreate()}
-          disabled={saving || !name.trim() || !selectedProgramId || !selectedTeacherId}
+          disabled={saving || !name.trim() || !selectedSubjectId || !selectedTeacherId || !selectedGrade}
           loading={saving}
           intent="primary"
           size="md"
@@ -367,25 +466,23 @@ export default function AdminContentPage() {
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
-  const [programs, setPrograms] = useState<AdminProgramDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('All');
+  const [activeTeacherId, setActiveTeacherId] = useState<string | null>(null);
 
   const loadPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const [packagesRes, subjectsRes, teachersRes, programsRes] = await Promise.all([
+      const [packagesRes, subjectsRes, teachersRes] = await Promise.all([
         contentService.getPackages({ force: true }),
         teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
-        teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] })),
-        adminService.listPrograms().catch(() => [] as AdminProgramDto[])
+        teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] }))
       ]);
       setPackages(packagesRes.data?.data ?? []);
       setSubjects(subjectsRes.data ?? []);
       setTeachers(teachersRes.data ?? []);
-      setPrograms(programsRes);
     } catch {
       toast.error('تعذر تحميل الباقات.');
     } finally {
@@ -395,74 +492,252 @@ export default function AdminContentPage() {
 
   useEffect(() => { void loadPackages(); }, [loadPackages]);
 
+  // Filter packages based on search, subject, and teacher
   const filtered = packages.filter((p) => {
     const matchesSearch = !search.trim() || p.name.toLowerCase().includes(search.toLowerCase());
     const matchesSubject = selectedSubjectId === 'All' || p.subjectId === selectedSubjectId;
-    const matchesTeacher = selectedTeacherId === 'All' || p.teacherId === selectedTeacherId;
+    const matchesTeacher = activeTeacherId ? p.teacherId === activeTeacherId : (selectedTeacherId === 'All' || p.teacherId === selectedTeacherId);
     return matchesSearch && matchesSubject && matchesTeacher;
   });
+
+  // Filter teachers for the grid view
+  const filteredTeachers = teachers.filter((t) => {
+    const matchesSearch = !search.trim() || t.fullName.toLowerCase().includes(search.toLowerCase());
+    const matchesSubject = selectedSubjectId === 'All' || t.subjectIds?.includes(selectedSubjectId);
+    return matchesSearch && matchesSubject;
+  });
+
+  const activeTeacher = teachers.find(t => t.id === activeTeacherId);
 
   return (
     <AdminShellChrome
       activePath="/admin/content"
       sectionLabel="إدارة المحتوى"
-      pageTitle="الباقات التعليمية"
-      subtitle="كل باقة تحتوي على أترام وأقسام وحصص ودروس"
+      pageTitle="المناهج التعليمية"
+      subtitle={activeTeacher ? `إدارة باقات ومحتوى المعلم: ${activeTeacher.fullName}` : "اختر المعلم أولاً لتصفح وإدارة المحتوى الدراسي الخاص به"}
     >
       {loading ? (
         <AdminPageSkeleton />
       ) : (
-        <div className="space-y-8">
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            <AdminStatCard variant="accent" icon={BookOpenText} label="إجمالي الباقات" value={packages.length} />
-            <AdminStatCard variant="light" icon={Sparkles} label="إجمالي الإيرادات" value={`${packages.reduce((s, p) => s + p.price, 0)} ج`} />
-            <AdminStatCard variant="muted" icon={Video} label="نشطة" value={packages.length} />
-          </div>
+        <div className="space-y-8 animate-[fadeIn_0.3s_ease-out]">
+          
+          {activeTeacher ? (
+            /* Scoped Teacher View */
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-[var(--admin-border)]/40 pb-4">
+                <NeumorphButton
+                  intent="primary"
+                  size="md"
+                  pill
+                  onClick={() => {
+                    setActiveTeacherId(null);
+                    setSearch('');
+                  }}
+                  className="flex items-center gap-1.5"
+                >
+                  <ChevronLeft className="h-4 w-4 rotate-180" />
+                  العودة لقائمة المعلمين
+                </NeumorphButton>
 
-          {/* Search & Filters */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="ابحث في الباقات..."
-                className="admin-input pr-11"
-              />
+                <div className="flex items-center gap-3">
+                  {activeTeacher.profileImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img 
+                      src={activeTeacher.profileImageUrl} 
+                      alt={activeTeacher.fullName} 
+                      className="w-10 h-10 rounded-xl object-cover border border-[var(--admin-border)]"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-[var(--admin-primary-15)] flex items-center justify-center text-[var(--admin-primary)] font-black text-sm">
+                      {activeTeacher.fullName[0]}
+                    </div>
+                  )}
+                  <div className="text-right">
+                    <p className="text-sm font-black text-[var(--admin-text)] leading-tight">{activeTeacher.fullName}</p>
+                    <p className="text-[10px] text-[var(--admin-muted)] mt-0.5">{activeTeacher.phoneNumber}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats for Teacher */}
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <AdminStatCard variant="accent" icon={BookOpenText} label="باقات المعلم" value={filtered.length} />
+                <AdminStatCard variant="light" icon={Sparkles} label="إيرادات الباقات" value={`${filtered.reduce((s, p) => s + p.price, 0)} ج`} />
+                <AdminStatCard variant="muted" icon={Video} label="الباقات النشطة" value={filtered.length} />
+              </div>
+
+              {/* Search & Subject filter */}
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="ابحث في الباقات..."
+                    className="admin-input pr-11"
+                  />
+                </div>
+                
+                <div className="min-w-[200px]">
+                  <select
+                    value={selectedSubjectId}
+                    onChange={(e) => setSelectedSubjectId(e.target.value)}
+                    className="admin-input w-full"
+                  >
+                    <option value="All">كل المواد</option>
+                    {subjects.filter(s => activeTeacher.subjectIds?.includes(s.id)).map((sub) => (
+                      <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Package list */}
+              <div className="space-y-4">
+                {filtered.length > 0 ? (
+                  filtered.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} />)
+                ) : (
+                  <div className="text-center py-10 rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-sm text-[var(--admin-muted)] font-bold">
+                    لا توجد باقات مضافة لهذا المعلم تلتزم بشروط الفلترة.
+                  </div>
+                )}
+                <CreatePackageRow 
+                  onSuccess={loadPackages} 
+                  teachers={teachers} 
+                  subjects={subjects} 
+                  activeTeacherId={activeTeacherId}
+                />
+              </div>
             </div>
-            
-            <div className="flex gap-3 min-w-[320px]">
-              <select
-                value={selectedSubjectId}
-                onChange={(e) => setSelectedSubjectId(e.target.value)}
-                className="admin-input flex-1"
-              >
-                <option value="All">كل المواد</option>
-                {subjects.map((sub) => (
-                  <option key={sub.id} value={sub.id}>{sub.name}</option>
-                ))}
-              </select>
+          ) : (
+            /* Grid View of all Teachers */
+            <div className="space-y-6">
+              {/* Stats for Content */}
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <AdminStatCard variant="accent" icon={BookOpenText} label="إجمالي الباقات" value={packages.length} />
+                <AdminStatCard variant="light" icon={Sparkles} label="إجمالي المعلمين" value={teachers.length} />
+                <AdminStatCard variant="muted" icon={Video} label="إجمالي المواد" value={subjects.length} />
+              </div>
 
-              <select
-                value={selectedTeacherId}
-                onChange={(e) => setSelectedTeacherId(e.target.value)}
-                className="admin-input flex-1"
-              >
-                <option value="All">كل المدرسين</option>
-                {teachers.map((t) => (
-                  <option key={t.id} value={t.id}>{t.fullName}</option>
-                ))}
-              </select>
+              {/* Search & Subject filter */}
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="ابحث عن معلم بالاسم..."
+                    className="admin-input pr-11"
+                  />
+                </div>
+                
+                <div className="min-w-[200px]">
+                  <select
+                    value={selectedSubjectId}
+                    onChange={(e) => setSelectedSubjectId(e.target.value)}
+                    className="admin-input w-full"
+                  >
+                    <option value="All">كل المواد</option>
+                    {subjects.map((sub) => (
+                      <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Teacher Cards Grid */}
+              {filteredTeachers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredTeachers.map((teacher) => {
+                    const teacherPackagesCount = packages.filter(p => p.teacherId === teacher.id).length;
+                    const gradeList = teacher.specialization ? teacher.specialization.split(',') : [];
+                    const teacherSubjects = subjects.filter(s => teacher.subjectIds?.includes(s.id));
+                    
+                    return (
+                      <div 
+                        key={teacher.id}
+                        onClick={() => {
+                          setActiveTeacherId(teacher.id);
+                          setSelectedSubjectId('All');
+                          setSearch('');
+                        }}
+                        className="group relative overflow-hidden rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[var(--admin-primary)] hover:shadow-md cursor-pointer flex flex-col justify-between min-h-[220px]"
+                      >
+                        <div>
+                          <div className="flex items-center gap-4 mb-4">
+                            {teacher.profileImageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img 
+                                src={teacher.profileImageUrl} 
+                                alt={teacher.fullName} 
+                                className="w-14 h-14 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 rounded-2xl bg-[var(--admin-primary-15)] flex items-center justify-center text-[var(--admin-primary)] font-black text-xl shadow-sm">
+                                {teacher.fullName[0]}
+                              </div>
+                            )}
+                            <div>
+                              <h3 className="font-black text-[var(--admin-text)] text-base group-hover:text-[var(--admin-primary)] transition-colors">
+                                {teacher.fullName}
+                              </h3>
+                              <p className="text-xs text-[var(--admin-muted)] font-mono mt-0.5">{teacher.phoneNumber}</p>
+                            </div>
+                          </div>
+
+                          {/* Taught Grades */}
+                          <div className="mb-3">
+                            <p className="text-[10px] font-bold text-[var(--admin-muted)] mb-1">الصفوف الدراسية:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {gradeList.length > 0 ? (
+                                gradeList.map((val, idx) => (
+                                  <span key={idx} className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[9px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10">
+                                    {GRADE_NAMES[val] || val}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[10px] text-red-500 font-bold">غير محدد</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Subjects */}
+                          <div className="mb-4">
+                            <p className="text-[10px] font-bold text-[var(--admin-muted)] mb-1">المواد الدراسية:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {teacherSubjects.length > 0 ? (
+                                teacherSubjects.map((sub) => (
+                                  <span key={sub.id} className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[9px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10">
+                                    {sub.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-[10px] text-[var(--admin-muted)]">—</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-[var(--admin-border)] flex items-center justify-between mt-auto">
+                          <span className="text-xs font-bold text-[var(--admin-muted)]">إجمالي الباقات:</span>
+                          <span className="text-sm font-black text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-2.5 py-1 rounded-xl">
+                            {teacherPackagesCount} باقات
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-20 rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/50 text-[var(--admin-muted)] font-bold text-sm">
+                  لا توجد نتائج مطابقة لفلترة المعلمين.
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* Package list */}
-          <div className="space-y-3">
-            {filtered.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} />)}
-            <CreatePackageRow onSuccess={loadPackages} teachers={teachers} programs={programs} />
-          </div>
         </div>
       )}
     </AdminShellChrome>

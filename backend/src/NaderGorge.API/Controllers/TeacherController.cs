@@ -76,14 +76,33 @@ public class TeacherController : ControllerBase
             dto.Bio,
             dto.Specialization,
             dto.ContactInfo,
-            dto.ProfileImageUrl
+            dto.ProfileImageUrl,
+            dto.Email,
+            dto.AssistantPhoneNumbers,
+            dto.FacebookUrl,
+            dto.YouTubeUrl,
+            dto.TelegramUrl
         ));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    [HttpGet("programs")]
-    public async Task<IActionResult> GetPrograms()
-        => Ok(await _mediator.Send(new GetAdminProgramsQuery(GetUserId())));
+    [HttpPost("profile/upload-image")]
+    public async Task<IActionResult> UploadProfileImage([FromBody] UploadImageRequestDto dto)
+    {
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps.UploadTeacherProfileImageCommand(GetUserId(), dto.Base64Image, dto.FileName));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("profile/upload-ai-photo")]
+    public async Task<IActionResult> UploadAiPhoto([FromBody] UploadImageRequestDto dto)
+    {
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps.UploadTeacherPhotoCommand(GetUserId(), dto.Base64Image, dto.FileName));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("subjects")]
+    public async Task<IActionResult> GetSubjects()
+        => Ok(await _mediator.Send(new GetSubjectsQuery(GetUserId())));
 
     [HttpGet("codes/groups")]
     public async Task<IActionResult> ListCodeGroups()
@@ -144,4 +163,15 @@ public class TeacherUpdateProfileRequestDto
     public string Specialization { get; set; } = string.Empty;
     public string ContactInfo { get; set; } = string.Empty;
     public string? ProfileImageUrl { get; set; }
+    public string? Email { get; set; }
+    public string? AssistantPhoneNumbers { get; set; }
+    public string? FacebookUrl { get; set; }
+    public string? YouTubeUrl { get; set; }
+    public string? TelegramUrl { get; set; }
+}
+
+public class UploadImageRequestDto
+{
+    public string Base64Image { get; set; } = null!;
+    public string FileName { get; set; } = null!;
 }

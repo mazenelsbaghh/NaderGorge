@@ -8,7 +8,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CreatePackageCommand(string Name, string Description, decimal Price, Guid? ProgramId, Guid? TeacherId = null, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreatePackageCommand(string Name, string Description, decimal Price, Guid SubjectId, string TargetGrade, Guid? TeacherId = null, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand, ApiResponse<Guid>>
 {
@@ -23,16 +23,15 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 
     public async Task<ApiResponse<Guid>> Handle(CreatePackageCommand request, CancellationToken ct)
     {
-        var pId = request.ProgramId ?? Guid.Empty;
-        if (pId == Guid.Empty)
+        if (request.SubjectId == Guid.Empty)
         {
-            return ApiResponse<Guid>.Fail("Program is required.");
+            return ApiResponse<Guid>.Fail("Subject is required.");
         }
 
-        var program = await _db.Programs.FindAsync(new object[] { pId }, ct);
-        if (program == null)
+        var subjectExists = await _db.Subjects.AnyAsync(s => s.Id == request.SubjectId, ct);
+        if (!subjectExists)
         {
-            return ApiResponse<Guid>.Fail("Program not found.");
+            return ApiResponse<Guid>.Fail("Subject not found.");
         }
 
         var teacherId = Guid.Empty;
@@ -49,10 +48,10 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
                     return ApiResponse<Guid>.Fail("Teacher profile not onboarded.");
                 teacherId = user.TeacherProfile.Id;
 
-                // Verify the teacher can access the program
-                var canAccessProgram = await _auth.CanAccessProgramAsync(request.CurrentUserId.Value, pId, ct);
-                if (!canAccessProgram)
-                    return ApiResponse<Guid>.Fail("Unauthorized access to this program.");
+                // Verify the teacher can access the subject
+                var teachesThisSubject = await _db.TeacherSubjects.AnyAsync(ts => ts.TeacherId == teacherId && ts.SubjectId == request.SubjectId, ct);
+                if (!teachesThisSubject)
+                    return ApiResponse<Guid>.Fail("Unauthorized access to this subject.");
             }
         }
 
@@ -70,11 +69,11 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             teacherId = request.TeacherId.Value;
         }
 
-        // Verify that the resolved teacher actually teaches the subject of the selected program
-        var teachesSubject = await _db.TeacherSubjects.AnyAsync(ts => ts.TeacherId == teacherId && ts.SubjectId == program.SubjectId, ct);
+        // Verify that the resolved teacher actually teaches the subject
+        var teachesSubject = await _db.TeacherSubjects.AnyAsync(ts => ts.TeacherId == teacherId && ts.SubjectId == request.SubjectId, ct);
         if (!teachesSubject)
         {
-            return ApiResponse<Guid>.Fail("Selected teacher does not teach this program's subject.");
+            return ApiResponse<Guid>.Fail("Selected teacher does not teach this subject.");
         }
 
         var pkg = new Package
@@ -82,7 +81,8 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             Name = request.Name,
             Description = request.Description,
             Price = request.Price,
-            ProgramId = pId,
+            SubjectId = request.SubjectId,
+            TargetGrade = string.IsNullOrWhiteSpace(request.TargetGrade) ? "All" : request.TargetGrade,
             TeacherId = teacherId
         };
         _db.Packages.Add(pkg);

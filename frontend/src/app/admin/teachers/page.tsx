@@ -19,6 +19,9 @@ import {
   Database,
   Loader2,
   Lock,
+  Send,
+  Upload,
+  Sparkles,
 } from 'lucide-react';
 import { 
   AdminShellChrome, 
@@ -36,6 +39,26 @@ import { teacherService, type TeacherDto, type SubjectDto } from '@/services/tea
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+
+const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+  </svg>
+);
+
+const YoutubeIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+  </svg>
+);
+
+const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="m22 2-7 20-4-9-9-4Z"/>
+    <path d="M22 2 11 13"/>
+  </svg>
+);
 
 const GRADE_NAMES: Record<string, string> = {
   FirstSecondary: 'الأول الثانوي',
@@ -276,10 +299,71 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
                   <div className="flex items-center gap-3">
                     <Mail className="h-5 w-5 text-[var(--admin-primary)]" />
                     <div>
-                      <p className="text-xs text-[var(--admin-muted)]">معلومات الاتصال / البريد</p>
+                      <p className="text-xs text-[var(--admin-muted)]">البريد الإلكتروني الرسمي</p>
+                      <p className="text-sm font-bold text-[var(--admin-text)] truncate max-w-[200px] font-mono" title={teacher.email}>
+                        {teacher.email || '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Phone className="h-5 w-5 text-[var(--admin-primary)]" />
+                    <div>
+                      <p className="text-xs text-[var(--admin-muted)]">أرقام هواتف المساعدين</p>
+                      <p className="text-sm font-bold text-[var(--admin-text)] font-mono" title={teacher.assistantPhoneNumbers}>
+                        {teacher.assistantPhoneNumbers || '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-[var(--admin-primary)]" />
+                    <div>
+                      <p className="text-xs text-[var(--admin-muted)]">معلومات الاتصال الإضافية</p>
                       <p className="text-sm font-bold text-[var(--admin-text)] truncate max-w-[200px]" title={teacher.contactInfo}>
                         {teacher.contactInfo || '—'}
                       </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media Links */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-[var(--admin-card)] p-5 rounded-3xl">
+                  <div className="flex items-center gap-3">
+                    <FacebookIcon className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="text-xs text-[var(--admin-muted)]">فيسبوك</p>
+                      {teacher.facebookUrl ? (
+                        <a href={teacher.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-[var(--admin-primary)] hover:underline truncate max-w-[180px] block font-mono">
+                          {teacher.facebookUrl}
+                        </a>
+                      ) : (
+                        <p className="text-sm text-[var(--admin-muted)]">—</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <YoutubeIcon className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-xs text-[var(--admin-muted)]">يوتيوب</p>
+                      {teacher.youtubeUrl ? (
+                        <a href={teacher.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-[var(--admin-primary)] hover:underline truncate max-w-[180px] block font-mono">
+                          {teacher.youtubeUrl}
+                        </a>
+                      ) : (
+                        <p className="text-sm text-[var(--admin-muted)]">—</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <TelegramIcon className="h-5 w-5 text-sky-500" />
+                    <div>
+                      <p className="text-xs text-[var(--admin-muted)]">تيليجرام</p>
+                      {teacher.telegramUrl ? (
+                        <a href={teacher.telegramUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-[var(--admin-primary)] hover:underline truncate max-w-[180px] block font-mono">
+                          {teacher.telegramUrl}
+                        </a>
+                      ) : (
+                        <p className="text-sm text-[var(--admin-muted)]">—</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -289,10 +373,10 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
                   <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 md:col-span-1">
                     <h4 className="text-sm font-black text-[var(--admin-text)] mb-3 flex items-center gap-2">
                       <User className="h-4 w-4 text-[var(--admin-primary)]" />
-                      السيرة الذاتية (البيو)
+                      الوصف
                     </h4>
                     <p className="text-sm text-[var(--admin-muted)] leading-relaxed whitespace-pre-wrap">
-                      {teacher.bio || 'لا توجد سيرة ذاتية مسجلة حالياً.'}
+                      {teacher.bio || 'لا يوجد وصف مسجل حالياً.'}
                     </p>
                   </div>
 
@@ -431,6 +515,19 @@ export default function AdminTeachersPage() {
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
+  // New fields states
+  const [email, setEmail] = useState('');
+  const [assistantPhoneNumbers, setAssistantPhoneNumbers] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
+  const [youtubeUrl, setYouTubeUrl] = useState('');
+  const [telegramUrl, setTelegramUrl] = useState('');
+
+  // Upload previews and loading states
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [aiPhotoPreview, setAiPhotoPreview] = useState<string | null>(null);
+  const [isUploadingAi, setIsUploadingAi] = useState(false);
+
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -468,6 +565,13 @@ export default function AdminTeachersPage() {
       setProfileImageUrl(teacher.profileImageUrl || '');
       setSelectedSubjectIds(teacher.subjectIds || []);
       setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
+      setEmail(teacher.email || '');
+      setAssistantPhoneNumbers(teacher.assistantPhoneNumbers || '');
+      setFacebookUrl(teacher.facebookUrl || '');
+      setYouTubeUrl(teacher.youtubeUrl || '');
+      setTelegramUrl(teacher.telegramUrl || '');
+      setProfileImagePreview(teacher.profileImageUrl || null);
+      setAiPhotoPreview(null);
     } else {
       setEditingTeacher(null);
       setFullName('');
@@ -478,6 +582,13 @@ export default function AdminTeachersPage() {
       setProfileImageUrl('');
       setSelectedSubjectIds([]);
       setSelectedGrades([]);
+      setEmail('');
+      setAssistantPhoneNumbers('');
+      setFacebookUrl('');
+      setYouTubeUrl('');
+      setTelegramUrl('');
+      setProfileImagePreview(null);
+      setAiPhotoPreview(null);
     }
     setIsModalOpen(true);
   };
@@ -488,6 +599,18 @@ export default function AdminTeachersPage() {
     setFullName('');
     setPhoneNumber('');
     setPassword('');
+    setBio('');
+    setContactInfo('');
+    setProfileImageUrl('');
+    setSelectedSubjectIds([]);
+    setSelectedGrades([]);
+    setEmail('');
+    setAssistantPhoneNumbers('');
+    setFacebookUrl('');
+    setYouTubeUrl('');
+    setTelegramUrl('');
+    setProfileImagePreview(null);
+    setAiPhotoPreview(null);
   };
 
   const handleSubjectToggle = (subjectId: string) => {
@@ -551,6 +674,11 @@ export default function AdminTeachersPage() {
           contactInfo: contactInfo.trim(),
           profileImageUrl: profileImageUrl.trim() || undefined,
           subjectIds: selectedSubjectIds,
+          email: email.trim() || undefined,
+          assistantPhoneNumbers: assistantPhoneNumbers.trim() || undefined,
+          facebookUrl: facebookUrl.trim() || undefined,
+          youtubeUrl: youtubeUrl.trim() || undefined,
+          telegramUrl: telegramUrl.trim() || undefined,
         });
 
         if (res.success) {
@@ -581,6 +709,11 @@ export default function AdminTeachersPage() {
             contactInfo: contactInfo.trim(),
             profileImageUrl: profileImageUrl.trim() || undefined,
             subjectIds: selectedSubjectIds,
+            email: email.trim() || undefined,
+            assistantPhoneNumbers: assistantPhoneNumbers.trim() || undefined,
+            facebookUrl: facebookUrl.trim() || undefined,
+            youtubeUrl: youtubeUrl.trim() || undefined,
+            telegramUrl: telegramUrl.trim() || undefined,
           });
 
           if (teacherRes.success) {
@@ -881,7 +1014,7 @@ export default function AdminTeachersPage() {
                 {/* Profile Details */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نقاط الاتصال / البريد الإلكتروني *</label>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نقاط الاتصال / البريد الإلكتروني الإضافي *</label>
                     <div className="relative">
                       <input
                         type="text"
@@ -889,7 +1022,7 @@ export default function AdminTeachersPage() {
                         disabled={isSaving}
                         value={contactInfo}
                         onChange={(e) => setContactInfo(e.target.value)}
-                        placeholder="إيميل المعلم أو الهاتف البديل..."
+                        placeholder="رقم هاتف إضافي أو عنوان الاتصال..."
                         className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
                       />
                       <Mail className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
@@ -912,14 +1045,215 @@ export default function AdminTeachersPage() {
                   </div>
                 </div>
 
+                {/* Official Email & Assistants' Phone Numbers */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">البريد الإلكتروني الرسمي (اختياري)</label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        disabled={isSaving}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="teacher@example.com"
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                      <Mail className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">أرقام هواتف المساعدين (اختياري)</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        disabled={isSaving}
+                        value={assistantPhoneNumbers}
+                        onChange={(e) => setAssistantPhoneNumbers(e.target.value)}
+                        placeholder="01xxxxxxxxx, 01xxxxxxxxx"
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                      <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media Urls */}
+                <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
+                    <Send className="h-4 w-4 text-[var(--admin-primary)]" />
+                    روابط السوشيال ميديا (اختياري)
+                  </h4>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-[var(--admin-text)] mb-2">رابط الفيسبوك</label>
+                      <input
+                        type="url"
+                        disabled={isSaving}
+                        value={facebookUrl}
+                        onChange={(e) => setFacebookUrl(e.target.value)}
+                        placeholder="https://facebook.com/..."
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-xs text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[var(--admin-text)] mb-2">رابط اليوتيوب</label>
+                      <input
+                        type="url"
+                        disabled={isSaving}
+                        value={youtubeUrl}
+                        onChange={(e) => setYouTubeUrl(e.target.value)}
+                        placeholder="https://youtube.com/..."
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-xs text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-[var(--admin-text)] mb-2">رابط التيليجرام</label>
+                      <input
+                        type="url"
+                        disabled={isSaving}
+                        value={telegramUrl}
+                        onChange={(e) => setTelegramUrl(e.target.value)}
+                        placeholder="https://t.me/..."
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-xs text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Images Upload Area (Only in Edit Mode) */}
+                {editingTeacher && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
+                    {/* Main Profile Image Upload */}
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
+                        <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+                        الصورة الشخصية الأساسية
+                      </label>
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          disabled={isUploadingProfile}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+                              return;
+                            }
+                            setIsUploadingProfile(true);
+                            const reader = new FileReader();
+                            reader.onload = async () => {
+                              try {
+                                const base64 = reader.result as string;
+                                setProfileImagePreview(base64);
+                                const res = await adminService.uploadTeacherProfileImage(editingTeacher.id, base64, file.name);
+                                if (res.success && res.data) {
+                                  setProfileImageUrl(res.data);
+                                  toast.success('تم رفع الصورة الشخصية بنجاح ✅');
+                                  loadData();
+                                } else {
+                                  toast.error(res.message || 'فشل رفع الصورة الشخصية');
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                toast.error('حدث خطأ أثناء رفع الصورة الشخصية');
+                              } finally {
+                                setIsUploadingProfile(false);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                        {profileImagePreview ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={profileImagePreview}
+                            alt="Profile Preview"
+                            className="h-24 w-24 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
+                          />
+                        ) : (
+                          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-xl">
+                            {getInitials(fullName)}
+                          </div>
+                        )}
+                        <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                          {isUploadingProfile ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* AI Photo Upload */}
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-[var(--admin-primary)]" />
+                        صورة التحليل للذكاء الاصطناعي (AI)
+                      </label>
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          disabled={isUploadingAi}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+                              return;
+                            }
+                            setIsUploadingAi(true);
+                            const reader = new FileReader();
+                            reader.onload = async () => {
+                              try {
+                                const base64 = reader.result as string;
+                                setAiPhotoPreview(base64);
+                                const res = await adminService.uploadTeacherPhoto(editingTeacher.userId, base64, file.name);
+                                if (res.success) {
+                                  toast.success('تم رفع صورة تحليل الـ AI بنجاح ✅');
+                                } else {
+                                  toast.error(res.message || 'فشل رفع صورة تحليل الـ AI');
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                toast.error('حدث خطأ أثناء رفع صورة التحليل');
+                              } finally {
+                                setIsUploadingAi(false);
+                              }
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                        {aiPhotoPreview ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={aiPhotoPreview}
+                            alt="AI Preview"
+                            className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
+                          />
+                        ) : (
+                          <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[var(--admin-hover)] text-[var(--admin-muted)]">
+                            <Sparkles className="h-8 w-8" />
+                          </div>
+                        )}
+                        <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                          {isUploadingAi ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">السيرة الذاتية (البيو)</label>
+                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">الوصف</label>
                   <textarea
                     rows={3}
                     disabled={isSaving}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    placeholder="اكتب نبذة ترويجية قصيرة تظهر للطلاب في صفحة الباقات..."
+                    placeholder="اكتب وصفاً ترويجياً قصيراً يظهر للطلاب في صفحة الباقات..."
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition resize-none"
                   />
                 </div>

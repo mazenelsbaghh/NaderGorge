@@ -47,7 +47,7 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             package.Name,
             package.Description,
             package.Price,
-            package.ProgramId,
+            package.SubjectId,
             package.IsActive,
             dtos);
 

@@ -50,7 +50,12 @@ public record TeacherProfileDto(
     string Bio,
     string Specialization,
     string? ProfileImageUrl,
-    string ContactInfo
+    string ContactInfo,
+    string? Email,
+    string? AssistantPhoneNumbers,
+    string? FacebookUrl,
+    string? YouTubeUrl,
+    string? TelegramUrl
 );
 
 public record UpdateTeacherProfileCommand(
@@ -58,7 +63,12 @@ public record UpdateTeacherProfileCommand(
     string Bio,
     string Specialization,
     string ContactInfo,
-    string? ProfileImageUrl
+    string? ProfileImageUrl,
+    string? Email,
+    string? AssistantPhoneNumbers,
+    string? FacebookUrl,
+    string? YouTubeUrl,
+    string? TelegramUrl
 ) : IRequest<ApiResponse<bool>>;
 
 public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDashboardStatsQuery, ApiResponse<TeacherDashboardStatsDto>>
@@ -209,7 +219,12 @@ public class GetTeacherProfileQueryHandler : IRequestHandler<GetTeacherProfileQu
             teacherProfile.Bio,
             teacherProfile.Specialization,
             teacherProfile.ProfileImageUrl,
-            teacherProfile.ContactInfo
+            teacherProfile.ContactInfo,
+            teacherProfile.Email,
+            teacherProfile.AssistantPhoneNumbers,
+            teacherProfile.FacebookUrl,
+            teacherProfile.YouTubeUrl,
+            teacherProfile.TelegramUrl
         );
 
         return ApiResponse<TeacherProfileDto>.Ok(dto);
@@ -239,6 +254,11 @@ public class UpdateTeacherProfileCommandHandler : IRequestHandler<UpdateTeacherP
         teacherProfile.Specialization = request.Specialization;
         teacherProfile.ContactInfo = request.ContactInfo;
         teacherProfile.ProfileImageUrl = request.ProfileImageUrl;
+        teacherProfile.Email = request.Email;
+        teacherProfile.AssistantPhoneNumbers = request.AssistantPhoneNumbers;
+        teacherProfile.FacebookUrl = request.FacebookUrl;
+        teacherProfile.YouTubeUrl = request.YouTubeUrl;
+        teacherProfile.TelegramUrl = request.TelegramUrl;
 
         await _db.SaveChangesAsync(ct);
 

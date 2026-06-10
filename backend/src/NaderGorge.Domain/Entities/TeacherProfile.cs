@@ -12,6 +12,11 @@ public class TeacherProfile : BaseEntity
     public decimal CommissionRate { get; set; }
     public string? ProfileImageUrl { get; set; }
     public string ContactInfo { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? AssistantPhoneNumbers { get; set; }
+    public string? FacebookUrl { get; set; }
+    public string? YouTubeUrl { get; set; }
+    public string? TelegramUrl { get; set; }
 
     // Navigation properties
     public ICollection<TeacherSubject> TeacherSubjects { get; set; } = new List<TeacherSubject>();

@@ -71,34 +71,6 @@ public class TeacherIsolationTests
         Assert.True(await authService.CanAccessPackageAsync(admin.Id, packageA.Id, CancellationToken.None));
     }
 
-    [Fact]
-    public async Task CanAccessProgram_IsIsolatedBetweenTeachers()
-    {
-        await using AppDbContext db = TestAppDbContextFactory.Create();
-        var (userA, profileA) = await OnboardTeacherAsync(db, "Teacher A", "01011111111");
-        var (userB, profileB) = await OnboardTeacherAsync(db, "Teacher B", "01022222222");
-
-        var subjectA = new Subject { Id = Guid.NewGuid(), Name = "Math" };
-        var subjectB = new Subject { Id = Guid.NewGuid(), Name = "Science" };
-        db.Subjects.AddRange(subjectA, subjectB);
-
-        // Link Teacher A to Subject A only
-        db.TeacherSubjects.Add(new TeacherSubject { TeacherId = profileA.Id, SubjectId = subjectA.Id });
-        // Link Teacher B to Subject B only
-        db.TeacherSubjects.Add(new TeacherSubject { TeacherId = profileB.Id, SubjectId = subjectB.Id });
-
-        var programA = new Program { Id = Guid.NewGuid(), Name = "Program A", SubjectId = subjectA.Id };
-        db.Programs.Add(programA);
-        await db.SaveChangesAsync();
-
-        var authService = new TeacherAuthorizationService(db);
-
-        // Teacher A teaches Subject A, so they can access Program A
-        Assert.True(await authService.CanAccessProgramAsync(userA.Id, programA.Id, CancellationToken.None));
-
-        // Teacher B does not teach Subject A, so they cannot access Program A
-        Assert.False(await authService.CanAccessProgramAsync(userB.Id, programA.Id, CancellationToken.None));
-    }
 
     [Fact]
     public async Task CanAccessCodeGroup_IsIsolatedBetweenTeachers()
@@ -154,11 +126,9 @@ public class TeacherIsolationTests
         var subject = new Subject { Id = Guid.NewGuid(), Name = "Math" };
         db.Subjects.Add(subject);
 
-        // Teacher A has Subject, Program, Package, Term, Section, Lesson
+        // Teacher A has Subject, Package, Term, Section, Lesson
         db.TeacherSubjects.Add(new TeacherSubject { TeacherId = profileA.Id, SubjectId = subject.Id });
-        var program = new Program { Id = Guid.NewGuid(), Name = "Program A", SubjectId = subject.Id };
-        db.Programs.Add(program);
-        var package = new Package { Id = Guid.NewGuid(), Name = "Package A", TeacherId = profileA.Id, ProgramId = program.Id };
+        var package = new Package { Id = Guid.NewGuid(), Name = "Package A", TeacherId = profileA.Id, SubjectId = subject.Id, TargetGrade = "3rd Secondary" };
         db.Packages.Add(package);
         var term = new Term { Id = Guid.NewGuid(), Title = "Term A", PackageId = package.Id };
         db.Terms.Add(term);
@@ -270,39 +240,25 @@ public class TeacherIsolationTests
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student A", "01099999999");
 
         // 1. Create Package A for Teacher A
-        var programA = new Domain.Entities.Program
-        {
-            Id = Guid.NewGuid(),
-            Name = "Prog A",
-            TargetGrade = "3rd Secondary",
-            SubjectId = Guid.NewGuid()
-        };
         var packageA = new Package
         {
             Id = Guid.NewGuid(),
             Name = "Package A",
             TeacherId = profileA.Id,
-            ProgramId = programA.Id
+            SubjectId = Guid.NewGuid(),
+            TargetGrade = "3rd Secondary"
         };
-        db.Programs.Add(programA);
         db.Packages.Add(packageA);
 
         // 2. Create Package B for Teacher B
-        var programB = new Domain.Entities.Program
-        {
-            Id = Guid.NewGuid(),
-            Name = "Prog B",
-            TargetGrade = "3rd Secondary",
-            SubjectId = Guid.NewGuid()
-        };
         var packageB = new Package
         {
             Id = Guid.NewGuid(),
             Name = "Package B",
             TeacherId = profileB.Id,
-            ProgramId = programB.Id
+            SubjectId = Guid.NewGuid(),
+            TargetGrade = "3rd Secondary"
         };
-        db.Programs.Add(programB);
         db.Packages.Add(packageB);
 
         // 3. Create content items for Package A (Term, Section, Lesson, Video, Watch Event)

@@ -5,7 +5,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
-public record GetSubjectsQuery : IRequest<ApiResponse<List<SubjectDto>>>;
+public record GetSubjectsQuery(Guid? TeacherId = null) : IRequest<ApiResponse<List<SubjectDto>>>;
 
 public record SubjectDto(Guid Id, string Name, string Description);
 
@@ -17,7 +17,14 @@ public class GetSubjectsQueryHandler : IRequestHandler<GetSubjectsQuery, ApiResp
 
     public async Task<ApiResponse<List<SubjectDto>>> Handle(GetSubjectsQuery request, CancellationToken ct)
     {
-        var subjects = await _db.Subjects
+        var query = _db.Subjects.AsQueryable();
+
+        if (request.TeacherId.HasValue)
+        {
+            query = query.Where(s => s.TeacherSubjects.Any(ts => ts.TeacherId == request.TeacherId.Value || ts.Teacher.UserId == request.TeacherId.Value));
+        }
+
+        var subjects = await query
             .OrderBy(s => s.Name)
             .Select(s => new SubjectDto(s.Id, s.Name, s.Description))
             .ToListAsync(ct);

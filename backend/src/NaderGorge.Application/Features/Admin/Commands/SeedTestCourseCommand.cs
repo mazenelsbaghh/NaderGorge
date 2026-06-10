@@ -24,13 +24,14 @@ public class SeedTestCourseCommandHandler : IRequestHandler<SeedTestCourseComman
         var package = await _db.Packages.FirstOrDefaultAsync(ct);
         if (package == null)
         {
-            var program = await _db.Programs.FirstOrDefaultAsync(ct);
-            if (program == null)
+            var subject = await _db.Subjects.FirstOrDefaultAsync(ct);
+            if (subject == null)
             {
-                program = new Program { Id = Guid.NewGuid(), Name = "برنامج اختبار النظام", Description = "Test", TargetGrade = "All", CreatedAt = DateTime.UtcNow };
-                _db.Programs.Add(program);
+                subject = new Subject { Id = Guid.NewGuid(), Name = "مادة اختبار النظام", NormalizedName = "TEST_SUBJECT", Description = "Test Subject", CreatedAt = DateTime.UtcNow };
+                _db.Subjects.Add(subject);
             }
-            package = new Package { Id = Guid.NewGuid(), Name = "باقة اختبار النظام", Description = "Test", Price = 0, IsActive = true, ProgramId = program.Id, CreatedAt = DateTime.UtcNow };
+            var teacher = await _db.TeacherProfiles.FirstOrDefaultAsync(ct);
+            package = new Package { Id = Guid.NewGuid(), Name = "باقة اختبار النظام", Description = "Test", Price = 0, IsActive = true, SubjectId = subject.Id, TargetGrade = "All", TeacherId = teacher?.Id ?? Guid.Empty, CreatedAt = DateTime.UtcNow };
             _db.Packages.Add(package);
             await _db.SaveChangesAsync(ct);
         }

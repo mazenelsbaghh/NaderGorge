@@ -37,9 +37,10 @@ test.describe('Admin Content Management Flow', () => {
     await page.fill('textarea[placeholder*="وصف مختصر"]', 'E2E test package');
     await page.fill('input[placeholder*="السعر"]', '100');
 
-    // Select Program and Teacher
-    await page.selectOption('select:has-text("اختر البرنامج الدراسي")', { index: 1 });
+    // Select Teacher, Subject, and Grade Level
     await page.selectOption('select:has-text("اختر المدرس")', { index: 1 });
+    await page.selectOption('select:has-text("اختر المادة")', { index: 1 });
+    await page.selectOption('select:has-text("اختر الصف الدراسي")', { index: 1 });
 
     // Submit
     await page.click('button:has-text("حفظ الباقة")', { force: true });

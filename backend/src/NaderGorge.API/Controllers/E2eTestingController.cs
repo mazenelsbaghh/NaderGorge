@@ -347,15 +347,7 @@ public class E2eTestingController : ControllerBase
         await _dbContext.SaveChangesAsync();
 
         var termId = Guid.NewGuid();
-        var program = new Domain.Entities.Program 
-        { 
-            Id = programId, 
-            Name = "E2E Program", 
-            Description = "Test Program", 
-            TargetGrade = "1st Secondary",
-            SubjectId = subject.Id
-        };
-        var package = new Package { Id = packageId, Name = "E2E Student Package", Description = "Test", Price = 100, ProgramId = programId, TeacherId = teacher.Id };
+        var package = new Package { Id = packageId, Name = "E2E Student Package", Description = "Test", Price = 100, SubjectId = subject.Id, TargetGrade = "1st Secondary", TeacherId = teacher.Id };
         var term = new Term { Id = termId, PackageId = packageId, Title = "E2E Term" };
         var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };
@@ -396,7 +388,6 @@ public class E2eTestingController : ControllerBase
         var essayQuestion = new EssayQuestion { Id = essayQuestionId, Text = "Explain photosynthesis", Type = QuestionType.Essay, DefaultPoints = 10, Tags = "Inline", WrittenCorrection = "Plants use sunlight", SubjectId = subject.Id, CreatedByTeacherId = teacher.Id };
         var essayExamQuestion = new ExamQuestion { ExamId = essayExamId, QuestionBankItemId = essayQuestionId, Order = 0, Points = 10 };
 
-        _dbContext.Set<Domain.Entities.Program>().Add(program);
         _dbContext.Set<Package>().Add(package);
         _dbContext.Set<Term>().Add(term);
         _dbContext.Set<ContentSection>().Add(section);

@@ -70,14 +70,14 @@ public class SubjectTests
     }
 
     [Fact]
-    public async Task DeleteSubject_FailsIfLinkedToProgram()
+    public async Task DeleteSubject_FailsIfLinkedToPackage()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var subject = new Subject { Id = Guid.NewGuid(), Name = "Math", NormalizedName = "MATH" };
-        var program = new Program { Id = Guid.NewGuid(), Name = "Grade 10", SubjectId = subject.Id };
+        var package = new Package { Id = Guid.NewGuid(), Name = "Math Package", SubjectId = subject.Id, TargetGrade = "All", TeacherId = Guid.NewGuid() };
         
         db.Subjects.Add(subject);
-        db.Programs.Add(program);
+        db.Packages.Add(package);
         await db.SaveChangesAsync();
 
         var handler = new DeleteSubjectCommandHandler(db);
@@ -87,7 +87,7 @@ public class SubjectTests
 
         Assert.False(result.Success);
         Assert.NotNull(result.Message);
-        Assert.Contains("program", result.Message.ToLower());
+        Assert.Contains("package", result.Message.ToLower());
 
         var exists = await db.Subjects.FindAsync(subject.Id);
         Assert.NotNull(exists);

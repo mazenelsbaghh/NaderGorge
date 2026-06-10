@@ -6,31 +6,89 @@ import { BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, 
 import { AdminPageSkeleton, AdminStatCard } from "@/components/admin";
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from "@/services/content-service";
-import { adminService, AdminProgramDto } from "@/services/admin-service";
+import { adminService } from "@/services/admin-service";
+import { teacherService, SubjectDto } from "@/services/teacher-service";
 import NeumorphButton from "@/components/ui/neumorph-button";
 import toast from "react-hot-toast";
 
+const GRADE_NAMES: Record<string, string> = {
+  FirstSecondary: 'الأول الثانوي',
+  SecondSecondary: 'الثاني الثانوي',
+  SecondaryGrade3: 'الثالث الثانوي',
+  FirstBaccalaureate: 'الأول بكالوريا',
+  SecondBaccalaureate: 'الثاني بكالوريا',
+  PrimaryGrade1: 'الأول الابتدائي',
+  PrimaryGrade2: 'الثاني الابتدائي',
+  PrimaryGrade3: 'الثالث الابتدائي',
+  PrimaryGrade4: 'الرابع الابتدائي',
+  PrimaryGrade5: 'الخامس الابتدائي',
+  PrimaryGrade6: 'السادس الابتدائي',
+  PrepGrade1: 'الأول الإعدادي',
+  PrepGrade2: 'الثاني الإعدادي',
+  PrepGrade3: 'الثالث الإعدادي',
+  AzhariPrimary1: 'الأول الابتدائي الأزهري',
+  AzhariPrep1: 'الأول الإعدادي الأزهري',
+  AzhariSecondary1: 'الأول الثانوي الأزهري',
+  AmericanGrade9: 'Grade 9',
+  AmericanGrade10: 'Grade 10',
+  AmericanGrade11: 'Grade 11',
+  AmericanGrade12: 'Grade 12',
+};
+
+function getTeacherPackageGrades(profile: any): { value: string; label: string }[] {
+  if (!profile || !profile.specialization) return [];
+  const specs = profile.specialization.split(',');
+  const list: { value: string; label: string }[] = [];
+  
+  const mapping: Record<string, { value: string; label: string }> = {
+    'FirstSecondary': { value: '1st Secondary', label: 'الصف الأول الثانوي' },
+    'SecondSecondary': { value: '2nd Secondary', label: 'الصف الثاني الثانوي' },
+    'SecondaryGrade3': { value: '3rd Secondary', label: 'الصف الثالث الثانوي' },
+    '1st Secondary': { value: '1st Secondary', label: 'الصف الأول الثانوي' },
+    '2nd Secondary': { value: '2nd Secondary', label: 'الصف الثاني الثانوي' },
+    '3rd Secondary': { value: '3rd Secondary', label: 'الصف الثالث الثانوي' },
+  };
+
+  specs.forEach((spec: string) => {
+    const trimmed = spec.trim();
+    if (mapping[trimmed]) {
+      list.push(mapping[trimmed]);
+    } else {
+      list.push({ value: trimmed, label: GRADE_NAMES[trimmed] || trimmed });
+    }
+  });
+
+  // Always include 'All' as a fallback package target
+  if (!list.some(item => item.value === 'All')) {
+    list.push({ value: 'All', label: 'عام' });
+  }
+
+  return list;
+}
+
 // ─── Create Package Inline Form ───────────────────────────────────────────────
-function CreatePackageRow({ onSuccess, programs }: { onSuccess: () => void; programs: AdminProgramDto[] }) {
+function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => void; subjects: SubjectDto[]; profile: any }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [selectedProgramId, setSelectedProgramId] = useState("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleCreate() {
-    if (!name.trim() || !selectedProgramId) return;
+    if (!name.trim() || !selectedSubjectId || !selectedGrade) return;
     try {
       setSaving(true);
       await adminService.createPackage({
         name: name.trim(),
         description: description.trim(),
         price: Number(price) || 0,
-        programId: selectedProgramId
+        subjectId: selectedSubjectId,
+        targetGrade: selectedGrade
       });
       toast.success("تمت إضافة الباقة بنجاح.");
-      setName(""); setDescription(""); setPrice(""); setSelectedProgramId("");
+      setName(""); setDescription(""); setPrice(""); setSelectedSubjectId(""); setSelectedGrade("");
       setOpen(false);
       onSuccess();
     } catch {
@@ -82,13 +140,25 @@ function CreatePackageRow({ onSuccess, programs }: { onSuccess: () => void; prog
       />
       
       <select
-        value={selectedProgramId}
-        onChange={(e) => setSelectedProgramId(e.target.value)}
+        value={selectedSubjectId}
+        onChange={(e) => setSelectedSubjectId(e.target.value)}
         className="admin-input"
       >
         <option value="">اختر المادة...</option>
-        {programs.map((p) => (
-          <option key={p.id} value={p.id}>{p.name}</option>
+        {subjects.map((s) => (
+          <option key={s.id} value={s.id}>{s.name}</option>
+        ))}
+      </select>
+
+      <select
+        value={selectedGrade}
+        onChange={(e) => setSelectedGrade(e.target.value)}
+        className="admin-input"
+        disabled={!selectedSubjectId}
+      >
+        <option value="">اختر الصف الدراسي...</option>
+        {getTeacherPackageGrades(profile).map((g) => (
+          <option key={g.value} value={g.value}>{g.label}</option>
         ))}
       </select>
 
@@ -101,7 +171,7 @@ function CreatePackageRow({ onSuccess, programs }: { onSuccess: () => void; prog
         </button>
         <NeumorphButton
           onClick={() => void handleCreate()}
-          disabled={saving || !name.trim() || !selectedProgramId}
+          disabled={saving || !name.trim() || !selectedSubjectId || !selectedGrade}
           loading={saving}
           intent="primary"
           size="md"
@@ -333,19 +403,24 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function TeacherContentPage() {
   const [packages, setPackages] = useState<PackageDto[]>([]);
-  const [programs, setPrograms] = useState<AdminProgramDto[]>([]);
+  const [subjects, setSubjects] = useState<SubjectDto[]>([]);
+  const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   const loadPackages = useCallback(async () => {
     try {
       setLoading(true);
-      const [res, programsRes] = await Promise.all([
+      const [res, subjectsRes, profileRes] = await Promise.all([
         contentService.getPackages(),
-        adminService.listPrograms().catch(() => [] as AdminProgramDto[])
+        teacherService.getMySubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
+        teacherService.getMyProfile().catch(() => ({ success: true, data: null }))
       ]);
       setPackages(res.data?.data ?? []);
-      setPrograms(programsRes);
+      setSubjects(subjectsRes.data ?? []);
+      if (profileRes && profileRes.success) {
+        setProfile(profileRes.data);
+      }
     } catch {
       toast.error("تعذر تحميل الباقات.");
     } finally {
@@ -394,7 +469,7 @@ export default function TeacherContentPage() {
           {/* Package list */}
           <div className="space-y-3">
             {filtered.map((pkg) => <PackageCard key={pkg.id} pkg={pkg} />)}
-            <CreatePackageRow onSuccess={loadPackages} programs={programs} />
+            <CreatePackageRow onSuccess={loadPackages} subjects={subjects} profile={profile} />
           </div>
         </div>
       )}

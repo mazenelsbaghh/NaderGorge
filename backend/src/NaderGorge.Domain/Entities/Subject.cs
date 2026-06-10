@@ -10,6 +10,6 @@ public class Subject : BaseEntity
 
     // Navigation properties
     public ICollection<TeacherSubject> TeacherSubjects { get; set; } = new List<TeacherSubject>();
-    public ICollection<Program> Programs { get; set; } = new List<Program>();
+    public ICollection<Package> Packages { get; set; } = new List<Package>();
     public ICollection<QuestionBankItem> QuestionBankItems { get; set; } = new List<QuestionBankItem>();
 }

@@ -42,18 +42,6 @@ public class TeacherAuthorizationService
         return package != null && package.TeacherId == status.teacherId.Value;
     }
 
-    public async Task<bool> CanAccessProgramAsync(Guid userId, Guid programId, CancellationToken ct)
-    {
-        var status = await GetUserStatusAsync(userId, ct);
-        if (status.isAdmin) return true;
-        if (!status.isTeacher) return true;
-        if (status.teacherId == null) return false;
-
-        var program = await _db.Programs.FindAsync(new object[] { programId }, ct);
-        if (program == null) return false;
-
-        return await _db.TeacherSubjects.AnyAsync(ts => ts.TeacherId == status.teacherId.Value && ts.SubjectId == program.SubjectId, ct);
-    }
 
     public async Task<bool> CanAccessTermAsync(Guid userId, Guid termId, CancellationToken ct)
     {

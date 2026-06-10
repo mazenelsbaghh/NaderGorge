@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
-using ProgramEntity = NaderGorge.Domain.Entities.Program;
 
 namespace NaderGorge.Application.Tests;
 
@@ -19,19 +18,19 @@ internal static class TestAppDbContextFactory
         return new AppDbContext(options);
     }
 
-    public static async Task<(Guid PackageId, Guid ProgramId)> SeedPackageAsync(
+    public static async Task<(Guid PackageId, Guid SubjectId)> SeedPackageAsync(
         AppDbContext db,
         string packageName,
         string? description = null,
         decimal price = 100,
         bool isActive = true)
     {
-        var program = new ProgramEntity
+        var subject = new Subject
         {
             Id = Guid.NewGuid(),
-            Name = $"{packageName} Program",
-            Description = "Test Program",
-            TargetGrade = "3rd Secondary",
+            Name = $"{packageName} Subject",
+            NormalizedName = $"{packageName.ToUpperInvariant().Replace(" ", "_")}_{Guid.NewGuid().ToString().Substring(0, 4)}",
+            Description = "Test Subject",
         };
 
         var package = new NaderGorge.Domain.Entities.Package
@@ -41,14 +40,15 @@ internal static class TestAppDbContextFactory
             Description = description ?? $"{packageName} description",
             Price = price,
             IsActive = isActive,
-            ProgramId = program.Id,
+            SubjectId = subject.Id,
+            TargetGrade = "3rd Secondary",
         };
 
-        db.Programs.Add(program);
+        db.Subjects.Add(subject);
         db.Packages.Add(package);
         await db.SaveChangesAsync();
 
-        return (package.Id, program.Id);
+        return (package.Id, subject.Id);
     }
 
     public static async Task<User> SeedUserAsync(AppDbContext db, string fullName, string phoneNumber)

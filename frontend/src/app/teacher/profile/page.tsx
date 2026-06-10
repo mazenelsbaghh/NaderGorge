@@ -1,11 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, Sparkles, Loader2, Save, FileText, Bookmark, Phone, Image as ImageIcon } from "lucide-react";
+import { User, Sparkles, Loader2, Save, FileText, Bookmark, Phone, Mail, Upload, Image as ImageIcon } from "lucide-react";
 import { teacherService } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+
+const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+  </svg>
+);
+
+const YoutubeIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/>
+  </svg>
+);
+
+const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="m22 2-7 20-4-9-9-4Z"/>
+    <path d="M22 2 11 13"/>
+  </svg>
+);
 
 export default function TeacherProfilePage() {
   const [loading, setLoading] = useState(true);
@@ -16,6 +36,17 @@ export default function TeacherProfilePage() {
   const [specialization, setSpecialization] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [email, setEmail] = useState("");
+  const [assistantPhoneNumbers, setAssistantPhoneNumbers] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [youtubeUrl, setYouTubeUrl] = useState("");
+  const [telegramUrl, setTelegramUrl] = useState("");
+
+  // Upload previews and loading states
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [aiPhotoPreview, setAiPhotoPreview] = useState<string | null>(null);
+  const [isUploadingAi, setIsUploadingAi] = useState(false);
 
   useEffect(() => {
     teacherService.getMyProfile()
@@ -25,6 +56,12 @@ export default function TeacherProfilePage() {
           setSpecialization(res.data.specialization || "");
           setContactInfo(res.data.contactInfo || "");
           setProfileImageUrl(res.data.profileImageUrl || "");
+          setEmail(res.data.email || "");
+          setAssistantPhoneNumbers(res.data.assistantPhoneNumbers || "");
+          setFacebookUrl(res.data.facebookUrl || "");
+          setYouTubeUrl(res.data.youtubeUrl || "");
+          setTelegramUrl(res.data.telegramUrl || "");
+          setProfileImagePreview(res.data.profileImageUrl || null);
         }
       })
       .catch((err) => {
@@ -42,7 +79,12 @@ export default function TeacherProfilePage() {
         bio,
         specialization,
         contactInfo,
-        profileImageUrl: profileImageUrl || undefined
+        profileImageUrl: profileImageUrl || undefined,
+        email: email || undefined,
+        assistantPhoneNumbers: assistantPhoneNumbers || undefined,
+        facebookUrl: facebookUrl || undefined,
+        youtubeUrl: youtubeUrl || undefined,
+        telegramUrl: telegramUrl || undefined,
       });
       if (res.success) {
         toast.success("تم تحديث الملف الشخصي بنجاح");
@@ -146,7 +188,7 @@ export default function TeacherProfilePage() {
               <div className="space-y-2">
                 <label htmlFor="profileImageUrl" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
                   <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
-                  رابط الصورة الشخصية
+                  رابط الصورة الشخصية (أو ارفعها بالأسفل)
                 </label>
                 <input
                   id="profileImageUrl"
@@ -176,17 +218,214 @@ export default function TeacherProfilePage() {
               />
             </div>
 
-            {/* Bio */}
+            {/* Email & Assistant numbers */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <label htmlFor="email" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
+                  <Mail className="h-4 w-4 text-[var(--admin-primary)]" />
+                  البريد الإلكتروني الرسمي (اختياري)
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="teacher@example.com"
+                  className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="assistantPhoneNumbers" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
+                  <Phone className="h-4 w-4 text-[var(--admin-primary)]" />
+                  أرقام هواتف المساعدين (اختياري)
+                </label>
+                <input
+                  id="assistantPhoneNumbers"
+                  type="text"
+                  value={assistantPhoneNumbers}
+                  onChange={(e) => setAssistantPhoneNumbers(e.target.value)}
+                  placeholder="01xxxxxxxxx, 01xxxxxxxxx"
+                  className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-6 space-y-4">
+              <h4 className="text-sm font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
+                <TelegramIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+                روابط وسائل التواصل الاجتماعي (اختياري)
+              </h4>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <label htmlFor="facebookUrl" className="block text-xs font-bold text-[var(--admin-text)]">رابط الفيسبوك</label>
+                  <input
+                    id="facebookUrl"
+                    type="url"
+                    value={facebookUrl}
+                    onChange={(e) => setFacebookUrl(e.target.value)}
+                    placeholder="https://facebook.com/..."
+                    className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-xs text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="youtubeUrl" className="block text-xs font-bold text-[var(--admin-text)]">رابط اليوتيوب</label>
+                  <input
+                    id="youtubeUrl"
+                    type="url"
+                    value={youtubeUrl}
+                    onChange={(e) => setYouTubeUrl(e.target.value)}
+                    placeholder="https://youtube.com/..."
+                    className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-xs text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="telegramUrl" className="block text-xs font-bold text-[var(--admin-text)]">رابط التيليجرام</label>
+                  <input
+                    id="telegramUrl"
+                    type="url"
+                    value={telegramUrl}
+                    onChange={(e) => setTelegramUrl(e.target.value)}
+                    placeholder="https://t.me/..."
+                    className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-xs text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Images Upload Area */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-6">
+              {/* Main Profile Image Upload */}
+              <div className="space-y-3">
+                <label className="block text-sm font-bold text-[var(--admin-text)] flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+                  الصورة الشخصية الأساسية
+                </label>
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card)] hover:border-[var(--admin-primary)] transition relative min-h-[160px]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    disabled={isUploadingProfile}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error("حجم الصورة يجب أن يكون أقل من 5 ميجابايت");
+                        return;
+                      }
+                      setIsUploadingProfile(true);
+                      const reader = new FileReader();
+                      reader.onload = async () => {
+                        try {
+                          const base64 = reader.result as string;
+                          setProfileImagePreview(base64);
+                          const res = await teacherService.uploadMyProfileImage(base64, file.name);
+                          if (res.success && res.data) {
+                            setProfileImageUrl(res.data);
+                            toast.success("تم رفع الصورة الشخصية بنجاح ✅");
+                          } else {
+                            toast.error(res.message || "فشل رفع الصورة الشخصية");
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          toast.error("حدث خطأ أثناء رفع الصورة الشخصية");
+                        } finally {
+                          setIsUploadingProfile(false);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  {profileImagePreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profileImagePreview}
+                      alt="Profile Preview"
+                      className="h-24 w-24 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-xl">
+                      <User className="h-8 w-8" />
+                    </div>
+                  )}
+                  <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                    {isUploadingProfile ? "جاري الرفع..." : "اسحب صورة أو انقر للرفع"}
+                  </span>
+                </div>
+              </div>
+
+              {/* AI Photo Upload */}
+              <div className="space-y-3">
+                <label className="block text-sm font-bold text-[var(--admin-text)] flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-[var(--admin-primary)]" />
+                  صورة التحليل للذكاء الاصطناعي (AI)
+                </label>
+                <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card)] hover:border-[var(--admin-primary)] transition relative min-h-[160px]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    disabled={isUploadingAi}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error("حجم الصورة يجب أن يكون أقل من 5 ميجابايت");
+                        return;
+                      }
+                      setIsUploadingAi(true);
+                      const reader = new FileReader();
+                      reader.onload = async () => {
+                        try {
+                          const base64 = reader.result as string;
+                          setAiPhotoPreview(base64);
+                          const res = await teacherService.uploadMyAiPhoto(base64, file.name);
+                          if (res.success) {
+                            toast.success("تم رفع صورة تحليل الـ AI بنجاح ✅");
+                          } else {
+                            toast.error(res.message || "فشل رفع صورة تحليل الـ AI");
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          toast.error("حدث خطأ أثناء رفع صورة التحليل");
+                        } finally {
+                          setIsUploadingAi(false);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  {aiPhotoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={aiPhotoPreview}
+                      alt="AI Preview"
+                      className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[var(--admin-bg)] text-[var(--admin-muted)]">
+                      <Sparkles className="h-8 w-8" />
+                    </div>
+                  )}
+                  <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                    {isUploadingAi ? "جاري الرفع..." : "اسحب صورة أو انقر للرفع"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Description (bio) */}
             <div className="space-y-2">
               <label htmlFor="bio" className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
                 <FileText className="h-4 w-4 text-[var(--admin-primary)]" />
-                نبذة تعريفية وسيرة ذاتية (Bio)
+                الوصف
               </label>
               <textarea
                 id="bio"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="اكتب نبذة عن خبراتك الأكاديمية والمهنية لتظهر للطلاب في صفحات الاشتراك والتفعيل..."
+                placeholder="اكتب وصفاً ترويجياً قصيراً يظهر للطلاب في صفحات الاشتراك والتفعيل..."
                 rows={5}
                 className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] resize-none"
                 required

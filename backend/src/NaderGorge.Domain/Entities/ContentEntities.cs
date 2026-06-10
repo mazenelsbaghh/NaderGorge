@@ -3,20 +3,6 @@ using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.Domain.Entities;
 
-public class Program : BaseEntity
-{
-    public string Name { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-
-    // e.g., "1st Secondary", "2nd Secondary", "3rd Secondary"
-    public string TargetGrade { get; set; } = string.Empty;
-
-    public Guid SubjectId { get; set; }
-    public Subject Subject { get; set; } = null!;
-
-    public ICollection<Package> Packages { get; set; } = new List<Package>();
-}
-
 /// <summary>
 /// Package represents the academic year.
 /// Contains Terms directly (no separate Year entity).
@@ -28,8 +14,10 @@ public class Package : BaseEntity
     public decimal Price { get; set; }
     public bool IsActive { get; set; } = true;
 
-    public Guid ProgramId { get; set; }
-    public Program Program { get; set; } = null!;
+    public Guid SubjectId { get; set; }
+    public Subject Subject { get; set; } = null!;
+
+    public string TargetGrade { get; set; } = string.Empty;
 
     public Guid TeacherId { get; set; }
     public TeacherProfile Teacher { get; set; } = null!;

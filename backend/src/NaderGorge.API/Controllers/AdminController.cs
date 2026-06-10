@@ -394,6 +394,14 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("teachers/upload-profile-image")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> UploadTeacherProfileImage([FromBody] UploadTeacherProfileImageRequest dto)
+    {
+        var result = await _mediator.Send(new UploadTeacherProfileImageCommand(dto.TeacherId, dto.Base64Image, dto.FileName));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("content/lessons/{lessonId:guid}/homework")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> AttachHomework(Guid lessonId, [FromBody] AttachHomeworkRequest dto)
@@ -660,17 +668,11 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    // --- Programs ---
-    [HttpGet("programs")]
-    [HasPermission("content.manage")]
-    public async Task<IActionResult> GetPrograms()
-        => Ok(await _mediator.Send(new GetAdminProgramsQuery(GetUserId())));
-
     // --- Subjects ---
     [HttpGet("subjects")]
     [HasPermission("content.manage")]
-    public async Task<IActionResult> GetSubjects()
-        => Ok(await _mediator.Send(new GetSubjectsQuery()));
+    public async Task<IActionResult> GetSubjects([FromQuery] Guid? teacherId)
+        => Ok(await _mediator.Send(new GetSubjectsQuery(teacherId)));
 
     [HttpGet("subjects/{id:guid}")]
     [HasPermission("content.manage")]
@@ -725,7 +727,8 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateTeacher(Guid id, [FromBody] UpdateTeacherProfileRequestDto dto)
     {
         var result = await _mediator.Send(new UpdateTeacherProfileCommand(
-            id, dto.Bio, dto.Specialization, dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds));
+            id, dto.Bio, dto.Specialization, dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds,
+            dto.Email, dto.AssistantPhoneNumbers, dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -738,7 +741,12 @@ public record UpdateTeacherProfileRequestDto(
     decimal CommissionRate,
     string? ProfileImageUrl,
     string ContactInfo,
-    List<Guid> SubjectIds);
+    List<Guid> SubjectIds,
+    string? Email = null,
+    string? AssistantPhoneNumbers = null,
+    string? FacebookUrl = null,
+    string? YouTubeUrl = null,
+    string? TelegramUrl = null);
 
 public record CreateRoleDto(string Name, List<string> Permissions);
 public record UpdateRoleDto(string Name, List<string> Permissions);
@@ -790,6 +798,7 @@ public record UpsertPackageCodeProfileRequest(
 );
 public record AddQuestionsToExamRequest(List<InlineExamQuestionDto> Questions);
 public record UploadTeacherPhotoRequest(Guid TeacherId, string Base64Image, string FileName);
+public record UploadTeacherProfileImageRequest(Guid TeacherId, string Base64Image, string FileName);
 public record UpdateSettingsRequest(Dictionary<string, string> Settings);
 public record UpdateStudentProfileRequest(
     string? FullName, string? Phone, string? ParentPhone, string? SecondaryPhone, string? MotherPhone,

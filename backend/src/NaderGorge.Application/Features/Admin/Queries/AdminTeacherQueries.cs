@@ -18,7 +18,12 @@ public record TeacherDto(
     string? ProfileImageUrl,
     string ContactInfo,
     List<Guid> SubjectIds,
-    List<string> SubjectNames);
+    List<string> SubjectNames,
+    string? Email,
+    string? AssistantPhoneNumbers,
+    string? FacebookUrl,
+    string? YouTubeUrl,
+    string? TelegramUrl);
 
 public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, ApiResponse<List<TeacherDto>>>
 {
@@ -44,7 +49,12 @@ public class GetTeachersQueryHandler : IRequestHandler<GetTeachersQuery, ApiResp
                 tp.ProfileImageUrl,
                 tp.ContactInfo,
                 tp.TeacherSubjects.Select(ts => ts.SubjectId).ToList(),
-                tp.TeacherSubjects.Select(ts => ts.Subject.Name).ToList()
+                tp.TeacherSubjects.Select(ts => ts.Subject.Name).ToList(),
+                tp.Email,
+                tp.AssistantPhoneNumbers,
+                tp.FacebookUrl,
+                tp.YouTubeUrl,
+                tp.TelegramUrl
             ))
             .ToListAsync(ct);
 
@@ -78,7 +88,12 @@ public class GetTeacherByIdQueryHandler : IRequestHandler<GetTeacherByIdQuery, A
                 tp.ProfileImageUrl,
                 tp.ContactInfo,
                 tp.TeacherSubjects.Select(ts => ts.SubjectId).ToList(),
-                tp.TeacherSubjects.Select(ts => ts.Subject.Name).ToList()
+                tp.TeacherSubjects.Select(ts => ts.Subject.Name).ToList(),
+                tp.Email,
+                tp.AssistantPhoneNumbers,
+                tp.FacebookUrl,
+                tp.YouTubeUrl,
+                tp.TelegramUrl
             ))
             .FirstOrDefaultAsync(ct);
 

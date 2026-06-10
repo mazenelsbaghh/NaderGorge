@@ -426,15 +426,6 @@ export interface AdminCreateUserResult {
   role: string;
 }
 
-export interface AdminProgramDto {
-  id: string;
-  name: string;
-  description: string;
-  targetGrade: string;
-  subjectId: string;
-  subjectName: string;
-}
-
 export interface AdminPackageListItemDto {
   id: string;
   name: string;
@@ -482,12 +473,6 @@ export const adminService = {
     return res.data?.data ?? [];
   },
 
-  listPrograms: async (): Promise<AdminProgramDto[]> => {
-    const isTeacher = getSurfaceName() === 'teacher';
-    const path = isTeacher ? '/teacher/programs' : '/admin/programs';
-    const res = await apiClient.get<ApiResponse<AdminProgramDto[]>>(path);
-    return res.data?.data ?? [];
-  },
 
   updateUserStatus: async (id: string, status: string) => {
     const res = await apiClient.put(`/admin/users/${id}/status`, { status });
@@ -501,6 +486,15 @@ export const adminService = {
 
   uploadTeacherPhoto: async (teacherId: string, base64Image: string, fileName: string) => {
     const res = await apiClient.post<ApiResponse>('/admin/teacher-photos/upload', {
+      teacherId,
+      base64Image,
+      fileName
+    });
+    return res.data;
+  },
+
+  uploadTeacherProfileImage: async (teacherId: string, base64Image: string, fileName: string) => {
+    const res = await apiClient.post<ApiResponse<string>>('/admin/teachers/upload-profile-image', {
       teacherId,
       base64Image,
       fileName
@@ -667,7 +661,8 @@ export const adminService = {
     name: string;
     description: string;
     price: number;
-    programId: string;
+    subjectId: string;
+    targetGrade: string;
     teacherId?: string;
   }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);

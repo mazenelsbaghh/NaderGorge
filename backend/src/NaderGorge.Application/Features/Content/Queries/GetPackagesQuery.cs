@@ -49,7 +49,7 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
         }
 
         var query = _db.Packages
-            .Include(p => p.Program).ThenInclude(pr => pr.Subject)
+            .Include(p => p.Subject)
             .Include(p => p.Teacher).ThenInclude(t => t.User)
             .AsQueryable();
 
@@ -69,13 +69,13 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.Name, 
                 pk.Description, 
                 pk.Price, 
-                pk.ProgramId, 
+                pk.SubjectId, 
                 isEnrolled, 
                 pk.TeacherId, 
-                pk.Program != null ? pk.Program.SubjectId : Guid.Empty,
+                pk.SubjectId,
                 pk.Teacher?.User?.FullName ?? "Unknown",
                 pk.Teacher?.ProfileImageUrl,
-                pk.Program?.Subject?.Name ?? "Unknown",
+                pk.Subject?.Name ?? "Unknown",
                 pk.Teacher?.Bio,
                 pk.Teacher?.Specialization
             ));

@@ -14,12 +14,12 @@ def test_multi_teacher_package_and_question_validation(clean_db):
     mock_data = setup_res.json()
     pkg_id = mock_data.get("packageId")
 
-    # Get program ID and subject ID from the created package
+    # Get subject ID from the created package
     pkg_details_res = admin.get(f"/api/admin/packages/{pkg_id}")
     assert pkg_details_res.status_code == 200
     pkg_data = pkg_details_res.json().get("data", {})
-    program_id = pkg_data.get("programId")
-    assert program_id is not None
+    subject_id = pkg_data.get("subjectId") or pkg_data.get("programId")
+    assert subject_id is not None
 
     # Fetch teachers to get the valid seeded teacher
     teachers_res = admin.get("/api/admin/teachers")
@@ -64,22 +64,24 @@ def test_multi_teacher_package_and_question_validation(clean_db):
 
     # --- Test Package Validation Boundaries ---
 
-    # T1: Fail if programId is missing (null/empty)
+    # T1: Fail if subjectId is missing (null/empty)
     res = admin.post("/api/admin/packages", json={
-        "name": "Test Package Without Program",
+        "name": "Test Package Without Subject",
         "description": "Desc",
         "price": 100,
-        "teacherId": valid_teacher_id
+        "teacherId": valid_teacher_id,
+        "targetGrade": "1st Secondary"
     })
     assert res.status_code == 400
-    assert "Program is required" in res.json().get("message", "")
+    assert "Subject is required" in res.json().get("message", "")
 
     # T2: Fail if teacherId is missing
     res = admin.post("/api/admin/packages", json={
         "name": "Test Package Without Teacher",
         "description": "Desc",
         "price": 100,
-        "programId": program_id
+        "subjectId": valid_subject_id,
+        "targetGrade": "1st Secondary"
     })
     assert res.status_code == 400
     assert "Teacher is required" in res.json().get("message", "")
@@ -89,29 +91,32 @@ def test_multi_teacher_package_and_question_validation(clean_db):
         "name": "Test Package With Fake Teacher",
         "description": "Desc",
         "price": 100,
-        "programId": program_id,
+        "subjectId": valid_subject_id,
+        "targetGrade": "1st Secondary",
         "teacherId": str(uuid.uuid4())
     })
     assert res.status_code == 400
     assert "Selected teacher not found" in res.json().get("message", "")
 
-    # T4: Fail if teacher exists but does not teach program's subject
+    # T4: Fail if teacher exists but does not teach subject
     res = admin.post("/api/admin/packages", json={
         "name": "Test Package With Unassociated Teacher",
         "description": "Desc",
         "price": 100,
-        "programId": program_id,
+        "subjectId": valid_subject_id,
+        "targetGrade": "1st Secondary",
         "teacherId": unassociated_teacher_id
     })
     assert res.status_code == 400
-    assert "Selected teacher does not teach this program's subject" in res.json().get("message", "")
+    assert "Selected teacher does not teach this subject" in res.json().get("message", "")
 
     # T5: Success when correctly mapped
     res = admin.post("/api/admin/packages", json={
         "name": "Valid Package",
         "description": "Desc",
         "price": 100,
-        "programId": program_id,
+        "subjectId": valid_subject_id,
+        "targetGrade": "1st Secondary",
         "teacherId": valid_teacher_id
     })
     assert res.status_code == 201

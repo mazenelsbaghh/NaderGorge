@@ -58,7 +58,7 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
         // Get packages with section/lesson counts
         var packages = await _db.Packages
             .Where(p => packageIds.Contains(p.Id))
-            .Include(p => p.Program).ThenInclude(pr => pr.Subject)
+            .Include(p => p.Subject)
             .Include(p => p.Teacher).ThenInclude(t => t.User)
             .Include(p => p.Terms).ThenInclude(t => t.Sections).ThenInclude(s => s.Lessons)
             .ToListAsync(ct);
@@ -98,8 +98,8 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
                 pkg.TeacherId,
                 pkg.Teacher?.User?.FullName ?? "Unknown",
                 pkg.Teacher?.ProfileImageUrl,
-                pkg.Program != null ? pkg.Program.SubjectId : Guid.Empty,
-                pkg.Program?.Subject?.Name ?? "Unknown"
+                pkg.SubjectId,
+                pkg.Subject?.Name ?? "Unknown"
             ));
 
             // Find resume point: first incomplete lesson in order

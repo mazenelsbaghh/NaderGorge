@@ -18,6 +18,11 @@ export interface TeacherDto {
   contactInfo: string;
   subjectIds: string[];
   subjectNames: string[];
+  email?: string;
+  assistantPhoneNumbers?: string;
+  facebookUrl?: string;
+  youtubeUrl?: string;
+  telegramUrl?: string;
 }
 
 export interface ApiResponse<T> {
@@ -92,6 +97,11 @@ export interface TeacherProfileDto {
   specialization: string;
   profileImageUrl?: string;
   contactInfo: string;
+  email?: string;
+  assistantPhoneNumbers?: string;
+  facebookUrl?: string;
+  youtubeUrl?: string;
+  telegramUrl?: string;
 }
 
 export const teacherService = {
@@ -120,6 +130,11 @@ export const teacherService = {
     profileImageUrl?: string;
     contactInfo: string;
     subjectIds: string[];
+    email?: string;
+    assistantPhoneNumbers?: string;
+    facebookUrl?: string;
+    youtubeUrl?: string;
+    telegramUrl?: string;
   }) =>
     apiClient.post<ApiResponse<string>>('/admin/teachers', data).then((res) => res.data),
   updateTeacher: (
@@ -131,6 +146,11 @@ export const teacherService = {
       profileImageUrl?: string;
       contactInfo: string;
       subjectIds: string[];
+      email?: string;
+      assistantPhoneNumbers?: string;
+      facebookUrl?: string;
+      youtubeUrl?: string;
+      telegramUrl?: string;
     }
   ) =>
     apiClient.put<ApiResponse<void>>(`/admin/teachers/${id}`, data).then((res) => res.data),
@@ -146,8 +166,24 @@ export const teacherService = {
     apiClient.post<ApiResponse<void>>(`/teacher/essays/${id}/grade`, data).then((res) => res.data),
   getMyProfile: () =>
     apiClient.get<ApiResponse<TeacherProfileDto>>('/teacher/profile').then((res) => res.data),
-  updateMyProfile: (data: { bio: string; specialization: string; contactInfo: string; profileImageUrl?: string }) =>
+  updateMyProfile: (data: {
+    bio: string;
+    specialization: string;
+    contactInfo: string;
+    profileImageUrl?: string;
+    email?: string;
+    assistantPhoneNumbers?: string;
+    facebookUrl?: string;
+    youtubeUrl?: string;
+    telegramUrl?: string;
+  }) =>
     apiClient.put<ApiResponse<void>>('/teacher/profile', data).then((res) => res.data),
+  uploadMyProfileImage: (base64Image: string, fileName: string) =>
+    apiClient.post<ApiResponse<string>>('/teacher/profile/upload-image', { base64Image, fileName }).then((res) => res.data),
+  uploadMyAiPhoto: (base64Image: string, fileName: string) =>
+    apiClient.post<ApiResponse<void>>('/teacher/profile/upload-ai-photo', { base64Image, fileName }).then((res) => res.data),
   getTeacherActivity: () =>
     apiClient.get<ApiResponse<TeacherActivityDto>>('/teacher/activity').then((res) => res.data),
+  getMySubjects: () =>
+    apiClient.get<ApiResponse<SubjectDto[]>>('/teacher/subjects').then((res) => res.data),
 };
