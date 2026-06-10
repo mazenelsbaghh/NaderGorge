@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { User, Sparkles, Loader2, Save, FileText, Bookmark, Phone, Mail, Upload, Image as ImageIcon } from "lucide-react";
 import { teacherService } from "@/services/teacher-service";
 import toast from "react-hot-toast";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 
@@ -131,7 +132,7 @@ export default function TeacherProfilePage() {
                 {profileImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={profileImageUrl}
+                    src={resolveMediaUrl(profileImageUrl)}
                     alt="Avatar"
                     className="h-20 w-20 rounded-[1.5rem] object-cover border border-[var(--admin-border)] shadow-md"
                     onError={(e) => {
@@ -304,7 +305,7 @@ export default function TeacherProfilePage() {
                   {profileImagePreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={profileImagePreview}
+                      src={resolveMediaUrl(profileImagePreview)}
                       alt="Profile Preview"
                       className="h-24 w-24 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
                     />

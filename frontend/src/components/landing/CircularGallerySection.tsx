@@ -8,6 +8,7 @@ import { motion, useReducedMotion, useMotionValue, useTransform, AnimatePresence
 
 import { platformStats, teachers as hardcodedTeachers, topStudents } from "./data";
 import { studentService } from "@/services/student-service";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 const medalStyles: Record<number, string> = {
   1: "bg-[#D4A017] text-white",
@@ -31,7 +32,9 @@ export function CircularGallerySection() {
             name: t.fullName,
             subject: t.specialization || t.subjectNames.join(" - ") || "معلم المنصة",
             rating: "4.9",
-            avatar: t.profileImageUrl || `https://avatar.vercel.sh/${encodeURIComponent(t.fullName)}`
+            avatar: t.profileImageUrl
+              ? resolveMediaUrl(t.profileImageUrl)
+              : `https://avatar.vercel.sh/${encodeURIComponent(t.fullName)}`
           })));
         } else {
           setActiveTeachers([...hardcodedTeachers]);

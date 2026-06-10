@@ -76,6 +76,39 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             return ApiResponse<Guid>.Fail("Selected teacher does not teach this subject.");
         }
 
+        // Validate the TargetGrade is within the teacher's specialization (grades)
+        var teacherProfile = await _db.TeacherProfiles.FirstOrDefaultAsync(tp => tp.Id == teacherId, ct);
+        if (teacherProfile == null)
+        {
+            return ApiResponse<Guid>.Fail("Selected teacher profile not found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.TargetGrade))
+        {
+            return ApiResponse<Guid>.Fail("Target grade is required.");
+        }
+
+        string normalizedRequestedGrade = request.TargetGrade.Trim();
+        if (normalizedRequestedGrade == "1st Secondary") normalizedRequestedGrade = "FirstSecondary";
+        else if (normalizedRequestedGrade == "2nd Secondary") normalizedRequestedGrade = "SecondSecondary";
+        else if (normalizedRequestedGrade == "3rd Secondary") normalizedRequestedGrade = "SecondaryGrade3";
+
+        var allowedGrades = teacherProfile.Specialization
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(g => {
+                if (g == "1st Secondary") return "FirstSecondary";
+                if (g == "2nd Secondary") return "SecondSecondary";
+                if (g == "3rd Secondary") return "SecondaryGrade3";
+                return g;
+            })
+            .ToList();
+
+        bool isGradeAllowed = allowedGrades.Any(g => string.Equals(g, normalizedRequestedGrade, StringComparison.OrdinalIgnoreCase));
+        if (!isGradeAllowed)
+        {
+            return ApiResponse<Guid>.Fail("The selected grade is not allowed for this teacher.");
+        }
+
         var pkg = new Package
         {
             Name = request.Name,

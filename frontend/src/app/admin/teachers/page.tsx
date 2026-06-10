@@ -39,6 +39,7 @@ import { teacherService, type TeacherDto, type SubjectDto } from '@/services/tea
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -255,7 +256,7 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
                   {teacher.profileImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={teacher.profileImageUrl}
+                      src={resolveMediaUrl(teacher.profileImageUrl)}
                       alt={teacher.fullName}
                       className="h-12 w-12 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
                     />
@@ -769,7 +770,7 @@ export default function AdminTeachersPage() {
           {t.profileImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={t.profileImageUrl}
+              src={resolveMediaUrl(t.profileImageUrl)}
               alt={t.fullName}
               className="h-12 w-12 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
             />
@@ -1159,7 +1160,7 @@ export default function AdminTeachersPage() {
                       {profileImagePreview ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={profileImagePreview}
+                          src={resolveMediaUrl(profileImagePreview)}
                           alt="Profile Preview"
                           className="h-24 w-24 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
                         />
@@ -1223,7 +1224,7 @@ export default function AdminTeachersPage() {
                       {aiPhotoPreview ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={aiPhotoPreview}
+                          src={resolveMediaUrl(aiPhotoPreview)}
                           alt="AI Preview"
                           className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
                         />

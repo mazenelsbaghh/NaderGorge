@@ -58,11 +58,6 @@ function getTeacherPackageGrades(profile: any): { value: string; label: string }
     }
   });
 
-  // Always include 'All' as a fallback package target
-  if (!list.some(item => item.value === 'All')) {
-    list.push({ value: 'All', label: 'عام' });
-  }
-
   return list;
 }
 

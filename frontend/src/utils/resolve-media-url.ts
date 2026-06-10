@@ -19,7 +19,14 @@ export function resolveMediaUrl(url?: string | null): string {
 
   try {
     const backendOrigin = new URL(apiBaseUrl).origin;
-    return new URL(normalized.startsWith('/') ? normalized : `/${normalized}`, backendOrigin).toString();
+    const isProduction =
+      !backendOrigin.includes('localhost') &&
+      !backendOrigin.includes('127.0.0.1') &&
+      !backendOrigin.includes('backend:5245');
+
+    const base = isProduction ? 'https://assets.massar-academy.net' : backendOrigin;
+    const path = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    return `${base}${path}`;
   } catch {
     return normalized;
   }

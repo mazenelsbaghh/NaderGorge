@@ -11,6 +11,7 @@ import { adminService } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 const GRADE_NAMES: Record<string, string> = {
   FirstSecondary: 'الأول الثانوي',
@@ -58,11 +59,6 @@ function getTeacherPackageGrades(teacher: TeacherDto | undefined): { value: stri
       list.push({ value: trimmed, label: GRADE_NAMES[trimmed] || trimmed });
     }
   });
-
-  // Always include 'All' as a fallback package target
-  if (!list.some(item => item.value === 'All')) {
-    list.push({ value: 'All', label: 'عام' });
-  }
 
   return list;
 }
@@ -543,7 +539,7 @@ export default function AdminContentPage() {
                   {activeTeacher.profileImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img 
-                      src={activeTeacher.profileImageUrl} 
+                      src={resolveMediaUrl(activeTeacher.profileImageUrl)} 
                       alt={activeTeacher.fullName} 
                       className="w-10 h-10 rounded-xl object-cover border border-[var(--admin-border)]"
                     />
@@ -670,7 +666,7 @@ export default function AdminContentPage() {
                             {teacher.profileImageUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img 
-                                src={teacher.profileImageUrl} 
+                                src={resolveMediaUrl(teacher.profileImageUrl)} 
                                 alt={teacher.fullName} 
                                 className="w-14 h-14 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
                               />

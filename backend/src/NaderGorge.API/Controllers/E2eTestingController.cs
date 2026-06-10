@@ -147,7 +147,7 @@ public class E2eTestingController : ControllerBase
                         UserId = teacherUser.Id,
                         CommissionRate = 0.20m,
                         Bio = "E2E Teacher Bio",
-                        Specialization = "Physics"
+                        Specialization = "FirstSecondary,SecondSecondary,SecondaryGrade3"
                     };
                     _dbContext.Set<TeacherProfile>().Add(teacherProfile);
                 }
@@ -179,7 +179,7 @@ public class E2eTestingController : ControllerBase
                         UserId = teacherUserB.Id,
                         CommissionRate = 0.20m,
                         Bio = "E2E Teacher B Bio",
-                        Specialization = "Maths"
+                        Specialization = "FirstSecondary,SecondSecondary,SecondaryGrade3"
                     };
                     _dbContext.Set<TeacherProfile>().Add(teacherProfileB);
                 }
@@ -309,7 +309,7 @@ public class E2eTestingController : ControllerBase
                 UserId = teacherUser.Id,
                 CommissionRate = 0.20m,
                 Bio = "Fallback teacher",
-                Specialization = "Maths"
+                Specialization = "FirstSecondary,SecondSecondary,SecondaryGrade3"
             };
             _dbContext.Set<TeacherProfile>().Add(teacher);
             await _dbContext.SaveChangesAsync();

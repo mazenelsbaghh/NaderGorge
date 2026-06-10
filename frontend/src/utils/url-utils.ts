@@ -1,4 +1,5 @@
 import { getSurfaceOrigins } from '@/packages/surface-runtime/config';
+import { resolveMediaUrl } from './resolve-media-url';
 
 /**
  * Resolves a relative path to an absolute URL pointing to the landing/student domain.
@@ -33,3 +34,12 @@ export function getAbsoluteLandingUrl(path: string): string {
   const mainDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || 'massar-academy.net';
   return `${protocol}//${mainDomain}${normalizedPath}`;
 }
+
+/**
+ * Resolves a relative image URL to an absolute URL pointing to the static assets or backend.
+ * Returns absolute URLs, base64 strings, or falsy inputs as-is.
+ */
+export function getImageUrl(url?: string): string {
+  return resolveMediaUrl(url);
+}
+
