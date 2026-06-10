@@ -58,6 +58,48 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
         url = `https://www.youtube.com/watch?v=${url}`;
     }
 
+    // ── Try Cobalt API First (Bypasses YouTube bot block without cookies/local binaries) ──
+    try {
+        console.log(`[Youtube-DL] Attempting extraction via Cobalt API for: ${url}`);
+        const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                url,
+                isAudioOnly: true,
+                aFormat: 'mp3',
+            }),
+        });
+
+        if (!cobaltRes.ok) {
+            throw new Error(`Cobalt returned status ${cobaltRes.status}`);
+        }
+
+        const data = (await cobaltRes.json()) as { url?: string; status?: string; text?: string };
+        if (data.status === 'error' || !data.url) {
+            throw new Error(data.text || 'Cobalt API did not return a valid download URL.');
+        }
+
+        console.log(`[Youtube-DL] Cobalt returned direct audio URL. Downloading...`);
+        const fileResponse = await fetch(data.url);
+        if (!fileResponse.ok) {
+            throw new Error(`Failed to download audio file: ${fileResponse.statusText}`);
+        }
+
+        const fileStream = fs.createWriteStream(expectedMp3);
+        const { Readable } = await import('stream');
+        const { finished } = await import('stream/promises');
+        await finished(Readable.fromWeb(fileResponse.body as any).pipe(fileStream));
+
+        console.log(`[Youtube-DL] ✅ Audio downloaded successfully via Cobalt: ${expectedMp3}`);
+        return expectedMp3;
+    } catch (cobaltErr: any) {
+        console.warn(`[Youtube-DL] Cobalt API failed (${cobaltErr.message || cobaltErr}). Falling back to local yt-dlp...`);
+    }
+
     // ── Snapshot BEFORE ──────────────────────────────────────────────────────
     const filesBefore = new Set(fs.readdirSync(tempDir));
 
