@@ -42,6 +42,14 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
+
+    - name: Run Backend Tests
+      working-directory: backend
+      env:
+        ASPNETCORE_ENVIRONMENT: Development
+        RUN_REDIS_INTEGRATION_TESTS: '1'
+        TEST_REDIS_CONNECTION: localhost:6379,abortConnect=false
+      run: dotnet test
         
     - name: Install Frontend Dependencies
       working-directory: frontend
@@ -51,18 +59,19 @@ jobs:
       working-directory: worker
       run: npm ci
 
-    - name: Build Worker
+    - name: Run Worker Tests
       working-directory: worker
       env:
         API_CALLBACK_SECRET: ci_api_callback_secret_value_1234567890
         WORKER_ADMIN_TOKEN: ci_worker_admin_token_value_1234567890
-      run: npm run build
+      run: npm test
 
     - name: Build and lint Frontend
       working-directory: frontend
       run: |
         npm run build
         npm run lint
+        npm run check:platform-events
         node scripts/check-performance-budget.js
       
     - name: Install Playwright Browsers
@@ -82,12 +91,12 @@ jobs:
       
     - name: Start Frontend
       working-directory: frontend
-      run: npm run dev &
+      run: npx next dev -p 3000 &
       
     - name: Wait for services to be ready
       run: |
         npx wait-on http://localhost:5245/api/health
-        npx wait-on http://localhost:8738
+        npx wait-on http://localhost:3000
         
     - name: Run Playwright tests
       working-directory: frontend

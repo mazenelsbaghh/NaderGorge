@@ -67,13 +67,35 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
             if (accessCode.CodeGroup.ExpiresAt.HasValue && accessCode.CodeGroup.ExpiresAt.Value < now)
                 throw new InvalidOperationException("This code group has expired.");
 
-            var consumedRows = await _db.AccessCodes
-                .Where(c => c.Id == accessCode.Id && !c.IsConsumed)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(c => c.IsConsumed, true)
-                    .SetProperty(c => c.ConsumedByUserId, user.Id)
-                    .SetProperty(c => c.ConsumedAt, now)
-                    .SetProperty(c => c.UpdatedAt, now), ct);
+            int consumedRows;
+            if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            {
+                var entry = await _db.AccessCodes.FirstOrDefaultAsync(c => c.Id == accessCode.Id && !c.IsConsumed, ct);
+                if (entry != null)
+                {
+                    entry.IsConsumed = true;
+                    entry.ConsumedByUserId = user.Id;
+                    entry.ConsumedAt = now;
+                    entry.UpdatedAt = now;
+                    _db.AccessCodes.Update(entry);
+                    await _db.SaveChangesAsync(ct);
+                    consumedRows = 1;
+                }
+                else
+                {
+                    consumedRows = 0;
+                }
+            }
+            else
+            {
+                consumedRows = await _db.AccessCodes
+                    .Where(c => c.Id == accessCode.Id && !c.IsConsumed)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(c => c.IsConsumed, true)
+                        .SetProperty(c => c.ConsumedByUserId, user.Id)
+                        .SetProperty(c => c.ConsumedAt, now)
+                        .SetProperty(c => c.UpdatedAt, now), ct);
+            }
 
             if (consumedRows != 1)
                 throw new KeyNotFoundException("Invalid or already used code");

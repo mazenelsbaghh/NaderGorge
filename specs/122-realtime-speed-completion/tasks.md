@@ -209,7 +209,7 @@ Add BEFORE the `await _db.SaveChangesAsync()` call.
 - [x] T032 Count outbox event types: `cd backend && rg "Type = " src/NaderGorge.Application --glob "*.cs" | grep -oP '"[A-Za-z]+"' | sort -u` — at least 17+ unique event types.
 - [x] T033 Run `clean-code-guard` on all modified production C# and TypeScript files.
 - [x] T034 Run `test-guard` on all modified test files.
-- [x] T035 Update `docs/realtime-platform-speed-plan-2026-06-11.md` to mark completed items.
+- [x] T035 Update `docs/realtime-platform-status-2026-06-11.md` to mark completed items.
 
 ---
 

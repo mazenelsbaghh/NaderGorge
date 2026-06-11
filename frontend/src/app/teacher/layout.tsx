@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { TeacherGuard } from "@/components/layout/TeacherGuard";
+import { StaffRealtimeBoundary } from "@/components/layout/StaffRealtimeBoundary";
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -14,7 +15,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
   return (
     <TeacherGuard>
-      {children}
+      <StaffRealtimeBoundary>{children}</StaffRealtimeBoundary>
     </TeacherGuard>
   );
 }

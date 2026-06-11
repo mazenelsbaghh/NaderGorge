@@ -3,6 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
 import { invalidateMany } from '@/lib/cache-invalidation';
+import type { StaffDataChangedPayload } from '@/lib/staff-realtime-scopes';
 
 export interface NotificationPayload {
   id: string;
@@ -146,7 +147,7 @@ export interface CodeGroupExportReadyPayload {
   codeGroupId: string;
   name: string;
   totalCodes: number;
-  codes: string[];
+  exportStatus: string;
 }
 
 export interface PurchaseCompletedPayload {
@@ -207,8 +208,6 @@ export interface PlatformEventHandlers {
   onPackageCreated?: (payload: { packageId: string; name: string; }) => void;
   onPackageUpdated?: (payload: { packageId: string; name: string; }) => void;
   onSectionCreated?: (payload: { sectionId: string; termId: string; packageId: string; title: string; }) => void;
-  onSectionUpdated?: (payload: { sectionId: string; termId: string; packageId: string; title: string; }) => void;
-  onSectionDeleted?: (payload: { sectionId: string; packageId: string; }) => void;
   onTermCreated?: (payload: { termId: string; packageId: string; title: string; }) => void;
   onTermUpdated?: (payload: { termId: string; packageId: string; title: string; }) => void;
   onTermDeleted?: (payload: { termId: string; packageId: string; }) => void;
@@ -241,6 +240,7 @@ export interface PlatformEventHandlers {
   onNotificationRead?: (payload: NotificationReadPayload) => void;
   onNotificationsCleared?: (payload: NotificationsClearedPayload) => void;
   onExamGraded?: (payload: ExamGradedPayload) => void;
+  onStaffDataChanged?: (payload: StaffDataChangedPayload) => void;
 }
 
 // Module-level connection to share across components
@@ -280,8 +280,6 @@ const listeners = {
   PackageCreated: new Set<(payload: { packageId: string; name: string; }) => void>(),
   PackageUpdated: new Set<(payload: { packageId: string; name: string; }) => void>(),
   SectionCreated: new Set<(payload: { sectionId: string; termId: string; packageId: string; title: string; }) => void>(),
-  SectionUpdated: new Set<(payload: { sectionId: string; termId: string; packageId: string; title: string; }) => void>(),
-  SectionDeleted: new Set<(payload: { sectionId: string; packageId: string; }) => void>(),
   TermCreated: new Set<(payload: { termId: string; packageId: string; title: string; }) => void>(),
   TermUpdated: new Set<(payload: { termId: string; packageId: string; title: string; }) => void>(),
   TermDeleted: new Set<(payload: { termId: string; packageId: string; }) => void>(),
@@ -314,7 +312,16 @@ const listeners = {
   NotificationRead: new Set<(payload: NotificationReadPayload) => void>(),
   NotificationsCleared: new Set<(payload: NotificationsClearedPayload) => void>(),
   ExamGraded: new Set<(payload: ExamGradedPayload) => void>(),
+  StaffDataChanged: new Set<(payload: StaffDataChangedPayload) => void>(),
 };
+
+if (typeof window !== 'undefined') {
+  (window as any).__platformEventsTesting = {
+    getSharedConnection: () => sharedConnection,
+    getActiveHooksCount: () => activeHooksCount,
+    getListeners: () => listeners,
+  };
+}
 
 export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
   const { accessToken, isAuthenticated } = useAuthStore();
@@ -471,12 +478,6 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     const onSectionCreated = (payload: { sectionId: string; termId: string; packageId: string; title: string; }) => {
       handlersRef.current?.onSectionCreated?.(payload);
     };
-    const onSectionUpdated = (payload: { sectionId: string; termId: string; packageId: string; title: string; }) => {
-      handlersRef.current?.onSectionUpdated?.(payload);
-    };
-    const onSectionDeleted = (payload: { sectionId: string; packageId: string; }) => {
-      handlersRef.current?.onSectionDeleted?.(payload);
-    };
     const onTermCreated = (payload: { termId: string; packageId: string; title: string; }) => {
       handlersRef.current?.onTermCreated?.(payload);
     };
@@ -573,6 +574,9 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     const onExamGraded = (payload: ExamGradedPayload) => {
       handlersRef.current?.onExamGraded?.(payload);
     };
+    const onStaffDataChanged = (payload: StaffDataChangedPayload) => {
+      handlersRef.current?.onStaffDataChanged?.(payload);
+    };
 
     // Add wrappers to registry sets
     listeners.NotificationCreated.add(onNotificationCreated);
@@ -601,8 +605,6 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     listeners.PackageCreated.add(onPackageCreated);
     listeners.PackageUpdated.add(onPackageUpdated);
     listeners.SectionCreated.add(onSectionCreated);
-    listeners.SectionUpdated.add(onSectionUpdated);
-    listeners.SectionDeleted.add(onSectionDeleted);
     listeners.TermCreated.add(onTermCreated);
     listeners.TermUpdated.add(onTermUpdated);
     listeners.TermDeleted.add(onTermDeleted);
@@ -635,6 +637,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
     listeners.NotificationRead.add(onNotificationRead);
     listeners.NotificationsCleared.add(onNotificationsCleared);
     listeners.ExamGraded.add(onExamGraded);
+    listeners.StaffDataChanged.add(onStaffDataChanged);
 
     const initConnection = async () => {
       if (!sharedConnection) {
@@ -945,26 +948,6 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
             invalidateMany(['content:packages']);
           } catch (e) {
             console.error('Error handling SectionCreated event:', e);
-          }
-        });
-
-        sharedConnection.on('SectionUpdated', (payloadJson: string) => {
-          try {
-            const payload = JSON.parse(payloadJson) as { sectionId: string; termId: string; packageId: string; title: string; };
-            listeners.SectionUpdated.forEach(handler => handler(payload));
-            invalidateMany(['content:packages']);
-          } catch (e) {
-            console.error('Error handling SectionUpdated event:', e);
-          }
-        });
-
-        sharedConnection.on('SectionDeleted', (payloadJson: string) => {
-          try {
-            const payload = JSON.parse(payloadJson) as { sectionId: string; packageId: string; };
-            listeners.SectionDeleted.forEach(handler => handler(payload));
-            invalidateMany(['content:packages']);
-          } catch (e) {
-            console.error('Error handling SectionDeleted event:', e);
           }
         });
 
@@ -1288,10 +1271,40 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           }
         });
 
+        sharedConnection.on('StaffDataChanged', (payloadJson: string) => {
+          try {
+            const payload = JSON.parse(payloadJson) as StaffDataChangedPayload;
+            listeners.StaffDataChanged.forEach(handler => handler(payload));
+          } catch (e) {
+            console.error('Error handling StaffDataChanged event:', e);
+          }
+        });
+
         connectionPromise = sharedConnection.start()
-          .then(() => {
+          .then(async () => {
             setIsConnected(true);
             connectionStatusListeners.forEach(listener => listener(true));
+            
+            // Join active package groups queued during connection negotiation
+            for (const packageId of activePackages) {
+              try {
+                await sharedConnection?.invoke('JoinPackage', packageId);
+                console.log(`Joined active package group on startup: ${packageId}`);
+              } catch (e) {
+                console.error(`Error joining package group ${packageId} on startup:`, e);
+              }
+            }
+
+            // Join active lesson groups queued during connection negotiation
+            for (const lessonId of activeLessons) {
+              try {
+                await sharedConnection?.invoke('JoinLesson', lessonId);
+                console.log(`Joined active lesson group on startup: ${lessonId}`);
+              } catch (e) {
+                console.error(`Error joining lesson group ${lessonId} on startup:`, e);
+              }
+            }
+
             return sharedConnection!;
           })
           .catch((err) => {
@@ -1336,6 +1349,34 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
       listeners.ExtraWatchRequestUpdated.delete(onExtraWatchRequestUpdated);
       listeners.AiJobProgress.delete(onAiJobProgress);
       listeners.PackagePublished.delete(onPackagePublished);
+      listeners.AiJobQueued.delete(onAiJobQueued);
+      listeners.AiJobCancelled.delete(onAiJobCancelled);
+      listeners.CommunityCommentCreated.delete(onCommunityCommentCreated);
+      listeners.CommunityCommentApproved.delete(onCommunityCommentApproved);
+      listeners.CommunityPostApproved.delete(onCommunityPostApproved);
+      listeners.CommunityPostLiked.delete(onCommunityPostLiked);
+      listeners.CommunityPostRejected.delete(onCommunityPostRejected);
+      listeners.CommunityCommentRejected.delete(onCommunityCommentRejected);
+      listeners.ExamPublished.delete(onExamPublished);
+      listeners.ExamResultReady.delete(onExamResultReady);
+      listeners.ExtraWatchRequestCreated.delete(onExtraWatchRequestCreated);
+      listeners.HomeworkPublished.delete(onHomeworkPublished);
+      listeners.HomeworkGraded.delete(onHomeworkGraded);
+      listeners.PackageCreated.delete(onPackageCreated);
+      listeners.PackageUpdated.delete(onPackageUpdated);
+      listeners.SectionCreated.delete(onSectionCreated);
+      listeners.TermCreated.delete(onTermCreated);
+      listeners.TermUpdated.delete(onTermUpdated);
+      listeners.TermDeleted.delete(onTermDeleted);
+      listeners.VideoUpdated.delete(onVideoUpdated);
+      listeners.VideoDeleted.delete(onVideoDeleted);
+      listeners.PackageAccessRevoked.delete(onPackageAccessRevoked);
+      listeners.VideoWatchLimitChanged.delete(onVideoWatchLimitChanged);
+      listeners.LessonManuallyUnlocked.delete(onLessonManuallyUnlocked);
+      listeners.GamificationPointsChanged.delete(onGamificationPointsChanged);
+      listeners.LessonCommentCreated.delete(onLessonCommentCreated);
+      listeners.LessonCommentApproved.delete(onLessonCommentApproved);
+      listeners.LessonCommentRejected.delete(onLessonCommentRejected);
       listeners.VideoFailed.delete(onVideoFailed);
       listeners.ExamSubmitted.delete(onExamSubmitted);
       listeners.HomeworkSubmitted.delete(onHomeworkSubmitted);
@@ -1356,6 +1397,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
       listeners.NotificationRead.delete(onNotificationRead);
       listeners.NotificationsCleared.delete(onNotificationsCleared);
       listeners.ExamGraded.delete(onExamGraded);
+      listeners.StaffDataChanged.delete(onStaffDataChanged);
 
       if (activeHooksCount <= 0 && sharedConnection) {
         const conn = sharedConnection;

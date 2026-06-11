@@ -8,6 +8,17 @@ namespace NaderGorge.API.Hubs;
 [Authorize]
 public class PlatformHub : Hub
 {
+    private static readonly HashSet<string> StaffRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Admin",
+        "Teacher",
+        "Assistant",
+        "AssistantReviewer",
+        "AssistantAcademic",
+        "Supervisor",
+        "Staff"
+    };
+
     private readonly IAccessCheckService _accessCheckService;
 
     public PlatformHub(IAccessCheckService accessCheckService)
@@ -43,6 +54,11 @@ public class PlatformHub : Hub
         if (!string.IsNullOrEmpty(role))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"Role_{role}");
+
+            if (StaffRoles.Contains(role))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, "Role_Staff");
+            }
         }
 
         await base.OnConnectedAsync();
@@ -55,7 +71,7 @@ public class PlatformHub : Hub
 
         var role = GetUserRole();
         // Admins and teachers/assistants have direct access
-        if (role == "Admin" || role == "Teacher" || role == "Assistant" || role == "AssistantReviewer" || role == "AssistantAcademic" || await _accessCheckService.HasAccessToPackageAsync(userId, packageId))
+        if (StaffRoles.Contains(role) || await _accessCheckService.HasAccessToPackageAsync(userId, packageId))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"Package_{packageId}");
         }
@@ -76,7 +92,7 @@ public class PlatformHub : Hub
 
         var role = GetUserRole();
         // Admins and teachers/assistants have direct access
-        if (role == "Admin" || role == "Teacher" || role == "Assistant" || role == "AssistantReviewer" || role == "AssistantAcademic" || await _accessCheckService.HasAccessToLessonAsync(userId, lessonId))
+        if (StaffRoles.Contains(role) || await _accessCheckService.HasAccessToLessonAsync(userId, lessonId))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"Lesson_{lessonId}");
         }

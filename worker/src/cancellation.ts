@@ -3,7 +3,7 @@ import { Redis } from 'ioredis';
 
 const DEFAULT_REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const CANCELLATION_TTL_SECONDS = 24 * 60 * 60;
-const cancellationRedis = new Redis(DEFAULT_REDIS_URL);
+const cancellationRedis = new Redis(DEFAULT_REDIS_URL, { lazyConnect: true });
 
 function cancellationKey(jobId: string | number) {
   return `cancelled-jobs:${jobId}`;

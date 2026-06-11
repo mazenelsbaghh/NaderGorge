@@ -403,7 +403,7 @@ public class E2eTestingController : ControllerBase
 
         await _dbContext.SaveChangesAsync();
 
-        return Ok(new { PackageId = packageId, LessonId = lessonId, Lesson2Id = lesson2Id, ExamId = examId, EssayExamId = essayExamId, HomeworkId = homeworkId, TeacherId = teacher.Id, TeacherPhone = teacher.User?.PhoneNumber });
+        return Ok(new { PackageId = packageId, TermId = termId, LessonId = lessonId, Lesson2Id = lesson2Id, ExamId = examId, EssayExamId = essayExamId, HomeworkId = homeworkId, TeacherId = teacher.Id, TeacherPhone = teacher.User?.PhoneNumber });
     }
 
     [HttpPost("grant-package")]
@@ -531,8 +531,7 @@ public class E2eTestingController : ControllerBase
         var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
         return env.Equals("E2e", StringComparison.OrdinalIgnoreCase) ||
                connectionString.Contains("e2e", StringComparison.OrdinalIgnoreCase) ||
-               connectionString.Contains("test", StringComparison.OrdinalIgnoreCase) ||
-               connectionString.Contains("masar_platform", StringComparison.OrdinalIgnoreCase);
+               connectionString.Contains("test", StringComparison.OrdinalIgnoreCase);
     }
 }
 
@@ -561,4 +560,3 @@ public class SetRolePermissionsRequest
     public string RoleName { get; set; } = "";
     public List<string> Permissions { get; set; } = new();
 }
-

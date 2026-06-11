@@ -215,6 +215,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(a => a.Action);
             e.HasIndex(a => a.EntityType);
             e.HasIndex(a => a.CreatedAt);
+            e.HasIndex(a => new { a.PerformedByUserId, a.CreatedAt });
             e.Property(a => a.Action).HasMaxLength(100).IsRequired();
             e.Property(a => a.EntityType).HasMaxLength(100).IsRequired();
             e.Property(a => a.IpAddress).HasMaxLength(45);
@@ -400,6 +401,8 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(lc => lc.LessonId);
             e.HasIndex(lc => lc.Status);
             e.HasIndex(lc => lc.CreatedAt);
+            e.HasIndex(lc => new { lc.LessonId, lc.CreatedAt });
+            e.HasIndex(lc => new { lc.Status, lc.CreatedAt });
             e.HasOne(lc => lc.Lesson)
                 .WithMany(l => l.Comments)
                 .HasForeignKey(lc => lc.LessonId)
@@ -1195,6 +1198,11 @@ public class AppDbContext : DbContext, IAppDbContext
                 })
             };
             OutboxEvents.Add(outboxEvent);
+        }
+
+        if (Database.IsRelational() && StaffRealtimeChangeDetector.CreateEvent(ChangeTracker) is { } staffEvent)
+        {
+            OutboxEvents.Add(staffEvent);
         }
 
         return base.SaveChangesAsync(cancellationToken);

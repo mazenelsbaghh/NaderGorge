@@ -9,6 +9,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { adminMenuItems } from "@/packages/admin";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import { useAuthStore } from "@/stores/auth-store";
+import { StaffRealtimeBoundary } from "@/components/layout/StaffRealtimeBoundary";
 
 const ROUTE_PERMISSIONS = [
   { pattern: /^\/admin\/users(\/|$)/, permissions: ['users.manage'] },
@@ -92,17 +93,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AdminGuard>
       <PermissionGuard>
-        {usesStandaloneShell ? (
-          <main>{children}</main>
-        ) : (
-          <div className="flex">
-            <Sidebar items={filteredMenuItems} title="لوحة الإدارة" />
-            <div className="flex-1">
-              <Breadcrumbs />
-              <main className="p-6">{children}</main>
+        <StaffRealtimeBoundary>
+          {usesStandaloneShell ? (
+            <main>{children}</main>
+          ) : (
+            <div className="flex">
+              <Sidebar items={filteredMenuItems} title="لوحة الإدارة" />
+              <div className="flex-1">
+                <Breadcrumbs />
+                <main className="p-6">{children}</main>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </StaffRealtimeBoundary>
       </PermissionGuard>
     </AdminGuard>
   );

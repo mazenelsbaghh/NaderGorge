@@ -207,6 +207,7 @@ app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseCors("FrontendPolicy");
 app.UseOutputCache();
+app.UseWebSockets();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<RedisRateLimitingMiddleware>();
