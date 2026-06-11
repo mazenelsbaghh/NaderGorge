@@ -17,7 +17,7 @@ SERVER_PASS="MazenElsbagh.12"
 SERVER_APP_DIR="/var/www/nadergorge"
 SERVER_GIT_DIR="/var/www/nadergorge.git"
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=15"
+SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=15 -o PreferredAuthentications=password"
 SSH_CMD="sshpass -p '${SERVER_PASS}' ssh ${SSH_OPTS} ${SERVER_USER}@${SERVER_HOST}"
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
