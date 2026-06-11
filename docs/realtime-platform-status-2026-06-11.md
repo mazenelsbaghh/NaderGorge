@@ -211,7 +211,7 @@
 
 - [ ] قياس compressed وuncompressed HTTP wire bytes بشكل منفصل.
 - [ ] إعادة EXPLAIN على dataset أكبر يمثل production وتوثيق p95/p99 بدل single execution فقط.
-- [ ] إضافة composite indexes لـ `(LessonId, CreatedAt)`, `(Status, CreatedAt)`, `(PerformedByUserId, CreatedAt)` إذا أثبت القياس الكبير استمرار sort cost.
+- [x] إضافة composite indexes لـ `(LessonId, CreatedAt)`, `(Status, CreatedAt)`, `(PerformedByUserId, CreatedAt)` إذا أثبت القياس الكبير استمرار sort cost.
 
 ## أوامر التحقق
 
