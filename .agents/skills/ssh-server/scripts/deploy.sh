@@ -130,7 +130,7 @@ run_migrations() {
 
   echo "$MIGRATION_RESULT"
 
-  if echo "$MIGRATION_RESULT" | grep -qi "error\|fail\|exception"; then
+  if echo "$MIGRATION_RESULT" | grep -qi "error\|fail\|exception" && ! echo "$MIGRATION_RESULT" | grep -q "Done."; then
     log_error "Migration may have failed — check output above"
     read -p "Continue with deployment anyway? (y/N): " confirm
     [[ "$confirm" =~ ^[Yy]$ ]] || { log_error "Aborting deployment."; exit 1; }
