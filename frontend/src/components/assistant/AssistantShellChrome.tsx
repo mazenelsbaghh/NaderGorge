@@ -112,6 +112,13 @@ export function AssistantShellChrome({
     !item.permission || hasPermission(item.permission)
   );
 
+  const getWorkspaceLabel = () => {
+    const roles = user?.roles || [];
+    if (roles.includes('Supervisor')) return 'مساحة المشرفين';
+    if (roles.includes('Staff')) return 'مساحة الموظفين';
+    return 'مساحة المساعدين';
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setShowBackdrop(true);
@@ -163,7 +170,7 @@ export function AssistantShellChrome({
               <BookOpenText className="h-5 w-5" />
             </div>
             <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-text)] self-center mr-3 truncate whitespace-nowrap">
-              مساحة المساعدين
+              {getWorkspaceLabel()}
             </span>
           </div>
 
@@ -277,7 +284,7 @@ export function AssistantShellChrome({
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-white shadow-md">
                   <BookOpenText className="h-5 w-5" />
                 </div>
-                <span className="text-sm font-bold text-[var(--admin-text)]">مساحة المساعدين</span>
+                <span className="text-sm font-bold text-[var(--admin-text)]">{getWorkspaceLabel()}</span>
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}

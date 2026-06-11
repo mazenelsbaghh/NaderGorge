@@ -6,6 +6,7 @@ import { X, Shield, Activity, Calendar, User, Loader2, Database } from 'lucide-r
 import { adminService, UserAuditLogDto, AdminUserListDto } from '@/services/admin-service';
 import { getInitials, formatRelativeDate } from '@/components/admin/admin-utils';
 import toast from 'react-hot-toast';
+import { translateRole } from '@/packages/brand';
 
 interface AssistantProfileModalProps {
   open: boolean;
@@ -164,7 +165,7 @@ export function AssistantProfileModal({ open, onClose, assistant }: AssistantPro
                     <div>
                       <p className="text-xs text-[var(--admin-muted)]">الدور والصلاحيات</p>
                       <p className="text-sm font-bold text-[var(--admin-text)]">
-                        {assistant.roles.join('، ') || 'مساعد تعليمي'}
+                        {assistant.roles.map(translateRole).join('، ') || 'مساعد تعليمي'}
                       </p>
                     </div>
                   </div>

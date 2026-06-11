@@ -34,6 +34,7 @@ import {
 import { AdminUserListDto, adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { translateRole } from '@/packages/brand';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -203,7 +204,7 @@ export default function AdminAssistantsPageClient() {
       label: 'الأدوار والصلاحيات',
       render: (u) => (
         <span className="text-sm font-bold text-[var(--admin-text)]">
-          {u.roles.filter(r => r !== 'Assistant').join(', ') || 'مساعد تعليمي عام'}
+          {u.roles.map(translateRole).join('، ') || 'مساعد تعليمي عام'}
         </span>
       ),
     },
