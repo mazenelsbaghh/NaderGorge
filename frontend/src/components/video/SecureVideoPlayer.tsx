@@ -659,7 +659,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         onClick={loadVideo}
         aria-label="تحميل وتشغيل الفيديو"
       >
-        <div className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-30 transition-opacity" style={{ backgroundImage: "url('/images/lesson-placeholder.jpg')" }}></div>
+        <div className="absolute inset-0 bg-cover bg-center opacity-40 group-hover:opacity-30 transition-opacity" style={{ backgroundImage: "url('/images/lesson-placeholder.webp')" }}></div>
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-30 flex items-center justify-center transition-all duration-300 pointer-events-auto">
           <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform group-hover:scale-110 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer">
             <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />

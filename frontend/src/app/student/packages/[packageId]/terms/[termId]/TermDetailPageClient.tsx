@@ -243,7 +243,7 @@ export default function TermDetailPageClient() {
         className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-2xl lg:min-h-[26rem]"
       >
         <Image
-          src={pkg?.imageUrl || "/images/default-package.png"}
+          src={pkg?.imageUrl || "/images/default-package.webp"}
           alt={term?.title || "ترم"}
           fill
           priority

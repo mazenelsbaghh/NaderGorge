@@ -187,7 +187,7 @@ export default function PackageProfilePageClient() {
         style={{ viewTransitionName: `pkg-image-${packageId}` }}
       >
         <Image
-          src={pkg?.imageUrl || "/images/default-package.png"}
+          src={pkg?.imageUrl || "/images/default-package.webp"}
           alt={pkg?.name || "باقة"}
           fill
           priority

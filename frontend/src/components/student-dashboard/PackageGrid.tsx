@@ -80,7 +80,7 @@ export function PackageGrid({
                       style={{ viewTransitionName: `pkg-image-${pkg.id}` }}
                     >
                       <Image 
-                        src={pkg.imageUrl || '/images/default-package.png'} 
+                        src={pkg.imageUrl || '/images/default-package.webp'} 
                         alt={pkg.name} 
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
