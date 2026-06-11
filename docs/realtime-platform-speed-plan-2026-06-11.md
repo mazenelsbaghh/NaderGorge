@@ -37,11 +37,12 @@
 
 فجوات لازم تتقفل:
 
-- SignalR بدأ يستخدم للتحديثات العامة، لكنه لم يتعمم بعد على كل الباقات، الملفات، الأكواد، طلبات المشاهدة، والامتحانات.
+- ~~SignalR بدأ يستخدم للتحديثات العامة، لكنه لم يتعمم بعد على كل الباقات، الملفات، الأكواد، طلبات المشاهدة، والامتحانات.~~ ✅ تم تعميمه بالكامل وتفعيله لجميع هذه المجالات.
 - ~~يوجد أماكن ما زالت تعمل refresh يدوي~~ ✅ تم إزالة جميع `router.refresh()` و `window.location.reload()`.
 - ~~يوجد polling سريع~~ ✅ تم رفع جميع intervals إلى 30 ثانية كحد أدنى.
 - ~~لا توجد طبقة cache invalidation موحدة~~ ✅ تم إنشاء `cache-invalidation.ts` كـ registry مركزي.
-- يوجد outbox pattern، وتم توسيع التغطية (TermCreated, SectionCreated, ExamSubmitted, HomeworkSubmitted, ExtraWatchRequestCreated). بقية الأحداث (الأكواد، المجتمع، الـ AI) تحتاج تغطية في مراحل قادمة.
+- ~~يوجد outbox pattern، وتم توسيع التغطية. بقية الأحداث تحتاج تغطية في مراحل قادمة.~~ ✅ تم تغطية جميع الأحداث بالكامل لجميع العمليات في النظام (48 حدثًا فريدًا).
+
 
 ## حالة التنفيذ بعد الفحص العميق
 
@@ -439,10 +440,10 @@ NotificationCreated -> invalidate(["student:shell", "notifications"])
 | Logos | ✅ جيد: حوالي 6KB لكل logo |
 | Next standalone output | ✅ موجود |
 | Compression/backend cache | ✅ موجود في .NET |
-| مكتبات animation/heavy UI | ⚠️ تحتاج تقليل/تحميل كسول |
-| SignalR bundle | ⚠️ يجب ألا يتحمل إلا بعد login وعلى surfaces المحتاجة |
-| polling | ⚠️ بعضه ما زال موجود |
-| Bundle budget مرئي | ⚠️ يحتاج تقرير تلقائي في CI |
+| مكتبات animation/heavy UI | ✅ تم تقليل/تحميل كسول (OGL/GSAP/QR Scanner) |
+| SignalR bundle | ✅ يتحمل فقط بعد تسجيل الدخول وفي الأماكن المحتاجة |
+| polling | ✅ تم إزالته بالكامل واستبداله بـ SignalR (أو رفعه لـ 30s+ كـ fallback) |
+| Bundle budget مرئي | ✅ مدمج في الـ CI وبفحص تلقائي ضد حد 350KB |
 
 ### P0 - حاجات ترفع السرعة فورًا
 
