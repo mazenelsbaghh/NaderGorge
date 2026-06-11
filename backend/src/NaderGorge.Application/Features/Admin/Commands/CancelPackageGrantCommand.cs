@@ -108,6 +108,19 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
             }
         }
 
+        var accessRevokedEvent = new OutboxEvent
+        {
+            Type = "PackageAccessRevoked",
+            TargetUserId = grant.UserId.ToString(),
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                packageId = grant.PackageId,
+                packageName = packageName,
+                userId = grant.UserId
+            })
+        };
+        _context.OutboxEvents.Add(accessRevokedEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         var successMessage = refundedAmount > 0m

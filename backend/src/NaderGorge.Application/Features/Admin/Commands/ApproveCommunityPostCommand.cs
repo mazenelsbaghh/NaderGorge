@@ -55,6 +55,7 @@ public class ApproveCommunityPostCommandHandler : IRequestHandler<ApproveCommuni
         var outboxEvent = new OutboxEvent
         {
             Type = "CommunityPostApproved",
+            TargetGroup = "Public",
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 postId = post.Id,

@@ -17,6 +17,7 @@ export interface PackageDto {
   subjectName?: string;
   teacherBio?: string;
   teacherSpecialization?: string;
+  targetGrade?: string;
 }
 
 export interface TermDto {

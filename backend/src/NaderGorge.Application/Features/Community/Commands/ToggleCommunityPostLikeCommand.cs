@@ -58,6 +58,7 @@ public class ToggleCommunityPostLikeCommandHandler : IRequestHandler<ToggleCommu
         var outboxEvent = new OutboxEvent
         {
             Type = "CommunityPostLiked",
+            TargetGroup = "Public",
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 postId = request.PostId,

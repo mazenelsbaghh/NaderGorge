@@ -31,6 +31,7 @@ import {
   type TermDto,
 } from "@/services/content-service";
 import { usePlatformEvents } from "@/hooks/usePlatformEvents";
+import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
 
 /* ─── Stagger helpers ─────────────────────────────────────────────────── */
 const stagger = {
@@ -226,7 +227,13 @@ export default function TermDetailPageClient() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+    if (termId) {
+      registerCacheStore(`content:term:${termId}`, () => {}, load);
+      return () => {
+        unregisterCacheStore(`content:term:${termId}`);
+      };
+    }
+  }, [load, termId]);
 
   const isEnrolled = pkg?.isEnrolled ?? false;
 

@@ -52,6 +52,18 @@ public class ManualUnlockCommandHandler : IRequestHandler<ManualUnlockCommand, A
             IpAddress = "System"
         });
 
+        var unlockEvent = new OutboxEvent
+        {
+            Type = "LessonManuallyUnlocked",
+            TargetUserId = request.StudentId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonId = request.LessonId,
+                studentId = request.StudentId
+            })
+        };
+        _db.OutboxEvents.Add(unlockEvent);
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse.Ok("Lesson successfully unlocked for student.");

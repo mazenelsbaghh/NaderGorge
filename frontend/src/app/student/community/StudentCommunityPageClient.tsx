@@ -10,6 +10,7 @@ import {
 import { CommunityFeed } from '@/components/student/CommunityFeed';
 import { CommunityPostComposer } from '@/components/student/CommunityPostComposer';
 import { MyCommunityPostsPanel } from '@/components/student/MyCommunityPostsPanel';
+import { registerCacheStore, unregisterCacheStore } from '@/lib/cache-invalidation';
 
 export default function StudentCommunityPageClient() {
   const [posts, setPosts] = useState<CommunityPostFeedDto[]>([]);
@@ -36,6 +37,13 @@ export default function StudentCommunityPageClient() {
 
   useEffect(() => {
     void loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    registerCacheStore('community:posts', () => {}, loadData);
+    return () => {
+      unregisterCacheStore('community:posts');
+    };
   }, [loadData]);
 
   return (

@@ -7,6 +7,8 @@ import { studentService, StudentNotificationDto } from "@/services/student-servi
 import { useStudentTheme } from "@/hooks/useStudentTheme";
 import { fadeSlideUp } from "@/lib/motion";
 
+import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+
 export default function StudentNotificationsPageClient() {
   const { isReady } = useStudentTheme();
   const [notifications, setNotifications] = useState<StudentNotificationDto[]>([]);
@@ -24,6 +26,10 @@ export default function StudentNotificationsPageClient() {
 
   useEffect(() => {
     fetchNotifications();
+    registerCacheStore('notifications', () => {}, fetchNotifications);
+    return () => {
+      unregisterCacheStore('notifications');
+    };
   }, []);
 
   const handleMarkAsRead = async (id: string) => {

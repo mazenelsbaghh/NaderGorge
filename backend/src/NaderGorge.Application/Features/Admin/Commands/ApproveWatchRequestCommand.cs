@@ -72,6 +72,7 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
             TargetUserId = req.UserId.ToString(),
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
+                lessonId = req.LessonVideo.LessonId,
                 videoId = req.LessonVideoId,
                 status = "Approved",
                 allowedWatchCount = watchEvent?.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount

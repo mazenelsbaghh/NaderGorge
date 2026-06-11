@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { LessonViewer } from "@/components/content/LessonViewer";
 import { contentService, type LessonDetailDto } from "@/services/content-service";
 import { usePlatformEvents } from "@/hooks/usePlatformEvents";
+import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
 
 export default function LessonDetailPageClient() {
   const params = useParams();
@@ -43,7 +44,13 @@ export default function LessonDetailPageClient() {
 
   useEffect(() => {
     fetchLessonDetail();
-  }, [fetchLessonDetail]);
+    if (lessonId) {
+      registerCacheStore(`content:lesson:${lessonId}`, () => {}, fetchLessonDetail);
+      return () => {
+        unregisterCacheStore(`content:lesson:${lessonId}`);
+      };
+    }
+  }, [fetchLessonDetail, lessonId]);
 
   const { joinLesson, leaveLesson } = usePlatformEvents({
     onVideoReady: (payload) => {

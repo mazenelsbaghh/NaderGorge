@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
   generateStudentContext,
-  authenticateE2E,
 } from '../fixtures/auth-helpers';
 
 test.describe('US1: Codes & Wallet Lifecycle', () => {

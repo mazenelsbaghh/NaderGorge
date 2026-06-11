@@ -52,7 +52,7 @@ export function LessonViewer({
           setLoadingResources(false);
         });
     }
-  }, [lesson.id]);
+  }, [lesson]);
 
   const handleResourceClick = async (e: React.MouseEvent, resourceId: string) => {
     e.preventDefault();

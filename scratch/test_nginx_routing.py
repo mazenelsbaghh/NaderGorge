@@ -18,11 +18,11 @@ def main():
         
     commands = [
         # Check Nginx locally with Host header on HTTP
-        "curl -I -H 'Host: bsma-academy.com' http://localhost/uploads/avatars/einstein.png",
+        "curl -I -H 'Host: bsma-academy.com' http://localhost/uploads/avatars/einstein.webp",
         # Check Nginx locally with Host header on HTTPS (using -k)
-        "curl -I -k https://127.0.0.1/uploads/avatars/einstein.png -H 'Host: bsma-academy.com'",
+        "curl -I -k https://127.0.0.1/uploads/avatars/einstein.webp -H 'Host: bsma-academy.com'",
         # Check admin domain too
-        "curl -I -k https://127.0.0.1/uploads/avatars/einstein.png -H 'Host: admin.bsma-academy.com'"
+        "curl -I -k https://127.0.0.1/uploads/avatars/einstein.webp -H 'Host: admin.bsma-academy.com'"
     ]
     
     for cmd in commands:

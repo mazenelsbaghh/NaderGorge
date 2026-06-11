@@ -85,8 +85,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
                 return new StudentExamResultSummaryDto(
                     a.UserId,
-                    a.User.FullName,
-                    a.User.PhoneNumber,
+                    a.User?.FullName ?? "طالب محذوف",
+                    a.User?.PhoneNumber ?? "غير متوفر",
                     a.StartedAt,
                     a.CreatedAt,
                     score,
@@ -100,8 +100,8 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
             .OrderBy(eq => eq.Order)
             .Select(eq => new ExamQuestionSummaryDto(
                 eq.Id,
-                eq.Question.Text,
-                eq.Question.Type.ToString(),
+                eq.Question?.Text ?? "سؤال محذوف",
+                eq.Question?.Type.ToString() ?? "Essay",
                 eq.Points,
                 eq.Question is FindTheMistakeQuestion ftm ? ftm.BaseText : null
             )).ToList();

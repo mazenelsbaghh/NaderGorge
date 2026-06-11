@@ -53,6 +53,36 @@ public class ApproveLessonCommentCommandHandler
             NewValues = $"Status={LessonCommentStatus.Approved};ReviewedAt={comment.ReviewedAt:O}",
         });
 
+        var lessonEvent = new OutboxEvent
+        {
+            Type = "LessonCommentApproved",
+            TargetGroup = $"Lesson_{comment.LessonId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                commentId = comment.Id,
+                lessonId = comment.LessonId,
+                authorUserId = comment.AuthorUserId,
+                body = comment.Body,
+                status = comment.Status.ToString()
+            })
+        };
+        _context.OutboxEvents.Add(lessonEvent);
+
+        var authorEvent = new OutboxEvent
+        {
+            Type = "LessonCommentApproved",
+            TargetUserId = comment.AuthorUserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                commentId = comment.Id,
+                lessonId = comment.LessonId,
+                authorUserId = comment.AuthorUserId,
+                body = comment.Body,
+                status = comment.Status.ToString()
+            })
+        };
+        _context.OutboxEvents.Add(authorEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<ModerateLessonCommentResponse>.Ok(

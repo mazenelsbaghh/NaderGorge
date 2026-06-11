@@ -1,5 +1,6 @@
 using MediatR;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -36,6 +37,21 @@ public class RejectCommunityCommentCommandHandler
         comment.RejectionReason = trimmedReason;
         comment.ReviewedAt = DateTime.UtcNow;
         comment.ReviewedByUserId = request.ReviewerUserId;
+
+        var authorEvent = new OutboxEvent
+        {
+            Type = "CommunityCommentRejected",
+            TargetUserId = comment.AuthorUserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                commentId = comment.Id,
+                postId = comment.PostId,
+                authorUserId = comment.AuthorUserId,
+                status = comment.Status.ToString(),
+                reason = comment.RejectionReason
+            })
+        };
+        _db.OutboxEvents.Add(authorEvent);
 
         await _db.SaveChangesAsync(ct);
 

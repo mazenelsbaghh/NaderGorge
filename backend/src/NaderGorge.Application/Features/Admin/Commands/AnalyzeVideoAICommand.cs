@@ -7,7 +7,7 @@ using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record AnalyzeVideoAICommand(Guid VideoId) : IRequest<ApiResponse>;
+public record AnalyzeVideoAICommand(Guid VideoId, Guid AdminId) : IRequest<ApiResponse>;
 
 public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAICommand, ApiResponse>
 {
@@ -60,16 +60,37 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
                 teacherPhotoUrl = teacherPhotoUrl
             });
 
-            var outboxEvent = new OutboxEvent
+            var adminEvent = new OutboxEvent
             {
                 Type = "AiJobQueued",
+                TargetGroup = "Role_Admin",
                 PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
                 {
                     lessonVideoId = video.Id,
                     jobType = "analyze-chapters"
                 })
             };
-            _db.OutboxEvents.Add(outboxEvent);
+            _db.OutboxEvents.Add(adminEvent);
+
+            var teacherUserId = await _db.LessonVideos
+                .Where(v => v.Id == video.Id)
+                .Select(v => (string?)v.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
+                .FirstOrDefaultAsync(ct);
+
+            if (teacherUserId != null)
+            {
+                var teacherEvent = new OutboxEvent
+                {
+                    Type = "AiJobQueued",
+                    TargetUserId = teacherUserId,
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        lessonVideoId = video.Id,
+                        jobType = "analyze-chapters"
+                    })
+                };
+                _db.OutboxEvents.Add(teacherEvent);
+            }
             await _db.SaveChangesAsync(ct);
         }
         catch

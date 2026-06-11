@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { stagger, fadeSlideUp } from "@/lib/motion";
@@ -20,6 +20,7 @@ import { useStudentTheme } from "@/hooks/useStudentTheme";
 import { studentService, type DashboardDto, type QuickAccessItemDto } from "@/services/student-service";
 import { useAuthStore } from "@/stores/auth-store";
 import { RegistrationInstructionsModal } from "@/components/registration/RegistrationInstructionsModal";
+import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
 
 const pageStagger = stagger(100);
 
@@ -66,7 +67,7 @@ export default function StudentDashboardClient() {
     setShowInstructionsOnboard(false);
   };
 
-  useEffect(() => {
+  const fetchDashboard = useCallback(() => {
     Promise.all([
       studentService.getDashboard(),
       studentService.getQuickAccess(),
@@ -78,6 +79,17 @@ export default function StudentDashboardClient() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
+  useEffect(() => {
+    registerCacheStore('student:exams', () => {}, fetchDashboard);
+    return () => {
+      unregisterCacheStore('student:exams');
+    };
+  }, [fetchDashboard]);
 
   if (loading) {
     return (

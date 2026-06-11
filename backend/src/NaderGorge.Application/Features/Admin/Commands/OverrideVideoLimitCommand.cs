@@ -81,6 +81,20 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
         };
         _context.AuditLogs.Add(audit);
 
+        var limitChangedEvent = new OutboxEvent
+        {
+            Type = "VideoWatchLimitChanged",
+            TargetUserId = request.UserId.ToString(),
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                userId = request.UserId,
+                videoId = request.VideoId,
+                newLimit = watchEvent.CustomMaxWatchCount.Value,
+                lessonId = watchEvent.LessonVideo.LessonId
+            })
+        };
+        _context.OutboxEvents.Add(limitChangedEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse.Ok("Video limit overridden successfully.");

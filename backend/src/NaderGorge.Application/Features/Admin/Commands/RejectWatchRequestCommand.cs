@@ -21,6 +21,7 @@ public class RejectWatchRequestCommandHandler : IRequestHandler<RejectWatchReque
     public async Task<ApiResponse<bool>> Handle(RejectWatchRequestCommand request, CancellationToken cancellationToken)
     {
         var req = await _context.ExtraWatchRequests
+            .Include(r => r.LessonVideo)
             .FirstOrDefaultAsync(r => r.Id == request.RequestId, cancellationToken);
 
         if (req == null)
@@ -44,6 +45,7 @@ public class RejectWatchRequestCommandHandler : IRequestHandler<RejectWatchReque
             TargetUserId = req.UserId.ToString(),
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
+                lessonId = req.LessonVideo.LessonId,
                 videoId = req.LessonVideoId,
                 status = "Rejected",
                 allowedWatchCount = 0

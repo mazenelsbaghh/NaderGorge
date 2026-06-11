@@ -6,7 +6,7 @@ using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CancelAnalyzeVideoAICommand(Guid VideoId, bool IsMindmapOnly = false) : IRequest<bool>;
+public record CancelAnalyzeVideoAICommand(Guid VideoId, Guid AdminId, bool IsMindmapOnly = false) : IRequest<bool>;
 
 public class CancelAnalyzeVideoAICommandHandler : IRequestHandler<CancelAnalyzeVideoAICommand, bool>
 {
@@ -44,16 +44,37 @@ public class CancelAnalyzeVideoAICommandHandler : IRequestHandler<CancelAnalyzeV
             }
         }
 
-        var outboxEvent = new OutboxEvent
+        var teacherUserId = await _context.LessonVideos
+            .Where(v => v.Id == video.Id)
+            .Select(v => (string?)v.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var adminEvent = new OutboxEvent
         {
             Type = "AiJobCancelled",
+            TargetGroup = "Role_Admin",
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 lessonVideoId = video.Id,
                 isMindmapOnly = request.IsMindmapOnly
             })
         };
-        _context.OutboxEvents.Add(outboxEvent);
+        _context.OutboxEvents.Add(adminEvent);
+
+        if (teacherUserId != null)
+        {
+            var teacherEvent = new OutboxEvent
+            {
+                Type = "AiJobCancelled",
+                TargetUserId = teacherUserId,
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    lessonVideoId = video.Id,
+                    isMindmapOnly = request.IsMindmapOnly
+                })
+            };
+            _context.OutboxEvents.Add(teacherEvent);
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

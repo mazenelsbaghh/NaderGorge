@@ -4,6 +4,8 @@
 
 الهدف: أي حاجة تتضاف أو تتغير في المنصة "تسمع" فورًا عند المستخدمين من غير ما الطالب أو المدرس أو الأدمن يدوس تحديث الصفحة أو زر تحديث المهام. وفي نفس الوقت المنصة تبقى أسرع ومحميّة من الضغط والتكرار.
 
+> **تنبيه تدقيق:** الجداول القديمة داخل هذا الملف تسجل مراحل تنفيذ سابقة، وبعضها يعلن اكتمال 100% بصورة غير دقيقة. قسم **"التدقيق المصحح والحالة الفعلية"** في نهاية الملف هو المرجع الحالي ويحل محل أي نسبة أو inventory متعارض قبله.
+
 ## الخلاصة
 
 المشكلة ليست في زر تحديث واحد. المطلوب طبقة تحديث لحظي عامة:
@@ -37,16 +39,18 @@
 
 فجوات لازم تتقفل:
 
-- ~~SignalR بدأ يستخدم للتحديثات العامة، لكنه لم يتعمم بعد على كل الباقات، الملفات، الأكواد، طلبات المشاهدة، والامتحانات.~~ ✅ تم تعميمه بالكامل وتفعيله لجميع هذه المجالات.
+- SignalR يغطي كل الـ 58 producer الحالية؛ يوجد listenerان احتياطيان بلا producer (`SectionUpdated`, `SectionDeleted`).
 - ~~يوجد أماكن ما زالت تعمل refresh يدوي~~ ✅ تم إزالة جميع `router.refresh()` و `window.location.reload()`.
 - ~~يوجد polling سريع~~ ✅ تم رفع جميع intervals إلى 30 ثانية كحد أدنى.
-- ~~لا توجد طبقة cache invalidation موحدة~~ ✅ تم إنشاء `cache-invalidation.ts` كـ registry مركزي.
-- ~~يوجد outbox pattern، وتم توسيع التغطية. بقية الأحداث تحتاج تغطية في مراحل قادمة.~~ ✅ تم تغطية جميع الأحداث بالكامل لجميع العمليات في النظام (48 حدثًا فريدًا).
+- تم إنشاء `cache-invalidation.ts` وتسجيل packages/shell/lesson/comments/term/notifications/balance/exams/community/AI monitor.
+- يوجد 58 event producer في backend، وكلها مرتبطة بـ frontend listeners؛ الاختبارات العقدية end-to-end ما زالت ناقصة.
 
 
-## حالة التنفيذ بعد الفحص العميق
+## سجل تنفيذ سابق (غير معتمد بعد التدقيق المصحح)
 
 آخر فحص: 2026-06-11 الساعة 22:35 بتوقيت القاهرة.
+
+> هذا القسم محفوظ كتاريخ للتنفيذ. الحالات والنسب هنا لا تستخدم كمرجع نهائي؛ راجع قسم **"التدقيق المصحح والحالة الفعلية"**.
 
 ### تحقق نجح
 
@@ -103,7 +107,7 @@
 | `X-Accel-Redirect` للملفات local | ✅ مخلص | يتم توجيه الملفات المحمية داخليًا عبر Nginx مع إضافة حماية ضد الـ Path Traversal باستخدام `Path.GetFullPath`. |
 | Redis-backed rate limiting عام | ✅ مخلص | تم بناء Middleware موزع باستخدام Redis Lua script مدمج في خط الأنابيب بعد الـ Auth مباشرة لفرز المستخدمين بدقة. |
 
-### inventory أحداث Outbox — حالة كل event
+### Inventory سابق لأحداث Outbox
 
 | المجال | الحدث | الحالة | المصدر في الكود |
 |---|---|---|---|
@@ -161,7 +165,7 @@
 | AI | `AiJobFailed` | ✅ مخلص | `AiProgressCommand.cs` |
 | AI | `AiJobCancelled` | ✅ مخلص | `CancelAnalyzeVideoAICommand.cs` |
 
-الإجمالي: **47 event مخلص** من أصل **47 event مطلوب** = **100%** (تمت تغطية جميع الأحداث والطلبات بالكامل).
+هذا الإحصاء قديم وغير معتمد. الجرد المصحح: **58 producer type**، وكلها لها frontend listeners.
 
 القاعدة: أي command يضيف أو يعدل أو يحذف حاجة لها أثر على شاشة مستخدم لازم يضيف `OutboxEvent` في نفس transaction.
 
@@ -638,13 +642,13 @@ Endpoints الأكثر أهمية:
 6. ~~إضافة Redis idempotency للعمليات الحساسة.~~ ✅ مخلص
 7. ~~Lazy loading لـ OGL/GSAP/QR Scanner.~~ ✅ مخلص
 8. ~~تقسيم Lesson Detail response.~~ ✅ مخلص
-9. ~~Batch shell updates.~~ ✅ مخلص
+9. ~~Batch shell updates.~~ ✅ balance والإشعارات يتم تحديثهما incremental.
 
 ### P2 - تحسينات أداء مستمرة
 
 1. ~~slow endpoint logging.~~ ✅ مخلص
 2. ~~slow query logging.~~ ✅ مخلص
-3. ~~مراجعة الفهارس بـ `EXPLAIN ANALYZE`.~~ ✅ مخلص
+3. مراجعة الفهارس بـ `EXPLAIN ANALYZE`. ⚠️ يوجد smoke report بصفوف صفرية؛ يلزم تشغيل representative data.
 4. ~~bundle analyzer للواجهة.~~ ✅ مخلص
 5. ~~performance budget في CI.~~ ✅ مخلص
 6. ~~Web Vitals logging (LCP/INP/CLS).~~ ✅ مخلص
@@ -672,90 +676,212 @@ rg -n "Include\\(|ToListAsync\\(|FirstOrDefaultAsync\\(" src/NaderGorge.Applicat
 
 ---
 
-## ملخص التدقيق — 2026-06-11 الساعة 23:45 (تحديث بعد إتمام المرحلة الثانية)
+## التدقيق المصحح والحالة الفعلية
 
-### نسب الإنجاز
+آخر فحص فعلي: **2026-06-11**. هذا القسم مبني على البحث في الكود وتشغيل أوامر التحقق، وليس على checkboxes الخطة فقط.
 
-| الفئة | المطلوب | المتنفذ | النسبة |
-|---|---|---|---|
-| P0 — البنية التحتية (Hub, Outbox, Hook, Idempotency, Rate Limit, Signed URLs, X-Accel) | 15 بند | 15 | 100% |
-| P0 — إزالة refresh/reload | 3 أماكن | 3 | 100% ✅ |
-| P0 — Cache invalidation registry | 1 نظام | 1 | 100% ✅ |
-| P0 — أحداث Outbox (inventory كامل) | 48 event | 48 events | 100% ✅ |
-| P0 — تقليل polling | 2 مكان | 2 (إلى 30s-60s) | 100% ✅ |
-| P1 — Lazy loading (OGL, GSAP, QR) | 4 ملفات | 4 | 100% ✅ |
-| P1 — Idempotency إضافي | 4+ endpoints | 4+ | 100% ✅ |
-| P1 — Network optimizations (lesson split, batch shell) | 2 بنود | 2 | 100% ✅ |
-| P2 - Monitoring/Tooling (Bundle Analyzer, Performance Budget, Logging) | 6 بنود | 6 | 100% ✅ |
+### نتيجة أوامر التحقق
 
-### أحداث Outbox المتنفذة فعلياً (48 event فريد)
-
-| Event | المصدر في الكود |
+| الفحص | النتيجة |
 |---|---|
-| `BalanceChanged` | `BalanceService.cs` (×2) + `AdjustBalanceCommand.cs` + `CancelPackageGrantCommand.cs` |
-| `CodeActivated` | `ActivateCodeCommand.cs` |
-| `LessonPublished` | `AdminContentCommands.cs` |
-| `PackageCreated` | `AdminContentCommands.cs` |
-| `PackageUpdated` | `UpdatePackageCommand.cs` |
-| `PackagePublished` | `UpdatePackageCommand.cs` |
-| `PackageArchived` | `UpdatePackageCommand.cs` |
-| `PackageAccessGranted` | `PurchaseContentCommand.cs`, `ActivateCodeCommand.cs`, `AdminCreateUserCommand.cs` |
-| `ResourceReady` | `AdminContentCommands.cs` |
-| `VideoReady` | `AiAnalysisCompletedCommand.cs` |
-| `ExtraWatchRequestUpdated` | `ApproveWatchRequestCommand.cs` + `RejectWatchRequestCommand.cs` |
-| `AiJobProgress` | `AiProgressCommand.cs` (admin + teacher groups) |
-| `NotificationCreated` | `AppDbContext.SaveChangesAsync` (تلقائي) |
-| `TermCreated` | `AdminContentCommands.cs` |
-| `SectionCreated` | `AdminContentCommands.cs` |
-| `ExamSubmitted` | `SubmitExamCommand.cs` |
-| `HomeworkSubmitted` | `SubmitHomeworkCommandHandler.cs` |
-| `ExtraWatchRequestCreated` | `CreateExtraWatchRequestCommand.cs` |
-| `AiJobCompleted` | `AiAnalysisCompletedCommand.cs` |
-| `AiJobFailed` | `AiProgressCommand.cs` |
-| `TermUpdated` | `AdminContentCommands.cs` |
-| `TermDeleted` | `AdminContentCommands.cs` |
-| `TermPublished` | `AdminContentCommands.cs` |
-| `SectionUpdated` | `AdminContentCommands.cs` |
-| `SectionDeleted` | `AdminContentCommands.cs` |
-| `SectionPublished` | `AdminContentCommands.cs` |
-| `LessonUpdated` | `AdminContentCommands.cs` |
-| `LessonLocked` | `SubmitExamCommand.cs` / `GradeEssayCommand.cs` |
-| `LessonUnlocked` | `SubmitExamCommand.cs` / `GradeEssayCommand.cs` |
-| `VideoProcessingStarted` | `AdminContentCommands.cs` |
-| `VideoUpdated` | `AdminContentCommands.cs` |
-| `VideoDeleted` | `AdminContentCommands.cs` |
-| `ResourceProcessingStarted` | `AdminContentCommands.cs` |
-| `ResourceUpdated` | `AdminContentCommands.cs` |
-| `ResourceDeleted` | `AdminContentCommands.cs` |
-| `HomeworkPublished` | `AdminContentCommands.cs` |
-| `HomeworkGraded` | `GradeEssayCommandHandler.cs` |
-| `ExamPublished` | `AdminContentCommands.cs` |
-| `ExamGraded` | `GradeEssayCommand.cs` / `SubmitExamCommand.cs` |
-| `ExamResultReady` | `SubmitExamCommand.cs` / `GradeEssayCommandHandler.cs` |
-| `CommunityPostCreated` | `CreateCommunityPostCommand.cs` |
-| `CommunityPostApproved` | `ApproveCommunityPostCommand.cs` |
-| `CommunityPostLiked` | `ToggleCommunityPostLikeCommand.cs` |
-| `CommunityCommentCreated` | `CreateCommunityPostCommentCommand.cs` |
-| `CommunityCommentApproved` | `ApproveCommunityCommentCommand.cs` |
-| `AiJobQueued` | `AnalyzeVideoAICommand.cs` |
-| `AiJobCancelled` | `CancelAnalyzeVideoAICommand.cs` |
-| `CodeGroupCreated` | `BulkGenerateCodesCommand.cs` |
-| `CodeGroupExportReady` | `BulkGenerateCodesCommand.cs` |
-| `PurchaseCompleted` | `PurchaseContentCommand.cs` |
-| `PurchaseFailed` | `PurchaseContentCommand.cs` |
-| `NotificationRead` | `MarkNotificationAsReadCommand.cs` |
-| `NotificationsCleared` | `ClearNotificationsCommand.cs` |
+| Backend tests | ✅ نجح: 95 passed، 0 failed |
+| Frontend lint | ✅ نجح بدون errors أو warnings |
+| Frontend production build | ✅ نجح، 63 صفحة static |
+| Worker TypeScript build | ✅ نجح |
+| `router.refresh()` / `window.location.reload()` | ✅ لا توجد نتائج في `frontend/src` |
+| Worker automated tests | ❌ غير موجودة؛ `npm test` في worker يفشل عمدًا |
+| Realtime/outbox integration tests | ⚠️ توجد 5 اختبارات للـ processor؛ اختبارات hub/reconnect/contracts ما زالت ناقصة |
 
-### Frontend consumers الموجودين
+### الخلاصة التنفيذية الصحيحة
 
-| الملف | الأحداث المستقبلة |
+| المجال | الحالة الفعلية | الملاحظة |
+|---|---|---|
+| SignalR hub + auth groups | ✅ موجود | personal وrole وpackage وlesson groups |
+| Outbox table + migration | ✅ موجود | مع index على `ProcessedAt, CreatedAt` |
+| Outbox processor | ✅ منفذ | row locking، backoff، dead-letter flag وcritical logging |
+| Backend event producers | ✅ 58 نوعًا فعليًا | كل producer له SignalR listener |
+| Frontend SignalR listeners | ⚠️ 60 listener | 58 مطابقون؛ `SectionUpdated` و`SectionDeleted` بلا producers |
+| Producer/consumer contract match | ✅ 58 من 58 = 100% | على مستوى أسماء الأحداث؛ contract tests ما زالت ناقصة |
+| Cache invalidation registry | ✅ منفذ | packages/shell/lesson/comments/term/notifications/balance/exams/community/AI monitor |
+| Lesson endpoint split | ✅ منفذ | resources/comments endpoints موجودة |
+| Incremental shell updates | ✅ منفذ | balance والإشعارات يتم تحديثهما محليًا مع reconciliation من الـ bootstrap |
+| Redis rate limiting | ✅ موجود | policies للـ codes وAI وsigned download وغيرها |
+| Idempotency | ⚠️ جزئي | موجود للشراء والكود والامتحان والواجب وextra-watch؛ بدء AI غير idempotent |
+| Web Vitals | ✅ منفذ | الإرسال والتخزين وoffline localStorage queue موجودة |
+| `EXPLAIN ANALYZE` | ⚠️ smoke فقط | التقرير يستخدم rows=0؛ قياس representative data ما زال ناقصًا |
+| Performance budget CI | ✅ موجود | يتم تشغيل `check-performance-budget.js` |
+| Zero warnings | ✅ محقق | lint الحالي بلا warnings |
+
+## Inventory الأحداث الفعلي
+
+يوجد **58 event type** منتج في backend، وكلها لها listeners مسجلة في `usePlatformEvents.ts`. توجد أيضًا listeners إضافية لـ `SectionUpdated` و`SectionDeleted` بلا producers لأن commands المقابلة غير موجودة.
+
+### Producers بلا frontend listener
+
+لا يوجد: **0 من 58**.
+
+### Listeners بلا backend producer
+
+| الحدث | المشكلة |
 |---|---|
-| `StudentShellChrome.tsx` | balance, notifications |
-| `LessonDetailPageClient.tsx` | video, resources, extra-watch, lesson locks |
-| `TermDetailPageClient.tsx` | lessons |
-| `AIMonitorPageClient.tsx` | AI progress, AI job completed, AI job failed, code groups |
-| `LessonVideoList.tsx` | video status |
+| `SectionUpdated` | listener احتياطي بلا command أو producer حاليًا |
+| `SectionDeleted` | listener احتياطي بلا command أو producer حاليًا |
 
-### الخطوات القادمة
-- مراقبة استقرار الاتصالات اللحظية عبر بيئة Docker.
-- توسيع إضافي لأحداث Outbox للعمليات المتبقية الأقل تأثيراً (مثل التعديلات البسيطة في لوحات المدرسين).
+### أحداث مذكورة سابقًا في الخطة لكنها غير موجودة
+
+| الحدث | الحالة |
+|---|---|
+| `SectionUpdated` | ❌ لا producer ولا command مطابق ظاهر |
+| `SectionDeleted` | ❌ لا producer ولا command مطابق ظاهر |
+| `ResourceUpdated` | ❌ لا producer ولا command مطابق ظاهر |
+| `ResourceDeleted` | ❌ لا producer ولا command مطابق ظاهر |
+| `LessonUpdated` | ✅ تم حذف listener غير المستخدم بدل اختراع producer لعملية غير موجودة |
+| `VideoFailed` | ✅ تمت إضافة producer له بجانب `AiJobFailed` |
+
+## مشاكل P0 الحرجة وحالتها
+
+1. **✅ تم: منع تسريب أكواد التفعيل عبر SignalR**
+   - `CodeGroupExportReady` أصبح يرسل `codeGroupId` و`exportStatus` فقط.
+   - الحدث أصبح يستهدف المستخدم الذي أنشأ المجموعة عبر `TargetUserId`.
+
+2. **✅ تم: الأحداث بلا target**
+   - تم إلغاء broadcast الافتراضي؛ `Clients.All` لا يعمل إلا عند target صريح `Public` أو `All`.
+   - فحص producers الحالي لم يجد أي event ثابت بلا `TargetUserId` أو `TargetGroup`.
+
+3. **✅ تم: منع duplicate processing بين API instances**
+   - تمت إضافة transaction و`FOR UPDATE SKIP LOCKED` عند سحب الدفعة.
+
+4. **✅ تم: Retry واعتمادية الفشل**
+   - تمت إضافة exponential delay حسب `RetryCount`.
+   - تمت إضافة `IsDeadLetter` و`LogCritical` بعد استنفاد 5 محاولات.
+
+5. **✅ تم: استعادة الجروبات بعد SignalR reconnect**
+   - تم حفظ active package/lesson IDs وإعادة `JoinPackage` و`JoinLesson` داخل `onreconnected`.
+
+## مشاكل P1 الوظيفية وحالتها
+
+1. **✅ تم: تحديث الملفات عند `ResourceReady`**
+   - إعادة جلب تفاصيل الدرس تغيّر مرجع `lesson`، و`LessonViewer` يعيد جلب resources.
+
+2. **✅ تم: تصحيح extra-watch invalidation**
+   - تمت إضافة `lessonId` إلى payload القبول والرفض واستخدامه في مفتاح الدرس.
+
+3. **✅ تم: cache invalidation registrations**
+   - تم تسجيل packages/shell/lesson/comments/term/notifications/balance/exams/community/AI monitor.
+
+4. **⚠️ جزئي: Payload contracts**
+   - ✅ تم تصحيح `VideoReady` و`ExtraWatchRequestUpdated` و`LessonPublished.order` وإضافة `VideoFailed`.
+   - ❌ لا توجد contract tests شاملة لكل الأحداث.
+
+5. **✅ تم: تحديث الإشعارات incremental**
+   - create يزيد العداد، read ينقصه، وclear يصفره محليًا.
+
+6. **✅ تم: استهداف AI events**
+   - queued/progress/completed/failed/cancelled تستهدف admin group والمدرس صاحب الفيديو حسب الحدث.
+
+7. **✅ تم: استهداف code-group events**
+   - `CodeGroupCreated` و`CodeGroupExportReady` أصبحا يستهدفان منفذ العملية فقط.
+
+## حالة الأحداث التي كانت ناقصة
+
+تمت مراجعة state changes التي كانت ناقصة في التدقيق السابق:
+
+| Event | الحالة | الهدف/الملاحظة |
+|---|---|---|
+| `LessonCommentCreated` | ✅ منفذ | `Lesson_{lessonId}` / moderation target |
+| `LessonCommentApproved` | ✅ منفذ | lesson group + صاحب التعليق |
+| `LessonCommentRejected` | ✅ منفذ | صاحب التعليق |
+| `CommunityPostRejected` | ✅ منفذ | صاحب المنشور |
+| `CommunityCommentRejected` | ✅ منفذ | صاحب التعليق |
+| `PackageAccessRevoked` | ✅ منفذ | الطالب |
+| `VideoWatchLimitChanged` | ✅ منفذ | الطالب/الفيديو |
+| `LessonManuallyUnlocked` | ✅ منفذ | الطالب |
+| `GamificationPointsChanged` | ✅ منفذ | الطالب/shell |
+| `SectionUpdated` / `SectionDeleted` | غير مطلوب حاليًا | لا توجد commands تعديل/حذف مقابلة؛ listeners احتياطية فقط |
+| `LessonUpdated` / `LessonDeleted` | غير مطلوب حاليًا | لا توجد commands مقابلة؛ listener القديم أزيل |
+| `ResourceUpdated` / `ResourceDeleted` | غير مطلوب حاليًا | لا توجد commands مقابلة |
+
+## نواقص الاختبارات والقياس
+
+- لا يوجد contract test matrix يثبت payloads والtargets لكل الـ 58 producer.
+- توجد اختبارات للـ `OutboxProcessorBackgroundService`: success، no-target، retry، dead-letter، backoff.
+- لا توجد اختبارات لـ `PlatformHub`: authorization والجروبات وإعادة الاتصال.
+- لا توجد اختبارات frontend للـ listener registry أو invalidation أو group rejoin.
+- لا توجد اختبارات Redis rate limiting تثبت 429 والسياسات المختلفة.
+- تقرير payload الحالي تقديري ولا يقيس response حقيقي، لذلك هدف 60% غير مثبت بعد.
+- تقرير `EXPLAIN ANALYZE` موجود، لكنه يستخدم UUID صفري و`rows=0` ولا يمثل production-like data.
+- Web Vitals تستخدم localStorage queue عند offline.
+- CI الحالي يبني worker والواجهة ويشغل E2E، لكنه لا يشغل backend unit tests صراحة.
+
+## ما تم إنجازه بالفعل
+
+- [x] `PlatformHub` مع personal/role/package/lesson groups.
+- [x] Outbox entity وmigration وprocessor.
+- [x] إنشاء 58 backend event producer type وربط listeners لكل producer.
+- [x] Singleton SignalR connection وlistener registry.
+- [x] إعادة الانضمام إلى package/lesson groups بعد reconnect.
+- [x] إزالة refresh/reload وتقليل AI polling إلى 30-60 ثانية.
+- [x] فصل resources/comments عن lesson detail.
+- [x] إصلاح تحديث resources عند وصول `ResourceReady`.
+- [x] إضافة `lessonId` إلى `ExtraWatchRequestUpdated` وتصحيح invalidation.
+- [x] إزالة plaintext codes من `CodeGroupExportReady` واستهداف منشئ المجموعة فقط.
+- [x] إضافة `VideoFailed` producer وتصحيح payload الخاص بـ `VideoReady`.
+- [x] إضافة outbox row locking باستخدام `FOR UPDATE SKIP LOCKED`.
+- [x] إضافة exponential retry delay للأحداث الفاشلة.
+- [x] Redis rate limiting وidempotency لخمسة flows حساسة.
+- [x] Signed downloads و`X-Accel-Redirect`.
+- [x] response compression وoutput cache وslow request/query logging.
+- [x] bundle analyzer وperformance budget وWeb Vitals storage.
+- [x] lazy loading لبعض المكتبات الثقيلة.
+- [x] Backend tests: 95 passed.
+- [x] Frontend production build وWorker TypeScript build.
+
+## خطة الإغلاق المحدثة
+
+### P0 - أمان واعتمادية
+
+- [x] إزالة plaintext codes من `CodeGroupExportReady`.
+- [x] استبدال role-wide code events بـ `TargetUserId`.
+- [x] إزالة `Clients.All` الافتراضي؛ broadcast أصبح مسموحًا فقط مع target صريح `Public` أو `All`.
+- [x] التأكد أن كل producers الحالية تحدد `TargetUserId` أو `TargetGroup`، مع منع broadcast الافتراضي.
+- [x] إضافة outbox claim/locking متعدد الـ instances.
+- [x] إضافة exponential backoff.
+- [x] إضافة `IsDeadLetter` وcritical logging بعد `RetryCount = 5`.
+- [x] إعادة الانضمام للجروبات بعد SignalR reconnect.
+- [ ] استكمال tests: processor مغطى بخمسة اختبارات، لكن PlatformHub/reconnect/sensitive payload contracts غير مغطاة.
+
+### P1 - اكتمال realtime
+
+- [x] إضافة listeners لكل الـ 58 producer؛ لا يوجد producer غير مستهلك.
+- [x] إضافة producer لـ `VideoFailed` مع الإبقاء على `AiJobFailed` لشاشة المهام.
+- [x] إضافة producer حقيقي لـ `LessonUpdated` أو حذف listener حتى توجد العملية.
+- [x] إصلاح `ResourceReady` ليعيد تحميل resources نفسها.
+- [x] إصلاح invalidation الخاص بـ `ExtraWatchRequestUpdated`.
+- [x] تسجيل cache stores المستخدمة، بما فيها exams/community/comments.
+- [ ] استكمال event contract tests: payloads الأساسية صُححت و`LessonPublished.order` أصبح مرسلًا، لكن لا توجد اختبارات عقود شاملة.
+- [x] إضافة events الخاصة بالتعليقات والرفض وسحب الوصول وwatch limits وmanual unlock.
+- [x] استكمال استهداف AI events للـ admin والمدرس صاحب الفيديو.
+
+### P2 - إثبات الأداء والجودة
+
+- [ ] إعادة `EXPLAIN ANALYZE` على بيانات representative؛ التقرير الحالي smoke test بصفوف صفرية فقط.
+- [ ] قياس payload HTTP فعلي قبل/بعد؛ التقرير الحالي نموذج تقديري وليس capture حقيقيًا.
+- [x] إضافة offline queue أو `sendBeacon` لـ Web Vitals.
+- [ ] إضافة backend unit tests وworker tests إلى CI؛ workflow الحالي لا يشغلهما وworker لا يملك test suite.
+- [x] إصلاح 4 lint warnings للوصول إلى zero warnings.
+- [ ] تشغيل وتوثيق Docker multi-instance acceptance؛ Redis backplane والـ port range موجودان لكن لا يوجد test/result مسجل.
+
+## تعريف الاكتمال الجديد
+
+لا يعتبر الحدث مكتملًا لمجرد وجود `new OutboxEvent`. الحدث يُعلّم ✅ فقط عند تحقق الآتي:
+
+1. producer داخل نفس transaction.
+2. target محدد ومصرح له.
+3. payload صغير ولا يحتوي أسرارًا.
+4. contract موحد ومختبر.
+5. listener موجود.
+6. الشاشة المستهدفة تتغير فعليًا.
+7. reconnect يعيد الاشتراك.
+8. integration test يثبت المسار من database إلى UI.
+
+بناءً على هذا التعريف، مطابقة أسماء producer/listener أصبحت **100% (58/58)**، لكن الإغلاق الكامل ما زال متوقفًا على contract/hub/reconnect tests، قياسات أداء ببيانات representative، وتشغيل Docker multi-instance acceptance موثق.

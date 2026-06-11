@@ -11,4 +11,5 @@ public class OutboxEvent : BaseEntity
     public DateTime? ProcessedAt { get; set; }
     public int RetryCount { get; set; } = 0;
     public string? LastError { get; set; }
+    public bool IsDeadLetter { get; set; } = false;
 }

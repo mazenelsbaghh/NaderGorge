@@ -408,7 +408,8 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
                     lessonId = lesson.Id,
                     sectionId = lesson.ContentSectionId,
                     title = lesson.Title,
-                    packageId = section.Term.PackageId
+                    packageId = section.Term.PackageId,
+                    order = lesson.Order
                 })
             };
             _db.OutboxEvents.Add(outboxEvent);

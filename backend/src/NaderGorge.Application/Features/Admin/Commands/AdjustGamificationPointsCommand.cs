@@ -57,6 +57,20 @@ public class AdjustGamificationPointsCommandHandler : IRequestHandler<AdjustGami
         };
         _context.AuditLogs.Add(audit);
 
+        var pointsChangedEvent = new OutboxEvent
+        {
+            Type = "GamificationPointsChanged",
+            TargetUserId = request.UserId.ToString(),
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                userId = request.UserId,
+                newPoints = gamification.TotalPoints,
+                change = Convert.ToInt32(request.Points),
+                reason = request.Reason
+            })
+        };
+        _context.OutboxEvents.Add(pointsChangedEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
         return ApiResponse.Ok("Gamification points adjusted.");
     }

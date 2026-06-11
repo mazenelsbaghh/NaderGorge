@@ -3,25 +3,26 @@
 import { useEffect, useState } from 'react';
 import { CreditCard, ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
 import { balanceService, StudentBalanceDto } from '@/services/balance-service';
+import { registerCacheStore, unregisterCacheStore } from '@/lib/cache-invalidation';
 
 export function BalanceDisplay() {
   const [balanceDto, setBalanceDto] = useState<StudentBalanceDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const data = await balanceService.getBalance();
-        setBalanceDto(data);
-        setError('');
-      } catch {
-        setError('تعذر تحميل بيانات المحفظة الآن.');
-      } finally {
-        setLoading(false);
-      }
+  const fetchBalance = async () => {
+    try {
+      const data = await balanceService.getBalance();
+      setBalanceDto(data);
+      setError('');
+    } catch {
+      setError('تعذر تحميل بيانات المحفظة الآن.');
+    } finally {
+      setLoading(false);
     }
-    
+  };
+
+  useEffect(() => {
     const handleRefresh = () => {
       void fetchBalance();
     };
@@ -29,8 +30,11 @@ export function BalanceDisplay() {
     window.addEventListener('refresh-student-balance', handleRefresh);
     void fetchBalance();
 
+    registerCacheStore('student:balance', () => {}, fetchBalance);
+
     return () => {
       window.removeEventListener('refresh-student-balance', handleRefresh);
+      unregisterCacheStore('student:balance');
     };
   }, []);
 

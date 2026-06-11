@@ -465,7 +465,7 @@ export default function AdminContentPageClient() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>('All');
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('All');
+  const selectedTeacherId = 'All';
   const [activeTeacherId, setActiveTeacherId] = useState<string | null>(null);
 
   const loadPackages = useCallback(async () => {

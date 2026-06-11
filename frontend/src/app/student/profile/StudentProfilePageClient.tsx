@@ -2,13 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Smartphone, MapPin, School, Phone, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
+import { User, Smartphone, MapPin, School, Phone, CheckCircle2, AlertCircle, Sparkles, Palette, Check, Loader2 } from "lucide-react";
+import Image from "next/image";
 import { studentService, StudentProfileDto, UpdateStudentProfileDto } from "@/services/student-service";
-import { useStudentTheme } from "@/hooks/useStudentTheme";
+import { useStudentTheme, getAvailableStudentThemePalettes } from "@/hooks/useStudentTheme";
 import { fadeSlideUp } from "@/lib/motion";
+import { AVATAR_LIST } from "@/data/avatars";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 
 export default function StudentProfilePageClient() {
-  const { isReady } = useStudentTheme();
+  const {
+    isReady,
+    isSavingPreferences,
+    selectedLightPaletteId,
+    selectedDarkPaletteId,
+    updatePalette,
+    updateAvatar,
+  } = useStudentTheme();
+  const user = useAuthStore((state) => state.user);
+  const lightPalettes = getAvailableStudentThemePalettes('light');
+  const darkPalettes = getAvailableStudentThemePalettes('dark');
+
   const [profile, setProfile] = useState<StudentProfileDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -87,33 +102,91 @@ export default function StudentProfilePageClient() {
 
   // Helper translations for stages/grades
   const translateStage = (stage: string) => {
-    switch (stage.toLowerCase()) {
-      case "primary": return "المرحلة الابتدائية";
-      case "preparatory": return "المرحلة الإعدادية";
-      case "secondary": return "المرحلة الثانوية";
-      default: return stage;
-    }
+    if (!stage) return "";
+    const key = stage.toLowerCase().trim();
+    const stageMap: Record<string, string> = {
+      secondary: "المرحلة الثانوية",
+      baccalaureate: "بكالوريا",
+      primary: "المرحلة الابتدائية",
+      preparatory: "المرحلة الإعدادية",
+      azhari: "أزهري",
+      american: "أمريكي",
+    };
+    return stageMap[key] || stage;
   };
 
   const translateGrade = (grade: string) => {
-    switch (grade.toLowerCase()) {
-      case "first": return "الصف الأول";
-      case "second": return "الصف الثاني";
-      case "third": return "الصف الثالث";
-      default: return grade;
-    }
+    if (!grade) return "";
+    const key = grade.toLowerCase().trim();
+    const gradeMap: Record<string, string> = {
+      // Secondary
+      firstsecondary: "الصف الأول الثانوي",
+      secondsecondary: "الصف الثاني الثانوي",
+      secondarygrade3: "الصف الثالث الثانوي",
+      // Baccalaureate
+      firstbaccalaureate: "الأول بكالوريا",
+      secondbaccalaureate: "الثاني بكالوريا",
+      // Primary
+      primarygrade1: "الصف الأول الابتدائي",
+      primarygrade2: "الصف الثاني الابتدائي",
+      primarygrade3: "الصف الثالث الابتدائي",
+      primarygrade4: "الصف الرابع الابتدائي",
+      primarygrade5: "الصف الخامس الابتدائي",
+      primarygrade6: "الصف السادس الابتدائي",
+      // Preparatory
+      prepgrade1: "الصف الأول الإعدادي",
+      prepgrade2: "الصف الثاني الإعدادي",
+      prepgrade3: "الصف الثالث الإعدادي",
+      // Azhari
+      azhariprimary1: "الصف الأول الابتدائي الأزهري",
+      azhariprimary2: "الصف الثاني الابتدائي الأزهري",
+      azhariprimary3: "الصف الثالث الابتدائي الأزهري",
+      azhariprimary4: "الصف الرابع الابتدائي الأزهري",
+      azhariprimary5: "الصف الخامس الابتدائي الأزهري",
+      azhariprimary6: "الصف السادس الابتدائي الأزهري",
+      azhariprep1: "الصف الأول الإعدادي الأزهري",
+      azhariprep2: "الصف الثاني الإعدادي الأزهري",
+      azhariprep3: "الصف الثالث الإعدادي الأزهري",
+      azharisecondary1: "الصف الأول الثانوي الأزهري",
+      azharisecondary2: "الصف الثاني الثانوي الأزهري",
+      azharisecondary3: "الصف الثالث الثانوي الأزهري",
+      // American
+      americangrade1: "Grade 1",
+      americangrade2: "Grade 2",
+      americangrade3: "Grade 3",
+      americangrade4: "Grade 4",
+      americangrade5: "Grade 5",
+      americangrade6: "Grade 6",
+      americangrade7: "Grade 7",
+      americangrade8: "Grade 8",
+      americangrade9: "Grade 9",
+      americangrade10: "Grade 10",
+      americangrade11: "Grade 11",
+      americangrade12: "Grade 12",
+      // Old compatibility values
+      first: "الصف الأول",
+      second: "الصف الثاني",
+      third: "الصف الثالث",
+    };
+    return gradeMap[key] || grade;
   };
 
   const translateTrack = (track: string | null) => {
     if (!track) return "";
-    switch (track.toLowerCase()) {
-      case "general": return "عام";
-      case "scientific": return "علمي";
-      case "literary": return "أدبي";
-      case "scientificmath": return "علمي رياضة";
-      case "scientificscience": return "علمي علوم";
-      default: return track;
-    }
+    const key = track.toLowerCase().trim();
+    const trackMap: Record<string, string> = {
+      arts: "أدبي",
+      science: "علمي",
+      medicineandlifesciences: "الطب وعلوم الحياة",
+      engineeringandcomputerscience: "الهندسة وعلوم الحاسب",
+      business: "قطاع الأعمال",
+      artsandhumanities: "الآداب والفنون",
+      general: "عام",
+      literary: "أدبي",
+      scientificmath: "علمي رياضة",
+      scientificscience: "علمي علوم",
+    };
+    return trackMap[key] || track;
   };
 
   return (
@@ -230,8 +303,8 @@ export default function StudentProfilePageClient() {
           </div>
         </div>
 
-        {/* Right Column: Editable Contact & Parent Info Forms */}
-        <div className="lg:col-span-2">
+        {/* Right Column: Editable Contact & Parent Info Forms & Customize settings */}
+        <div className="lg:col-span-2 space-y-8">
           <form onSubmit={handleSubmit} className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
             <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)]">تحديث معلومات الاتصال والمدارس</h3>
 
@@ -342,6 +415,192 @@ export default function StudentProfilePageClient() {
               </button>
             </div>
           </form>
+
+          {/* ── Appearance & Theme Settings ── */}
+          <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
+            <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)] flex items-center gap-2">
+              <Palette className="h-5 w-5 text-[var(--admin-primary)]" />
+              تخصيص مظهر حسابك وألوانه
+            </h3>
+
+            {/* Avatar Selection Section */}
+            <section className="space-y-4">
+              <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+                شخصيتك الكارتونية (علماء ومفكرون)
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {AVATAR_LIST.map((avatar) => {
+                  const isSelected = user?.avatarSlug === avatar.slug;
+                  return (
+                    <button
+                      key={avatar.slug}
+                      type="button"
+                      onClick={() => void updateAvatar(avatar.slug)}
+                      disabled={isSavingPreferences}
+                      className={cn(
+                        'relative flex flex-col items-center gap-2 p-3 rounded-2xl border transition duration-300',
+                        'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)] hover:scale-105',
+                        isSelected && 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)] ring-2 ring-[var(--admin-primary)] shadow-md'
+                      )}
+                    >
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden border border-[var(--admin-border)] bg-[var(--admin-bg)]">
+                        <Image
+                          src={avatar.imageUrl}
+                          alt={avatar.name}
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                      <span className="text-[10px] font-black text-[var(--admin-text)] text-center truncate w-full">
+                        {avatar.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected Avatar Detailed Info Box */}
+              {user?.avatarSlug && (
+                <div className="p-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-right flex gap-4 items-center shadow-inner mt-4">
+                  <div className="relative w-14 h-14 rounded-full overflow-hidden border border-[var(--admin-border)] bg-[var(--admin-bg)] shrink-0">
+                    <Image
+                      src={AVATAR_LIST.find(a => a.slug === user.avatarSlug)?.imageUrl || ''}
+                      alt="Selected"
+                      fill
+                      sizes="56px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <h5 className="text-sm font-black text-[var(--admin-primary-strong)]">
+                      {AVATAR_LIST.find(a => a.slug === user.avatarSlug)?.name}
+                    </h5>
+                    <p className="text-xs font-bold text-[var(--admin-muted)] leading-relaxed">
+                      {AVATAR_LIST.find(a => a.slug === user.avatarSlug)?.info}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Themes / Palettes Sections */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[var(--admin-border)]">
+              {/* Light Mode Palettes */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+                  ألوان الوضع الفاتح
+                </h4>
+                <div className="grid grid-cols-1 gap-3">
+                  {lightPalettes.map((palette) => {
+                    const isSelected = palette.id === selectedLightPaletteId;
+
+                    return (
+                      <button
+                        key={palette.id}
+                        type="button"
+                        onClick={() => void updatePalette('light', palette.id)}
+                        disabled={isSavingPreferences}
+                        className={cn(
+                          'flex items-center justify-between rounded-2xl border p-3.5 text-right transition duration-300 w-full',
+                          'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)]',
+                          isSelected && 'border-[var(--admin-primary)] bg-[var(--admin-card-strong)] shadow-md ring-1 ring-[var(--admin-primary)]',
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-10 w-10 rounded-xl border border-white/10 shadow-inner shrink-0"
+                            style={{
+                              background: `linear-gradient(135deg, ${palette.previewAccent}, ${palette.tokens['--admin-primary-strong'] ?? palette.previewAccent})`,
+                            }}
+                          />
+                          <div className="space-y-0.5">
+                            <p className="font-black text-sm text-[var(--admin-text)]">{palette.name}</p>
+                            <p className="text-[10px] text-[var(--admin-muted)]">
+                              مخصص للوضع الفاتح
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          {isSavingPreferences && isSelected ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-[var(--admin-primary)]" />
+                          ) : isSelected ? (
+                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                              <Check className="h-3 w-3" />
+                              مفعل
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                              اختيار
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Dark Mode Palettes */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
+                  ألوان الوضع الداكن
+                </h4>
+                <div className="grid grid-cols-1 gap-3">
+                  {darkPalettes.map((palette) => {
+                    const isSelected = palette.id === selectedDarkPaletteId;
+
+                    return (
+                      <button
+                        key={palette.id}
+                        type="button"
+                        onClick={() => void updatePalette('dark', palette.id)}
+                        disabled={isSavingPreferences}
+                        className={cn(
+                          'flex items-center justify-between rounded-2xl border p-3.5 text-right transition duration-300 w-full',
+                          'border-[var(--admin-border)] bg-[var(--admin-card)] hover:bg-[var(--admin-card-strong)]',
+                          isSelected && 'border-[var(--admin-primary)] bg-[var(--admin-card-strong)] shadow-md ring-1 ring-[var(--admin-primary)]',
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="h-10 w-10 rounded-xl border border-white/10 shadow-inner shrink-0"
+                            style={{
+                              background: `linear-gradient(135deg, ${palette.previewAccent}, ${palette.tokens['--admin-primary-strong'] ?? palette.previewAccent})`,
+                            }}
+                          />
+                          <div className="space-y-0.5">
+                            <p className="font-black text-sm text-[var(--admin-text)]">{palette.name}</p>
+                            <p className="text-[10px] text-[var(--admin-muted)]">
+                              مخصص للوضع الداكن
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          {isSavingPreferences && isSelected ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-[var(--admin-primary)]" />
+                          ) : isSelected ? (
+                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                              <Check className="h-3.5 w-3.5" />
+                              مفعل
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                              اختيار
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>

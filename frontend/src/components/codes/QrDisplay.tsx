@@ -10,6 +10,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { Printer } from 'lucide-react';
 import { useRef } from 'react';
+import { getSurfaceOrigins } from '@/packages/surface-runtime/config';
 
 interface QrDisplayProps {
   codes: string[];
@@ -19,7 +20,8 @@ interface QrDisplayProps {
 
 export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProps) {
   const printRef = useRef<HTMLDivElement>(null);
-  const effectiveBaseUrl = process.env.NEXT_PUBLIC_APP_URL || baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://massar-academy.net');
+  const origins = getSurfaceOrigins();
+  const effectiveBaseUrl = baseUrl || origins.student;
   const isLocalhost = effectiveBaseUrl.includes('localhost') || effectiveBaseUrl.includes('0.0.0.0') || effectiveBaseUrl.includes('127.0.0.1');
 
   const handlePrint = () => {

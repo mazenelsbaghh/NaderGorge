@@ -3,11 +3,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  User,
   Shield,
   Calendar,
   DollarSign,
-  Clock,
   CheckCircle,
   XCircle,
   Loader2,

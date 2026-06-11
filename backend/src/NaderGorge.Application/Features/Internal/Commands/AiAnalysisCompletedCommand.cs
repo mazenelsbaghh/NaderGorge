@@ -104,6 +104,11 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
                 newChapters.Count, request.VideoId);
         }
 
+        var teacherUserId = await _db.LessonVideos
+            .Where(v => v.Id == request.VideoId)
+            .Select(v => (string?)v.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
+            .FirstOrDefaultAsync(ct);
+
         var outboxEvent = new OutboxEvent
         {
             Type = "VideoReady",
@@ -111,7 +116,10 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 videoId = video.Id,
-                lessonId = video.LessonId
+                lessonId = video.LessonId,
+                title = video.Title,
+                provider = video.Provider,
+                providerVideoId = video.ProviderVideoId
             })
         };
         _db.OutboxEvents.Add(outboxEvent);
@@ -127,6 +135,21 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             })
         };
         _db.OutboxEvents.Add(aiJobCompletedEvent);
+
+        if (teacherUserId != null)
+        {
+            var teacherCompletedEvent = new OutboxEvent
+            {
+                Type = "AiJobCompleted",
+                TargetUserId = teacherUserId,
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    jobId = request.JobId ?? video.Id.ToString(),
+                    lessonVideoId = video.Id
+                })
+            };
+            _db.OutboxEvents.Add(teacherCompletedEvent);
+        }
 
         // 5. Single save — no concurrency token on LessonVideo, so no concurrency exception possible
         await _db.SaveChangesAsync(ct);

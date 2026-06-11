@@ -223,7 +223,8 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         var codeGroupCreatedEvent = new OutboxEvent
         {
             Type = "CodeGroupCreated",
-            TargetGroup = isTeacher ? "Role_Teacher" : "Role_Admin",
+            TargetUserId = request.AdminId.ToString(),
+            TargetGroup = null,
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 codeGroupId = group.Id,
@@ -238,13 +239,14 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         var codeGroupExportReadyEvent = new OutboxEvent
         {
             Type = "CodeGroupExportReady",
-            TargetGroup = isTeacher ? "Role_Teacher" : "Role_Admin",
+            TargetUserId = request.AdminId.ToString(),
+            TargetGroup = null,
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 codeGroupId = group.Id,
                 name = group.Name,
                 totalCodes = group.TotalCodes,
-                codes = plaintexts
+                exportStatus = "Ready"
             })
         };
         _db.OutboxEvents.Add(codeGroupExportReadyEvent);

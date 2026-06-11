@@ -93,7 +93,11 @@ builder.Services.AddScoped<AcademicValidationService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
 builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddStackExchangeRedis(redisConnectionString ?? "localhost:6379,abortConnect=false", options =>
+    {
+        options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("MassarSignalR");
+    });
 builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
 
 // ---------- Authentication ----------

@@ -45,6 +45,19 @@ public class RejectCommunityPostCommandHandler : IRequestHandler<RejectCommunity
             NewValues = $"Status={CommunityPostStatus.Rejected};ReviewedAt={post.ReviewedAt:O}",
         });
 
+        var authorEvent = new OutboxEvent
+        {
+            Type = "CommunityPostRejected",
+            TargetUserId = post.AuthorUserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                postId = post.Id,
+                authorUserId = post.AuthorUserId,
+                status = post.Status.ToString()
+            })
+        };
+        _context.OutboxEvents.Add(authorEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<ModerateCommunityPostResponse>.Ok(

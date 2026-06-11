@@ -41,6 +41,7 @@ public class ApproveCommunityCommentCommandHandler
         var approvedEvent = new OutboxEvent
         {
             Type = "CommunityCommentApproved",
+            TargetGroup = "Public",
             PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
                 commentId = comment.Id,

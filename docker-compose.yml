@@ -76,7 +76,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: massar_backend
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Docker}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:5245}
@@ -98,7 +97,7 @@ services:
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       ParentReports__SigningSecret: ${PARENT_REPORT_SIGNING_SECRET:?PARENT_REPORT_SIGNING_SECRET is required}
     ports:
-      - "${MASSAR_BACKEND_PORT:-5245}:5245"
+      - "${MASSAR_BACKEND_PORT:-5245-5246}:5245"
     volumes:
       - massar_assets:/app/wwwroot
     networks:

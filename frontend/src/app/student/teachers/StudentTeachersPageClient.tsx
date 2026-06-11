@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { GraduationCap, ChevronLeft, BookOpen } from "lucide-react";
+import { GraduationCap, ChevronLeft, BookOpen, ArrowRight, BookOpenText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -33,6 +33,7 @@ const GRADE_NAMES: Record<string, string> = {
   AmericanGrade10: "Grade 10",
   AmericanGrade11: "Grade 11",
   AmericanGrade12: "Grade 12",
+  All: "جميع الصفوف الدراسية",
 };
 
 const stagger = {
@@ -54,6 +55,10 @@ export default function StudentTeachersPageClient() {
   const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Flow states
+  const [activeTeacher, setActiveTeacher] = useState<PublicTeacherDto | null>(null);
+  const [activeGrade, setActiveGrade] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -88,197 +93,386 @@ export default function StudentTeachersPageClient() {
     );
   }
 
-  return (
-    <motion.div
-      className="space-y-10 pb-10"
-      variants={stagger}
-      initial="hidden"
-      animate="visible"
-    >
-      {/* ── Banner Section ── */}
-      <motion.section
-        variants={fadeUp}
-        className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10"
+  // LEVEL 1: Render List of Teachers
+  if (activeTeacher === null) {
+    return (
+      <motion.div
+        className="space-y-10 pb-10"
+        variants={stagger}
+        initial="hidden"
+        animate="visible"
+        key="teachers-list"
       >
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[48px]" />
-        <div className="absolute right-10 bottom-0 top-0 hidden w-40 opacity-10 lg:block">
-          <GraduationCap className="h-full w-full text-[var(--admin-primary)]" />
-        </div>
-        
-        <div className="relative z-10 max-w-2xl">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-20)] bg-[var(--admin-primary-10)] px-3 py-1 text-xs font-bold text-[var(--admin-primary-strong)]">
-            <GraduationCap className="h-3.5 w-3.5" />
-            <span>نخبة من أفضل المعلمين</span>
+        {/* Banner Section */}
+        <motion.section
+          variants={fadeUp}
+          className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10"
+        >
+          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[48px]" />
+          <div className="absolute right-10 bottom-0 top-0 hidden w-40 opacity-10 lg:block">
+            <GraduationCap className="h-full w-full text-[var(--admin-primary)]" />
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-[var(--admin-text)] sm:text-5xl">
-            مدرسو المنصة
-          </h1>
-          <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)] sm:text-base">
-            تصفح معلمي المنصة والمسارات والمساقات التعليمية والباقات المتاحة معهم لتبدأ رحلتك التعليمية المتميزة.
-          </p>
-        </div>
-      </motion.section>
+          
+          <div className="relative z-10 max-w-2xl">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-20)] bg-[var(--admin-primary-10)] px-3 py-1 text-xs font-bold text-[var(--admin-primary-strong)]">
+              <GraduationCap className="h-3.5 w-3.5" />
+              <span>نخبة من أفضل المعلمين</span>
+            </div>
+            <h1 className="text-3xl font-black tracking-tight text-[var(--admin-text)] sm:text-5xl">
+              مدرسو المنصة
+            </h1>
+            <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)] sm:text-base">
+              تصفح معلمي المنصة والمسارات والمساقات التعليمية والباقات المتاحة معهم لتبدأ رحلتك التعليمية المتميزة.
+            </p>
+          </div>
+        </motion.section>
 
-      {/* ── Grid of Teachers ── */}
-      {teachers.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
-          <GraduationCap className="mb-4 h-16 w-16 text-[var(--admin-muted)] opacity-60" />
-          <p className="font-bold text-[var(--admin-muted)]">لا يوجد معلمون مسجلون في المنصة حالياً.</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          {teachers.map((teacher) => {
-            const teacherPackages = packages.filter(
-              (p) => p.teacherId === teacher.id
-            );
+        {/* Grid of Teachers */}
+        {teachers.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+            <GraduationCap className="mb-4 h-16 w-16 text-[var(--admin-muted)] opacity-60" />
+            <p className="font-bold text-[var(--admin-muted)]">لا يوجد معلمون مسجلون في المنصة حالياً.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {teachers.map((teacher) => {
+              const teacherPackages = packages.filter(
+                (p) => p.teacherId === teacher.id
+              );
 
-            const specList = teacher.specialization
-              ? teacher.specialization
-                  .split(",")
-                  .map((s) => GRADE_NAMES[s.trim()] || s.trim())
-              : [];
+              const specList = teacher.specialization
+                ? teacher.specialization
+                    .split(",")
+                    .map((s) => GRADE_NAMES[s.trim()] || s.trim())
+                : [];
 
-            return (
-              <motion.div
-                key={teacher.id}
-                variants={fadeUp}
-                className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:border-[var(--admin-primary-30)] hover:shadow-lg hover:shadow-[var(--admin-primary-10)]"
-              >
-                <div>
-                  {/* Teacher Profile Info */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      {teacher.profileImageUrl ? (
-                        <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-[var(--admin-border)] shadow-sm">
-                          <Image
-                            src={resolveMediaUrl(teacher.profileImageUrl)}
-                            alt={teacher.fullName}
-                            fill
-                            className="object-cover"
-                            sizes="64px"
-                          />
+              return (
+                <motion.div
+                  key={teacher.id}
+                  variants={fadeUp}
+                  onClick={() => {
+                    setActiveTeacher(teacher);
+                    setActiveGrade(null);
+                  }}
+                  className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:border-[var(--admin-primary-30)] hover:shadow-lg hover:shadow-[var(--admin-primary-10)] hover:scale-[1.01] cursor-pointer"
+                >
+                  <div>
+                    {/* Teacher Profile Info */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        {teacher.profileImageUrl ? (
+                          <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-[var(--admin-border)] shadow-sm">
+                            <Image
+                              src={resolveMediaUrl(teacher.profileImageUrl)}
+                              alt={teacher.fullName}
+                              fill
+                              className="object-cover"
+                              sizes="64px"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-extrabold text-xl">
+                            {teacher.fullName.charAt(0)}
+                          </div>
+                        )}
+
+                        <div>
+                          <h2 className="text-lg font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)] transition-colors">
+                            أ. {teacher.fullName}
+                          </h2>
+                          
+                          {/* Subjects tag list */}
+                          {teacher.subjectNames && teacher.subjectNames.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {teacher.subjectNames.map((subject, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center rounded-md bg-[var(--admin-primary-10)] px-2 py-0.5 text-[10px] font-bold text-[var(--admin-primary)]"
+                                >
+                                  {subject}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-extrabold text-xl">
-                          {teacher.fullName.charAt(0)}
-                        </div>
-                      )}
+                      </div>
+                    </div>
 
-                      <div>
-                        <h2 className="text-lg font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)] transition-colors">
-                          أ. {teacher.fullName}
-                        </h2>
-                        
-                        {/* Subjects tag list */}
-                        {teacher.subjectNames && teacher.subjectNames.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {teacher.subjectNames.map((subject, idx) => (
+                    {/* Specializations & Bio */}
+                    <div className="mt-4 space-y-3">
+                      {specList.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 items-center">
+                          <span className="text-xs font-bold text-[var(--admin-muted)]">المراحل:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {specList.map((spec, sIdx) => (
                               <span
-                                key={idx}
-                                className="inline-flex items-center rounded-md bg-[var(--admin-primary-10)] px-2 py-0.5 text-[10px] font-bold text-[var(--admin-primary)]"
+                                key={sIdx}
+                                className="rounded-full bg-[var(--admin-card-soft)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--admin-muted)] border border-[var(--admin-border)]/40"
                               >
-                                {subject}
+                                {spec}
                               </span>
                             ))}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Specializations & Bio */}
-                  <div className="mt-4 space-y-3">
-                    {specList.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 items-center">
-                        <span className="text-xs font-bold text-[var(--admin-muted)]">المراحل:</span>
-                        <div className="flex flex-wrap gap-1">
-                          {specList.map((spec, sIdx) => (
-                            <span
-                              key={sIdx}
-                              className="rounded-full bg-[var(--admin-card-soft)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--admin-muted)] border border-[var(--admin-border)]/40"
-                            >
-                              {spec}
-                            </span>
-                          ))}
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {teacher.bio ? (
-                      <p className="text-xs leading-relaxed text-[var(--admin-muted)] line-clamp-3">
-                        {teacher.bio}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-[var(--admin-muted)]/60 italic">
-                        لا يوجد وصف متوفر حالياً للمعلم.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Packages Section */}
-                <div className="mt-6 border-t border-[var(--admin-border)]/50 pt-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="flex items-center gap-1.5 text-xs font-black text-[var(--admin-text)]">
-                      <BookOpen className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
-                      <span>الباقات المتاحة ({teacherPackages.length})</span>
-                    </h3>
-                  </div>
-
-                  {teacherPackages.length === 0 ? (
-                    <p className="text-[11px] text-[var(--admin-muted)]/60 italic">
-                      لا توجد باقات معلنة لهذا المعلم بعد.
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {teacherPackages.slice(0, 3).map((pkg) => (
-                        <button
-                          key={pkg.id}
-                          type="button"
-                          onClick={() => router.push(`/student/packages/${pkg.id}`)}
-                          className="flex w-full items-center justify-between rounded-xl border border-[var(--admin-border)]/60 bg-[var(--admin-card-soft)] p-3 text-right transition-all hover:bg-[var(--admin-hover)] hover:border-[var(--admin-primary-20)]"
-                        >
-                          <div className="flex flex-col gap-0.5 max-w-[70%]">
-                            <span className="line-clamp-1 text-xs font-extrabold text-[var(--admin-text)]">
-                              {pkg.name}
-                            </span>
-                            <span className="text-[10px] text-[var(--admin-muted)]">
-                              {pkg.price.toFixed(0)} ج.م
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`rounded-md px-2 py-0.5 text-[9px] font-black tracking-wide ${
-                                pkg.isEnrolled
-                                  ? "bg-[var(--admin-success-20)] text-[var(--admin-success)]"
-                                  : "bg-[var(--admin-card-strong)] text-[var(--admin-text)]"
-                              }`}
-                            >
-                              {pkg.isEnrolled ? "مفعّلة" : "غير مفعّلة"}
-                            </span>
-                            <ChevronLeft className="h-3.5 w-3.5 text-[var(--admin-muted)]" />
-                          </div>
-                        </button>
-                      ))}
-
-                      {teacherPackages.length > 3 && (
-                        <button
-                          type="button"
-                          onClick={() => router.push(`/student/packages`)}
-                          className="w-full text-center text-[10px] font-bold text-[var(--admin-primary)] hover:underline mt-1"
-                        >
-                          عرض كل الباقات الأخرى للمعلم...
-                        </button>
+                      {teacher.bio ? (
+                        <p className="text-xs leading-relaxed text-[var(--admin-muted)] line-clamp-2">
+                          {teacher.bio}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-[var(--admin-muted)]/60 italic">
+                          لا يوجد وصف متوفر حالياً للمعلم.
+                        </p>
                       )}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Flow Action Prompt */}
+                  <div className="mt-6 border-t border-[var(--admin-border)]/50 pt-4 flex items-center justify-between text-xs font-bold text-[var(--admin-primary)] group-hover:text-[var(--admin-primary-strong)] transition-colors">
+                    <span>تصفح الصفوف الدراسية والباقات ({teacherPackages.length})</span>
+                    <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
+  // Filter packages belonging to the active teacher
+  const teacherPackages = packages.filter(
+    (p) => p.teacherId === activeTeacher.id
+  );
+
+  const uniqueGrades = Array.from(
+    new Set(teacherPackages.map((p) => p.targetGrade || "All"))
+  );
+
+  // LEVEL 2: Render Grade Levels of Selected Teacher
+  if (activeGrade === null) {
+    return (
+      <motion.div
+        className="space-y-8 pb-10"
+        variants={stagger}
+        initial="hidden"
+        animate="visible"
+        key="teacher-grades"
+      >
+        {/* Back and Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--admin-border)]/50 pb-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setActiveTeacher(null)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)] transition-all"
+              title="عودة للمعلمين"
+            >
+              <ArrowRight className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-black text-[var(--admin-text)]">
+                أ. {activeTeacher.fullName}
+              </h1>
+              <p className="text-xs text-[var(--admin-muted)] mt-1">
+                اختر الصف الدراسي لتصفح الباقات والمحتوى التعليمي
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Teacher profile summary card */}
+        <div className="overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-6 items-start">
+            {activeTeacher.profileImageUrl ? (
+              <div className="relative h-20 w-20 overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-sm flex-shrink-0">
+                <Image
+                  src={resolveMediaUrl(activeTeacher.profileImageUrl)}
+                  alt={activeTeacher.fullName}
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+              </div>
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-extrabold text-3xl flex-shrink-0">
+                {activeTeacher.fullName.charAt(0)}
+              </div>
+            )}
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                {activeTeacher.subjectNames?.map((subject, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center rounded-md bg-[var(--admin-primary-10)] px-2.5 py-0.5 text-xs font-bold text-[var(--admin-primary)]"
+                  >
+                    {subject}
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm font-medium leading-relaxed text-[var(--admin-text)]">
+                {activeTeacher.bio || "لا يوجد وصف متوفر حالياً للمعلم."}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Grades Grid */}
+        <div className="space-y-6">
+          <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2">
+            <GraduationCap className="h-5 w-5 text-[var(--admin-primary)]" />
+            <span>الصفوف الدراسية المتاحة</span>
+          </h2>
+
+          {uniqueGrades.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+              <BookOpen className="mb-4 h-12 w-12 text-[var(--admin-muted)] opacity-60" />
+              <p className="font-bold text-[var(--admin-muted)]">لا توجد باقات دراسية معلنة لهذا المعلم حالياً.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {uniqueGrades.map((grade) => {
+                const gradePackagesCount = teacherPackages.filter(
+                  (p) => (p.targetGrade || "All") === grade
+                ).length;
+
+                return (
+                  <motion.button
+                    key={grade}
+                    variants={fadeUp}
+                    onClick={() => setActiveGrade(grade)}
+                    className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right transition-all hover:border-[var(--admin-primary-30)] hover:shadow-md hover:scale-[1.02]"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--admin-primary-10)] text-[var(--admin-primary)] group-hover:bg-[var(--admin-primary)] group-hover:text-white transition-colors">
+                        <GraduationCap className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <span className="block text-sm font-extrabold text-[var(--admin-text)] group-hover:text-[var(--admin-primary)] transition-colors">
+                          {GRADE_NAMES[grade] || grade}
+                        </span>
+                        <span className="block text-xs text-[var(--admin-muted)] mt-1">
+                          {gradePackagesCount} باقة تعليمية
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronLeft className="h-5 w-5 text-[var(--admin-muted)] transition-transform group-hover:-translate-x-1" />
+                  </motion.button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+
+  // LEVEL 3: Render Packages for Selected Teacher & Grade
+  const filteredPackages = teacherPackages.filter(
+    (p) => (p.targetGrade || "All") === activeGrade
+  );
+
+  return (
+    <motion.div
+      className="space-y-8 pb-10"
+      variants={stagger}
+      initial="hidden"
+      animate="visible"
+      key="teacher-grade-packages"
+    >
+      {/* Back and Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--admin-border)]/50 pb-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setActiveGrade(null)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)] transition-all"
+            title="عودة للصفوف الدراسية"
+          >
+            <ArrowRight className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black text-[var(--admin-text)]">
+              باقات {GRADE_NAMES[activeGrade] || activeGrade}
+            </h1>
+            <p className="text-xs text-[var(--admin-muted)] mt-1">
+              المعلم: أ. {activeTeacher.fullName}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Packages Grid */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2">
+          <BookOpenText className="h-5 w-5 text-[var(--admin-primary)]" />
+          <span>الباقات المتاحة للمشاهدة والاشتراك</span>
+        </h2>
+
+        {filteredPackages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+            <BookOpen className="mb-4 h-12 w-12 text-[var(--admin-muted)] opacity-60" />
+            <p className="font-bold text-[var(--admin-muted)]">لا توجد باقات متوفرة لهذا الصف الدراسي حالياً.</p>
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredPackages.map((pkg) => (
+              <motion.div
+                key={pkg.id}
+                variants={fadeUp}
+                onClick={() => router.push(`/student/packages/${pkg.id}`)}
+                className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:border-[var(--admin-primary-30)] hover:shadow-lg hover:shadow-[var(--admin-primary-10)] hover:scale-[1.01] cursor-pointer"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+                        <BookOpen className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)] transition-colors line-clamp-1">
+                          {pkg.name}
+                        </h3>
+                        <span className="text-[10px] text-[var(--admin-muted)] block mt-0.5">
+                          {pkg.subjectName}
+                        </span>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-[9px] font-black tracking-wide ${
+                        pkg.isEnrolled
+                          ? "bg-[var(--admin-success-20)] text-[var(--admin-success)]"
+                          : "bg-[var(--admin-card-strong)] text-[var(--admin-text)]"
+                      }`}
+                    >
+                      {pkg.isEnrolled ? "مفعّلة" : "غير مفعّلة"}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-[var(--admin-muted)] leading-relaxed mt-4 line-clamp-3">
+                    {pkg.description || "لا يوجد وصف متوفر للباقة."}
+                  </p>
+                </div>
+
+                <div className="mt-6 border-t border-[var(--admin-border)]/50 pt-4 flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-[var(--admin-muted)]">سعر الاشتراك</span>
+                    <span className="text-sm font-black text-[var(--admin-text)]">
+                      {pkg.price.toFixed(0)} ج.م
+                    </span>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1 text-xs font-bold text-[var(--admin-primary)] group-hover:text-[var(--admin-primary-strong)] transition-colors">
+                    <span>عرض التفاصيل</span>
+                    <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                  </span>
                 </div>
               </motion.div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }

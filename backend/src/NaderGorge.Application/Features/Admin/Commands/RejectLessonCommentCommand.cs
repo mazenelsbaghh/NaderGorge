@@ -46,6 +46,20 @@ public class RejectLessonCommentCommandHandler
             NewValues = $"Status={LessonCommentStatus.Rejected};ReviewedAt={comment.ReviewedAt:O}",
         });
 
+        var authorEvent = new OutboxEvent
+        {
+            Type = "LessonCommentRejected",
+            TargetUserId = comment.AuthorUserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                commentId = comment.Id,
+                lessonId = comment.LessonId,
+                authorUserId = comment.AuthorUserId,
+                status = comment.Status.ToString()
+            })
+        };
+        _context.OutboxEvents.Add(authorEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<ModerateLessonCommentResponse>.Ok(

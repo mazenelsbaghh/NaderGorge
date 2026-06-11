@@ -27,6 +27,7 @@ import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { AdminShellChrome, AdminTeacherPhotoUpload } from '@/components/admin';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
+import { registerCacheStore, unregisterCacheStore } from '@/lib/cache-invalidation';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -815,6 +816,12 @@ export default function AIMonitorPageClient() {
 
   useEffect(() => {
     loadProcessingVideos();
+    registerCacheStore('admin:ai-monitor', () => {}, () => {
+      void loadProcessingVideos();
+    });
+    return () => {
+      unregisterCacheStore('admin:ai-monitor');
+    };
   }, []);
 
   // Start polling once we have items; don't restart when item count changes

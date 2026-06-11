@@ -65,6 +65,44 @@ public class CreateLessonCommentCommandHandler : IRequestHandler<CreateLessonCom
             NewValues = $"LessonId={request.LessonId};Status={LessonCommentStatus.Pending};BodyLength={trimmedBody.Length}",
         });
 
+        var teacherUserId = await _db.Lessons
+            .Where(l => l.Id == request.LessonId)
+            .Select(l => (string?)l.ContentSection.Term.Package.Teacher.UserId.ToString())
+            .FirstOrDefaultAsync(ct);
+
+        var adminEvent = new OutboxEvent
+        {
+            Type = "LessonCommentCreated",
+            TargetGroup = "Role_Admin",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                commentId = comment.Id,
+                lessonId = request.LessonId,
+                authorUserId = request.UserId,
+                body = trimmedBody,
+                status = comment.Status.ToString()
+            })
+        };
+        _db.OutboxEvents.Add(adminEvent);
+
+        if (teacherUserId != null)
+        {
+            var teacherEvent = new OutboxEvent
+            {
+                Type = "LessonCommentCreated",
+                TargetUserId = teacherUserId,
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    commentId = comment.Id,
+                    lessonId = request.LessonId,
+                    authorUserId = request.UserId,
+                    body = trimmedBody,
+                    status = comment.Status.ToString()
+                })
+            };
+            _db.OutboxEvents.Add(teacherEvent);
+        }
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<CreateLessonCommentResponse>.Ok(

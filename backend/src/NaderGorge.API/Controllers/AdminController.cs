@@ -344,7 +344,7 @@ public class AdminController : ControllerBase
     [EnableRateLimiting("ai-analysis")]
     public async Task<IActionResult> RequestAIAnalysis(Guid videoId)
     {
-        var result = await _mediator.Send(new AnalyzeVideoAICommand(videoId));
+        var result = await _mediator.Send(new AnalyzeVideoAICommand(videoId, GetUserId()));
         return result.Success ? Accepted(result) : BadRequest(result);
     }
 
@@ -352,7 +352,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> CancelAIAnalysis(Guid videoId)
     {
-        var result = await _mediator.Send(new CancelAnalyzeVideoAICommand(videoId));
+        var result = await _mediator.Send(new CancelAnalyzeVideoAICommand(videoId, GetUserId()));
         return Ok(new { Success = result });
     }
 
@@ -360,7 +360,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> CancelMindmapGeneration(Guid videoId)
     {
-        var result = await _mediator.Send(new CancelAnalyzeVideoAICommand(videoId, IsMindmapOnly: true));
+        var result = await _mediator.Send(new CancelAnalyzeVideoAICommand(videoId, GetUserId(), IsMindmapOnly: true));
         return Ok(new { Success = result });
     }
 

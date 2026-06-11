@@ -139,7 +139,15 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       useStudentShellStore.getState().setBalance(payload.newBalance);
     },
     onNotificationCreated: () => {
-      void fetchBootstrap(true);
+      const current = useStudentShellStore.getState().unreadNotificationsCount;
+      useStudentShellStore.getState().setUnreadCount(current + 1);
+    },
+    onNotificationRead: () => {
+      const current = useStudentShellStore.getState().unreadNotificationsCount;
+      useStudentShellStore.getState().setUnreadCount(Math.max(0, current - 1));
+    },
+    onNotificationsCleared: () => {
+      useStudentShellStore.getState().setUnreadCount(0);
     }
   });
 

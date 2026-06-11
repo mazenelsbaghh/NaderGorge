@@ -1146,6 +1146,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(o => o.TargetGroup).HasMaxLength(150);
             e.Property(o => o.TargetUserId).HasMaxLength(150);
             e.Property(o => o.LastError).HasMaxLength(4000);
+            e.Property(o => o.IsDeadLetter).HasDefaultValue(false);
             
             e.HasIndex(o => new { o.ProcessedAt, o.CreatedAt });
         });
