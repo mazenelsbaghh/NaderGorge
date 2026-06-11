@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Homework.Commands;
 using NaderGorge.Application.Features.Homework.Queries;
 using NaderGorge.API.Extensions;
+using NaderGorge.API.Filters;
 
 namespace NaderGorge.API.Controllers;
 
@@ -26,6 +27,7 @@ public class HomeworkController : ControllerBase
     }
 
     [HttpPost("{homeworkId}/submit")]
+    [Idempotent]
     public async Task<IActionResult> SubmitHomework(Guid homeworkId, [FromBody] List<StudentAnswerInput> answers)
     {
         var command = new SubmitHomeworkCommand(homeworkId, GetUserId(), answers);

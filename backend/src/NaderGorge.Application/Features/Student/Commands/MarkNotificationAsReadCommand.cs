@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 using System;
 using System.Threading;
@@ -30,6 +31,19 @@ public class MarkNotificationAsReadCommandHandler : IRequestHandler<MarkNotifica
         }
 
         notification.ReadAt = DateTime.UtcNow;
+
+        var notificationReadEvent = new OutboxEvent
+        {
+            Type = "NotificationRead",
+            TargetUserId = request.UserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                notificationId = request.NotificationId,
+                userId = request.UserId
+            })
+        };
+        _db.OutboxEvents.Add(notificationReadEvent);
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<bool>.Ok(true);

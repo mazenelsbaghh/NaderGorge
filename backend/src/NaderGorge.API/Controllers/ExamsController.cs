@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Exams.Queries;
 using System.Security.Claims;
+using NaderGorge.API.Filters;
 
 namespace NaderGorge.API.Controllers;
 
@@ -60,6 +61,7 @@ public class ExamsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/submit/{attemptId:guid}")]
+    [Idempotent]
     public async Task<IActionResult> SubmitExam(Guid id, Guid attemptId, [FromBody] List<AnswerSubmissionDto> answers)
     {
         var response = await _mediator.Send(new SubmitExamCommand(id, attemptId, GetUserId(), answers));

@@ -2,6 +2,7 @@ using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -36,6 +37,19 @@ public class ApproveCommunityCommentCommandHandler
         comment.RejectionReason = null;
         comment.ReviewedAt = DateTime.UtcNow;
         comment.ReviewedByUserId = request.ReviewerUserId;
+
+        var approvedEvent = new OutboxEvent
+        {
+            Type = "CommunityCommentApproved",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                commentId = comment.Id,
+                postId = comment.PostId,
+                authorId = comment.AuthorUserId,
+                body = comment.Body
+            })
+        };
+        _db.OutboxEvents.Add(approvedEvent);
 
         await _db.SaveChangesAsync(ct);
 

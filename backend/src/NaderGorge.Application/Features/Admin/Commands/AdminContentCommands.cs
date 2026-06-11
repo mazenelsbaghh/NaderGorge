@@ -168,6 +168,33 @@ public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiRe
             Price = request.Price
         };
         _db.Terms.Add(term);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "TermCreated",
+            TargetGroup = $"Package_{request.PackageId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                termId = term.Id,
+                packageId = request.PackageId,
+                title = term.Title
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
+        var termPublishedEvent = new OutboxEvent
+        {
+            Type = "TermPublished",
+            TargetGroup = $"Package_{request.PackageId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                termId = term.Id,
+                packageId = request.PackageId,
+                title = term.Title
+            })
+        };
+        _db.OutboxEvents.Add(termPublishedEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(term.Id);
     }
@@ -200,6 +227,20 @@ public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiRe
         term.Title = request.Title;
         term.Order = request.Order;
         term.Price = request.Price;
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "TermUpdated",
+            TargetGroup = $"Package_{term.PackageId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                termId = term.Id,
+                packageId = term.PackageId,
+                title = term.Title
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }
@@ -233,6 +274,20 @@ public class DeleteTermCommandHandler : IRequestHandler<DeleteTermCommand, ApiRe
             return ApiResponse.Fail("Cannot delete term because it has sections. Remove sections first.");
 
         _db.Terms.Remove(term);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "TermDeleted",
+            TargetGroup = $"Package_{term.PackageId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                termId = term.Id,
+                packageId = term.PackageId,
+                title = term.Title
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }
@@ -268,6 +323,39 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
             Price = request.Price
         };
         _db.ContentSections.Add(sec);
+
+        var term = await _db.Terms.FindAsync(new object[] { request.TermId }, ct);
+        if (term != null)
+        {
+            var sectionOutbox = new OutboxEvent
+            {
+                Type = "SectionCreated",
+                TargetGroup = $"Package_{term.PackageId}",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    sectionId = sec.Id,
+                    termId = request.TermId,
+                    packageId = term.PackageId,
+                    title = sec.Title
+                })
+            };
+            _db.OutboxEvents.Add(sectionOutbox);
+
+            var sectionPublishedOutbox = new OutboxEvent
+            {
+                Type = "SectionPublished",
+                TargetGroup = $"Package_{term.PackageId}",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    sectionId = sec.Id,
+                    termId = request.TermId,
+                    packageId = term.PackageId,
+                    title = sec.Title
+                })
+            };
+            _db.OutboxEvents.Add(sectionPublishedOutbox);
+        }
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(sec.Id);
     }
@@ -377,6 +465,20 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             LessonId = request.LessonId
         };
         _db.LessonVideos.Add(video);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "VideoProcessingStarted",
+            TargetGroup = $"Lesson_{request.LessonId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonId = request.LessonId,
+                videoId = video.Id,
+                status = "Started"
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(video.Id);
     }
@@ -427,6 +529,19 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
         video.Order = request.Order;
         video.MaxWatchCount = request.Limit;
 
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "VideoUpdated",
+            TargetGroup = $"Lesson_{video.LessonId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonId = video.LessonId,
+                videoId = video.Id,
+                title = video.Title
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }
@@ -457,6 +572,19 @@ public class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoCommand, Api
         }
 
         _db.LessonVideos.Remove(video);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "VideoDeleted",
+            TargetGroup = $"Lesson_{video.LessonId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonId = video.LessonId,
+                videoId = video.Id
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }
@@ -495,6 +623,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
         }
 
         var lesson = await _db.Lessons
+            .Include(l => l.ContentSection).ThenInclude(s => s.Term)
             .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
 
         if (lesson == null) return ApiResponse<Guid>.Fail("Lesson not found");
@@ -540,6 +669,23 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             });
         }
 
+        if (lesson.ContentSection?.Term != null)
+        {
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "HomeworkPublished",
+                TargetGroup = $"Package_{lesson.ContentSection.Term.PackageId}",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    lessonId = lesson.Id,
+                    homeworkId = hw.Id,
+                    title = hw.Title,
+                    packageId = lesson.ContentSection.Term.PackageId
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
+        }
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(hw.Id);
     }
@@ -573,6 +719,18 @@ public class CreateLessonResourceCommandHandler : IRequestHandler<CreateLessonRe
             FileUrl = request.FileUrl,
             ResourceType = request.ResourceType
         };
+
+        var resourceProcessingStartedEvent = new OutboxEvent
+        {
+            Type = "ResourceProcessingStarted",
+            TargetGroup = $"Lesson_{request.LessonId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonId = request.LessonId,
+                title = request.Title
+            })
+        };
+        _db.OutboxEvents.Add(resourceProcessingStartedEvent);
 
         _db.LessonResources.Add(resource);
 
@@ -623,10 +781,29 @@ public class LinkLessonExamCommandHandler : IRequestHandler<LinkLessonExamComman
             }
         }
 
-        var lesson = await _db.Lessons.FindAsync(new object[] { request.LessonId }, ct);
+        var lesson = await _db.Lessons
+            .Include(l => l.ContentSection).ThenInclude(s => s.Term)
+            .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
         if (lesson == null) return ApiResponse.Fail("Lesson not found");
 
         lesson.ExamId = request.ExamId;
+
+        if (request.ExamId.HasValue && lesson.ContentSection?.Term != null)
+        {
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "ExamPublished",
+                TargetGroup = $"Package_{lesson.ContentSection.Term.PackageId}",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    lessonId = lesson.Id,
+                    examId = request.ExamId.Value,
+                    packageId = lesson.ContentSection.Term.PackageId
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
+        }
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();
     }

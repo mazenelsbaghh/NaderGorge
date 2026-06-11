@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
@@ -340,6 +341,7 @@ public class AdminController : ControllerBase
 
     [HttpPost("videos/{videoId:guid}/analyze-ai")]
     [HasPermission("content.manage")]
+    [EnableRateLimiting("ai-analysis")]
     public async Task<IActionResult> RequestAIAnalysis(Guid videoId)
     {
         var result = await _mediator.Send(new AnalyzeVideoAICommand(videoId));

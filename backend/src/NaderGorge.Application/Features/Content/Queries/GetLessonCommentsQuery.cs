@@ -17,7 +17,7 @@ public record LessonCommentDto(
     string? AuthorAvatarSlug
 );
 
-public record GetLessonCommentsQuery(Guid LessonId, Guid UserId) : IRequest<ApiResponse<List<LessonCommentDto>>>;
+public record GetLessonCommentsQuery(Guid LessonId, Guid UserId, int Offset = 0, int Limit = 50) : IRequest<ApiResponse<List<LessonCommentDto>>>;
 
 public class GetLessonCommentsQueryHandler : IRequestHandler<GetLessonCommentsQuery, ApiResponse<List<LessonCommentDto>>>
 {
@@ -45,6 +45,8 @@ public class GetLessonCommentsQueryHandler : IRequestHandler<GetLessonCommentsQu
             .Include(c => c.AuthorUser)
             .Where(c => c.LessonId == request.LessonId && c.Status == LessonCommentStatus.Approved)
             .OrderByDescending(c => c.CreatedAt)
+            .Skip(request.Offset)
+            .Take(request.Limit)
             .Select(c => new LessonCommentDto(
                 c.Id,
                 c.LessonId,

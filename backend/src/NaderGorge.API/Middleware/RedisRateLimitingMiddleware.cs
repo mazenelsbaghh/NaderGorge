@@ -20,6 +20,8 @@ public class RedisRateLimitingMiddleware
         { "auth", (30, TimeSpan.FromMinutes(1), false) },
         { "codes", (20, TimeSpan.FromMinutes(1), true) },
         { "video-session", (30, TimeSpan.FromMinutes(1), true) },
+        { "ai-analysis", (5, TimeSpan.FromMinutes(1), true) },
+        { "sign-download", (10, TimeSpan.FromMinutes(1), true) },
         { "public-whatsapp", (12, TimeSpan.FromMinutes(1), false) },
         { "public-forms", (20, TimeSpan.FromMinutes(1), false) },
         { "parent-report", (30, TimeSpan.FromMinutes(1), false) }

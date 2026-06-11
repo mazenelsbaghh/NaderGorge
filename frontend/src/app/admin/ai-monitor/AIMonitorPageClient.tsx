@@ -205,7 +205,7 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
       } catch { /* ignore */ }
     };
 
-    const interval = setInterval(poll, 2500);
+    const interval = setInterval(poll, 30000);
     poll();
     return () => clearInterval(interval);
   }, [jobId, onDone]);
@@ -841,8 +841,8 @@ export default function AIMonitorPageClient() {
       setItems(updated);
     })();
 
-    // Fall back to a very slow interval (30s) if SignalR is connected, otherwise poll every 3s
-    const pollInterval = isConnected ? 30000 : 3000;
+    // Fall back to slow polling: 60s when SignalR connected, 30s when disconnected
+    const pollInterval = isConnected ? 60000 : 30000;
     intervalRef.current = setInterval(pollJobStatuses, pollInterval);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

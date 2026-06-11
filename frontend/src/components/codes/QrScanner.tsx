@@ -7,9 +7,11 @@ import { devConsole } from '@/utils/dev-console';
  */
 
 import { useState } from 'react';
-import { Scanner } from '@yudiel/react-qr-scanner';
-import { Camera, X } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Camera, X, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+const ScannerComponent = dynamic(() => import('@yudiel/react-qr-scanner').then(mod => ({ default: mod.Scanner })), { ssr: false, loading: () => <div className="aspect-square flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div> });
 
 export function QrScanner() {
   const router = useRouter();
@@ -76,7 +78,7 @@ export function QrScanner() {
         
         {/* Scanner Viewport */}
         <div className="rounded-xl overflow-hidden bg-black/50 aspect-square relative border border-[var(--admin-border)]">
-          <Scanner
+          <ScannerComponent
             onScan={handleScan}
             onError={handleError}
             formats={['qr_code']}

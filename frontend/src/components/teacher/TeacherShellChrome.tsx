@@ -22,7 +22,9 @@ import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { useAuthStore } from '@/stores/auth-store';
-import { RippleGrid } from '@/components/ui/ripple-grid';
+import dynamic from 'next/dynamic';
+
+const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 
 type TeacherShellRoute =
   | '/teacher'

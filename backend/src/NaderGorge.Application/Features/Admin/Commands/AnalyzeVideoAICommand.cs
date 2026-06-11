@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -58,6 +59,18 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
                 sourceUrl = sourceUrl,
                 teacherPhotoUrl = teacherPhotoUrl
             });
+
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "AiJobQueued",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    lessonVideoId = video.Id,
+                    jobType = "analyze-chapters"
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
+            await _db.SaveChangesAsync(ct);
         }
         catch
         {

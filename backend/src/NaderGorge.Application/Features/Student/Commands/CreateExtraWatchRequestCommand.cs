@@ -42,6 +42,20 @@ public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtra
         };
 
         _context.ExtraWatchRequests.Add(watchRequest);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "ExtraWatchRequestCreated",
+            TargetGroup = "Role_Admin",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                requestId = watchRequest.Id,
+                videoId = request.LessonVideoId,
+                studentId = request.UserId
+            })
+        };
+        _context.OutboxEvents.Add(outboxEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<Guid>.Ok(watchRequest.Id);

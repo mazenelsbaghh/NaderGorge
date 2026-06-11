@@ -64,6 +64,20 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
 
             if (alreadyPurchased)
             {
+                var failEvent = new OutboxEvent
+                {
+                    Type = "PurchaseFailed",
+                    TargetUserId = request.StudentId.ToString(),
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        studentId = request.StudentId,
+                        contentType = request.ContentType.ToString(),
+                        contentId = request.ContentId,
+                        reason = "already_purchased"
+                    })
+                };
+                _db.OutboxEvents.Add(failEvent);
+                await _db.SaveChangesAsync(ct);
                 return ApiResponse<bool>.Fail("تم شراء هذا المحتوى مسبقاً");
             }
 
@@ -78,6 +92,20 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             }
             catch (InvalidOperationException)
             {
+                var failEvent = new OutboxEvent
+                {
+                    Type = "PurchaseFailed",
+                    TargetUserId = request.StudentId.ToString(),
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        studentId = request.StudentId,
+                        contentType = request.ContentType.ToString(),
+                        contentId = request.ContentId,
+                        reason = "insufficient_balance"
+                    })
+                };
+                _db.OutboxEvents.Add(failEvent);
+                await _db.SaveChangesAsync(ct);
                 return ApiResponse<bool>.Fail($"رصيدك الحالي لا يكفي لشراء {contentName} بسعر ({price} ج.م)");
             }
 
@@ -89,7 +117,6 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 GrantType = request.ContentType,
                 GrantedAt = DateTime.UtcNow,
                 IsActive = true
-                // If subscription expires, set ExpiresAt based on content config
             };
 
             switch (request.ContentType)
@@ -101,6 +128,35 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             }
 
             _db.StudentAccessGrants.Add(grant);
+
+            if (request.ContentType == CodeType.Package)
+            {
+                var packageAccessGrantedEvent = new OutboxEvent
+                {
+                    Type = "PackageAccessGranted",
+                    TargetUserId = request.StudentId.ToString(),
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        userId = request.StudentId,
+                        packageId = request.ContentId
+                    })
+                };
+                _db.OutboxEvents.Add(packageAccessGrantedEvent);
+            }
+
+            var purchaseCompletedEvent = new OutboxEvent
+            {
+                Type = "PurchaseCompleted",
+                TargetUserId = request.StudentId.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    studentId = request.StudentId,
+                    contentType = request.ContentType.ToString(),
+                    contentId = request.ContentId,
+                    price = price
+                })
+            };
+            _db.OutboxEvents.Add(purchaseCompletedEvent);
 
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -117,6 +173,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
     {
         return ex.Message.Contains("could not serialize", StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("concurrent update", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("transaction is aborted", StringComparison.OrdinalIgnoreCase)
+            || ex.Message.Contains("25P02", StringComparison.OrdinalIgnoreCase)
             || (ex.InnerException != null && IsConcurrencyFailure(ex.InnerException));
     }
 }

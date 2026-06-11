@@ -60,6 +60,37 @@ public class CreateCommunityPostCommentCommandHandler : IRequestHandler<CreateCo
         };
 
         _db.CommunityPostComments.Add(comment);
+
+        var createdEvent = new OutboxEvent
+        {
+            Type = "CommunityCommentCreated",
+            TargetUserId = request.UserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                commentId = comment.Id,
+                postId = comment.PostId,
+                authorId = comment.AuthorUserId,
+                status = comment.Status.ToString()
+            })
+        };
+        _db.OutboxEvents.Add(createdEvent);
+
+        if (isTeacherOrAdmin)
+        {
+            var approvedEvent = new OutboxEvent
+            {
+                Type = "CommunityCommentApproved",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    commentId = comment.Id,
+                    postId = comment.PostId,
+                    authorId = comment.AuthorUserId,
+                    body = comment.Body
+                })
+            };
+            _db.OutboxEvents.Add(approvedEvent);
+        }
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<CreateCommunityPostCommentResponse>.Ok(

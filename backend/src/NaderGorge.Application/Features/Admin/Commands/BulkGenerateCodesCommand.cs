@@ -219,6 +219,36 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
         }
 
         _db.AccessCodes.AddRange(codes);
+
+        var codeGroupCreatedEvent = new OutboxEvent
+        {
+            Type = "CodeGroupCreated",
+            TargetGroup = isTeacher ? "Role_Teacher" : "Role_Admin",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                codeGroupId = group.Id,
+                name = group.Name,
+                codeType = group.CodeType.ToString(),
+                totalCodes = group.TotalCodes,
+                createdAt = DateTime.UtcNow
+            })
+        };
+        _db.OutboxEvents.Add(codeGroupCreatedEvent);
+
+        var codeGroupExportReadyEvent = new OutboxEvent
+        {
+            Type = "CodeGroupExportReady",
+            TargetGroup = isTeacher ? "Role_Teacher" : "Role_Admin",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                codeGroupId = group.Id,
+                name = group.Name,
+                totalCodes = group.TotalCodes,
+                codes = plaintexts
+            })
+        };
+        _db.OutboxEvents.Add(codeGroupExportReadyEvent);
+
         await _db.SaveChangesAsync(ct);
 
         await _audit.LogAsync(

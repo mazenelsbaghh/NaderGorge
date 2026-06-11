@@ -45,6 +45,28 @@ public static class RateLimitingConfig
                         QueueLimit = 0
                     }));
 
+            // AI Analysis: 5 requests per minute per user
+            options.AddPolicy("ai-analysis", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = isE2e ? 100000 : 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
+            // Sign Download: 10 requests per minute per user
+            options.AddPolicy("sign-download", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = isE2e ? 100000 : 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
             // General API: 1000 requests per minute per IP
             options.AddPolicy("public-whatsapp", context =>
                 RateLimitPartition.GetFixedWindowLimiter(

@@ -17,7 +17,7 @@ public class ChapterDto
     public int Order { get; set; }
 }
 
-public record AiAnalysisCompletedCommand(Guid VideoId, string SubtitleUrl, List<ChapterDto> Chapters) : IRequest<ApiResponse>;
+public record AiAnalysisCompletedCommand(Guid VideoId, string SubtitleUrl, List<ChapterDto> Chapters, string? JobId = null) : IRequest<ApiResponse>;
 
 public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompletedCommand, ApiResponse>
 {
@@ -115,6 +115,18 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             })
         };
         _db.OutboxEvents.Add(outboxEvent);
+
+        var aiJobCompletedEvent = new OutboxEvent
+        {
+            Type = "AiJobCompleted",
+            TargetGroup = "Role_Admin",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                jobId = request.JobId ?? video.Id.ToString(),
+                lessonVideoId = video.Id
+            })
+        };
+        _db.OutboxEvents.Add(aiJobCompletedEvent);
 
         // 5. Single save — no concurrency token on LessonVideo, so no concurrency exception possible
         await _db.SaveChangesAsync(ct);

@@ -24,7 +24,13 @@ export default function LessonDetailPageClient() {
 
     contentService
       .getLessonDetail(lessonId)
-      .then((res) => setLesson(res.data.data))
+      .then((res) => {
+        if (res.data.data) {
+          setLesson(res.data.data);
+        } else {
+          setError("تعذر تحميل الدرس أو لم يتم العثور عليه.");
+        }
+      })
       .catch((err) => {
         if (err.response?.status === 403) {
           setError("هذا الدرس غير متاح الآن أو ما زال مغلقًا.");

@@ -177,6 +177,96 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
         try
         {
+            var examSubmittedEvent = new OutboxEvent
+            {
+                Type = "ExamSubmitted",
+                TargetUserId = request.UserId.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    examId = request.ExamId,
+                    attemptId = request.AttemptId,
+                    isPassed = attempt.IsPassed,
+                    score = attempt.ScoreAchieved
+                })
+            };
+            _db.OutboxEvents.Add(examSubmittedEvent);
+
+            if (!hasEssayQuestions)
+            {
+                var examGradedEvent = new OutboxEvent
+                {
+                    Type = "ExamGraded",
+                    TargetUserId = request.UserId.ToString(),
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        examId = request.ExamId,
+                        attemptId = attempt.Id,
+                        isPassed = attempt.IsPassed,
+                        score = attempt.ScoreAchieved,
+                        evaluation = attempt.Evaluation
+                    })
+                };
+                _db.OutboxEvents.Add(examGradedEvent);
+
+                var examResultReadyEvent = new OutboxEvent
+                {
+                    Type = "ExamResultReady",
+                    TargetUserId = request.UserId.ToString(),
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        examId = request.ExamId,
+                        attemptId = attempt.Id,
+                        isPassed = attempt.IsPassed,
+                        score = attempt.ScoreAchieved
+                    })
+                };
+                _db.OutboxEvents.Add(examResultReadyEvent);
+            }
+
+            if (lesson != null)
+            {
+                var nextLesson = await _db.Lessons
+                    .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order > lesson.Order)
+                    .OrderBy(l => l.Order)
+                    .FirstOrDefaultAsync(ct);
+
+                if (nextLesson == null)
+                {
+                    var nextSection = await _db.ContentSections
+                        .Where(s => s.TermId == lesson.ContentSection.TermId && s.Order > lesson.ContentSection.Order)
+                        .OrderBy(s => s.Order)
+                        .FirstOrDefaultAsync(ct);
+
+                    if (nextSection != null)
+                    {
+                        nextLesson = await _db.Lessons
+                            .Where(l => l.ContentSectionId == nextSection.Id)
+                            .OrderBy(l => l.Order)
+                            .FirstOrDefaultAsync(ct);
+                    }
+                }
+
+                if (nextLesson != null)
+                {
+                    var nextLessonProgress = await _db.LessonProgresses
+                        .FirstOrDefaultAsync(lp => lp.UserId == request.UserId && lp.LessonId == nextLesson.Id, ct);
+
+                    bool nextIsLocked = !attempt.IsPassed && (nextLessonProgress == null || !nextLessonProgress.IsManuallyUnlocked);
+
+                    var lockEvent = new OutboxEvent
+                    {
+                        Type = nextIsLocked ? "LessonLocked" : "LessonUnlocked",
+                        TargetUserId = request.UserId.ToString(),
+                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            lessonId = nextLesson.Id,
+                            reason = nextIsLocked ? $"يجب اجتياز امتحان '{exam.Title}' بنجاح." : null
+                        })
+                    };
+                    _db.OutboxEvents.Add(lockEvent);
+                }
+            }
+
             await _db.SaveChangesAsync(ct);
 
             var pendingEssays = _db.EssaySubmissions.Local

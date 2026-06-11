@@ -122,6 +122,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<TeacherPayout> TeacherPayouts => Set<TeacherPayout>();
     public DbSet<AccessCodeActivationLog> AccessCodeActivationLogs => Set<AccessCodeActivationLog>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
+    public DbSet<WebVitalsMetric> WebVitalsMetrics => Set<WebVitalsMetric>();
 
     public Task<StudentAnswer?> FindStudentAnswerAsync(
         Guid studentExamAttemptId,
@@ -1147,6 +1148,20 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(o => o.LastError).HasMaxLength(4000);
             
             e.HasIndex(o => new { o.ProcessedAt, o.CreatedAt });
+        });
+
+        // WebVitalsMetric
+        modelBuilder.Entity<WebVitalsMetric>(e =>
+        {
+            e.ToTable("web_vitals_metrics");
+            e.HasKey(m => m.Id);
+            e.Property(m => m.MetricName).HasMaxLength(32).IsRequired();
+            e.Property(m => m.Rating).HasMaxLength(32).IsRequired();
+            e.Property(m => m.PageUrl).HasMaxLength(512).IsRequired();
+            e.Property(m => m.UserAgent).HasMaxLength(512).IsRequired();
+
+            e.HasIndex(m => m.MetricName);
+            e.HasIndex(m => m.CreatedAt);
         });
     }
 

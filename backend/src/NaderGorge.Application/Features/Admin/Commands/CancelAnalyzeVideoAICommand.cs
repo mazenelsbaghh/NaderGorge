@@ -2,6 +2,7 @@ using MediatR;
 using NaderGorge.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -42,6 +43,17 @@ public class CancelAnalyzeVideoAICommandHandler : IRequestHandler<CancelAnalyzeV
                 _context.VideoChapters.RemoveRange(existingChapters);
             }
         }
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "AiJobCancelled",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonVideoId = video.Id,
+                isMindmapOnly = request.IsMindmapOnly
+            })
+        };
+        _context.OutboxEvents.Add(outboxEvent);
 
         await _context.SaveChangesAsync(cancellationToken);
 

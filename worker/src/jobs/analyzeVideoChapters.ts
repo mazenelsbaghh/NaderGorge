@@ -86,7 +86,8 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
             body: JSON.stringify({
                 videoId: lessonVideoId,
                 subtitleUrl: subtitleUrl,
-                chapters: result.chapters
+                chapters: result.chapters,
+                jobId: job.id
             })
         });
 

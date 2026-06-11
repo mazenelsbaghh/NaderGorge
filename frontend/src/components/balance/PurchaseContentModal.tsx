@@ -5,6 +5,7 @@ import { Wallet, AlertTriangle, CheckCircle } from 'lucide-react';
 import { InlineLoader } from '@/components/ui/loading-indicator';
 import { balanceService, CodeType, StudentBalanceDto } from '@/services/balance-service';
 import { useRouter } from 'next/navigation';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 export interface PurchaseContentModalProps {
   isOpen: boolean;
@@ -80,10 +81,10 @@ export function PurchaseContentModal({
       await balanceService.purchaseContent(contentType, contentId);
       setSuccess(true);
       setTimeout(() => {
+        invalidateMany(['student:shell', 'student:balance', 'content:packages']);
         void onPurchaseSuccess?.();
         onClose();
-        router.refresh();
-      }, 2000);
+      }, 1500);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'فشل في إتمام عملية الشراء';
       setError(message);
@@ -108,7 +109,7 @@ export function PurchaseContentModal({
               <CheckCircle className="h-10 w-10" />
             </div>
             <h3 id="purchase-modal-title" className="mb-2 text-2xl font-black text-[var(--admin-text)]">تم الشراء بنجاح!</h3>
-            <p className="font-medium text-[var(--admin-muted)]">سيتم تحديث الصفحة الآن...</p>
+            <p className="font-medium text-[var(--admin-muted)]">تمت العملية بنجاح!</p>
           </div>
         ) : (
           <>

@@ -113,6 +113,13 @@ public class StudentController : ControllerBase
         var result = await _mediator.Send(new MarkNotificationAsReadCommand(id, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpPost("notifications/clear")]
+    public async Task<IActionResult> ClearNotifications()
+    {
+        var result = await _mediator.Send(new ClearNotificationsCommand(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }
 
 public class UpdateStudentProfileDto

@@ -67,6 +67,9 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
             ? null
             : _db.Exams.Local.FirstOrDefault(e => e.Id == attempt.ExamId)
                 ?? await _db.Exams.FirstOrDefaultAsync(e => e.Id == attempt.ExamId, ct);
+
+        bool allTeacherGraded = false;
+
         if (attempt != null && exam != null)
         {
             var objectiveAnswers = await _db.StudentAnswers
@@ -94,13 +97,108 @@ public class GradeEssayCommandHandler : IRequestHandler<GradeEssayCommand, ApiRe
                 .Where(e => e.QuestionId != submission.QuestionId)
                 .Any(e => e.Status != EssaySubmissionStatus.TeacherGraded);
 
-            var allTeacherGraded = !hasPendingEssayQuestions;
+            allTeacherGraded = !hasPendingEssayQuestions;
             if (allTeacherGraded)
             {
                 var scaledScore = NaderGorge.Application.Services.GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, exam.TotalScore);
                 attempt.ScoreAchieved = scaledScore;
                 attempt.IsPassed = scaledScore >= exam.PassingScore;
                 attempt.Evaluation = NaderGorge.Application.Services.GradingEvaluationService.DetermineEvaluation(scaledScore, exam.PassingScore, exam.TotalScore);
+            }
+        }
+
+        var homeworkGradedEvent = new OutboxEvent
+        {
+            Type = "HomeworkGraded",
+            TargetUserId = submission.StudentId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                submissionId = submission.Id,
+                studentId = submission.StudentId,
+                examAttemptId = submission.StudentExamAttemptId,
+                teacherScore = submission.TeacherFinalScore,
+                feedback = submission.TeacherFeedback
+            })
+        };
+        _db.OutboxEvents.Add(homeworkGradedEvent);
+
+        if (allTeacherGraded && attempt != null && exam != null)
+        {
+            var examGradedEvent = new OutboxEvent
+            {
+                Type = "ExamGraded",
+                TargetUserId = submission.StudentId.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    examId = attempt.ExamId,
+                    attemptId = attempt.Id,
+                    isPassed = attempt.IsPassed,
+                    score = attempt.ScoreAchieved,
+                    evaluation = attempt.Evaluation
+                })
+            };
+            _db.OutboxEvents.Add(examGradedEvent);
+
+            var examResultReadyEvent = new OutboxEvent
+            {
+                Type = "ExamResultReady",
+                TargetUserId = submission.StudentId.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    examId = attempt.ExamId,
+                    attemptId = attempt.Id,
+                    isPassed = attempt.IsPassed,
+                    score = attempt.ScoreAchieved
+                })
+            };
+            _db.OutboxEvents.Add(examResultReadyEvent);
+
+            var lesson = await _db.Lessons
+                .Include(l => l.ContentSection).ThenInclude(cs => cs.Term)
+                .FirstOrDefaultAsync(l => l.ExamId == exam.Id, ct);
+
+            if (lesson != null)
+            {
+                var nextLesson = await _db.Lessons
+                    .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order > lesson.Order)
+                    .OrderBy(l => l.Order)
+                    .FirstOrDefaultAsync(ct);
+
+                if (nextLesson == null)
+                {
+                    var nextSection = await _db.ContentSections
+                        .Where(s => s.TermId == lesson.ContentSection.TermId && s.Order > lesson.ContentSection.Order)
+                        .OrderBy(s => s.Order)
+                        .FirstOrDefaultAsync(ct);
+
+                    if (nextSection != null)
+                    {
+                        nextLesson = await _db.Lessons
+                            .Where(l => l.ContentSectionId == nextSection.Id)
+                            .OrderBy(l => l.Order)
+                            .FirstOrDefaultAsync(ct);
+                    }
+                }
+
+                if (nextLesson != null)
+                {
+                    var nextLessonProgress = await _db.LessonProgresses
+                        .FirstOrDefaultAsync(lp => lp.UserId == submission.StudentId && lp.LessonId == nextLesson.Id, ct);
+
+                    bool nextIsLocked = !attempt.IsPassed && (nextLessonProgress == null || !nextLessonProgress.IsManuallyUnlocked);
+
+                    var lockEvent = new OutboxEvent
+                    {
+                        Type = nextIsLocked ? "LessonLocked" : "LessonUnlocked",
+                        TargetUserId = submission.StudentId.ToString(),
+                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            lessonId = nextLesson.Id,
+                            reason = nextIsLocked ? $"يجب اجتياز امتحان '{exam.Title}' بنجاح." : null
+                        })
+                    };
+                    _db.OutboxEvents.Add(lockEvent);
+                }
             }
         }
 

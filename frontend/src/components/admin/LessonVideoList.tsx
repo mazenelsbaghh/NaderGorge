@@ -66,7 +66,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     };
 
     checkStatus();
-    const interval = setInterval(checkStatus, isConnected ? 30000 : 3000);
+    const interval = setInterval(checkStatus, isConnected ? 60000 : 30000);
 
     return () => {
       clearInterval(interval);

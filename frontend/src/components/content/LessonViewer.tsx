@@ -7,7 +7,7 @@ import { useLessonFocusStore } from "@/stores/lesson-focus-store";
 import apiClient from "@/services/api-client";
 import toast from 'react-hot-toast';
 
-import type { LessonDetailDto } from "@/services/content-service";
+import { contentService, type LessonDetailDto, type ResourceDto } from "@/services/content-service";
 
 import { LessonCarousel } from "@/app/student/packages/[packageId]/lessons/[lessonId]/components/LessonCarousel";
 import { LessonCommentsSection } from "@/components/content/LessonCommentsSection";
@@ -35,8 +35,26 @@ export function LessonViewer({
   const [homeworkSubmitted, setHomeworkSubmitted] = useState(false);
   const [shuffledQuestions, setShuffledQuestions] = useState<Exclude<LessonDetailDto['homework'], undefined>['questions']>([]);
   const [downloadingResourceId, setDownloadingResourceId] = useState<string | null>(null);
+  const [resources, setResources] = useState<ResourceDto[]>([]);
+  const [loadingResources, setLoadingResources] = useState(true);
 
-  const handleResourceClick = async (e: React.MouseEvent, resourceId: string, title: string) => {
+  useEffect(() => {
+    if (lesson.id) {
+      setLoadingResources(true);
+      contentService.getLessonResources(lesson.id)
+        .then((res) => {
+          setResources(res.data?.data ?? []);
+        })
+        .catch((err) => {
+          console.error("Error loading resources:", err);
+        })
+        .finally(() => {
+          setLoadingResources(false);
+        });
+    }
+  }, [lesson.id]);
+
+  const handleResourceClick = async (e: React.MouseEvent, resourceId: string) => {
     e.preventDefault();
     if (downloadingResourceId) return;
     setDownloadingResourceId(resourceId);
@@ -186,26 +204,35 @@ export function LessonViewer({
               <h3 className="text-xl font-black text-[var(--admin-text)]">المصادر والملفات</h3>
             </div>
             <ul className="space-y-4 text-sm">
-              {lesson.resources.map((res) => (
-                <li key={res.id}>
-                  <button
-                    type="button"
-                    disabled={downloadingResourceId === res.id}
-                    onClick={(e) => handleResourceClick(e, res.id, res.title)}
-                    className="flex w-full text-right items-start gap-4 rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4 font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:items-center sm:px-5 disabled:opacity-50"
-                  >
-                    <svg className="h-5 w-5 opacity-80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span className="flex-1">{res.title}</span>
-                    {downloadingResourceId === res.id && (
-                      <span className="text-xs font-normal text-[var(--admin-muted)] animate-pulse">جاري التحضير...</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-              {lesson.resources.length === 0 && (
-                <li className="py-4 text-center font-medium text-[var(--admin-muted)]">لا توجد ملفات مرفقة.</li>
+              {loadingResources ? (
+                <div className="space-y-2 py-4 animate-pulse">
+                  <div className="h-12 w-full bg-[var(--admin-card-soft)] rounded-2xl"></div>
+                  <div className="h-12 w-full bg-[var(--admin-card-soft)] rounded-2xl"></div>
+                </div>
+              ) : (
+                <>
+                  {resources.map((res) => (
+                    <li key={res.id}>
+                      <button
+                        type="button"
+                        disabled={downloadingResourceId === res.id}
+                        onClick={(e) => handleResourceClick(e, res.id)}
+                        className="flex w-full text-right items-start gap-4 rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4 font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:items-center sm:px-5 disabled:opacity-50"
+                      >
+                        <svg className="h-5 w-5 opacity-80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="flex-1">{res.title}</span>
+                        {downloadingResourceId === res.id && (
+                          <span className="text-xs font-normal text-[var(--admin-muted)] animate-pulse">جاري التحضير...</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                  {resources.length === 0 && (
+                    <li className="py-4 text-center font-medium text-[var(--admin-muted)]">لا توجد ملفات مرفقة.</li>
+                  )}
+                </>
               )}
             </ul>
           </div>

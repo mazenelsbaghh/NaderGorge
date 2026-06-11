@@ -67,6 +67,19 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         submission.Status = SubmissionStatus.PendingReview;
         submission.SubmittedAt = DateTime.UtcNow;
 
+        var outboxEvent = new NaderGorge.Domain.Entities.OutboxEvent
+        {
+            Type = "HomeworkSubmitted",
+            TargetUserId = request.StudentId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                homeworkId = request.HomeworkId,
+                submissionId = submission.Id,
+                studentId = request.StudentId
+            })
+        };
+        _dbContext.OutboxEvents.Add(outboxEvent);
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         // At this point, Domain Events or background job enqueuing to BullMQ should ideally be triggered

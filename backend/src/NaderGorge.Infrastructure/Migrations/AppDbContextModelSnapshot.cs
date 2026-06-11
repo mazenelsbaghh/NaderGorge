@@ -3162,6 +3162,50 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("video_watch_events", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.WebVitalsMetric", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("MetricName")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("PageUrl")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Rating")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<double>("Value")
+                        .HasColumnType("double precision");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("MetricName");
+
+                    b.ToTable("web_vitals_metrics", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.EssayQuestion", b =>
                 {
                     b.HasBaseType("NaderGorge.Domain.Entities.QuestionBankItem");

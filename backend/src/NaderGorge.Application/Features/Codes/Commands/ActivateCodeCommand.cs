@@ -298,6 +298,21 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
             };
             _db.OutboxEvents.Add(outboxEvent);
 
+            if (codeType == CodeType.Package && codeGroup.PackageId.HasValue)
+            {
+                var packageAccessGrantedEvent = new OutboxEvent
+                {
+                    Type = "PackageAccessGranted",
+                    TargetUserId = user.Id.ToString(),
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        userId = user.Id,
+                        packageId = codeGroup.PackageId.Value
+                    })
+                };
+                _db.OutboxEvents.Add(packageAccessGrantedEvent);
+            }
+
             await _db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
 

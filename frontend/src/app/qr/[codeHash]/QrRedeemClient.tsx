@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
@@ -20,6 +20,20 @@ export function QrRedeemClient({ codeHash }: { codeHash: string }) {
     loadFromStorage();
   }, [loadFromStorage]);
 
+  const redeem = useCallback(async () => {
+    setState("redeeming");
+    setError(null);
+    try {
+      const response = await codeService.redeemCode(codeHash);
+      const redirectUrl = response.data.data?.redirectUrl || "/student";
+      router.replace(redirectUrl);
+    } catch (err) {
+      const apiError = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(apiError.response?.data?.message || apiError.message || "تعذر تفعيل الكود.");
+      setState("error");
+    }
+  }, [codeHash, router]);
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -28,30 +42,8 @@ export function QrRedeemClient({ codeHash }: { codeHash: string }) {
       return;
     }
 
-    let cancelled = false;
-
-    async function redeem() {
-      setState("redeeming");
-      setError(null);
-      try {
-        const response = await codeService.redeemCode(codeHash);
-        if (cancelled) return;
-        const redirectUrl = response.data.data?.redirectUrl || "/student";
-        router.replace(redirectUrl);
-      } catch (err) {
-        if (cancelled) return;
-        const apiError = err as { response?: { data?: { message?: string } }; message?: string };
-        setError(apiError.response?.data?.message || apiError.message || "تعذر تفعيل الكود.");
-        setState("error");
-      }
-    }
-
     void redeem();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [codeHash, isAuthenticated, isLoading, router]);
+  }, [codeHash, isAuthenticated, isLoading, router, redeem]);
 
   const isBusy = state === "loading" || state === "redeeming" || isLoading;
 
@@ -75,7 +67,7 @@ export function QrRedeemClient({ codeHash }: { codeHash: string }) {
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <button
                   type="button"
-                  onClick={() => window.location.reload()}
+                  onClick={() => void redeem()}
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2 text-sm font-bold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2"
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden="true" />

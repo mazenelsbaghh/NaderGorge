@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Content.Commands;
 using NaderGorge.Application.Features.Content.Queries;
@@ -90,9 +91,28 @@ public class ContentController : ControllerBase
     }
 
     [HttpGet("lessons/{lessonId:guid}/comments")]
-    public async Task<IActionResult> GetLessonComments(Guid lessonId)
+    public async Task<IActionResult> GetLessonComments(Guid lessonId, [FromQuery] int offset = 0, [FromQuery] int limit = 50)
     {
-        var response = await _mediator.Send(new GetLessonCommentsQuery(lessonId, GetUserId()));
+        var response = await _mediator.Send(new GetLessonCommentsQuery(lessonId, GetUserId(), offset, limit));
+
+        if (!response.Success)
+        {
+            if (response.Errors?.Contains("FORBIDDEN") == true)
+                return StatusCode(403, response);
+
+            if (response.Errors?.Contains("NOT_FOUND") == true)
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpGet("lessons/{lessonId:guid}/resources")]
+    public async Task<IActionResult> GetLessonResources(Guid lessonId)
+    {
+        var response = await _mediator.Send(new GetLessonResourcesQuery(lessonId, GetUserId()));
 
         if (!response.Success)
         {
@@ -147,6 +167,7 @@ public class ContentController : ControllerBase
     }
 
     [HttpPost("resources/{resourceId:guid}/sign-download")]
+    [EnableRateLimiting("sign-download")]
     public async Task<IActionResult> SignDownload(Guid resourceId, CancellationToken ct)
     {
         var userId = GetUserId();

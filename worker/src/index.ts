@@ -121,6 +121,32 @@ async function reportProgressToBackend(jobId: string, progress: any) {
   }
 }
 
+async function reportFailureToBackend(jobId: string, errorMsg: string) {
+  try {
+    const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
+    const apiKey = process.env.API_CALLBACK_SECRET;
+
+    const res = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Token': apiKey || ''
+      },
+      body: JSON.stringify({
+        jobId,
+        progress: 0,
+        status: 'failed',
+        message: errorMsg
+      })
+    });
+    if (!res.ok) {
+      console.error(`[Worker] Failure callback failed for job ${jobId} with status ${res.status}`);
+    }
+  } catch (err) {
+    console.error(`[Worker] Failed to report failure for job ${jobId}:`, err);
+  }
+}
+
 async function startNotificationWorker() {
   const worker = new Worker('notifications', async (job) => {
     return await processNotificationJob(job);
@@ -154,6 +180,9 @@ async function startAIWorker() {
 
   worker.on('failed', (job, err) => {
     console.error(`[AI Worker] Job ${job?.id} has failed with ${err.message}`);
+    if (job) {
+      reportFailureToBackend(job.id!, err.message);
+    }
   });
   
   console.log('[Worker] AI Video Chapters BullMQ worker started on queue: ai-video-chapters');
@@ -192,6 +221,9 @@ async function startMindmapsWorker() {
 
   worker.on('failed', (job, err) => {
     console.error(`[Mindmaps Worker] Job ${job?.id} has failed with ${err.message}`);
+    if (job) {
+      reportFailureToBackend(job.id!, err.message);
+    }
   });
   
   console.log('[Worker] Mindmaps BullMQ worker started on queue: generate-chapter-mindmaps');

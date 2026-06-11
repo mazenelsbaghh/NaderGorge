@@ -7,8 +7,10 @@ import { videoSessionService, type ExtraWatchRequestStatus } from '@/services/vi
 import { AlertCircle, Play, Info, X, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinnerLoader } from '@/components/ui/loading-indicator';
+import dynamic from 'next/dynamic';
 import PlayerControls from './PlayerControls';
-import SplitText from '@/components/ui/SplitText';
+
+const SplitText = dynamic(() => import('@/components/ui/SplitText'), { ssr: false });
 import { applyDomShields } from '@/utils/dom-shield';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { useRouter, useParams } from 'next/navigation';

@@ -55,6 +55,20 @@ public class ToggleCommunityPostLikeCommandHandler : IRequestHandler<ToggleCommu
 
         var likeCount = await _db.CommunityPostLikes.CountAsync(l => l.PostId == request.PostId, ct);
 
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "CommunityPostLiked",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                postId = request.PostId,
+                likeCount = likeCount,
+                userId = request.UserId,
+                isLiked = isLiked
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+        await _db.SaveChangesAsync(ct);
+
         return ApiResponse<ToggleCommunityPostLikeResponse>.Ok(
             new ToggleCommunityPostLikeResponse(request.PostId, isLiked, likeCount)
         );

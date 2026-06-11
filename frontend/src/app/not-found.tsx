@@ -4,7 +4,8 @@ import React, { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
-import { RippleGrid } from '@/components/ui/ripple-grid';
+import dynamic from 'next/dynamic';
+const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
 import { getSurfaceName, getSurfaceOrigins } from '@/packages/surface-runtime/config';
 

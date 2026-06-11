@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { studentService } from '@/services/student-service';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 interface StudentShellState {
   unreadNotificationsCount: number;
@@ -56,3 +57,11 @@ export const useStudentShellStore = create<StudentShellState>((set, get) => ({
   setUnreadCount: (count) => set({ unreadNotificationsCount: count }),
   setBalance: (balance) => set({ currentBalance: balance }),
 }));
+
+registerCacheStore(
+  'student:shell',
+  () => {},
+  () => {
+    void useStudentShellStore.getState().fetchBootstrap(true);
+  }
+);

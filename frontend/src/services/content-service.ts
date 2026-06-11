@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 import type { AxiosResponse } from 'axios';
 
 export interface PackageDto {
@@ -96,6 +97,7 @@ export interface HomeworkDto {
   instructions: string;
   isMandatory: boolean;
   requiredPointsToPass: number;
+  totalScore?: number;
   questions: HomeworkQuestionDto[];
 }
 
@@ -106,7 +108,7 @@ export interface LessonDetailDto {
   packageId: string;
   examId?: string;
   videos: VideoDto[];
-  resources: ResourceDto[];
+  resources?: ResourceDto[];
   homework?: HomeworkDto;
   isLocked?: boolean;
   lockedReason?: string;
@@ -208,11 +210,19 @@ export const contentService = {
   getPackageCodePage: (packageId: string) => apiClient.get<ContentApiResponse<PackageCodePageDto>>(`/content/packages/${packageId}/code-page`),
   getSections: (termId: string) => apiClient.get(`/content/terms/${termId}/sections`),
   getLessons: (sectionId: string) => apiClient.get(`/content/sections/${sectionId}/lessons`),
-  getLessonDetail: (lessonId: string) => apiClient.get(`/content/lessons/${lessonId}`),
-  getLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments`),
+  getLessonDetail: (lessonId: string) => apiClient.get<ContentApiResponse<LessonDetailDto>>(`/content/lessons/${lessonId}`),
+  getLessonComments: (lessonId: string, offset = 0, limit = 50) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments?offset=${offset}&limit=${limit}`),
+  getLessonResources: (lessonId: string) => apiClient.get<ContentApiResponse<ResourceDto[]>>(`/content/lessons/${lessonId}/resources`),
   getMyLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments/mine`),
   createLessonComment: (lessonId: string, body: string) =>
     apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body }),
   recordVideoEvent: (lessonVideoId: string, watchedSeconds: number, totalDurationSeconds = 0) => 
     apiClient.post('/tracking/video-event', { lessonVideoId, watchedSeconds, totalDurationSeconds }),
 };
+
+// Register with centralized cache invalidation registry
+registerCacheStore(
+  'content:packages',
+  () => contentService.clearPackagesCache(),
+  () => void contentService.getPackages({ force: true })
+);

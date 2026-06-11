@@ -21,7 +21,7 @@ public class InternalController : ControllerBase
     [HttpPost("ai-analysis-completed")]
     public async Task<IActionResult> AiAnalysisCompleted([FromBody] AiAnalysisCompletedWebhookRequest request)
     {
-        var cmd = new AiAnalysisCompletedCommand(request.VideoId, request.SubtitleUrl, request.Chapters);
+        var cmd = new AiAnalysisCompletedCommand(request.VideoId, request.SubtitleUrl, request.Chapters, request.JobId);
         var result = await _mediator.Send(cmd);
 
         return result.Success ? Ok(result) : BadRequest(result);
@@ -73,6 +73,7 @@ public class AiAnalysisCompletedWebhookRequest
     public Guid VideoId { get; set; }
     public string SubtitleUrl { get; set; } = string.Empty;
     public List<ChapterDto> Chapters { get; set; } = new List<ChapterDto>();
+    public string? JobId { get; set; }
 }
 
 public class AiProgressWebhookRequest

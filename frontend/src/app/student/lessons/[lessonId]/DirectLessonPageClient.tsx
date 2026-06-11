@@ -22,7 +22,13 @@ export default function DirectLessonPageClient() {
 
     contentService
       .getLessonDetail(lessonId)
-      .then((res) => setLesson(res.data.data))
+      .then((res) => {
+        if (res.data.data) {
+          setLesson(res.data.data);
+        } else {
+          setError("تعذر تحميل الحصة أو لم يتم العثور عليها.");
+        }
+      })
       .catch((err) => {
         if (err.response?.status === 403) {
           setError("هذه الحصة غير متاحة الآن أو ما زالت مغلقة.");

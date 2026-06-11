@@ -18,6 +18,7 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
         var package = await _db.Packages.FindAsync(new object[] { request.Id }, ct);
         if (package == null) return ApiResponse.Fail("Package not found");
 
+        bool wasActive = package.IsActive;
         package.Name = request.Name;
         package.Description = request.Description;
         package.Price = request.Price;
@@ -36,6 +37,35 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
             })
         };
         _db.OutboxEvents.Add(outboxEvent);
+
+        if (wasActive && !package.IsActive)
+        {
+            var archiveEvent = new OutboxEvent
+            {
+                Type = "PackageArchived",
+                TargetGroup = $"Package_{package.Id}",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    packageId = package.Id
+                })
+            };
+            _db.OutboxEvents.Add(archiveEvent);
+        }
+        else if (!wasActive && package.IsActive)
+        {
+            var publishEvent = new OutboxEvent
+            {
+                Type = "PackagePublished",
+                TargetGroup = "Role_Student",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    packageId = package.Id,
+                    name = package.Name,
+                    price = package.Price
+                })
+            };
+            _db.OutboxEvents.Add(publishEvent);
+        }
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();

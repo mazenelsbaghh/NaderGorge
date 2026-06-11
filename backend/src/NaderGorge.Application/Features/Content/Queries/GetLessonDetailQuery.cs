@@ -16,14 +16,13 @@ public record LessonDetailDto(
     Guid? ExamId,
     LessonHomeworkDto? Homework,
     List<VideoDto> Videos,
-    List<ResourceDto> Resources,
     bool IsLocked = false,
     string? LockedReason = null,
     Guid? BlockingExamId = null,
     Guid? BlockingHomeworkLessonId = null
 );
 
-public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, List<LessonHomeworkQuestionDto> Questions);
+public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
 public record LessonHomeworkQuestionDto(Guid Id, string Text, int Order, int MaxPoints);
 
 public record VideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
@@ -74,7 +73,6 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .AsNoTracking()
             .Include(l => l.Videos)
                 .ThenInclude(v => v.VideoChapters)
-            .Include(l => l.Resources)
             .Include(l => l.ContentSection)
             .ThenInclude(cs => cs.Term)
             .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
@@ -218,8 +216,6 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             }
         }
 
-        var resourceDtos = lesson.Resources.Select(r => new ResourceDto(r.Id, r.Title, r.FileUrl, r.ResourceType)).ToList();
-
         var hw = await _db.Homeworks
             .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
@@ -241,7 +237,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 new LessonHomeworkQuestionDto(q.Id, q.BodyText, q.Order, q.PointsActive)
             ).ToList();
 
-            homeworkDto = new LessonHomeworkDto(hw.Id, hw.Title, hw.Description ?? "", hw.IsMandatory, hw.PassingScoreThreshold, hwQuestions);
+            homeworkDto = new LessonHomeworkDto(hw.Id, hw.Title, hw.Description ?? "", hw.IsMandatory, hw.PassingScoreThreshold, hw.TotalScore, hwQuestions);
         }
         var detail = new LessonDetailDto(
             lesson.Id,
@@ -251,7 +247,6 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             lesson.ExamId,
             homeworkDto,
             videoDtos,
-            resourceDtos,
             isLocked,
             lockedReason,
             blockingExamId,

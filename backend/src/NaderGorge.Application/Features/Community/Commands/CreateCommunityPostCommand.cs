@@ -76,6 +76,18 @@ public class CreateCommunityPostCommandHandler : IRequestHandler<CreateCommunity
             NewValues = $"Status={CommunityPostStatus.Pending};BodyLength={trimmedBody.Length};IsPoll={isPoll}",
         });
 
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "CommunityPostCreated",
+            TargetUserId = request.UserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                postId = post.Id,
+                authorId = request.UserId
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<CreateCommunityPostResponse>.Ok(

@@ -412,7 +412,7 @@ export default function AdminStudentsPageClient() {
             </p>
           </div>
           <NeumorphButton
-            onClick={() => window.location.reload()}
+            onClick={() => void fetchUsers()}
             intent="primary"
             size="lg"
             pill
@@ -551,16 +551,18 @@ export default function AdminStudentsPageClient() {
             </div>
           )}
 
-          <AdminDataTable
-            data={filteredStudents}
-            columns={columns}
-            loading={loading}
-            rowKey={(u) => u.id}
-            emptyMessage="لا توجد نتائج مطابقة لفلترة الطلاب."
-            onRowClick={(u) => {
-              router.push(`/admin/users/${u.id}`);
-            }}
-          />
+          <div className="content-visibility-auto">
+            <AdminDataTable
+              data={filteredStudents}
+              columns={columns}
+              loading={loading}
+              rowKey={(u) => u.id}
+              emptyMessage="لا توجد نتائج مطابقة لفلترة الطلاب."
+              onRowClick={(u) => {
+                router.push(`/admin/users/${u.id}`);
+              }}
+            />
+          </div>
         </>
       )}
     </AdminShellChrome>

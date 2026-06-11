@@ -6,6 +6,7 @@ using NaderGorge.API.Configuration;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
+using NaderGorge.API.Filters;
 
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -113,6 +114,7 @@ public class VideoSessionController : ControllerBase
     }
 
     [HttpPost("{lessonVideoId}/request-extra")]
+    [Idempotent]
     public async Task<IActionResult> RequestExtraWatch(Guid lessonVideoId, CancellationToken ct)
     {
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;

@@ -773,6 +773,13 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     transition: transform 0.2s cubic-bezier(0.87, 0, 0.13, 1);
     transform: translateY(calc(var(--value) * -1em));
   }
+
+  @supports (content-visibility: auto) {
+    .content-visibility-auto {
+      content-visibility: auto;
+      contain-intrinsic-size: 0 500px;
+    }
+  }
 }
 
 /* 🛡️ THE GLOBAL IDM ANNIHILATOR 🛡️ */

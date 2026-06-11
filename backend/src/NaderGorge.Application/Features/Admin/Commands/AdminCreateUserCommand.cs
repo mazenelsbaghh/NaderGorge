@@ -112,6 +112,18 @@ public class AdminCreateUserCommandHandler : IRequestHandler<AdminCreateUserComm
                         GrantedAt = DateTime.UtcNow,
                         IsActive = true
                     });
+
+                    var accessGrantedEvent = new OutboxEvent
+                    {
+                        Type = "PackageAccessGranted",
+                        TargetUserId = user.Id.ToString(),
+                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            userId = user.Id,
+                            packageId = packageId
+                        })
+                    };
+                    _context.OutboxEvents.Add(accessGrantedEvent);
                 }
             }
         }

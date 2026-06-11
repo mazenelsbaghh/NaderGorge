@@ -52,6 +52,18 @@ public class ApproveCommunityPostCommandHandler : IRequestHandler<ApproveCommuni
             NewValues = $"Status={CommunityPostStatus.Approved};ReviewedAt={post.ReviewedAt:O}",
         });
 
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "CommunityPostApproved",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                postId = post.Id,
+                authorId = post.AuthorUserId,
+                body = post.Body
+            })
+        };
+        _context.OutboxEvents.Add(outboxEvent);
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<ModerateCommunityPostResponse>.Ok(
