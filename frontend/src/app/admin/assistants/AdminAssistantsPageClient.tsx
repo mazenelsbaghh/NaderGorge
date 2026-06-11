@@ -35,9 +35,10 @@ import { AdminUserListDto, adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
-function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' {
+function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
   if (user.roles.includes('Student')) return 'Student';
+  if (user.roles.includes('Teacher')) return 'Teacher';
   return 'Assistant';
 }
 
