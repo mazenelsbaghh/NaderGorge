@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import {
   ArrowRight,
   ChevronDown,
@@ -29,7 +30,9 @@ import {
   type PackageDto,
   type TermDto,
 } from "@/services/content-service";
+import { usePlatformEvents } from "@/hooks/usePlatformEvents";
 
+/* ─── Stagger helpers ─────────────────────────────────────────────────── */
 const stagger = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
@@ -58,7 +61,7 @@ function SectionLessons({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchLessons = useCallback(() => {
     setLoading(true);
     setError(null);
     contentService
@@ -67,6 +70,39 @@ function SectionLessons({
       .catch(() => setError("تعذر تحميل الحصص."))
       .finally(() => setLoading(false));
   }, [sectionId]);
+
+  useEffect(() => {
+    fetchLessons();
+  }, [fetchLessons]);
+
+  const { joinPackage, leavePackage } = usePlatformEvents({
+    onLessonPublished: (payload) => {
+      if (payload.packageId === packageId) {
+        contentService.clearPackagesCache();
+        fetchLessons();
+        toast.success(`تم نشر درس جديد: ${payload.title}`);
+      }
+    },
+    onVideoReady: (payload) => {
+      if (lessons?.some((l) => l.id === payload.lessonId)) {
+        fetchLessons();
+        toast.success(`فيديو الدرس جاهز: ${payload.title}`);
+      }
+    },
+    onResourceReady: (payload) => {
+      if (lessons?.some((l) => l.id === payload.lessonId)) {
+        fetchLessons();
+        toast.success(`ملف جديد متاح: ${payload.title}`);
+      }
+    },
+  });
+
+  useEffect(() => {
+    void joinPackage(packageId);
+    return () => {
+      void leavePackage(packageId);
+    };
+  }, [packageId, joinPackage, leavePackage]);
 
   const go = (lesson: LessonSummaryDto) => {
     if (lesson.isLocked) {

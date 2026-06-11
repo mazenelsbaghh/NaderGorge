@@ -1,103 +1,131 @@
-# Implementation Plan: Docker/Domain Isolation and Role Permissions
+# Implementation Plan: [FEATURE]
 
-**Branch**: `113-docker-domain-isolation` | **Date**: 2026-06-10 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `specs/113-docker-domain-isolation-role-permissions/spec.md`
+**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
-Decouple each of the 5 web surfaces (Landing, Student, Teacher, Assistant, Admin) into dedicated Docker configurations, update the environment/host configurations to target the new `massar-academy.net` domain, clean up legacy domains from Nginx and CORS AllowedOrigins, and implement comprehensive E2E tests for cross-surface blocking, assistant permissions, and teacher bindings.
+[Extract from feature spec: primary requirement + technical approach from research]
 
 ## Technical Context
 
-**Language/Version**: C# 13 (.NET 9) Backend, TypeScript 5.x / Next.js 16.2.1 / React 19 Frontend  
-**Primary Dependencies**: Next.js App Router, Axios, Zustand, Docker Compose, Playwright  
-**Storage**: PostgreSQL (LessonVideo DB, StudentProfile, Role, Permissions)  
-**Testing**: Playwright (`npx playwright test`), `scripts/verify-surface-separation.mjs`  
-**Target Platform**: Docker-compose standalone services on `massar-academy.net`  
-**Project Type**: Multi-subdomain Web Application  
-**Performance Goals**: Instant cross-surface boundary blocks, decoupled container builds  
-**Constraints**: Zero cross-subdomain session/CORS leakage, secure routing  
-**Scale/Scope**: 5 isolated subdomains, full role separation  
+<!--
+  ACTION REQUIRED: Replace the content in this section with the technical details
+  for the project. The structure here is presented in advisory capacity to guide
+  the iteration process.
+-->
+
+**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
+**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
+**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
+**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
+**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
+**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
+**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
+**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
+**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- **Layer impact**: Docker configurations (`docker-compose.yml`), frontend host environment configurations, Nginx routing configs, backend `appsettings.json` CORS allowed origins, E2E tests, and boundary check scripts.
-- **Automated tests**: Extended Playwright tests mapping out students, teachers, assistants, and supervisors, plus `scripts/verify-surface-separation.mjs` containing subdomain validations.
-- **Manual QA**: Verifying that each surface responds on the designated subdomain/port and returns a custom 404 page for wrong surfaces.
-- **Docker gate**: Running `docker compose config -q` and starting the isolated services successfully.
+[Gates determined based on constitution file. For this project, every plan MUST
+document:
+- Layer impact across backend, frontend, worker, database, and Docker.
+- Automated tests required for the phase's critical paths.
+- Manual QA flows required from the product owner.
+- Docker gate commands (`docker compose config -q`, `make up`, `make migrate`
+  when schema changes exist, service health checks).
+- Explicit decision that the next phase cannot start until failed gates are
+  fixed or owner-approved risk is documented.]
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/113-docker-domain-isolation-role-permissions/
-├── plan.md              # This file
-├── research.md          # Research findings
-├── data-model.md        # DB impacts (none)
-├── quickstart.md        # Developer setup guide
-└── tasks.md             # Task checklist (created in Phase 3)
+specs/[###-feature]/
+├── plan.md              # This file (/speckit.plan command output)
+├── research.md          # Phase 0 output (/speckit.plan command)
+├── data-model.md        # Phase 1 output (/speckit.plan command)
+├── quickstart.md        # Phase 1 output (/speckit.plan command)
+├── contracts/           # Phase 1 output (/speckit.plan command)
+└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
 ```
 
 ### Source Code (repository root)
+<!--
+  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
+  for this feature. Delete unused options and expand the chosen structure with
+  real paths (e.g., apps/admin, packages/something). The delivered plan must
+  not include Option labels.
+-->
 
 ```text
+# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
+src/
+├── models/
+├── services/
+├── cli/
+└── lib/
+
+tests/
+├── contract/
+├── integration/
+└── unit/
+
+# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
 ├── src/
-│   └── NaderGorge.API/
-│       ├── appsettings.json
-│       ├── appsettings.Development.json
-│       └── appsettings.E2e.json
+│   ├── models/
+│   ├── services/
+│   └── api/
+└── tests/
+
 frontend/
 ├── src/
-│   ├── app/
-│   │   └── not-found.tsx
-│   ├── packages/surface-runtime/
-│   │   └── config.ts
-│   └── proxy.ts
-├── tests/
-│   └── e2e/
-│       ├── admin-content.spec.ts
-│       ├── admin-users.spec.ts
-│       ├── assistant-dashboard.spec.ts
-│       ├── auth.spec.ts
-│       ├── codes-wallet.spec.ts
-│       ├── codes.spec.ts
-│       ├── package-code-profiles.spec.ts
-│       ├── parent-report.spec.ts
-│       ├── student-academic.spec.ts
-│       └── student-journey.spec.ts
-scripts/
-└── verify-surface-separation.mjs
-docker-compose.yml
+│   ├── components/
+│   ├── pages/
+│   └── services/
+└── tests/
+
+# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
+api/
+└── [same as backend above]
+
+ios/ or android/
+└── [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
-**Structure Decision**: Web application with separate `frontend` and `backend` projects integrated via Docker Compose.
+**Structure Decision**: [Document the selected structure and reference the real
+directories captured above]
 
 ## Phase Closure & Verification Plan
 
-**Automated Tests Required**:
-- E2E Playwright verification: `npx playwright test`
-- Next.js build validation: `npm run build` inside `frontend/`
-- Next.js lint validation: `npm run lint` inside `frontend/`
-- Boundary separation verification: `node scripts/verify-surface-separation.mjs --static-only`
+<!--
+  ACTION REQUIRED: Replace placeholders with the concrete close-out plan for
+  this feature/phase. A phase is not complete without evidence here.
+-->
 
-**Docker Gate Required**:
-- Run `docker compose config -q` to verify container environments.
-- Confirm Nginx / CORS AllowOrigins configuration correctness.
+**Automated Tests Required**: [dotnet/frontend/worker/python/e2e commands and
+the critical paths they cover]
 
-**Manual QA Required**:
-- Access all subdomains: `app.massar-academy.net`, `teacher.massar-academy.net`, `staff.massar-academy.net`, `admin.massar-academy.net`
-- Verify that attempting to load routes belonging to a different surface on a subdomain renders a custom 404 page.
+**Docker Gate Required**: [docker compose config, make up, make migrate if
+needed, make ps, health URLs, surface verification]
 
-**End-of-Phase Report Format**:
-- Summary of docker configuration separation.
-- Details of Nginx / CORS cleanup.
-- Playwright E2E and surface validation script results.
-- Go/No-go recommendation for production deployment.
+**Manual QA Required**: [role-by-role flows the product owner must test
+manually, including negative permission checks]
+
+**End-of-Phase Report Format**: [implemented scope, commands run, test results,
+Docker result, manual QA checklist, risks, go/no-go for next phase]
 
 ## Complexity Tracking
 
-*No violations to document.*
+> **Fill ONLY if Constitution Check has violations that must be justified**
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |

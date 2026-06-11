@@ -6,6 +6,11 @@
 
 ## Active Plans
 
+### Real-time Platform Speed & Sync (2026-06-11)
+- [x] Integrate real-time notification toasts and count badge updates in student sidebar and bottom nav bar immediately upon SignalR events.
+- [x] Enhance lesson viewing layout to fetch and render newly ready videos, chapters, or resources instantly when processing finishes.
+- [x] Redesign AI monitor to listen to real-time `AiJobProgress` events, showing progress bar percentages and stages dynamically without visual jitter.
+
 ### Performance Audit Remediation (2026-06-11)
 - [x] Remove heavy global template animation wrappers.
 - [x] Optimize font weights (Tajawal, Montserrat) loaded on layout.

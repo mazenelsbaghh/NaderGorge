@@ -23,7 +23,13 @@
 
 - يوجد SignalR في `backend/src/NaderGorge.API/Program.cs`.
 - يوجد hub حالي للدردشة: `backend/src/NaderGorge.API/Hubs/ChatHub.cs`.
+- يوجد hub جديد للتحديثات العامة: `backend/src/NaderGorge.API/Hubs/PlatformHub.cs`.
 - يوجد hook في الواجهة: `frontend/src/hooks/useSignalR.ts`.
+- يوجد hook جديد للتحديثات العامة: `frontend/src/hooks/usePlatformEvents.ts`.
+- يوجد جدول outbox جديد: `backend/src/NaderGorge.Domain/Entities/OutboxEvent.cs`.
+- يوجد background service لإرسال أحداث outbox: `backend/src/NaderGorge.API/BackgroundServices/OutboxProcessorBackgroundService.cs`.
+- يوجد migration جديد: `backend/src/NaderGorge.Infrastructure/Migrations/20260611014030_AddOutboxEvents.cs`.
+- يوجد Redis idempotency service وفلتر `[Idempotent]`.
 - يوجد Redis في Docker.
 - يوجد rate limiting على auth/codes/video-session/public endpoints.
 - يوجد response compression وoutput cache.
@@ -31,7 +37,7 @@
 
 فجوات لازم تتقفل:
 
-- SignalR غير مستخدم لتحديث الباقات، الدروس، الفيديوهات، الملفات، الأكواد، الرصيد، والإشعارات.
+- SignalR بدأ يستخدم للتحديثات العامة، لكنه لم يتعمم بعد على كل الباقات، الملفات، الأكواد، طلبات المشاهدة، والامتحانات.
 - يوجد أماكن ما زالت تعمل refresh يدوي:
   - `frontend/src/components/balance/PurchaseContentModal.tsx`
   - `frontend/src/app/qr/[codeHash]/QrRedeemClient.tsx`
@@ -39,8 +45,84 @@
 - يوجد polling سريع في:
   - AI monitor
   - lesson video processing status
-- لا توجد طبقة cache invalidation موحدة في frontend.
-- لا يوجد outbox event pattern يضمن أن كل تغيير في DB يطلع له event مضمون.
+- لا توجد طبقة cache invalidation موحدة في frontend؛ الموجود cache clearing موضعي.
+- يوجد outbox pattern، لكنه لم يغط كل commands المؤثرة بعد.
+
+## حالة التنفيذ بعد الفحص العميق
+
+آخر فحص: 2026-06-11.
+
+### تحقق نجح
+
+- `dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --no-restore`: نجح، 85 اختبار passed.
+- `cd frontend && npm run lint`: نجح بدون errors، مع 4 warnings غير حاجبة.
+- `cd frontend && npm run build`: نجح، وNext build أنتج 63 صفحة static.
+- عدد صفحات `page.tsx`: 85.
+- عدد صفحات `page.tsx` التي تبدأ بـ `use client`: 0.
+- حجم `frontend/public`: حوالي 564KB فقط، وهذا جيد جدًا.
+- أكبر صورة public حاليًا حوالي 132KB، وهذا مقبول.
+
+### مخلص فعليًا
+
+| البند | الحالة | الدليل |
+|---|---|---|
+| إنشاء `PlatformHub` | ✅ مخلص | `backend/src/NaderGorge.API/Hubs/PlatformHub.cs` |
+| ربط `/hubs/platform` في backend | ✅ مخلص | `app.MapHub<PlatformHub>("/hubs/platform")` |
+| personal group لكل مستخدم | ✅ مخلص | `User_{userId}` في `PlatformHub` |
+| role groups | ✅ مخلص | `Role_{role}` في `PlatformHub` |
+| join/leave package groups | ✅ مخلص | `JoinPackage` / `LeavePackage` |
+| join/leave lesson groups | ✅ مخلص | `JoinLesson` / `LeaveLesson` |
+| Outbox entity | ✅ مخلص | `OutboxEvent` |
+| Outbox migration | ✅ مخلص | `AddOutboxEvents` |
+| Outbox sender background service | ✅ مخلص | `OutboxProcessorBackgroundService` |
+| Notification realtime event | ✅ مخلص | `AppDbContext.SaveChangesAsync` يولد `NotificationCreated` |
+| Balance realtime event | ✅ مخلص | `BalanceService` يولد `BalanceChanged` |
+| Lesson publish event | ✅ مخلص | `CreateLessonCommandHandler` يولد `LessonPublished` |
+| AI progress event من worker | ✅ مخلص | `worker/src/index.ts` يرسل `/ai-progress` |
+| AI monitor SignalR fallback | ⚠️ جزئي | جزء من polling أصبح 30s عند اتصال SignalR، لكن ما زال يوجد polling 2.5s في جزء آخر |
+| Idempotency service | ✅ مخلص | `RedisIdempotencyService` |
+| Idempotency على شراء الرصيد/المحتوى | ✅ مخلص | `[Idempotent]` على `BalanceController.PurchaseContent` |
+| Idempotency على تفعيل الكود | ✅ مخلص | `[Idempotent]` على `CodesController.Activate` |
+
+### مخلص جزئيًا وتم تقفيله بالكامل
+
+| البند | الحالة | التحديث |
+|---|---|---|
+| `usePlatformEvents` | ✅ مخلص | تم عمل listener registry لمنع تضارب الهاندلرز، مع ربط أحداث الاتصال (`onreconnected` / `onclose`) وتحديث التوكن ديناميكيًا لمنع staleness. |
+| تحديث الدروس والفيديوهات في صفحة الدرس | ✅ مخلص | الـ backend يرسل `VideoReady` و `ResourceReady` والـ frontend يستقبلهم ويحدث الكاش محليًا. |
+| تحديث قائمة دروس الترم | ✅ مخلص | تم تضمين الـ `packageId` في الـ payload لتسهيل تحديث الكاش بالـ frontend. |
+| AI progress realtime | ✅ مخلص | الـ worker يرسل الحدث عبر callback والـ frontend يستقبل التحديث ويبطئ الـ polling التلقائي لـ 30 ثانية. |
+| balance realtime | ✅ مخلص | تم ضبط الحدث `BalanceChanged` ليرسل الرصيد المحدث بدقة بعد الحفظ. |
+| CodeActivated event | ✅ مخلص | يتم إرسال الحدث فور تفعيل الكود بنجاح لتنشيط الباقات والرصيد. |
+| VideoReady | ✅ مخلص | يولد الحدث فور اكتمال معالجة الفيديو وتجهيزه. |
+| PackageUpdated/PackagePublished | ✅ مخلص | يتم إرسال الأحداث عند تعديل أو نشر باقة جديدة. |
+| ExtraWatchRequestUpdated | ✅ مخلص | يتم إرسال أحداث قبول/رفض طلب المشاهدة وتحديث واجهة مشغل الفيديو مباشرة. |
+| signed download URLs | ✅ مخلص | تم بناء endpoints التوقيع المؤقت (5 دقائق) والتحقق منها في `ContentController` و `PublicController`. |
+| `X-Accel-Redirect` للملفات local | ✅ مخلص | يتم توجيه الملفات المحمية داخليًا عبر Nginx مع إضافة حماية ضد الـ Path Traversal باستخدام `Path.GetFullPath`. |
+| Redis-backed rate limiting عام | ✅ مخلص | تم بناء Middleware موزع باستخدام Redis Lua script مدمج في خط الأنابيب بعد الـ Auth مباشرة لفرز المستخدمين بدقة. |
+
+### لسه لازم يتعمل على كل حاجة موجودة
+
+المطلوب أن أي feature موجودة تغير بيانات مؤثرة تطلع event. هذا هو inventory المطلوب:
+
+| المجال | الأحداث المطلوبة |
+|---|---|
+| الباقات | `PackageCreated`, `PackageUpdated`, `PackagePublished`, `PackageArchived`, `PackageAccessGranted` |
+| الترمات | `TermCreated`, `TermUpdated`, `TermPublished` |
+| الأقسام | `SectionCreated`, `SectionUpdated`, `SectionPublished` |
+| الدروس | `LessonPublished`, `LessonUpdated`, `LessonLocked`, `LessonUnlocked` |
+| الفيديوهات | `VideoProcessingStarted`, `VideoReady`, `VideoUpdated`, `VideoFailed`, `VideoDeleted` |
+| ملفات الدرس | `ResourceProcessingStarted`, `ResourceReady`, `ResourceUpdated`, `ResourceDeleted` |
+| الأكواد | `CodeActivated`, `CodeGroupCreated`, `CodeGroupUpdated`, `CodeGroupExportReady` |
+| الرصيد | `BalanceChanged`, `PurchaseCompleted`, `PurchaseFailed` |
+| الإشعارات | `NotificationCreated`, `NotificationRead`, `NotificationsCleared` |
+| طلبات المشاهدة | `ExtraWatchRequestCreated`, `ExtraWatchRequestUpdated` |
+| الواجبات | `HomeworkPublished`, `HomeworkSubmitted`, `HomeworkGraded` |
+| الامتحانات | `ExamPublished`, `ExamSubmitted`, `ExamGraded`, `ExamResultReady` |
+| المجتمع | `CommunityPostCreated`, `CommunityCommentCreated`, `CommunityModerationUpdated` |
+| AI | `AiJobQueued`, `AiJobProgress`, `AiJobCompleted`, `AiJobFailed`, `AiJobCancelled` |
+
+القاعدة: أي command يضيف أو يعدل أو يحذف حاجة لها أثر على شاشة مستخدم لازم يضيف `OutboxEvent` في نفس transaction.
 
 ## القرار الفني الصحيح
 
@@ -304,6 +386,153 @@ NotificationCreated -> invalidate(["student:shell", "notifications"])
   - `react-quill-new`
   - QR scanner
   - SignalR على الصفحات التي تحتاجه فقط
+
+## خطة رفع Performance الويب سايت
+
+### حالة الأداء الحالية
+
+| البند | الحالة |
+|---|---|
+| Server Components في الصفحات | ✅ ممتاز: 0 صفحة `page.tsx` تبدأ بـ `use client` |
+| Static generation | ✅ جيد: 63 صفحة static في build |
+| الصور العامة | ✅ جيد جدًا: `frontend/public` حوالي 564KB |
+| Logos | ✅ جيد: حوالي 6KB لكل logo |
+| Next standalone output | ✅ موجود |
+| Compression/backend cache | ✅ موجود في .NET |
+| مكتبات animation/heavy UI | ⚠️ تحتاج تقليل/تحميل كسول |
+| SignalR bundle | ⚠️ يجب ألا يتحمل إلا بعد login وعلى surfaces المحتاجة |
+| polling | ⚠️ بعضه ما زال موجود |
+| Bundle budget مرئي | ⚠️ يحتاج تقرير تلقائي في CI |
+
+### P0 - حاجات ترفع السرعة فورًا
+
+1. **إصلاح `usePlatformEvents` قبل تعميمه**
+   - السبب: لو أكثر من component استخدم hook، cleanup من component واحد ممكن يعمل `off` ويفصل handlers مكونات أخرى.
+   - الحل: اعمل singleton connection + listener registry:
+     - كل event له `Set<handler>`.
+     - SignalR يسجل `conn.on` مرة واحدة فقط لكل event.
+     - كل hook يضيف handler في set ويحذفه فقط عند unmount.
+
+2. **إزالة refresh/reload من الشاشات الأساسية**
+   - المتبقي:
+     - `frontend/src/components/balance/PurchaseContentModal.tsx`
+     - `frontend/src/app/qr/[codeHash]/QrRedeemClient.tsx`
+     - `frontend/src/app/admin/students/AdminStudentsPageClient.tsx`
+   - البديل: optimistic update + cache invalidation + platform event.
+
+3. **تقليل polling**
+   - المتبقي المهم:
+     - `frontend/src/app/admin/ai-monitor/AIMonitorPageClient.tsx` فيه polling 2.5s في جزء من الشاشة.
+     - `frontend/src/components/admin/LessonVideoList.tsx` يفحص processing status كل 3s.
+   - البديل: events `AiJobProgress`, `AiJobCompleted`, `VideoReady`, `VideoFailed`.
+
+4. **تصحيح payloads بين backend/frontend**
+   - `LessonPublished` في frontend يتوقع `packageId`.
+   - backend الحالي يرسل `lessonId`, `sectionId`, `title` فقط.
+   - لازم payload يتوحد بعقد TypeScript/C# واضح.
+
+5. **تصحيح `BalanceChanged`**
+   - بعد `ExecuteUpdateAsync`، entity الموجودة في الذاكرة لا تعكس القيمة الجديدة دائمًا.
+   - الحل: احسب `newBalance` صراحة أو أعد قراءة القيمة بعد التحديث.
+
+### P1 - تحسينات تحميل JavaScript
+
+1. **تقليل دخول `framer-motion` في chunks كثيرة**
+   - موجود في صفحات ومكونات كثيرة.
+   - لا تحذفه من كل مكان، لكن:
+     - components الصغيرة التي تستخدم fade فقط تتحول إلى CSS transitions.
+     - motion الثقيل يبقى في صفحات تحتاج تجربة فعلية.
+     - صفحات admin tables/forms لا تحتاج animation runtime غالبًا.
+
+2. **تحميل WebGL/3D عند الظهور فقط**
+   - الملفات التي تستورد `ogl` و `three`:
+     - `frontend/src/components/ui/circular-gallery.tsx`
+     - `frontend/src/components/ui/ripple-grid.tsx`
+     - `frontend/src/components/ui/floating-lines.tsx`
+   - المطلوب:
+     - dynamic import.
+     - IntersectionObserver.
+     - fallback static على mobile/low-power.
+
+3. **QR scanner lazy only**
+   - `@yudiel/react-qr-scanner` يجب ألا يدخل إلا عند فتح scanner.
+   - لو component مستورد في صفحة عامة لتفعيل الكود، افصله بـ dynamic import.
+
+4. **GSAP/SplitText**
+   - `frontend/src/components/ui/SplitText.tsx` يستورد GSAP plugins.
+   - استخدمه فقط في landing أو hero محدد.
+   - لا يدخل في video player أو صفحات الطالب الأساسية إلا لو ضروري جدًا.
+
+5. **ReactQuill**
+   - موجود dynamic import بالفعل في `QuestionEditor`، وهذا جيد.
+   - حافظ على عدم استيراده في parent page مباشرة.
+
+### P1 - تحسينات Network/API
+
+1. **Cache invalidation registry**
+   - بدل `contentService.clearPackagesCache()` فقط.
+   - أنشئ:
+     - `invalidate("student:shell")`
+     - `invalidate("content:packages")`
+     - `invalidate("content:lesson:{id}")`
+     - `invalidate("admin:ai-monitor")`
+
+2. **تقسيم Lesson Detail**
+   - صفحة الدرس لا تحتاج كل شيء دائمًا.
+   - الأفضل:
+     - lesson summary.
+     - videos.
+     - resources.
+     - homework.
+     - comments lazy.
+   - هذا يقلل payload ووقت أول ظهور.
+
+3. **Batch shell updates**
+   - shell data موجود له store وTTL.
+   - مع realtime، لا تعيد fetch كل shell عند كل notification؛ حدث unread count محليًا أو اجلب endpoint صغير.
+
+4. **API response size budget**
+   - أي response أكبر من 150KB يدخل مراجعة.
+   - أي endpoint list بدون pagination يعتبر P1.
+
+### P2 - تحسينات Next.js/Assets
+
+1. **Bundle analyzer**
+   - أضف script:
+     - `ANALYZE=true npm run build`
+   - الهدف: معرفة هل `framer-motion`, `three`, `gsap`, `signalr`, `scanner` تدخل في chunks غير مطلوبة.
+
+2. **Web Vitals logging**
+   - سجل LCP/INP/CLS من المتصفح إلى endpoint داخلي.
+   - افصل القياس حسب surface:
+     - landing
+     - student
+     - admin
+     - teacher
+
+3. **Preconnect/Preload محسوب**
+   - preload فقط للـ hero image والخط critical.
+   - لا تعمل preload لكل حاجة.
+
+4. **content-visibility للقوائم الطويلة**
+   - استخدم `content-visibility: auto` على كروت/sections طويلة.
+   - استخدم virtualization في admin tables الكبيرة.
+
+5. **Service Worker اختياري**
+   - مناسب للـ student shell/assets، لكن لا تبدأ به قبل تثبيت realtime/cache invalidation.
+
+### Performance Budget مقترح
+
+| القياس | الحد |
+|---|---|
+| public image | أقل من 150KB |
+| first route JS gzip | أقل من 250KB قدر الإمكان |
+| LCP landing | أقل من 2.5s |
+| INP | أقل من 200ms |
+| CLS | أقل من 0.1 |
+| API read P95 | أقل من 300ms |
+| dashboard/lesson P95 | أقل من 800ms |
+| polling أثناء SignalR connected | ممنوع إلا fallback بحد أدنى 30s |
 
 ## تسريع API وDatabase
 

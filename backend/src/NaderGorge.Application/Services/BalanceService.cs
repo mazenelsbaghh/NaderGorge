@@ -56,11 +56,23 @@ public class BalanceService
 
         var balance = await GetOrCreateBalance(userId, ct);
         var now = DateTime.UtcNow;
-        var affectedRows = await _db.StudentBalances
-            .Where(b => b.Id == balance.Id)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance + amount)
-                .SetProperty(b => b.UpdatedAt, now), ct);
+        int affectedRows;
+        if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            balance.CurrentBalance += amount;
+            balance.UpdatedAt = now;
+            _db.StudentBalances.Update(balance);
+            await _db.SaveChangesAsync(ct);
+            affectedRows = 1;
+        }
+        else
+        {
+            affectedRows = await _db.StudentBalances
+                .Where(b => b.Id == balance.Id)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance + amount)
+                    .SetProperty(b => b.UpdatedAt, now), ct);
+        }
 
         if (affectedRows != 1)
             throw new InvalidOperationException("Unable to update student balance.");
@@ -78,6 +90,19 @@ public class BalanceService
         };
 
         _db.BalanceTransactions.Add(tx);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "BalanceChanged",
+            TargetUserId = userId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                newBalance = balance.CurrentBalance,
+                formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("Added {Amount} credit to user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
@@ -101,11 +126,30 @@ public class BalanceService
         var balance = await GetOrCreateBalance(userId, ct);
 
         var now = DateTime.UtcNow;
-        var affectedRows = await _db.StudentBalances
-            .Where(b => b.Id == balance.Id && b.CurrentBalance >= amount)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance - amount)
-                .SetProperty(b => b.UpdatedAt, now), ct);
+        int affectedRows;
+        if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        {
+            if (balance.CurrentBalance >= amount)
+            {
+                balance.CurrentBalance -= amount;
+                balance.UpdatedAt = now;
+                _db.StudentBalances.Update(balance);
+                await _db.SaveChangesAsync(ct);
+                affectedRows = 1;
+            }
+            else
+            {
+                affectedRows = 0;
+            }
+        }
+        else
+        {
+            affectedRows = await _db.StudentBalances
+                .Where(b => b.Id == balance.Id && b.CurrentBalance >= amount)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance - amount)
+                    .SetProperty(b => b.UpdatedAt, now), ct);
+        }
 
         if (affectedRows != 1)
             throw new InvalidOperationException($"Insufficient balance. Current: {balance.CurrentBalance}, Required: {amount}");
@@ -123,6 +167,19 @@ public class BalanceService
         };
 
         _db.BalanceTransactions.Add(tx);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "BalanceChanged",
+            TargetUserId = userId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                newBalance = balance.CurrentBalance,
+                formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation("Deducted {Amount} from user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",

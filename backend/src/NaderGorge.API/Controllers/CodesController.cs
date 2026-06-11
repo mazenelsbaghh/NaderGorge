@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using NaderGorge.Application.Features.Codes.Commands;
+using NaderGorge.API.Filters;
 
 namespace NaderGorge.API.Controllers;
 
@@ -18,6 +19,7 @@ public class CodesController : ControllerBase
     public CodesController(IMediator mediator) => _mediator = mediator;
 
     [HttpPost("activate")]
+    [Idempotent]
     public async Task<IActionResult> Activate([FromBody] ActivateCodeRequest body)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

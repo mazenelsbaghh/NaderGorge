@@ -47,6 +47,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useStudentShellStore } from '@/stores/student-shell-store';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
@@ -132,6 +133,15 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useRootOverscrollBackground();
+
+  usePlatformEvents({
+    onBalanceChanged: (payload) => {
+      useStudentShellStore.getState().setBalance(payload.newBalance);
+    },
+    onNotificationCreated: () => {
+      void fetchBootstrap(true);
+    }
+  });
 
   const unreadCount = useStudentShellStore((state) => state.unreadNotificationsCount);
   const fetchBootstrap = useStudentShellStore((state) => state.fetchBootstrap);

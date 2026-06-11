@@ -104,6 +104,18 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
                 newChapters.Count, request.VideoId);
         }
 
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "VideoReady",
+            TargetGroup = $"Lesson_{video.LessonId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                videoId = video.Id,
+                lessonId = video.LessonId
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         // 5. Single save — no concurrency token on LessonVideo, so no concurrency exception possible
         await _db.SaveChangesAsync(ct);
 

@@ -26,6 +26,7 @@ import { contentService, type VideoChapterDto, type VideoDto } from '@/services/
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { AdminShellChrome, AdminTeacherPhotoUpload } from '@/components/admin';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -676,6 +677,37 @@ export default function AIMonitorPageClient() {
   // even after isProcessingAI flips to false in the DB.
   const trackedIdsRef = useRef<Set<string>>(new Set());
 
+  const handleAiJobProgress = (payload: { jobId: string; progress: number; status: string; message: string }) => {
+    setItems((prevItems) => {
+      return prevItems.map((item) => {
+        const idSuffix = item.video.isProcessingMindmaps ? '_mindmaps' : '';
+        const expectedJobId = `${item.video.id}${idSuffix}`;
+
+        if (payload.jobId === expectedJobId) {
+          const updatedStatus: JobStatus = {
+            id: payload.jobId,
+            state: payload.progress >= 100 ? 'completed' : payload.progress < 0 ? 'failed' : 'active',
+            progress: {
+              percentage: payload.progress,
+              stage: payload.message || payload.status,
+            },
+            failedReason: payload.progress < 0 ? payload.message : null,
+          };
+          return {
+            ...item,
+            jobStatus: updatedStatus,
+            fetchError: false,
+          };
+        }
+        return item;
+      });
+    });
+  };
+
+  const { isConnected } = usePlatformEvents({
+    onAiJobProgress: handleAiJobProgress
+  });
+
   // ── Load all processing videos from the content tree ──────────────────────
   async function loadProcessingVideos() {
     try {
@@ -808,13 +840,15 @@ export default function AIMonitorPageClient() {
       setWorkerReachable(anySuccess || items.length === 0);
       setItems(updated);
     })();
-    // Recurring poll every 3s
-    intervalRef.current = setInterval(pollJobStatuses, 3000);
+
+    // Fall back to a very slow interval (30s) if SignalR is connected, otherwise poll every 3s
+    const pollInterval = isConnected ? 30000 : 3000;
+    intervalRef.current = setInterval(pollJobStatuses, pollInterval);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length]);
+  }, [items.length, isConnected]);
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleCancel = async (videoId: string, isMindmap: boolean) => {

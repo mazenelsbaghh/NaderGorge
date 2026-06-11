@@ -5,6 +5,7 @@ using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
 using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Enums;
+using NaderGorge.API.Filters;
 
 namespace NaderGorge.API.Controllers;
 
@@ -27,6 +28,7 @@ public class BalanceController : ControllerBase
     }
 
     [HttpPost("purchase")]
+    [Idempotent]
     public async Task<IActionResult> PurchaseContent([FromBody] PurchaseRequestDto request)
     {
         var result = await _mediator.Send(new PurchaseContentCommand(GetUserId(), request.ContentType, request.ContentId));

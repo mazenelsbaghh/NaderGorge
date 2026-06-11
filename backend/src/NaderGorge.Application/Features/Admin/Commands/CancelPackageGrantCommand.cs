@@ -89,6 +89,25 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
         };
         _context.AuditLogs.Add(audit);
 
+        if (refundedAmount > 0m)
+        {
+            var balance = await _context.StudentBalances.FirstOrDefaultAsync(b => b.UserId == grant.UserId, cancellationToken);
+            if (balance != null)
+            {
+                var outboxEvent = new OutboxEvent
+                {
+                    Type = "BalanceChanged",
+                    TargetUserId = grant.UserId.ToString(),
+                    PayloadJson = JsonSerializer.Serialize(new
+                    {
+                        newBalance = balance.CurrentBalance,
+                        formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
+                    })
+                };
+                _context.OutboxEvents.Add(outboxEvent);
+            }
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         var successMessage = refundedAmount > 0m

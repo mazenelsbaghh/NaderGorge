@@ -67,6 +67,18 @@ public class AdjustBalanceCommandHandler : IRequestHandler<AdjustBalanceCommand,
             IpAddress = "System"
         });
 
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "BalanceChanged",
+            TargetUserId = request.StudentId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                newBalance = balance.CurrentBalance,
+                formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok($"Balance updated: {oldBalance} → {balance.CurrentBalance}");
     }

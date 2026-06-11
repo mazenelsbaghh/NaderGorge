@@ -34,6 +34,31 @@ export function LessonViewer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [homeworkSubmitted, setHomeworkSubmitted] = useState(false);
   const [shuffledQuestions, setShuffledQuestions] = useState<Exclude<LessonDetailDto['homework'], undefined>['questions']>([]);
+  const [downloadingResourceId, setDownloadingResourceId] = useState<string | null>(null);
+
+  const handleResourceClick = async (e: React.MouseEvent, resourceId: string, title: string) => {
+    e.preventDefault();
+    if (downloadingResourceId) return;
+    setDownloadingResourceId(resourceId);
+    try {
+      const response = await apiClient.post<{ success: boolean; downloadUrl: string }>(
+        `/content/resources/${resourceId}/sign-download`
+      );
+      if (response.data?.downloadUrl) {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 
+          (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '') : 'http://localhost:5245');
+        const fullUrl = `${backendUrl}${response.data.downloadUrl}`;
+        window.open(fullUrl, '_blank');
+      } else {
+        toast.error('فشل في تحميل الملف');
+      }
+    } catch (err) {
+      console.error("Error signing download URL:", err);
+      // Error is already toasted by apiClient interceptor
+    } finally {
+      setDownloadingResourceId(null);
+    }
+  };
 
   useEffect(() => {
     if (lesson.homework?.questions) {
@@ -163,17 +188,20 @@ export function LessonViewer({
             <ul className="space-y-4 text-sm">
               {lesson.resources.map((res) => (
                 <li key={res.id}>
-                  <a
-                    href={res.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start gap-4 rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4 font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:items-center sm:px-5"
+                  <button
+                    type="button"
+                    disabled={downloadingResourceId === res.id}
+                    onClick={(e) => handleResourceClick(e, res.id, res.title)}
+                    className="flex w-full text-right items-start gap-4 rounded-[20px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-4 font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:items-center sm:px-5 disabled:opacity-50"
                   >
-                    <svg className="h-5 w-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-5 w-5 opacity-80 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    {res.title}
-                  </a>
+                    <span className="flex-1">{res.title}</span>
+                    {downloadingResourceId === res.id && (
+                      <span className="text-xs font-normal text-[var(--admin-muted)] animate-pulse">جاري التحضير...</span>
+                    )}
+                  </button>
                 </li>
               ))}
               {lesson.resources.length === 0 && (

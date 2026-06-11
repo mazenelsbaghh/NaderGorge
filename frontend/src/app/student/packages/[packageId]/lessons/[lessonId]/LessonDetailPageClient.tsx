@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
+import toast from "react-hot-toast";
 
 import { LessonViewer } from "@/components/content/LessonViewer";
 import { contentService, type LessonDetailDto } from "@/services/content-service";
+import { usePlatformEvents } from "@/hooks/usePlatformEvents";
 
 export default function LessonDetailPageClient() {
   const params = useParams();
@@ -17,7 +19,7 @@ export default function LessonDetailPageClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const fetchLessonDetail = useCallback(() => {
     if (!lessonId) return;
 
     contentService
@@ -32,6 +34,32 @@ export default function LessonDetailPageClient() {
       })
       .finally(() => setLoading(false));
   }, [lessonId]);
+
+  useEffect(() => {
+    fetchLessonDetail();
+  }, [fetchLessonDetail]);
+
+  const { joinLesson, leaveLesson } = usePlatformEvents({
+    onVideoReady: (payload) => {
+      if (payload.lessonId === lessonId) {
+        fetchLessonDetail();
+        toast.success(`فيديو الدرس جاهز: ${payload.title}`);
+      }
+    },
+    onResourceReady: (payload) => {
+      if (payload.lessonId === lessonId) {
+        fetchLessonDetail();
+        toast.success(`ملف جديد متاح: ${payload.title}`);
+      }
+    }
+  });
+
+  useEffect(() => {
+    void joinLesson(lessonId);
+    return () => {
+      void leaveLesson(lessonId);
+    };
+  }, [lessonId, joinLesson, leaveLesson]);
 
   if (loading) {
     return (

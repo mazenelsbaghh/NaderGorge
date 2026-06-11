@@ -121,6 +121,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<TeacherAccount> TeacherAccounts => Set<TeacherAccount>();
     public DbSet<TeacherPayout> TeacherPayouts => Set<TeacherPayout>();
     public DbSet<AccessCodeActivationLog> AccessCodeActivationLogs => Set<AccessCodeActivationLog>();
+    public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
 
     public Task<StudentAnswer?> FindStudentAnswerAsync(
         Guid studentExamAttemptId,
@@ -1133,6 +1134,20 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(al => al.TeacherId);
             e.HasIndex(al => al.StudentId);
         });
+
+        // OutboxEvent
+        modelBuilder.Entity<OutboxEvent>(e =>
+        {
+            e.ToTable("outbox_events");
+            e.HasKey(o => o.Id);
+            e.Property(o => o.Type).HasMaxLength(100).IsRequired();
+            e.Property(o => o.PayloadJson).IsRequired();
+            e.Property(o => o.TargetGroup).HasMaxLength(150);
+            e.Property(o => o.TargetUserId).HasMaxLength(150);
+            e.Property(o => o.LastError).HasMaxLength(4000);
+            
+            e.HasIndex(o => new { o.ProcessedAt, o.CreatedAt });
+        });
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -1142,6 +1157,30 @@ public class AppDbContext : DbContext, IAppDbContext
             if (entry.State == EntityState.Modified)
                 entry.Entity.UpdatedAt = DateTime.UtcNow;
         }
+
+        // Intercept Added NotificationEvents to generate OutboxEvents
+        var newNotifications = ChangeTracker.Entries<Domain.Entities.Notifications.NotificationEvent>()
+            .Where(e => e.State == EntityState.Added)
+            .Select(e => e.Entity)
+            .ToList();
+
+        foreach (var notification in newNotifications)
+        {
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "NotificationCreated",
+                TargetUserId = notification.UserId.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    id = notification.Id,
+                    title = notification.Title,
+                    message = notification.Body,
+                    createdAt = notification.CreatedAt
+                })
+            };
+            OutboxEvents.Add(outboxEvent);
+        }
+
         return base.SaveChangesAsync(cancellationToken);
     }
 }

@@ -119,6 +119,7 @@ public interface IAppDbContext
     DbSet<TeacherAccount> TeacherAccounts { get; }
     DbSet<TeacherPayout> TeacherPayouts { get; }
     DbSet<AccessCodeActivationLog> AccessCodeActivationLogs { get; }
+    DbSet<OutboxEvent> OutboxEvents { get; }
 
     Task<StudentAnswer?> FindStudentAnswerAsync(Guid studentExamAttemptId, Guid examQuestionId, CancellationToken cancellationToken = default);
     Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;

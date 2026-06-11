@@ -6,6 +6,14 @@
 
 ## Active Plans
 
+### Real-time Platform Speed & Sync (2026-06-11)
+- [x] Create universal `usePlatformEvents` custom React hook wrapping `@microsoft/signalr` to manage unified real-time event subscriptions (NotificationCreated, BalanceChanged, LessonPublished, VideoReady, ResourceReady, AiJobProgress).
+- [x] Integrate `usePlatformEvents` in `StudentShellChrome.tsx` to dynamically sync balance and notifications count without page refreshes.
+- [x] Expose `clearPackagesCache` in `content-service.ts` to clear API cache when new lessons or content updates are detected.
+- [x] Integrate `usePlatformEvents` in `TermDetailPageClient.tsx`'s `SectionLessons` to refetch lessons lists instantly upon `LessonPublished` SignalR notifications.
+- [x] Integrate `usePlatformEvents` in `LessonDetailPageClient.tsx` to automatically reload lesson videos and resources in real-time when `VideoReady` or `ResourceReady` events arrive.
+- [x] Integrate `usePlatformEvents` in `AIMonitorPageClient.tsx` to receive `AiJobProgress` updates dynamically and slow down the polling interval to 30s to save database resources.
+
 ### Teacher Image WebP Conversion (2026-06-11)
 - [x] Add base64 MIME type detection helper in `frontend/src/utils/image-compressor.ts`.
 - [x] Rename teacher profile image file extension to `.webp` during upload in `AdminTeachersPageClient.tsx`.

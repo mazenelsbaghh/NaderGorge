@@ -173,6 +173,11 @@ let packagesCacheAt = 0;
 const readPackagesFromCache = () => packagesCache?.data?.data ?? [];
 
 export const contentService = {
+  clearPackagesCache: () => {
+    packagesCache = null;
+    packagesCacheAt = 0;
+    packagesInFlight = null;
+  },
   getPackages: (options?: { force?: boolean }) => {
     const force = options?.force ?? false;
     const isCacheFresh = !force && packagesCache && Date.now() - packagesCacheAt < PACKAGES_CACHE_TTL_MS;

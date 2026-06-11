@@ -7,6 +7,7 @@ import { adminService } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 
 function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
@@ -18,6 +19,31 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
+
+  const handleAiJobProgress = (payload: { jobId: string; progress: number; status: string; message: string }) => {
+    if (payload.jobId === videoId) {
+      setStatus({
+        id: payload.jobId,
+        state: payload.progress >= 100 ? 'completed' : payload.progress < 0 ? 'failed' : 'active',
+        progress: {
+          percentage: payload.progress,
+          stage: payload.message || payload.status,
+        },
+        failedReason: payload.progress < 0 ? payload.message : null,
+      } as any);
+
+      if (payload.progress >= 100) {
+        isFinishedRef.current = true;
+        setTimeout(() => {
+          if (onCompleteRef.current) onCompleteRef.current();
+        }, 2000);
+      }
+    }
+  };
+
+  const { isConnected } = usePlatformEvents({
+    onAiJobProgress: handleAiJobProgress
+  });
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
@@ -40,13 +66,13 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
     };
 
     checkStatus();
-    const interval = setInterval(checkStatus, 3000);
+    const interval = setInterval(checkStatus, isConnected ? 30000 : 3000);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [videoId, isCancelling]);
+  }, [videoId, isCancelling, isConnected]);
 
   const handleCancel = async () => {
     if (!confirm('هل أنت متأكد من إلغاء العملية؟')) return;

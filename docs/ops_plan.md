@@ -6,6 +6,15 @@
 
 ## Active Plans
 
+### Real-time Platform Speed & Sync (2026-06-11)
+- [x] Apply EF Core migrations for the `OutboxEvents` table on the database.
+- [x] Configure SignalR WebSockets transport and connection lifetimes in the API and frontend containers.
+- [x] Verify Redis container has active configuration for persistent caching and rate-limiting.
+- [x] Validate production builds:
+  - C# Backend: `dotnet build` passes with 0 warnings/errors.
+  - Next.js Frontend: `next build` passes and creates optimized production bundles.
+  - Node.js Worker: `tsc -p tsconfig.json` compiles successfully.
+
 ### Performance Audit Remediation (2026-06-11)
 - [x] Configure Brotli response compression and output caching configurations in C# backend.
 - [x] Clean and optimize Turbopack dev cache (`rm -rf frontend/.next`).

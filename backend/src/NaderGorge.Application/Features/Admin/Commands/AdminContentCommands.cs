@@ -119,6 +119,20 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             TeacherId = teacherId
         };
         _db.Packages.Add(pkg);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "PackageCreated",
+            TargetGroup = "Role_Student",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                packageId = pkg.Id,
+                name = pkg.Name,
+                price = pkg.Price
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(pkg.Id);
     }
@@ -280,6 +294,10 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
             if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this section.");
         }
 
+        var section = await _db.ContentSections
+            .Include(s => s.Term)
+            .FirstOrDefaultAsync(s => s.Id == request.SectionId, ct);
+
         var lesson = new Lesson
         {
             Title = request.Title,
@@ -290,6 +308,24 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
             Price = request.Price
         };
         _db.Lessons.Add(lesson);
+
+        if (section?.Term != null)
+        {
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "LessonPublished",
+                TargetGroup = $"Package_{section.Term.PackageId}",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    lessonId = lesson.Id,
+                    sectionId = lesson.ContentSectionId,
+                    title = lesson.Title,
+                    packageId = section.Term.PackageId
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
+        }
+
         await _db.SaveChangesAsync(ct);
         return ApiResponse<Guid>.Ok(lesson.Id);
     }
@@ -539,6 +575,21 @@ public class CreateLessonResourceCommandHandler : IRequestHandler<CreateLessonRe
         };
 
         _db.LessonResources.Add(resource);
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "ResourceReady",
+            TargetGroup = $"Lesson_{request.LessonId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                lessonId = request.LessonId,
+                resourceId = resource.Id,
+                title = resource.Title,
+                fileUrl = resource.FileUrl
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
+
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<Guid>.Ok(resource.Id);

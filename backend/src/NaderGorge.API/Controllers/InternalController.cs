@@ -27,6 +27,16 @@ public class InternalController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [HttpPost("ai-progress")]
+    public async Task<IActionResult> AiProgress([FromBody] AiProgressWebhookRequest request)
+    {
+        var cmd = new AiProgressCommand(request.JobId, request.Progress, request.Status, request.Message);
+        var result = await _mediator.Send(cmd);
+
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [InternalTokenAuthorize("API_CALLBACK_SECRET")]
     [HttpPost("mindmaps-completed")]
     public async Task<IActionResult> MindmapsCompleted([FromBody] MindmapsCompletedWebhookRequest request)
@@ -63,6 +73,14 @@ public class AiAnalysisCompletedWebhookRequest
     public Guid VideoId { get; set; }
     public string SubtitleUrl { get; set; } = string.Empty;
     public List<ChapterDto> Chapters { get; set; } = new List<ChapterDto>();
+}
+
+public class AiProgressWebhookRequest
+{
+    public string JobId { get; set; } = string.Empty;
+    public int Progress { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
 }
 
 public class MindmapsCompletedWebhookRequest

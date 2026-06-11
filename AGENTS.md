@@ -74,6 +74,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
-- 119-teacher-webp-images: specs/119-teacher-webp-images/plan.md
+- 121-realtime-platform-speed: specs/121-realtime-platform-speed/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

@@ -86,6 +86,41 @@ const connection = {
   password: new URL(DEFAULT_REDIS_URL).password || undefined,
 };
 
+async function reportProgressToBackend(jobId: string, progress: any) {
+  try {
+    const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
+    const apiKey = process.env.API_CALLBACK_SECRET;
+    
+    let percentage = 0;
+    let stage = '';
+    if (typeof progress === 'object' && progress !== null) {
+      percentage = progress.percentage ?? 0;
+      stage = progress.stage ?? '';
+    } else {
+      percentage = Number(progress) || 0;
+    }
+
+    const res = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Token': apiKey || ''
+      },
+      body: JSON.stringify({
+        jobId,
+        progress: percentage,
+        status: 'active',
+        message: stage
+      })
+    });
+    if (!res.ok) {
+      console.error(`[Worker] Progress callback failed for job ${jobId} with status ${res.status}`);
+    }
+  } catch (err) {
+    console.error(`[Worker] Failed to report progress for job ${jobId}:`, err);
+  }
+}
+
 async function startNotificationWorker() {
   const worker = new Worker('notifications', async (job) => {
     return await processNotificationJob(job);
@@ -108,6 +143,10 @@ async function startAIWorker() {
     const processor = await import('./jobs/analyzeVideoChapters.js');
     return await processor.default(job);
   }, { connection });
+
+  worker.on('progress', (job, progress) => {
+    reportProgressToBackend(job.id!, progress);
+  });
 
   worker.on('completed', job => {
     console.log(`[AI Worker] Job ${job.id} has completed successfully!`);
@@ -142,6 +181,10 @@ async function startMindmapsWorker() {
     const processor = await import('./jobs/generateChapterMindmaps.js');
     return await processor.default(job);
   }, { connection });
+
+  worker.on('progress', (job, progress) => {
+    reportProgressToBackend(job.id!, progress);
+  });
 
   worker.on('completed', job => {
     console.log(`[Mindmaps Worker] Job ${job.id} has completed successfully!`);

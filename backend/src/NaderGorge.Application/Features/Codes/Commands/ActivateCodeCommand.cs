@@ -274,9 +274,6 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                 CreatedAt = DateTime.UtcNow
             });
 
-            await _db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-
             var message = codeType switch
             {
                 CodeType.Package => "تم تفعيل الباكدج بنجاح!",
@@ -287,6 +284,22 @@ public class ActivateCodeCommandHandler : IRequestHandler<ActivateCodeCommand, A
                 CodeType.Exam => "تم تفعيل الامتحان بنجاح!",
                 _ => "تم تفعيل الكود بنجاح!"
             };
+
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "CodeActivated",
+                TargetUserId = user.Id.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    codeType = codeType.ToString(),
+                    referenceId = grantId.ToString(),
+                    message = message
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
+
+            await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
 
             return ApiResponse<ActivateCodeResponse>.Ok(
                 new ActivateCodeResponse(grantId, message, codeType, redirectUrl));

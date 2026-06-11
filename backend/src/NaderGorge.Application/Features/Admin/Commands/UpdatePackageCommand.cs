@@ -1,6 +1,7 @@
 using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -21,6 +22,20 @@ public class UpdatePackageCommandHandler : IRequestHandler<UpdatePackageCommand,
         package.Description = request.Description;
         package.Price = request.Price;
         package.IsActive = request.IsActive;
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "PackageUpdated",
+            TargetGroup = $"Package_{package.Id}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                packageId = package.Id,
+                name = package.Name,
+                price = package.Price,
+                isActive = package.IsActive
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();

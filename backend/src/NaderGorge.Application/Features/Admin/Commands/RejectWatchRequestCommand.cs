@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
@@ -36,6 +37,19 @@ public class RejectWatchRequestCommandHandler : IRequestHandler<RejectWatchReque
         req.Status = RequestStatus.Rejected;
         req.ResolvedAt = DateTime.UtcNow;
         req.RejectionReason = reason;
+
+        var outboxEvent = new OutboxEvent
+        {
+            Type = "ExtraWatchRequestUpdated",
+            TargetUserId = req.UserId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                videoId = req.LessonVideoId,
+                status = "Rejected",
+                allowedWatchCount = 0
+            })
+        };
+        _context.OutboxEvents.Add(outboxEvent);
 
         await _context.SaveChangesAsync(cancellationToken);
         return ApiResponse<bool>.Ok(true);

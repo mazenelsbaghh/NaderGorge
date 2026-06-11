@@ -6,6 +6,16 @@
 
 ## Active Plans
 
+### Real-time Platform Speed & Sync (2026-06-11)
+- [x] Implement database schema migration `AddOutboxEvents` and transactional entity `OutboxEvent` to capture balance and notification updates.
+- [x] Implement SignalR unified `PlatformHub` at `/hubs/platform` with automatic group mapping for connections (UserId, Role, and dynamic Package/Lesson groups).
+- [x] Create `OutboxProcessorBackgroundService` to process and dispatch pending outbox events every 2 seconds via SignalR.
+- [x] Integrate `BalanceChanged` outbox event in `BalanceService` and intercept `NotificationCreated` events globally in `AppDbContext.SaveChangesAsync()`.
+- [x] Publish `LessonPublished` outbox events upon new lesson creation inside `CreateLessonCommandHandler`.
+- [x] Publish `VideoReady` outbox events inside `AiAnalysisCompletedCommandHandler` on processing completions.
+- [x] Expose `ai-progress` endpoint in `InternalController` to enqueue `AiJobProgress` events for active monitoring.
+- [x] Implement Redis-backed `IIdempotencyService` and `[Idempotent]` action filter to enforce 100% request deduplication on critical POST endpoints (purchase, code activation).
+
 ### Teacher Image WebP Conversion (2026-06-11)
 - [x] Enforce `.webp` extension based on base64 prefix mime-type in `UploadTeacherProfileImageCommand.cs`.
 - [x] Enforce `.webp` extension based on base64 prefix mime-type in `UploadTeacherPhotoCommand.cs`.

@@ -19,6 +19,7 @@ using NaderGorge.Infrastructure.Services;
 using NaderGorge.Infrastructure.Providers;
 using StackExchange.Redis;
 using NaderGorge.API.Hubs;
+using NaderGorge.API.BackgroundServices;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
@@ -86,8 +87,10 @@ builder.Services.AddScoped<ICachedPlatformSettingsReader, CachedPlatformSettings
 builder.Services.AddScoped<BalanceService>();
 builder.Services.AddScoped<AcademicValidationService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
+builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -195,11 +198,12 @@ app.UseResponseCompression();
 app.UseStaticFiles();
 app.UseCors("FrontendPolicy");
 app.UseOutputCache();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<RedisRateLimitingMiddleware>();
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<PlatformHub>("/hubs/platform");
 
 if (app.Environment.EnvironmentName != "E2e")
 {

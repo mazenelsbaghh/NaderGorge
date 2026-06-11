@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\NaderGorge.Application\NaderGorge.Application.csproj" />
     <ProjectReference Include="..\..\src\NaderGorge.Infrastructure\NaderGorge.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\NaderGorge.API\NaderGorge.API.csproj" />
   </ItemGroup>
 
 </Project>

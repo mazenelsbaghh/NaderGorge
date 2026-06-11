@@ -1,9 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Content.Commands;
 using NaderGorge.Application.Features.Content.Queries;
+using NaderGorge.Domain.Interfaces;
+using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace NaderGorge.API.Controllers;
 
@@ -13,10 +18,16 @@ namespace NaderGorge.API.Controllers;
 public class ContentController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IAppDbContext _db;
+    private readonly IAccessCheckService _access;
+    private readonly IConfiguration _config;
 
-    public ContentController(IMediator mediator)
+    public ContentController(IMediator mediator, IAppDbContext db, IAccessCheckService access, IConfiguration config)
     {
         _mediator = mediator;
+        _db = db;
+        _access = access;
+        _config = config;
     }
 
     private Guid GetUserId() => Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -133,6 +144,36 @@ public class ContentController : ControllerBase
         }
 
         return Ok(response);
+    }
+
+    [HttpPost("resources/{resourceId:guid}/sign-download")]
+    public async Task<IActionResult> SignDownload(Guid resourceId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        var resource = await _db.LessonResources.FirstOrDefaultAsync(r => r.Id == resourceId, ct);
+        if (resource == null)
+            return NotFound(new { Success = false, Message = "Resource not found" });
+
+        var hasAccess = await _access.HasAccessToLessonAsync(userId, resource.LessonId, ct);
+        if (!hasAccess)
+            return StatusCode(403, new { Success = false, Message = "You do not have access to this resource." });
+
+        var secret = _config["JwtSettings:Secret"];
+        if (string.IsNullOrEmpty(secret))
+            return StatusCode(500, new { Success = false, Message = "Server configuration error" });
+
+        var expiresUnixSeconds = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
+        var payload = $"{userId}:{expiresUnixSeconds}";
+        
+        var keyBytes = Encoding.UTF8.GetBytes(secret);
+        using var hmac = new HMACSHA256(keyBytes);
+        var hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes($"{resourceId}:{payload}"));
+        var signature = Convert.ToHexString(hashBytes);
+
+        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{payload}:{signature}"));
+        var downloadUrl = $"/api/public/resources/{resourceId}/download?token={Uri.EscapeDataString(token)}";
+
+        return Ok(new { Success = true, DownloadUrl = downloadUrl });
     }
 }
 
