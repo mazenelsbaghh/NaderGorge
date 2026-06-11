@@ -83,8 +83,8 @@
 
 **Purpose**: Documentation updates and final linting
 
-- [ ] T008 [P] Update documentation in `docs/frontend_plan.md` and `docs/backend_plan.md` to reflect completed status
-- [ ] T009 Run lint checks on modified files in `frontend` via `npm run lint`
+- [x] T008 [P] Update documentation in `docs/frontend_plan.md` and `docs/backend_plan.md` to reflect completed status
+- [x] T009 Run lint checks on modified files in `frontend` via `npm run lint`
 
 ---
 
@@ -92,11 +92,11 @@
 
 **Purpose**: Execute mandatory quality gates (`clean-code-guard`, `test-guard`) and verify compilation, Docker health, and manual QA.
 
-- [ ] T010 Run `clean-code-guard` against changed files to verify production code quality and resolve all findings
-- [ ] T011 Run `test-guard` to audit any changed test files (if no test files changed, record that in achievements.md)
-- [ ] T012 Verify backend project builds successfully via `dotnet build`
-- [ ] T013 Verify frontend project builds successfully via `npm run build`
-- [ ] T014 Run `docker compose config -q` to verify Docker configuration
-- [ ] T015 Verify docker containers start cleanly with `make up` and are healthy via `make ps`
-- [ ] T016 Perform manual QA checklist for all user stories and document results
-- [ ] T017 Compile and output the final walkthrough report summarizing the completed work
+- [x] T010 Run `clean-code-guard` against changed files to verify production code quality and resolve all findings
+- [x] T011 Run `test-guard` to audit any changed test files (if no test files changed, record that in achievements.md)
+- [x] T012 Verify backend project builds successfully via `dotnet build`
+- [x] T013 Verify frontend project builds successfully via `npm run build`
+- [x] T014 Run `docker compose config -q` to verify Docker configuration
+- [x] T015 Verify docker containers start cleanly with `make up` and are healthy via `make ps`
+- [x] T016 Perform manual QA checklist for all user stories and document results
+- [x] T017 Compile and output the final walkthrough report summarizing the completed work

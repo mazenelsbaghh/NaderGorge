@@ -33,7 +33,8 @@ def run_verification():
     assert len(teachers) > 0, "No teachers found in seeded database"
     teacher = teachers[0]
     teacher_id = teacher.get("id")
-    print(f"Found Teacher ID: {teacher_id}")
+    user_id = teacher.get("userId")
+    print(f"Found Teacher Profile ID: {teacher_id}, User ID: {user_id}")
     
     png_base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
     jpg_base64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
@@ -54,7 +55,7 @@ def run_verification():
     # --- Test 2: Admin Upload Teacher AI Photo ---
     print("\n[Test 2] Admin Upload AI Photo...")
     res = admin.post("/api/admin/teacher-photos/upload", json={
-        "teacherId": teacher_id,
+        "teacherId": user_id,
         "base64Image": webp_base64,
         "fileName": "photo.jpg"
     })
