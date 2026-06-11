@@ -6,7 +6,12 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
 function hasAdminAccess(roles: string[] | undefined) {
-  return !!roles?.length && (roles.includes("Admin") || roles.includes("Supervisor"));
+  return !!roles?.length && (
+    roles.includes("Admin") ||
+    roles.includes("Supervisor") ||
+    roles.includes("Assistant") ||
+    roles.includes("Staff")
+  );
 }
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {

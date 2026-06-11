@@ -15,6 +15,9 @@ import {
   Menu,
   X,
   BookOpenText,
+  Shield,
+  Star,
+  BookOpen,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -31,7 +34,11 @@ type AssistantShellRoute =
   | '/assistant/chat'
   | '/assistant/attendance'
   | '/assistant/vacations'
-  | '/assistant/notifications';
+  | '/assistant/notifications'
+  | '/admin/content'
+  | '/admin/community'
+  | '/admin/questions'
+  | '/admin/watch-requests';
 
 type AssistantShellChromeProps = {
   activePath: AssistantShellRoute;
@@ -59,6 +66,30 @@ const navItems: Array<{
     label: 'المهام والعمليات',
     icon: ClipboardList,
     permission: 'tasks.manage',
+  },
+  {
+    href: '/admin/content',
+    label: 'إدارة تعليقات الدروس',
+    icon: BookOpen,
+    permission: 'comments.manage',
+  },
+  {
+    href: '/admin/community',
+    label: 'إدارة مجتمع الطلاب',
+    icon: MessageSquareText,
+    permission: 'community.manage',
+  },
+  {
+    href: '/admin/questions',
+    label: 'إدارة الامتحانات والأسئلة',
+    icon: Shield,
+    permission: 'exams.manage',
+  },
+  {
+    href: '/admin/watch-requests',
+    label: 'طلبات إعادة المشاهدة',
+    icon: Star,
+    permission: 'watch_requests.manage',
   },
   {
     href: '/assistant/crm',

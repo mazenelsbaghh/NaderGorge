@@ -27,6 +27,7 @@ import {
   Coins,
   Users,
   ChevronDown,
+  ArrowRight,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -262,6 +263,7 @@ export function AdminShellChrome({
   const router = useRouter();
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const user = useAuthStore((state) => state.user);
+  const roles = user?.roles || [];
   const { hasPermission } = useHasPermission();
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
   const [showBackdrop, setShowBackdrop] = useState(false);
@@ -384,6 +386,19 @@ export function AdminShellChrome({
                 الرئيسية
               </span>
             </Link>
+
+            {(roles.includes('Assistant') || roles.includes('Staff')) && (
+              <Link
+                href="/assistant/dashboard"
+                prefetch={false}
+                className="flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 text-emerald-500 hover:bg-emerald-500/10 font-bold border border-emerald-500/20"
+              >
+                <ArrowRight className="h-5 w-5 flex-shrink-0" />
+                <span className="hidden group-hover/sidebar:block text-sm truncate whitespace-nowrap">
+                  مساحة المساعدين
+                </span>
+              </Link>
+            )}
 
             {navGroups.map((group) => {
               const GroupIcon = group.icon;

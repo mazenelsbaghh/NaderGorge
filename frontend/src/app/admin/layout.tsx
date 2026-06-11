@@ -11,18 +11,18 @@ import { useHasPermission } from "@/hooks/useHasPermission";
 import { useAuthStore } from "@/stores/auth-store";
 
 const ROUTE_PERMISSIONS = [
-  { pattern: /^\/admin\/users(\/|$)/, permission: 'users.manage' },
-  { pattern: /^\/admin\/teachers(\/|$)/, permission: 'users.manage' },
-  { pattern: /^\/admin\/overrides(\/|$)/, permission: 'users.manage' },
-  { pattern: /^\/admin\/content(\/|$)/, permission: 'content.manage' },
-  { pattern: /^\/admin\/subjects(\/|$)/, permission: 'content.manage' },
-  { pattern: /^\/admin\/forms(\/|$)/, permission: 'content.manage' },
-  { pattern: /^\/admin\/community(\/|$)/, permission: 'community.manage' },
-  { pattern: /^\/admin\/ai-monitor(\/|$)/, permission: 'reports.manage' },
-  { pattern: /^\/admin\/codes(\/|$)/, permission: 'codes.manage' },
-  { pattern: /^\/admin\/questions(\/|$)/, permission: 'exams.manage' },
-  { pattern: /^\/admin\/watch-requests(\/|$)/, permission: 'watch_requests.manage' },
-  { pattern: /^\/admin\/settings(\/|$)/, permission: 'settings.manage' },
+  { pattern: /^\/admin\/users(\/|$)/, permissions: ['users.manage'] },
+  { pattern: /^\/admin\/teachers(\/|$)/, permissions: ['users.manage'] },
+  { pattern: /^\/admin\/overrides(\/|$)/, permissions: ['users.manage'] },
+  { pattern: /^\/admin\/content(\/|$)/, permissions: ['content.manage', 'comments.manage'] },
+  { pattern: /^\/admin\/subjects(\/|$)/, permissions: ['content.manage'] },
+  { pattern: /^\/admin\/forms(\/|$)/, permissions: ['content.manage'] },
+  { pattern: /^\/admin\/community(\/|$)/, permissions: ['community.manage'] },
+  { pattern: /^\/admin\/ai-monitor(\/|$)/, permissions: ['reports.manage'] },
+  { pattern: /^\/admin\/codes(\/|$)/, permissions: ['codes.manage'] },
+  { pattern: /^\/admin\/questions(\/|$)/, permissions: ['exams.manage'] },
+  { pattern: /^\/admin\/watch-requests(\/|$)/, permissions: ['watch_requests.manage'] },
+  { pattern: /^\/admin\/settings(\/|$)/, permissions: ['settings.manage'] },
 ];
 
 function PermissionGuard({ children }: { children: React.ReactNode }) {
@@ -41,8 +41,11 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
       route.pattern.test(pathname)
     );
 
-    if (matchedRoute && !hasPermission(matchedRoute.permission)) {
-      router.replace("/admin/unauthorized");
+    if (matchedRoute) {
+      const hasAny = matchedRoute.permissions.some((p) => hasPermission(p));
+      if (!hasAny) {
+        router.replace("/admin/unauthorized");
+      }
     }
   }, [pathname, isLoading, isAuthenticated, hasPermission, router]);
 
@@ -55,8 +58,11 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
     ? ROUTE_PERMISSIONS.find((route) => route.pattern.test(pathname))
     : null;
 
-  if (matchedRoute && !hasPermission(matchedRoute.permission)) {
-    return null;
+  if (matchedRoute) {
+    const hasAny = matchedRoute.permissions.some((p) => hasPermission(p));
+    if (!hasAny) {
+      return null;
+    }
   }
 
   return <>{children}</>;
@@ -76,9 +82,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  const filteredMenuItems = adminMenuItems.filter((item) =>
-    hasPermission(item.permission)
-  );
+  const filteredMenuItems = adminMenuItems.filter((item) => {
+    if (item.href === '/admin/content') {
+      return hasPermission('content.manage') || hasPermission('comments.manage');
+    }
+    return hasPermission(item.permission);
+  });
 
   return (
     <AdminGuard>

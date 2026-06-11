@@ -9,8 +9,31 @@ import {
   ClockInOutWidget,
 } from '@/components/admin';
 import { adminRootLinks, adminRootStats } from '@/packages/admin';
+import { useHasPermission } from '@/hooks/useHasPermission';
 
 export default function AdminRootPageClient() {
+  const { hasPermission } = useHasPermission();
+
+  const getPermissionForHref = (href: string) => {
+    if (href.startsWith('/admin/subjects')) return 'content.manage';
+    if (href.startsWith('/admin/teachers')) return 'users.manage';
+    if (href.startsWith('/admin/students')) return 'users.manage';
+    if (href.startsWith('/admin/assistants')) return 'users.manage';
+    if (href.startsWith('/admin/admins')) return 'users.manage';
+    if (href.startsWith('/admin/content')) return hasPermission('content.manage') || hasPermission('comments.manage');
+    if (href.startsWith('/admin/codes')) return 'codes.manage';
+    if (href.startsWith('/admin/questions')) return 'exams.manage';
+    if (href.startsWith('/admin/overrides')) return 'users.manage';
+    if (href.startsWith('/admin/finance')) return 'users.manage';
+    return null;
+  };
+
+  const filteredLinks = adminRootLinks.filter((item) => {
+    const perm = getPermissionForHref(item.href);
+    if (typeof perm === 'boolean') return perm;
+    return !perm || hasPermission(perm);
+  });
+
   return (
     <AdminShellChrome
       activePath="/admin"
@@ -49,7 +72,7 @@ export default function AdminRootPageClient() {
       </div>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        {adminRootLinks.map((item) => {
+        {filteredLinks.map((item) => {
           const Icon = item.icon;
 
           return (
