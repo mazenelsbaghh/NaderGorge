@@ -60,3 +60,25 @@ export function compressImage(file: File, maxWidth = 800, maxHeight = 800, quali
     reader.readAsDataURL(file);
   });
 }
+
+/**
+ * Detects the MIME type of a base64 image and returns the appropriate file extension.
+ */
+export function getExtensionFromBase64(base64: string, fallback = 'jpg'): string {
+  if (base64.startsWith('data:image/webp')) return 'webp';
+  if (base64.startsWith('data:image/png')) return 'png';
+  if (base64.startsWith('data:image/jpeg') || base64.startsWith('data:image/jpg')) return 'jpg';
+  if (base64.startsWith('data:image/gif')) return 'gif';
+  return fallback;
+}
+
+/**
+ * Renames a filename's extension to match the image type of the base64 string.
+ */
+export function renameFileToMatchBase64(fileName: string, base64: string): string {
+  const ext = getExtensionFromBase64(base64);
+  const lastDot = fileName.lastIndexOf('.');
+  const baseName = lastDot !== -1 ? fileName.substring(0, lastDot) : fileName;
+  return `${baseName}.${ext}`;
+}
+

@@ -39,7 +39,27 @@ public class UploadTeacherProfileImageCommandHandler : IRequestHandler<UploadTea
             if (!Directory.Exists(uploadsDir))
                 Directory.CreateDirectory(uploadsDir);
 
-            var uniqueFileName = $"{Guid.NewGuid()}_{Path.GetFileName(request.FileName)}";
+            // Determine extension from base64 header if present, otherwise fallback to request.FileName extension
+            var extension = Path.GetExtension(request.FileName);
+            if (request.Base64Image.StartsWith("data:image/"))
+            {
+                var parts = request.Base64Image.Split(';');
+                if (parts.Length > 0)
+                {
+                    var mimePart = parts[0];
+                    if (mimePart.EndsWith("/webp")) extension = ".webp";
+                    else if (mimePart.EndsWith("/png")) extension = ".png";
+                    else if (mimePart.EndsWith("/jpeg") || mimePart.EndsWith("/jpg")) extension = ".jpg";
+                    else if (mimePart.EndsWith("/gif")) extension = ".gif";
+                }
+            }
+
+            var baseName = Path.GetFileNameWithoutExtension(request.FileName);
+            if (extension.Equals(".webp", StringComparison.OrdinalIgnoreCase))
+            {
+                extension = ".webp";
+            }
+            var uniqueFileName = $"{Guid.NewGuid()}_{baseName}{extension}";
             var filePath = Path.Combine(uploadsDir, uniqueFileName);
 
             await File.WriteAllBytesAsync(filePath, bytes, ct);

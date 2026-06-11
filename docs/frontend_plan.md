@@ -6,6 +6,12 @@
 
 ## Active Plans
 
+### Teacher Image WebP Conversion (2026-06-11)
+- [x] Add base64 MIME type detection helper in `frontend/src/utils/image-compressor.ts`.
+- [x] Rename teacher profile image file extension to `.webp` during upload in `AdminTeachersPageClient.tsx`.
+- [x] Rename teacher AI photo file extension to `.webp` during upload in `AdminTeachersPageClient.tsx`.
+- [x] Rename teacher profile image and AI photo file extensions to `.webp` in `TeacherProfilePageClient.tsx`.
+
 ### Performance Audit Remediation (2026-06-11)
 - [x] Optimize `frontend/src/app/layout.tsx` to remove `force-dynamic` and `headers()`.
 - [x] Add inline head script in root layout to set `data-massar-surface` dynamically from `window.location.host` without making layout dynamic.

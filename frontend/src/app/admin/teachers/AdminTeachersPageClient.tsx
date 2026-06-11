@@ -10,7 +10,6 @@ import {
   Check, 
   User, 
   Phone, 
-  Mail, 
   Image as ImageIcon,
   BookOpen,
   Eye,
@@ -20,7 +19,6 @@ import {
   Loader2,
   Lock,
   Send,
-  Upload,
   Sparkles,
 } from 'lucide-react';
 import { 
@@ -40,7 +38,7 @@ import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
-import { compressImage } from '@/utils/image-compressor';
+import { compressImage, renameFileToMatchBase64 } from '@/utils/image-compressor';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -1128,9 +1126,10 @@ export default function AdminTeachersPageClient() {
                           setIsUploadingProfile(true);
                           try {
                             const base64 = await compressImage(file);
+                            const finalFileName = renameFileToMatchBase64(file.name, base64);
                             setProfileImagePreview(base64);
                             if (editingTeacher) {
-                              const res = await adminService.uploadTeacherProfileImage(editingTeacher.id, base64, file.name);
+                              const res = await adminService.uploadTeacherProfileImage(editingTeacher.id, base64, finalFileName);
                               if (res.success && res.data) {
                                 setProfileImageUrl(res.data);
                                 toast.success('تم رفع الصورة الشخصية بنجاح ✅');
@@ -1139,7 +1138,7 @@ export default function AdminTeachersPageClient() {
                                 toast.error(res.message || 'فشل رفع الصورة الشخصية');
                               }
                             } else {
-                              setPendingProfileImage({ base64, name: file.name });
+                              setPendingProfileImage({ base64, name: finalFileName });
                               toast.success('تم اختيار الصورة الشخصية بنجاح (سيتم حفظها عند إرسال النموذج) 📸');
                             }
                           } catch (err) {
@@ -1186,16 +1185,17 @@ export default function AdminTeachersPageClient() {
                           setIsUploadingAi(true);
                           try {
                             const base64 = await compressImage(file);
+                            const finalFileName = renameFileToMatchBase64(file.name, base64);
                             setAiPhotoPreview(base64);
                             if (editingTeacher) {
-                              const res = await adminService.uploadTeacherPhoto(editingTeacher.userId, base64, file.name);
+                              const res = await adminService.uploadTeacherPhoto(editingTeacher.userId, base64, finalFileName);
                               if (res.success) {
                                 toast.success('تم رفع صورة تحليل الـ AI بنجاح ✅');
                               } else {
                                 toast.error(res.message || 'فشل رفع صورة تحليل الـ AI');
                               }
                             } else {
-                              setPendingAiPhoto({ base64, name: file.name });
+                              setPendingAiPhoto({ base64, name: finalFileName });
                               toast.success('تم اختيار صورة تحليل الـ AI بنجاح (سيتم حفظها عند إرسال النموذج) 🤖');
                             }
                           } catch (err) {

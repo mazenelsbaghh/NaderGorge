@@ -6,6 +6,10 @@
 
 ## Active Plans
 
+### Teacher Image WebP Conversion (2026-06-11)
+- [x] Enforce `.webp` extension based on base64 prefix mime-type in `UploadTeacherProfileImageCommand.cs`.
+- [x] Enforce `.webp` extension based on base64 prefix mime-type in `UploadTeacherPhotoCommand.cs`.
+
 ### Performance Audit Remediation (2026-06-11)
 - [x] Implement `GET /api/student/shell-bootstrap` endpoint and MediatR query `GetShellBootstrapQuery` to retrieve notifications, balance, gamification points/streak in a single DB roundtrip.
 - [x] Optimize `GetDashboardQuery.cs` to use `.AsNoTracking()`, flat SQL aggregates, and `.Select()` projections instead of full entity includes and memory loops.
