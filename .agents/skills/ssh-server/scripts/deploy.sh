@@ -150,9 +150,13 @@ get_rebuild_plan() {
         REBUILD_FRONTEND=true
       elif [[ "$file" =~ ^docker/nginx/ ]]; then
         REBUILD_NGINX=true
-      else
+      elif [[ "$file" = "docker-compose.yml" || "$file" = ".env" || "$file" =~ ^docker-compose ]]; then
+        echo "   ⚠️ Docker configuration change detected: $file. Forcing full rebuild."
         REBUILD_ALL=true
         break
+      else
+        # Any other files (like scripts, docs, readme, etc.) do NOT trigger any rebuild
+        log_info "Skipping container rebuild for system/doc file: $file"
       fi
     done <<< "$CHANGED_FILES"
     
@@ -312,11 +316,13 @@ rebuild_containers() {
           REBUILD_FRONTEND=true
         elif [[ \"\$file\" =~ ^docker/nginx/ ]]; then
           REBUILD_NGINX=true
-        else
-          # Any other file change (like docker-compose.yml, .env, scripts, etc.) triggers full rebuild
-          echo \"Root/infrastructure file change detected: \$file. Forcing full rebuild.\"
+        elif [[ \"\$file\" = \"docker-compose.yml\" || \"\$file\" = \".env\" || \"\$file\" =~ ^docker-compose ]]; then
+          echo \"Docker configuration change detected: \$file. Forcing full rebuild.\"
           REBUILD_ALL=true
           break
+        else
+          # Any other files (like scripts, docs, readme, etc.) do NOT trigger any rebuild
+          echo \"Skipping container rebuild for system/doc file: \$file\"
         fi
       done <<< \"\$CHANGED_FILES\"
     fi
