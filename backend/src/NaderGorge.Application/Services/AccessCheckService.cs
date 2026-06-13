@@ -51,14 +51,20 @@ public class AccessCheckService : IAccessCheckService
 
         if (lesson == null) return false;
 
-        // Check if user explicitly has grant for this exact lesson, or the package
-        var packageId = lesson.ContentSection.Term?.PackageId;
+        var sectionId = lesson.ContentSectionId;
+        var termId = lesson.ContentSection?.TermId;
+        var packageId = lesson.ContentSection?.Term?.PackageId;
 
+        // Check ANY matching grant: lesson → section → term → package (cascading)
         var hasAccess = await _db.StudentAccessGrants
             .AnyAsync(g => g.UserId == userId &&
                            g.IsActive &&
-                           (g.LessonId == lessonId || g.PackageId == packageId) &&
-                           (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
+                           (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow) &&
+                           (g.LessonId == lessonId ||
+                            g.ContentSectionId == sectionId ||
+                            (termId != null && g.TermId == termId) ||
+                            (packageId != null && g.PackageId == packageId)),
+                       ct);
 
         return hasAccess;
     }

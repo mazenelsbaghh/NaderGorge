@@ -397,7 +397,7 @@ export default function TermDetailPageClient() {
                   className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  شراء الباقة
+                  {(term?.price != null && term.price > 0) ? 'شراء الترم' : 'شراء الباقة'}
                 </button>
                 <Link
                   href="/student/code-redemption"
@@ -454,10 +454,26 @@ export default function TermDetailPageClient() {
         isOpen={isPurchaseModalOpen}
         onClose={() => setIsPurchaseModalOpen(false)}
         onPurchaseSuccess={() => void load()}
-        contentType={"Package" as CodeType}
-        contentId={packageId}
-        contentName={pkg?.name || "الباقة الكاملة"}
-        price={pkg?.price || 0}
+        contentType={
+          (term?.price != null && term.price > 0)
+            ? ("Term" as CodeType)
+            : ("Package" as CodeType)
+        }
+        contentId={
+          (term?.price != null && term.price > 0)
+            ? termId
+            : packageId
+        }
+        contentName={
+          (term?.price != null && term.price > 0)
+            ? (term.title || "الترم")
+            : (pkg?.name || "الباقة الكاملة")
+        }
+        price={
+          (term?.price != null && term.price > 0)
+            ? term.price
+            : (pkg?.price || 0)
+        }
       />
     </motion.div>
   );

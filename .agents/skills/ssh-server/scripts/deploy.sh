@@ -39,6 +39,8 @@ log_info()  { echo -e "${CYAN}   $1${RESET}"; }
 RUN_MIGRATIONS=true
 DEPLOY=true
 FORCE_FULL=false
+REBUILD_BACKEND=false
+REBUILD_ALL=false
 
 for arg in "$@"; do
   case "$arg" in
@@ -133,7 +135,7 @@ get_rebuild_plan() {
       echo "     • ... and $((FILES_COUNT - 15)) more files."
     fi
     
-    # Determine what will rebuild
+    # Determine what will rebuild (REBUILD_BACKEND and REBUILD_ALL are global)
     REBUILD_BACKEND=false
     REBUILD_WORKER=false
     REBUILD_FRONTEND=false
@@ -457,10 +459,12 @@ main() {
     push_to_prod
     checkout_on_server
 
-    if $RUN_MIGRATIONS; then
-      run_migrations
-    else
+    if ! $RUN_MIGRATIONS; then
       log_warn "Skipping migrations (--no-migrate flag)"
+    elif ! $REBUILD_BACKEND && ! $REBUILD_ALL && ! $FORCE_FULL; then
+      log_warn "Skipping migrations (no backend changes detected)"
+    else
+      run_migrations
     fi
 
     rebuild_containers

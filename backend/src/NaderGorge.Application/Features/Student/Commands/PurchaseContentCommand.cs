@@ -40,9 +40,30 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     price = pkg.Price;
                     contentName = pkg.Name;
                     break;
+                case CodeType.Term:
+                    var term = await _db.Terms.FirstOrDefaultAsync(t => t.Id == request.ContentId, ct);
+                    if (term == null) return ApiResponse<bool>.Fail("الترم غير موجود");
+                    price = term.Price;
+                    contentName = term.Title;
+                    break;
+                case CodeType.Month:
+                    var section = await _db.ContentSections.FirstOrDefaultAsync(s => s.Id == request.ContentId, ct);
+                    if (section == null) return ApiResponse<bool>.Fail("القسم غير موجود");
+                    price = section.Price;
+                    contentName = section.Title;
+                    break;
+                case CodeType.Lesson:
+                    var lesson = await _db.Lessons.FirstOrDefaultAsync(l => l.Id == request.ContentId, ct);
+                    if (lesson == null) return ApiResponse<bool>.Fail("الحصة غير موجودة");
+                    price = lesson.Price;
+                    contentName = lesson.Title;
+                    break;
                 default:
-                    return ApiResponse<bool>.Fail("شراء الأجزاء الفردية غير متاح بالرصيد حالياً، يمكنك استخدام كود شحن مخصص.");
+                    return ApiResponse<bool>.Fail("نوع المحتوى غير مدعوم للشراء.");
             }
+
+            if (price <= 0)
+                return ApiResponse<bool>.Fail("هذا المحتوى مجاني ولا يحتاج شراء.");
 
             // 2. Check if already purchased
             bool alreadyPurchased = false;
