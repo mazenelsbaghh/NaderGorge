@@ -5,6 +5,7 @@ import { hrService, EmployeeDto } from "@/services/hr-service";
 import { getWhatsAppLink } from "@/utils/phone-utils";
 import { CrmCallLogModal } from "./CrmCallLogModal";
 import NeumorphButton from "@/components/ui/neumorph-button";
+import { Dropdown } from "@/components/ui/dropdown";
 import toast from "react-hot-toast";
 import { formatDate } from "@/components/admin/admin-utils";
 
@@ -128,55 +129,47 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
           />
         </div>
 
-        <select
+        <Dropdown
           value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
+          onChange={(v) => {
+            setStatus(v as string);
             setPage(1);
           }}
-          className="admin-input min-w-[150px]"
-        >
-          <option value="">كل الحالات</option>
-          {CRM_STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          placeholder="كل الحالات"
+          size="sm"
+          className="min-w-[150px]"
+          options={[{ value: '', label: 'كل الحالات' }, ...CRM_STATUSES]}
+        />
 
         {mode === "admin" && (
-          <select
+          <Dropdown
             value={agentId}
-            onChange={(e) => {
-              setAgentId(e.target.value);
+            onChange={(v) => {
+              setAgentId(v as string);
               setPage(1);
             }}
-            className="admin-input min-w-[180px]"
-          >
-            <option value="">كل موظفي المتابعة</option>
-            {employees.map((emp) => (
-              <option key={emp.userId} value={emp.userId}>
-                {emp.fullName}
-              </option>
-            ))}
-          </select>
+            placeholder="كل موظفي المتابعة"
+            searchable
+            size="sm"
+            className="min-w-[180px]"
+            options={[
+              { value: '', label: 'كل موظفي المتابعة' },
+              ...employees.map((emp) => ({ value: emp.userId, label: emp.fullName })),
+            ]}
+          />
         )}
 
-        <select
+        <Dropdown
           value={priority}
-          onChange={(e) => {
-            setPriority(e.target.value);
+          onChange={(v) => {
+            setPriority(v as string);
             setPage(1);
           }}
-          className="admin-input min-w-[140px]"
-        >
-          <option value="">كل الأولويات</option>
-          {CRM_PRIORITIES.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
+          placeholder="كل الأولويات"
+          size="sm"
+          className="min-w-[140px]"
+          options={[{ value: '', label: 'كل الأولويات' }, ...CRM_PRIORITIES]}
+        />
 
         <label className="flex items-center gap-2 text-xs font-bold text-[var(--admin-text)] cursor-pointer">
           <input
@@ -256,30 +249,24 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
                   {mode === "admin" ? (
                     <div className="flex items-center gap-2">
                       <UserPlus className="h-4 w-4 text-[var(--admin-muted)]" />
-                      <select
-                        value={student.assignedAgentId || "unassigned"}
-                        onChange={(e) => handleAssignAgent(student.studentId, e.target.value, student.priority, student.notes)}
-                        className="admin-input py-1 text-xs"
-                      >
-                        <option value="unassigned">غير مسند</option>
-                        {employees.map((emp) => (
-                          <option key={emp.userId} value={emp.userId}>
-                            {emp.fullName}
-                          </option>
-                        ))}
-                      </select>
+                      <Dropdown
+                        value={student.assignedAgentId || 'unassigned'}
+                        onChange={(v) => handleAssignAgent(student.studentId, v as string, student.priority, student.notes)}
+                        size="sm"
+                        className="min-w-[130px]"
+                        options={[
+                          { value: 'unassigned', label: 'غير مسند' },
+                          ...employees.map((emp) => ({ value: emp.userId, label: emp.fullName })),
+                        ]}
+                      />
 
-                      <select
+                      <Dropdown
                         value={student.priority}
-                        onChange={(e) => handlePriorityChange(student.studentId, e.target.value, student.assignedAgentId, student.notes)}
-                        className="admin-input py-1 text-xs"
-                      >
-                        {CRM_PRIORITIES.map((p) => (
-                          <option key={p.value} value={p.value}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(v) => handlePriorityChange(student.studentId, v as string, student.assignedAgentId, student.notes)}
+                        size="sm"
+                        className="min-w-[110px]"
+                        options={CRM_PRIORITIES}
+                      />
                     </div>
                   ) : (
                     <div className="text-xs text-[var(--admin-muted)] flex items-center gap-1 font-bold">

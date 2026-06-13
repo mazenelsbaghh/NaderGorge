@@ -11,6 +11,7 @@ import {
   type LessonSummaryDto,
   type LessonDetailDto,
 } from '@/services/content-service';
+import { Dropdown } from '@/components/ui/dropdown';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 export interface CodeTypeSelection {
@@ -44,7 +45,7 @@ const CODE_TYPES: { type: CodeType; label: string; icon: LucideIcon; description
   { type: 'Balance', label: 'شحن رصيد', icon: Wallet, description: 'يشحن محفظة الطالب بمبلغ نقدي' },
 ];
 
-const selectClassName = 'w-full bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm text-[var(--admin-text)]';
+
 
 export function CodeTypeSelector({ value, onChange, errors = {}, packages }: CodeTypeSelectorProps) {
   const [terms, setTerms] = useState<TermDto[]>([]);
@@ -211,83 +212,61 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
 
   const renderPackageSelect = () => (
     <div className="col-span-1 md:col-span-2">
-      <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">اختر الباكدج</label>
-      <select
-        className={selectClassName}
+      <Dropdown
+        label="اختر الباكدج"
         value={value.packageId || ''}
-        onChange={(e) => handlePackageChange(e.target.value)}
-      >
-        <option value="">اختر الباكدج</option>
-        {packages.map((pkg) => (
-          <option key={pkg.id} value={pkg.id}>
-            {pkg.name}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => handlePackageChange(v as string)}
+        placeholder="اختر الباكدج"
+        searchable
+        options={[{ value: '', label: 'اختر الباكدج' }, ...packages.map((pkg) => ({ value: pkg.id, label: pkg.name }))]}
+        error={errors.packageId}
+      />
       {selectedPackage ? <p className="mt-1 text-xs text-[var(--admin-muted)]">المحدد: {selectedPackage.name}</p> : null}
-      {errors.packageId && <p className="text-xs text-red-500 mt-1">{errors.packageId}</p>}
     </div>
   );
 
   const renderTermSelect = () => (
     <div className="col-span-1 md:col-span-2">
-      <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">اختر الترم</label>
-      <select
-        className={selectClassName}
+      <Dropdown
+        label="اختر الترم"
         value={value.termId || ''}
-        onChange={(e) => handleTermChange(e.target.value)}
+        onChange={(v) => handleTermChange(v as string)}
         disabled={!value.packageId}
-      >
-        <option value="">{value.packageId ? 'اختر الترم' : 'اختر الباكدج أولاً'}</option>
-        {visibleTerms.map((term) => (
-          <option key={term.id} value={term.id}>
-            {term.title}
-          </option>
-        ))}
-      </select>
+        placeholder={value.packageId ? 'اختر الترم' : 'اختر الباكدج أولاً'}
+        options={[{ value: '', label: 'اختر الترم' }, ...visibleTerms.map((t) => ({ value: t.id, label: t.title }))]}
+        error={errors.termId}
+      />
       {selectedTerm ? <p className="mt-1 text-xs text-[var(--admin-muted)]">المحدد: {selectedTerm.title}</p> : null}
-      {errors.termId && <p className="text-xs text-red-500 mt-1">{errors.termId}</p>}
     </div>
   );
 
   const renderSectionSelect = () => (
     <div className="col-span-1 md:col-span-2">
-      <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">اختر الشهر / القسم</label>
-      <select
-        className={selectClassName}
+      <Dropdown
+        label="اختر الشهر / القسم"
         value={value.contentSectionId || ''}
-        onChange={(e) => handleSectionChange(e.target.value)}
+        onChange={(v) => handleSectionChange(v as string)}
         disabled={!value.termId}
-      >
-        <option value="">{value.termId ? 'اختر الشهر / القسم' : 'اختر الترم أولاً'}</option>
-        {visibleSections.map((section) => (
-          <option key={section.id} value={section.id}>
-            {section.title}
-          </option>
-        ))}
-      </select>
+        placeholder={value.termId ? 'اختر الشهر / القسم' : 'اختر الترم أولاً'}
+        options={[{ value: '', label: 'اختر الشهر / القسم' }, ...visibleSections.map((s) => ({ value: s.id, label: s.title }))]}
+        error={errors.contentSectionId}
+      />
       {selectedSection ? <p className="mt-1 text-xs text-[var(--admin-muted)]">المحدد: {selectedSection.title}</p> : null}
-      {errors.contentSectionId && <p className="text-xs text-red-500 mt-1">{errors.contentSectionId}</p>}
     </div>
   );
 
   const renderLessonSelect = (label = 'اختر الحصة') => (
     <div className="col-span-1 md:col-span-2">
-      <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">{label}</label>
-      <select
-        className={selectClassName}
+      <Dropdown
+        label={label}
         value={value.lessonId || ''}
-        onChange={(e) => handleLessonChange(e.target.value)}
+        onChange={(v) => handleLessonChange(v as string)}
         disabled={!value.contentSectionId}
-      >
-        <option value="">{value.contentSectionId ? label : 'اختر الشهر / القسم أولاً'}</option>
-        {visibleLessons.map((lesson) => (
-          <option key={lesson.id} value={lesson.id}>
-            {lesson.title}
-          </option>
-        ))}
-      </select>
-      {errors.lessonId && <p className="text-xs text-red-500 mt-1">{errors.lessonId}</p>}
+        placeholder={value.contentSectionId ? label : 'اختر الشهر / القسم أولاً'}
+        searchable
+        options={[{ value: '', label }, ...visibleLessons.map((l) => ({ value: l.id, label: l.title }))]}
+        error={errors.lessonId}
+      />
     </div>
   );
 

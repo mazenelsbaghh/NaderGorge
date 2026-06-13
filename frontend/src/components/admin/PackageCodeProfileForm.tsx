@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import type { PackageCodeProfileDto, PackageCodeProfilePayload, PackageCodeProfileStatus } from '@/services/admin-service';
 import { adminService } from '@/services/admin-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { Dropdown } from '@/components/ui/dropdown';
 
 const THEME_OPTIONS = [
   { value: 'default-gold', label: 'افتراضي أكاديمي' },
@@ -181,33 +182,27 @@ export function PackageCodeProfileForm({
       <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
         <div className="space-y-6">
           <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
-            <label className="mb-2 block text-sm font-bold text-[var(--admin-text)]">حالة البروفايل</label>
-            <select
+            <Dropdown
+              label="حالة البروفايل"
               value={form.status}
-              onChange={(e) => updateField('status', e.target.value as PackageCodeProfileStatus)}
-              className="admin-input"
-            >
-              <option value="Draft">مسودة</option>
-              <option value="Published">منشور</option>
-            </select>
+              onChange={(v) => updateField('status', v as PackageCodeProfileStatus)}
+              options={[
+                { value: 'Draft', label: 'مسودة' },
+                { value: 'Published', label: 'منشور' },
+              ]}
+            />
             <p className="mt-2 text-xs leading-6 text-[var(--admin-muted)]">
               عند اختيار &quot;منشور&quot; يجب أن تكون الحقول الأساسية مكتملة، وإلا سيرفض الحفظ.
             </p>
           </div>
 
           <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
-            <label className="mb-2 block text-sm font-bold text-[var(--admin-text)]">لون التمييز</label>
-            <select
+            <Dropdown
+              label="لون التمييز"
               value={form.themeAccentKey ?? 'default-gold'}
-              onChange={(e) => updateField('themeAccentKey', e.target.value)}
-              className="admin-input"
-            >
-              {THEME_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => updateField('themeAccentKey', v as string)}
+              options={THEME_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+            />
           </div>
 
           <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">

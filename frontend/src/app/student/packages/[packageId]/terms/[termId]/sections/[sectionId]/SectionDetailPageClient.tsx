@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Sparkles,
   PlayCircle,
+  ShoppingCart,
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
@@ -81,6 +82,7 @@ export default function SectionDetailPageClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [purchaseLesson, setPurchaseLesson] = useState<LessonSummaryDto | null>(null);
 
   const load = useCallback(async () => {
     if (!packageId || !termId || !sectionId) return;
@@ -316,6 +318,21 @@ export default function SectionDetailPageClient() {
                       {canAccess && (
                         <PlayCircle className="h-5 w-5 shrink-0 text-[var(--admin-primary)] opacity-0 transition-opacity group-hover:opacity-100" />
                       )}
+
+                      {/* Buy lesson button */}
+                      {!canAccess && lesson.price != null && lesson.price > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPurchaseLesson(lesson);
+                          }}
+                          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary)] px-3 py-1.5 text-[10px] font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-95 opacity-100"
+                        >
+                          <ShoppingCart className="h-3 w-3" />
+                          {lesson.price} ج.م
+                        </button>
+                      )}
                     </button>
                   );
                 })}
@@ -424,6 +441,20 @@ export default function SectionDetailPageClient() {
               : (pkg?.name || "الباقة الكاملة")
         }
         price={displayPrice as number}
+      />
+
+      {/* Lesson-level purchase modal */}
+      <PurchaseContentModal
+        isOpen={!!purchaseLesson}
+        onClose={() => setPurchaseLesson(null)}
+        onPurchaseSuccess={() => {
+          setPurchaseLesson(null);
+          void load();
+        }}
+        contentType={"Lesson" as CodeType}
+        contentId={purchaseLesson?.id || ''}
+        contentName={purchaseLesson?.title || 'الحصة'}
+        price={purchaseLesson?.price || 0}
       />
     </motion.div>
   );

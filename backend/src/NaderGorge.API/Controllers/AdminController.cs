@@ -9,6 +9,7 @@ using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
 using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Application.Features.Admin.Teachers.Queries;
 using SixLabors.ImageSharp;
 
 namespace NaderGorge.API.Controllers;
@@ -780,6 +781,26 @@ public class AdminController : ControllerBase
             dto.AssistantPhoneNumbers, dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl));
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("teachers/{id:guid}/stats")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> GetTeacherProfileStats(Guid id)
+        => Ok(await _mediator.Send(new GetTeacherProfileStatsQuery(id)));
+
+    [HttpGet("teachers/{id:guid}/students")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> GetTeacherStudents(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await _mediator.Send(new GetTeacherStudentsQuery(id, page, pageSize)));
+
+    [HttpGet("teachers/{id:guid}/essays")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> GetTeacherEssays(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await _mediator.Send(new GetTeacherEssaysQuery(id, page, pageSize)));
+
+    [HttpGet("teachers/{id:guid}/activations")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> GetTeacherActivations(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        => Ok(await _mediator.Send(new GetTeacherActivationsQuery(id, page, pageSize)));
 
 }
 

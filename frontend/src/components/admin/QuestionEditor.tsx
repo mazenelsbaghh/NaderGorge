@@ -3,6 +3,7 @@
 import type { CSSProperties } from 'react';
 import { Trash2, Plus, Check } from 'lucide-react';
 import { NumberField } from '@/components/ui/number-field';
+import { Dropdown } from '@/components/ui/dropdown';
 import dynamic from 'next/dynamic';
 import { FindTheMistakeBuilder } from './FindTheMistakeBuilder';
 import 'react-quill-new/dist/quill.snow.css';
@@ -114,16 +115,17 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
           
           <div className="flex flex-wrap gap-4">
             <div className="flex-1 min-w-[120px] space-y-2">
-              <label className="text-[10px] uppercase tracking-wider font-bold text-[var(--admin-muted)] block">نوع السؤال</label>
-              <select
+              <Dropdown
+                label="نوع السؤال"
                 value={question.type}
-                onChange={(e) => handlePropChange('type', e.target.value)}
-                className="w-full h-[46px] rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 text-sm font-bold text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all"
-              >
-                <option value="MCQ">اختيارات (MCQ)</option>
-                <option value="Essay">مقال (Essay)</option>
-                <option value="FindTheMistake">اكتشف الغلطة</option>
-              </select>
+                onChange={(v) => handlePropChange('type', v as string)}
+                size="sm"
+                options={[
+                  { value: 'MCQ', label: 'اختيارات (MCQ)' },
+                  { value: 'Essay', label: 'مقال (Essay)' },
+                  { value: 'FindTheMistake', label: 'اكتشف الغلطة' },
+                ]}
+              />
             </div>
 
             <div className="flex-1 min-w-[120px] space-y-2">

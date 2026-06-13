@@ -937,5 +937,72 @@ export const adminService = {
   deleteRole: async (id: string) => {
     const res = await apiClient.delete<ApiResponse<any>>(`/admin/roles/${id}`);
     return res.data;
-  }
+  },
+
+  // ── Teacher Profile Page endpoints ──────────────────────────────
+  getTeacherStats: async (teacherId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any>>(`/admin/teachers/${teacherId}/stats`);
+      return res.data?.data ?? null;
+    } catch { return null; }
+  },
+
+  getTeacherStudents: async (teacherId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/teachers/${teacherId}/students`);
+      return res.data?.data ?? [];
+    } catch { return []; }
+  },
+
+  getTeacherEssays: async (teacherId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/teachers/${teacherId}/essays`);
+      return res.data?.data ?? [];
+    } catch { return []; }
+  },
+
+  getTeacherActivations: async (teacherId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/teachers/${teacherId}/activations`);
+      return res.data?.data ?? [];
+    } catch { return []; }
+  },
+
+  getFinancePayouts: async (teacherId?: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any[]>>('/admin/finance/payouts', {
+        params: teacherId ? { teacherId } : {},
+      });
+      return res.data?.data ?? [];
+    } catch { return []; }
+  },
+
+  // ── Assistant Profile Page endpoints ──────────────────────────────
+  getAssistantStats: async (assistantId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any>>(`/admin/assistants/${assistantId}/stats`);
+      return res.data?.data ?? null;
+    } catch { return null; }
+  },
+
+  getAssistantTasks: async (assistantId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/assistants/${assistantId}/tasks`);
+      return res.data?.data ?? [];
+    } catch { return []; }
+  },
+
+  getAssistantHomeworkReviews: async (assistantId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/assistants/${assistantId}/homework-reviews`);
+      return res.data?.data ?? [];
+    } catch { return []; }
+  },
+
+  getAssistantWarnings: async (assistantId: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any[]>>(`/admin/assistants/${assistantId}/warnings`);
+      return res.data?.data ?? [];
+    } catch { return []; }
+  },
 };

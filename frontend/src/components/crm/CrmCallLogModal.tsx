@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { X, Calendar, PhoneCall, Loader2 } from "lucide-react";
 import { crmService, CrmCallLogDto } from "@/services/crm-service";
 import NeumorphButton from "@/components/ui/neumorph-button";
+import { Dropdown } from "@/components/ui/dropdown";
 import toast from "react-hot-toast";
 import { formatDate } from "@/components/admin/admin-utils";
 
@@ -101,18 +102,12 @@ export const CrmCallLogModal: React.FC<CrmCallLogModalProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">نتيجة المكالمة</label>
-                <select
+                <Dropdown
+                  label="نتيجة المكالمة"
                   value={outcome}
-                  onChange={(e) => setOutcome(e.target.value)}
-                  className="admin-input w-full"
-                >
-                  {OUTCOME_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => setOutcome(v as string)}
+                  options={OUTCOME_OPTIONS}
+                />
               </div>
 
               {(outcome === "Postponed" || outcome === "Pending") && (

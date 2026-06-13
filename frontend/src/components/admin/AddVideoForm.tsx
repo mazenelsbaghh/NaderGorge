@@ -5,6 +5,7 @@ import { adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import { NumberField } from '@/components/ui/number-field';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { Dropdown } from '@/components/ui/dropdown';
 
 interface AddVideoFormProps {
   lessonId: string;
@@ -52,16 +53,17 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             required
           />
         </div>
-        <div className="w-32 space-y-2">
-          <label className="text-xs font-bold text-[var(--admin-muted)]">المنصة</label>
-          <select
+        <div className="w-40 space-y-2">
+          <Dropdown
+            label="المنصة"
             value={provider}
-            onChange={(e) => setProvider(e.target.value)}
-            className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
-          >
-            <option value="YouTube">YouTube</option>
-            <option value="vk">VK (فيكونتاكتي)</option>
-          </select>
+            onChange={(v) => setProvider(v as string)}
+            size="sm"
+            options={[
+              { value: 'YouTube', label: 'YouTube' },
+              { value: 'vk', label: 'VK (فيكونتاكتي)' },
+            ]}
+          />
         </div>
         <div className="flex-1 space-y-2 min-w-[200px]">
           <label className="text-xs font-bold text-[var(--admin-muted)]">رابط الفيديو (أو المعرف)</label>

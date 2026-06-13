@@ -6,6 +6,7 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import { hrService, EmployeeDto } from '@/services/hr-service';
 import { assistantService } from '@/services/assistant-service';
 import toast from 'react-hot-toast';
+import { Dropdown } from '@/components/ui/dropdown';
 
 interface TaskCreateModalProps {
   open: boolean;
@@ -114,37 +115,32 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">تعيين إلى *</label>
-            <select
+            <Dropdown
+              label="تعيين إلى *"
               value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
+              onChange={(v) => setAssigneeId(v as string)}
               disabled={loadingEmployees}
-              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
-            >
-              {loadingEmployees ? (
-                <option>جاري تحميل الموظفين...</option>
-              ) : (
-                employees.map((emp) => (
-                  <option key={emp.userId} value={emp.userId}>
-                    {emp.fullName} ({emp.roles.join(', ')})
-                  </option>
-                ))
-              )}
-            </select>
+              searchable
+              placeholder={loadingEmployees ? 'جاري تحميل الموظفين...' : 'اختر الموظف...'}
+              options={employees.map((emp) => ({
+                value: emp.userId,
+                label: `${emp.fullName} (${emp.roles.join(', ')})`,
+              }))}
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">الأولوية</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(Number(e.target.value))}
-              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)]"
-            >
-              <option value={1}>منخفضة (Low)</option>
-              <option value={2}>متوسطة (Medium)</option>
-              <option value={3}>عالية (High)</option>
-              <option value={4}>حرجة (Critical)</option>
-            </select>
+            <Dropdown
+              label="الأولوية"
+              value={String(priority)}
+              onChange={(v) => setPriority(Number(v))}
+              options={[
+                { value: '1', label: 'منخفضة (Low)' },
+                { value: '2', label: 'متوسطة (Medium)' },
+                { value: '3', label: 'عالية (High)' },
+                { value: '4', label: 'حرجة (Critical)' },
+              ]}
+            />
           </div>
         </div>
 
