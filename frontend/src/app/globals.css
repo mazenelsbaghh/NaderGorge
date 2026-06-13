@@ -31,6 +31,18 @@ html.theme-switching *::after {
   transition: none !important;
 }
 
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+}
+
+@media (pointer: coarse) {
+  :where(button, [role="button"], input[type="checkbox"], input[type="radio"]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 @theme inline {
 
   --color-background: var(--background);

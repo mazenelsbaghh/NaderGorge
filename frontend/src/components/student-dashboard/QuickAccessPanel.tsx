@@ -1,56 +1,51 @@
 "use client";
 
-import { ChevronLeft, Calendar, Folder, FileText } from "lucide-react";
+import { Calendar, ChevronDown, ChevronLeft, FileText, Folder } from "lucide-react";
 import Link from "next/link";
-import { type QuickAccessItemDto } from "@/services/student-service";
+
+import type { QuickAccessItemDto } from "@/services/student-service";
 
 interface QuickAccessPanelProps {
   items: QuickAccessItemDto[];
 }
 
 export function QuickAccessPanel({ items }: QuickAccessPanelProps) {
-  if (!items || items.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
-      <div className="mb-6">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">وصول سريع</p>
-        <p className="mt-2 text-sm font-bold text-[var(--admin-muted)]">ارجع بسرعة إلى الدروس والمسارات المفتوحة لك الآن.</p>
-      </div>
+    <details className="group rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-5 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] sm:px-6">
+        <span>
+          <span className="block text-base font-black text-[var(--admin-text)]">وصول سريع</span>
+          <span className="mt-0.5 block text-xs text-[var(--admin-muted)]">
+            {items.length} روابط مفتوحة لك
+          </span>
+        </span>
+        <ChevronDown className="h-5 w-5 text-[var(--admin-primary)] transition-transform group-open:rotate-180" />
+      </summary>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item, idx) => {
-          // accessType: 1 = Term, 2 = Month, 3 = Lesson
+      <div className="grid gap-2 border-t border-[var(--admin-border)] p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3">
+        {items.map((item, index) => {
           const Icon = item.accessType === 1 ? Calendar : item.accessType === 2 ? Folder : FileText;
 
           return (
             <Link
-              key={`${item.url}-${idx}`}
+              key={`${item.url}-${index}`}
               href={item.url}
-              className="group flex flex-col gap-3 rounded-2xl bg-[var(--admin-bg)] p-5 text-right transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
+              className="flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-[var(--admin-card-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
             >
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <h3 className="line-clamp-1 text-base font-bold text-[var(--admin-text)] transition-colors group-hover:text-[var(--admin-primary)]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--admin-muted)]">
-                    {item.pathBreadcrumb}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] font-black text-[var(--admin-primary)]">
-                <span>اذهب مباشرة</span>
-                <ChevronLeft className="h-3 w-3 transition-transform group-hover:-translate-x-1" />
-              </div>
+              <Icon className="h-5 w-5 shrink-0 text-[var(--admin-primary)]" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-bold text-[var(--admin-text)]">{item.title}</span>
+                <span className="mt-0.5 block truncate text-xs text-[var(--admin-muted)]">
+                  {item.pathBreadcrumb}
+                </span>
+              </span>
+              <ChevronLeft className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
             </Link>
           );
         })}
       </div>
-    </div>
+    </details>
   );
 }

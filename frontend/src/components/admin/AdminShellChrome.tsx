@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -34,9 +34,6 @@ import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { useAuthStore } from '@/stores/auth-store';
-import dynamic from 'next/dynamic';
-
-const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 import { AdminBreadcrumbs } from './AdminBreadcrumbs';
 import { useHasPermission } from '@/hooks/useHasPermission';
 
@@ -268,7 +265,6 @@ export function AdminShellChrome({
   const roles = user?.roles || [];
   const { hasPermission } = useHasPermission();
   const { isDark, themeVars, toggleTheme } = useAdminTheme();
-  const [showBackdrop, setShowBackdrop] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -314,16 +310,6 @@ export function AdminShellChrome({
     };
   }).filter((group) => group.items.length > 0);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setShowBackdrop(true);
-    }, 180);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, []);
-
   const handleLogout = () => {
     clearAuth();
     router.replace('/login');
@@ -339,23 +325,6 @@ export function AdminShellChrome({
       className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
       style={themeVars}
     >
-      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.16),transparent_48%),linear-gradient(180deg,transparent,rgba(100,116,139,0.06))]" />
-      <div
-        className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {showBackdrop ? (
-          <RippleGrid
-            gridColor={isDark ? '#64748b' : '#94a3b8'}
-            rippleIntensity={0.035}
-            gridSize={10}
-            gridThickness={isDark ? 14 : 11}
-            mouseInteraction={false}
-            mouseInteractionRadius={1.2}
-            opacity={isDark ? 0.32 : 0.14}
-            animationSpeed={0.22}
-          />
-        ) : null}
-      </div>
       <aside
         className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex group/sidebar transition-all duration-300 ease-in-out hover:w-64"
         role="navigation"
@@ -571,10 +540,10 @@ export function AdminShellChrome({
 
         {children}
 
-        <footer className="mt-14 flex flex-col items-center opacity-35 select-none">
-          <div className="mb-4 h-px w-full bg-gradient-to-r from-transparent via-[var(--admin-footer)] to-transparent" />
-          <p className="text-[10px] font-black uppercase tracking-[0.34em] text-[var(--admin-primary)]">
-            شيخ المتحف
+        <footer className="mt-14 flex flex-col items-center opacity-60 select-none">
+          <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
+          <p className="text-xs font-bold text-[var(--admin-muted)]">
+            منصة مسار
           </p>
         </footer>
       </main>

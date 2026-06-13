@@ -5,6 +5,7 @@ import { CheckCircle2, Filter, MessageSquareText, ShieldX, ThumbsUp } from 'luci
 import toast from 'react-hot-toast';
 
 import { AdminDataTable, type AdminColumn } from '@/components/admin/AdminDataTable';
+import { AdminModal } from '@/components/admin/AdminModal';
 import { adminService, type ModerationCommunityPostDto } from '@/services/admin-service';
 
 type FilterStatus = 'All' | 'Pending' | 'Approved' | 'Rejected';
@@ -39,16 +40,22 @@ const statusLabel = (status: string) => filterLabel[status as FilterStatus] ?? s
 export function CommunityPostsModerationTable() {
   const [posts, setPosts] = useState<ModerationCommunityPostDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [rejectingPostIds, setRejectingPostIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('Pending');
 
   const loadPosts = useCallback(async (filter: FilterStatus) => {
     setLoading(true);
+    setError(null);
     try {
       const rows = await adminService.getCommunityPostsForModeration(filter);
       setPosts(rows);
+      setSelectedIds(new Set());
     } catch {
-      setPosts([]);
+      setError('تعذر تحميل بوستات المجتمع. تحقق من الاتصال ثم أعد المحاولة.');
     } finally {
       setLoading(false);
     }
@@ -58,31 +65,87 @@ export function CommunityPostsModerationTable() {
     void loadPosts(activeFilter);
   }, [activeFilter, loadPosts]);
 
-  const handleModeration = useCallback(async (postId: string, action: 'approve' | 'reject') => {
-    setActingId(postId);
+  const handleModeration = useCallback(async (postIds: string[], action: 'approve' | 'reject') => {
+    if (postIds.length === 0) return;
+
+    const isBulk = postIds.length > 1;
+    if (isBulk) {
+      setBulkAction(action);
+    } else {
+      setActingId(postIds[0]);
+    }
+
     try {
-      if (action === 'approve') {
-        await adminService.approveCommunityPost(postId);
-        toast.success('تم قبول البوست.');
+      const results = await Promise.allSettled(
+        postIds.map((postId) =>
+          action === 'approve'
+            ? adminService.approveCommunityPost(postId)
+            : adminService.rejectCommunityPost(postId),
+        ),
+      );
+      const succeeded = results.filter((result) => result.status === 'fulfilled').length;
+      const failed = results.length - succeeded;
+      const actionLabel = action === 'approve' ? 'قبول' : 'رفض';
+
+      if (failed === 0) {
+        toast.success(
+          postIds.length === 1
+            ? `تم ${actionLabel} البوست.`
+            : `تم ${actionLabel} ${succeeded} بوستات.`,
+        );
+      } else if (succeeded === 0) {
+        toast.error(`تعذر ${actionLabel} البوستات المحددة.`);
       } else {
-        await adminService.rejectCommunityPost(postId);
-        toast.success('تم رفض البوست.');
+        toast.error(`تم ${actionLabel} ${succeeded} بوستات، وتعذر تنفيذ الإجراء على ${failed}.`);
       }
 
-      await loadPosts(activeFilter);
-    } catch {
-      // global interceptor
+      if (succeeded > 0) {
+        await loadPosts(activeFilter);
+      }
     } finally {
       setActingId(null);
+      setBulkAction(null);
     }
   }, [activeFilter, loadPosts]);
+
+  const toggleSelection = useCallback((postId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(postId)) next.delete(postId);
+      else next.add(postId);
+      return next;
+    });
+  }, []);
 
   const pendingCount = useMemo(
     () => posts.filter((post) => post.status === 'Pending').length,
     [posts],
   );
+  const pendingPosts = useMemo(
+    () => posts.filter((post) => post.status === 'Pending'),
+    [posts],
+  );
+  const isMutating = actingId !== null || bulkAction !== null;
 
   const columns = useMemo<AdminColumn<ModerationCommunityPostDto>[]>(() => [
+    {
+      key: 'select',
+      label: 'تحديد',
+      align: 'center',
+      render: (row) =>
+        row.status === 'Pending' ? (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(row.id)}
+            disabled={isMutating}
+            onChange={() => toggleSelection(row.id)}
+            aria-label={`تحديد بوست الطالب ${row.studentName}`}
+            className="h-4 w-4 accent-[var(--admin-primary)]"
+          />
+        ) : (
+          <span className="text-[var(--admin-muted)]">—</span>
+        ),
+    },
     {
       key: 'student',
       label: 'الطالب',
@@ -142,8 +205,8 @@ export function CommunityPostsModerationTable() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={actingId === row.id}
-              onClick={() => void handleModeration(row.id, 'approve')}
+              disabled={isMutating}
+              onClick={() => void handleModeration([row.id], 'approve')}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] px-4 py-2 text-xs font-black text-[var(--admin-success)] transition hover:brightness-110 disabled:opacity-60"
             >
               <CheckCircle2 className="h-4 w-4" />
@@ -151,8 +214,8 @@ export function CommunityPostsModerationTable() {
             </button>
             <button
               type="button"
-              disabled={actingId === row.id}
-              onClick={() => void handleModeration(row.id, 'reject')}
+              disabled={isMutating}
+              onClick={() => setRejectingPostIds([row.id])}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-4 py-2 text-xs font-black text-[var(--admin-danger)] transition hover:brightness-110 disabled:opacity-60"
             >
               <ShieldX className="h-4 w-4" />
@@ -163,7 +226,7 @@ export function CommunityPostsModerationTable() {
           <span className="text-xs font-bold text-[var(--admin-muted)]">لا توجد إجراءات إضافية</span>
         ),
     },
-  ], [actingId, handleModeration]);
+  ], [handleModeration, isMutating, selectedIds, toggleSelection]);
 
   return (
     <div className="space-y-6">
@@ -180,8 +243,8 @@ export function CommunityPostsModerationTable() {
             </p>
           </div>
           <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4 text-center">
-            <p className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">قيد المراجعة الآن</p>
-            <p className="mt-2 text-3xl font-black text-[var(--admin-primary)]">{pendingCount}</p>
+            <p className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">قيد المراجعة ضمن النتائج</p>
+            <p className="mt-2 text-3xl font-black text-[var(--admin-primary)]">{error ? '—' : pendingCount}</p>
           </div>
         </div>
       </section>
@@ -198,6 +261,7 @@ export function CommunityPostsModerationTable() {
               <button
                 key={filter}
                 type="button"
+                disabled={loading || isMutating}
                 onClick={() => setActiveFilter(filter)}
                 className={`rounded-full px-4 py-2 text-xs font-black transition ${
                   active
@@ -211,16 +275,59 @@ export function CommunityPostsModerationTable() {
           })}
         </div>
 
+        {!error && pendingPosts.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <span className="text-sm font-black text-[var(--admin-text)]">
+              تم تحديد {selectedIds.size} من {pendingPosts.length} قيد المراجعة
+            </span>
+            <button
+              type="button"
+              disabled={isMutating}
+              onClick={() =>
+                setSelectedIds(
+                  selectedIds.size === pendingPosts.length
+                    ? new Set()
+                    : new Set(pendingPosts.map((post) => post.id)),
+                )
+              }
+              className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2 text-xs font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)] disabled:opacity-60"
+            >
+              {selectedIds.size === pendingPosts.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+            </button>
+            <div className="mr-auto flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={selectedIds.size === 0 || isMutating}
+                onClick={() => void handleModeration([...selectedIds], 'approve')}
+                className="rounded-full bg-[var(--admin-success)] px-4 py-2 text-xs font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bulkAction === 'approve' ? 'جارٍ القبول...' : 'قبول المحدد'}
+              </button>
+              <button
+                type="button"
+                disabled={selectedIds.size === 0 || isMutating}
+                onClick={() => setRejectingPostIds([...selectedIds])}
+                className="rounded-full bg-[var(--admin-danger)] px-4 py-2 text-xs font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {bulkAction === 'reject' ? 'جارٍ الرفض...' : 'رفض المحدد'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <AdminDataTable
           data={posts}
           columns={columns}
           loading={loading}
           rowKey={(row) => row.id}
+          errorMessage={error}
+          onRetry={() => void loadPosts(activeFilter)}
           emptyMessage={
             activeFilter === 'Pending'
               ? 'لا توجد بوستات قيد المراجعة حاليًا.'
               : 'لا توجد بوستات مطابقة لهذا الفلتر.'
           }
+          rowActionLabel={(row) => `عرض تفاصيل بوست الطالب ${row.studentName}`}
           expandedRowRender={(row) => (
             <div className="space-y-4">
               <div>
@@ -253,6 +360,43 @@ export function CommunityPostsModerationTable() {
           )}
         />
       </section>
+
+      <AdminModal
+        open={rejectingPostIds.length > 0}
+        onClose={() => {
+          if (!isMutating) setRejectingPostIds([]);
+        }}
+        title={rejectingPostIds.length > 1 ? 'تأكيد رفض البوستات المحددة' : 'تأكيد رفض البوست'}
+        subtitle="سيتم إخفاء البوستات المرفوضة عن الطلاب وتسجيل قرار المراجعة."
+      >
+        <div className="space-y-5" dir="rtl">
+          <p className="text-sm font-medium leading-7 text-[var(--admin-text)]">
+            هل تريد متابعة رفض {rejectingPostIds.length > 1 ? `${rejectingPostIds.length} بوستات` : 'هذا البوست'}؟
+          </p>
+          <div className="flex items-center justify-end gap-3 border-t border-[var(--admin-border)] pt-4">
+            <button
+              type="button"
+              disabled={isMutating}
+              onClick={() => setRejectingPostIds([])}
+              className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-2.5 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)] disabled:opacity-60"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              disabled={isMutating}
+              onClick={async () => {
+                const ids = rejectingPostIds;
+                await handleModeration(ids, 'reject');
+                setRejectingPostIds([]);
+              }}
+              className="rounded-full bg-[var(--admin-danger)] px-5 py-2.5 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {bulkAction === 'reject' || actingId ? 'جارٍ الرفض...' : 'تأكيد الرفض'}
+            </button>
+          </div>
+        </div>
+      </AdminModal>
     </div>
   );
 }

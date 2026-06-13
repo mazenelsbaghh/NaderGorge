@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,9 +24,6 @@ import { useAdminTheme } from '@/components/admin/useAdminTheme';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { useAuthStore } from '@/stores/auth-store';
-import dynamic from 'next/dynamic';
-
-const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 import { useHasPermission } from '@/hooks/useHasPermission';
 
 type AssistantShellRoute =
@@ -135,8 +132,7 @@ export function AssistantShellChrome({
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const user = useAuthStore((state) => state.user);
   const { hasPermission } = useHasPermission();
-  const { isDark, themeVars } = useAdminTheme();
-  const [showBackdrop, setShowBackdrop] = useState(false);
+  const { themeVars } = useAdminTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useRootOverscrollBackground();
@@ -152,16 +148,6 @@ export function AssistantShellChrome({
     return 'مساحة المساعدين';
   };
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setShowBackdrop(true);
-    }, 180);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, []);
-
   const handleLogout = () => {
     clearAuth();
     router.replace('/login');
@@ -173,23 +159,6 @@ export function AssistantShellChrome({
       className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
       style={themeVars}
     >
-      <div className="absolute inset-0 z-0 pointer-events-none bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.16),transparent_48%),linear-gradient(180deg,transparent,rgba(100,116,139,0.06))]" />
-      <div
-        className={`absolute inset-0 z-0 pointer-events-none transition-opacity duration-300 ${showBackdrop ? 'opacity-100' : 'opacity-0'}`}
-      >
-        {showBackdrop ? (
-          <RippleGrid
-            gridColor={isDark ? '#64748b' : '#94a3b8'}
-            rippleIntensity={0.035}
-            gridSize={10}
-            gridThickness={isDark ? 14 : 11}
-            mouseInteraction={false}
-            mouseInteractionRadius={1.2}
-            opacity={isDark ? 0.32 : 0.14}
-            animationSpeed={0.22}
-          />
-        ) : null}
-      </div>
 
       {/* Desktop Sidebar */}
       <aside
@@ -241,7 +210,7 @@ export function AssistantShellChrome({
             </div>
             <div className="hidden group-hover/sidebar:block min-w-0">
               <p className="text-xs font-black text-[var(--admin-text)] truncate">{user?.fullName ?? 'مساعد'}</p>
-              <p className="text-[10px] text-[var(--admin-muted)] truncate">{user?.phone ?? ''}</p>
+              <p className="text-xs text-[var(--admin-muted)] truncate">{user?.phone ?? ''}</p>
             </div>
           </div>
 
@@ -271,7 +240,7 @@ export function AssistantShellChrome({
               <Menu className="h-6 w-6" />
             </button>
             <div className="hidden sm:block">
-              <span className="text-[10px] font-black tracking-wider text-[var(--admin-primary)] uppercase">
+              <span className="text-xs font-bold text-[var(--admin-primary)]">
                 {sectionLabel}
               </span>
               <h1 className="text-lg font-black tracking-tight text-[var(--admin-text)]">
@@ -302,10 +271,10 @@ export function AssistantShellChrome({
           )}
           {children}
 
-          <footer className="mt-14 flex flex-col items-center opacity-35 select-none">
-            <div className="mb-4 h-px w-full bg-gradient-to-r from-transparent via-[var(--admin-footer)] to-transparent" />
-            <p className="text-[10px] font-black uppercase tracking-[0.34em] text-[var(--admin-primary)]">
-              شيخ المتحف
+          <footer className="mt-14 flex flex-col items-center opacity-60 select-none">
+            <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
+            <p className="text-xs font-bold text-[var(--admin-muted)]">
+              منصة مسار
             </p>
           </footer>
         </main>

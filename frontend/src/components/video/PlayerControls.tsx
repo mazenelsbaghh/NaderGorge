@@ -295,6 +295,8 @@ export default function PlayerControls({
                   onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
                   variant="ghost"
                   size="icon"
+                  aria-label={isPlaying ? "إيقاف الفيديو مؤقتًا" : "تشغيل الفيديو"}
+                  aria-pressed={isPlaying}
                   className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full"
                 >
                   {isPlaying ? (
@@ -311,6 +313,8 @@ export default function PlayerControls({
                     onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
                     variant="ghost"
                     size="icon"
+                    aria-label={isMuted || volume === 0 ? "تشغيل الصوت" : "كتم الصوت"}
+                    aria-pressed={isMuted || volume === 0}
                     className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full shrink-0"
                   >
                     {isMuted || volume === 0 ? (
@@ -349,7 +353,11 @@ export default function PlayerControls({
             <div className="flex items-center gap-1 shrink-0">
               {provider !== 'vk' && (
                 <>
-                  <div className="hidden sm:flex items-center gap-1 bg-black/20 p-1 rounded-full border border-white/5 mr-2">
+                  <div
+                    className="hidden sm:flex items-center gap-1 bg-black/20 p-1 rounded-full border border-white/5 mr-2"
+                    role="group"
+                    aria-label="سرعة تشغيل الفيديو"
+                  >
                     {[0.5, 1, 1.5, 2].map((speed) => (
                       <motion.div
                         whileHover={{ scale: 1.1 }}
@@ -359,6 +367,8 @@ export default function PlayerControls({
                         <Button
                           onClick={(e) => { e.stopPropagation(); setSpeed(speed); }}
                           variant="ghost"
+                          aria-label={`ضبط سرعة التشغيل على ${speed}x`}
+                          aria-pressed={playbackSpeed === speed}
                           className={cn(
                             "text-white hover:bg-[#111111d1] hover:text-white h-7 px-2.5 text-xs rounded-full cursor-pointer",
                             playbackSpeed === speed && "bg-white/20 font-bold"
@@ -379,6 +389,7 @@ export default function PlayerControls({
                         setSpeed(next);
                       }}
                       variant="ghost"
+                      aria-label={`سرعة التشغيل الحالية ${playbackSpeed}x. اضغط لتغيير السرعة`}
                       className="text-white hover:bg-[#111111d1] hover:text-white h-8 px-2 text-xs font-bold rounded-full"
                     >
                       {playbackSpeed}x
@@ -394,6 +405,7 @@ export default function PlayerControls({
                   onClick={(e) => { e.stopPropagation(); onToggleFullscreen(); }}
                   variant="ghost"
                   size="icon"
+                  aria-label="تبديل وضع ملء الشاشة"
                   className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full"
                 >
                   <Maximize className="h-5 w-5" />

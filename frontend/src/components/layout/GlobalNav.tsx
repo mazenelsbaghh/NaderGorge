@@ -18,35 +18,16 @@ import {
 } from "@/components/ui/resizable-navbar";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { useAdminTheme } from "@/components/admin/useAdminTheme";
-import { motion, useReducedMotion } from "framer-motion";
 import { ShinyButton } from "@/components/ui/shiny-button";
 import { PlatformLogo } from "@/components/shared/PlatformLogo";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 
 function LoginNavButtonContent() {
-  const shouldReduceMotion = useReducedMotion();
-
   return (
     <span className="inline-flex items-center gap-2.5 whitespace-nowrap">
-      <motion.span
-        className="inline-flex h-4 w-4 shrink-0 origin-center drop-shadow-[0_2px_10px_rgba(145,95,42,0.2)]"
-        animate={
-          shouldReduceMotion
-            ? undefined
-            : {
-                y: [0, -1.5, 0],
-                rotate: [0, -5, 0],
-                scale: [1, 1.06, 1],
-              }
-        }
-        transition={{
-          duration: 3.2,
-          ease: 'easeInOut',
-          repeat: Infinity,
-        }}
-      >
+      <span className="inline-flex h-4 w-4 shrink-0">
         <PlatformLogo variant="mark" size="sm" />
-      </motion.span>
+      </span>
       <span>تسجيل الدخول</span>
     </span>
   );
@@ -160,8 +141,17 @@ export function GlobalNav() {
         <MobileNav>
           <MobileNavHeader>
             <NavbarLogo />
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 items-center">
+            <div className="flex items-center gap-1 sm:gap-2">
+              {!isAuthenticated && (
+                <Link
+                  href="/login"
+                  aria-label="تسجيل الدخول"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-[#0E8F8F] px-3 text-sm font-black text-white transition-colors hover:bg-[#0A7474] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E8F8F] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--landing-bg)]"
+                >
+                  دخول
+                </Link>
+              )}
+              <div className="hidden h-10 items-center sm:flex">
                 <AnimatedThemeToggler
                   checked={isDark}
                   onToggle={toggleTheme}

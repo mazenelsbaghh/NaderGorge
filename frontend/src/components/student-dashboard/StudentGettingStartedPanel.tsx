@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpLeft, BookOpenText, KeyRound, X } from "lucide-react";
+import { ArrowUpLeft, BookOpenText, ChevronDown, KeyRound, X } from "lucide-react";
+
 import type { DashboardDto } from "@/services/student-service";
 
 const ONBOARDING_DISMISS_KEY = "student-dashboard-onboarding-dismissed-v1";
@@ -12,7 +13,6 @@ type StudentGettingStartedPanelProps = {
 };
 
 type OnboardingVariant = {
-  eyebrow: string;
   title: string;
   description: string;
   primaryCta: {
@@ -34,32 +34,30 @@ type OnboardingVariant = {
 function getVariant(data: DashboardDto): OnboardingVariant | null {
   if (data.activePackages.length === 0) {
     return {
-      eyebrow: "ابدأ من هنا",
-      title: "ابدأ بخطوتين بس",
-      description:
-        "فعّل كودك الأول أو شوف الباقات المتاحة ليك، وبعدها هتظهرلك الدروس اللي تقدر تبدأ فيها على طول.",
+      title: "تحتاج مساعدة في البداية؟",
+      description: "ثلاث خطوات قصيرة من التفعيل حتى أول درس.",
       primaryCta: {
         href: "/student/code-redemption",
-        label: "فعّل كودك دلوقتي",
+        label: "فعّل كودك",
         icon: KeyRound,
       },
       secondaryCta: {
         href: "/student/packages",
-        label: "شوف كل الباقات",
+        label: "تصفح الباقات",
         icon: BookOpenText,
       },
       steps: [
         {
-          title: "1. افتح الوصول",
-          detail: "فعّل كود جديد أو شوف الباقات اللي متاحة ليك.",
+          title: "افتح الوصول",
+          detail: "فعّل كودًا جديدًا أو راجع الباقات المتاحة لك.",
         },
         {
-          title: "2. ابدأ أول درس",
-          detail: "بعد التفعيل هتلاقي الباقة المفتوحة والدرس اللي بعده في نفس الصفحة.",
+          title: "ابدأ أول درس",
+          detail: "بعد التفعيل ستجد الباقة والدرس المتاح في لوحة الطالب.",
         },
         {
-          title: "3. تابع تقدمك",
-          detail: "كل درس أو امتحان تخلصه هيزوّد نسبة التقدم ويوريك إيه اللي فاضل.",
+          title: "تابع تقدمك",
+          detail: "إكمال الدروس والامتحانات يحدّث تقدمك تلقائيًا.",
         },
       ],
     };
@@ -67,10 +65,8 @@ function getVariant(data: DashboardDto): OnboardingVariant | null {
 
   if (!data.resumePoint && data.totalLessonsCompleted === 0) {
     return {
-      eyebrow: "خطوة البداية",
-      title: "الباقات جاهزة، ابدأ أول درس",
-      description:
-        "مش محتاج شرح كتير. افتح باقتك وابدأ أول درس، والخطوة اللي بعدها هتظهرلك لوحدها وإنت بتذاكر.",
+      title: "باقاتك جاهزة، ابدأ أول درس",
+      description: "افتح إحدى باقاتك واختر أول درس متاح.",
       primaryCta: {
         href: "/student/packages",
         label: "افتح الباقات",
@@ -78,21 +74,21 @@ function getVariant(data: DashboardDto): OnboardingVariant | null {
       },
       secondaryCta: {
         href: "/student/mistakes",
-        label: "ملف الأخطاء — بعدين",
+        label: "راجع ملف الأخطاء",
         icon: BookOpenText,
       },
       steps: [
         {
-          title: "1. اختار الباقة",
-          detail: "افتح الباقة المناسبة ليك عشان تشوف الدروس المتاحة دلوقتي.",
+          title: "اختر الباقة",
+          detail: "افتح الباقة المناسبة لرؤية الدروس المتاحة.",
         },
         {
-          title: "2. ابدأ أول درس",
-          detail: "بعد ما تفتح الدرس هتلاقي الواجب أو الاختبار المرتبط بيه في نفس المسار.",
+          title: "ابدأ الدرس",
+          detail: "ستجد الواجب أو الامتحان المرتبط داخل المسار نفسه.",
         },
         {
-          title: "3. ارجع هنا بعد ما تخلص",
-          detail: "بعد ما تخلص هتتحول لوحة الطالب لملخص واضح لإنجازاتك واللي فاضل.",
+          title: "ارجع إلى اللوحة",
+          detail: "بعد الإكمال ستظهر لك نقطة الاستكمال التالية مباشرة.",
         },
       ],
     };
@@ -103,88 +99,77 @@ function getVariant(data: DashboardDto): OnboardingVariant | null {
 
 export function StudentGettingStartedPanel({ data }: StudentGettingStartedPanelProps) {
   const [dismissed, setDismissed] = useState(() => {
-    if (typeof window === "undefined") {
-      return true;
-    }
-
+    if (typeof window === "undefined") return true;
     return window.localStorage.getItem(ONBOARDING_DISMISS_KEY) === "true";
   });
 
   const variant = getVariant(data);
 
-  if (!variant || dismissed) {
-    return null;
-  }
+  if (!variant || dismissed) return null;
 
   const PrimaryIcon = variant.primaryCta.icon;
   const SecondaryIcon = variant.secondaryCta.icon;
 
   return (
-    <section className="rounded-2xl bg-[var(--admin-card)] p-6 shadow-sm ring-1 ring-[var(--admin-border)] sm:p-8">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="max-w-2xl space-y-3">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-[var(--admin-primary)]">
-            {variant.eyebrow}
-          </p>
-          <h2 className="text-2xl font-black leading-tight text-[var(--admin-text)]">
-            {variant.title}
-          </h2>
-          <p className="text-sm leading-7 text-[var(--admin-muted)] sm:text-base">
-            {variant.description}
-          </p>
+    <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+      <div className="flex items-start justify-between gap-3 px-5 py-4 sm:px-6">
+        <div>
+          <h2 className="text-base font-black text-[var(--admin-text)]">{variant.title}</h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">{variant.description}</p>
         </div>
-
         <button
           type="button"
+          aria-label="إخفاء خطوات البداية"
           onClick={() => {
             window.localStorage.setItem(ONBOARDING_DISMISS_KEY, "true");
             setDismissed(true);
           }}
-          className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-2xl px-4 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-card-soft)] hover:text-[var(--admin-text)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
+          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-card-soft)] hover:text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
         >
-          <X className="h-4 w-4" />
-          <span>هستكشف بنفسي</span>
+          <X className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="grid gap-3">
-          {variant.steps.map((step) => (
-            <div
-              key={step.title}
-              className="rounded-[24px] bg-[var(--admin-card-soft)] px-5 py-4"
-            >
-              <h3 className="text-sm font-black text-[var(--admin-text)]">{step.title}</h3>
-              <p className="mt-1 text-sm leading-7 text-[var(--admin-muted)]">{step.detail}</p>
-            </div>
-          ))}
-        </div>
+      <details className="group border-t border-[var(--admin-border)]">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 text-sm font-bold text-[var(--admin-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] sm:px-6">
+          <span>اعرض خطوات البداية</span>
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+        </summary>
 
-        <div className="flex flex-col gap-3 rounded-[24px] bg-[var(--admin-primary-12)] p-5">
-          <p className="text-sm font-bold leading-7 text-[var(--admin-text)]">
-            الفكرة بسيطة: تعرف إيه اللي عليك دلوقتي، وتوصله في أقل عدد من الضغطات.
-          </p>
+        <div className="border-t border-[var(--admin-border)] p-5 sm:p-6">
+          <ol className="space-y-4">
+            {variant.steps.map((step, index) => (
+              <li key={step.title} className="flex gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--admin-card-soft)] text-xs font-black text-[var(--admin-primary)]">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3 className="text-sm font-black text-[var(--admin-text)]">{step.title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">{step.detail}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
 
-          <div className="mt-auto flex flex-col gap-3">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Link
               href={variant.primaryCta.href}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-foreground)] transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)] transition-colors hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
             >
               <PrimaryIcon className="h-4 w-4" />
-              <span>{variant.primaryCta.label}</span>
+              {variant.primaryCta.label}
             </Link>
-
             <Link
               href={variant.secondaryCta.href}
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-card-soft)] px-5 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--admin-card-soft)] px-5 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-card-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
             >
               <SecondaryIcon className="h-4 w-4" />
-              <span>{variant.secondaryCta.label}</span>
+              {variant.secondaryCta.label}
               <ArrowUpLeft className="h-4 w-4" />
             </Link>
           </div>
         </div>
-      </div>
+      </details>
     </section>
   );
 }

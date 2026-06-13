@@ -635,6 +635,192 @@
   text-align: center;
 }
 
+/* Login keeps the account form visible immediately and compact on mobile. */
+.auth-login-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  min-height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 1rem 1.5rem;
+}
+
+.auth-login-card {
+  width: min(100%, 62rem);
+  overflow: hidden;
+  border: 1px solid var(--admin-border);
+  border-radius: 1rem;
+  background: var(--admin-card);
+  box-shadow: 0 6px 8px var(--admin-shadow);
+}
+
+.auth-login-heading {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid var(--admin-border);
+  padding: 1.25rem 1.5rem;
+  background: var(--admin-card-strong);
+}
+
+.auth-login-logo {
+  display: grid;
+  width: 4.5rem;
+  height: 4.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.auth-login-brand {
+  color: var(--admin-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.auth-login-heading h1 {
+  margin-top: 0.15rem;
+  color: var(--admin-text);
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.auth-login-heading p:last-child {
+  max-width: 54ch;
+  margin-top: 0.3rem;
+  color: var(--admin-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.65;
+}
+
+.auth-login-body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(22rem, 1.15fr);
+}
+
+.auth-login-intro {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.5rem;
+  background: color-mix(in srgb, var(--admin-primary) 8%, var(--admin-card-strong));
+}
+
+.auth-login-intro h2,
+.auth-login-panel > h2 {
+  color: var(--admin-text);
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.auth-login-intro p {
+  margin-top: 0.75rem;
+  color: var(--admin-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.8;
+}
+
+.auth-login-home-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  width: fit-content;
+  align-items: center;
+  margin-top: 1.5rem;
+  color: var(--admin-primary);
+  font-size: 0.875rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
+.auth-login-home-link:focus-visible {
+  border-radius: 0.35rem;
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 3px;
+}
+
+.auth-login-panel {
+  padding: 2rem;
+  background: var(--admin-card);
+}
+
+.auth-login-panel > h2 {
+  margin-bottom: 1.25rem;
+}
+
+.auth-login-panel form {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.auth-login-main > .auth-footer-caption {
+  margin-top: 1rem;
+}
+
+@media (max-width: 767px) {
+  .auth-login-main {
+    justify-content: flex-start;
+    padding: 4.75rem 0.75rem 1rem;
+  }
+
+  .auth-login-card {
+    max-width: 30rem;
+  }
+
+  .auth-login-heading {
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .auth-login-logo {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .auth-login-heading h1 {
+    font-size: 1.25rem;
+  }
+
+  .auth-login-heading p:last-child {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .auth-login-body {
+    display: block;
+  }
+
+  .auth-login-intro {
+    display: none;
+  }
+
+  .auth-login-panel {
+    padding: 1.25rem 1rem;
+  }
+
+  .auth-login-panel > h2 {
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+  }
+
+  .auth-theme-bar {
+    top: 0.75rem;
+    left: 0.75rem;
+  }
+}
+
+@media (max-width: 767px), (pointer: coarse), (prefers-reduced-motion: reduce), (update: slow) {
+  .auth-shell__glow {
+    display: none;
+  }
+}
+
 /* ── Field Error Text ────────────────────────────────────
    Small red hint under invalid fields.
    ───────────────────────────────────────────────────── */

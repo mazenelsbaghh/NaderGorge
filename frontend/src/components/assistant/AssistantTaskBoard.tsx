@@ -23,7 +23,7 @@ export function AssistantTaskBoard() {
       const res = await assistantService.getPendingTasks(typeFilter);
       setTasks(res.data.data);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch tasks.');
+      setError(err.response?.data?.message || 'تعذر تحميل المهام. حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -52,10 +52,10 @@ export function AssistantTaskBoard() {
 
   const getTaskTypeLabel = (typeNum: number) => {
       switch (typeNum) {
-          case 0: return { label: 'Grade Essay', style: 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' };
-          case 1: return { label: 'Follow-Up At Risk', style: 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)]' };
-          case 2: return { label: 'Payment Issue', style: 'bg-[var(--admin-warning-10)] text-[var(--admin-warning)]' };
-          default: return { label: 'Unknown', style: 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)]' };
+          case 0: return { label: 'تصحيح إجابة مقالية', style: 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)]' };
+          case 1: return { label: 'متابعة طالب متعثر', style: 'bg-[var(--admin-danger-10)] text-[var(--admin-danger)]' };
+          case 2: return { label: 'مشكلة في الدفع', style: 'bg-[var(--admin-warning-10)] text-[var(--admin-warning)]' };
+          default: return { label: 'نوع غير محدد', style: 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)]' };
       }
   };
 
@@ -157,7 +157,7 @@ export function AssistantTaskBoard() {
                               {task.studentName}
                           </h3>
                           <p className="text-sm text-[var(--admin-muted)] font-medium font-mono truncate">
-                              Student ID: {task.studentId?.substring(0,8) || 'N/A'}
+                              معرّف الطالب: {task.studentId?.substring(0,8) || 'غير متاح'}
                           </p>
                           
                           {resolvingTaskId === task.id && (

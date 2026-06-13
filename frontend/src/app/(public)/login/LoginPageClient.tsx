@@ -9,8 +9,8 @@
  *
  * Features:
  *  - Light / Dark toggle pill (top-left) — persists via localStorage("admin-theme-mode")
- *  - Dot-grid background + ambient glow orbs (identical to AdminShellChrome)
- *  - Glassmorphism card with Admin CSS vars
+ *  - Compact, static-first form layout
+ *  - Admin CSS variables for shared theming
  *  - Link to /register
  */
 
@@ -23,14 +23,11 @@ import { useAuthStore } from '@/stores/auth-store';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
-import dynamic from 'next/dynamic';
-const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 import { LoginForm } from '@/components/forms/LoginForm';
-import { FeatureCarousel } from '@/components/ui/feature-carousel';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
 import { getSurfaceName, getSurfaceOrigins, isValidRedirectUrl } from '@/packages/surface-runtime/config';
 
-function getLoginSteps(surface: string) {
+function getLoginCopy(surface: string) {
   let title = 'بوابة الطالب';
   let description = 'ادخل مباشرة إلى دروسك، واجباتك، ومتابعة تقدمك الدراسي.';
 
@@ -45,15 +42,7 @@ function getLoginSteps(surface: string) {
     description = 'إدارة المنصة بالكامل، إعدادات النظام، والصلاحيات.';
   }
 
-  return [
-    {
-      id: '1',
-      step: 1,
-      name: 'تسجيل الدخول',
-      title,
-      description,
-    },
-  ];
+  return { title, description };
 }
 
 export default function LoginPageClient() {
@@ -62,7 +51,7 @@ export default function LoginPageClient() {
 
   const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
   const surface = getSurfaceName();
-  const loginSteps = getLoginSteps(surface);
+  const loginCopy = getLoginCopy(surface);
 
   useEffect(() => {
     loadFromStorage();
@@ -106,17 +95,6 @@ export default function LoginPageClient() {
         className="auth-shell auth-redirect-screen relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]"
         style={themeVars}
       >
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <RippleGrid
-            gridColor={isDark ? '#64748b' : '#94a3b8'}
-            rippleIntensity={0.035}
-            gridSize={12}
-            gridThickness={isDark ? 12 : 10}
-            mouseInteraction={false}
-            opacity={isDark ? 0.5 : 0.28}
-          />
-        </div>
-
         <section className="auth-redirect-card" aria-live="polite" aria-busy="true">
           <div className="auth-redirect-logo">
             <PlatformLogo variant="mark" size="md" tone={isDark ? 'light' : 'dark'} priority />
@@ -147,30 +125,15 @@ export default function LoginPageClient() {
   }
 
   return (
-    <div 
-      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-hidden overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]" 
+    <div
+      className="auth-shell relative flex min-h-[100dvh] w-full flex-col overflow-y-auto bg-[var(--admin-bg)] text-[var(--admin-text)]"
       style={themeVars}
     >
-      {/* ── Ripple Interactive Background ── */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <RippleGrid
-          gridColor={isDark ? '#64748b' : '#94a3b8'}
-          rippleIntensity={0.05}
-          gridSize={10}
-          gridThickness={isDark ? 15 : 12}
-          mouseInteraction={true}
-          mouseInteractionRadius={1.2}
-          opacity={isDark ? 0.8 : 0.4}
-        />
-      </div>
-
-      {/* ── Ambient Glow Orbs ── */}
       <div className="auth-shell__glow pointer-events-none">
         <div className="auth-shell__glow-top" />
         <div className="auth-shell__glow-bottom" />
       </div>
 
-      {/* ── Theme Toggle Bar ── */}
       <div className="auth-theme-bar">
         <AnimatedThemeToggler
           checked={isDark}
@@ -181,64 +144,55 @@ export default function LoginPageClient() {
         />
       </div>
 
-      {/* ── Main content (Matches Registration's 7xl size) ── */}
-      <main className="relative z-10 w-full max-w-7xl px-4 py-10 sm:px-5 sm:py-16 m-auto">
-        
-        {/* Logo Avatar is now inside the layout or just centered at top */}
-        <div className="auth-avatar mb-8">
-          <PlatformLogo variant="mark" size="lg" tone={isDark ? 'light' : 'dark'} priority />
-        </div>
-
-        <FeatureCarousel
-          clickToAdvance={false}
-          autoPlay={false}
-          steps={loginSteps}
-          bgClass="!border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] min-h-[500px] sm:min-h-[550px] shadow-[0_28px_70px_var(--admin-shadow)]"
+      <main className="auth-login-main">
+        <section
+          className="auth-login-card"
+          aria-labelledby="login-page-title"
         >
-          <div className="relative z-10 mt-8 sm:mt-10 w-full pr-4 md:pr-0">
-            <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 lg:items-center w-full">
-              
-              {/* Left Side: Welcoming Visual (Hidden on mobile) */}
-              <div className="hidden lg:flex lg:w-[50%] xl:w-[45%] flex-col justify-center items-center text-center space-y-6">
-                 <div className="space-y-2">
-                   <h3 className="text-xl font-bold" style={{ color: 'var(--admin-text)' }}>منصة مسار</h3>
-                   <p className="text-sm leading-relaxed" style={{ color: 'var(--admin-muted)' }}>
-                     {welcomeText}
-                   </p>
-                 </div>
-              </div>
+          <header className="auth-login-heading">
+            <div className="auth-login-logo">
+              <PlatformLogo variant="mark" size="md" tone={isDark ? 'light' : 'dark'} priority />
+            </div>
+            <div>
+              <p className="auth-login-brand">منصة مسار</p>
+              <h1 id="login-page-title">{loginCopy.title}</h1>
+              <p>{loginCopy.description}</p>
+            </div>
+          </header>
 
-              {/* Right Side: Login Form Box */}
-              <div className="w-full lg:w-[50%] xl:w-[50%]">
-                <div className="space-y-5 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 backdrop-blur-md sm:rounded-[28px] sm:p-7 shadow-[0_12px_40px_var(--admin-shadow)]">
-                  <LoginForm />
-                  
-                  {(surface === 'student' || surface === 'landing' || surface === 'all') && (
-                    <>
-                      <div className="auth-divider my-6" />
-                      
-                      <p className="text-center text-sm" style={{ color: 'var(--admin-muted)' }}>
-                        ليس لديك حساب؟{' '}
-                        <Link
-                          href="/register"
-                          className="font-bold transition-colors hover:opacity-80"
-                          style={{ color: 'var(--admin-primary)' }}
-                        >
-                          إنشاء حساب طالب
-                        </Link>
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
+          <div className="auth-login-body">
+            <aside className="auth-login-intro" aria-label="عن منصة مسار">
+              <h2>خطوتك التالية تبدأ من حسابك</h2>
+              <p>{welcomeText}</p>
+              <Link href="/" className="auth-login-home-link">
+                العودة إلى الصفحة الرئيسية
+              </Link>
+            </aside>
 
+            <div className="auth-login-panel">
+              <h2>تسجيل الدخول إلى حسابك</h2>
+              <LoginForm />
+
+              {(surface === 'student' || surface === 'landing' || surface === 'all') && (
+                <>
+                  <div className="auth-divider" />
+                  <p className="text-center text-sm" style={{ color: 'var(--admin-muted)' }}>
+                    ليس لديك حساب؟{' '}
+                    <Link
+                      href="/register"
+                      className="font-bold transition-colors hover:opacity-80"
+                      style={{ color: 'var(--admin-primary)' }}
+                    >
+                      إنشاء حساب طالب
+                    </Link>
+                  </p>
+                </>
+              )}
             </div>
           </div>
-        </FeatureCarousel>
+        </section>
 
-        <p className="auth-footer-caption mt-10">
-          © 2026 منصة مسار
-        </p>
+        <p className="auth-footer-caption">© 2026 منصة مسار</p>
       </main>
     </div>
   );

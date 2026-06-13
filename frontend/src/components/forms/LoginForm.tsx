@@ -115,6 +115,8 @@ export function LoginForm() {
       {/* ── Error Banner ── */}
       {error && (
         <motion.div
+          role="alert"
+          aria-live="assertive"
           className="auth-error-banner"
           initial={reduceMotion ? false : { opacity: 0, y: -6 }}
           animate={reduceMotion ? {} : { opacity: 1, y: 0 }}

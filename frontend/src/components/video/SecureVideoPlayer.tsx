@@ -691,6 +691,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
            </div>
         ) : (
            <button 
+              type="button"
               onClick={handleRequestExtra}
               disabled={requestingExtra}
               className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-lg transition-colors flex items-center justify-center min-w-[200px]"
@@ -708,7 +709,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         <AlertCircle className="w-12 h-12 text-red-500 mb-4 drop-shadow-lg" />
         <h3 className="text-xl font-bold text-white mb-2">عذراً، حدث خطأ</h3>
         <p className="text-gray-300">{errorMessage}</p>
-        <button onClick={loadVideo} className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-md transition-colors shadow-md">
+        <button type="button" onClick={loadVideo} className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-md transition-colors shadow-md">
           حاول مرة أخرى
         </button>
       </div>
@@ -740,13 +741,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
              <AnimatePresence mode="wait">
                {!isChapterInfoOpen ? (
                  <motion.button 
+                   type="button"
                    key="btn"
                    initial={{ opacity: 0, scale: 0.8 }}
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsChapterInfoOpen(true)} 
                    className="pointer-events-auto w-10 h-10 shrink-0 rounded-xl bg-black/60 backdrop-blur border border-white/10 flex items-center justify-center text-white hover:bg-[var(--admin-primary)] transition shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer"
-                   title="معلومات الفصل الحالى"
+                   aria-label="فتح معلومات الفصل الحالي"
                  >
                     <Info className="w-5 h-5" />
                  </motion.button>
@@ -760,9 +762,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    className="pointer-events-auto bg-black/70 backdrop-blur-xl border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[350px] h-full overflow-y-auto custom-scrollbar shadow-[0_10px_40px_rgba(0,0,0,0.6)] relative flex flex-col"
                  >
                     <button 
+                      type="button"
                       onClick={() => setIsChapterInfoOpen(false)} 
                       className="absolute top-2 left-2 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-full p-1.5 transition z-10"
-                      title="إغلاق"
+                      aria-label="إغلاق معلومات الفصل"
                     >
                        <X className="w-4 h-4" />
                     </button>
@@ -801,13 +804,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
              <AnimatePresence mode="wait">
                {!isMindmapOpen ? (
                  <motion.button 
+                   type="button"
                    key="btn-mindmap"
                    initial={{ opacity: 0, scale: 0.8 }}
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsMindmapOpen(true)} 
                    className="pointer-events-auto shrink-0 rounded-xl bg-black/60 backdrop-blur border border-white/10 flex items-center justify-center text-white hover:bg-[var(--admin-primary)] transition shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer px-4 h-10"
-                   title="الخريطة الذهنية"
+                   aria-label="فتح الخريطة الذهنية للفصل"
                  >
                     <Map className="w-5 h-5 mr-2" />
                     <span className="font-bold text-sm tracking-wide">Mindmap</span>
@@ -822,9 +826,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    className="pointer-events-auto bg-black/70 backdrop-blur-xl border border-[var(--admin-primary)]/30 rounded-2xl p-6 w-[280px] sm:w-[500px] h-full overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.6)] relative flex flex-col"
                  >
                     <button 
+                      type="button"
                       onClick={() => setIsMindmapOpen(false)} 
                       className="absolute top-2 right-2 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-full p-1.5 transition z-10"
-                      title="إغلاق"
+                      aria-label="إغلاق الخريطة الذهنية"
                     >
                        <X className="w-4 h-4" />
                     </button>
@@ -859,8 +864,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         )}
 
         {status === 'ready' && !isPlaying && !isBuffering && (
-          <div 
+          <button
+            type="button"
             className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex items-center justify-center transition-all duration-300 pointer-events-auto rounded-xl"
+            aria-label="تشغيل الفيديو"
             onClick={(e) => {
               e.stopPropagation();
               togglePlay();
@@ -869,7 +876,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/50 rounded-full flex items-center justify-center transform hover:scale-110 transition-all shadow-[0_0_30px_rgba(255,255,255,0.4)] cursor-pointer">
               <Play className="w-8 h-8 text-white ml-1" fill="currentColor" />
             </div>
-          </div>
+          </button>
         )}
 
         {status === 'ready' && (

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { AdminModal } from '@/components/admin/AdminModal';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { hrService, EmployeeDto } from '@/services/hr-service';
@@ -25,6 +25,9 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
   const [assigneeId, setAssigneeId] = useState('');
   const [priority, setPriority] = useState<number>(2); // Default to Medium (2)
   const [dueDate, setDueDate] = useState('');
+  const titleId = useId();
+  const descriptionId = useId();
+  const dueDateId = useId();
 
   useEffect(() => {
     if (open) {
@@ -91,8 +94,9 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
     <AdminModal open={open} onClose={onClose} title="إنشاء مهمة جديدة" subtitle="قم بتعبئة تفاصيل المهمة وتعيينها لأحد الموظفين.">
       <form onSubmit={handleSubmit} className="space-y-4 text-right" dir="rtl">
         <div>
-          <label className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">عنوان المهمة *</label>
+          <label htmlFor={titleId} className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">عنوان المهمة *</label>
           <input
+            id={titleId}
             type="text"
             required
             value={title}
@@ -103,8 +107,9 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">وصف المهمة</label>
+          <label htmlFor={descriptionId} className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">وصف المهمة</label>
           <textarea
+            id={descriptionId}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
@@ -145,8 +150,9 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">تاريخ الاستحقاق (اختياري)</label>
+          <label htmlFor={dueDateId} className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">تاريخ الاستحقاق (اختياري)</label>
           <input
+            id={dueDateId}
             type="datetime-local"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}

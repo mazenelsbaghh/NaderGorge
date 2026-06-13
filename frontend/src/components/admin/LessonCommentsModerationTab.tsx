@@ -5,6 +5,7 @@ import { CheckCircle2, MessageSquareText, ShieldX, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { AdminDataTable, type AdminColumn } from '@/components/admin/AdminDataTable';
+import { AdminModal } from '@/components/admin/AdminModal';
 import { adminService, type ModerationLessonCommentDto } from '@/services/admin-service';
 
 type FilterStatus = 'All' | 'Pending' | 'Approved' | 'Rejected';
@@ -52,14 +53,22 @@ export function LessonCommentsModerationTab({
 }: LessonCommentsModerationTabProps) {
   const [comments, setComments] = useState<ModerationLessonCommentDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('Pending');
   const [actingId, setActingId] = useState<string | null>(null);
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [rejectingCommentIds, setRejectingCommentIds] = useState<string[]>([]);
 
   const loadComments = useCallback(async (filter: FilterStatus) => {
     setLoading(true);
+    setError(null);
     try {
       const rows = await adminService.getLessonCommentsForModeration(lessonId, filter);
       setComments(rows);
+      setSelectedIds(new Set());
+    } catch {
+      setError('تعذر تحميل تعليقات الحصة. تحقق من الاتصال ثم أعد المحاولة.');
     } finally {
       setLoading(false);
     }
@@ -69,27 +78,88 @@ export function LessonCommentsModerationTab({
     loadComments(activeFilter);
   }, [activeFilter, loadComments]);
 
-  const handleModeration = useCallback(async (commentId: string, action: 'approve' | 'reject') => {
-    setActingId(commentId);
+  const handleModeration = useCallback(async (commentIds: string[], action: 'approve' | 'reject') => {
+    if (commentIds.length === 0) return;
+
+    const isBulk = commentIds.length > 1;
+    if (isBulk) {
+      setBulkAction(action);
+    } else {
+      setActingId(commentIds[0]);
+    }
+
     try {
-      if (action === 'approve') {
-        await adminService.approveLessonComment(commentId);
-        toast.success('تم قبول التعليق.');
+      const results = await Promise.allSettled(
+        commentIds.map((commentId) =>
+          action === 'approve'
+            ? adminService.approveLessonComment(commentId)
+            : adminService.rejectLessonComment(commentId),
+        ),
+      );
+      const succeeded = results.filter((result) => result.status === 'fulfilled').length;
+      const failed = results.length - succeeded;
+      const actionLabel = action === 'approve' ? 'قبول' : 'رفض';
+
+      if (failed === 0) {
+        toast.success(
+          commentIds.length === 1
+            ? `تم ${actionLabel} التعليق.`
+            : `تم ${actionLabel} ${succeeded} تعليقات.`,
+        );
+      } else if (succeeded === 0) {
+        toast.error(`تعذر ${actionLabel} التعليقات المحددة.`);
       } else {
-        await adminService.rejectLessonComment(commentId);
-        toast.success('تم رفض التعليق.');
+        toast.error(`تم ${actionLabel} ${succeeded} تعليقات، وتعذر تنفيذ الإجراء على ${failed}.`);
       }
 
-      await loadComments(activeFilter);
-      await onRefresh?.();
-    } catch {
-      // Toast handled globally
+      if (succeeded > 0) {
+        await loadComments(activeFilter);
+        try {
+          await onRefresh?.();
+        } catch {
+          toast.error('تم تنفيذ المراجعة، لكن تعذر تحديث ملخص الحصة.');
+        }
+      }
     } finally {
       setActingId(null);
+      setBulkAction(null);
     }
   }, [activeFilter, loadComments, onRefresh]);
 
+  const toggleSelection = useCallback((commentId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(commentId)) next.delete(commentId);
+      else next.add(commentId);
+      return next;
+    });
+  }, []);
+
+  const pendingComments = useMemo(
+    () => comments.filter((comment) => comment.status === 'Pending'),
+    [comments],
+  );
+  const isMutating = actingId !== null || bulkAction !== null;
+
   const columns = useMemo<AdminColumn<ModerationLessonCommentDto>[]>(() => [
+    {
+      key: 'select',
+      label: 'تحديد',
+      align: 'center',
+      render: (row) =>
+        row.status === 'Pending' ? (
+          <input
+            type="checkbox"
+            checked={selectedIds.has(row.id)}
+            disabled={isMutating}
+            onChange={() => toggleSelection(row.id)}
+            aria-label={`تحديد تعليق الطالب ${row.studentName}`}
+            className="h-4 w-4 accent-[var(--admin-primary)]"
+          />
+        ) : (
+          <span className="text-[var(--admin-muted)]">—</span>
+        ),
+    },
     {
       key: 'student',
       label: 'الطالب',
@@ -133,10 +203,10 @@ export function LessonCommentsModerationTab({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              disabled={actingId === row.id}
+              disabled={isMutating}
               onClick={(e) => {
                 e.stopPropagation();
-                void handleModeration(row.id, 'approve');
+                void handleModeration([row.id], 'approve');
               }}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] px-4 py-2 text-xs font-black text-[var(--admin-success)] transition hover:brightness-110 disabled:opacity-60"
             >
@@ -145,10 +215,10 @@ export function LessonCommentsModerationTab({
             </button>
             <button
               type="button"
-              disabled={actingId === row.id}
+              disabled={isMutating}
               onClick={(e) => {
                 e.stopPropagation();
-                void handleModeration(row.id, 'reject');
+                setRejectingCommentIds([row.id]);
               }}
               className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-4 py-2 text-xs font-black text-[var(--admin-danger)] transition hover:brightness-110 disabled:opacity-60"
             >
@@ -160,7 +230,7 @@ export function LessonCommentsModerationTab({
           <span className="text-xs font-bold text-[var(--admin-muted)]">لا توجد إجراءات إضافية</span>
         ),
     },
-  ], [actingId, handleModeration]);
+  ], [handleModeration, isMutating, selectedIds, toggleSelection]);
 
   return (
     <div className="space-y-6">

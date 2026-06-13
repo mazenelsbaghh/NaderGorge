@@ -84,9 +84,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             <button
               key={room.id}
               onClick={() => onSelectRoom(room.id)}
-              className={`w-full flex items-center gap-3 p-3 rounded-2xl text-right transition-all duration-300 ${
+            className={`w-full flex min-h-14 items-center gap-3 rounded-xl p-3 text-right transition-colors duration-200 ${
                 isSelected
-                  ? "bg-[var(--admin-primary-15)] border-r-4 border-[var(--admin-primary)] shadow-sm"
+                  ? "bg-[var(--admin-primary-15)] ring-1 ring-inset ring-[var(--admin-primary)]"
                   : "hover:bg-[var(--admin-card-soft)]"
               }`}
             >
@@ -100,7 +100,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     {room.name}
                   </h3>
                   {room.lastMessage && (
-                    <span className="text-[10px] text-[var(--admin-muted)] whitespace-nowrap">
+                    <span className="text-xs text-[var(--admin-muted)] whitespace-nowrap">
                       {formatDate(room.lastMessage.createdAt)}
                     </span>
                   )}
@@ -108,7 +108,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 <div className="flex justify-between items-center gap-2">
                   {getRoomSubtitle(room)}
                   {room.unreadCount > 0 && (
-                    <span className="bg-[var(--admin-primary)] text-white text-[10px] font-black h-5 min-w-5 px-1.5 rounded-full flex items-center justify-center animate-bounce shadow">
+                    <span className="flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[var(--admin-primary)] px-1.5 text-xs font-black text-white">
                       {room.unreadCount}
                     </span>
                   )}

@@ -15,7 +15,7 @@
  * Token source: useAdminTheme() → same --admin-* CSS vars as admin pages.
  */
 
-import { type CSSProperties, ReactNode, useEffect, useState, useCallback } from 'react';
+import { type CSSProperties, ReactNode, useEffect, useState, useCallback, useId, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
@@ -109,6 +109,64 @@ const secondaryNavItems: Array<{
 /** All items combined — used by the desktop sidebar */
 const allNavItems = [...primaryNavItems, ...secondaryNavItems.filter(i => i.href !== '/student/balance')];
 
+const drawerFocusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function getDrawerFocusableElements(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>(drawerFocusableSelector)).filter(
+    (element) => element.getClientRects().length > 0 && element.getAttribute('aria-hidden') !== 'true'
+  );
+}
+
+function isTopmostDialog(dialog: HTMLElement) {
+  const openDialogs = Array.from(
+    document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
+  ).filter((candidate) => candidate.getClientRects().length > 0);
+  return openDialogs[openDialogs.length - 1] === dialog;
+}
+
+function makeOutsideContentInert(drawerLayer: HTMLElement) {
+  const snapshots: Array<{
+    element: HTMLElement;
+    inert: boolean;
+    ariaHidden: string | null;
+  }> = [];
+  let current: HTMLElement | null = drawerLayer;
+
+  while (current && current !== document.body) {
+    const parent = current.parentElement;
+    if (!parent) break;
+
+    Array.from(parent.children).forEach((sibling) => {
+      if (sibling === current || !(sibling instanceof HTMLElement)) return;
+      snapshots.push({
+        element: sibling,
+        inert: sibling.inert,
+        ariaHidden: sibling.getAttribute('aria-hidden'),
+      });
+      sibling.inert = true;
+      sibling.setAttribute('aria-hidden', 'true');
+    });
+
+    current = parent;
+  }
+
+  return () => {
+    snapshots.reverse().forEach(({ element, inert, ariaHidden }) => {
+      element.inert = inert;
+      if (ariaHidden === null) element.removeAttribute('aria-hidden');
+      else element.setAttribute('aria-hidden', ariaHidden);
+    });
+  };
+}
+
 /* ── Component ──────────────────────────────────────────────────────── */
 
 export function StudentShellChrome({ children }: StudentShellChromeProps) {
@@ -124,6 +182,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const shouldReduceMotion = useReducedMotion();
   // isThemeSettingsOpen state removed
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const drawerId = useId();
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const drawerLayerRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   useRootOverscrollBackground();
 
@@ -173,6 +235,71 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   };
 
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
+
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      closeDrawer();
+      return;
+    }
+
+    const drawer = drawerRef.current;
+    const drawerLayer = drawerLayerRef.current;
+    if (!drawer || !drawerLayer) return;
+
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    const restoreOutsideContent = makeOutsideContentInert(drawerLayer);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isTopmostDialog(drawer)) return;
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDrawer();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const focusableElements = getDrawerFocusableElements(drawer);
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        drawer.focus();
+        return;
+      }
+
+      const firstFocusable = focusableElements[0];
+      const lastFocusable = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      if (event.shiftKey && (activeElement === firstFocusable || !drawer.contains(activeElement))) {
+        event.preventDefault();
+        lastFocusable.focus();
+      } else if (!event.shiftKey && activeElement === lastFocusable) {
+        event.preventDefault();
+        firstFocusable.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const frameId = requestAnimationFrame(() => {
+      const [firstFocusable] = getDrawerFocusableElements(drawer);
+      (firstFocusable ?? drawer).focus();
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      document.removeEventListener('keydown', handleKeyDown);
+      restoreOutsideContent();
+      document.body.style.overflow = previousOverflow;
+      const previouslyFocused = previouslyFocusedRef.current;
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
+    };
+  }, [closeDrawer, isDrawerOpen]);
 
   /* Which top-level route is active? */
   const activePath: StudentShellRoute =
@@ -475,11 +602,13 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
-                className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] relative ${isDrawerOpen
+                className={`relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isDrawerOpen
                   ? 'text-[var(--admin-primary)]'
                   : 'text-[var(--admin-muted)]'
                   }`}
                 aria-label="القائمة"
+                aria-expanded={isDrawerOpen}
+                aria-controls={drawerId}
               >
                 <div className="relative">
                   <Menu className="h-[22px] w-[22px]" />
@@ -497,28 +626,34 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       {/* ── Mobile Drawer (slide from left for RTL) ────────────────────── */}
       <AnimatePresence>
         {isDrawerOpen && (
-          <>
+          <motion.div
+            ref={drawerLayerRef}
+            className="fixed inset-0 z-[60] lg:hidden"
+          >
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm lg:hidden"
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
               onClick={closeDrawer}
-              aria-hidden
+              aria-hidden="true"
             />
 
             {/* Drawer panel — slides from the right (RTL) */}
             <motion.div
+              ref={drawerRef}
+              id={drawerId}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-              className="fixed top-0 right-0 z-[70] h-full w-72 bg-[var(--admin-sidebar)] shadow-[-20px_0_60px_var(--admin-shadow)] lg:hidden"
+              className="absolute right-0 top-0 z-10 h-full w-72 bg-[var(--admin-sidebar)] shadow-[-20px_0_60px_var(--admin-shadow)]"
               role="dialog"
               aria-modal="true"
               aria-label="القائمة الجانبية"
+              tabIndex={-1}
             >
               <div className="flex h-full flex-col py-6 px-5">
                 {/* Drawer header */}
@@ -536,7 +671,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   <button
                     type="button"
                     onClick={closeDrawer}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                    className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
                     aria-label="إغلاق القائمة"
                   >
                     <X className="h-5 w-5" />
@@ -623,7 +758,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 </div>
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -41,10 +41,10 @@ export function LandingNav() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Link href="/login" className="landing-secondary-button hidden sm:inline-flex">
+          <Link href="/login" className="landing-primary-button px-4 sm:px-6">
             تسجيل الدخول
           </Link>
-          <Link href="/register" className="landing-primary-button px-4 sm:px-6">
+          <Link href="/register" className="landing-secondary-button hidden sm:inline-flex">
             ابدأ الآن
           </Link>
         </div>

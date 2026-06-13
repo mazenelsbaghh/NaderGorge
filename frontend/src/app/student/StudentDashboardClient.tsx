@@ -2,30 +2,23 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { stagger, fadeSlideUp } from "@/lib/motion";
 
 import {
   ContinueLearningCard,
   StudentDestinationsPanel,
   StudentGettingStartedPanel,
-  StudentMomentumRail,
   PackageGrid,
   StatsStrip,
   StudentHero,
   UpcomingExamsPanel,
   QuickAccessPanel,
 } from "@/packages/student";
-import { useStudentTheme } from "@/hooks/useStudentTheme";
 import { studentService, type DashboardDto, type QuickAccessItemDto } from "@/services/student-service";
 import { useAuthStore } from "@/stores/auth-store";
 import { RegistrationInstructionsModal } from "@/components/registration/RegistrationInstructionsModal";
 import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
 
-const pageStagger = stagger(100);
-
 export default function StudentDashboardClient() {
-  const { isReady } = useStudentTheme();
   const [data, setData] = useState<DashboardDto | null>(null);
   const [quickAccessItems, setQuickAccessItems] = useState<QuickAccessItemDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,21 +92,13 @@ export default function StudentDashboardClient() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-72 rounded-2xl bg-[var(--admin-card-strong)] animate-pulse" />
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="h-32 rounded-[28px] bg-[var(--admin-card-strong)] animate-pulse"
-            />
-          ))}
+      <div className="space-y-6" aria-label="جارٍ تحميل لوحة الطالب">
+        <div className="h-20 animate-pulse rounded-xl bg-[var(--admin-card-strong)]" />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)]">
+          <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
+          <div className="h-64 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
         </div>
-        <div className="h-44 rounded-[28px] bg-[var(--admin-card-strong)] animate-pulse" />
-        <div className="grid gap-6 xl:grid-cols-[1.45fr_0.85fr]">
-          <div className="h-[28rem] rounded-2xl bg-[var(--admin-card-strong)] animate-pulse" />
-          <div className="h-[28rem] rounded-2xl bg-[var(--admin-card-strong)] animate-pulse" />
-        </div>
+        <div className="h-72 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
       </div>
     );
   }
@@ -130,19 +115,13 @@ export default function StudentDashboardClient() {
   };
 
   return (
-    <motion.div
-      className="space-y-10"
-      variants={pageStagger}
-      initial="hidden"
-      animate={isReady ? "show" : undefined}
-    >
-      <motion.div variants={fadeSlideUp}>
-        <StudentHero data={d} />
-      </motion.div>
+    <div className="space-y-8 pb-4">
+      <StudentHero data={d} />
 
-      <motion.div variants={fadeSlideUp} className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] xl:items-start">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] xl:items-stretch">
         <ContinueLearningCard
           resumePoint={d.resumePoint ?? undefined}
+          hasActivePackages={d.activePackages.length > 0}
           onContinue={() => {
             if (d.resumePoint) {
               router.push(
@@ -150,44 +129,32 @@ export default function StudentDashboardClient() {
               );
               return;
             }
-            router.push("/student/code-redemption");
+            router.push(d.activePackages.length > 0 ? "/student/packages" : "/student/code-redemption");
           }}
         />
 
-        <StudentMomentumRail data={d} />
-      </motion.div>
+        <UpcomingExamsPanel
+          exams={d.upcomingExams}
+          onStartExam={(examId) => router.push(`/student/exams/${examId}`)}
+        />
+      </div>
 
       {(d.activePackages.length === 0 || (!d.resumePoint && d.totalLessonsCompleted === 0)) && (
-        <motion.div variants={fadeSlideUp}>
-          <StudentGettingStartedPanel data={d} />
-        </motion.div>
+        <StudentGettingStartedPanel data={d} />
       )}
 
-      <motion.div variants={fadeSlideUp} className="grid gap-6 xl:grid-cols-[1.38fr_0.92fr] xl:items-start">
-        <div className="space-y-6">
-          <PackageGrid
-            packages={d.activePackages}
-            onOpenPackage={(packageId) => router.push(`/student/packages/${packageId}`)}
-            onActivateCode={() => router.push("/student/code-redemption")}
-          />
-        </div>
+      <PackageGrid
+        packages={d.activePackages}
+        onOpenPackage={(packageId) => router.push(`/student/packages/${packageId}`)}
+        onActivateCode={() => router.push("/student/code-redemption")}
+      />
 
-        <div className="space-y-6">
-          {quickAccessItems.length > 0 && (
-            <QuickAccessPanel items={quickAccessItems} />
-          )}
+      {quickAccessItems.length > 0 && <QuickAccessPanel items={quickAccessItems} />}
 
-          <UpcomingExamsPanel
-            exams={d.upcomingExams}
-            onStartExam={(examId) => router.push(`/student/exams/${examId}`)}
-          />
-        </div>
-      </motion.div>
-
-      <motion.div variants={fadeSlideUp} className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr] xl:items-start">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <StudentDestinationsPanel />
         <StatsStrip data={d} />
-      </motion.div>
+      </div>
 
       <RegistrationInstructionsModal
         open={showInstructionsOnboard}
@@ -196,6 +163,6 @@ export default function StudentDashboardClient() {
         title="تعليمات وشروط هامة قبل الدخول"
         subtitle="يرجى قراءتها بدقة قبل تسجيل الدخول للجنة التعليمية واستخدام المنصة."
       />
-    </motion.div>
+    </div>
   );
 }

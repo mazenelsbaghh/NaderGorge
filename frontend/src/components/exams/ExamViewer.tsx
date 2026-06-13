@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -449,6 +449,7 @@ function QuestionCard({
   const isSkipped = skipped.has(q.id);
   const hasAnswer = !!answers[q.id];
   const hintRevealed = revealedHintId === q.id;
+  const essayAnswerId = useId();
 
   return (
     <div className="space-y-5" dir="rtl">
@@ -493,7 +494,7 @@ function QuestionCard({
                 if (res.data.data) onUseFiftyFifty(res.data.data);
               } catch { /* ignore */ }
             }}
-            className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
               hasUsedFiftyFifty
                 ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground/50'
                 : 'border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40'
@@ -509,7 +510,7 @@ function QuestionCard({
             type="button"
             disabled={(hasUsedHint && !hintRevealed) || loading}
             onClick={() => { if (!hasUsedHint) onUseHint(q.id); }}
-            className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
               hasUsedHint && !hintRevealed
                 ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground/50'
                 : 'border-primary/30 bg-primary/5 text-primary hover:bg-primary/10'
@@ -524,7 +525,7 @@ function QuestionCard({
           type="button"
           disabled={hasUsedSwap || loading || hasAnswer}
           onClick={() => { if (!hasUsedSwap) onUseSwap(q.id); }}
-          className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-bold transition-all ${
             hasUsedSwap || hasAnswer
               ? 'cursor-not-allowed border-border bg-muted/50 text-muted-foreground/50'
               : 'border-blue-300/50 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40'
@@ -538,7 +539,7 @@ function QuestionCard({
           type="button"
           disabled={loading}
           onClick={onSkip}
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-border bg-transparent px-3.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-muted"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-transparent px-3.5 py-2 text-sm font-bold text-muted-foreground transition hover:bg-muted"
         >
           <SkipForward className="h-3.5 w-3.5" />
           تخطي
@@ -579,12 +580,18 @@ function QuestionCard({
             disabled={false}
           />
         ) : q.type === 'Essay' ? (
-          <textarea
-            className="w-full rounded-2xl border border-border bg-background/70 px-5 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[160px] resize-none"
-            placeholder="اكتب إجابتك هنا..."
-            value={answers[q.id] || ''}
-            onChange={(e) => onAnswer(q.id, e.target.value)}
-          />
+          <div>
+            <label htmlFor={essayAnswerId} className="mb-2 block text-sm font-black text-foreground">
+              إجابتك المقالية
+            </label>
+            <textarea
+              id={essayAnswerId}
+              className="w-full rounded-2xl border border-border bg-background/70 px-5 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[160px] resize-none"
+              placeholder="اكتب إجابتك هنا..."
+              value={answers[q.id] || ''}
+              onChange={(e) => onAnswer(q.id, e.target.value)}
+            />
+          </div>
         ) : (
           <div className="space-y-3">
             {q.options.map((opt, optIdx) => {
@@ -858,7 +865,15 @@ export function ExamViewer({
           <span>تقدمك في الامتحان</span>
           <span>{answeredCount} من {totalQ} أسئلة</span>
         </div>
-        <div className="h-2 rounded-full bg-muted">
+        <div
+          className="h-2 rounded-full bg-muted"
+          role="progressbar"
+          aria-label="نسبة الأسئلة التي تمت الإجابة عنها"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          aria-valuetext={`${answeredCount} من ${totalQ} أسئلة تمت الإجابة عنها`}
+        >
           <div
             className="h-full rounded-full bg-primary transition-all duration-500"
             style={{ width: `${progress}%` }}
@@ -868,34 +883,52 @@ export function ExamViewer({
 
       {/* ─── Question nav bubbles ─── */}
       {totalQ > 0 && (
-        <div className="mb-5 flex flex-wrap gap-2">
-          {shuffledQuestions.map((q, idx) => {
-            const isCurrent = idx === currentIdx;
-            const hasAns = !!answers[q.id];
-            const isSkip = skipped.has(q.id) && !hasAns;
+        <div className="mb-5">
+          <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-muted-foreground" aria-label="دليل حالات الأسئلة">
+            <span>● الحالي</span>
+            <span>✓ تمت الإجابة</span>
+            <span>! متخطى</span>
+            <span>○ بدون إجابة</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {shuffledQuestions.map((q, idx) => {
+              const isCurrent = idx === currentIdx;
+              const hasAns = !!answers[q.id];
+              const isSkip = skipped.has(q.id) && !hasAns;
+              const stateLabel = isCurrent
+                ? 'السؤال الحالي'
+                : hasAns
+                  ? 'تمت الإجابة'
+                  : isSkip
+                    ? 'متخطى'
+                    : 'بدون إجابة';
+              const stateMark = isCurrent ? '●' : hasAns ? '✓' : isSkip ? '!' : '○';
 
-            return (
-              <button
-                key={q.id}
-                type="button"
-                onClick={() => navigateTo(idx)}
-                disabled={loading}
-                title={`سؤال ${idx + 1}`}
-                aria-current={isCurrent ? 'step' : undefined}
-                className={`flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary ${
-                  isCurrent
-                    ? 'scale-110 bg-primary text-primary-foreground shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_30%,transparent)]'
-                    : hasAns
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                      : isSkip
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {hasAns && !isCurrent ? '✓' : idx + 1}
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={q.id}
+                  type="button"
+                  onClick={() => navigateTo(idx)}
+                  disabled={loading}
+                  title={`سؤال ${idx + 1}: ${stateLabel}`}
+                  aria-label={`سؤال ${idx + 1}: ${stateLabel}`}
+                  aria-current={isCurrent ? 'step' : undefined}
+                  className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary ${
+                    isCurrent
+                      ? 'scale-110 bg-primary text-primary-foreground shadow-[0_4px_12px_color-mix(in_srgb,var(--primary)_30%,transparent)]'
+                      : hasAns
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                        : isSkip
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  <span aria-hidden="true" className="absolute left-1 top-0.5 text-[9px] leading-none">{stateMark}</span>
+                  {idx + 1}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -951,7 +984,7 @@ export function ExamViewer({
           type="button"
           onClick={() => navigateTo(currentIdx - 1)}
           disabled={currentIdx === 0 || loading}
-          className="flex items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-black text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex min-h-11 items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-black text-muted-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronRight className="h-4 w-4" />
           السابق
@@ -962,7 +995,7 @@ export function ExamViewer({
             type="button"
             onClick={() => navigateTo(currentIdx + 1)}
             disabled={loading}
-            className="flex items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-[0_4px_16px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50"
+            className="flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-black text-primary-foreground shadow-[0_4px_16px_color-mix(in_srgb,var(--primary)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50"
           >
             التالي
             <ChevronLeft className="h-4 w-4" />
@@ -972,7 +1005,7 @@ export function ExamViewer({
             type="button"
             onClick={() => handleSubmit(false)}
             disabled={loading}
-            className="flex items-center gap-2 rounded-2xl bg-foreground px-7 py-3 text-sm font-black text-background shadow-[0_4px_20px_color-mix(in_srgb,var(--foreground)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-60"
+            className="flex min-h-11 items-center gap-2 rounded-2xl bg-foreground px-7 py-3 text-sm font-black text-background shadow-[0_4px_20px_color-mix(in_srgb,var(--foreground)_25%,transparent)] transition hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-60"
           >
             {loading ? (
               'جاري التسليم...'

@@ -67,14 +67,10 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
           />
         </div>
 
-        {/* Premium Glassmorphism Card */}
-        <div className="relative max-w-lg w-full overflow-hidden rounded-[32px] bg-slate-900/60 border border-white/10 p-8 sm:p-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
-          {/* Internal card gold highlight glow */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(212,160,23,0.06),transparent_70%)]" />
-          
+        <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-slate-900 p-8 text-center sm:p-10">
           <div className="relative flex justify-center mb-6">
-            <div className="p-4.5 bg-[#0E8F8F]/10 rounded-2xl text-[#0E8F8F] border border-[#0E8F8F]/20 shadow-[0_8px_30px_rgba(14,143,143,0.15)]">
-              <Wrench className="w-10 h-10 animate-bounce" style={{ animationDuration: '3s' }} />
+            <div className="rounded-xl bg-[#0E8F8F]/10 p-4 text-[#0E8F8F]">
+              <Wrench className="h-10 w-10" />
             </div>
           </div>
 

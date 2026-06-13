@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Particle {
   x: number;
@@ -14,6 +14,7 @@ interface Particle {
 }
 
 export function ScholarlyParticles() {
+  const [isEnabled, setIsEnabled] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<Particle[]>([]);
@@ -33,26 +34,33 @@ export function ScholarlyParticles() {
   });
 
   useEffect(() => {
+    const constrainedContext = window.matchMedia(
+      "(max-width: 767px), (pointer: coarse), (prefers-reduced-motion: reduce), (update: slow)",
+    );
+
+    const updateAvailability = () => {
+      const connection = (
+        navigator as Navigator & { connection?: { saveData?: boolean } }
+      ).connection;
+      setIsEnabled(!constrainedContext.matches && !connection?.saveData);
+    };
+
+    updateAvailability();
+    constrainedContext.addEventListener("change", updateAvailability);
+
+    return () => {
+      constrainedContext.removeEventListener("change", updateAvailability);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isEnabled) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
-    // Detect prefers-reduced-motion
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let prefersReducedMotion = mediaQuery.matches;
-
-    const handleMotionPreferenceChange = (e: MediaQueryListEvent) => {
-      prefersReducedMotion = e.matches;
-      if (prefersReducedMotion) {
-        stopAnimation();
-        drawStaticLayout();
-      } else {
-        startAnimation();
-      }
-    };
-    mediaQuery.addEventListener("change", handleMotionPreferenceChange);
 
     // Update dimensions
     const resizeCanvas = () => {
@@ -62,12 +70,7 @@ export function ScholarlyParticles() {
       };
       canvas.width = rect.width;
       canvas.height = rect.height;
-      
-      if (prefersReducedMotion) {
-        drawStaticLayout();
-      } else {
-        initParticles(rect.width, rect.height);
-      }
+      initParticles(rect.width, rect.height);
     };
 
     // Extract colors from computed CSS variables
@@ -96,7 +99,6 @@ export function ScholarlyParticles() {
 
     // Mouse events
     const handleMouseMove = (e: MouseEvent) => {
-      if (prefersReducedMotion) return;
       const rect = canvas.getBoundingClientRect();
       // Support RTL page layouts or scroll offset
       mouseRef.current = {
@@ -118,7 +120,7 @@ export function ScholarlyParticles() {
       (entries) => {
         entries.forEach((entry) => {
           isVisibleRef.current = entry.isIntersecting;
-          if (entry.isIntersecting && !prefersReducedMotion) {
+          if (entry.isIntersecting) {
             startAnimation();
           } else {
             stopAnimation();
@@ -159,45 +161,6 @@ export function ScholarlyParticles() {
         });
       }
       particlesRef.current = tempParticles;
-    }
-
-    // Draw static representation for reduced motion
-    function drawStaticLayout() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Draw a few elegant, static blurred background spots instead of moving dots
-      const width = canvas.width;
-      const height = canvas.height;
-
-      ctx.save();
-      // Secondary color soft glow
-      let gradient = ctx.createRadialGradient(
-        width * 0.2,
-        height * 0.3,
-        0,
-        width * 0.2,
-        height * 0.3,
-        width * 0.4
-      );
-      gradient.addColorStop(0, hexToRgba(colorsRef.current.secondary, 0.04));
-      gradient.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-
-      // Accent color soft glow
-      gradient = ctx.createRadialGradient(
-        width * 0.8,
-        height * 0.7,
-        0,
-        width * 0.8,
-        height * 0.7,
-        width * 0.35
-      );
-      gradient.addColorStop(0, hexToRgba(colorsRef.current.accent, 0.03));
-      gradient.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, width, height);
-      ctx.restore();
     }
 
     // Convert hex color to rgba helper
@@ -299,7 +262,7 @@ export function ScholarlyParticles() {
     }
 
     function startAnimation() {
-      if (!animationFrameRef.current && !prefersReducedMotion) {
+      if (!animationFrameRef.current) {
         animationFrameRef.current = requestAnimationFrame(animate);
       }
     }
@@ -311,11 +274,7 @@ export function ScholarlyParticles() {
       }
     }
 
-    if (!prefersReducedMotion) {
-      startAnimation();
-    } else {
-      drawStaticLayout();
-    }
+    startAnimation();
 
     return () => {
       stopAnimation();
@@ -324,9 +283,10 @@ export function ScholarlyParticles() {
       document.removeEventListener("mouseleave", handleMouseLeave);
       observer.disconnect();
       intersectionObserver.disconnect();
-      mediaQuery.removeEventListener("change", handleMotionPreferenceChange);
     };
-  }, []);
+  }, [isEnabled]);
+
+  if (!isEnabled) return null;
 
   return (
     <div

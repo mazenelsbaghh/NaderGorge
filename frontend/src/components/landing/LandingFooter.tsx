@@ -7,8 +7,17 @@ import { useEffect, useState } from "react";
 
 import { educationTracks, finalCtaFeatures } from "./data";
 
-const quickLinks = ["الدورات", "المعلمون", "الأسئلة الشائعة"] as const;
-const supportLinks = ["تواصل معنا", "سياسة الخصوصية", "الشروط والأحكام"] as const;
+const quickLinks = [
+  { label: "الدورات", href: "#courses" },
+  { label: "المعلمون", href: "#teachers" },
+  { label: "الأسئلة الشائعة", href: "/faq" },
+] as const;
+
+const supportLinks = [
+  { label: "تواصل معنا", href: "#contact" },
+  { label: "سياسة الخصوصية", href: null },
+  { label: "الشروط والأحكام", href: null },
+] as const;
 
 export function LandingFooter() {
   const [isDark, setIsDark] = useState(false);
@@ -131,18 +140,17 @@ export function LandingFooter() {
 
             <div className="text-right">
               <h3 className="text-sm font-black">تابعنا</h3>
-              <div className="mt-4 flex gap-3 md:justify-start">
+              <div className="mt-4 flex gap-3 md:justify-start" aria-hidden="true">
                 {[MessageCircle, AtSign, Send, Video, Globe].map((Icon, index) => (
-                  <a
+                  <span
                     key={index}
-                    href="#"
-                    aria-label="تابع منصة مسار"
-                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-[#0E8F8F]"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white/70"
                   >
                     <Icon className="h-4 w-4" />
-                  </a>
+                  </span>
                 ))}
               </div>
+              <p className="mt-3 text-xs font-semibold text-white/68">قنوات التواصل قريبًا</p>
             </div>
           </div>
         </div>
@@ -151,16 +159,28 @@ export function LandingFooter() {
   );
 }
 
-function FooterLinks({ title, links }: { title: string; links: readonly string[] }) {
+type FooterLink = {
+  label: string;
+  href: string | null;
+};
+
+function FooterLinks({ title, links }: { title: string; links: readonly FooterLink[] }) {
   return (
     <div className="text-right">
       <h3 className="text-sm font-black">{title}</h3>
       <ul className="mt-4 space-y-2">
-        {links.map((link) => (
-          <li key={link}>
-            <a href="#" className="text-sm font-semibold text-white/68 transition hover:text-[#9BE4E4]">
-              {link}
-            </a>
+        {links.map(({ label, href }) => (
+          <li key={label}>
+            {href ? (
+              <Link
+                href={href}
+                className="text-sm font-semibold text-white/68 transition hover:text-[#9BE4E4]"
+              >
+                {label}
+              </Link>
+            ) : (
+              <span className="text-sm font-semibold text-white/48">{label}</span>
+            )}
           </li>
         ))}
       </ul>

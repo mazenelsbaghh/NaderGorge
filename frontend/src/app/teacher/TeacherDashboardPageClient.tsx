@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, KeyRound, Shield, Sparkles, Users, GraduationCap } from "lucide-react";
+import { ArrowLeft, BookOpen, KeyRound, Shield, Users, GraduationCap } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
 import { AdminStatCard } from "@/components/admin";
 import { teacherService, TeacherDashboardStatsDto } from "@/services/teacher-service";
@@ -13,17 +13,54 @@ export default function TeacherDashboardPageClient() {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<TeacherDashboardStatsDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
+  const loadDashboardStats = useCallback(() => {
+    setLoading(true);
+    setError("");
     teacherService.getDashboardStats()
       .then((res) => {
         if (res.success) {
           setStats(res.data);
+          return;
         }
+        setError(res.message || "تعذر تحميل ملخص لوحة المعلم.");
       })
-      .catch((err) => console.error("Error fetching stats:", err))
+      .catch(() => setError("تعذر تحميل ملخص لوحة المعلم. حاول مرة أخرى."))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadDashboardStats();
+  }, [loadDashboardStats]);
+
+  const quickLinks = [
+    {
+      href: "/teacher/essays",
+      title: "الإجابات المعلقة",
+      body: "راجع الإجابات المقالية التي تنتظر التصحيح.",
+      icon: GraduationCap,
+      count: stats?.pendingEssaysCount ?? 0,
+    },
+    {
+      href: "/teacher/packages",
+      title: "إدارة المحتوى",
+      body: "نظّم الباقات والدروس والمواد التعليمية.",
+      icon: BookOpen,
+    },
+    {
+      href: "/teacher/codes",
+      title: "أكواد الوصول",
+      body: "أنشئ الأكواد وتابع استخدامها.",
+      icon: KeyRound,
+    },
+    {
+      href: "/teacher/exams",
+      title: "الأسئلة والامتحانات",
+      body: "أنشئ الامتحانات وتابع نتائج الطلاب.",
+      icon: Shield,
+    },
+  ];
 
   return (
     <TeacherShellChrome
@@ -32,25 +69,25 @@ export default function TeacherDashboardPageClient() {
       pageTitle="لوحة المعلم"
       subtitle="مرحباً بك في مساحتك التعليمية الخاصة."
     >
-      <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]" dir="rtl">
-        {/* Welcome Section */}
-        <div className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
-          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-1 text-xs font-black text-[var(--admin-primary)]">
-                <Sparkles className="h-3.5 w-3.5" />
-                مرحباً بك في لوحة المعلم
-              </div>
-              <h1 className="mt-4 text-3xl font-black text-[var(--admin-text)] md:text-4xl">
-                أهلاً، أ. {user?.fullName || "المعلم"}
-              </h1>
-              <p className="mt-2 text-sm text-[var(--admin-muted)]">
-                هنا يمكنك إدارة باقاتك، توليد الأكواد للطلاب، وبناء بنك الأسئلة وتصحيح الامتحانات الخاصة بك.
-              </p>
-            </div>
+      <div className="space-y-8" dir="rtl">
+        <section className="rounded-2xl bg-[var(--admin-card-soft)] p-6">
+          <p className="text-sm font-bold text-[var(--admin-primary)]">مرحباً بعودتك</p>
+          <h2 className="mt-2 text-2xl font-black text-[var(--admin-text)] md:text-3xl">
+            أ. {user?.fullName || "المعلم"}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--admin-muted)]">
+            ابدأ بالإجابات التي تنتظر التصحيح، ثم انتقل إلى إدارة المحتوى والامتحانات.
+          </p>
+        </section>
+
+        {error ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-4 text-sm font-bold text-[var(--admin-danger)]">
+            <span>{error}</span>
+            <button type="button" onClick={loadDashboardStats} className="min-h-11 rounded-lg px-4 underline underline-offset-4">
+              إعادة المحاولة
+            </button>
           </div>
-        </div>
+        ) : null}
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -84,80 +121,28 @@ export default function TeacherDashboardPageClient() {
           />
         </div>
 
-        {/* Quick Access Grid */}
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {/* Packages Card */}
-          <Link
-            href="/teacher/packages"
-            className="group relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl transition hover:bg-[var(--admin-hover)]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-black text-[var(--admin-text)]">إدارة المحتوى</h3>
-                <p className="mt-2 text-sm text-[var(--admin-muted)]">
-                  قم بإنشاء وتعديل باقاتك الدراسية، إضافة الدروس، وربط فيديوهات اليوتيوب أو VK.
-                </p>
+        <section aria-labelledby="teacher-actions-title" className="overflow-hidden rounded-2xl bg-[var(--admin-card)]">
+          <div className="border-b border-[var(--admin-border)] px-5 py-4">
+            <h2 id="teacher-actions-title" className="text-lg font-black text-[var(--admin-text)]">ابدأ العمل</h2>
+          </div>
+          {quickLinks.map(({ href, title, body, icon: Icon, count }) => (
+            <Link key={href} href={href} className="group flex min-h-20 items-center gap-4 border-b border-[var(--admin-border)] px-5 py-4 last:border-b-0 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+                <Icon className="h-5 w-5" aria-hidden="true" />
               </div>
-              <div className="rounded-[1.25rem] bg-[var(--admin-primary)] p-4 text-[var(--admin-primary-contrast)] shadow-lg transition-transform group-hover:scale-110">
-                <BookOpen className="h-6 w-6" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-black text-[var(--admin-text)]">{title}</h3>
+                  {typeof count === "number" && count > 0 ? (
+                    <span className="rounded-full bg-[var(--admin-warning-10)] px-2 py-0.5 text-xs font-black text-[var(--admin-warning)]">{count}</span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-sm text-[var(--admin-muted)]">{body}</p>
               </div>
-            </div>
-            <div className="mt-8 flex items-center justify-between">
-              <span className="rounded-full bg-[var(--admin-bg)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)]">
-                تصفح الباقات
-              </span>
-              <ArrowLeft className="h-5 w-5 text-[var(--admin-primary)] transition-transform group-hover:-translate-x-2" />
-            </div>
-          </Link>
-
-          {/* Codes Card */}
-          <Link
-            href="/teacher/codes"
-            className="group relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl transition hover:bg-[var(--admin-hover)]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-black text-[var(--admin-text)]">أكواد الوصول</h3>
-                <p className="mt-2 text-sm text-[var(--admin-muted)]">
-                  قم بتوليد الأكواد لتمكين الطلاب من تفعيل الباقات مجاناً وتتبع حالة استخدام كل كود.
-                </p>
-              </div>
-              <div className="rounded-[1.25rem] bg-[var(--admin-primary)] p-4 text-[var(--admin-primary-contrast)] shadow-lg transition-transform group-hover:scale-110">
-                <KeyRound className="h-6 w-6" />
-              </div>
-            </div>
-            <div className="mt-8 flex items-center justify-between">
-              <span className="rounded-full bg-[var(--admin-bg)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)]">
-                إدارة الأكواد
-              </span>
-              <ArrowLeft className="h-5 w-5 text-[var(--admin-primary)] transition-transform group-hover:-translate-x-2" />
-            </div>
-          </Link>
-
-          {/* Exams Card */}
-          <Link
-            href="/teacher/exams"
-            className="group relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-8 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl transition hover:bg-[var(--admin-hover)]"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xl font-black text-[var(--admin-text)]">بنك الأسئلة والامتحانات</h3>
-                <p className="mt-2 text-sm text-[var(--admin-muted)]">
-                  أنشئ اختبارات تفاعلية لدروسك، قم بصياغة أسئلة الاختيار من متعدد، المقالي، والخطأ، وصحح إجابات الطلاب.
-                </p>
-              </div>
-              <div className="rounded-[1.25rem] bg-[var(--admin-primary)] p-4 text-[var(--admin-primary-contrast)] shadow-lg transition-transform group-hover:scale-110">
-                <Shield className="h-6 w-6" />
-              </div>
-            </div>
-            <div className="mt-8 flex items-center justify-between">
-              <span className="rounded-full bg-[var(--admin-bg)] px-4 py-2 text-xs font-bold text-[var(--admin-primary)]">
-                افتح بنك الأسئلة
-              </span>
-              <ArrowLeft className="h-5 w-5 text-[var(--admin-primary)] transition-transform group-hover:-translate-x-2" />
-            </div>
-          </Link>
-        </div>
+              <ArrowLeft className="h-5 w-5 text-[var(--admin-primary)] transition-transform group-hover:-translate-x-1" aria-hidden="true" />
+            </Link>
+          ))}
+        </section>
       </div>
     </TeacherShellChrome>
   );

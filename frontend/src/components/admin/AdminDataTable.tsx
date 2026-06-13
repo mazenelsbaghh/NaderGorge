@@ -6,7 +6,7 @@ import { formatCompactNumber } from './admin-utils';
 
 export interface AdminColumn<T> {
   key: string;
-  label: string;
+  label: React.ReactNode;
   render: (row: T) => React.ReactNode;
   align?: 'right' | 'left' | 'center';
 }
@@ -21,8 +21,12 @@ export interface AdminDataTableProps<T> {
   rowKey: (item: T) => string | number;
   emptyMessage?: string;
   pageSize?: number;
+  pagination?: boolean;
+  errorMessage?: string | null;
+  onRetry?: () => void;
   expandedRowRender?: (record: T) => React.ReactNode;
   onRowClick?: (record: T) => void;
+  rowActionLabel?: (record: T) => string;
 }
 
 /**
@@ -37,10 +41,14 @@ export function AdminDataTable<T>({
   columns,
   loading = false,
   pageSize = 8,
+  pagination = true,
   emptyMessage = 'لا توجد نتائج.',
+  errorMessage,
+  onRetry,
   rowKey,
   expandedRowRender,
   onRowClick,
+  rowActionLabel,
 }: AdminDataTableProps<T>) {
   const [page, setPage] = useState(1);
   const [expandedKeys, setExpandedKeys] = useState<Set<string | number>>(new Set());
@@ -61,7 +69,24 @@ export function AdminDataTable<T>({
   }, [data]);
 
   const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
-  const pagedData = data.slice((page - 1) * pageSize, page * pageSize);
+  const displayedData = pagination ? data.slice((page - 1) * pageSize, page * pageSize) : data;
+
+  const activateRow = (row: T, key: string | number) => {
+    if (onRowClick) {
+      onRowClick(row);
+    } else if (expandedRowRender) {
+      toggleExpand(key);
+    }
+  };
+
+  const isNestedInteractiveElement = (target: EventTarget | null, currentTarget: EventTarget) => {
+    if (!(target instanceof Element)) return false;
+
+    const interactiveElement = target.closest(
+      'button, a, input, select, textarea, [role="button"], [role="link"]',
+    );
+    return interactiveElement !== null && interactiveElement !== currentTarget;
+  };
 
   const renderSkeleton = () => {
     return Array.from({ length: pageSize / 2 }).map((_, index) => (
@@ -92,26 +117,59 @@ export function AdminDataTable<T>({
           <tbody className="divide-y divide-[var(--admin-border)]">
             {loading ? (
               renderSkeleton()
-            ) : pagedData.length === 0 ? (
+            ) : errorMessage ? (
+              <tr>
+                <td colSpan={columns.length} className="px-8 py-14 text-center">
+                  <div role="alert" className="mx-auto flex max-w-lg flex-col items-center gap-3">
+                    <p className="text-sm font-bold text-[var(--admin-danger)]">{errorMessage}</p>
+                    {onRetry && (
+                      <button
+                        type="button"
+                        onClick={onRetry}
+                        className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-2 text-xs font-black text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                      >
+                        إعادة المحاولة
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ) : displayedData.length === 0 ? (
               <tr>
                 <td colSpan={columns.length} className="px-8 py-16 text-center text-[var(--admin-muted)]">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              pagedData.map((row) => {
+              displayedData.map((row) => {
                 const key = rowKey(row);
                 const isExpanded = expandedKeys.has(key);
+                const isInteractive = Boolean(expandedRowRender || onRowClick);
+                const expandedRowId = `admin-table-expanded-${String(key)}`;
                 return (
                   <React.Fragment key={key}>
-                    <tr 
-                      className={`transition-colors hover:bg-[var(--admin-hover)] ${(expandedRowRender || onRowClick) ? 'cursor-pointer' : ''}`}
-                      onClick={() => {
-                        if (onRowClick) {
-                          onRowClick(row);
-                        } else if (expandedRowRender) {
-                          toggleExpand(key);
+                    <tr
+                      role={isInteractive ? 'button' : undefined}
+                      tabIndex={isInteractive ? 0 : undefined}
+                      aria-expanded={expandedRowRender ? isExpanded : undefined}
+                      aria-controls={expandedRowRender ? expandedRowId : undefined}
+                      aria-label={isInteractive ? rowActionLabel?.(row) ?? 'عرض تفاصيل الصف' : undefined}
+                      className={`transition-colors hover:bg-[var(--admin-hover)] ${isInteractive ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]' : ''}`}
+                      onClick={(event) => {
+                        if (!isInteractive || isNestedInteractiveElement(event.target, event.currentTarget)) return;
+                        activateRow(row, key);
+                      }}
+                      onKeyDown={(event) => {
+                        if (
+                          !isInteractive
+                          || isNestedInteractiveElement(event.target, event.currentTarget)
+                          || (event.key !== 'Enter' && event.key !== ' ')
+                        ) {
+                          return;
                         }
+
+                        event.preventDefault();
+                        activateRow(row, key);
                       }}
                     >
                       {columns.map((col) => (
@@ -125,7 +183,7 @@ export function AdminDataTable<T>({
                     </tr>
                     {isExpanded && expandedRowRender && (
                       <tr className="bg-[var(--admin-card-soft)]">
-                        <td colSpan={columns.length} className="px-8 py-4 border-b border-[var(--admin-border)]">
+                        <td id={expandedRowId} colSpan={columns.length} className="px-8 py-4 border-b border-[var(--admin-border)]">
                           {expandedRowRender(row)}
                         </td>
                       </tr>
@@ -138,33 +196,37 @@ export function AdminDataTable<T>({
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-[var(--admin-border)] p-6">
-        <span className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">
-          عرض {formatCompactNumber(data.length === 0 ? 0 : (page - 1) * pageSize + 1)}-
-          {formatCompactNumber(Math.min(page * pageSize, data.length))} من أصل {formatCompactNumber(data.length)} عنصر
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
-            aria-label="الصفحة السابقة"
-            title="الصفحة السابقة"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-          <span className="px-3 text-sm font-bold text-[var(--admin-primary)]" aria-current="page" aria-label={`الصفحة ${page}`}>{formatCompactNumber(page)}</span>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-            className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
-            aria-label="الصفحة التالية"
-            title="الصفحة التالية"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+      {pagination && (
+        <div className="flex items-center justify-between border-t border-[var(--admin-border)] p-6">
+          <span className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">
+            عرض {formatCompactNumber(data.length === 0 ? 0 : (page - 1) * pageSize + 1)}-
+            {formatCompactNumber(Math.min(page * pageSize, data.length))} من أصل {formatCompactNumber(data.length)} عنصر
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
+              aria-label="الصفحة السابقة"
+              title="الصفحة السابقة"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <span className="px-3 text-sm font-bold text-[var(--admin-primary)]" aria-current="page" aria-label={`الصفحة ${page}`}>{formatCompactNumber(page)}</span>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
+              aria-label="الصفحة التالية"
+              title="الصفحة التالية"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
