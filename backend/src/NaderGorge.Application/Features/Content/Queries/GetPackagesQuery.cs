@@ -22,7 +22,8 @@ public record PackageDto(
     string SubjectName,
     string? TeacherBio,
     string? TeacherSpecialization,
-    string TargetGrade
+    string TargetGrade,
+    string? ImageUrl
 );
 
 public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResponse<List<PackageDto>>>
@@ -79,7 +80,8 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.Subject?.Name ?? "Unknown",
                 pk.Teacher?.Bio,
                 pk.Teacher?.Specialization,
-                pk.TargetGrade
+                pk.TargetGrade,
+                pk.ImageUrl
             ));
         }
 

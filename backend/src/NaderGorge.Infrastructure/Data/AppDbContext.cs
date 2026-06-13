@@ -304,6 +304,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("packages");
             e.HasKey(p => p.Id);
             e.Property(p => p.Name).HasMaxLength(200).IsRequired();
+            e.Property(p => p.ImageUrl).HasMaxLength(500);
             e.HasOne(p => p.Subject).WithMany(s => s.Packages).HasForeignKey(p => p.SubjectId);
             e.HasOne(p => p.Teacher).WithMany(t => t.Packages).HasForeignKey(p => p.TeacherId);
             e.Property(p => p.TargetGrade).HasMaxLength(100).IsRequired().HasDefaultValue("All");
@@ -341,6 +342,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("content_sections");
             e.HasKey(c => c.Id);
             e.Property(c => c.Title).HasMaxLength(200).IsRequired();
+            e.Property(c => c.ImageUrl).HasMaxLength(500);
             e.HasOne(c => c.Term).WithMany(t => t.Sections).HasForeignKey(c => c.TermId);
         });
 
@@ -735,6 +737,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("terms");
             e.HasKey(t => t.Id);
             e.Property(t => t.Title).HasMaxLength(200).IsRequired();
+            e.Property(t => t.ImageUrl).HasMaxLength(500);
             e.HasOne(t => t.Package).WithMany(p => p.Terms).HasForeignKey(t => t.PackageId);
         });
 

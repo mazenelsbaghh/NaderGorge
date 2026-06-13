@@ -4,6 +4,7 @@ import { ArrowUpLeft, BookCopy } from "lucide-react";
 import Image from "next/image";
 
 import type { ActivePackageDto } from "@/services/student-service";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 type PackageGridProps = {
   packages: ActivePackageDto[];
@@ -80,7 +81,7 @@ export function PackageGrid({
                       style={{ viewTransitionName: `pkg-image-${pkg.id}` }}
                     >
                       <Image 
-                        src={pkg.imageUrl || '/images/default-package.webp'} 
+                        src={pkg.imageUrl ? resolveMediaUrl(pkg.imageUrl) : '/images/default-package.webp'}
                         alt={pkg.name} 
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-105"

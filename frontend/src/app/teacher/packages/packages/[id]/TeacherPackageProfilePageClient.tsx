@@ -7,7 +7,7 @@ import {
   AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
-  PackageCodeProfileSummary
+  PackageCodeProfileSummary, ContentImageUpload
 } from "@/components/admin";
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
@@ -159,6 +159,13 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
 
       {activeTab === "overview" && (
         <div className="space-y-6">
+          <ContentImageUpload
+            entityId={pkg.id}
+            contentType="package"
+            imageUrl={pkg.imageUrl}
+            label="صورة الباقة"
+            onUploaded={(imageUrl) => setPkg((current: any) => ({ ...current, imageUrl }))}
+          />
           <EntityOverviewDashboard 
             entityType="باقة" 
             details={{ title: pkg.name, description: pkg.description, price: pkg.price }} 

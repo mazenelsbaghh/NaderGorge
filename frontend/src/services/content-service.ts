@@ -25,6 +25,7 @@ export interface TermDto {
   title: string;
   order: number;
   price?: number;
+  imageUrl?: string;
 }
 
 export interface ContentSectionDto {
@@ -32,6 +33,7 @@ export interface ContentSectionDto {
   title: string;
   order: number;
   price?: number;
+  imageUrl?: string;
 }
 
 export interface LessonSummaryDto {

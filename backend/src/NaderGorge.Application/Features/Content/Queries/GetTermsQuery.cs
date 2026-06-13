@@ -17,7 +17,7 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
         var terms = await _db.Terms
             .Where(t => t.PackageId == request.PackageId)
             .OrderBy(t => t.Order)
-            .Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price))
+            .Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price, t.ImageUrl))
             .ToListAsync(ct);
 
         return ApiResponse<List<TermDto>>.Ok(terms);

@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
   // Enables standalone output for minimal Docker images.
   // Only the production-necessary files are copied into the final image layer.
   output: 'standalone',
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'assets.massar-academy.net',
+      },
+    ],
+  },
 };
 
 const withBundleAnalyzerConfig = withBundleAnalyzer({

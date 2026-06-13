@@ -3,6 +3,7 @@
 import { PackageDto } from '@/services/content-service';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => void }) {
   return (
@@ -15,7 +16,7 @@ export function PackageCard({ pkg, onClick }: { pkg: PackageDto; onClick: () => 
       {/* Image Header */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-[var(--admin-card-strong)]">
         <Image 
-          src={pkg.imageUrl || '/images/default-package.webp'} 
+          src={pkg.imageUrl ? resolveMediaUrl(pkg.imageUrl) : '/images/default-package.webp'}
           alt={pkg.name} 
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"

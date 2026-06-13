@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as signalR from '@microsoft/signalr';
+import { getBackendHubUrl } from '@/lib/backend-url';
 import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
 import { invalidateMany } from '@/lib/cache-invalidation';
@@ -641,8 +642,7 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
 
     const initConnection = async () => {
       if (!sharedConnection) {
-        const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api';
-        const hubUrl = apiBaseUrl.replace('/api', '') + '/hubs/platform';
+        const hubUrl = getBackendHubUrl('/hubs/platform');
 
         sharedConnection = new signalR.HubConnectionBuilder()
           .withUrl(hubUrl, {

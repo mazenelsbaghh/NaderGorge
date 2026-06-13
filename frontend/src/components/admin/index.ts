@@ -45,10 +45,10 @@ export * from './AddLessonForm';
 export * from '../ui/confirm-dialog';
 export * from './AdminTeacherPhotoUpload';
 export * from './ContentHierarchyPanel';
+export * from './ContentImageUpload';
 export * from './EntityOverviewDashboard';
 export * from './AttachedExamViewer';
 export * from './EmployeeProfileDrawer';
 export * from './ClockInOutWidget';
 export * from './AttendanceLogTable';
 export * from './VacationRequestModal';
-

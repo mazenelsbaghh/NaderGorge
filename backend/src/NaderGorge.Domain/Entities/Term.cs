@@ -5,6 +5,7 @@ namespace NaderGorge.Domain.Entities;
 public class Term : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
     public int Order { get; set; }
     public decimal Price { get; set; }
 

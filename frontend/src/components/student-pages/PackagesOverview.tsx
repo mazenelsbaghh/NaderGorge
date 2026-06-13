@@ -2,6 +2,7 @@ import { LayoutGrid, PackageOpen } from "lucide-react";
 import Image from "next/image";
 
 import type { PackageDto } from "@/services/content-service";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 type PackagesOverviewProps = {
   packages: PackageDto[];
@@ -104,7 +105,7 @@ export function PackagesGrid({
               {/* Image Frame */}
               <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--admin-bg)]">
                 <Image
-                  src={pkg.imageUrl || '/images/default-package.webp'}
+                  src={pkg.imageUrl ? resolveMediaUrl(pkg.imageUrl) : '/images/default-package.webp'}
                   alt={pkg.name}
                   fill
                   className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"

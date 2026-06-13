@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
+import { getBackendHubUrl } from '@/lib/backend-url';
 
 export interface SignalRMessage {
   id: string;
@@ -41,8 +42,7 @@ export const useSignalR = (
       return;
     }
 
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api';
-    const hubUrl = apiBaseUrl.replace('/api', '') + '/hubs/chat';
+    const hubUrl = getBackendHubUrl('/hubs/chat');
 
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {

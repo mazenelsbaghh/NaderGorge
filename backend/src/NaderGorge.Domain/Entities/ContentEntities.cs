@@ -11,6 +11,7 @@ public class Package : BaseEntity
 {
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
     public decimal Price { get; set; }
     public bool IsActive { get; set; } = true;
 
@@ -28,6 +29,7 @@ public class Package : BaseEntity
 public class ContentSection : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
     public int Order { get; set; }
     public decimal Price { get; set; }
 

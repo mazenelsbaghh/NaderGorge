@@ -40,7 +40,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 
 # Install only production dependencies
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund --loglevel=error
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential \
+    && npm ci --omit=dev --no-audit --no-fund --loglevel=error \
+    && DEBIAN_FRONTEND=noninteractive apt-get purge -y --auto-remove build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist

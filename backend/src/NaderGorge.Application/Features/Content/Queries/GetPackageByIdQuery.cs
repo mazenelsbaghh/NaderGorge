@@ -8,8 +8,8 @@ namespace NaderGorge.Application.Features.Content.Queries;
 
 public record GetPackageByIdQuery(Guid Id, Guid? CurrentUserId = null) : IRequest<ApiResponse<PackageDetailDto>>;
 
-public record PackageDetailDto(Guid Id, string Name, string Description, decimal Price, Guid ProgramId, bool IsActive, List<TermDto> Terms);
-public record TermDto(Guid Id, string Title, int Order, decimal Price);
+public record PackageDetailDto(Guid Id, string Name, string Description, decimal Price, Guid ProgramId, bool IsActive, string? ImageUrl, List<TermDto> Terms);
+public record TermDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl);
 
 public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, ApiResponse<PackageDetailDto>>
 {
@@ -40,7 +40,7 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
         if (package == null)
             return ApiResponse<PackageDetailDto>.Fail("Package not found");
 
-        var dtos = package.Terms.OrderBy(t => t.Order).Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price)).ToList();
+        var dtos = package.Terms.OrderBy(t => t.Order).Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price, t.ImageUrl)).ToList();
 
         var packageDto = new PackageDetailDto(
             package.Id,
@@ -49,6 +49,7 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             package.Price,
             package.SubjectId,
             package.IsActive,
+            package.ImageUrl,
             dtos);
 
         return ApiResponse<PackageDetailDto>.Ok(packageDto);

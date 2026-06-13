@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpenText, ChevronRight } from "lucide-react";
-import { AdminPageSkeleton, AdminTabBar, AdminTab, EntityOverviewDashboard } from "@/components/admin";
+import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from "@/components/admin";
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { ContentHierarchyPanel, HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
@@ -104,10 +104,19 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
       </div>
 
       {activeTab === "overview" && (
-        <EntityOverviewDashboard 
-          entityType="قسم" 
-          details={{ title: section.title, price: section.price }} 
-        />
+        <div className="space-y-6">
+          <ContentImageUpload
+            entityId={section.id}
+            contentType="section"
+            imageUrl={section.imageUrl}
+            label="صورة الشهر / القسم"
+            onUploaded={(imageUrl) => setSection((current: any) => ({ ...current, imageUrl }))}
+          />
+          <EntityOverviewDashboard
+            entityType="قسم"
+            details={{ title: section.title, price: section.price }}
+          />
+        </div>
       )}
 
       {activeTab === "lessons" && (

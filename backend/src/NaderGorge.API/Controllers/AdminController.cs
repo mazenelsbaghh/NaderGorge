@@ -6,8 +6,10 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
+using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Entities;
+using SixLabors.ImageSharp;
 
 namespace NaderGorge.API.Controllers;
 
@@ -217,6 +219,51 @@ public class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive));
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("content/{contentType}/{id:guid}/image")]
+    [HasPermission("content.manage")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadContentImage(
+        string contentType,
+        Guid id,
+        IFormFile image,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.TryParse<ContentImageType>(contentType, true, out var parsedContentType))
+        {
+            return BadRequest(ApiResponse.Fail("Unsupported content image type"));
+        }
+
+        if (image.Length == 0 || image.Length > 10 * 1024 * 1024)
+        {
+            return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
+        }
+
+        if (!image.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file must be an image"));
+        }
+
+        await using var imageStream = image.OpenReadStream();
+        using var memoryStream = new MemoryStream();
+        await imageStream.CopyToAsync(memoryStream, cancellationToken);
+
+        try
+        {
+            var result = await _mediator.Send(
+                new UploadContentImageCommand(id, parsedContentType, memoryStream.ToArray()),
+                cancellationToken);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+        catch (UnknownImageFormatException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidImageContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded image is invalid or too large"));
+        }
     }
 
     [HttpGet("packages/{id:guid}/code-profile")]

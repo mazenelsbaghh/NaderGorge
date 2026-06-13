@@ -7,7 +7,7 @@ namespace NaderGorge.Application.Features.Content.Queries;
 
 public record GetSectionByIdQuery(Guid Id) : IRequest<ApiResponse<SectionDetailDto>>;
 
-public record SectionDetailDto(Guid Id, string Title, int Order, Guid TermId, decimal Price);
+public record SectionDetailDto(Guid Id, string Title, int Order, Guid TermId, decimal Price, string? ImageUrl);
 
 public class GetSectionByIdQueryHandler : IRequestHandler<GetSectionByIdQuery, ApiResponse<SectionDetailDto>>
 {
@@ -26,7 +26,7 @@ public class GetSectionByIdQueryHandler : IRequestHandler<GetSectionByIdQuery, A
         if (section == null)
             return ApiResponse<SectionDetailDto>.Fail("Section not found");
 
-        var dto = new SectionDetailDto(section.Id, section.Title, section.Order, section.TermId, section.Price);
+        var dto = new SectionDetailDto(section.Id, section.Title, section.Order, section.TermId, section.Price, section.ImageUrl);
 
         return ApiResponse<SectionDetailDto>.Ok(dto);
     }

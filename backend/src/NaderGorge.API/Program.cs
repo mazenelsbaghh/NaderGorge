@@ -20,6 +20,7 @@ using NaderGorge.Infrastructure.Providers;
 using StackExchange.Redis;
 using NaderGorge.API.Hubs;
 using NaderGorge.API.BackgroundServices;
+using NaderGorge.API.Services;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
@@ -92,6 +93,7 @@ builder.Services.AddScoped<BalanceService>();
 builder.Services.AddScoped<AcademicValidationService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
 builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
+builder.Services.AddScoped<IContentImageStorage, ContentImageStorage>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddSignalR()
     .AddStackExchangeRedis(redisConnectionString ?? "localhost:6379,abortConnect=false", options =>

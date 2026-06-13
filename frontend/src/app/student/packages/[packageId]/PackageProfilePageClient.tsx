@@ -187,7 +187,7 @@ export default function PackageProfilePageClient() {
         style={{ viewTransitionName: `pkg-image-${packageId}` }}
       >
         <Image
-          src={pkg?.imageUrl || "/images/default-package.webp"}
+          src={pkg?.imageUrl ? resolveMediaUrl(pkg.imageUrl) : "/images/default-package.webp"}
           alt={pkg?.name || "باقة"}
           fill
           priority
@@ -323,6 +323,15 @@ export default function PackageProfilePageClient() {
                     className="relative h-36 w-full overflow-hidden"
                     style={{ background: `linear-gradient(135deg, ${pal.from} 0%, ${pal.to} 100%)` }}
                   >
+                    {term.imageUrl && (
+                      <Image
+                        src={resolveMediaUrl(term.imageUrl)}
+                        alt={term.title}
+                        fill
+                        sizes="(max-width: 640px) 100vw, 33vw"
+                        className="object-cover"
+                      />
+                    )}
                     {/* Geometric pharaonic SVG pattern */}
                     <svg
                       className="absolute inset-0 h-full w-full opacity-[0.12]"

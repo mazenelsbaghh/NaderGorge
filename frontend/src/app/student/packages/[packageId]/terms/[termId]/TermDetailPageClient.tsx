@@ -32,6 +32,7 @@ import {
 } from "@/services/content-service";
 import { usePlatformEvents } from "@/hooks/usePlatformEvents";
 import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 /* ─── Stagger helpers ─────────────────────────────────────────────────── */
 const stagger = {
@@ -286,7 +287,13 @@ export default function TermDetailPageClient() {
         className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-2xl lg:min-h-[26rem]"
       >
         <Image
-          src={pkg?.imageUrl || "/images/default-package.webp"}
+          src={
+            term?.imageUrl
+              ? resolveMediaUrl(term.imageUrl)
+              : pkg?.imageUrl
+                ? resolveMediaUrl(pkg.imageUrl)
+                : "/images/default-package.webp"
+          }
           alt={term?.title || "ترم"}
           fill
           priority
@@ -395,6 +402,15 @@ export default function TermDetailPageClient() {
                           background: `linear-gradient(135deg, ${pal.from} 0%, ${pal.to} 100%)`,
                         }}
                       >
+                        {section.imageUrl && (
+                          <Image
+                            src={resolveMediaUrl(section.imageUrl)}
+                            alt={section.title}
+                            fill
+                            sizes="(max-width: 640px) 100vw, 33vw"
+                            className="object-cover"
+                          />
+                        )}
                         {/* Diamond-grid SVG pattern */}
                         <svg
                           className="absolute inset-0 h-full w-full opacity-[0.14]"

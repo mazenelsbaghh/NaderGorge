@@ -7,6 +7,8 @@ export interface ApiResponse<T = any> {
   message: string;
 }
 
+export type ContentImageType = 'package' | 'term' | 'section';
+
 export interface AdminUserListDto {
   id: string;
   phoneNumber: string;
@@ -667,6 +669,16 @@ export const adminService = {
   }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);
     return res.data?.data;
+  },
+  uploadContentImage: async (contentType: ContentImageType, id: string, image: File) => {
+    const formData = new FormData();
+    formData.append('image', image);
+    const res = await apiClient.post<ApiResponse<string>>(
+      `/admin/content/${contentType}/${id}/image`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data.data;
   },
   getPackageById: async (id: string) => {
     const res = await apiClient.get<ApiResponse<any>>(`/admin/packages/${id}`);

@@ -7,7 +7,7 @@ namespace NaderGorge.Application.Features.Content.Queries;
 
 public record GetTermByIdQuery(Guid Id) : IRequest<ApiResponse<TermDetailDto>>;
 
-public record TermDetailDto(Guid Id, string Title, int Order, Guid PackageId, decimal Price);
+public record TermDetailDto(Guid Id, string Title, int Order, Guid PackageId, decimal Price, string? ImageUrl);
 
 public class GetTermByIdQueryHandler : IRequestHandler<GetTermByIdQuery, ApiResponse<TermDetailDto>>
 {
@@ -26,7 +26,7 @@ public class GetTermByIdQueryHandler : IRequestHandler<GetTermByIdQuery, ApiResp
         if (term == null)
             return ApiResponse<TermDetailDto>.Fail("Term not found");
 
-        var dto = new TermDetailDto(term.Id, term.Title, term.Order, term.PackageId, term.Price);
+        var dto = new TermDetailDto(term.Id, term.Title, term.Order, term.PackageId, term.Price, term.ImageUrl);
 
         return ApiResponse<TermDetailDto>.Ok(dto);
     }
