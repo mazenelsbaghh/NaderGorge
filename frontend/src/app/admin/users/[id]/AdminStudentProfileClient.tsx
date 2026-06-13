@@ -33,6 +33,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
     price: number;
   } | null>(null);
   const [refundBalanceOption, setRefundBalanceOption] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({});
   const [expandedTerms, setExpandedTerms] = useState<Record<string, boolean>>({});
@@ -227,6 +228,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
       price: p.price
     });
     setRefundBalanceOption(p.purchaseMethod === 'Balance');
+    setCancelReason('');
     setModalOpen('cancelPackage');
   };
 
@@ -237,7 +239,8 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
       await adminService.cancelStudentPackage(
         id,
         selectedPackageForCancel.accessGrantId,
-        refundBalanceOption
+        refundBalanceOption,
+        cancelReason || undefined
       );
       toast.success('تم إلغاء الاشتراك في الباقة بنجاح');
       setModalOpen('none');
@@ -679,7 +682,22 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                             );
                           }},
                           {key: 'actions', label: 'إجراءات الإلغاء', render: (row) => {
-                            if (!row.isActive) return <span className="text-[var(--admin-muted)] text-xs">غير متاحة</span>;
+                            if (!row.isActive) {
+                              return (
+                                <div className="text-xs space-y-0.5">
+                                  {row.cancelledByName && (
+                                    <p className="text-red-500 font-bold">بواسطة: {row.cancelledByName}</p>
+                                  )}
+                                  {row.cancelledAt && (
+                                    <p className="text-[var(--admin-muted)]">{new Date(row.cancelledAt).toLocaleDateString('en-GB')}</p>
+                                  )}
+                                  {row.cancellationReason && (
+                                    <p className="text-[var(--admin-muted)] italic">{row.cancellationReason}</p>
+                                  )}
+                                  {!row.cancelledByName && <span className="text-[var(--admin-muted)]">ملغية</span>}
+                                </div>
+                              );
+                            }
                             return (
                               <button
                                 onClick={() => handleOpenCancelPackageModal(row)}
@@ -1470,6 +1488,18 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                 <span className="block text-xs text-[var(--admin-muted)]">سيتم إضافة مبلغ ({selectedPackageForCancel.price} ج.م) لرصيد الطالب بعد الإلغاء.</span>
                             </div>
                         </label>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-bold text-[var(--admin-text)] mb-1.5">سبب الإلغاء (اختياري)</label>
+                        <input
+                          type="text"
+                          value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          disabled={submitting}
+                          placeholder="مثال: طلب الطالب إرجاع الباقة..."
+                          className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2.5 text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] focus:outline-none focus:border-[var(--admin-primary)] disabled:opacity-50"
+                        />
                     </div>
 
                     <div className="flex gap-4">

@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Folder, ChevronRight, BookOpenText } from 'lucide-react';
+import { Folder, ChevronRight, BookOpenText, Video, Clock3, Layers } from 'lucide-react';
 import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from '@/components/admin';
+import type { OverviewStat } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
 import { contentService, ContentSectionDto } from '@/services/content-service';
@@ -17,6 +18,15 @@ const TABS: AdminTab<ActiveTab>[] = [
   { key: 'sections', label: 'الشهور / الأقسام', icon: Folder },
 ];
 
+function formatWatchTime(seconds?: number): string {
+  if (!seconds || seconds <= 0) return '0 دقيقة';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0 && minutes > 0) return `${hours} ساعة ${minutes} دقيقة`;
+  if (hours > 0) return `${hours} ساعة`;
+  return `${minutes} دقيقة`;
+}
+
 export default function TermProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
@@ -26,6 +36,10 @@ export default function TermProfilePageClient(props: { params: { id: string } })
   const [sections, setSections] = useState<ContentSectionDto[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(true);
   const [sectionsError, setSectionsError] = useState(false);
+
+  // Stats state
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const loadTerm = useCallback(async () => {
     try {
@@ -52,8 +66,21 @@ export default function TermProfilePageClient(props: { params: { id: string } })
     }
   }, [params.id]);
 
+  const loadStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const res = await adminService.getTermStats(params.id);
+      setStats(res);
+    } catch {
+      // Stats endpoint may not exist yet
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [params.id]);
+
   useEffect(() => { void loadTerm(); }, [loadTerm]);
   useEffect(() => { void loadSections(); }, [loadSections]);
+  useEffect(() => { void loadStats(); }, [loadStats]);
 
   if (termLoading) {
     return (
@@ -84,6 +111,17 @@ export default function TermProfilePageClient(props: { params: { id: string } })
     imageUrl: s.imageUrl,
     href: `/admin/content/sections/${s.id}`,
   }));
+
+  // Build overview stats from API response
+  const overviewStats: OverviewStat[] = [];
+  if (stats) {
+    overviewStats.push(
+      { label: 'الأقسام', value: stats.sectionsCount ?? sections.length, icon: Layers, tone: 'muted' },
+      { label: 'الحصص', value: stats.lessonsCount ?? 0, icon: BookOpenText, tone: 'muted' },
+      { label: 'الفيديوهات', value: stats.videosCount ?? 0, icon: Video, tone: 'success' },
+      { label: 'إجمالي المشاهدة', value: formatWatchTime(stats.totalWatchTimeSeconds), icon: Clock3, tone: 'warning' },
+    );
+  }
 
   return (
     <AdminShellChrome
@@ -118,6 +156,8 @@ export default function TermProfilePageClient(props: { params: { id: string } })
           <EntityOverviewDashboard
             entityType="ترم"
             details={{ title: term.title, price: term.price }}
+            stats={overviewStats}
+            loading={statsLoading}
           />
         </div>
       )}

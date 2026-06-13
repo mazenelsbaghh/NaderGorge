@@ -1,8 +1,8 @@
 'use client';
 
-import { BarChart3, CalendarDays, Receipt, Sparkles, type LucideIcon } from 'lucide-react';
+import { BarChart3, Sparkles, type LucideIcon } from 'lucide-react';
 
-interface OverviewStat {
+export interface OverviewStat {
   label: string;
   value: string | number;
   icon: LucideIcon;
@@ -19,6 +19,8 @@ interface EntityOverviewDashboardProps {
     createdAt?: string;
   };
   stats?: OverviewStat[];
+  loading?: boolean;
+  children?: React.ReactNode;
 }
 
 const toneClassName: Record<NonNullable<OverviewStat['tone']>, string> = {
@@ -28,7 +30,17 @@ const toneClassName: Record<NonNullable<OverviewStat['tone']>, string> = {
   muted: 'bg-[var(--admin-card-strong)] text-[var(--admin-muted)]',
 };
 
-export function EntityOverviewDashboard({ entityType, details, stats = [] }: EntityOverviewDashboardProps) {
+function StatSkeleton() {
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-[var(--admin-card)] p-6 shadow-sm">
+      <div className="mb-4 h-12 w-12 animate-pulse rounded-2xl bg-[var(--admin-card-strong)]" />
+      <div className="mb-2 h-4 w-24 animate-pulse rounded-lg bg-[var(--admin-card-strong)]" />
+      <div className="h-8 w-20 animate-pulse rounded-lg bg-[var(--admin-card-strong)]" />
+    </div>
+  );
+}
+
+export function EntityOverviewDashboard({ entityType, details, stats = [], loading = false, children }: EntityOverviewDashboardProps) {
   const createdAt = details.createdAt
     ? details.createdAt
     : 'غير متاح';
@@ -80,29 +92,40 @@ export function EntityOverviewDashboard({ entityType, details, stats = [] }: Ent
           <div>
             <h3 className="text-xl font-black text-[var(--admin-text)]">أداء الـ{entityType}</h3>
             <p className="text-sm font-bold text-[var(--admin-muted)]">
-              تظهر هنا المؤشرات بعد ربط مصدر بيانات حقيقي.
+              {loading ? 'جاري تحميل الإحصائيات...' : stats.length > 0 ? 'إحصائيات فعلية من بيانات المنصة' : 'لا تتوفر إحصائيات حاليا'}
             </p>
           </div>
         </div>
 
-        {stats.length > 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <StatSkeleton key={i} />
+            ))}
+          </div>
+        ) : stats.length > 0 ? (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat) => {
               const Icon = stat.icon;
               return (
                 <div
                   key={stat.label}
-                  className="group relative overflow-hidden rounded-3xl bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:shadow-lg"
+                  className="group relative overflow-hidden rounded-3xl bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5"
                 >
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-text)] transition-colors group-hover:bg-[var(--admin-primary-15)] group-hover:text-[var(--admin-primary)]">
-                    <Icon className="h-6 w-6" />
+                  <div className="absolute -right-6 -top-6 text-[var(--admin-primary-15)] opacity-30 transition-transform duration-700 group-hover:rotate-12 group-hover:scale-125 pointer-events-none">
+                    <Icon className="h-28 w-28" />
                   </div>
-                  <p className="text-sm font-bold text-[var(--admin-muted)]">{stat.label}</p>
-                  <p className="mt-1 text-3xl font-black tracking-tight text-[var(--admin-text)]">
-                    {stat.value}
-                  </p>
-                  <div className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-black ${toneClassName[stat.tone || 'muted']}`}>
-                    بيانات فعلية
+                  <div className="relative z-10">
+                    <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-card-strong)] text-[var(--admin-text)] transition-colors group-hover:bg-[var(--admin-primary-15)] group-hover:text-[var(--admin-primary)]">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <p className="text-sm font-bold text-[var(--admin-muted)]">{stat.label}</p>
+                    <p className="mt-1 text-3xl font-black tracking-tight text-[var(--admin-text)]">
+                      {stat.value}
+                    </p>
+                    <div className={`mt-4 inline-flex rounded-full px-3 py-1 text-xs font-black ${toneClassName[stat.tone || 'muted']}`}>
+                      بيانات فعلية
+                    </div>
                   </div>
                 </div>
               );
@@ -110,32 +133,20 @@ export function EntityOverviewDashboard({ entityType, details, stats = [] }: Ent
           </div>
         ) : (
           <div className="rounded-3xl bg-[var(--admin-card)] p-8 shadow-sm">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div className="max-w-2xl">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
-                  <BarChart3 className="h-6 w-6" />
-                </div>
-                <h4 className="text-lg font-black text-[var(--admin-text)]">لا توجد بيانات تحليلية بعد</h4>
-                <p className="mt-2 text-sm leading-6 text-[var(--admin-muted)]">
-                  لن نعرض أرقام تقديرية أو عشوائية هنا. عند توفر مصدر بيانات فعلي للمشتريات، التفاعل، أو الإكمال ستظهر المؤشرات تلقائيا.
-                </p>
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+                <BarChart3 className="h-7 w-7" />
               </div>
-              <div className="grid min-w-52 grid-cols-2 gap-3 text-sm">
-                <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4">
-                  <Receipt className="mb-3 h-5 w-5 text-[var(--admin-primary)]" />
-                  <p className="font-black text-[var(--admin-text)]">المشتريات</p>
-                  <p className="text-xs text-[var(--admin-muted)]">بانتظار API</p>
-                </div>
-                <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4">
-                  <CalendarDays className="mb-3 h-5 w-5 text-[var(--admin-primary)]" />
-                  <p className="font-black text-[var(--admin-text)]">الإكمال</p>
-                  <p className="text-xs text-[var(--admin-muted)]">بانتظار API</p>
-                </div>
-              </div>
+              <h4 className="text-lg font-black text-[var(--admin-text)]">لا تتوفر إحصائيات بعد</h4>
+              <p className="max-w-md text-sm leading-6 text-[var(--admin-muted)]">
+                عند توفر بيانات فعلية من المنصة (مشتريات، تفاعل، أو إكمال) ستظهر المؤشرات تلقائيا.
+              </p>
             </div>
           </div>
         )}
       </section>
+
+      {children}
     </div>
   );
 }

@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText } from 'lucide-react';
+import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video } from 'lucide-react';
 import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, LessonHomeworkList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer } from '@/components/admin';
+import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
@@ -68,6 +69,25 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
      )
   }
 
+  // Build lesson overview stats from cockpit data
+  const videoCount = lesson.videos?.length || 0;
+  const resourceCount = lesson.resources?.length || 0;
+  const homeworkCount = lesson.homework?.length || 0;
+  const pendingComments = lesson.commentsSummary?.pending || 0;
+  const totalComments = lesson.commentsSummary?.total || 0;
+
+  const overviewStats: OverviewStat[] = [
+    { label: 'الفيديوهات', value: videoCount, icon: Video, tone: videoCount > 0 ? 'success' : 'muted' },
+    { label: 'المذكرات والملفات', value: resourceCount, icon: FileText, tone: resourceCount > 0 ? 'muted' : 'muted' },
+    { label: 'الواجبات', value: homeworkCount, icon: ClipboardList, tone: homeworkCount > 0 ? 'primary' : 'muted' },
+    { label: 'التعليقات', value: `${totalComments}${pendingComments > 0 ? ` (${pendingComments} بانتظار)` : ''}`, icon: MessageSquareText, tone: pendingComments > 0 ? 'warning' : 'muted' },
+  ];
+
+  // Add exam status
+  if (lesson.examId) {
+    overviewStats.push({ label: 'الامتحان', value: 'مرفق', icon: BookCheck, tone: 'success' });
+  }
+
   return (
     <AdminShellChrome
       activePath="/admin/content"
@@ -97,8 +117,52 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       {activeTab === 'overview' && (
         <EntityOverviewDashboard 
           entityType="حصة" 
-          details={{ title: lesson.title, description: lesson.summary }} 
-        />
+          details={{ title: lesson.title, description: lesson.summary }}
+          stats={overviewStats}
+          loading={false}
+        >
+          {/* Quick navigation cards */}
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+            <h3 className="mb-4 text-lg font-black text-[var(--admin-text)]">انتقال سريع</h3>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setActiveTab('videos')}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-primary)] hover:text-white"
+              >
+                <PlaySquare className="h-4 w-4" />
+                الفيديوهات ({videoCount})
+              </button>
+              <button
+                onClick={() => setActiveTab('comments')}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition-colors ${pendingComments > 0 ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white' : 'bg-[var(--admin-card-strong)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'}`}
+              >
+                <MessageSquareText className="h-4 w-4" />
+                التعليقات {pendingComments > 0 ? `(${pendingComments} بانتظار)` : ''}
+              </button>
+              <button
+                onClick={() => setActiveTab('resources')}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-hover)]"
+              >
+                <FileText className="h-4 w-4" />
+                المذكرات ({resourceCount})
+              </button>
+              <button
+                onClick={() => setActiveTab('homework')}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-hover)]"
+              >
+                <ClipboardList className="h-4 w-4" />
+                الواجبات ({homeworkCount})
+              </button>
+              <button
+                onClick={() => setActiveTab('exam')}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-hover)]"
+              >
+                <BookCheck className="h-4 w-4" />
+                {lesson.examId ? 'عرض الامتحان' : 'إنشاء امتحان'}
+              </button>
+            </div>
+          </div>
+        </EntityOverviewDashboard>
       )}
       
       {activeTab === 'videos' && (

@@ -74,4 +74,10 @@ public class StudentAccessGrant : BaseEntity
     public DateTime GrantedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ExpiresAt { get; set; }
     public bool IsActive { get; set; } = true;
+
+    // --- Cancellation tracking ---
+    public Guid? CancelledByUserId { get; set; }
+    public User? CancelledByUser { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public string? CancellationReason { get; set; }
 }

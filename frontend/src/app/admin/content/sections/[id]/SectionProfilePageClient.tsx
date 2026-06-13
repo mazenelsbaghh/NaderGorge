@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpenText, ChevronRight } from 'lucide-react';
+import { BookOpenText, ChevronRight, Video, Clock3 } from 'lucide-react';
 import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from '@/components/admin';
+import type { OverviewStat } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
 import { contentService, LessonSummaryDto } from '@/services/content-service';
@@ -17,6 +18,15 @@ const TABS: AdminTab<ActiveTab>[] = [
   { key: 'lessons', label: 'الحصص', icon: BookOpenText },
 ];
 
+function formatWatchTime(seconds?: number): string {
+  if (!seconds || seconds <= 0) return '0 دقيقة';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0 && minutes > 0) return `${hours} ساعة ${minutes} دقيقة`;
+  if (hours > 0) return `${hours} ساعة`;
+  return `${minutes} دقيقة`;
+}
+
 export default function SectionProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
@@ -26,6 +36,10 @@ export default function SectionProfilePageClient(props: { params: { id: string }
   const [lessons, setLessons] = useState<LessonSummaryDto[]>([]);
   const [lessonsLoading, setLessonsLoading] = useState(true);
   const [lessonsError, setLessonsError] = useState(false);
+
+  // Stats state
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const loadSection = useCallback(async () => {
     try {
@@ -52,8 +66,21 @@ export default function SectionProfilePageClient(props: { params: { id: string }
     }
   }, [params.id]);
 
+  const loadStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const res = await adminService.getSectionStats(params.id);
+      setStats(res);
+    } catch {
+      // Stats endpoint may not exist yet
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [params.id]);
+
   useEffect(() => { void loadSection(); }, [loadSection]);
   useEffect(() => { void loadLessons(); }, [loadLessons]);
+  useEffect(() => { void loadStats(); }, [loadStats]);
 
   if (sectionLoading) {
     return (
@@ -84,6 +111,16 @@ export default function SectionProfilePageClient(props: { params: { id: string }
     subtitle: l.summary || undefined,
     href: `/admin/content/lessons/${l.id}`,
   }));
+
+  // Build overview stats from API response
+  const overviewStats: OverviewStat[] = [];
+  if (stats) {
+    overviewStats.push(
+      { label: 'الحصص', value: stats.lessonsCount ?? lessons.length, icon: BookOpenText, tone: 'muted' },
+      { label: 'الفيديوهات', value: stats.videosCount ?? 0, icon: Video, tone: 'success' },
+      { label: 'إجمالي المشاهدة', value: formatWatchTime(stats.totalWatchTimeSeconds), icon: Clock3, tone: 'warning' },
+    );
+  }
 
   return (
     <AdminShellChrome
@@ -118,6 +155,8 @@ export default function SectionProfilePageClient(props: { params: { id: string }
           <EntityOverviewDashboard
             entityType="قسم"
             details={{ title: section.title, price: section.price }}
+            stats={overviewStats}
+            loading={statsLoading}
           />
         </div>
       )}

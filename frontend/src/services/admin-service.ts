@@ -126,6 +126,10 @@ export interface StudentPackageDto {
   isActive: boolean;
   purchaseMethod: string;
   price: number;
+  grantType?: string;
+  cancelledByName?: string | null;
+  cancelledAt?: string | null;
+  cancellationReason?: string | null;
 }
 
 export interface StudentDeviceProfileDto {
@@ -904,8 +908,8 @@ export const adminService = {
     return res.data;
   },
 
-  cancelStudentPackage: async (userId: string, accessGrantId: string, refundBalance: boolean) => {
-    const res = await apiClient.post<ApiResponse>(`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`, { refundBalance });
+  cancelStudentPackage: async (userId: string, accessGrantId: string, refundBalance: boolean, reason?: string) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/users/students/${userId}/packages/${accessGrantId}/cancel`, { refundBalance, reason });
     return res.data;
   },
 
@@ -1004,5 +1008,27 @@ export const adminService = {
       const res = await apiClient.get<ApiResponse<any[]>>(`/admin/assistants/${assistantId}/warnings`);
       return res.data?.data ?? [];
     } catch { return []; }
+  },
+
+  // ── Content Stats endpoints ───────────────────────────────────────
+  getPackageStats: async (id: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any>>(`/admin/packages/${id}/stats`);
+      return res.data?.data ?? null;
+    } catch { return null; }
+  },
+
+  getTermStats: async (id: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any>>(`/admin/terms/${id}/stats`);
+      return res.data?.data ?? null;
+    } catch { return null; }
+  },
+
+  getSectionStats: async (id: string) => {
+    try {
+      const res = await apiClient.get<ApiResponse<any>>(`/admin/sections/${id}/stats`);
+      return res.data?.data ?? null;
+    } catch { return null; }
   },
 };

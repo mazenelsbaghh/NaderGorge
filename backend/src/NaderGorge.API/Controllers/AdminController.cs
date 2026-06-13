@@ -10,6 +10,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Application.Features.Admin.Teachers.Queries;
+using NaderGorge.Application.Features.Admin.Content.Queries;
 using SixLabors.ImageSharp;
 
 namespace NaderGorge.API.Controllers;
@@ -191,7 +192,7 @@ public class AdminController : ControllerBase
     [HasPermission("users.manage")]
     public async Task<IActionResult> CancelPackage(Guid userId, Guid accessGrantId, [FromBody] CancelPackageRequest dto)
     {
-        var result = await _mediator.Send(new CancelPackageGrantCommand(accessGrantId, dto.RefundBalance, GetUserId()));
+        var result = await _mediator.Send(new CancelPackageGrantCommand(accessGrantId, dto.RefundBalance, GetUserId(), dto.Reason));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -213,6 +214,11 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetPackageById(Guid id)
         => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetPackageByIdQuery(id, GetUserId())));
+
+    [HttpGet("packages/{id:guid}/stats")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetPackageStats(Guid id)
+        => Ok(await _mediator.Send(new GetPackageStatsQuery(id)));
 
     [HttpPut("packages/{id:guid}")]
     [HasPermission("content.manage")]
@@ -318,6 +324,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetTermById(Guid id)
         => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetTermByIdQuery(id)));
 
+    [HttpGet("terms/{id:guid}/stats")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetTermStats(Guid id)
+        => Ok(await _mediator.Send(new GetTermStatsQuery(id)));
+
     [HttpPut("terms/{id:guid}")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateTermDto dto)
@@ -338,6 +349,11 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> GetSectionById(Guid id)
         => Ok(await _mediator.Send(new NaderGorge.Application.Features.Content.Queries.GetSectionByIdQuery(id)));
+
+    [HttpGet("sections/{id:guid}/stats")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetSectionStats(Guid id)
+        => Ok(await _mediator.Send(new GetSectionStatsQuery(id)));
 
     [HttpPost("sections")]
     [HasPermission("content.manage")]
@@ -831,7 +847,7 @@ public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);
 public record GamificationAdjustmentRequest(int Points, string Reason);
 public record BalanceAdjustmentRequest(decimal Amount, string Reason);
-public record CancelPackageRequest(bool RefundBalance);
+public record CancelPackageRequest(bool RefundBalance, string? Reason = null);
 public record BulkGenerateRequest(
     string GroupName,
     Domain.Enums.CodeType CodeType,

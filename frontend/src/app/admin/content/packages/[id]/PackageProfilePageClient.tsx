@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight } from 'lucide-react';
+import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Video, Clock3, DollarSign, Layers } from 'lucide-react';
 import {
   AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
   PackageCodeProfileSummary, ContentImageUpload
 } from '@/components/admin';
+import type { OverviewStat } from '@/components/admin';
 import { HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
 import { contentService, TermDto } from '@/services/content-service';
@@ -23,6 +24,15 @@ const TABS: AdminTab<ActiveTab>[] = [
   { key: 'codeProfile', label: 'صفحة الأكواد', icon: KeyRound },
 ];
 
+function formatWatchTime(seconds?: number): string {
+  if (!seconds || seconds <= 0) return '0 دقيقة';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0 && minutes > 0) return `${hours} ساعة ${minutes} دقيقة`;
+  if (hours > 0) return `${hours} ساعة`;
+  return `${minutes} دقيقة`;
+}
+
 export default function PackageProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
@@ -35,6 +45,10 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   const [terms, setTerms] = useState<TermDto[]>([]);
   const [termsLoading, setTermsLoading] = useState(true);
   const [termsError, setTermsError] = useState(false);
+
+  // Stats state
+  const [stats, setStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const loadPkg = useCallback(async () => {
     try {
@@ -61,8 +75,21 @@ export default function PackageProfilePageClient(props: { params: { id: string }
     }
   }, [params.id]);
 
+  const loadStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const res = await adminService.getPackageStats(params.id);
+      setStats(res);
+    } catch {
+      // Stats endpoint may not exist yet — gracefully degrade
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [params.id]);
+
   useEffect(() => { void loadPkg(); }, [loadPkg]);
   useEffect(() => { void loadTerms(); }, [loadTerms]);
+  useEffect(() => { void loadStats(); }, [loadStats]);
 
   if (pkgLoading) {
     return (
@@ -93,6 +120,20 @@ export default function PackageProfilePageClient(props: { params: { id: string }
     imageUrl: t.imageUrl,
     href: `/admin/content/terms/${t.id}`,
   }));
+
+  // Build overview stats from API response
+  const overviewStats: OverviewStat[] = [];
+  if (stats) {
+    overviewStats.push(
+      { label: 'الطلاب المشتركين', value: stats.enrolledStudentsCount ?? 0, icon: Users, tone: 'primary' },
+      { label: 'الأترام', value: stats.termsCount ?? terms.length, icon: Calendar, tone: 'muted' },
+      { label: 'الأقسام', value: stats.sectionsCount ?? 0, icon: Layers, tone: 'muted' },
+      { label: 'الحصص', value: stats.lessonsCount ?? 0, icon: BookOpenText, tone: 'muted' },
+      { label: 'الفيديوهات', value: stats.videosCount ?? 0, icon: Video, tone: 'success' },
+      { label: 'إجمالي المشاهدة', value: formatWatchTime(stats.totalWatchTimeSeconds), icon: Clock3, tone: 'warning' },
+      { label: 'الإيرادات', value: stats.totalRevenue != null ? `${stats.totalRevenue} ج.م` : '—', icon: DollarSign, tone: 'primary' },
+    );
+  }
 
   return (
     <AdminShellChrome
@@ -180,8 +221,51 @@ export default function PackageProfilePageClient(props: { params: { id: string }
         <div className="space-y-6">
           <EntityOverviewDashboard 
             entityType="باقة" 
-            details={{ title: pkg.name, description: pkg.description, price: pkg.price }} 
-          />
+            details={{ title: pkg.name, description: pkg.description, price: pkg.price }}
+            stats={overviewStats}
+            loading={statsLoading}
+          >
+            {/* Content hierarchy summary */}
+            {stats && (
+              <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+                <h3 className="mb-5 text-lg font-black text-[var(--admin-text)]">ملخص هيكل المحتوى</h3>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
+                    <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.termsCount ?? terms.length}</p>
+                    <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">ترم</p>
+                  </div>
+                  <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
+                    <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.sectionsCount ?? 0}</p>
+                    <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">قسم</p>
+                  </div>
+                  <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
+                    <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.lessonsCount ?? 0}</p>
+                    <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">حصة</p>
+                  </div>
+                  <div className="rounded-2xl bg-[var(--admin-card-strong)] p-4 text-center">
+                    <p className="text-2xl font-black text-[var(--admin-primary)]">{stats.videosCount ?? 0}</p>
+                    <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">فيديو</p>
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => setActiveTab('terms')}
+                    className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-primary)] hover:text-white"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    إدارة الأترام
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('codeProfile')}
+                    className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-card-strong)] px-4 py-2 text-sm font-bold text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-hover)]"
+                  >
+                    <KeyRound className="h-4 w-4" />
+                    صفحة الأكواد
+                  </button>
+                </div>
+              </div>
+            )}
+          </EntityOverviewDashboard>
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
             <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>
             <PackageDetailsForm pkg={pkg} />
