@@ -160,6 +160,25 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             }
         }
 
+        // Check the lesson's OWN exam: Exam → Video → Homework flow
+        // The student must pass the lesson's exam before accessing its content
+        if (!isLocked && lesson.ExamId.HasValue)
+        {
+            var currentExam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
+            if (currentExam != null)
+            {
+                var passedCurrentExam = await _db.StudentExamAttempts
+                    .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+
+                if (!passedCurrentExam)
+                {
+                    isLocked = true;
+                    lockedReason = $"يجب اجتياز امتحان '{currentExam.Title}' أولاً للدخول لهذه الحصة.";
+                    blockingExamId = currentExam.Id;
+                }
+            }
+        }
+
         var watchEvents = await _db.VideoWatchEvents
             .AsNoTracking()
             .Where(v => v.UserId == request.UserId && lesson.Videos.Select(x => x.Id).Contains(v.LessonVideoId))
