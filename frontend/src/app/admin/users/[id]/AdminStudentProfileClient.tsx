@@ -655,6 +655,21 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                           {key: 'name', label: 'اسم الباقة', render: (row) => (
                             <span className="font-bold text-[var(--admin-text)]">{row.name}</span>
                           )},
+                          {key: 'grantType', label: 'نوع الاشتراك', render: (row) => {
+                            const types: Record<string, string> = { Package: 'باقة', Term: 'ترم', Month: 'قسم', Lesson: 'حصة' };
+                            const colors: Record<string, string> = {
+                              Package: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
+                              Term: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400',
+                              Month: 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400',
+                              Lesson: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
+                            };
+                            const gt = row.grantType || 'Package';
+                            return (
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${colors[gt] || colors.Package}`}>
+                                {types[gt] || 'باقة'}
+                              </span>
+                            );
+                          }},
                           {key: 'price', label: 'السعر', render: (row) => (
                             <span className="font-medium text-[var(--admin-text)]">{row.price} ج.م</span>
                           )},
