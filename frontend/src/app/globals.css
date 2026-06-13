@@ -570,11 +570,7 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     background-size: 1.25rem;
     padding-left: 2.5rem;
     cursor: pointer;
-  }
-
-  select.admin-input option {
-    background-color: var(--admin-bg);
-    color: var(--admin-text);
+    transition: none; /* Fixes Chrome native select dropdown positioning bug on macOS/RTL */
   }
 
   /* ─── Primary Button (Neumorphic Gold) ─── */

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
-  BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText,
+  BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload,
 } from 'lucide-react';
 import { AdminShellChrome, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
@@ -83,6 +83,11 @@ function CreatePackageRow({
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('');
   const [saving, setSaving] = useState(false);
+  
+  // Image Upload States
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (activeTeacherId) {
@@ -92,11 +97,31 @@ function CreatePackageRow({
     }
   }, [activeTeacherId]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('اختر ملف صورة صالحًا.');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('حجم الصورة يجب ألا يتجاوز 10 ميجابايت.');
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   async function handleCreate() {
     if (!name.trim() || !selectedSubjectId || !selectedTeacherId || !selectedGrade) return;
     try {
       setSaving(true);
-      await adminService.createPackage({
+      const newPkg = await adminService.createPackage({
         name: name.trim(),
         description: description.trim(),
         price: Number(price) || 0,
@@ -104,10 +129,21 @@ function CreatePackageRow({
         targetGrade: selectedGrade,
         teacherId: selectedTeacherId
       });
+
+      if (newPkg?.id && imageFile) {
+        try {
+          await adminService.uploadContentImage('package', newPkg.id, imageFile);
+        } catch {
+          toast.error('تم حفظ الباقة، لكن فشل رفع الصورة.');
+        }
+      }
+
       toast.success('تمت إضافة الباقة بنجاح.');
       setName(''); setDescription(''); setPrice(''); 
       if (!activeTeacherId) setSelectedTeacherId('');
       setSelectedSubjectId(''); setSelectedGrade('');
+      setImageFile(null); setImagePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setOpen(false);
       onSuccess();
     } catch {
@@ -157,6 +193,48 @@ function CreatePackageRow({
         placeholder="السعر (جنيه مصري)"
         className="admin-input"
       />
+      
+      {/* صورة الباقة */}
+      <div className="space-y-1 text-right">
+        <span className="text-xs font-bold text-[var(--admin-muted)]">صورة الباقة (اختياري)</span>
+        <div 
+          onClick={() => fileInputRef.current?.click()}
+          className="relative flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card)] hover:border-[var(--admin-primary)] cursor-pointer transition min-h-[100px]"
+        >
+          {imagePreview ? (
+            <div className="relative w-full aspect-[21/9] rounded-xl overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setImageFile(null);
+                  setImagePreview(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 transition shadow"
+                title="إزالة الصورة"
+              >
+                <span className="block text-xs font-black px-1.5">إزالة</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-1.5 text-[var(--admin-muted)]">
+              <Upload className="h-5 w-5 text-[var(--admin-primary)]" />
+              <span className="text-xs font-bold">اضغط هنا لاختيار صورة للباقة</span>
+              <span className="text-[9px]">الحد الأقصى 10 ميجابايت (يتم تحويلها لـ WebP)</span>
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+      </div>
       
       {!activeTeacherId && (
         <select

@@ -8,9 +8,9 @@ ENV NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_PROGRESS=false \
     NPM_CONFIG_UPDATE_NOTIFIER=false
 
-# Install ffmpeg and python3 (required by fluent-ffmpeg and youtube-dl-exec)
+# Install media and native-module build dependencies.
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg python3 \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg python3 build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install ALL dependencies (including devDependencies for TypeScript compile)
