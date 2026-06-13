@@ -168,19 +168,10 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             }
         }
 
-        if (lesson.ExamId.HasValue && !passedExamIds.Contains(lesson.ExamId.Value))
-        {
-            var currentExam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
-            if (currentExam != null)
-            {
-                return (
-                    true,
-                    $"يوجد امتحان مرتبط بالحصة '{lesson.Title}' ولم يتم اجتيازه بعد.",
-                    currentExam.Id,
-                    null
-                );
-            }
-        }
+        // NOTE: We intentionally do NOT check lesson.ExamId here.
+        // A lesson's own exam is taken AFTER watching the lesson content,
+        // so it should not lock the student out of the lesson itself.
+        // Only the PREVIOUS lesson's exam (checked above) blocks access.
 
         return (false, null, null, null);
     }
