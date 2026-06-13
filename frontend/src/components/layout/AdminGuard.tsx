@@ -33,9 +33,13 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   if (isLoading || !isAuthenticated || !hasAdminAccess(user?.roles)) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center px-6">
-        <div className="landing-panel rounded-[28px] px-6 py-5 text-center">
-          <p className="text-sm font-bold text-[var(--landing-muted)]">
+      <div
+        dir="rtl"
+        className="flex min-h-dvh items-center justify-center bg-[var(--admin-bg)] px-6 text-[var(--admin-text)]"
+      >
+        <div className="relative overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5 text-center shadow-[0_18px_48px_var(--admin-shadow)]">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
+          <p className="relative text-sm font-bold text-[var(--admin-muted)]">
             جارٍ التحقق من صلاحية الدخول...
           </p>
         </div>

@@ -301,6 +301,13 @@ export function AssistantShellChrome({
             </div>
           )}
           {children}
+
+          <footer className="mt-14 flex flex-col items-center opacity-35 select-none">
+            <div className="mb-4 h-px w-full bg-gradient-to-r from-transparent via-[var(--admin-footer)] to-transparent" />
+            <p className="text-[10px] font-black uppercase tracking-[0.34em] text-[var(--admin-primary)]">
+              شيخ المتحف
+            </p>
+          </footer>
         </main>
       </div>
 

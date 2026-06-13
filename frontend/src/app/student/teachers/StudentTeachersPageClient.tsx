@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { GraduationCap, ChevronLeft, BookOpen, ArrowRight, BookOpenText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 
 import { studentService, type PublicTeacherDto } from "@/services/student-service";
 import { contentService, type PackageDto } from "@/services/content-service";
@@ -417,10 +418,10 @@ export default function StudentTeachersPageClient() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPackages.map((pkg) => (
-              <motion.div
+              <Link
                 key={pkg.id}
-                variants={fadeUp}
-                onClick={() => router.push(`/student/packages/${pkg.id}`)}
+                href={`/student/packages/${pkg.id}`}
+                prefetch={false}
                 className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:border-[var(--admin-primary-30)] hover:shadow-lg hover:shadow-[var(--admin-primary-10)] hover:scale-[1.01] cursor-pointer"
               >
                 <div>
@@ -468,7 +469,7 @@ export default function StudentTeachersPageClient() {
                     <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                   </span>
                 </div>
-              </motion.div>
+              </Link>
             ))}
           </div>
         )}

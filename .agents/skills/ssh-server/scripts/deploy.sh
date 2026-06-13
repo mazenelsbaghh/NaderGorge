@@ -403,6 +403,11 @@ rebuild_containers() {
 
   wait $REMOTE_PID || true
   log_ok "Docker configuration applied successfully"
+
+  # Clean up build cache to prevent disk from filling up
+  log_step "Cleaning Docker build cache..."
+  remote "docker builder prune -af 2>&1 | tail -1"
+  log_ok "Build cache cleaned"
 }
 
 # =============================================================================

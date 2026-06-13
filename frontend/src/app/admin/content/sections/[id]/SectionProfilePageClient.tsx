@@ -98,19 +98,23 @@ export default function SectionProfilePageClient(props: { params: { id: string }
         </NeumorphButton>
       }
     >
+      {/* Always visible section image upload at the top */}
+      <div className="mb-8 max-w-3xl">
+        <ContentImageUpload
+          entityId={section.id}
+          contentType="section"
+          imageUrl={section.imageUrl}
+          label="صورة الشهر / القسم"
+          onUploaded={(imageUrl) => setSection((current: any) => ({ ...current, imageUrl }))}
+        />
+      </div>
+
       <div className="mb-8">
         <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
 
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          <ContentImageUpload
-            entityId={section.id}
-            contentType="section"
-            imageUrl={section.imageUrl}
-            label="صورة الشهر / القسم"
-            onUploaded={(imageUrl) => setSection((current: any) => ({ ...current, imageUrl }))}
-          />
           <EntityOverviewDashboard
             entityType="قسم"
             details={{ title: section.title, price: section.price }}

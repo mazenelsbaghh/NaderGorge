@@ -2,7 +2,6 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import {
   PackagesGrid,
@@ -11,7 +10,6 @@ import {
 import { type PackageDto, contentService } from "@/services/content-service";
 
 export default function PackagesPageClient() {
-  const router = useRouter();
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +48,7 @@ export default function PackagesPageClient() {
         actionLabel="دخول الباقة"
         emptyTitle="لا توجد باقات مفعّلة بعد"
         emptyDescription="بمجرد تفعيل كود صالح ستظهر الباقات النشطة هنا بشكل مرتب."
-        onAction={(packageId) => router.push(`/student/packages/${packageId}`)}
+        getHref={(packageId) => `/student/packages/${packageId}`}
       />
 
       <PackagesGrid

@@ -14,9 +14,10 @@ import { devConsole } from '@/utils/dev-console';
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 const GRADE_NAMES: Record<string, string> = {
@@ -72,7 +73,6 @@ const fadeUp = {
 
 export default function PackageProfilePageClient() {
   const params = useParams();
-  const router = useRouter();
   const packageId = params.packageId as string;
 
   const [pkg, setPkg] = useState<PackageDto | null>(null);
@@ -166,15 +166,16 @@ export default function PackageProfilePageClient() {
       animate="visible"
     >
       {/* ── Back button ── */}
-      <motion.button
-        variants={fadeUp}
-        type="button"
-        onClick={() => router.push("/student/packages")}
-        className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
-      >
-        <ArrowRight className="h-4 w-4" />
-        <span>العودة إلى باقاتي</span>
-      </motion.button>
+      <motion.div variants={fadeUp}>
+        <Link
+          href="/student/packages"
+          prefetch={false}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
+        >
+          <ArrowRight className="h-4 w-4" />
+          <span>العودة إلى باقاتي</span>
+        </Link>
+      </motion.div>
 
       {/* ── Hero Image Banner ── */}
       <div
@@ -260,15 +261,15 @@ export default function PackageProfilePageClient() {
                   ];
                   const pal = palettes[idx % palettes.length];
                   return (
-                    <button
+                    <Link
                       key={term.id}
-                      type="button"
-                      onClick={() => router.push(`/student/packages/${packageId}/terms/${term.id}`)}
+                      href={`/student/packages/${packageId}/terms/${term.id}`}
+                      prefetch={false}
                       className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-sm border border-[var(--admin-border)] transition-all hover:-translate-y-1.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
                     >
                       {/* Thumbnail area */}
                       <div
-                        className="relative h-36 w-full overflow-hidden"
+                        className="relative aspect-video w-full overflow-hidden"
                         style={{ background: `linear-gradient(135deg, ${pal.from} 0%, ${pal.to} 100%)` }}
                       >
                         {term.imageUrl && (
@@ -350,7 +351,7 @@ export default function PackageProfilePageClient() {
                           <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-all group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
                         </div>
                       </div>
-                    </button>
+                    </Link>
                   );
                 })}
               </div>
@@ -381,13 +382,13 @@ export default function PackageProfilePageClient() {
                   <Sparkles className="h-4 w-4" />
                   شراء الباقة
                 </button>
-                <button
-                  type="button"
-                  onClick={() => router.push("/student/code-redemption")}
+                <Link
+                  href="/student/code-redemption"
+                  prefetch={false}
                   className="w-full inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-3 text-sm font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] active:scale-[0.98]"
                 >
                   لدي كود تفعيل
-                </button>
+                </Link>
               </div>
             )}
           </div>
