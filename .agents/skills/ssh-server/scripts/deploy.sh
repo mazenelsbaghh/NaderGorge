@@ -216,9 +216,26 @@ rebuild_containers() {
     fi
     
     if [ \"\$REBUILD_ALL\" = true ]; then
+      echo \"\"
+      echo \"🛠️  Rebuild Plan: [FULL REBUILD] — Rebuilding all services:\"
+      echo \"   - db\"
+      echo \"   - redis\"
+      echo \"   - backend\"
+      echo \"   - worker\"
+      echo \"   - frontend (landing, student, admin, teacher, assistant)\"
+      echo \"   - nginx\"
+      echo \"\"
       echo \"Rebuilding all containers...\"
       docker compose up -d --build --force-recreate --remove-orphans 2>&1
     else
+      echo \"\"
+      echo \"🛠️  Rebuild Plan: [SELECTIVE REBUILD] — Rebuilding only modified services:\"
+      if [ \"\$REBUILD_BACKEND\" = true ]; then echo \"   - backend\"; fi
+      if [ \"\$REBUILD_WORKER\" = true ]; then echo \"   - worker\"; fi
+      if [ \"\$REBUILD_FRONTEND\" = true ]; then echo \"   - frontend (landing, student, admin, teacher, assistant)\"; fi
+      if [ \"\$REBUILD_NGINX\" = true ]; then echo \"   - nginx\"; fi
+      echo \"\"
+      
       # Rebuild and restart selectively
       SERVICES_TO_UP=\"\"
       

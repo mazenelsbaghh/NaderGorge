@@ -9,26 +9,41 @@ This skill provides structured workflows for connecting to and managing the Nade
 
 ## 🚀 Quick Deploy (Recommended)
 
-Use the built-in deploy script for one-command deployments:
+Use the built-in deploy script for one-command deployments with smart selective rebuilding and database schema verification:
 
 ```bash
-# Full deploy: push to git + migrate + rebuild Docker
+# Smart deploy: push to git + migrate + rebuild ONLY changed containers
 bash ".agents/skills/ssh-server/scripts/deploy.sh"
+
+# Force a full rebuild of all containers (bypassing selective smart build)
+bash ".agents/skills/ssh-server/scripts/deploy.sh" --force
 
 # Deploy without running migrations
 bash ".agents/skills/ssh-server/scripts/deploy.sh" --no-migrate
 
-# Run migrations only (no push, no rebuild)
+# Run migrations only (no push, no rebuild) and verify schema
 bash ".agents/skills/ssh-server/scripts/deploy.sh" --migrate-only
 ```
 
-**The script does automatically:**
-1. 📤 Push current branch → GitHub (`origin`)
-2. 📤 Push current branch → Production server (`prod`)
-3. 🔄 Checkout latest code on server
-4. 🗄️ Run EF Core migrations (via `migrator` Docker profile)
-5. 🐳 Rebuild & restart all Docker containers
-6. ✅ Health-check all containers
+### Smart Rebuild & Verification Process
+1. **🔍 Database Schema Pre-check**: Runs a local check comparing the codebase DbContext snapshot (`AppDbContextModelSnapshot.cs`) against the live production database.
+   - Generates/updates the documentation under `.agents/skills/ssh-server/docs/database_schema.md`.
+   - Warns of any missing tables or columns before upload.
+2. **📤 Git Sync**: Pushes the current branch to GitHub (`origin`) and the production server (`prod`).
+3. **🔄 Checkout**: Checks out the latest code on the production server.
+4. **🗄️ Database Migrations**: Runs pending EF Core migrations on the database.
+5. **🛠️ Smart Selective Rebuilds**:
+   - Diffs the files changed between the last deployed commit and the current HEAD.
+   - Outputs a clear build plan listing exactly which containers will be rebuilt/recreated.
+   - Only builds and restarts containers belonging to modified folders:
+     - `backend/` -> `backend`
+     - `worker/` -> `worker`
+     - `frontend/` -> `landing student admin teacher assistant`
+     - `docker/nginx/` -> `nginx`
+   - If root infrastructure files (like `docker-compose.yml`, `.env`, etc.) change or if `--force`/`--full` is used, a full rebuild of all containers is executed.
+6. **✅ Final Verification**:
+   - Health-checks all restarted containers.
+   - Runs a final database schema check and strictly fails the deployment if the schema is not 100% in sync with the codebase.
 
 ---
 
