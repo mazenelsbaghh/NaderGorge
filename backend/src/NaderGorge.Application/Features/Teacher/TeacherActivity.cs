@@ -128,7 +128,7 @@ public class GetTeacherActivityQueryHandler : IRequestHandler<GetTeacherActivity
         var studentGrants = await _db.StudentAccessGrants
             .AsNoTracking()
             .Include(s => s.User)
-            .Where(s => s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
+            .Where(s => s.GrantType == Domain.Enums.CodeType.Package && s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
             .Where(s => s.PackageId.HasValue && packageIds.Contains(s.PackageId.Value))
             .ToListAsync(ct);
 

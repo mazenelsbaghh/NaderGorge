@@ -89,7 +89,7 @@ public class GetTeacherDashboardStatsQueryHandler : IRequestHandler<GetTeacherDa
         }
 
         var activeStudentsCount = await _db.StudentAccessGrants
-            .Where(s => s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
+            .Where(s => s.GrantType == CodeType.Package && s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
             .Where(s => _db.Packages.Any(p => p.Id == s.PackageId && p.TeacherId == teacherProfile.Id))
             .Select(s => s.UserId)
             .Distinct()
@@ -130,7 +130,7 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
         var students = await _db.StudentAccessGrants
             .AsNoTracking()
             .Include(s => s.User)
-            .Where(s => s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
+            .Where(s => s.GrantType == CodeType.Package && s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
             .Where(s => _db.Packages.Any(p => p.Id == s.PackageId && p.TeacherId == teacherProfile.Id))
             .Select(s => new TeacherStudentDto(
                 s.User.Id,

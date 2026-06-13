@@ -31,9 +31,9 @@ public class GetPackageStatsQueryHandler : IRequestHandler<GetPackageStatsQuery,
         if (!packageExists)
             return ApiResponse<PackageStatsDto>.Fail("Package not found");
 
-        // Enrolled students: distinct users with active access grants for this package
+        // Enrolled students: distinct users with active Package-level access grants
         var enrolledStudentsCount = await _db.StudentAccessGrants
-            .Where(sag => sag.PackageId == request.PackageId && sag.IsActive)
+            .Where(sag => sag.GrantType == Domain.Enums.CodeType.Package && sag.PackageId == request.PackageId && sag.IsActive)
             .Select(sag => sag.UserId)
             .Distinct()
             .CountAsync(ct);

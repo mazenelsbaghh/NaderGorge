@@ -31,10 +31,11 @@ public class GetTermStatsQueryHandler : IRequestHandler<GetTermStatsQuery, ApiRe
         if (term is null)
             return ApiResponse<TermStatsDto>.Fail("Term not found");
 
-        // Enrolled students: grants directly on this term OR on the parent package
+        // Enrolled students: Term-level grants for this term OR Package-level grants for parent
         var enrolledStudentsCount = await _db.StudentAccessGrants
             .Where(sag => sag.IsActive &&
-                (sag.TermId == request.TermId || sag.PackageId == term.PackageId))
+                ((sag.GrantType == Domain.Enums.CodeType.Term && sag.TermId == request.TermId) ||
+                 (sag.GrantType == Domain.Enums.CodeType.Package && sag.PackageId == term.PackageId)))
             .Select(sag => sag.UserId)
             .Distinct()
             .CountAsync(ct);

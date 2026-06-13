@@ -30,10 +30,14 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
         var grants = await _db.StudentAccessGrants
             .AsNoTracking()
             .Where(g => g.UserId == request.UserId && g.IsActive)
-            .Select(g => new { g.PackageId })
+            .Select(g => new { g.PackageId, g.GrantType })
             .ToListAsync(ct);
 
-        var packageIds = grants.Where(g => g.PackageId.HasValue).Select(g => g.PackageId!.Value).Distinct().ToList();
+        var packageIds = grants
+            .Where(g => g.GrantType == Domain.Enums.CodeType.Package && g.PackageId.HasValue)
+            .Select(g => g.PackageId!.Value)
+            .Distinct()
+            .ToList();
 
         var packages = await _db.Packages
             .AsNoTracking()

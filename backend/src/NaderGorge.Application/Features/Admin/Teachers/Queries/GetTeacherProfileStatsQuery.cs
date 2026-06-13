@@ -35,9 +35,9 @@ public class GetTeacherProfileStatsQueryHandler : IRequestHandler<GetTeacherProf
         var packagesCount = await _db.Packages
             .CountAsync(p => p.TeacherId == request.TeacherId, ct);
 
-        // Count distinct students enrolled across all teacher's packages
+        // Count distinct students enrolled across all teacher's packages (Package-level only)
         var activeStudentsCount = await _db.StudentAccessGrants
-            .Where(sag => sag.PackageId != null && sag.IsActive)
+            .Where(sag => sag.GrantType == Domain.Enums.CodeType.Package && sag.PackageId != null && sag.IsActive)
             .Where(sag => _db.Packages
                 .Where(p => p.TeacherId == request.TeacherId)
                 .Select(p => p.Id)
