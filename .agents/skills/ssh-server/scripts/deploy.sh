@@ -20,9 +20,6 @@ SERVER_GIT_DIR="/var/www/nadergorge.git"
 SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=15 -o PreferredAuthentications=password"
 SSH_CMD="sshpass -p '${SERVER_PASS}' ssh ${SSH_OPTS} ${SERVER_USER}@${SERVER_HOST}"
 
-# Tell git to use sshpass when pushing to SSH remotes
-export GIT_SSH_COMMAND="sshpass -p '${SERVER_PASS}' ssh ${SSH_OPTS}"
-
 # ─── Colors ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -215,7 +212,7 @@ push_to_github() {
 # =============================================================================
 push_to_prod() {
   log_step "Pushing to production server (prod/${BRANCH})"
-  if git push prod HEAD 2>&1; then
+  if GIT_SSH_COMMAND="sshpass -p '${SERVER_PASS}' ssh ${SSH_OPTS}" git push prod HEAD 2>&1; then
     log_ok "Production git repo updated"
   else
     log_warn "Prod push had warnings (may already be up to date)"
@@ -442,7 +439,7 @@ health_check() {
 main() {
   # Ensure we're in the repo root
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+  REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
   cd "${REPO_ROOT}"
 
   check_deps
