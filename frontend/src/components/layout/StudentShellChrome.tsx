@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
-import { StudentThemeSettingsPanel } from '@/components/student/StudentThemeSettingsPanel';
+// StudentThemeSettingsPanel removed as settings are now inside the profile tab system
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { SidebarBalance } from '@/components/layout/SidebarBalance';
 import { SidebarGamification } from '@/components/layout/SidebarGamification';
@@ -103,7 +103,6 @@ const secondaryNavItems: Array<{
     { href: '/student/mistakes', label: 'أخطائي', icon: Bug },
     { href: '/student/code-redemption', label: 'تفعيل كود', icon: KeyRound },
     { href: '/student/notifications', label: 'الإشعارات', icon: Bell },
-    { href: '/student/profile', label: 'الملف الشخصي', icon: User },
     { href: '/student/balance', label: 'الرصيد', icon: Wallet },
   ];
 
@@ -118,18 +117,12 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const user = useAuthStore((state) => state.user);
   const {
-    mode,
     isDark,
     toggleTheme,
-    isSavingPreferences,
-    selectedLightPaletteId,
-    selectedDarkPaletteId,
-    updatePalette,
-    updateAvatar,
   } = useStudentTheme();
   const isFocusMode = useLessonFocusStore((state) => state.isFocusMode);
   const shouldReduceMotion = useReducedMotion();
-  const [isThemeSettingsOpen, setIsThemeSettingsOpen] = useState(false);
+  // isThemeSettingsOpen state removed
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useRootOverscrollBackground();
@@ -230,11 +223,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
             aria-label="القائمة الرئيسية"
           >
             <div className="space-y-7">
-              <button
-                type="button"
+              <Link
+                href="/student/profile"
                 className="flex w-full items-center justify-start gap-3 rounded-full px-5 py-1 text-right transition-colors duration-200 hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
-                onClick={() => setIsThemeSettingsOpen(true)}
-                aria-label="فتح إعدادات مظهر الطالب"
+                aria-label="الملف الشخصي"
               >
                 <UserAvatar
                   avatarSlug={user?.avatarSlug}
@@ -245,7 +237,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-text)] truncate whitespace-nowrap">
                   {user?.fullName || 'طالب'}
                 </span>
-              </button>
+              </Link>
 
               <nav className="space-y-3 px-3">
                 <Link
@@ -320,18 +312,22 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsThemeSettingsOpen(true)}
-                className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-muted)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
-                aria-label="إعدادات الثيم"
-                title="إعدادات الثيم"
+              <Link
+                href="/student/profile"
+                prefetch={false}
+                className={`flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${
+                  pathname === '/student/profile'
+                    ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                    : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                }`}
+                aria-label="الملف الشخصي"
+                title="الملف الشخصي"
               >
                 <Settings className="h-5 w-5 flex-shrink-0" />
                 <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
-                  تخصيص المظهر
+                  الملف الشخصي
                 </span>
-              </button>
+              </Link>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -392,18 +388,17 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                     className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setIsThemeSettingsOpen(true)}
+                  <Link
+                    href="/student/profile"
                     className="hover:scale-105 transition duration-300"
-                    title="تخصيص الحساب"
+                    title="الملف الشخصي"
                   >
                     <UserAvatar
                       avatarSlug={user?.avatarSlug}
                       fullName={user?.fullName}
                       size="sm"
                     />
-                  </button>
+                  </Link>
                 </div>
               </div>
             </motion.header>
@@ -585,6 +580,19 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                       </Link>
                     );
                   })}
+                  {/* Profile */}
+                  <Link
+                    href="/student/profile"
+                    onClick={closeDrawer}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${
+                      activePath === '/student/profile'
+                        ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md border-transparent'
+                        : 'text-[var(--admin-text)] hover:bg-[var(--admin-hover)] border-[var(--admin-border)]'
+                    }`}
+                  >
+                    <User className="h-5 w-5 shrink-0" />
+                    <span>الملف الشخصي</span>
+                  </Link>
                 </nav>
 
                 {/* Drawer footer actions */}
@@ -599,19 +607,6 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                       className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
                     />
                   </div>
-
-                  {/* Theme settings */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeDrawer();
-                      setIsThemeSettingsOpen(true);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)]"
-                  >
-                    <Settings className="h-5 w-5 shrink-0" />
-                    <span>إعدادات الألوان</span>
-                  </button>
 
                   {/* Logout */}
                   <button
@@ -631,22 +626,6 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
           </>
         )}
       </AnimatePresence>
-
-      <StudentThemeSettingsPanel
-        open={isThemeSettingsOpen}
-        onOpenChange={setIsThemeSettingsOpen}
-        selectedLightPaletteId={selectedLightPaletteId}
-        selectedDarkPaletteId={selectedDarkPaletteId}
-        currentMode={mode === 'dark' ? 'dark' : 'light'}
-        isSaving={isSavingPreferences}
-        onSelectPalette={(paletteMode, paletteId) => {
-          void updatePalette(paletteMode, paletteId);
-        }}
-        selectedAvatarSlug={user?.avatarSlug}
-        onSelectAvatar={(slug) => {
-          void updateAvatar(slug);
-        }}
-      />
     </div>
   );
 }

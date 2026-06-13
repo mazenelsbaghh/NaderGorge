@@ -29,6 +29,8 @@ export default function StudentProfilePageClient() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const [activeTab, setActiveTab] = useState<'profile' | 'appearance'>('profile');
+
   // Form states
   const [address, setAddress] = useState("");
   const [secondaryPhone, setSecondaryPhone] = useState("");
@@ -229,7 +231,38 @@ export default function StudentProfilePageClient() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      {/* Tab Navigation */}
+      <div className="flex gap-2 p-1.5 rounded-2xl border border-[var(--admin-border)]/50 bg-[var(--admin-card)]/50 backdrop-blur-md w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveTab('profile')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2",
+            activeTab === 'profile'
+              ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md"
+              : "text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"
+          )}
+        >
+          <User className="h-4 w-4" />
+          البيانات الشخصية والاتصال
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('appearance')}
+          className={cn(
+            "px-6 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2",
+            activeTab === 'appearance'
+              ? "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md"
+              : "text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]"
+          )}
+        >
+          <Palette className="h-4 w-4" />
+          تخصيص مظهر المنصة
+        </button>
+      </div>
+
+      {activeTab === 'profile' ? (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         {/* Left Column: Read-Only Registration Info & Devices */}
         <div className="space-y-6 lg:col-span-1">
           <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
@@ -415,7 +448,10 @@ export default function StudentProfilePageClient() {
               </button>
             </div>
           </form>
-
+        </div>
+      </div>
+      ) : (
+        <div className="max-w-4xl mx-auto">
           {/* ── Appearance & Theme Settings ── */}
           <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl space-y-6">
             <h3 className="text-xl font-black text-[var(--admin-text)] font-tajawal pb-3 border-b border-[var(--admin-border)] flex items-center gap-2">
@@ -602,7 +638,7 @@ export default function StudentProfilePageClient() {
             </div>
           </div>
         </div>
-      </div>
+      )}
     </motion.div>
   );
 }

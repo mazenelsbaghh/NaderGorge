@@ -147,6 +147,12 @@ run_migrations() {
 # STEP 6: Rebuild Docker containers
 # =============================================================================
 rebuild_containers() {
+  log_step "Syncing static webp avatars to Docker assets volume..."
+  remote "
+    mkdir -p /var/lib/docker/volumes/massar_assets/_data/uploads/avatars
+    cp -r ${SERVER_APP_DIR}/backend/src/NaderGorge.API/wwwroot/uploads/avatars/*.webp /var/lib/docker/volumes/massar_assets/_data/uploads/avatars/ || true
+  "
+
   log_step "Rebuilding and restarting Docker containers"
   log_info "This may take a few minutes..."
 
