@@ -687,7 +687,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 {/* Secondary nav links */}
                 <nav className="flex-1 space-y-1">
                   <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-[var(--admin-muted)]">
-                    صفحات تانية
+                    وجهات إضافية
                   </p>
                   {secondaryNavItems.map((item) => {
                     const Icon = item.icon;

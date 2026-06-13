@@ -161,14 +161,14 @@ export function AttendanceLogTable({ logs, loading }: AttendanceLogTableProps) {
                 <td className="px-5 py-4">
                   <div className="flex flex-col items-end gap-1 text-xs text-[var(--admin-muted)]">
                     <span className="flex items-center gap-1 font-mono">
-                      {log.ipAddress || 'Unknown IP'}
+                      {log.ipAddress || 'عنوان غير معروف'}
                       <MapPin className="h-3 w-3 text-[var(--admin-muted)]" />
                     </span>
                     <span
                       className="max-w-[180px] truncate flex items-center gap-1"
                       title={log.userAgent}
                     >
-                      {log.userAgent || 'Unknown Agent'}
+                      {log.userAgent || 'جهاز غير معروف'}
                       <Monitor className="h-3 w-3 text-[var(--admin-muted)]" />
                     </span>
                   </div>

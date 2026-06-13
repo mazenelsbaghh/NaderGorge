@@ -143,7 +143,7 @@ export function CommunityCommentsModerationTable() {
           <p className="line-clamp-4 whitespace-pre-wrap text-sm font-medium leading-7 text-[var(--admin-text)]">
             {row.body}
           </p>
-          <p className="text-xs font-medium text-[var(--admin-muted)]">البوست: {row.postId}</p>
+          <p className="text-xs font-medium text-[var(--admin-muted)]">المنشور: {row.postId}</p>
         </div>
       ),
     },
@@ -179,19 +179,19 @@ export function CommunityCommentsModerationTable() {
   ], [handleModeration, isMutating, selectedIds, toggleSelection]);
 
   return (
-    <section className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+    <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">
             <MessageSquareMore className="h-4 w-4" />
-            Community Comments
+            تعليقات المجتمع
           </div>
           <h3 className="text-xl font-black text-[var(--admin-text)]">تعليقات المجتمع قيد المراجعة</h3>
           <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
             هذه التعليقات لن تظهر للطلاب حتى يتم اعتمادها يدويًا.
           </p>
         </div>
-        <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4 text-center">
+        <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4 text-center">
           <p className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">معلّقة الآن</p>
           <p className="mt-2 text-3xl font-black text-[var(--admin-primary)]">{error ? '—' : comments.length}</p>
         </div>

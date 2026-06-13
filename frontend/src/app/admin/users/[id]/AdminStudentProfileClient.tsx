@@ -857,7 +857,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                <span className="text-3xl">{deviceIcon[device.deviceType ?? 'Desktop'] ?? '🖥️'}</span>
                                <div>
                                  <p className="font-black text-[var(--admin-text)] text-sm">
-                                   {osIcon[device.osName ?? ''] ?? '💻'} {device.osName ?? 'Unknown OS'}
+                                   {osIcon[device.osName ?? ''] ?? '💻'} {device.osName ?? 'نظام غير معروف'}
                                  </p>
                                  <p className="text-xs text-[var(--admin-muted)] font-medium">{device.deviceType ?? 'Desktop'}</p>
                                </div>
@@ -876,7 +876,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                            <div className="grid grid-cols-2 gap-3">
                              <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2">
                                <p className="text-xs text-[var(--admin-muted)] font-semibold mb-0.5">المتصفح</p>
-                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.browserName ?? 'Unknown'}</p>
+                               <p className="text-sm font-bold text-[var(--admin-text)]">{device.browserName ?? 'متصفح غير معروف'}</p>
                              </div>
                              <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2">
                                <p className="text-xs text-[var(--admin-muted)] font-semibold mb-0.5">عنوان IP</p>

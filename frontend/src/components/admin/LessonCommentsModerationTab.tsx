@@ -234,7 +234,7 @@ export function LessonCommentsModerationTab({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">
@@ -246,14 +246,14 @@ export function LessonCommentsModerationTab({
               تظهر هنا جميع التعليقات المرتبطة بهذه الحصة. التعليقات قيد المراجعة فقط تحتاج قرارًا، بينما المقبول والمرفوض يحتفظان بسجل المراجعة.
             </p>
           </div>
-          <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4 text-center">
+          <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4 text-center">
             <p className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">قيد المراجعة الآن</p>
             <p className="mt-2 text-3xl font-black text-[var(--admin-primary)]">{pendingCount}</p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <div className="inline-flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
             <Filter className="h-4 w-4 text-[var(--admin-primary)]" />

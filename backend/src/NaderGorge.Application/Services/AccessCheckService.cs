@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Services;
@@ -14,7 +15,6 @@ public class AccessCheckService : IAccessCheckService
 
     public async Task<bool> HasAccessToPackageAsync(Guid userId, Guid packageId, CancellationToken ct = default)
     {
-        // Admins, Teachers might bypass this, but for students we check StudentAccessGrants
         var userRoles = await _db.UserRoles
             .Include(ur => ur.Role)
             .Where(ur => ur.UserId == userId)
@@ -24,10 +24,12 @@ public class AccessCheckService : IAccessCheckService
         if (userRoles.Contains("Admin") || userRoles.Contains("Teacher"))
             return true;
 
+        // Only a Package-level grant gives access to the whole package
         var hasAccess = await _db.StudentAccessGrants
             .AnyAsync(g => g.UserId == userId &&
                            g.IsActive &&
-                           (g.PackageId == packageId || g.PackageId == null) &&
+                           g.GrantType == CodeType.Package &&
+                           g.PackageId == packageId &&
                            (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
 
         return hasAccess;
@@ -55,15 +57,18 @@ public class AccessCheckService : IAccessCheckService
         var termId = lesson.ContentSection?.TermId;
         var packageId = lesson.ContentSection?.Term?.PackageId;
 
-        // Check ANY matching grant: lesson → section → term → package (cascading)
+        // Check cascading access: Lesson → Section → Term → Package
+        // Each level must match its GrantType to prevent cross-level leaks
         var hasAccess = await _db.StudentAccessGrants
             .AnyAsync(g => g.UserId == userId &&
                            g.IsActive &&
                            (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow) &&
-                           (g.LessonId == lessonId ||
-                            g.ContentSectionId == sectionId ||
-                            (termId != null && g.TermId == termId) ||
-                            (packageId != null && g.PackageId == packageId)),
+                           (
+                               (g.GrantType == CodeType.Lesson && g.LessonId == lessonId) ||
+                               (g.GrantType == CodeType.Month && g.ContentSectionId == sectionId) ||
+                               (termId != null && g.GrantType == CodeType.Term && g.TermId == termId) ||
+                               (packageId != null && g.GrantType == CodeType.Package && g.PackageId == packageId)
+                           ),
                        ct);
 
         return hasAccess;

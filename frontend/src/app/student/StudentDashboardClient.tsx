@@ -22,6 +22,7 @@ export default function StudentDashboardClient() {
   const [data, setData] = useState<DashboardDto | null>(null);
   const [quickAccessItems, setQuickAccessItems] = useState<QuickAccessItemDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { user } = useAuthStore();
   const [showInstructionsOnboard, setShowInstructionsOnboard] = useState(false);
   const router = useRouter();
@@ -67,6 +68,7 @@ export default function StudentDashboardClient() {
   };
 
   const fetchDashboard = useCallback(() => {
+    setLoadError(null);
     Promise.all([
       studentService.getDashboard(),
       studentService.getQuickAccess(),
@@ -75,7 +77,9 @@ export default function StudentDashboardClient() {
         setData(dashboardData);
         setQuickAccessItems(dQuickAccess || []);
       })
-      .catch(() => {})
+      .catch(() => {
+        setLoadError("تعذر تحميل لوحة الطالب. تحقق من الاتصال ثم أعد المحاولة.");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -103,6 +107,27 @@ export default function StudentDashboardClient() {
     );
   }
 
+  if (!data && loadError) {
+    return (
+      <div
+        role="alert"
+        className="mx-auto flex max-w-xl flex-col items-center gap-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-500/30 dark:bg-red-500/10"
+      >
+        <p className="font-bold text-red-700 dark:text-red-200">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setLoading(true);
+            fetchDashboard();
+          }}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)]"
+        >
+          إعادة المحاولة
+        </button>
+      </div>
+    );
+  }
+
   const d: DashboardDto = data ?? {
     studentName: "طالب",
     activePackages: [],
@@ -116,6 +141,22 @@ export default function StudentDashboardClient() {
 
   return (
     <div className="space-y-8 pb-4">
+      {loadError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+        >
+          <span>{loadError} يتم عرض آخر بيانات متاحة.</span>
+          <button
+            type="button"
+            onClick={fetchDashboard}
+            className="min-h-11 rounded-xl border border-current px-4"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      )}
+
       <StudentHero data={d} />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] xl:items-stretch">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { formatCompactNumber } from './admin-utils';
 
 export interface AdminColumn<T> {
@@ -10,6 +10,12 @@ export interface AdminColumn<T> {
   render: (row: T) => React.ReactNode;
   align?: 'right' | 'left' | 'center';
 }
+
+const alignmentClasses = {
+  right: 'text-right',
+  left: 'text-left',
+  center: 'text-center',
+} as const;
 
 /**
  * Props for the generic Admin data table.
@@ -79,19 +85,13 @@ export function AdminDataTable<T>({
     }
   };
 
-  const isNestedInteractiveElement = (target: EventTarget | null, currentTarget: EventTarget) => {
-    if (!(target instanceof Element)) return false;
-
-    const interactiveElement = target.closest(
-      'button, a, input, select, textarea, [role="button"], [role="link"]',
-    );
-    return interactiveElement !== null && interactiveElement !== currentTarget;
-  };
+  const hasRowAction = Boolean(expandedRowRender || onRowClick);
+  const totalColumns = columns.length + (hasRowAction ? 1 : 0);
 
   const renderSkeleton = () => {
     return Array.from({ length: pageSize / 2 }).map((_, index) => (
       <tr key={`skeleton-${index}`}>
-        <td colSpan={columns.length} className="px-8 py-6">
+        <td colSpan={totalColumns} className="px-8 py-6">
           <div className="h-14 animate-pulse rounded-full bg-[var(--admin-card-strong)]" />
         </td>
       </tr>
@@ -99,7 +99,7 @@ export function AdminDataTable<T>({
   };
 
   return (
-    <div className="overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 shadow-[var(--admin-shadow)] backdrop-blur-2xl">
+    <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)]">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[780px] border-collapse">
           <thead>
@@ -107,11 +107,13 @@ export function AdminDataTable<T>({
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`px-8 py-5 text-sm font-bold uppercase tracking-[0.2em] text-[var(--admin-primary)] text-${col.align || 'right'}`}
+                  scope="col"
+                  className={`px-8 py-5 text-sm font-bold text-[var(--admin-primary)] ${alignmentClasses[col.align ?? 'right']}`}
                 >
                   {col.label}
                 </th>
               ))}
+              {hasRowAction && <th scope="col" className="w-24 px-4 py-5 text-center text-sm font-bold text-[var(--admin-primary)]">الإجراء</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--admin-border)]">
@@ -119,7 +121,7 @@ export function AdminDataTable<T>({
               renderSkeleton()
             ) : errorMessage ? (
               <tr>
-                <td colSpan={columns.length} className="px-8 py-14 text-center">
+                <td colSpan={totalColumns} className="px-8 py-14 text-center">
                   <div role="alert" className="mx-auto flex max-w-lg flex-col items-center gap-3">
                     <p className="text-sm font-bold text-[var(--admin-danger)]">{errorMessage}</p>
                     {onRetry && (
@@ -136,7 +138,7 @@ export function AdminDataTable<T>({
               </tr>
             ) : displayedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-8 py-16 text-center text-[var(--admin-muted)]">
+                <td colSpan={totalColumns} className="px-8 py-16 text-center text-[var(--admin-muted)]">
                   {emptyMessage}
                 </td>
               </tr>
@@ -144,46 +146,40 @@ export function AdminDataTable<T>({
               displayedData.map((row) => {
                 const key = rowKey(row);
                 const isExpanded = expandedKeys.has(key);
-                const isInteractive = Boolean(expandedRowRender || onRowClick);
                 const expandedRowId = `admin-table-expanded-${String(key)}`;
                 return (
                   <React.Fragment key={key}>
-                    <tr
-                      role={isInteractive ? 'button' : undefined}
-                      tabIndex={isInteractive ? 0 : undefined}
-                      aria-expanded={expandedRowRender ? isExpanded : undefined}
-                      aria-controls={expandedRowRender ? expandedRowId : undefined}
-                      aria-label={isInteractive ? rowActionLabel?.(row) ?? 'عرض تفاصيل الصف' : undefined}
-                      className={`transition-colors hover:bg-[var(--admin-hover)] ${isInteractive ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]' : ''}`}
-                      onClick={(event) => {
-                        if (!isInteractive || isNestedInteractiveElement(event.target, event.currentTarget)) return;
-                        activateRow(row, key);
-                      }}
-                      onKeyDown={(event) => {
-                        if (
-                          !isInteractive
-                          || isNestedInteractiveElement(event.target, event.currentTarget)
-                          || (event.key !== 'Enter' && event.key !== ' ')
-                        ) {
-                          return;
-                        }
-
-                        event.preventDefault();
-                        activateRow(row, key);
-                      }}
-                    >
+                    <tr className="transition-colors hover:bg-[var(--admin-hover)]">
                       {columns.map((col) => (
                         <td
                           key={col.key}
-                          className={`px-8 py-6 text-sm text-[var(--admin-text)] text-${col.align || 'right'}`}
+                          className={`px-8 py-6 text-sm text-[var(--admin-text)] ${alignmentClasses[col.align ?? 'right']}`}
                         >
                           {col.render(row)}
                         </td>
                       ))}
+                      {hasRowAction && (
+                        <td className="px-4 py-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => activateRow(row, key)}
+                            aria-expanded={expandedRowRender ? isExpanded : undefined}
+                            aria-controls={expandedRowRender ? expandedRowId : undefined}
+                            aria-label={rowActionLabel?.(row) ?? 'عرض تفاصيل الصف'}
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)]"
+                          >
+                            {expandedRowRender ? (
+                              <ChevronDown className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+                            ) : (
+                              <ExternalLink className="h-5 w-5" aria-hidden="true" />
+                            )}
+                          </button>
+                        </td>
+                      )}
                     </tr>
                     {isExpanded && expandedRowRender && (
                       <tr className="bg-[var(--admin-card-soft)]">
-                        <td id={expandedRowId} colSpan={columns.length} className="px-8 py-4 border-b border-[var(--admin-border)]">
+                        <td id={expandedRowId} colSpan={totalColumns} className="border-b border-[var(--admin-border)] px-8 py-4">
                           {expandedRowRender(row)}
                         </td>
                       </tr>

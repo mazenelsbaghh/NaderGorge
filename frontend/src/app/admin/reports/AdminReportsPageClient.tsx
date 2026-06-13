@@ -399,9 +399,9 @@ export default function AdminReportsPageClient() {
                   <option value="">كل الأدوار</option>
                   <option value="Admin">مدير (Admin)</option>
                   <option value="Supervisor">مشرف (Supervisor)</option>
-                  <option value="Assistant">مساعد (Assistant)</option>
+                  <option value="Assistant">مساعد</option>
                   <option value="Teacher">مدرس (Teacher)</option>
-                  <option value="Staff">موظف (Staff)</option>
+                  <option value="Staff">موظف</option>
                 </select>
               </div>
             </div>

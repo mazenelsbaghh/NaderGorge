@@ -55,7 +55,7 @@ export function CommunityPostsModerationTable() {
       setPosts(rows);
       setSelectedIds(new Set());
     } catch {
-      setError('تعذر تحميل بوستات المجتمع. تحقق من الاتصال ثم أعد المحاولة.');
+      setError('تعذر تحميل منشورات المجتمع. تحقق من الاتصال ثم أعد المحاولة.');
     } finally {
       setLoading(false);
     }
@@ -90,13 +90,13 @@ export function CommunityPostsModerationTable() {
       if (failed === 0) {
         toast.success(
           postIds.length === 1
-            ? `تم ${actionLabel} البوست.`
-            : `تم ${actionLabel} ${succeeded} بوستات.`,
+            ? `تم ${actionLabel} المنشور.`
+            : `تم ${actionLabel} ${succeeded} منشورات.`,
         );
       } else if (succeeded === 0) {
-        toast.error(`تعذر ${actionLabel} البوستات المحددة.`);
+        toast.error(`تعذر ${actionLabel} المنشورات المحددة.`);
       } else {
-        toast.error(`تم ${actionLabel} ${succeeded} بوستات، وتعذر تنفيذ الإجراء على ${failed}.`);
+        toast.error(`تم ${actionLabel} ${succeeded} منشورات، وتعذر تنفيذ الإجراء على ${failed}.`);
       }
 
       if (succeeded > 0) {
@@ -139,7 +139,7 @@ export function CommunityPostsModerationTable() {
             checked={selectedIds.has(row.id)}
             disabled={isMutating}
             onChange={() => toggleSelection(row.id)}
-            aria-label={`تحديد بوست الطالب ${row.studentName}`}
+            aria-label={`تحديد منشور الطالب ${row.studentName}`}
             className="h-4 w-4 accent-[var(--admin-primary)]"
           />
         ) : (
@@ -158,7 +158,7 @@ export function CommunityPostsModerationTable() {
     },
     {
       key: 'post',
-      label: 'البوست',
+      label: 'المنشور',
       render: (row) => (
         <div className="max-w-xl space-y-2">
           <p className="line-clamp-4 whitespace-pre-wrap text-sm font-medium leading-7 text-[var(--admin-text)]">
@@ -230,26 +230,26 @@ export function CommunityPostsModerationTable() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">
               <MessageSquareText className="h-4 w-4" />
               Community Moderation
             </div>
-            <h3 className="text-xl font-black text-[var(--admin-text)]">مراجعة بوستات مجتمع الطلاب</h3>
+            <h3 className="text-xl font-black text-[var(--admin-text)]">مراجعة منشورات مجتمع الطلاب</h3>
             <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
-              تظهر هنا كل البوستات المرسلة من الطلاب. البوستات قيد المراجعة فقط تحتاج قرارًا، بينما يحتفظ المقبول والمرفوض بسجل آخر مراجعة.
+              تظهر هنا كل المنشورات المرسلة من الطلاب. المنشورات قيد المراجعة فقط تحتاج قرارًا، بينما يحتفظ المقبول والمرفوض بسجل آخر مراجعة.
             </p>
           </div>
-          <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4 text-center">
+          <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-4 text-center">
             <p className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">قيد المراجعة ضمن النتائج</p>
             <p className="mt-2 text-3xl font-black text-[var(--admin-primary)]">{error ? '—' : pendingCount}</p>
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+      <section className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
         <div className="mb-5 flex flex-wrap items-center gap-3">
           <div className="inline-flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
             <Filter className="h-4 w-4 text-[var(--admin-primary)]" />
@@ -324,10 +324,10 @@ export function CommunityPostsModerationTable() {
           onRetry={() => void loadPosts(activeFilter)}
           emptyMessage={
             activeFilter === 'Pending'
-              ? 'لا توجد بوستات قيد المراجعة حاليًا.'
-              : 'لا توجد بوستات مطابقة لهذا الفلتر.'
+              ? 'لا توجد منشورات قيد المراجعة حاليًا.'
+              : 'لا توجد منشورات مطابقة لهذا الفلتر.'
           }
-          rowActionLabel={(row) => `عرض تفاصيل بوست الطالب ${row.studentName}`}
+          rowActionLabel={(row) => `عرض تفاصيل منشور الطالب ${row.studentName}`}
           expandedRowRender={(row) => (
             <div className="space-y-4">
               <div>
@@ -366,12 +366,12 @@ export function CommunityPostsModerationTable() {
         onClose={() => {
           if (!isMutating) setRejectingPostIds([]);
         }}
-        title={rejectingPostIds.length > 1 ? 'تأكيد رفض البوستات المحددة' : 'تأكيد رفض البوست'}
-        subtitle="سيتم إخفاء البوستات المرفوضة عن الطلاب وتسجيل قرار المراجعة."
+        title={rejectingPostIds.length > 1 ? 'تأكيد رفض المنشورات المحددة' : 'تأكيد رفض المنشور'}
+        subtitle="سيتم إخفاء المنشورات المرفوضة عن الطلاب وتسجيل قرار المراجعة."
       >
         <div className="space-y-5" dir="rtl">
           <p className="text-sm font-medium leading-7 text-[var(--admin-text)]">
-            هل تريد متابعة رفض {rejectingPostIds.length > 1 ? `${rejectingPostIds.length} بوستات` : 'هذا البوست'}؟
+            هل تريد متابعة رفض {rejectingPostIds.length > 1 ? `${rejectingPostIds.length} منشورات` : 'هذا المنشور'}؟
           </p>
           <div className="flex items-center justify-end gap-3 border-t border-[var(--admin-border)] pt-4">
             <button

@@ -88,6 +88,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [watchInfo, setWatchInfo] = useState<{current: number, max: number, isLocked?: boolean} | null>(null);
   const [extraWatchReqStatus, setExtraWatchReqStatus] = useState<ExtraWatchRequestStatus | null>(null);
   const [extraWatchRejectionReason, setExtraWatchRejectionReason] = useState<string | null>(null);
+  const [extraWatchStatusError, setExtraWatchStatusError] = useState<string | null>(null);
   const [requestingExtra, setRequestingExtra] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
@@ -126,25 +127,32 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     };
   }, [isPlaying, handlePlayerInteraction]);
 
-  useEffect(() => {
-    if (status === 'locked') {
-      videoSessionService.getExtraWatchStatus(lessonVideoId).then(res => {
-         if (res.data?.data) {
-          setExtraWatchReqStatus(res.data.data.requestStatus ?? null);
-          setExtraWatchRejectionReason(res.data.data.rejectionReason ?? null);
-         }
-      }).catch(() => {});
+  const loadExtraWatchStatus = useCallback(async () => {
+    setExtraWatchStatusError(null);
+    try {
+      const response = await videoSessionService.getExtraWatchStatus(lessonVideoId);
+      setExtraWatchReqStatus(response.data?.data?.requestStatus ?? null);
+      setExtraWatchRejectionReason(response.data?.data?.rejectionReason ?? null);
+    } catch (error) {
+      devConsole.error(error);
+      setExtraWatchStatusError('تعذر التحقق من حالة طلب المشاهدة الإضافية.');
     }
-  }, [status, lessonVideoId]);
+  }, [lessonVideoId]);
+
+  useEffect(() => {
+    if (status === 'locked') void loadExtraWatchStatus();
+  }, [loadExtraWatchStatus, status]);
 
   const handleRequestExtra = async () => {
     setRequestingExtra(true);
+    setExtraWatchStatusError(null);
     try {
       await videoSessionService.requestExtraWatch(lessonVideoId);
       setExtraWatchReqStatus('Pending');
       setExtraWatchRejectionReason(null);
     } catch(err) {
       devConsole.error(err);
+      setExtraWatchStatusError('تعذر إرسال طلب المشاهدة الإضافية. أعد المحاولة.');
     } finally {
       setRequestingExtra(false);
     }
@@ -678,7 +686,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         <h3 className="text-xl font-bold text-white mb-2">تم الوصول للحد الأقصى للمشاهدات</h3>
         <p className="text-gray-300 mb-6">لقد استنفدت الحد المسموح به لمشاهدة هذا الفيديو ({watchInfo?.max} مرات).</p>
         
-        {extraWatchReqStatus === 'Pending' ? (
+        {extraWatchStatusError ? (
+           <div role="alert" className="flex max-w-md flex-col items-center gap-3 rounded-xl border border-red-500/50 bg-red-500/20 px-5 py-4 text-red-100">
+              <span>{extraWatchStatusError}</span>
+              <button
+                type="button"
+                onClick={() => void loadExtraWatchStatus()}
+                className="min-h-11 rounded-lg border border-red-200/50 px-4 font-bold"
+              >
+                إعادة التحقق
+              </button>
+           </div>
+        ) : extraWatchReqStatus === 'Pending' ? (
            <div className="px-6 py-3 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 rounded-lg">
               جاري مراجعة طلبك للمشاهدة الإضافية من قبل الدعم الفني
            </div>
@@ -709,7 +728,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         <AlertCircle className="w-12 h-12 text-red-500 mb-4 drop-shadow-lg" />
         <h3 className="text-xl font-bold text-white mb-2">عذراً، حدث خطأ</h3>
         <p className="text-gray-300">{errorMessage}</p>
-        <button type="button" onClick={loadVideo} className="mt-6 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-md transition-colors shadow-md">
+        <button type="button" onClick={loadVideo} className="mt-6 min-h-11 rounded-md bg-red-600 px-6 font-medium text-white shadow-md transition-colors hover:bg-red-500">
           حاول مرة أخرى
         </button>
       </div>
@@ -722,8 +741,18 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       {/* Video Container */}
       <div 
         className="relative w-full aspect-video bg-black cursor-pointer rounded-xl overflow-hidden"
+        role="region"
+        aria-label="مشغل الفيديو"
+        tabIndex={0}
         onMouseMove={handlePlayerInteraction}
         onTouchStart={handlePlayerInteraction}
+        onFocus={handlePlayerInteraction}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handlePlayerInteraction();
+          }
+        }}
         onClick={() => handlePlayerInteraction()}
         onMouseLeave={() => { if(isPlaying) setShowControls(false) }}
       >
@@ -747,7 +776,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsChapterInfoOpen(true)} 
-                   className="pointer-events-auto w-10 h-10 shrink-0 rounded-xl bg-black/60 backdrop-blur border border-white/10 flex items-center justify-center text-white hover:bg-[var(--admin-primary)] transition shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer"
+                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-[var(--admin-primary)]"
                    aria-label="فتح معلومات الفصل الحالي"
                  >
                     <Info className="w-5 h-5" />
@@ -764,7 +793,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                     <button 
                       type="button"
                       onClick={() => setIsChapterInfoOpen(false)} 
-                      className="absolute top-2 left-2 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-full p-1.5 transition z-10"
+                      className="absolute left-2 top-2 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/5 text-white/50 transition hover:bg-white/10 hover:text-red-400"
                       aria-label="إغلاق معلومات الفصل"
                     >
                        <X className="w-4 h-4" />
@@ -810,11 +839,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsMindmapOpen(true)} 
-                   className="pointer-events-auto shrink-0 rounded-xl bg-black/60 backdrop-blur border border-white/10 flex items-center justify-center text-white hover:bg-[var(--admin-primary)] transition shadow-[0_4px_20px_rgba(0,0,0,0.5)] cursor-pointer px-4 h-10"
+                   className="pointer-events-auto flex min-h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 px-4 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-[var(--admin-primary)]"
                    aria-label="فتح الخريطة الذهنية للفصل"
                  >
                     <Map className="w-5 h-5 mr-2" />
-                    <span className="font-bold text-sm tracking-wide">Mindmap</span>
+                    <span className="text-sm font-bold">الخريطة الذهنية</span>
                  </motion.button>
                ) : (
                  <motion.div 
@@ -828,7 +857,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                     <button 
                       type="button"
                       onClick={() => setIsMindmapOpen(false)} 
-                      className="absolute top-2 right-2 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-full p-1.5 transition z-10"
+                      className="absolute right-2 top-2 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/5 text-white/50 transition hover:bg-white/10 hover:text-red-400"
                       aria-label="إغلاق الخريطة الذهنية"
                     >
                        <X className="w-4 h-4" />

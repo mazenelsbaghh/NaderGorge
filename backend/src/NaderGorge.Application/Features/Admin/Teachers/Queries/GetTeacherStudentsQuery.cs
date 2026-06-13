@@ -18,6 +18,7 @@ public record TeacherStudentDto(
     string Phone,
     string? AvatarSlug,
     string PackageName,
+    decimal Price,
     DateTime EnrolledAt,
     DateTime? LastWatchedAt,
     int WatchedVideosCount
@@ -70,6 +71,9 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
                 PackageName = sag.PackageId != null
                     ? _db.Packages.Where(p => p.Id == sag.PackageId).Select(p => p.Name).FirstOrDefault() ?? ""
                     : "",
+                PackagePrice = sag.PackageId != null
+                    ? _db.Packages.Where(p => p.Id == sag.PackageId).Select(p => p.Price).FirstOrDefault()
+                    : 0m,
                 sag.GrantedAt
             })
             .ToListAsync(ct);
@@ -99,6 +103,7 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
                 g.StudentPhone,
                 g.AvatarSlug,
                 g.PackageName,
+                g.PackagePrice,
                 g.GrantedAt,
                 watch?.LastWatchedAt,
                 watch?.WatchedVideosCount ?? 0

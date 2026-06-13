@@ -11,7 +11,7 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
   Users, Package, BookOpen, PenLine, DollarSign, Wallet,
   GraduationCap, Activity, Phone, User, Clock3,
-  FileText, ArrowLeft,
+  FileText, ArrowLeft, Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -138,6 +138,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const [payouts, setPayouts] = useState<any[]>([]);
   const [codeGroups, setCodeGroups] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<UserAuditLogDto[]>([]);
+  const [studentPackageFilter, setStudentPackageFilter] = useState<string>('all');
 
 
 
@@ -422,9 +423,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
           </div>
         )}
 
-        {/* ══════════════════════════════════════════
-            TAB 3: Students — الطلاب
-            ══════════════════════════════════════════ */}
         {activeTab === 'students' && (
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -433,23 +431,85 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
             </div>
 
             <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
-              <div className="mb-5">
-                <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">قائمة الطلاب</h3>
-                <p className="text-[var(--admin-muted)]">الطلاب المسجلين في باقات هذا المعلم مع حالة النشاط.</p>
+              {/* Header with title + download button */}
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div>
+                  <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">قائمة الطلاب</h3>
+                  <p className="text-[var(--admin-muted)]">الطلاب المسجلين في باقات هذا المعلم مع تفاصيل الاشتراك.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const filtered = studentPackageFilter === 'all' ? students : students.filter((s: any) => (s.packageName || s.activatedPackageName) === studentPackageFilter);
+                    const csv = [
+                      ['اسم الطالب', 'رقم الهاتف', 'الباقة', 'السعر', 'تاريخ التفعيل', 'الحالة'].join(','),
+                      ...filtered.map((s: any) => [
+                        s.fullName || s.studentName || '',
+                        s.phone || s.phoneNumber || '',
+                        s.packageName || s.activatedPackageName || '',
+                        s.price ?? '',
+                        s.enrolledAt || s.activatedAt || s.grantedAt || '',
+                        s.isActive !== false ? 'نشط' : 'غير نشط',
+                      ].join(','))
+                    ].join('\n');
+                    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `teacher-students-${new Date().toISOString().slice(0,10)}.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success('تم تحميل الملف بنجاح');
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold bg-[var(--admin-primary-15)] text-[var(--admin-text)] hover:bg-[var(--admin-primary-15)]/80 transition-all active:scale-95"
+                >
+                  <Download size={16} />
+                  تنزيل CSV
+                </button>
               </div>
+
+              {/* Package filter pills */}
+              {(() => {
+                const packages = [...new Set(students.map((s: any) => s.packageName || s.activatedPackageName).filter(Boolean))];
+                if (packages.length <= 1) return null;
+                return (
+                  <div className="flex flex-wrap gap-2 mb-5">
+                    <button
+                      onClick={() => setStudentPackageFilter('all')}
+                      className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${studentPackageFilter === 'all' ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
+                    >
+                      الكل ({students.length})
+                    </button>
+                    {packages.map((pkg: string) => {
+                      const count = students.filter((s: any) => (s.packageName || s.activatedPackageName) === pkg).length;
+                      return (
+                        <button
+                          key={pkg}
+                          onClick={() => setStudentPackageFilter(pkg)}
+                          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${studentPackageFilter === pkg ? 'bg-[var(--admin-text)] text-[var(--admin-bg)]' : 'bg-[var(--admin-hover)] text-[var(--admin-muted)] hover:bg-[var(--admin-border)]'}`}
+                        >
+                          {pkg} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               <AdminDataTable<any>
                 columns={[
                   { key: 'fullName', label: 'اسم الطالب', render: (row) => (
                     <span className="font-bold text-[var(--admin-text)]">{row.fullName || row.studentName || '—'}</span>
                   )},
-                  { key: 'phoneNumber', label: 'رقم الهاتف', render: (row) => (
-                    <span className="font-mono text-sm text-[var(--admin-text)]">{row.phoneNumber || '—'}</span>
+                  { key: 'phone', label: 'رقم الهاتف', render: (row) => (
+                    <span className="font-mono text-sm text-[var(--admin-text)] tracking-wide" dir="ltr">{row.phone || row.phoneNumber || '—'}</span>
                   )},
                   { key: 'packageName', label: 'الباقة', render: (row) => (
-                    <span className="text-sm text-[var(--admin-text)]">{row.activatedPackageName || row.packageName || '—'}</span>
+                    <span className="text-sm text-[var(--admin-text)]">{row.packageName || row.activatedPackageName || '—'}</span>
                   )},
-                  { key: 'activatedAt', label: 'تاريخ التفعيل', render: (row) => formatDate(row.activatedAt || row.enrolledAt) },
+                  { key: 'price', label: 'السعر', render: (row) => (
+                    <span className="font-mono font-bold text-sm text-[var(--admin-text)]">{row.price != null ? `${row.price} ج.م` : '—'}</span>
+                  )},
+                  { key: 'enrolledAt', label: 'تاريخ التفعيل', render: (row) => formatDate(row.enrolledAt || row.activatedAt || row.grantedAt) },
                   { key: 'status', label: 'الحالة', render: (row) => {
                     const active = row.isActive !== false;
                     return (
@@ -460,7 +520,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     );
                   }},
                 ]}
-                data={students}
+                data={studentPackageFilter === 'all' ? students : students.filter((s: any) => (s.packageName || s.activatedPackageName) === studentPackageFilter)}
                 rowKey={(row) => row.id || row.studentId || row.fullName}
                 emptyMessage="لا يوجد طلاب مسجلين حالياً"
               />

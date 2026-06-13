@@ -52,7 +52,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       mediaUrl = attachmentUrl.trim();
       mediaMetadata = JSON.stringify({
         fileName: attachmentUrl.split("/").pop() || "attachment",
-        fileSize: "Unknown Size",
+        fileSize: "حجم غير معروف",
         type: attachmentUrl.endsWith(".mp3") ? "Audio" : "Image",
       });
     }
