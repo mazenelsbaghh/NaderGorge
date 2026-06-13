@@ -375,6 +375,7 @@ export interface LessonCockpitDto {
   title: string;
   summary: string;
   examId?: string | null;
+  price: number;
   videos: any[];
   resources: any[];
   homework: any[];
@@ -741,9 +742,17 @@ export const adminService = {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/sections', payload);
     return res.data?.data;
   },
+  updateSection: async (id: string, payload: { title: string; order: number; price: number }) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/sections/${id}`, payload);
+    return res.data;
+  },
   createLesson: async (payload: any) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/lessons', payload);
     return res.data?.data;
+  },
+  updateLesson: async (id: string, payload: { title: string; summary: string; order: number; price: number }) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/lessons/${id}`, payload);
+    return res.data;
   },
   getLessonCockpit: async (id: string) => {
     const res = await apiClient.get<ApiResponse<LessonCockpitDto>>(`/admin/lessons/${id}/cockpit`);

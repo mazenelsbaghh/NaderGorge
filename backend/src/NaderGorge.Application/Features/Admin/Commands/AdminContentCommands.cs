@@ -361,6 +361,75 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
     }
 }
 
+// --- Update Section ---
+public record UpdateSectionCommand(Guid Id, string Title, int Order, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+
+public class UpdateSectionCommandHandler : IRequestHandler<UpdateSectionCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public UpdateSectionCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
+
+    public async Task<ApiResponse> Handle(UpdateSectionCommand request, CancellationToken ct)
+    {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessSectionAsync(request.CurrentUserId.Value, request.Id, ct);
+            if (!canAccess) return ApiResponse.Fail("Unauthorized access to this section.");
+        }
+
+        var section = await _db.ContentSections.FindAsync(new object[] { request.Id }, ct);
+        if (section == null) return ApiResponse.Fail("Section not found");
+
+        section.Title = request.Title;
+        section.Order = request.Order;
+        section.Price = request.Price;
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
+// --- Update Lesson ---
+public record UpdateLessonCommand(Guid Id, string Title, string Summary, int Order, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+
+public class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public UpdateLessonCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
+
+    public async Task<ApiResponse> Handle(UpdateLessonCommand request, CancellationToken ct)
+    {
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.Id, ct);
+            if (!canAccess) return ApiResponse.Fail("Unauthorized access to this lesson.");
+        }
+
+        var lesson = await _db.Lessons.FindAsync(new object[] { request.Id }, ct);
+        if (lesson == null) return ApiResponse.Fail("Lesson not found");
+
+        lesson.Title = request.Title;
+        lesson.Summary = request.Summary;
+        lesson.Order = request.Order;
+        lesson.Price = request.Price;
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
 public record CreateLessonCommand(string Title, string Summary, int Order, Guid SectionId, Guid? ExamId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, ApiResponse<Guid>>

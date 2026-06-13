@@ -57,7 +57,13 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
 
         if (teacherId.HasValue)
         {
+            // Teachers see their own packages regardless of IsActive
             query = query.Where(p => p.TeacherId == teacherId.Value);
+        }
+        else
+        {
+            // Students only see active packages
+            query = query.Where(p => p.IsActive);
         }
 
         var packages = await query.ToListAsync(ct);

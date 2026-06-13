@@ -1,6 +1,7 @@
 'use client';
 
-import { BarChart3, Sparkles, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { BarChart3, Sparkles, Pencil, Check, X, type LucideIcon } from 'lucide-react';
 
 export interface OverviewStat {
   label: string;
@@ -20,6 +21,7 @@ interface EntityOverviewDashboardProps {
   };
   stats?: OverviewStat[];
   loading?: boolean;
+  onPriceUpdate?: (newPrice: number) => Promise<void>;
   children?: React.ReactNode;
 }
 
@@ -40,10 +42,25 @@ function StatSkeleton() {
   );
 }
 
-export function EntityOverviewDashboard({ entityType, details, stats = [], loading = false, children }: EntityOverviewDashboardProps) {
+export function EntityOverviewDashboard({ entityType, details, stats = [], loading = false, onPriceUpdate, children }: EntityOverviewDashboardProps) {
+  const [editingPrice, setEditingPrice] = useState(false);
+  const [priceValue, setPriceValue] = useState(details.price ?? 0);
+  const [savingPrice, setSavingPrice] = useState(false);
+
   const createdAt = details.createdAt
     ? details.createdAt
     : 'غير متاح';
+
+  const handlePriceSave = async () => {
+    if (!onPriceUpdate) return;
+    setSavingPrice(true);
+    try {
+      await onPriceUpdate(priceValue);
+      setEditingPrice(false);
+    } finally {
+      setSavingPrice(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
@@ -68,16 +85,57 @@ export function EntityOverviewDashboard({ entityType, details, stats = [], loadi
           <div className="flex flex-col justify-center space-y-5 rounded-2xl bg-[var(--admin-card)] p-5">
             <div>
               <p className="mb-1 text-xs font-bold text-[var(--admin-muted)]">تسعير الطرح</p>
-              <p className="text-3xl font-black text-[var(--admin-text)]">
-                {details.price && details.price > 0 ? (
-                  <>
-                    <span className="text-[var(--admin-primary)]">{details.price}</span>
-                    <span className="mr-1 text-lg text-[var(--admin-muted)]">ج.م</span>
-                  </>
-                ) : (
-                  <span className="text-[var(--admin-success)]">مجانا</span>
-                )}
-              </p>
+              {editingPrice ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={priceValue}
+                    onChange={(e) => setPriceValue(Number(e.target.value))}
+                    className="w-24 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-3 py-2 text-lg font-black text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-colors"
+                    autoFocus
+                    disabled={savingPrice}
+                  />
+                  <span className="text-sm text-[var(--admin-muted)]">ج.م</span>
+                  <button
+                    onClick={handlePriceSave}
+                    disabled={savingPrice}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500/15 text-green-600 transition-colors hover:bg-green-500 hover:text-white disabled:opacity-50"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => { setEditingPrice(false); setPriceValue(details.price ?? 0); }}
+                    disabled={savingPrice}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/15 text-red-500 transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-3xl font-black text-[var(--admin-text)]">
+                    {details.price && details.price > 0 ? (
+                      <>
+                        <span className="text-[var(--admin-primary)]">{details.price}</span>
+                        <span className="mr-1 text-lg text-[var(--admin-muted)]">ج.م</span>
+                      </>
+                    ) : (
+                      <span className="text-[var(--admin-success)]">مجانا</span>
+                    )}
+                  </p>
+                  {onPriceUpdate && (
+                    <button
+                      onClick={() => { setPriceValue(details.price ?? 0); setEditingPrice(true); }}
+                      className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--admin-card-strong)] text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)]"
+                      title="تعديل السعر"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <p className="mb-1 text-xs font-bold text-[var(--admin-muted)]">تاريخ الإنشاء</p>

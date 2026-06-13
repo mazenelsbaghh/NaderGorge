@@ -17,6 +17,7 @@ public record LessonCockpitDto(
     string Title,
     string Summary,
     Guid? ExamId,
+    decimal Price,
     List<LessonCockpitVideoDto> Videos,
     List<LessonCockpitResourceDto> Resources,
     List<LessonCockpitHomeworkDto> Homework,
@@ -79,6 +80,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
             lesson.Title,
             lesson.Summary,
             lesson.ExamId,
+            lesson.Price,
             lesson.Videos.OrderBy(v => v.Order).Select(v =>
             {
                 var chapters = v.VideoChapters?.OrderBy(c => c.Order)

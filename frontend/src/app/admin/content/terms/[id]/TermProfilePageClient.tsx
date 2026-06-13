@@ -158,6 +158,11 @@ export default function TermProfilePageClient(props: { params: { id: string } })
             details={{ title: term.title, price: term.price }}
             stats={overviewStats}
             loading={statsLoading}
+            onPriceUpdate={async (newPrice) => {
+              await adminService.updateTerm(params.id, { title: term.title, order: term.order, price: newPrice });
+              toast.success('تم تحديث السعر');
+              setTerm((c: any) => ({ ...c, price: newPrice }));
+            }}
           />
         </div>
       )}

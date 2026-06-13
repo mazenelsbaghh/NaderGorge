@@ -157,6 +157,11 @@ export default function SectionProfilePageClient(props: { params: { id: string }
             details={{ title: section.title, price: section.price }}
             stats={overviewStats}
             loading={statsLoading}
+            onPriceUpdate={async (newPrice) => {
+              await adminService.updateSection(params.id, { title: section.title, order: section.order, price: newPrice });
+              toast.success('تم تحديث السعر');
+              setSection((c: any) => ({ ...c, price: newPrice }));
+            }}
           />
         </div>
       )}

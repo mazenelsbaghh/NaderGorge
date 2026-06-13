@@ -363,12 +363,28 @@ public class AdminController : ControllerBase
         return result.Success ? CreatedAtAction(nameof(CreateSection), new { id = result.Data }, result) : BadRequest(result);
     }
 
+    [HttpPut("sections/{id:guid}")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> UpdateSection(Guid id, [FromBody] UpdateSectionDto dto)
+    {
+        var result = await _mediator.Send(new UpdateSectionCommand(id, dto.Title, dto.Order, dto.Price, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("lessons")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> CreateLesson(CreateLessonCommand command)
     {
         var result = await _mediator.Send(command with { CurrentUserId = GetUserId() });
         return result.Success ? CreatedAtAction(nameof(CreateLesson), new { id = result.Data }, result) : BadRequest(result);
+    }
+
+    [HttpPut("lessons/{id:guid}")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> UpdateLesson(Guid id, [FromBody] UpdateLessonDto dto)
+    {
+        var result = await _mediator.Send(new UpdateLessonCommand(id, dto.Title, dto.Summary, dto.Order, dto.Price, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
     }
 
     [HttpGet("lessons/{lessonId:guid}/cockpit")]
@@ -867,6 +883,8 @@ public record UpdateVideoRequest(string Title, string Provider, string UrlOrEmbe
 public record AttachHomeworkRequest(string Title, string Instructions, bool IsMandatory, bool IsRandomized, int RequiredPointsToPass, decimal TotalScore, List<AttachHomeworkQuestionDto> Questions);
 public record LinkLessonExamRequest(Guid? ExamId);
 public record UpdateTermDto(string Title, int Order, decimal Price);
+public record UpdateSectionDto(string Title, int Order, decimal Price);
+public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price);
 public record UpdatePackageDto(string Name, string Description, decimal Price, bool IsActive);
 public record UpsertPackageCodeProfileRequest(
     PackageCodePageProfileStatus Status,

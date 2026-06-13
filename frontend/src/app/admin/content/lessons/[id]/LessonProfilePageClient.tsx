@@ -117,9 +117,14 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       {activeTab === 'overview' && (
         <EntityOverviewDashboard 
           entityType="حصة" 
-          details={{ title: lesson.title, description: lesson.summary }}
+          details={{ title: lesson.title, description: lesson.summary, price: lesson.price }}
           stats={overviewStats}
           loading={false}
+          onPriceUpdate={async (newPrice) => {
+            await adminService.updateLesson(lesson.lessonId, { title: lesson.title, summary: lesson.summary, order: 0, price: newPrice });
+            toast.success('تم تحديث السعر');
+            await loadData();
+          }}
         >
           {/* Quick navigation cards */}
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
