@@ -225,15 +225,27 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
           {lesson.examId ? (
             <AttachedExamViewer examId={lesson.examId} />
           ) : (
-            <>
-              <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
-                <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
-                  <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
-                  إنشاء امتحان مدمج
-                </h3>
-                <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} />
-              </div>
-            </>
+            <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+              <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
+                <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
+                إنشاء امتحان الحصة
+              </h3>
+              <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} />
+            </div>
+          )}
+
+          {/* Always show video exam builder if videos exist */}
+          {(lesson.videos?.length ?? 0) > 0 && (
+            <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+              <h3 className="mb-2 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
+                <Video className="h-6 w-6 text-[var(--admin-primary)]" />
+                إضافة امتحان فيديو (Pop Quiz)
+              </h3>
+              <p className="mb-6 text-sm text-[var(--admin-muted)]">
+                أضف امتحان يظهر بعد مشاهدة فيديو معين — مستقل عن امتحان الحصة.
+              </p>
+              <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} />
+            </div>
           )}
         </div>
       )}
