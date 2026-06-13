@@ -81,6 +81,112 @@ get_branch() {
 }
 
 # =============================================================================
+# STEP 1.5: Preview rebuild plan and files to upload
+# =============================================================================
+get_rebuild_plan() {
+  log_step "Fetching last deployed status from server..."
+  
+  # Fetch last deployed commit from server
+  LAST_COMMIT=$(remote "cat ${SERVER_APP_DIR}/.last_deployed_commit 2>/dev/null || true" | tr -d '\r\n')
+  
+  if [ -z "$LAST_COMMIT" ]; then
+    log_warn "No last deployed commit found on server. This will be a FULL REBUILD."
+    echo -e "\n${BOLD}${YELLOW}📋 DEPLOYMENT PLAN:${RESET}"
+    echo -e "   - Rebuild Mode: ${BOLD}${RED}FULL REBUILD${RESET} (All containers)"
+    echo -e "   - Changes: First smart deployment or fresh baseline."
+    echo ""
+    confirm_plan
+    return 0
+  fi
+  
+  # Check if last commit is valid in local git history
+  if ! git cat-file -e "$LAST_COMMIT" 2>/dev/null; then
+    log_warn "Last deployed commit ($LAST_COMMIT) not found in local git history."
+    log_info "This could happen if history was rewritten or branches diverged. Rebuilding all containers."
+    echo -e "\n${BOLD}${YELLOW}📋 DEPLOYMENT PLAN:${RESET}"
+    echo -e "   - Rebuild Mode: ${BOLD}${RED}FULL REBUILD${RESET} (All containers)"
+    echo -e "   - Changes: Cannot diff history (rebuild baseline)."
+    echo ""
+    confirm_plan
+    return 0
+  fi
+  
+  # Get local head commit
+  CURRENT_COMMIT=$(git rev-parse HEAD)
+  
+  # Get diff list
+  CHANGED_FILES=$(git diff --name-only "$LAST_COMMIT" "$CURRENT_COMMIT")
+  FILES_COUNT=$(echo "$CHANGED_FILES" | grep -c -v "^$" || true)
+  
+  echo -e "\n${BOLD}${YELLOW}📋 DEPLOYMENT PLAN:${RESET}"
+  log_info "Last Deployed Commit: ${CYAN}$LAST_COMMIT${RESET}"
+  log_info "Current Local Commit: ${CYAN}$CURRENT_COMMIT${RESET}"
+  
+  if [ "$FILES_COUNT" -eq 0 ]; then
+    log_warn "No new commits/changes to upload since last deployment."
+    echo -e "   - Rebuild Mode: ${BOLD}${GREEN}NO CHANGES${RESET} (Skip rebuild)"
+  else
+    log_info "Files to be deployed (${BOLD}${YELLOW}$FILES_COUNT files${RESET}):"
+    # Show first 15 files
+    echo "$CHANGED_FILES" | head -n 15 | sed 's/^/     • /'
+    if [ "$FILES_COUNT" -gt 15 ]; then
+      echo "     • ... and $((FILES_COUNT - 15)) more files."
+    fi
+    
+    # Determine what will rebuild
+    REBUILD_BACKEND=false
+    REBUILD_WORKER=false
+    REBUILD_FRONTEND=false
+    REBUILD_NGINX=false
+    REBUILD_ALL=false
+    
+    while IFS= read -r file; do
+      if [ -z "$file" ]; then continue; fi
+      if [[ "$file" =~ ^backend/ ]]; then
+        REBUILD_BACKEND=true
+      elif [[ "$file" =~ ^worker/ ]]; then
+        REBUILD_WORKER=true
+      elif [[ "$file" =~ ^frontend/ ]]; then
+        REBUILD_FRONTEND=true
+      elif [[ "$file" =~ ^docker/nginx/ ]]; then
+        REBUILD_NGINX=true
+      else
+        REBUILD_ALL=true
+        break
+      fi
+    done <<< "$CHANGED_FILES"
+    
+    if [ "$REBUILD_ALL" = true ]; then
+      echo -e "\n   - Rebuild Mode: ${BOLD}${RED}FULL REBUILD${RESET} (Root/Infrastructure changes detected)"
+      echo "     Services to rebuild: db, redis, backend, worker, frontend, nginx"
+    else
+      echo -e "\n   - Rebuild Mode: ${BOLD}${CYAN}SELECTIVE REBUILD${RESET} (Only modified services)"
+      echo "     Services to rebuild and restart:"
+      [ "$REBUILD_BACKEND" = true ] && echo "       • backend"
+      [ "$REBUILD_WORKER" = true ] && echo "       • worker"
+      [ "$REBUILD_FRONTEND" = true ] && echo "       • frontend (landing, student, admin, teacher, assistant)"
+      [ "$REBUILD_NGINX" = true ] && echo "       • nginx"
+      if [ "$REBUILD_BACKEND" = false ] && [ "$REBUILD_WORKER" = false ] && [ "$REBUILD_FRONTEND" = false ] && [ "$REBUILD_NGINX" = false ]; then
+        echo "       • None (no container rebuild needed)"
+      fi
+    fi
+  fi
+  echo ""
+  confirm_plan
+}
+
+confirm_plan() {
+  # Prompt confirmation before proceeding if running in interactive shell
+  if [[ -t 0 ]]; then
+    read -p "Do you want to proceed with this deployment plan? (Y/n): " confirm
+    [[ "$confirm" =~ ^[Nn]$ ]] && { log_error "Deployment cancelled by user."; exit 0; }
+  else
+    log_info "Non-interactive shell detected, proceeding automatically in 3 seconds..."
+    sleep 3
+  fi
+}
+
+# =============================================================================
 # STEP 2: Push to GitHub (origin)
 # =============================================================================
 push_to_github() {
@@ -324,6 +430,8 @@ main() {
   get_branch
 
   if $DEPLOY; then
+    get_rebuild_plan
+
     log_step "Running database schema verification check..."
     if python3 "${SCRIPT_DIR}/check_db_schema.py"; then
       log_ok "Database schema is in sync."
