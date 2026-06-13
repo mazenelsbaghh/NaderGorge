@@ -17,7 +17,7 @@
 import '../auth.css';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
@@ -32,6 +32,18 @@ export default function RegisterPageClient() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
   const [showInstructions, setShowInstructions] = useState(false);
+
+  useEffect(() => {
+    const hasSeen = localStorage.getItem('hasSeenRegisterInstructions');
+    if (!hasSeen) {
+      setShowInstructions(true);
+    }
+  }, []);
+
+  const handleCloseInstructions = () => {
+    setShowInstructions(false);
+    localStorage.setItem('hasSeenRegisterInstructions', 'true');
+  };
 
   return (
     <div 
@@ -125,7 +137,7 @@ export default function RegisterPageClient() {
         </p>
       </main>
 
-      <RegistrationInstructionsModal open={showInstructions} onClose={() => setShowInstructions(false)} />
+      <RegistrationInstructionsModal open={showInstructions} onClose={handleCloseInstructions} />
     </div>
   );
 }

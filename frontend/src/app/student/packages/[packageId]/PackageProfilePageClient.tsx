@@ -181,9 +181,9 @@ export default function PackageProfilePageClient() {
         <span>العودة إلى باقاتي</span>
       </motion.button>
 
-      {/* ── Hero Image ── */}
+      {/* ── Hero Image Banner ── */}
       <div
-        className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-2xl lg:min-h-[26rem]"
+        className="relative h-[clamp(14rem,35vh,25rem)] min-h-[14rem] w-full overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-md sm:rounded-2xl"
         style={{ viewTransitionName: `pkg-image-${packageId}` }}
       >
         <Image
@@ -191,226 +191,250 @@ export default function PackageProfilePageClient() {
           alt={pkg?.name || "باقة"}
           fill
           priority
-          quality={85}
+          quality={90}
           sizes="100vw"
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-[10s] hover:scale-105"
         />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--admin-text)_6%,transparent),color-mix(in_srgb,var(--admin-text)_82%,transparent)_66%,color-mix(in_srgb,var(--admin-text)_92%,transparent))]" />
-        <div className="absolute inset-x-0 bottom-0 z-10 p-5 sm:p-8 lg:p-12">
-          <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[color:color-mix(in_srgb,var(--admin-text)_24%,transparent)] px-4 py-2 text-[11px] font-black tracking-[0.22em] text-[var(--admin-primary-contrast)] backdrop-blur-md sm:text-[13px]">
-            <span>{isEnrolled ? "باقة مفعّلة" : "تحتاج تفعيل"}</span>
-            <span className="opacity-55">•</span>
-            <span>{terms.length} ترم</span>
-            <span className="opacity-55">•</span>
-            <span>{pkg?.price || 0} ج.م</span>
-          </div>
-          <h1
-            className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-[var(--admin-primary-contrast)] drop-shadow-[0_8px_24px_rgba(44,23,8,0.28)] sm:text-5xl lg:text-6xl"
-            style={{ viewTransitionName: `pkg-title-${packageId}` }}
-          >
-            {pkg?.name || "باقة غير معروفة"}
-          </h1>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
       </div>
 
-      {/* ── Info strip + CTA ── */}
-      <motion.div variants={fadeUp} className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex-1 max-w-4xl">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-            {/* Description */}
-            <div className="md:col-span-2">
-              <p className="text-sm leading-7 text-[var(--admin-muted)] sm:text-base">
-                {pkg?.description || "تفاصيل هذه الباقة غير متوفرة حالياً."}
-              </p>
+      {/* ── Package Title & Info Header Area ── */}
+      <div className="space-y-4 text-right">
+        <div className="flex flex-wrap items-center gap-2">
+          {pkg?.subjectName && (
+            <span className="rounded-full bg-[var(--admin-primary-15)] px-3 py-1 text-xs font-black text-[var(--admin-primary)]">
+              {pkg.subjectName}
+            </span>
+          )}
+          <span className={`rounded-full px-3 py-1 text-xs font-black ${
+            isEnrolled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          }`}>
+            {isEnrolled ? "باقة مفعّلة" : "تحتاج تفعيل"}
+          </span>
+          <span className="rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 px-3 py-1 text-xs font-black">
+            {terms.length} ترم
+          </span>
+        </div>
+
+        <h1
+          className="text-3xl font-black text-[var(--admin-text)] sm:text-4xl lg:text-5xl leading-tight"
+          style={{ viewTransitionName: `pkg-title-${packageId}` }}
+        >
+          {pkg?.name || "باقة غير معروفة"}
+        </h1>
+      </div>
+
+      {/* ── Two-Column Layout ── */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Right Column: Main Content (Description + Terms) */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Description */}
+          <div className="space-y-2 text-right">
+            <h3 className="text-lg font-black text-[var(--admin-text)]">تفاصيل الباقة</h3>
+            <p className="text-sm leading-7 text-[var(--admin-muted)] sm:text-base whitespace-pre-line">
+              {pkg?.description || "تفاصيل هذه الباقة غير متوفرة حالياً."}
+            </p>
+          </div>
+
+          {/* Terms Section */}
+          <div className="space-y-4">
+            <div className="text-right">
+              <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر الترم</h2>
+              <p className="mt-1 text-sm text-[var(--admin-muted)]">كل ترم يحتوي على أقسام وحصص. اختر الترم لتبدأ الدراسة.</p>
             </div>
-            {/* Teacher Card */}
-            {pkg?.teacherName && (
-              <div className="rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/60 p-5 shadow-sm backdrop-blur-md flex flex-col gap-3">
-                <div className="flex items-center gap-3">
-                  {pkg.teacherProfileImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={resolveMediaUrl(pkg.teacherProfileImageUrl)}
-                      alt={pkg.teacherName}
-                      className="h-12 w-12 rounded-xl object-cover border border-[var(--admin-border)] shadow-sm"
-                    />
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-base">
-                      {pkg.teacherName.charAt(0)}
-                    </div>
-                  )}
-                  <div>
-                    <h4 className="font-black text-sm text-[var(--admin-text)]">أ. {pkg.teacherName}</h4>
-                    {pkg.teacherSpecialization && (
-                      <p className="text-[11px] text-[var(--admin-primary)] font-black mt-0.5">
-                        {pkg.teacherSpecialization
-                          .split(",")
-                          .map((s) => GRADE_NAMES[s.trim()] || s.trim())
-                          .join(" ، ")}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {pkg.teacherBio && (
-                  <p className="text-[11px] text-[var(--admin-muted)] leading-relaxed border-t border-[var(--admin-border)]/10 pt-2 font-medium">
-                    {pkg.teacherBio}
-                  </p>
-                )}
+
+            {/* Terms grid */}
+            {termsLoading ? (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="h-44 animate-pulse rounded-[1.75rem] bg-[var(--admin-card-strong)]" />
+                ))}
+              </div>
+            ) : terms.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center bg-[var(--admin-card)]/30">
+                <p className="font-bold text-[var(--admin-muted)]">لا توجد أترام في هذه الباقة بعد.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                {terms.map((term, idx) => {
+                  const palettes = [
+                    { from: "#475569", to: "#0f766e", pat: "#64748b" },
+                    { from: "#334155", to: "#0891b2", pat: "#475569" },
+                    { from: "#0f766e", to: "#38bdf8", pat: "#0e7490" },
+                    { from: "#1e293b", to: "#64748b", pat: "#334155" },
+                  ];
+                  const pal = palettes[idx % palettes.length];
+                  return (
+                    <button
+                      key={term.id}
+                      type="button"
+                      onClick={() => router.push(`/student/packages/${packageId}/terms/${term.id}`)}
+                      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-sm border border-[var(--admin-border)] transition-all hover:-translate-y-1.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
+                    >
+                      {/* Thumbnail area */}
+                      <div
+                        className="relative h-36 w-full overflow-hidden"
+                        style={{ background: `linear-gradient(135deg, ${pal.from} 0%, ${pal.to} 100%)` }}
+                      >
+                        {term.imageUrl && (
+                          <Image
+                            src={resolveMediaUrl(term.imageUrl)}
+                            alt={term.title}
+                            fill
+                            sizes="(max-width: 640px) 100vw, 33vw"
+                            className="object-cover"
+                          />
+                        )}
+                        {/* Geometric pattern */}
+                        <svg
+                          className="absolute inset-0 h-full w-full opacity-[0.12]"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="80"
+                          height="80"
+                        >
+                          <defs>
+                            <pattern id={`p${idx}`} patternUnits="userSpaceOnUse" width="40" height="40">
+                              <path
+                                d="M20 0 L40 20 L20 40 L0 20 Z"
+                                fill="none"
+                                stroke="white"
+                                strokeWidth="1.5"
+                              />
+                              <circle cx="20" cy="20" r="4" fill="white" />
+                              <line x1="20" y1="0" x2="20" y2="6" stroke="white" strokeWidth="1" />
+                              <line x1="20" y1="34" x2="20" y2="40" stroke="white" strokeWidth="1" />
+                              <line x1="0" y1="20" x2="6" y2="20" stroke="white" strokeWidth="1" />
+                              <line x1="34" y1="20" x2="40" y2="20" stroke="white" strokeWidth="1" />
+                            </pattern>
+                          </defs>
+                          <rect width="100%" height="100%" fill={`url(#p${idx})`} />
+                        </svg>
+
+                        {/* Large term ordinal number */}
+                        <span
+                          className="absolute -left-2 -top-4 select-none font-black leading-none text-white/[0.08] rtl:-right-2 rtl:left-auto"
+                          style={{ fontSize: "clamp(5rem, 14vw, 9rem)" }}
+                          aria-hidden
+                        >
+                          {idx + 1}
+                        </span>
+
+                        {/* Status badge */}
+                        <span
+                          className={`absolute right-4 top-4 rounded-full px-3 py-1 text-[11px] font-black tracking-wider ${
+                            isEnrolled
+                              ? "bg-white/20 text-white backdrop-blur-sm"
+                              : "bg-black/25 text-white/80 backdrop-blur-sm"
+                          }`}
+                        >
+                          {isEnrolled ? "✦ مفتوح" : "مقفول"}
+                        </span>
+
+                        {/* Term number pill */}
+                        <div className="absolute bottom-4 left-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm rtl:left-auto rtl:right-4">
+                          <span className="text-sm font-black text-white">
+                            {String(idx + 1).padStart(2, "0")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Content area */}
+                      <div className="flex flex-1 flex-col p-5">
+                        <h3 className="line-clamp-2 text-base font-black leading-snug text-[var(--admin-text)] transition-colors group-hover:text-[var(--admin-primary)] sm:text-lg">
+                          {term.title}
+                        </h3>
+
+                        <div className="mt-auto flex items-center justify-between pt-3">
+                          {term.price != null && term.price > 0 ? (
+                            <span className="text-xs font-bold text-[var(--admin-muted)]">
+                              {term.price} ج.م
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">مجانًا</span>
+                          )}
+                          <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-all group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
-        {!isEnrolled && (
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:self-start lg:mt-0 mt-4">
-            <button
-              type="button"
-              onClick={() => setIsPurchaseModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-[18px] bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
-            >
-              <Sparkles className="h-4 w-4" />
-              شراء الباقة
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push("/student/code-redemption")}
-              className="inline-flex items-center justify-center rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-3 text-sm font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
-            >
-              لدي كود تفعيل
-            </button>
-          </div>
-        )}
-      </motion.div>
 
-      {/* ── Terms section heading ── */}
-      <motion.div variants={fadeUp}>
-        <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر الترم</h2>
-        <p className="mt-1 text-sm text-[var(--admin-muted)]">كل ترم يحتوي على أقسام وحصص. اختر الترم لتبدأ الدراسة.</p>
-      </motion.div>
-
-      {/* ── Terms grid ── */}
-      <motion.div variants={fadeUp}>
-        {termsLoading ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-44 animate-pulse rounded-[1.75rem] bg-[var(--admin-card-strong)]" />
-            ))}
-          </div>
-        ) : terms.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
-            <p className="font-bold text-[var(--admin-muted)]">لا توجد أترام في هذه الباقة بعد.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {terms.map((term, idx) => {
-              // Each term gets a distinct cool palette from the default student theme.
-              const palettes = [
-                { from: "#475569", to: "#0f766e", pat: "#64748b" },
-                { from: "#334155", to: "#0891b2", pat: "#475569" },
-                { from: "#0f766e", to: "#38bdf8", pat: "#0e7490" },
-                { from: "#1e293b", to: "#64748b", pat: "#334155" },
-              ];
-              const pal = palettes[idx % palettes.length];
-              return (
+        {/* Left Column: Sidebar (Actions + Teacher Info) */}
+        <div className="space-y-6">
+          {/* Purchase / Enrollment Action Card */}
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm space-y-4 text-right">
+            <div>
+              <span className="text-xs font-bold text-[var(--admin-muted)]">سعر الباقة</span>
+              <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{pkg?.price || 0} ج.م</p>
+            </div>
+            
+            {isEnrolled ? (
+              <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
+                🎉 هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة الأترام مباشرة.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
                 <button
-                  key={term.id}
                   type="button"
-                  onClick={() => router.push(`/student/packages/${packageId}/terms/${term.id}`)}
-                  className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.75rem] bg-[var(--admin-card)] text-right shadow-md transition-all hover:-translate-y-1.5 hover:shadow-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
-                  style={{ boxShadow: `0 4px 24px color-mix(in srgb, ${pal.from} 18%, transparent)` }}
+                  onClick={() => setIsPurchaseModalOpen(true)}
+                  className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
                 >
-                  {/* ── Thumbnail area ── */}
-                  <div
-                    className="relative h-36 w-full overflow-hidden"
-                    style={{ background: `linear-gradient(135deg, ${pal.from} 0%, ${pal.to} 100%)` }}
-                  >
-                    {term.imageUrl && (
-                      <Image
-                        src={resolveMediaUrl(term.imageUrl)}
-                        alt={term.title}
-                        fill
-                        sizes="(max-width: 640px) 100vw, 33vw"
-                        className="object-cover"
-                      />
-                    )}
-                    {/* Geometric pharaonic SVG pattern */}
-                    <svg
-                      className="absolute inset-0 h-full w-full opacity-[0.12]"
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="80"
-                      height="80"
-                    >
-                      <defs>
-                        <pattern id={`p${idx}`} patternUnits="userSpaceOnUse" width="40" height="40">
-                          <path
-                            d="M20 0 L40 20 L20 40 L0 20 Z"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="1.5"
-                          />
-                          <circle cx="20" cy="20" r="4" fill="white" />
-                          <line x1="20" y1="0" x2="20" y2="6" stroke="white" strokeWidth="1" />
-                          <line x1="20" y1="34" x2="20" y2="40" stroke="white" strokeWidth="1" />
-                          <line x1="0" y1="20" x2="6" y2="20" stroke="white" strokeWidth="1" />
-                          <line x1="34" y1="20" x2="40" y2="20" stroke="white" strokeWidth="1" />
-                        </pattern>
-                      </defs>
-                      <rect width="100%" height="100%" fill={`url(#p${idx})`} />
-                    </svg>
-
-                    {/* Large term ordinal number — decorative */}
-                    <span
-                      className="absolute -left-2 -top-4 select-none font-black leading-none text-white/[0.08] rtl:-right-2 rtl:left-auto"
-                      style={{ fontSize: "clamp(5rem, 14vw, 9rem)" }}
-                      aria-hidden
-                    >
-                      {idx + 1}
-                    </span>
-
-                    {/* Status badge */}
-                    <span
-                      className={`absolute right-4 top-4 rounded-full px-3 py-1 text-[11px] font-black tracking-wider ${
-                        isEnrolled
-                          ? "bg-white/20 text-white backdrop-blur-sm"
-                          : "bg-black/25 text-white/80 backdrop-blur-sm"
-                      }`}
-                    >
-                      {isEnrolled ? "✦ مفتوح" : "مقفول"}
-                    </span>
-
-                    {/* Term number pill — bottom left */}
-                    <div className="absolute bottom-4 left-4 flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm rtl:left-auto rtl:right-4">
-                      <span className="text-sm font-black text-white">
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-                    </div>
-
-                    {/* Hover shine */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                  </div>
-
-                  {/* ── Content area ── */}
-                  <div className="flex flex-1 flex-col p-5">
-                    <h3 className="line-clamp-2 text-base font-black leading-snug text-[var(--admin-text)] transition-colors group-hover:text-[var(--admin-primary)] sm:text-lg">
-                      {term.title}
-                    </h3>
-
-                    <div className="mt-auto flex items-center justify-between pt-3">
-                      {term.price != null && term.price > 0 ? (
-                        <span className="text-xs font-bold text-[var(--admin-muted)]">
-                          {term.price} ج.م
-                        </span>
-                      ) : (
-                        <span />
-                      )}
-                      <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] transition-all group-hover:-translate-x-0.5 group-hover:text-[var(--admin-primary)]" />
-                    </div>
-                  </div>
+                  <Sparkles className="h-4 w-4" />
+                  شراء الباقة
                 </button>
-              );
-            })}
+                <button
+                  type="button"
+                  onClick={() => router.push("/student/code-redemption")}
+                  className="w-full inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-3 text-sm font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] active:scale-[0.98]"
+                >
+                  لدي كود تفعيل
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </motion.div>
+
+          {/* Teacher Card */}
+          {pkg?.teacherName && (
+            <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm flex flex-col gap-4 text-right">
+              <h3 className="text-xs font-black text-[var(--admin-muted)]">مدرس المادة</h3>
+              <div className="flex items-center gap-4">
+                {pkg.teacherProfileImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={resolveMediaUrl(pkg.teacherProfileImageUrl)}
+                    alt={pkg.teacherName}
+                    className="h-14 w-14 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-black text-lg shadow-inner">
+                    {pkg.teacherName.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-black text-base text-[var(--admin-text)]">أ. {pkg.teacherName}</h4>
+                  {pkg.teacherSpecialization && (
+                    <p className="text-[10px] text-[var(--admin-primary)] font-black mt-0.5">
+                      {pkg.teacherSpecialization
+                        .split(",")
+                        .map((s) => GRADE_NAMES[s.trim()] || s.trim())
+                        .join(" ، ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {pkg.teacherBio && (
+                <p className="text-xs text-[var(--admin-muted)] leading-relaxed border-t border-[var(--admin-border)]/10 pt-3 font-medium whitespace-pre-line">
+                  {pkg.teacherBio}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Purchase modal */}
       <PurchaseContentModal

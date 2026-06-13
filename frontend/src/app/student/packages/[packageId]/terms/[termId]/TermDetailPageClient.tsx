@@ -279,12 +279,9 @@ export default function TermDetailPageClient() {
         <span>العودة إلى {pkg?.name ?? "الباقة"}</span>
       </motion.button>
 
-      {/* ══════════════════════════════════════════════════════════════════
-          HERO — full-width cinematic banner (same as package page)
-          Uses the package image as backdrop, term title as heading
-          ══════════════════════════════════════════════════════════════════ */}
+      {/* ── Hero Image Banner ── */}
       <div
-        className="relative h-[clamp(18rem,52vh,40rem)] min-h-[18rem] w-full overflow-hidden rounded-[28px] border border-[var(--admin-border)] shadow-[0_24px_60px_var(--admin-shadow)] sm:min-h-[22rem] sm:rounded-2xl lg:min-h-[26rem]"
+        className="relative h-[clamp(14rem,35vh,25rem)] min-h-[14rem] w-full overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-md sm:rounded-2xl"
       >
         <Image
           src={
@@ -297,31 +294,36 @@ export default function TermDetailPageClient() {
           alt={term?.title || "ترم"}
           fill
           priority
-          quality={85}
+          quality={90}
           sizes="100vw"
           className="absolute inset-0 h-full w-full object-cover transition-transform duration-[10s] hover:scale-105"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+      </div>
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--admin-text)_6%,transparent),color-mix(in_srgb,var(--admin-text)_82%,transparent)_66%,color-mix(in_srgb,var(--admin-text)_92%,transparent))]" />
-        <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,transparent,color-mix(in_srgb,var(--admin-primary)_16%,transparent))]" />
-
-        {/* Title overlay */}
-        <div className="absolute inset-x-0 bottom-0 z-10 p-5 sm:p-8 lg:p-12">
-          {/* Breadcrumb pill */}
-          <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[color:color-mix(in_srgb,var(--admin-text)_24%,transparent)] px-4 py-2 text-[11px] font-black tracking-[0.22em] text-[var(--admin-primary-contrast)] backdrop-blur-md sm:text-[13px]">
-            <span>{pkg?.name}</span>
-            <span className="opacity-55">•</span>
-            <span>{sections.length} قسم</span>
-            <span className="opacity-55">•</span>
-            <span>{isEnrolled ? "مفعّل" : "تحتاج تفعيل"}</span>
-          </div>
-          <h1
-            className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-[var(--admin-primary-contrast)] drop-shadow-[0_8px_24px_rgba(44,23,8,0.28)] sm:text-5xl lg:text-6xl"
-          >
-            {term?.title ?? "الترم"}
-          </h1>
+      {/* ── Term Title & Info Header Area ── */}
+      <div className="space-y-4 text-right animate-[fadeIn_0.3s_ease-out]">
+        <div className="flex flex-wrap items-center gap-2">
+          {pkg?.name && (
+            <span className="rounded-full bg-[var(--admin-primary-15)] px-3 py-1 text-xs font-black text-[var(--admin-primary)]">
+              {pkg.name}
+            </span>
+          )}
+          <span className="rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 px-3 py-1 text-xs font-black">
+            {sections.length} قسم
+          </span>
+          <span className={`rounded-full px-3 py-1 text-xs font-black ${
+            isEnrolled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+          }`}>
+            {isEnrolled ? "مفعّل" : "تحتاج تفعيل"}
+          </span>
         </div>
+
+        <h1
+          className="text-3xl font-black text-[var(--admin-text)] sm:text-4xl lg:text-5xl leading-tight"
+        >
+          {term?.title ?? "الترم"}
+        </h1>
       </div>
 
       {/* ── Error state ── */}
