@@ -126,12 +126,7 @@ export default function PackageProfilePageClient() {
     };
   }, [loadPackageData]);
 
-  // Auto-navigate when there is exactly one term — must be before any early returns
-  useEffect(() => {
-    if (!termsLoading && terms.length === 1 && pkg?.isEnrolled) {
-      router.replace(`/student/packages/${packageId}/terms/${terms[0].id}`);
-    }
-  }, [termsLoading, terms, pkg, packageId, router]);
+
 
   /* ── Loading skeleton ── */
   if (loading && !pkg) {

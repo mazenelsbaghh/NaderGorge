@@ -3,6 +3,8 @@ using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Infrastructure.Data;
+using NaderGorge.Application.Interfaces;
+using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
 
 namespace NaderGorge.Application.Tests.MultiTeacher;
 
@@ -122,5 +124,65 @@ public class TeacherProfileTests
         Assert.Contains(updatedProfile.TeacherSubjects, ts => ts.SubjectId == subject2.Id);
         Assert.Contains(updatedProfile.TeacherSubjects, ts => ts.SubjectId == subject3.Id);
         Assert.DoesNotContain(updatedProfile.TeacherSubjects, ts => ts.SubjectId == subject1.Id);
+    }
+
+    [Fact]
+    public async Task UploadTeacherPhoto_SavesCompressedWebpAndAddsPhoto()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher John", "01099999999");
+
+        var expectedUrl = "/uploads/content/teacher/photo-123.webp";
+        var stubStorage = new StubContentImageStorage(expectedUrl);
+        var handler = new UploadTeacherPhotoCommandHandler(db, new Microsoft.Extensions.Logging.Abstractions.NullLogger<UploadTeacherPhotoCommandHandler>(), stubStorage);
+
+        var result = await handler.Handle(
+            new UploadTeacherPhotoCommand(user.Id, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "photo.png"),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        var photo = await db.TeacherPhotos.FirstOrDefaultAsync(p => p.TeacherId == user.Id);
+        Assert.NotNull(photo);
+        Assert.Equal(expectedUrl, photo!.FileUrl);
+    }
+
+    [Fact]
+    public async Task UploadTeacherProfileImage_SavesCompressedWebpAndUpdatesProfile()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher John", "01099999999");
+        var profile = new TeacherProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Bio = "Bio",
+            Specialization = "Spec",
+            CommissionRate = 5m
+        };
+        db.TeacherProfiles.Add(profile);
+        await db.SaveChangesAsync();
+
+        var expectedUrl = "/uploads/content/teacher/profile-123.webp";
+        var stubStorage = new StubContentImageStorage(expectedUrl);
+        var handler = new UploadTeacherProfileImageCommandHandler(db, new Microsoft.Extensions.Logging.Abstractions.NullLogger<UploadTeacherProfileImageCommandHandler>(), stubStorage);
+
+        var result = await handler.Handle(
+            new UploadTeacherProfileImageCommand(user.Id, "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "photo.png"),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(expectedUrl, result.Data);
+
+        var updatedProfile = await db.TeacherProfiles.FirstOrDefaultAsync(p => p.Id == profile.Id);
+        Assert.NotNull(updatedProfile);
+        Assert.Equal(expectedUrl, updatedProfile!.ProfileImageUrl);
+    }
+
+    private sealed class StubContentImageStorage(string imageUrl) : IContentImageStorage
+    {
+        public Task<string> SaveAsWebpAsync(
+            Stream imageStream,
+            string contentFolder,
+            CancellationToken cancellationToken) => Task.FromResult(imageUrl);
     }
 }

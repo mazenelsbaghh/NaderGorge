@@ -183,7 +183,10 @@ confirm_plan() {
   # Prompt confirmation before proceeding if running in interactive shell
   if [[ -t 0 ]]; then
     read -p "Do you want to proceed with this deployment plan? (Y/n): " confirm
-    [[ "$confirm" =~ ^[Nn]$ ]] && { log_error "Deployment cancelled by user."; exit 0; }
+    # NOTE: The `|| true` is critical — without it, when the user types "Y",
+    # the [[ ]] test returns exit code 1 (no match), making the function return 1,
+    # which causes `set -e` to silently kill the entire script.
+    [[ "$confirm" =~ ^[Nn]$ ]] && { log_error "Deployment cancelled by user."; exit 0; } || true
   else
     log_info "Non-interactive shell detected, proceeding automatically in 3 seconds..."
     sleep 3
