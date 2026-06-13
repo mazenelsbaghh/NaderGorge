@@ -144,7 +144,7 @@ export default function AssistantVacationsPageClient() {
                           {vac.handledByName ? (
                             <span>
                               {vac.handledByName}
-                              <span className="block text-[9px] font-mono font-normal">{vac.handledAt ? new Date(vac.handledAt).toLocaleDateString('ar-EG') : ''}</span>
+                              <span className="block text-xs font-mono font-normal">{vac.handledAt ? new Date(vac.handledAt).toLocaleDateString('ar-EG') : ''}</span>
                             </span>
                           ) : '—'}
                         </td>

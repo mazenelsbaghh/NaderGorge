@@ -465,7 +465,7 @@ export function ContentHierarchyPanel({
                       </button>
                     </>
                   ) : (
-                    <div className="flex flex-col items-center justify-center gap-1 text-[var(--admin-muted)] text-[10px] font-bold">
+                    <div className="flex flex-col items-center justify-center gap-1 text-[var(--admin-muted)] text-xs font-bold">
                       <Camera className="h-4 w-4 text-[var(--admin-primary)]" />
                       <span>صورة الغلاف</span>
                     </div>

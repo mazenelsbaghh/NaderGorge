@@ -95,7 +95,7 @@ export function StudentThemeSettingsPanel({
                         unoptimized
                       />
                     </div>
-                    <span className="text-[10px] font-black text-[var(--admin-text)] text-center truncate w-full">
+                    <span className="text-xs font-black text-[var(--admin-text)] text-center truncate w-full">
                       {avatar.name}
                     </span>
                   </button>
@@ -120,7 +120,7 @@ export function StudentThemeSettingsPanel({
                   <h5 className="text-[12px] font-black text-[var(--admin-primary-strong)]">
                     {AVATAR_LIST.find(a => a.slug === selectedAvatarSlug)?.name}
                   </h5>
-                  <p className="text-[10px] font-bold text-[var(--admin-muted)] leading-normal">
+                  <p className="text-xs font-bold text-[var(--admin-muted)] leading-normal">
                     {AVATAR_LIST.find(a => a.slug === selectedAvatarSlug)?.info}
                   </p>
                 </div>

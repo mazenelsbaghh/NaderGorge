@@ -328,7 +328,7 @@ export default function StudentProfilePageClient() {
                     style={{ width: `${Math.min(100, (profile.deviceCount / profile.maxDevices) * 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-[var(--admin-muted)] leading-relaxed mt-2">
+                <p className="text-xs text-[var(--admin-muted)] leading-relaxed mt-2">
                   يسمح النظام بربط حسابك بعدد أجهزة محدد لمنع مشاركة الحساب. يرجى التواصل مع الدعم الفني في حال رغبتك بتغيير جهازك النشط.
                 </p>
               </div>
@@ -489,7 +489,7 @@ export default function StudentProfilePageClient() {
                           unoptimized
                         />
                       </div>
-                      <span className="text-[10px] font-black text-[var(--admin-text)] text-center truncate w-full">
+                      <span className="text-xs font-black text-[var(--admin-text)] text-center truncate w-full">
                         {avatar.name}
                       </span>
                     </button>
@@ -554,7 +554,7 @@ export default function StudentProfilePageClient() {
                           />
                           <div className="space-y-0.5">
                             <p className="font-black text-sm text-[var(--admin-text)]">{palette.name}</p>
-                            <p className="text-[10px] text-[var(--admin-muted)]">
+                            <p className="text-xs text-[var(--admin-muted)]">
                               مخصص للوضع الفاتح
                             </p>
                           </div>
@@ -564,12 +564,12 @@ export default function StudentProfilePageClient() {
                           {isSavingPreferences && isSelected ? (
                             <Loader2 className="h-4 w-4 animate-spin text-[var(--admin-primary)]" />
                           ) : isSelected ? (
-                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
                               <Check className="h-3 w-3" />
                               مفعل
                             </span>
                           ) : (
-                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
                               اختيار
                             </span>
                           )}
@@ -610,7 +610,7 @@ export default function StudentProfilePageClient() {
                           />
                           <div className="space-y-0.5">
                             <p className="font-black text-sm text-[var(--admin-text)]">{palette.name}</p>
-                            <p className="text-[10px] text-[var(--admin-muted)]">
+                            <p className="text-xs text-[var(--admin-muted)]">
                               مخصص للوضع الداكن
                             </p>
                           </div>
@@ -620,12 +620,12 @@ export default function StudentProfilePageClient() {
                           {isSavingPreferences && isSelected ? (
                             <Loader2 className="h-4 w-4 animate-spin text-[var(--admin-primary)]" />
                           ) : isSelected ? (
-                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                            <span className="flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
                               <Check className="h-3.5 w-3.5" />
                               مفعل
                             </span>
                           ) : (
-                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-black text-[var(--admin-primary)]">
+                            <span className="rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-black text-[var(--admin-primary)]">
                               اختيار
                             </span>
                           )}

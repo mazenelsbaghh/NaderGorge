@@ -121,11 +121,11 @@ export default function TeacherActivityPageClient() {
                         <div className="flex items-start justify-between">
                           <div>
                             <h4 className="font-bold text-[var(--admin-text)] text-sm">{student.studentName}</h4>
-                            <span className="text-[10px] bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-black px-2 py-0.5 rounded-full mt-1.5 inline-block">
+                            <span className="text-xs bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-black px-2 py-0.5 rounded-full mt-1.5 inline-block">
                               {student.packageName}
                             </span>
                           </div>
-                          <span className="text-[10px] text-[var(--admin-muted)] flex items-center gap-1">
+                          <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {student.lastActivityAt ? new Date(student.lastActivityAt).toLocaleDateString("ar-EG", {
                               hour: "2-digit",

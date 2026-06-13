@@ -271,7 +271,7 @@ export const NavbarLogo = () => {
         />
       </div>
       <div>
-        <p className="text-[10px] sm:text-[13px] font-semibold tracking-[0.25em] sm:tracking-[0.36em] text-[var(--landing-muted)] leading-tight">
+        <p className="text-xs sm:text-[13px] font-semibold tracking-[0.25em] sm:tracking-[0.36em] text-[var(--landing-muted)] leading-tight">
           MASSAR PLATFORM
         </p>
         <p className="text-base sm:text-xl font-black text-[var(--landing-ink)] md:text-2xl leading-none mt-0.5 sm:mt-1">

@@ -132,7 +132,7 @@ export default function StudentNotificationsPageClient() {
                   <p className="text-xs text-[var(--admin-text)]/90 leading-relaxed font-medium">
                     {notif.body}
                   </p>
-                  <span className="text-[10px] text-[var(--admin-muted)] flex items-center gap-1 mt-1">
+                  <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 mt-1">
                     <Clock className="h-3.5 w-3.5" />
                     {new Date(notif.createdAt).toLocaleDateString("ar-EG", {
                       year: "numeric",

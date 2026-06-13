@@ -223,7 +223,7 @@ export function CommunityCommentsModerationTable() {
               onClick={() => void handleModeration([...selectedIds], 'approve')}
               className="rounded-full bg-[var(--admin-success)] px-4 py-2 text-xs font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {bulkAction === 'approve' ? 'جارٍ القبول...' : 'قبول المحدد'}
+              {isMutating ? 'جارٍ القبول...' : 'قبول المحدد'}
             </button>
             <button
               type="button"
@@ -234,7 +234,7 @@ export function CommunityCommentsModerationTable() {
               }}
               className="rounded-full bg-[var(--admin-danger)] px-4 py-2 text-xs font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {bulkAction === 'reject' ? 'جارٍ الرفض...' : 'رفض المحدد'}
+              {isMutating ? 'جارٍ الرفض...' : 'رفض المحدد'}
             </button>
           </div>
         </div>
@@ -294,7 +294,7 @@ export function CommunityCommentsModerationTable() {
               onClick={() => void handleReject()}
               className="rounded-full bg-[var(--admin-danger)] px-5 py-2.5 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {bulkAction === 'reject' || actingId ? 'جارٍ الرفض...' : 'تأكيد الرفض'}
+              {isMutating ? 'جارٍ الرفض...' : 'تأكيد الرفض'}
             </button>
           </div>
         </div>

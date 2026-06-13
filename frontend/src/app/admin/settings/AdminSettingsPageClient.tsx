@@ -533,17 +533,17 @@ export default function AdminSettingsPageClient() {
                         <div className="space-y-4">
                           <div className="flex justify-between items-start">
                             {isSystemRole ? (
-                              <span className="bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-[10px] font-bold px-2.5 py-1 rounded-full border border-[var(--admin-primary)]/15">
+                              <span className="bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-xs font-bold px-2.5 py-1 rounded-full border border-[var(--admin-primary)]/15">
                                 دور نظام أساسي
                               </span>
                             ) : (
-                              <span className="bg-[var(--admin-card-strong)] text-[var(--admin-muted)] text-[10px] font-bold px-2.5 py-1 rounded-full">
+                              <span className="bg-[var(--admin-card-strong)] text-[var(--admin-muted)] text-xs font-bold px-2.5 py-1 rounded-full">
                                 دور مخصص
                               </span>
                             )}
                             <div>
                               <h4 className="text-base font-extrabold text-[var(--admin-text)]">{role.name}</h4>
-                              <span className="text-[10px] text-[var(--admin-muted)]">النوع في قاعدة البيانات: {role.type}</span>
+                              <span className="text-xs text-[var(--admin-muted)]">النوع في قاعدة البيانات: {role.type}</span>
                             </div>
                           </div>
 
@@ -561,7 +561,7 @@ export default function AdminSettingsPageClient() {
                                 {role.permissions.map(p => {
                                   const def = PERMISSION_DEFINITIONS.find(d => d.key === p);
                                   return (
-                                    <span key={p} className="bg-[var(--admin-card-strong)] text-[var(--admin-text)] text-[11px] font-medium px-2 py-1 rounded-lg border border-[var(--admin-border)] shadow-2xs">
+                                    <span key={p} className="bg-[var(--admin-card-strong)] text-[var(--admin-text)] text-xs font-medium px-2 py-1 rounded-lg border border-[var(--admin-border)] shadow-2xs">
                                       {def ? def.label : p}
                                     </span>
                                   );

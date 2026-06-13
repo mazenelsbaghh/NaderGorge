@@ -223,7 +223,7 @@ function CreatePackageRow({
             <div className="flex flex-col items-center justify-center gap-1.5 text-[var(--admin-muted)]">
               <Upload className="h-5 w-5 text-[var(--admin-primary)]" />
               <span className="text-xs font-bold">اضغط هنا لاختيار صورة للباقة</span>
-              <span className="text-[9px]">الحد الأقصى 10 ميجابايت (يتم تحويلها لـ WebP)</span>
+              <span className="text-xs">الحد الأقصى 10 ميجابايت (يتم تحويلها لـ WebP)</span>
             </div>
           )}
           <input
@@ -632,7 +632,7 @@ export default function AdminContentPageClient() {
                   )}
                   <div className="text-right">
                     <p className="text-sm font-black text-[var(--admin-text)] leading-tight">{activeTeacher.fullName}</p>
-                    <p className="text-[10px] text-[var(--admin-muted)] mt-0.5">{activeTeacher.phoneNumber}</p>
+                    <p className="text-xs text-[var(--admin-muted)] mt-0.5">{activeTeacher.phoneNumber}</p>
                   </div>
                 </div>
               </div>
@@ -767,32 +767,32 @@ export default function AdminContentPageClient() {
 
                           {/* Taught Grades */}
                           <div className="mb-3">
-                            <p className="text-[10px] font-bold text-[var(--admin-muted)] mb-1">الصفوف الدراسية:</p>
+                            <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">الصفوف الدراسية:</p>
                             <div className="flex flex-wrap gap-1">
                               {gradeList.length > 0 ? (
                                 gradeList.map((val, idx) => (
-                                  <span key={idx} className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[9px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10">
+                                  <span key={idx} className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-xs font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10">
                                     {GRADE_NAMES[val] || val}
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-[10px] text-red-500 font-bold">غير محدد</span>
+                                <span className="text-xs text-red-500 font-bold">غير محدد</span>
                               )}
                             </div>
                           </div>
 
                           {/* Subjects */}
                           <div className="mb-4">
-                            <p className="text-[10px] font-bold text-[var(--admin-muted)] mb-1">المواد الدراسية:</p>
+                            <p className="text-xs font-bold text-[var(--admin-muted)] mb-1">المواد الدراسية:</p>
                             <div className="flex flex-wrap gap-1">
                               {teacherSubjects.length > 0 ? (
                                 teacherSubjects.map((sub) => (
-                                  <span key={sub.id} className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[9px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10">
+                                  <span key={sub.id} className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-xs font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10">
                                     {sub.name}
                                   </span>
                                 ))
                               ) : (
-                                <span className="text-[10px] text-[var(--admin-muted)]">—</span>
+                                <span className="text-xs text-[var(--admin-muted)]">—</span>
                               )}
                             </div>
                           </div>

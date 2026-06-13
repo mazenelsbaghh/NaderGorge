@@ -251,11 +251,11 @@ function MindmapJobTracker({ jobId, onDone }: { jobId: string; onDone: () => voi
       )}
       {/* Stage text */}
       {stage && !isCompleted && (
-        <div className="px-2.5 py-1 text-[10px] text-[var(--admin-muted)]">{stage}</div>
+        <div className="px-2.5 py-1 text-xs text-[var(--admin-muted)]">{stage}</div>
       )}
       {/* Error reason */}
       {isFailed && status.failedReason && (
-        <div className="px-2.5 py-1.5 text-[10px] text-[var(--admin-danger)]">{status.failedReason}</div>
+        <div className="px-2.5 py-1.5 text-xs text-[var(--admin-danger)]">{status.failedReason}</div>
       )}
     </div>
   );
@@ -575,7 +575,7 @@ function JobCard({
       {isFailed && jobStatus?.failedReason && (
         <div className="ai-card__fail-reason" title={jobStatus.failedReason}>
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-500" />
-          <span className="truncate text-[11px] text-red-400">{jobStatus.failedReason}</span>
+          <span className="truncate text-xs text-red-400">{jobStatus.failedReason}</span>
         </div>
       )}
 

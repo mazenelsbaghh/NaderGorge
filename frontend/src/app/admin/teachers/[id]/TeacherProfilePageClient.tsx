@@ -6,13 +6,12 @@ import { useRouter } from 'next/navigation';
 import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable } from '@/components/admin';
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
-import { hrService, type EmployeeDto, type AdminAttendanceLogDto, type AdminVacationDto } from '@/services/hr-service';
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
   Users, Package, BookOpen, PenLine, DollarSign, Wallet,
   GraduationCap, Activity, Phone, User, Clock3,
-  FileText, Briefcase, ArrowLeft,
+  FileText, ArrowLeft,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

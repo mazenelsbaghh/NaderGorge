@@ -35,7 +35,7 @@ function makeOutsideContentInert(modalRoot: HTMLElement) {
   let current: HTMLElement | null = modalRoot;
 
   while (current && current !== document.body) {
-    const parent = current.parentElement;
+    const parent: HTMLElement | null = current.parentElement;
     if (!parent) break;
 
     Array.from(parent.children).forEach((sibling) => {

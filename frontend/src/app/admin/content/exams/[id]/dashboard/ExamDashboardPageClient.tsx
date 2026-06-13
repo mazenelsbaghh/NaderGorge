@@ -150,7 +150,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                     <div className="min-w-0">
                       <p className="font-bold text-[var(--admin-text)] truncate" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }} />
                       <div className="mt-1 flex items-center gap-3 flex-wrap">
-                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                        <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-black uppercase tracking-wider ${
                           q.type === 'FindTheMistake'
                             ? 'bg-purple-500/10 text-purple-600'
                             : q.type === 'Essay'
@@ -161,7 +161,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                         </span>
                         <span className="text-xs text-[var(--admin-muted)] font-mono">{q.points} نقطة</span>
                         {q.type === 'FindTheMistake' && !q.baseText && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-0.5 text-[10px] font-black text-red-600">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-black text-red-600">
                             <AlertCircle className="h-3 w-3" /> baseText مفقود
                           </span>
                         )}
@@ -257,7 +257,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                       {row.isPassed ? 'ناجح' : 'راسب'}
                     </span>
                     {row.isTimeExpired && (
-                      <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-orange-500/10 text-orange-600" title="نفذ الوقت وتم التسليم تلقائياً">
+                      <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-orange-500/10 text-orange-600" title="نفذ الوقت وتم التسليم تلقائياً">
                         <AlertCircle className="w-3.5 h-3.5 mr-1" /> تأخير
                       </span>
                     )}

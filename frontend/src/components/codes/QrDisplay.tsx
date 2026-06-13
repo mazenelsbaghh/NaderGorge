@@ -75,7 +75,7 @@ export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProp
                 style={{ aspectRatio: '1/1.2' }}
               >
                 {/* Brand / Title per card */}
-                <div className="text-black font-bold text-[10px] sm:text-xs mb-2 text-center uppercase tracking-widest print:text-[10px]">
+                <div className="text-black font-bold text-xs sm:text-xs mb-2 text-center uppercase tracking-widest print:text-xs">
                   MASSAR PLATFORM
                 </div>
 
@@ -92,7 +92,7 @@ export function QrDisplay({ codes, groupName = 'Batch', baseUrl }: QrDisplayProp
                   <div className="font-mono font-bold text-gray-900 text-sm sm:text-base print:text-sm tracking-widest">
                     {code}
                   </div>
-                  <div className="text-gray-500 text-[10px] print:text-[8px] mt-1">
+                  <div className="text-gray-500 text-xs print:text-xs mt-1">
                     {groupName}
                   </div>
                 </div>

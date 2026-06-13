@@ -356,7 +356,7 @@ export default function PublicFormPageClient({ params }: PublicFormPageProps) {
                           initial={{ opacity: 0, y: -5 }}
                           animate={{ opacity: 1, y: 0 }}
                           role="alert"
-                          className="text-[10px] text-[var(--admin-danger)] font-bold flex items-center gap-1 mt-1 px-1"
+                          className="text-xs text-[var(--admin-danger)] font-bold flex items-center gap-1 mt-1 px-1"
                         >
                           <AlertCircle className="h-3 w-3 shrink-0" />
                           <span>{errors[field.id]}</span>

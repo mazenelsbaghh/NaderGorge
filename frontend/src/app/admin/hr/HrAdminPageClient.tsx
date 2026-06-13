@@ -317,7 +317,7 @@ export default function HrAdminPageClient() {
             <div className="text-xs font-bold text-[var(--admin-text)]">
               {v.handledByName}
             </div>
-            <div className="text-[10px] text-[var(--admin-muted)] font-mono">
+            <div className="text-xs text-[var(--admin-muted)] font-mono">
               {v.handledAt
                 ? new Date(v.handledAt).toLocaleDateString('ar-EG')
                 : ''}

@@ -188,7 +188,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                               {row.isPassed ? 'ناجح' : 'راسب'}
                             </span>
                             {row.isTimeExpired && (
-                              <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[var(--admin-warning-10)] text-[var(--admin-warning)]" title="نفذ الوقت وتم التسليم تلقائياً">
+                              <span className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-[var(--admin-warning-10)] text-[var(--admin-warning)]" title="نفذ الوقت وتم التسليم تلقائياً">
                                 <AlertCircle className="w-3.5 h-3.5 mr-1" /> تأخير
                               </span>
                             )}

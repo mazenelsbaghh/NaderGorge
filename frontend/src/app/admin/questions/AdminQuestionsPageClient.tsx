@@ -425,7 +425,7 @@ export default function AdminQuestionsPageClient() {
           </div>
 
           <div className="flex flex-col gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--admin-muted)] block">شرح صوتي (اختياري)</span>
+            <span className="text-xs uppercase tracking-wider font-bold text-[var(--admin-muted)] block">شرح صوتي (اختياري)</span>
             <input 
               type="file" 
               accept="audio/*"

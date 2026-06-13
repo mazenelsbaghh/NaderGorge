@@ -27,7 +27,7 @@ export function StudentBottomNav({ items }: { items: StudentBottomNavItem[] }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-[11px] font-black transition-all",
+                "flex min-w-0 flex-col items-center justify-center gap-1 rounded-[20px] px-1.5 py-2.5 text-center text-xs font-black transition-all",
                 isActive
                   ? "bg-[var(--landing-card-strong)] text-[var(--landing-accent)]"
                   : "text-[var(--landing-muted)]",

@@ -141,19 +141,19 @@ export const LessonListManager = forwardRef<LessonListManagerRef, LessonListMana
                 <NeumorphButton disabled intent="icon" size="icon" title="إعدادات الحصة قريباً">
                   <Settings className="h-4 w-4" />
                 </NeumorphButton>
-                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-[10px] font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/settings:opacity-100">قريباً</span>
+                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/settings:opacity-100">قريباً</span>
               </div>
               <div className="relative group/edit">
                 <NeumorphButton disabled intent="icon" size="icon" title="تعديل الحصة قريباً">
                   <Edit2 className="h-4 w-4" />
                 </NeumorphButton>
-                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-[10px] font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
+                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
               </div>
               <div className="relative group/del">
                 <NeumorphButton disabled intent="danger" size="icon" title="حذف الحصة قريباً">
                   <Trash2 className="h-4 w-4" />
                 </NeumorphButton>
-                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-[10px] font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
+                <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
               </div>
             </div>
           </div>

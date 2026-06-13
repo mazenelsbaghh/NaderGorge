@@ -802,13 +802,13 @@ export default function AdminTeachersPageClient() {
               gradeList.map((val, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-[10px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
+                  className="inline-flex items-center rounded-full bg-[var(--admin-primary-15)] px-2.5 py-0.5 text-xs font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
                 >
                   {GRADE_NAMES[val] || val}
                 </span>
               ))
             ) : (
-              <span className="text-[10px] font-bold text-red-500">غير محدد</span>
+              <span className="text-xs font-bold text-red-500">غير محدد</span>
             )}
           </div>
         );
@@ -823,13 +823,13 @@ export default function AdminTeachersPageClient() {
             t.subjectNames.map((name, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
+                className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-xs font-bold text-[var(--admin-primary)] border border-[var(--admin-primary)]/10"
               >
                 {name}
               </span>
             ))
           ) : (
-            <span className="text-[10px] font-bold text-red-500">لا يوجد مواد</span>
+            <span className="text-xs font-bold text-red-500">لا يوجد مواد</span>
           )}
         </div>
       ),
@@ -1024,7 +1024,7 @@ export default function AdminTeachersPageClient() {
                     </div>
                   )}
                   {editingTeacher && (
-                    <p className="text-[10px] text-[var(--admin-muted)] flex items-center gap-1.5 mt-1.5">
+                    <p className="text-xs text-[var(--admin-muted)] flex items-center gap-1.5 mt-1.5">
                       <Lock className="h-3 w-3" />
                       بيانات تسجيل الدخول مدارة من قبل قسم شؤون المستخدمين ولا يمكن تعديلها من هنا.
                     </p>
@@ -1073,7 +1073,7 @@ export default function AdminTeachersPageClient() {
                   </h4>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div>
-                      <label className="block text-[11px] font-bold text-[var(--admin-text)] mb-2">رابط الفيسبوك</label>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط الفيسبوك</label>
                       <input
                         type="url"
                         disabled={isSaving}
@@ -1084,7 +1084,7 @@ export default function AdminTeachersPageClient() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-[var(--admin-text)] mb-2">رابط اليوتيوب</label>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط اليوتيوب</label>
                       <input
                         type="url"
                         disabled={isSaving}
@@ -1095,7 +1095,7 @@ export default function AdminTeachersPageClient() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-[var(--admin-text)] mb-2">رابط التيليجرام</label>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط التيليجرام</label>
                       <input
                         type="url"
                         disabled={isSaving}
@@ -1163,7 +1163,7 @@ export default function AdminTeachersPageClient() {
                           {getInitials(fullName || 'معلم')}
                         </div>
                       )}
-                      <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                      <span className="text-xs text-[var(--admin-muted)] mt-2">
                         {isUploadingProfile ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
                       </span>
                     </div>
@@ -1220,7 +1220,7 @@ export default function AdminTeachersPageClient() {
                           <Sparkles className="h-8 w-8" />
                         </div>
                       )}
-                      <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                      <span className="text-xs text-[var(--admin-muted)] mt-2">
                         {isUploadingAi ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
                       </span>
                     </div>

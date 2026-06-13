@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GraduationCap, FileText, Calendar, CheckCircle2, User, Loader2, Sparkles, X, Star } from "lucide-react";
+import { GraduationCap, FileText, Calendar, CheckCircle2, User, Loader2, Sparkles, Star } from "lucide-react";
 import { 
   AdminDataTable, 
   AdminColumn, 
   AdminStatCard, 
   AdminSearchToolbar, 
-  AdminPageSkeleton 
+  AdminPageSkeleton,
+  AdminModal,
 } from "@/components/admin";
 import { teacherService, PendingEssayDto } from "@/services/teacher-service";
 import toast from "react-hot-toast";
@@ -221,30 +222,19 @@ export default function TeacherEssaysPageClient() {
         )}
 
         {/* Grading Modal */}
-        {selectedEssay && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div onClick={handleCloseGrading} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-            {/* Modal Container */}
-            <div className="relative w-full max-w-3xl rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-8 shadow-2xl overflow-y-auto max-h-[90vh]" dir="rtl">
-              <button
-                onClick={handleCloseGrading}
-                className="absolute left-6 top-6 rounded-xl border border-[var(--admin-border)] p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] transition"
-              >
-                <X className="h-4 w-4" />
-              </button>
-
-              <div className="flex items-center gap-2 text-xs font-black text-[var(--admin-primary)] mb-3">
-                <Sparkles className="h-4 w-4" />
+        <AdminModal
+          open={selectedEssay !== null}
+          onClose={handleCloseGrading}
+          title={selectedEssay ? `تصحيح إجابة الطالب: ${selectedEssay.studentName}` : 'تصحيح إجابة مقالية'}
+          subtitle={selectedEssay?.examTitle}
+          maxWidth="max-w-3xl"
+        >
+          {selectedEssay ? (
+            <div dir="rtl">
+              <div className="mb-3 flex items-center gap-2 text-xs font-black text-[var(--admin-primary)]">
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
                 <span>تقييم إجابة مقالية</span>
               </div>
-
-              <h2 className="text-xl font-black text-[var(--admin-text)]">
-                تصحيح إجابة الطالب: {selectedEssay.studentName}
-              </h2>
-              <p className="text-xs text-[var(--admin-muted)] mt-1">{selectedEssay.examTitle}</p>
-
               <form onSubmit={handleSubmitGrade} className="mt-6 space-y-6">
                 {/* Question Text */}
                 <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
@@ -346,8 +336,8 @@ export default function TeacherEssaysPageClient() {
                 </div>
               </form>
             </div>
-          </div>
-        )}
+          ) : null}
+        </AdminModal>
       </div>
     </TeacherShellChrome>
   );

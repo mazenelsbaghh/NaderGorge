@@ -174,7 +174,7 @@ export function ExamResultPanel({
               key={stat.label}
               className="rounded-xl bg-background/60 px-4 py-3 backdrop-blur-sm border border-border/50"
             >
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
+              <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{stat.label}</p>
               <p className="mt-0.5 text-lg font-black text-foreground">{stat.value}</p>
             </div>
           ))}
@@ -343,19 +343,19 @@ export function ExamResultPanel({
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-background/60 border border-border/40 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">إجابتك</p>
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">إجابتك</p>
                     <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تختر إجابة.') }} />
                   </div>
 
                   {q.correctOptionText ? (
                     <div className="rounded-xl bg-background/60 border border-border/40 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                         الإجابة الصحيحة
                       </p>
                       <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.correctOptionText) }} />
                       {q.writtenCorrection && (
                         <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                             التصحيح
                           </p>
                           <p className="mt-1.5 whitespace-pre-wrap text-sm font-bold leading-6 text-foreground">
@@ -365,7 +365,7 @@ export function ExamResultPanel({
                       )}
                       {q.audioUrl && (
                         <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          <p className="mb-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
                             تصحيح صوتي
                           </p>
                           <audio controls className="h-9 w-full" preload="none">
@@ -376,7 +376,7 @@ export function ExamResultPanel({
                     </div>
                   ) : (
                     <div className="rounded-xl bg-muted/30 border border-border/30 p-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                         ملاحظات
                       </p>
                       {q.writtenCorrection ? (
@@ -923,7 +923,7 @@ export function ExamViewer({
                           : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
-                  <span aria-hidden="true" className="absolute left-1 top-0.5 text-[9px] leading-none">{stateMark}</span>
+                  <span aria-hidden="true" className="absolute left-1 top-0.5 text-xs leading-none">{stateMark}</span>
                   {idx + 1}
                 </button>
               );

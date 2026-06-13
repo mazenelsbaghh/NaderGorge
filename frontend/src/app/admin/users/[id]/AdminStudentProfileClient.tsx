@@ -875,15 +875,15 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                            {/* Details grid */}
                            <div className="grid grid-cols-2 gap-3">
                              <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2">
-                               <p className="text-[10px] text-[var(--admin-muted)] font-semibold mb-0.5">المتصفح</p>
+                               <p className="text-xs text-[var(--admin-muted)] font-semibold mb-0.5">المتصفح</p>
                                <p className="text-sm font-bold text-[var(--admin-text)]">{device.browserName ?? 'Unknown'}</p>
                              </div>
                              <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2">
-                               <p className="text-[10px] text-[var(--admin-muted)] font-semibold mb-0.5">عنوان IP</p>
+                               <p className="text-xs text-[var(--admin-muted)] font-semibold mb-0.5">عنوان IP</p>
                                <p className="text-sm font-bold text-[var(--admin-text)] font-mono">{device.ipAddress ?? '—'}</p>
                              </div>
                              <div className="rounded-xl bg-[var(--admin-surface-low)] px-3 py-2 col-span-2">
-                               <p className="text-[10px] text-[var(--admin-muted)] font-semibold mb-0.5">آخر نشاط</p>
+                               <p className="text-xs text-[var(--admin-muted)] font-semibold mb-0.5">آخر نشاط</p>
                                <p className="text-sm font-bold text-[var(--admin-text)]">{device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}</p>
                              </div>
                            </div>
@@ -1020,7 +1020,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                           <div className="flex flex-col justify-between h-full min-h-[90px]">
                             <div className="flex-1">
                               {note.isPinned && (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-black tracking-wider text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-3 py-1 rounded-full mb-3 self-start">
+                                <span className="inline-flex items-center gap-1 text-xs font-black tracking-wider text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-3 py-1 rounded-full mb-3 self-start">
                                   <Pin size={10} className="fill-[var(--admin-primary)]" /> مثبتة في الأعلى
                                 </span>
                               )}
@@ -1028,7 +1028,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                             </div>
                             <div className="flex justify-between items-center text-xs text-[var(--admin-muted)] border-t border-[var(--admin-border)]/30 pt-3">
                               <div className="flex items-center gap-1.5">
-                                <span className="h-5 w-5 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] flex items-center justify-center font-bold text-[10px]">
+                                <span className="h-5 w-5 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] flex items-center justify-center font-bold text-xs">
                                   {note.adminName.substring(0, 1).toUpperCase()}
                                 </span>
                                 <span>بواسطة <strong className="text-[var(--admin-text)] font-semibold">{note.adminName}</strong></span>
@@ -1212,7 +1212,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                                              </div>
 
                                                              {/* Metrics */}
-                                                             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-[var(--admin-muted)]">
+                                                             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[var(--admin-muted)]">
                                                                <div>
                                                                  <span className="font-bold">المشاهدة:</span> {formatDuration(activity.watchedSeconds)}
                                                                </div>
@@ -1222,7 +1222,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                                                <div>
                                                                  <span className="font-bold">آخر نشاط:</span> {activity.lastWatchedAt ? new Date(activity.lastWatchedAt).toLocaleDateString('ar-EG', { dateStyle: 'medium' }) : 'غير متوفر'}
                                                                </div>
-                                                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${activity.isLocked ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${activity.isLocked ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                                                  {activity.isLocked ? <Lock size={10} /> : <Unlock size={10} />}
                                                                  {activity.isLocked ? 'مقفول' : 'نشط'}
                                                                </span>

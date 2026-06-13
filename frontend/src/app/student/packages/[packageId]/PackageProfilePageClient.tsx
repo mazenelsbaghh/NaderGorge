@@ -317,7 +317,7 @@ export default function PackageProfilePageClient() {
 
                         {/* Status badge */}
                         <span
-                          className={`absolute right-4 top-4 rounded-full px-3 py-1 text-[11px] font-black tracking-wider ${
+                          className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-black tracking-wider ${
                             isEnrolled
                               ? "bg-white/20 text-white backdrop-blur-sm"
                               : "bg-black/25 text-white/80 backdrop-blur-sm"
@@ -413,7 +413,7 @@ export default function PackageProfilePageClient() {
                 <div>
                   <h4 className="font-black text-base text-[var(--admin-text)]">أ. {pkg.teacherName}</h4>
                   {pkg.teacherSpecialization && (
-                    <p className="text-[10px] text-[var(--admin-primary)] font-black mt-0.5">
+                    <p className="text-xs text-[var(--admin-primary)] font-black mt-0.5">
                       {pkg.teacherSpecialization
                         .split(",")
                         .map((s) => GRADE_NAMES[s.trim()] || s.trim())

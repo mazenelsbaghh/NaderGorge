@@ -46,7 +46,7 @@ export function GamificationWidget() {
           <Star className="h-5 w-5 fill-current" />
         </div>
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--admin-primary)]">{status.currentLevel}</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--admin-primary)]">{status.currentLevel}</p>
           <div className="mt-0.5 flex items-baseline gap-1">
             <span className="text-xl font-black text-[var(--admin-text)]">{status.totalPoints}</span>
             <span className="text-xs font-semibold text-[var(--admin-muted)]">نقطة</span>

@@ -70,13 +70,13 @@ export function LessonResourceList({ resources }: LessonResourceListProps) {
               <button aria-label="تعديل الملف" disabled className="rounded-lg p-2 text-[var(--admin-muted)] opacity-40 cursor-not-allowed">
                 <Edit2 className="h-4 w-4" />
               </button>
-              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-[10px] font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
+              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
             </div>
             <div className="relative group/del">
               <button aria-label="حذف الملف" disabled className="rounded-lg p-2 text-[var(--admin-muted)] opacity-40 cursor-not-allowed">
                 <Trash2 className="h-4 w-4" />
               </button>
-              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-[10px] font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
+              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
             </div>
           </div>
         </div>

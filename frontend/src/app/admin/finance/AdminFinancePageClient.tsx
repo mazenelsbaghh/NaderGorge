@@ -471,7 +471,7 @@ export default function AdminFinancePageClient() {
               </>
             )}
             {!isDraft && (item.approvedByName || item.approvedAt) && (
-              <span className="text-[10px] text-[var(--admin-muted)] text-left" title={item.approvedByName ? `بواسطة ${item.approvedByName} في ${item.approvedAt ? formatDate(item.approvedAt) : ''}` : undefined}>
+              <span className="text-xs text-[var(--admin-muted)] text-left" title={item.approvedByName ? `بواسطة ${item.approvedByName} في ${item.approvedAt ? formatDate(item.approvedAt) : ''}` : undefined}>
                 معتمد وقفل
               </span>
             )}
@@ -525,7 +525,7 @@ export default function AdminFinancePageClient() {
         item.handledByName ? (
           <div>
             <div className="text-xs font-bold">{item.handledByName}</div>
-            <div className="text-[10px] text-[var(--admin-muted)] font-mono">
+            <div className="text-xs text-[var(--admin-muted)] font-mono">
               {item.handledAt ? formatDate(item.handledAt) : ''}
             </div>
           </div>
@@ -984,7 +984,7 @@ export default function AdminFinancePageClient() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                           adj.type === 'Addition'
                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                             : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400'
@@ -997,7 +997,7 @@ export default function AdminFinancePageClient() {
                       </span>
                     </div>
                     <p className="text-xs text-[var(--admin-muted)] mt-1">{adj.reason}</p>
-                    <span className="text-[10px] text-[var(--admin-muted)] mt-0.5 block font-mono">
+                    <span className="text-xs text-[var(--admin-muted)] mt-0.5 block font-mono">
                       {formatDate(adj.createdAt)}
                     </span>
                   </div>

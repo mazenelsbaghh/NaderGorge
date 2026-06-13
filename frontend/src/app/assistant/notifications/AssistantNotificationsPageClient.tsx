@@ -56,7 +56,7 @@ export default function AssistantNotificationsPageClient() {
               <div className="flex-1 space-y-1">
                 <div className="flex justify-between items-center">
                   <h3 className="text-sm font-black text-[var(--admin-text)]">{notif.title}</h3>
-                  <span className="text-[10px] text-[var(--admin-muted)] font-bold font-mono flex items-center gap-1">
+                  <span className="text-xs text-[var(--admin-muted)] font-bold font-mono flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     {notif.time}
                   </span>

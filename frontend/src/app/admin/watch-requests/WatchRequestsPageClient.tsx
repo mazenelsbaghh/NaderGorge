@@ -156,7 +156,7 @@ export default function WatchRequestsPageClient() {
                 <Check className="w-3.5 h-3.5 ml-1.5" /> تمت الموافقة
               </span>
               {req.reason && (
-                <span className="text-[10px] font-semibold text-[var(--admin-muted)] max-w-[150px] truncate block leading-normal" title={req.reason}>
+                <span className="text-xs font-semibold text-[var(--admin-muted)] max-w-[150px] truncate block leading-normal" title={req.reason}>
                   السبب: {req.reason}
                 </span>
               )}
@@ -169,7 +169,7 @@ export default function WatchRequestsPageClient() {
               <X className="w-3.5 h-3.5 ml-1.5" /> مرفوض
             </span>
             {req.reason && (
-              <span className="text-[10px] font-semibold text-rose-500 dark:text-rose-400 max-w-[150px] truncate block leading-normal" title={req.reason}>
+              <span className="text-xs font-semibold text-rose-500 dark:text-rose-400 max-w-[150px] truncate block leading-normal" title={req.reason}>
                 السبب: {req.reason}
               </span>
             )}

@@ -42,7 +42,7 @@ export function LessonHomeworkList({ homework }: LessonHomeworkListProps) {
               <h4 className="font-bold text-[var(--admin-text)] flex items-center gap-2">
                 {hw.title}
                 {hw.isMandatory && (
-                  <span className="text-[0.65rem] font-bold bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-full border border-amber-500/20">
+                  <span className="text-xs font-bold bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-full border border-amber-500/20">
                     إلزامي
                   </span>
                 )}
@@ -63,13 +63,13 @@ export function LessonHomeworkList({ homework }: LessonHomeworkListProps) {
               <button aria-label="تعديل الواجب" disabled className="rounded-lg p-2 text-[var(--admin-muted)] opacity-40 cursor-not-allowed">
                 <Edit2 className="h-4 w-4" />
               </button>
-              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-[10px] font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
+              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/edit:opacity-100">قريباً</span>
             </div>
             <div className="relative group/del">
               <button aria-label="حذف الواجب" disabled className="rounded-lg p-2 text-[var(--admin-muted)] opacity-40 cursor-not-allowed">
                 <Trash2 className="h-4 w-4" />
               </button>
-              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-[10px] font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
+              <span className="pointer-events-none absolute -top-8 right-0 whitespace-nowrap rounded-lg bg-[var(--admin-text)] px-2 py-1 text-xs font-bold text-[var(--admin-bg)] opacity-0 transition-opacity group-hover/del:opacity-100">قريباً</span>
             </div>
           </div>
         </div>

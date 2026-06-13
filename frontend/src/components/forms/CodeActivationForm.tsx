@@ -101,12 +101,12 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
         {/* Target metadata card */}
         <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 space-y-4 shadow-sm max-w-md mx-auto">
           <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[var(--admin-primary)]">المحتوى</span>
+            <span className="text-xs font-black uppercase tracking-wider text-[var(--admin-primary)]">المحتوى</span>
             <p className="text-base font-bold text-[var(--admin-text)]">{preview.targetName}</p>
           </div>
 
           <div className="flex flex-col items-center justify-center gap-3 border-t border-[var(--admin-border)] pt-4">
-            <span className="text-[10px] font-black uppercase tracking-wider text-[var(--admin-muted)]">مع المعلم</span>
+            <span className="text-xs font-black uppercase tracking-wider text-[var(--admin-muted)]">مع المعلم</span>
             <div className="flex items-center gap-3">
               <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-strong)]">
                 <Image

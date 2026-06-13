@@ -170,11 +170,11 @@ export const CrmCallLogModal: React.FC<CrmCallLogModalProps> = ({
                   {/* Timeline bullet */}
                   <div className="absolute right-[-21px] top-1.5 w-2 h-2 rounded-full bg-[var(--admin-primary)] ring-4 ring-[var(--admin-bg)]" />
                   
-                  <div className="text-[10px] text-[var(--admin-muted)] font-bold mb-0.5">
+                  <div className="text-xs text-[var(--admin-muted)] font-bold mb-0.5">
                     {formatDate(log.callDate)} - {log.agentName}
                   </div>
                   
-                  <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black mb-1 ${
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-black mb-1 ${
                     log.outcome === "Completed" ? "bg-emerald-500/10 text-emerald-500" :
                     log.outcome === "NoAnswer" ? "bg-red-500/10 text-red-500" :
                     log.outcome === "Postponed" ? "bg-amber-500/10 text-amber-500" :
@@ -187,7 +187,7 @@ export const CrmCallLogModal: React.FC<CrmCallLogModalProps> = ({
                     <p className="text-xs text-[var(--admin-text)] leading-relaxed">{log.notes}</p>
                   )}
                   {log.nextFollowUpDate && (
-                    <div className="text-[9px] text-[var(--admin-primary)] mt-1 flex items-center gap-1 font-bold">
+                    <div className="text-xs text-[var(--admin-primary)] mt-1 flex items-center gap-1 font-bold">
                       <Calendar className="h-3 w-3" />
                       المتابعة القادمة: {formatDate(log.nextFollowUpDate)}
                     </div>

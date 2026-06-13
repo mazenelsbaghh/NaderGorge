@@ -199,7 +199,7 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
             <div className="flex flex-col items-center justify-center gap-1.5 text-[var(--admin-muted)]">
               <Upload className="h-5 w-5 text-[var(--admin-primary)]" />
               <span className="text-xs font-bold">اضغط هنا لاختيار صورة للباقة</span>
-              <span className="text-[9px]">الحد الأقصى 10 ميجابايت (يتم تحويلها لـ WebP)</span>
+              <span className="text-xs">الحد الأقصى 10 ميجابايت (يتم تحويلها لـ WebP)</span>
             </div>
           )}
           <input

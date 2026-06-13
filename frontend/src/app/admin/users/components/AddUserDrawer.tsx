@@ -265,7 +265,7 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
                         >
                           {r.icon}
                           <span className="text-xs font-bold">{r.label}</span>
-                          <span className="text-[10px] opacity-70 leading-tight">{r.desc}</span>
+                          <span className="text-xs opacity-70 leading-tight">{r.desc}</span>
                         </button>
                       ))}
                     </div>

@@ -197,7 +197,7 @@ export default function AdminAdminsPageClient() {
             <div className="font-bold text-[var(--admin-text)]">
               {u.fullName}
               {currentUser?.id === u.id && (
-                <span className="mr-2 rounded-md bg-[var(--admin-primary-15)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--admin-primary)]">
+                <span className="mr-2 rounded-md bg-[var(--admin-primary-15)] px-1.5 py-0.5 text-xs font-bold text-[var(--admin-primary)]">
                   أنت
                 </span>
               )}

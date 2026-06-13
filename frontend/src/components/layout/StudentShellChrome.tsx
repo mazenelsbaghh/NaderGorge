@@ -141,7 +141,7 @@ function makeOutsideContentInert(drawerLayer: HTMLElement) {
   let current: HTMLElement | null = drawerLayer;
 
   while (current && current !== document.body) {
-    const parent = current.parentElement;
+    const parent: HTMLElement | null = current.parentElement;
     if (!parent) break;
 
     Array.from(parent.children).forEach((sibling) => {
@@ -412,7 +412,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                         </span>
                       </div>
                       {item.href === '/student/notifications' && unreadCount > 0 && (
-                        <span className="hidden group-hover/sidebar:flex mr-2 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-[10px] font-black h-5 px-1.5 rounded-full items-center justify-center">
+                        <span className="hidden group-hover/sidebar:flex mr-2 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-xs font-black h-5 px-1.5 rounded-full items-center justify-center">
                           {unreadCount}
                         </span>
                       )}
@@ -504,7 +504,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   >
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                      <span className="absolute top-1 left-1 h-4.5 w-4.5 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-[9px] font-black rounded-full flex items-center justify-center">
+                      <span className="absolute top-1 left-1 h-4.5 w-4.5 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-xs font-black rounded-full flex items-center justify-center">
                         {unreadCount}
                       </span>
                     )}
@@ -543,7 +543,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               className="mt-20 flex flex-col items-center select-none"
             >
               <div className="mb-4 h-px w-full bg-[var(--admin-border)]" />
-              <p className="text-[11px] font-black tracking-[0.26em] text-[var(--admin-footer)]">
+              <p className="text-xs font-black tracking-[0.26em] text-[var(--admin-footer)]">
                 منصة مسار
               </p>
             </motion.footer>
@@ -574,7 +574,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   }`}
               >
                 <Home className="h-[22px] w-[22px]" />
-                <span className="text-[10px] font-bold leading-none">الرئيسية</span>
+                <span className="text-xs font-bold leading-none">الرئيسية</span>
               </Link>
 
               {/* Primary nav items */}
@@ -593,7 +593,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                       }`}
                   >
                     <Icon className="h-[22px] w-[22px]" />
-                    <span className="text-[10px] font-bold leading-none">{item.label}</span>
+                    <span className="text-xs font-bold leading-none">{item.label}</span>
                   </Link>
                 );
               })}
@@ -616,7 +616,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     <span className="absolute -top-0.5 -left-0.5 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
                   )}
                 </div>
-                <span className="text-[10px] font-bold leading-none">القائمة</span>
+                <span className="text-xs font-bold leading-none">القائمة</span>
               </button>
             </div>
           </motion.nav>
@@ -686,7 +686,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
 
                 {/* Secondary nav links */}
                 <nav className="flex-1 space-y-1">
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--admin-muted)]">
+                  <p className="mb-2 text-xs font-black uppercase tracking-[0.2em] text-[var(--admin-muted)]">
                     صفحات تانية
                   </p>
                   {secondaryNavItems.map((item) => {
@@ -708,7 +708,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                           <span>{item.label}</span>
                         </div>
                         {item.href === '/student/notifications' && unreadCount > 0 && (
-                          <span className="bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-[10px] font-black h-5 px-2 rounded-full flex items-center justify-center">
+                          <span className="bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-xs font-black h-5 px-2 rounded-full flex items-center justify-center">
                             {unreadCount}
                           </span>
                         )}

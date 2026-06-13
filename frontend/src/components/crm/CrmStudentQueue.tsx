@@ -218,7 +218,7 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
                     </div>
 
                     <div className="flex gap-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
                         student.crmStatus === "Unassigned" ? "bg-gray-500/10 text-gray-500" :
                         student.crmStatus === "Assigned" ? "bg-blue-500/10 text-blue-500" :
                         student.crmStatus === "InProgress" ? "bg-amber-500/10 text-amber-500" :
@@ -229,7 +229,7 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
                       </span>
 
                       {isOverdue && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-500/15 text-red-500 flex items-center gap-1 animate-pulse">
+                        <span className="px-2 py-0.5 rounded-full text-xs font-black bg-red-500/15 text-red-500 flex items-center gap-1 animate-pulse">
                           <AlertCircle className="h-3 w-3" />
                           موعد المكالمة متأخر
                         </span>
@@ -271,7 +271,7 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
                   ) : (
                     <div className="text-xs text-[var(--admin-muted)] flex items-center gap-1 font-bold">
                       الأولوية: 
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
                         student.priority === "Critical" ? "bg-red-500/10 text-red-500" :
                         student.priority === "High" ? "bg-amber-500/10 text-amber-500" :
                         student.priority === "Medium" ? "bg-blue-500/10 text-blue-500" :
@@ -305,7 +305,7 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
                 </div>
 
                 {student.nextFollowUpDate && (
-                  <div className="text-[10px] text-[var(--admin-muted)] flex items-center gap-1">
+                  <div className="text-xs text-[var(--admin-muted)] flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     موعد الاتصال القادم: {formatDate(student.nextFollowUpDate)}
                   </div>

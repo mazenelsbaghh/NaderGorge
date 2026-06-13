@@ -62,13 +62,13 @@ export function MyCommunityPostsPanel({ posts, loading = false }: MyCommunityPos
                 <div className="flex items-center gap-2">
                   <p className="text-[12px] font-medium text-gray-500 dark:text-[var(--admin-muted)]">{formatDate(post.createdAt)}</p>
                   {post.isPoll && (
-                     <span className="flex items-center gap-1 text-[11px] font-bold text-[#0866ff]/80">
+                     <span className="flex items-center gap-1 text-xs font-bold text-[#0866ff]/80">
                        <BarChart3 className="h-3 w-3" />
                        استطلاع
                      </span>
                   )}
                 </div>
-                <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${statusClasses(post.status)}`}>
+                <span className={`rounded-md px-2 py-0.5 text-xs font-bold ${statusClasses(post.status)}`}>
                   {statusLabel(post.status)}
                 </span>
               </div>

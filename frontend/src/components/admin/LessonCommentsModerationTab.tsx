@@ -265,6 +265,7 @@ export function LessonCommentsModerationTab({
               <button
                 key={filter}
                 type="button"
+                disabled={loading || isMutating}
                 onClick={() => setActiveFilter(filter)}
                 className={`rounded-full px-4 py-2 text-xs font-black transition ${
                   active
@@ -278,16 +279,59 @@ export function LessonCommentsModerationTab({
           })}
         </div>
 
+        {!error && pendingComments.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <span className="text-sm font-black text-[var(--admin-text)]">
+              تم تحديد {selectedIds.size} من {pendingComments.length} قيد المراجعة
+            </span>
+            <button
+              type="button"
+              disabled={isMutating}
+              onClick={() =>
+                setSelectedIds(
+                  selectedIds.size === pendingComments.length
+                    ? new Set()
+                    : new Set(pendingComments.map((comment) => comment.id)),
+                )
+              }
+              className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-2 text-xs font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)] disabled:opacity-60"
+            >
+              {selectedIds.size === pendingComments.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+            </button>
+            <div className="mr-auto flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={selectedIds.size === 0 || isMutating}
+                onClick={() => void handleModeration([...selectedIds], 'approve')}
+                className="rounded-full bg-[var(--admin-success)] px-4 py-2 text-xs font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isMutating ? 'جارٍ القبول...' : 'قبول المحدد'}
+              </button>
+              <button
+                type="button"
+                disabled={selectedIds.size === 0 || isMutating}
+                onClick={() => setRejectingCommentIds([...selectedIds])}
+                className="rounded-full bg-[var(--admin-danger)] px-4 py-2 text-xs font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isMutating ? 'جارٍ الرفض...' : 'رفض المحدد'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <AdminDataTable
           data={comments}
           columns={columns}
           loading={loading}
           rowKey={(row) => row.id}
+          errorMessage={error}
+          onRetry={() => void loadComments(activeFilter)}
           emptyMessage={
             activeFilter === 'Pending'
               ? 'لا توجد تعليقات قيد المراجعة حاليًا.'
               : 'لا توجد تعليقات مطابقة لهذا الفلتر.'
           }
+          rowActionLabel={(row) => `عرض تفاصيل تعليق الطالب ${row.studentName}`}
           expandedRowRender={(row) => (
             <div className="space-y-4">
               <div>
@@ -316,6 +360,43 @@ export function LessonCommentsModerationTab({
           )}
         />
       </section>
+
+      <AdminModal
+        open={rejectingCommentIds.length > 0}
+        onClose={() => {
+          if (!isMutating) setRejectingCommentIds([]);
+        }}
+        title={rejectingCommentIds.length > 1 ? 'تأكيد رفض التعليقات المحددة' : 'تأكيد رفض التعليق'}
+        subtitle="سيتم إخفاء التعليقات المرفوضة عن الطلاب وتسجيل قرار المراجعة."
+      >
+        <div className="space-y-5" dir="rtl">
+          <p className="text-sm font-medium leading-7 text-[var(--admin-text)]">
+            هل تريد متابعة رفض {rejectingCommentIds.length > 1 ? `${rejectingCommentIds.length} تعليقات` : 'هذا التعليق'}؟
+          </p>
+          <div className="flex items-center justify-end gap-3 border-t border-[var(--admin-border)] pt-4">
+            <button
+              type="button"
+              disabled={isMutating}
+              onClick={() => setRejectingCommentIds([])}
+              className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-2.5 text-sm font-bold text-[var(--admin-text)] transition hover:bg-[var(--admin-hover)] disabled:opacity-60"
+            >
+              إلغاء
+            </button>
+            <button
+              type="button"
+              disabled={isMutating}
+              onClick={async () => {
+                const ids = rejectingCommentIds;
+                await handleModeration(ids, 'reject');
+                setRejectingCommentIds([]);
+              }}
+              className="rounded-full bg-[var(--admin-danger)] px-5 py-2.5 text-sm font-black text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isMutating ? 'جارٍ الرفض...' : 'تأكيد الرفض'}
+            </button>
+          </div>
+        </div>
+      </AdminModal>
     </div>
   );
 }

@@ -146,7 +146,7 @@ export default function MediaKpiDashboard() {
                       return (
                         <tr key={editor.editorId} className="hover:bg-[var(--admin-hover)]/30 transition-colors">
                           <td className="py-4 pr-4 font-bold text-xs text-[var(--admin-text)] flex items-center gap-3">
-                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-[10px] font-bold">
+                            <span className="w-6 h-6 flex items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-xs font-bold">
                               {index + 1}
                             </span>
                             {editor.editorName}
@@ -158,7 +158,7 @@ export default function MediaKpiDashboard() {
                             {editor.totalErrors}
                           </td>
                           <td className="py-4 text-center">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${errorRateColor}`}>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${errorRateColor}`}>
                               {errorRate} خطأ / فيديو
                             </span>
                           </td>

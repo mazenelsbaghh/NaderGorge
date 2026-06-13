@@ -143,7 +143,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
         {(isWorking || !status) && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
         {isFailed && <AlertTriangle className="h-3 w-3 shrink-0 text-red-500" />}
         <span
-          className={`truncate text-[11px] ${isFailed ? 'text-red-500' : isCompleted ? 'text-green-500' : 'text-[var(--admin-primary)]'}`}
+          className={`truncate text-xs ${isFailed ? 'text-red-500' : isCompleted ? 'text-green-500' : 'text-[var(--admin-primary)]'}`}
           title={progressText}
         >
           {isFailed ? 'فشلت العملية' : progressText}
@@ -162,7 +162,7 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
 
       {/* Failed reason snippet */}
       {isFailed && status.failedReason && (
-        <span className="text-[10px] text-red-400 truncate w-full" title={status.failedReason}>
+        <span className="text-xs text-red-400 truncate w-full" title={status.failedReason}>
           {status.failedReason}
         </span>
       )}
@@ -222,13 +222,13 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
     <div className="px-4 pb-3 space-y-1">
       {chapters.map((ch: any, i: number) => (
         <div key={ch.id} className="flex items-start gap-2.5 rounded-lg bg-[var(--admin-bg)] border border-[var(--admin-border)] px-3 py-2">
-          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-[10px] font-bold flex items-center justify-center mt-0.5">{i + 1}</div>
+          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] text-xs font-bold flex items-center justify-center mt-0.5">{i + 1}</div>
           <div className="flex-1 min-w-0">
             <div className="text-xs font-bold text-[var(--admin-text)] truncate">{ch.title}</div>
-            {ch.summaryText && <div className="text-[10px] text-[var(--admin-muted)] mt-0.5 line-clamp-2">{ch.summaryText}</div>}
+            {ch.summaryText && <div className="text-xs text-[var(--admin-muted)] mt-0.5 line-clamp-2">{ch.summaryText}</div>}
             {ch.mindmapImageUrl && (
               <div className="mt-2">
-                <a href={resolveMediaUrl(ch.mindmapImageUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-teal-500 font-bold hover:underline mb-1">
+                <a href={resolveMediaUrl(ch.mindmapImageUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-teal-500 font-bold hover:underline mb-1">
                   <ImageIcon className="w-3 h-3" />
                   رؤية الخريطة الذهنية
                 </a>
@@ -243,7 +243,7 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
               </div>
             )}
           </div>
-          <div className="flex-shrink-0 text-[10px] font-mono font-bold text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-1.5 py-0.5 rounded whitespace-nowrap">
+          <div className="flex-shrink-0 text-xs font-mono font-bold text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-1.5 py-0.5 rounded whitespace-nowrap">
             {Math.floor(ch.startTime / 60)}:{String(ch.startTime % 60).padStart(2, '0')} — {Math.floor(ch.endTime / 60)}:{String(ch.endTime % 60).padStart(2, '0')}
           </div>
         </div>
@@ -391,7 +391,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                 </div>
                 <div>
                   <h4 className="font-bold text-[var(--admin-text)]">{video.title}</h4>
-                  <div className="mt-2 sm:mt-1 flex flex-wrap items-center gap-2 text-[11px] sm:text-xs font-mono text-[var(--admin-muted)]">
+                  <div className="mt-2 sm:mt-1 flex flex-wrap items-center gap-2 text-xs sm:text-xs font-mono text-[var(--admin-muted)]">
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
                       {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'YouTube')}
                     </span>
@@ -412,7 +412,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                   <button
                     type="button"
                     onClick={() => toggleChapters(video.id)}
-                    className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold transition-colors ${expandedChapters === video.id
+                    className={`flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold transition-colors ${expandedChapters === video.id
                         ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)] border border-[var(--admin-primary)]/30'
                         : 'text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] border border-transparent'
                       }`}

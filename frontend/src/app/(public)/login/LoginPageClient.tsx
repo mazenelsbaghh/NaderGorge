@@ -25,7 +25,11 @@ import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { LoginForm } from '@/components/forms/LoginForm';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
-import { getSurfaceName, getSurfaceOrigins, isValidRedirectUrl } from '@/packages/surface-runtime/config';
+import {
+  getSurfaceName,
+  getSurfaceOrigins,
+  isValidRedirectUrl,
+} from '@/packages/surface-runtime/config';
 
 function getLoginCopy(surface: string) {
   let title = 'بوابة الطالب';
@@ -95,9 +99,18 @@ export default function LoginPageClient() {
         className="auth-shell auth-redirect-screen relative flex min-h-[100dvh] w-full flex-col items-center justify-center bg-[var(--admin-bg)] text-[var(--admin-text)]"
         style={themeVars}
       >
-        <section className="auth-redirect-card" aria-live="polite" aria-busy="true">
+        <section
+          className="auth-redirect-card"
+          aria-live="polite"
+          aria-busy="true"
+        >
           <div className="auth-redirect-logo">
-            <PlatformLogo variant="mark" size="md" tone={isDark ? 'light' : 'dark'} priority />
+            <PlatformLogo
+              variant="mark"
+              size="md"
+              tone={isDark ? 'light' : 'dark'}
+              priority
+            />
             <span className="auth-redirect-loader" aria-hidden="true" />
           </div>
 
@@ -138,20 +151,26 @@ export default function LoginPageClient() {
         <AnimatedThemeToggler
           checked={isDark}
           onToggle={toggleTheme}
-          aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
-          title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+          aria-label={
+            isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
+          }
+          title={
+            isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'
+          }
           className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card-soft)]"
         />
       </div>
 
       <main className="auth-login-main">
-        <section
-          className="auth-login-card"
-          aria-labelledby="login-page-title"
-        >
+        <section className="auth-login-card" aria-labelledby="login-page-title">
           <header className="auth-login-heading">
             <div className="auth-login-logo">
-              <PlatformLogo variant="mark" size="md" tone={isDark ? 'light' : 'dark'} priority />
+              <PlatformLogo
+                variant="mark"
+                size="md"
+                tone={isDark ? 'light' : 'dark'}
+                priority
+              />
             </div>
             <div>
               <p className="auth-login-brand">منصة مسار</p>
@@ -173,10 +192,15 @@ export default function LoginPageClient() {
               <h2>تسجيل الدخول إلى حسابك</h2>
               <LoginForm />
 
-              {(surface === 'student' || surface === 'landing' || surface === 'all') && (
+              {(surface === 'student' ||
+                surface === 'landing' ||
+                surface === 'all') && (
                 <>
                   <div className="auth-divider" />
-                  <p className="text-center text-sm" style={{ color: 'var(--admin-muted)' }}>
+                  <p
+                    className="text-center text-sm"
+                    style={{ color: 'var(--admin-muted)' }}
+                  >
                     ليس لديك حساب؟{' '}
                     <Link
                       href="/register"

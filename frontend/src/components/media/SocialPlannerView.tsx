@@ -275,11 +275,11 @@ export default function SocialPlannerView() {
                     return (
                       <div 
                         key={plan.id}
-                        className={`p-1.5 rounded-xl border border-[var(--admin-border)] flex flex-col gap-1 text-[10px] bg-[var(--admin-card)] hover:border-[var(--admin-primary-30)] transition-all`}
+                        className={`p-1.5 rounded-xl border border-[var(--admin-border)] flex flex-col gap-1 text-xs bg-[var(--admin-card)] hover:border-[var(--admin-primary-30)] transition-all`}
                         title={`${plan.title} - ${STATUS_LABELS[plan.status]}`}
                       >
                         <div className="flex items-center justify-between gap-1">
-                          <span className="font-bold text-[9px] text-[var(--admin-text)] truncate">{plan.title}</span>
+                          <span className="font-bold text-xs text-[var(--admin-text)] truncate">{plan.title}</span>
                           <span className={platInfo.color}>
                             <PlatIcon className="h-3 w-3" />
                           </span>

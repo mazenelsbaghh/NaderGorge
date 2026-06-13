@@ -102,6 +102,90 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 return ApiResponse<bool>.Fail("تم شراء هذا المحتوى مسبقاً");
             }
 
+            // 3. Check if student already has access from a HIGHER-LEVEL grant
+            // Hierarchy: Package > Term > Section (Month) > Lesson
+            // If they own the parent, they can't buy the child (it's already included)
+            string? coveredBy = null;
+            switch (request.ContentType)
+            {
+                case CodeType.Term:
+                {
+                    // Can't buy a Term if they already own its Package
+                    var termCheck = await _db.Terms.FirstOrDefaultAsync(t => t.Id == request.ContentId, ct);
+                    if (termCheck != null)
+                    {
+                        bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
+                            g.UserId == request.StudentId && g.IsActive &&
+                            g.GrantType == CodeType.Package && g.PackageId == termCheck.PackageId, ct);
+                        if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
+                    }
+                    break;
+                }
+                case CodeType.Month:
+                {
+                    // Can't buy a Section if they own its Term or its Package
+                    var sectionCheck = await _db.ContentSections
+                        .Include(s => s.Term)
+                        .FirstOrDefaultAsync(s => s.Id == request.ContentId, ct);
+                    if (sectionCheck != null)
+                    {
+                        bool hasTerm = await _db.StudentAccessGrants.AnyAsync(g =>
+                            g.UserId == request.StudentId && g.IsActive &&
+                            g.GrantType == CodeType.Term && g.TermId == sectionCheck.TermId, ct);
+                        if (hasTerm) { coveredBy = "الترم"; break; }
+
+                        var sectionPackageId = sectionCheck.Term?.PackageId;
+                        if (sectionPackageId != null)
+                        {
+                            bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
+                                g.UserId == request.StudentId && g.IsActive &&
+                                g.GrantType == CodeType.Package && g.PackageId == sectionPackageId, ct);
+                            if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
+                        }
+                    }
+                    break;
+                }
+                case CodeType.Lesson:
+                {
+                    // Can't buy a Lesson if they own its Section, Term, or Package
+                    var lessonCheck = await _db.Lessons
+                        .Include(l => l.ContentSection)
+                        .ThenInclude(s => s.Term)
+                        .FirstOrDefaultAsync(l => l.Id == request.ContentId, ct);
+                    if (lessonCheck != null)
+                    {
+                        bool hasSection = await _db.StudentAccessGrants.AnyAsync(g =>
+                            g.UserId == request.StudentId && g.IsActive &&
+                            g.GrantType == CodeType.Month && g.ContentSectionId == lessonCheck.ContentSectionId, ct);
+                        if (hasSection) { coveredBy = "القسم"; break; }
+
+                        var lessonTermId = lessonCheck.ContentSection?.TermId;
+                        if (lessonTermId != null)
+                        {
+                            bool hasTerm = await _db.StudentAccessGrants.AnyAsync(g =>
+                                g.UserId == request.StudentId && g.IsActive &&
+                                g.GrantType == CodeType.Term && g.TermId == lessonTermId, ct);
+                            if (hasTerm) { coveredBy = "الترم"; break; }
+                        }
+
+                        var lessonPackageId = lessonCheck.ContentSection?.Term?.PackageId;
+                        if (lessonPackageId != null)
+                        {
+                            bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
+                                g.UserId == request.StudentId && g.IsActive &&
+                                g.GrantType == CodeType.Package && g.PackageId == lessonPackageId, ct);
+                            if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
+                        }
+                    }
+                    break;
+                }
+            }
+
+            if (coveredBy != null)
+            {
+                return ApiResponse<bool>.Fail($"أنت مشترك بالفعل في {coveredBy} — لا يمكن شراء {contentName} بشكل منفصل لأنها مغطاة بالاشتراك الحالي.");
+            }
+
             try
             {
                 await _balanceService.DeductBalance(

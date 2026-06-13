@@ -165,7 +165,12 @@ export default function AdminOperationsPageClient() {
       key: 'title',
       label: 'المهمة',
       render: (t) => (
-        <div className="cursor-pointer" onClick={() => setSelectedTaskId(t.id)}>
+        <button
+          type="button"
+          onClick={() => setSelectedTaskId(t.id)}
+          className="block w-full cursor-pointer text-right"
+          aria-label={`عرض تفاصيل المهمة ${t.title}`}
+        >
           <div className="font-bold text-[var(--admin-text)] hover:text-[var(--admin-primary)] transition-colors">
             {t.title}
           </div>
@@ -174,7 +179,7 @@ export default function AdminOperationsPageClient() {
               {t.description}
             </div>
           )}
-        </div>
+        </button>
       ),
     },
     {

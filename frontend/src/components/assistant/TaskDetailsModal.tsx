@@ -223,23 +223,23 @@ export default function TaskDetailsModal({
           {/* Top Metadata Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[var(--admin-card-soft)] p-4 rounded-2xl border border-[var(--admin-border)]">
             <div>
-              <span className="block text-[10px] font-black text-[var(--admin-muted)] uppercase">الحالة</span>
+              <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">الحالة</span>
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 mt-1 text-xs font-bold ${getStatusConfig(details.task.status).color}`}>
                 {getStatusConfig(details.task.status).label}
               </span>
             </div>
             <div>
-              <span className="block text-[10px] font-black text-[var(--admin-muted)] uppercase">الأولوية</span>
+              <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">الأولوية</span>
               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 mt-1 text-xs font-bold ${getPriorityConfig(details.task.priority).color}`}>
                 {getPriorityConfig(details.task.priority).label}
               </span>
             </div>
             <div>
-              <span className="block text-[10px] font-black text-[var(--admin-muted)] uppercase">المسؤول</span>
+              <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">المسؤول</span>
               <span className="text-xs font-bold text-[var(--admin-text)] block mt-1">{details.task.assigneeName}</span>
             </div>
             <div>
-              <span className="block text-[10px] font-black text-[var(--admin-muted)] uppercase">تاريخ الاستحقاق</span>
+              <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">تاريخ الاستحقاق</span>
               <span className="text-xs font-bold text-[var(--admin-text)] block mt-1 font-mono">
                 {details.task.dueDate ? new Date(details.task.dueDate).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '—'}
               </span>
@@ -352,7 +352,7 @@ export default function TaskDetailsModal({
                   <div key={comment.id} className="p-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] flex flex-col gap-1">
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-extrabold text-[var(--admin-text)]">{comment.userName}</span>
-                      <span className="text-[10px] text-[var(--admin-muted)] flex items-center gap-1 font-mono">
+                      <span className="text-xs text-[var(--admin-muted)] flex items-center gap-1 font-mono">
                         <Clock className="h-3 w-3" />
                         {new Date(comment.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}{' '}
                         {new Date(comment.createdAt).toLocaleDateString('ar-EG')}

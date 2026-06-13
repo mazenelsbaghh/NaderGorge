@@ -311,7 +311,7 @@ export default function ForgotPasswordPageClient() {
             <form onSubmit={handleReset} className="space-y-5">
               {/* ── Password Checklist ── */}
               <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)]/80 p-4 mb-2 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--admin-primary)] mb-1">متطلبات الأمان</p>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--admin-primary)] mb-1">متطلبات الأمان</p>
                 {passwordChecklist.map((item) => (
                   <div key={item.label} className="flex items-center justify-between text-xs">
                     <span style={{ color: item.valid ? 'var(--admin-text)' : 'var(--admin-muted)' }}>{item.label}</span>

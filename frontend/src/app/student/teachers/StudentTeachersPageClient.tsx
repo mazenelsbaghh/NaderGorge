@@ -188,7 +188,7 @@ export default function StudentTeachersPageClient() {
                               {teacher.subjectNames.map((subject, idx) => (
                                 <span
                                   key={idx}
-                                  className="inline-flex items-center rounded-md bg-[var(--admin-primary-10)] px-2 py-0.5 text-[10px] font-bold text-[var(--admin-primary)]"
+                                  className="inline-flex items-center rounded-md bg-[var(--admin-primary-10)] px-2 py-0.5 text-xs font-bold text-[var(--admin-primary)]"
                                 >
                                   {subject}
                                 </span>
@@ -208,7 +208,7 @@ export default function StudentTeachersPageClient() {
                             {specList.map((spec, sIdx) => (
                               <span
                                 key={sIdx}
-                                className="rounded-full bg-[var(--admin-card-soft)] px-2.5 py-0.5 text-[10px] font-semibold text-[var(--admin-muted)] border border-[var(--admin-border)]/40"
+                                className="rounded-full bg-[var(--admin-card-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--admin-muted)] border border-[var(--admin-border)]/40"
                               >
                                 {spec}
                               </span>
@@ -434,14 +434,14 @@ export default function StudentTeachersPageClient() {
                         <h3 className="text-sm font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)] transition-colors line-clamp-1">
                           {pkg.name}
                         </h3>
-                        <span className="text-[10px] text-[var(--admin-muted)] block mt-0.5">
+                        <span className="text-xs text-[var(--admin-muted)] block mt-0.5">
                           {pkg.subjectName}
                         </span>
                       </div>
                     </div>
 
                     <span
-                      className={`rounded-md px-2 py-0.5 text-[9px] font-black tracking-wide ${
+                      className={`rounded-md px-2 py-0.5 text-xs font-black tracking-wide ${
                         pkg.isEnrolled
                           ? "bg-[var(--admin-success-20)] text-[var(--admin-success)]"
                           : "bg-[var(--admin-card-strong)] text-[var(--admin-text)]"
@@ -458,7 +458,7 @@ export default function StudentTeachersPageClient() {
 
                 <div className="mt-6 border-t border-[var(--admin-border)]/50 pt-4 flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-[var(--admin-muted)]">سعر الاشتراك</span>
+                    <span className="text-xs text-[var(--admin-muted)]">سعر الاشتراك</span>
                     <span className="text-sm font-black text-[var(--admin-text)]">
                       {pkg.price.toFixed(0)} ج.م
                     </span>

@@ -163,7 +163,7 @@ export default function AdminCodesPageClient() {
       render: (g) => (
         <div>
           <div className="font-bold text-[var(--admin-text-strong)]">{g.name || 'دفعة بدون اسم'}</div>
-          <div className="text-[10px] font-mono text-[var(--admin-muted)] mt-0.5">{g.id}</div>
+          <div className="text-xs font-mono text-[var(--admin-muted)] mt-0.5">{g.id}</div>
         </div>
       ),
     },

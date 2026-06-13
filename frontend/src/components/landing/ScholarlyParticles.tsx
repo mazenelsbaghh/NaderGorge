@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
 interface Particle {
   x: number;
@@ -27,15 +27,19 @@ export function ScholarlyParticles() {
   });
 
   // Track colors dynamically based on CSS theme variables
-  const colorsRef = useRef<{ primary: string; secondary: string; accent: string }>({
-    primary: "#0A1D3D",
-    secondary: "#0E8F8F",
-    accent: "#D4A017",
+  const colorsRef = useRef<{
+    primary: string;
+    secondary: string;
+    accent: string;
+  }>({
+    primary: '#0A1D3D',
+    secondary: '#0E8F8F',
+    accent: '#D4A017',
   });
 
   useEffect(() => {
     const constrainedContext = window.matchMedia(
-      "(max-width: 767px), (pointer: coarse), (prefers-reduced-motion: reduce), (update: slow)",
+      '(max-width: 767px), (pointer: coarse), (prefers-reduced-motion: reduce), (update: slow)'
     );
 
     const updateAvailability = () => {
@@ -46,10 +50,10 @@ export function ScholarlyParticles() {
     };
 
     updateAvailability();
-    constrainedContext.addEventListener("change", updateAvailability);
+    constrainedContext.addEventListener('change', updateAvailability);
 
     return () => {
-      constrainedContext.removeEventListener("change", updateAvailability);
+      constrainedContext.removeEventListener('change', updateAvailability);
     };
   }, []);
 
@@ -59,7 +63,7 @@ export function ScholarlyParticles() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     // Update dimensions
@@ -75,12 +79,12 @@ export function ScholarlyParticles() {
 
     // Extract colors from computed CSS variables
     const updateColors = () => {
-      if (typeof window === "undefined") return;
+      if (typeof window === 'undefined') return;
       const styles = getComputedStyle(document.documentElement);
       colorsRef.current = {
-        primary: styles.getPropertyValue("--primary").trim() || "#0A1D3D",
-        secondary: styles.getPropertyValue("--secondary").trim() || "#0E8F8F",
-        accent: styles.getPropertyValue("--accent").trim() || "#D4A017",
+        primary: styles.getPropertyValue('--primary').trim() || '#0A1D3D',
+        secondary: styles.getPropertyValue('--secondary').trim() || '#0E8F8F',
+        accent: styles.getPropertyValue('--accent').trim() || '#D4A017',
       };
     };
 
@@ -90,12 +94,12 @@ export function ScholarlyParticles() {
     });
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class", "data-student-theme-surface", "style"],
+      attributeFilter: ['class', 'data-student-theme-surface', 'style'],
     });
 
     updateColors();
     resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener('resize', resizeCanvas);
 
     // Mouse events
     const handleMouseMove = (e: MouseEvent) => {
@@ -112,8 +116,8 @@ export function ScholarlyParticles() {
       mouseRef.current.active = false;
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
 
     // Intersection Observer to stop drawing when scrolled off-screen
     const intersectionObserver = new IntersectionObserver(
@@ -166,12 +170,14 @@ export function ScholarlyParticles() {
     // Convert hex color to rgba helper
     function hexToRgba(hex: string, alpha: number): string {
       // Clean hex string
-      const cleanHex = hex.replace("#", "").trim();
+      const cleanHex = hex.replace('#', '').trim();
       if (cleanHex.length !== 6 && cleanHex.length !== 3) {
         return `rgba(14, 143, 143, ${alpha})`; // Fallback teal
       }
-      
-      let r = 0, g = 0, b = 0;
+
+      let r = 0,
+        g = 0,
+        b = 0;
       if (cleanHex.length === 6) {
         r = parseInt(cleanHex.substring(0, 2), 16);
         g = parseInt(cleanHex.substring(2, 4), 16);
@@ -223,7 +229,7 @@ export function ScholarlyParticles() {
         // Keep inside bounds with wrapping
         if (p.x < -10) p.x = width + 10;
         else if (p.x > width + 10) p.x = -10;
-        
+
         if (p.y < -10) p.y = height + 10;
         else if (p.y > height + 10) p.y = -10;
 
@@ -245,12 +251,17 @@ export function ScholarlyParticles() {
           const maxConnectionDist = 120;
 
           if (dist < maxConnectionDist) {
-            const alpha = (1 - dist / maxConnectionDist) * 0.09 * Math.min(p1.alpha, p2.alpha);
+            const alpha =
+              (1 - dist / maxConnectionDist) *
+              0.09 *
+              Math.min(p1.alpha, p2.alpha);
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
             ctx.strokeStyle = hexToRgba(
-              p1.color === colorsRef.current.accent ? colorsRef.current.accent : colorsRef.current.secondary,
+              p1.color === colorsRef.current.accent
+                ? colorsRef.current.accent
+                : colorsRef.current.secondary,
               alpha
             );
             ctx.stroke();
@@ -278,9 +289,9 @@ export function ScholarlyParticles() {
 
     return () => {
       stopAnimation();
-      window.removeEventListener("resize", resizeCanvas);
-      window.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseleave", handleMouseLeave);
+      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
       observer.disconnect();
       intersectionObserver.disconnect();
     };
@@ -294,7 +305,10 @@ export function ScholarlyParticles() {
       className="pointer-events-none absolute inset-0 select-none overflow-hidden"
       style={{ zIndex: 0 }}
     >
-      <canvas ref={canvasRef} className="block h-full w-full opacity-60 dark:opacity-45" />
+      <canvas
+        ref={canvasRef}
+        className="block h-full w-full opacity-60 dark:opacity-45"
+      />
     </div>
   );
 }

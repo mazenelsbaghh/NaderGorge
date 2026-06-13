@@ -166,7 +166,7 @@ export default function CodeGroupDetailsPageClient() {
               {c.usedByStudentName || 'طالب مجهول الاسم'}
             </span>
             {c.usedByStudentPhone && (
-              <span className="text-[10px] text-[var(--admin-muted)] font-mono mt-0.5">{c.usedByStudentPhone}</span>
+              <span className="text-xs text-[var(--admin-muted)] font-mono mt-0.5">{c.usedByStudentPhone}</span>
             )}
           </Link>
         );

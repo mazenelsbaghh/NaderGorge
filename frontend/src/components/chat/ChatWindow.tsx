@@ -122,7 +122,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
               {pinnedMessages[pinnedMessages.length - 1].content || "ملف مرفق"}
             </div>
           </div>
-          <span className="text-[10px] font-bold text-[var(--admin-primary)] bg-white/40 px-2 py-0.5 rounded-full">
+          <span className="text-xs font-bold text-[var(--admin-primary)] bg-white/40 px-2 py-0.5 rounded-full">
             {pinnedMessages.length} رسائل
           </span>
         </div>
@@ -141,7 +141,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
             >
               {/* Sender Name */}
               {!isOwn && (
-                <span className="text-[10px] font-extrabold text-[var(--admin-muted)] mb-1 px-1">
+                <span className="text-xs font-extrabold text-[var(--admin-muted)] mb-1 px-1">
                   {msg.senderName}
                 </span>
               )}
@@ -190,10 +190,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
 
                 {/* Date & Read Receipt */}
-                <div className="flex items-center gap-1.5 justify-end mt-1.5 opacity-60 text-[9px]">
+                <div className="flex items-center gap-1.5 justify-end mt-1.5 opacity-60 text-xs">
                   <span>{formatDate(msg.createdAt)}</span>
                   {isOwn && (
-                    <span className="font-extrabold text-[8px] uppercase">
+                    <span className="font-extrabold text-xs uppercase">
                       {msg.readBy.length > 1 ? "✓✓ مقروءة" : "✓"}
                     </span>
                   )}
@@ -231,7 +231,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
                     setAttachmentType("Text");
                     setAttachmentUrl("");
                   }}
-                  className="text-[10px] text-red-500 font-bold px-2"
+                  className="text-xs text-red-500 font-bold px-2"
                 >
                   إلغاء
                 </button>

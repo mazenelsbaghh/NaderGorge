@@ -295,7 +295,7 @@ export default function TeacherProfilePageClient() {
                       <User className="h-8 w-8" />
                     </div>
                   )}
-                  <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                  <span className="text-xs text-[var(--admin-muted)] mt-2">
                     {isUploadingProfile ? "جاري الرفع..." : "اسحب صورة أو انقر للرفع"}
                   </span>
                 </div>
@@ -347,7 +347,7 @@ export default function TeacherProfilePageClient() {
                       <Sparkles className="h-8 w-8" />
                     </div>
                   )}
-                  <span className="text-[10px] text-[var(--admin-muted)] mt-2">
+                  <span className="text-xs text-[var(--admin-muted)] mt-2">
                     {isUploadingAi ? "جاري الرفع..." : "اسحب صورة أو انقر للرفع"}
                   </span>
                 </div>

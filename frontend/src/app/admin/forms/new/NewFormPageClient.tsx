@@ -390,7 +390,7 @@ export default function NewFormPageClient() {
                   onChange={(e) => setSlug(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ''))}
                   className="admin-input w-full text-left"
                 />
-                <span className="text-[10px] text-[var(--admin-muted)]">
+                <span className="text-xs text-[var(--admin-muted)]">
                   الرابط العام سيكون: {getAbsoluteLandingUrl(`/forms/${slug || 'slug'}`)}
                 </span>
               </div>
@@ -457,7 +457,7 @@ export default function NewFormPageClient() {
                   رفع صورة
                 </button>
               </div>
-              <span className="text-[10px] text-[var(--admin-muted)]">
+              <span className="text-xs text-[var(--admin-muted)]">
                 ضع رابط صورة الغلاف أو انقر على &quot;رفع صورة&quot; لاختيار صورة من جهازك.
               </span>
             </div>

@@ -159,7 +159,7 @@ export function AttendanceLogTable({ logs, loading }: AttendanceLogTableProps) {
                   {log.lateMinutes > 0 ? `${log.lateMinutes} د` : '—'}
                 </td>
                 <td className="px-5 py-4">
-                  <div className="flex flex-col items-end gap-1 text-[10px] text-[var(--admin-muted)]">
+                  <div className="flex flex-col items-end gap-1 text-xs text-[var(--admin-muted)]">
                     <span className="flex items-center gap-1 font-mono">
                       {log.ipAddress || 'Unknown IP'}
                       <MapPin className="h-3 w-3 text-[var(--admin-muted)]" />

@@ -432,7 +432,7 @@ export function RegistrationForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)] flex flex-col justify-between">
               <div>
-                <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">بطاقة الطالب</p>
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">بطاقة الطالب</p>
                 <div className="mt-4 flex items-center gap-3">
                   <UserAvatar avatarSlug={formData.avatarSlug} fullName={formData.fullName || 'طالب'} size="md" />
                   <h3 className="text-xl font-black text-[var(--admin-text)] leading-tight">
@@ -447,7 +447,7 @@ export function RegistrationForm() {
             </div>
             <div className="grid gap-4">
               <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
-                <p className="text-[0.65rem] font-bold text-[var(--admin-muted)] uppercase tracking-wider">المنطقة السكنية</p>
+                <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">المنطقة السكنية</p>
                 <p className="mt-2 text-xl font-black text-[var(--admin-text)]">{formData.district || 'اختر المنطقة السكنية'}</p>
               </div>
               {formData.dateOfBirth ? (() => {
@@ -455,7 +455,7 @@ export function RegistrationForm() {
                 return (
                   <>
                     <div className="rounded-[24px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/5 to-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
-                      <p className="text-[0.65rem] font-bold text-[var(--admin-muted)] uppercase tracking-wider">سنك دلوقتي</p>
+                      <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">سنك دلوقتي</p>
                       <p className="mt-2 text-2xl font-black text-[var(--admin-primary)] flex flex-wrap gap-1 items-baseline">
                         {info.ageYears} <span className="text-base font-bold text-[var(--admin-muted)] ml-1">سنة</span>
                         {info.ageMonths > 0 && <> و {info.ageMonths} <span className="text-base font-bold text-[var(--admin-muted)] ml-1">شهر</span></>}
@@ -463,14 +463,14 @@ export function RegistrationForm() {
                       </p>
                     </div>
                     <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
-                      <p className="text-[0.65rem] font-bold text-[var(--admin-muted)] uppercase tracking-wider">عيد ميلادك 🎂</p>
+                      <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">عيد ميلادك 🎂</p>
                       <p className="mt-2 text-2xl font-black text-[var(--admin-text)]">باقي {info.daysToNextBirthday} <span className="text-base font-bold text-[var(--admin-muted)]">يوم</span></p>
                     </div>
                   </>
                 );
               })() : (
                 <div className="rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)]/90 p-5 backdrop-blur-sm">
-                  <p className="text-[0.65rem] font-bold text-[var(--admin-muted)] uppercase tracking-wider">تاريخ الميلاد</p>
+                  <p className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">تاريخ الميلاد</p>
                   <p className="mt-2 text-xl font-black text-[var(--admin-muted)]/50">اختر تاريخ الميلاد</p>
                 </div>
               )}
@@ -481,7 +481,7 @@ export function RegistrationForm() {
         return (
           <div className="space-y-4">
             <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
-              <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جهة المتابعة</p>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جهة المتابعة</p>
               <h3 className="mt-4 text-2xl font-black text-[var(--admin-text)] tracking-wider">{formData.parentPhone || 'رقم هاتف ولي الأمر'}</h3>
               <p className="mt-2 text-sm text-[var(--admin-muted)] leading-7">هذا الرقم سيستخدم للتواصل والمتابعة عند الحاجة.</p>
             </div>
@@ -501,7 +501,7 @@ export function RegistrationForm() {
         return (
           <div className="space-y-4">
             <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
-              <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">المسار الحالي</p>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">المسار الحالي</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
                   {formData.educationStage === 'Secondary' ? 'ثانوية' : formData.educationStage === 'Baccalaureate' ? 'بكالوريا' : 'المرحلة الدراسية'}
@@ -527,7 +527,7 @@ export function RegistrationForm() {
         return (
           <div className="space-y-4">
             <div className="rounded-[28px] border border-[var(--admin-border)] bg-gradient-to-br from-[var(--admin-primary)]/10 via-[var(--admin-card)] to-[var(--admin-card-strong)] p-6 shadow-[0_24px_50px_var(--admin-shadow)]">
-              <p className="text-[0.65rem] font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جاهزية الحساب</p>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">جاهزية الحساب</p>
               <div className="mt-5 space-y-3">
                 {passwordChecklist.map((item) => (
                   <div key={item.label} className="flex items-center justify-between rounded-[20px] bg-[var(--admin-bg)]/90 px-5 py-4 backdrop-blur-md">
@@ -577,7 +577,7 @@ export function RegistrationForm() {
                           unoptimized
                         />
                       </div>
-                      <span className="text-[11px] font-black text-[var(--admin-text)] text-center truncate w-full">
+                      <span className="text-xs font-black text-[var(--admin-text)] text-center truncate w-full">
                         {avatar.name}
                       </span>
                       {isSelected && (
@@ -607,7 +607,7 @@ export function RegistrationForm() {
                     <h5 className="text-[12px] font-black text-[var(--admin-primary-strong)]">
                       {AVATAR_LIST.find(a => a.slug === formData.avatarSlug)?.name}
                     </h5>
-                    <p className="text-[10px] font-bold text-[var(--admin-muted)] leading-normal">
+                    <p className="text-xs font-bold text-[var(--admin-muted)] leading-normal">
                       {AVATAR_LIST.find(a => a.slug === formData.avatarSlug)?.info}
                     </p>
                   </div>
@@ -1076,7 +1076,7 @@ export function RegistrationForm() {
                 )}
               </div>
 
-              <div className="flex items-start gap-2 text-[0.65rem] font-medium text-[var(--admin-muted)] max-w-[480px] leading-5">
+              <div className="flex items-start gap-2 text-xs font-medium text-[var(--admin-muted)] max-w-[480px] leading-5">
                 <MapPinned className="h-3 w-3 mt-1 shrink-0" />
                 <span>بياناتك محفوظة محليًا في هذه الصفحة، ولن يتم إرسالها أو حفظها بشكل نهائي إلا بعد الضغط على &quot;إنشاء الحساب&quot;.</span>
               </div>

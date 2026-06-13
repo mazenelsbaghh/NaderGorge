@@ -63,15 +63,15 @@ export function AssistantOperationsTaskBoard() {
     }[priority] || 2 : priority;
     switch (p) {
       case 1:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">منخفضة</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">منخفضة</span>;
       case 2:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">متوسطة</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">متوسطة</span>;
       case 3:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">عالية</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">عالية</span>;
       case 4:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse">حرجة 🚨</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse">حرجة 🚨</span>;
       default:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold bg-gray-100 text-gray-700">غير محددة</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold bg-gray-100 text-gray-700">غير محددة</span>;
     }
   };
 
@@ -156,7 +156,7 @@ export function AssistantOperationsTaskBoard() {
             >
               <div className="flex justify-between items-center mb-3">
                 {getPriorityBadge(task.priority)}
-                <span className="text-[10px] text-[var(--admin-muted)] font-mono flex items-center gap-1">
+                <span className="text-xs text-[var(--admin-muted)] font-mono flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {task.dueDate ? new Date(task.dueDate).toLocaleDateString('ar-EG') : 'بدون تاريخ'}
                 </span>
@@ -174,7 +174,7 @@ export function AssistantOperationsTaskBoard() {
 
               <div className="mt-6 pt-4 border-t border-[var(--admin-border)] flex items-center justify-between">
                 {getStatusBadge(task.status)}
-                <span className="text-[10px] text-[var(--admin-muted)]">تعيين بواسطة: {task.createdByName}</span>
+                <span className="text-xs text-[var(--admin-muted)]">تعيين بواسطة: {task.createdByName}</span>
               </div>
             </div>
           ))}

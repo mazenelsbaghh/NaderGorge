@@ -252,7 +252,7 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
                   const val = selectedAnswers[field.id] || '';
                   return (
                     <div key={field.id} className="space-y-1">
-                      <div className="text-[10px] font-bold text-[var(--admin-muted)] uppercase tracking-wider">
+                      <div className="text-xs font-bold text-[var(--admin-muted)] uppercase tracking-wider">
                         {field.label}
                       </div>
                       <div className="text-sm font-semibold text-[var(--admin-text-strong)] whitespace-pre-wrap">

@@ -88,7 +88,7 @@ export function CommunityPostComments({ postId, commentCount }: CommunityPostCom
                   }
                 >
                   {comment.isPinned && (
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 mb-1 select-none">
+                    <div className="flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 mb-1 select-none">
                       <Pin className="h-3 w-3 fill-current rotate-45" />
                       <span>تعليق مثبت</span>
                     </div>
@@ -103,7 +103,7 @@ export function CommunityPostComments({ postId, commentCount }: CommunityPostCom
                 <div className="flex items-center gap-3 px-3 mt-1 text-[12px] font-bold text-gray-500 hover:text-gray-700 dark:text-[var(--admin-muted)] transition-colors">
                   <span className="cursor-pointer hover:underline">أعجبني</span>
                   <span className="cursor-pointer hover:underline">رد</span>
-                  <span className="font-normal text-gray-400 dark:text-gray-500 text-[11px]">{formatDate(comment.createdAt)}</span>
+                  <span className="font-normal text-gray-400 dark:text-gray-500 text-xs">{formatDate(comment.createdAt)}</span>
                 </div>
               </div>
             </article>

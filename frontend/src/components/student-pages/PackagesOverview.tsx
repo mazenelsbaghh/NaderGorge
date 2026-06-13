@@ -47,7 +47,7 @@ export function PackagesOverview({ packages }: PackagesOverviewProps) {
 function Metric({ label, value, active }: { label: string; value: number; active?: boolean }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center text-center">
-      <dt className="mb-1 text-[10px] font-bold uppercase tracking-wider text-[var(--admin-muted)]">
+      <dt className="mb-1 text-xs font-bold uppercase tracking-wider text-[var(--admin-muted)]">
         {label}
       </dt>
       <dd className={`text-3xl font-black ${active ? "text-[var(--admin-primary)] drop-shadow-md" : "text-[var(--admin-text)]"}`}>
@@ -152,7 +152,7 @@ export function PackagesGrid({
                         className="h-5 w-5 rounded-full object-cover"
                       />
                     ) : (
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[8px] font-black text-[var(--admin-primary)]">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-xs font-black text-[var(--admin-primary)]">
                         {t.name.charAt(0)}
                       </span>
                     )}
@@ -246,7 +246,7 @@ export function PackagesGrid({
                 {/* Badge */}
                 <div className="absolute left-4 top-4">
                   <span
-                    className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-black uppercase tracking-wider shadow-md backdrop-blur-md ${
+                    className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black uppercase tracking-wider shadow-md backdrop-blur-md ${
                       pkg.isEnrolled
                         ? "bg-[var(--admin-success-20)] text-[var(--admin-success)] border border-[var(--admin-success-30)]"
                         : "bg-[var(--admin-card-strong)] text-[var(--admin-text)] border border-[var(--admin-border)]"
@@ -287,7 +287,7 @@ export function PackagesGrid({
                     <div className="min-w-0">
                       <p className="text-sm font-black text-[var(--admin-text)] truncate">أ. {pkg.teacherName}</p>
                       {pkg.subjectName && (
-                        <p className="text-[10px] font-bold text-[var(--admin-primary)] truncate">{pkg.subjectName}</p>
+                        <p className="text-xs font-bold text-[var(--admin-primary)] truncate">{pkg.subjectName}</p>
                       )}
                     </div>
                   </div>
@@ -295,9 +295,9 @@ export function PackagesGrid({
 
                 <div className="mt-auto flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-[var(--admin-muted)]">السعر</span>
+                    <span className="text-xs font-bold text-[var(--admin-muted)]">السعر</span>
                     <span className="font-mono text-lg font-black text-[var(--admin-text)]">
-                      {pkg.price.toFixed(0)} <span className="text-[10px] font-sans">ج.م</span>
+                      {pkg.price.toFixed(0)} <span className="text-xs font-sans">ج.م</span>
                     </span>
                   </div>
                   

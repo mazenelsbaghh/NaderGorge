@@ -445,7 +445,7 @@ export function Dropdown({
                 if (groupOptions.length === 0) return null;
                 return (
                   <li key={group} role="presentation">
-                    <div className="sticky top-0 bg-[var(--admin-card-soft)] px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--admin-muted)]">
+                    <div className="sticky top-0 bg-[var(--admin-card-soft)] px-4 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-[var(--admin-muted)]">
                       {group}
                     </div>
                     <ul role="group" aria-label={group}>

@@ -1,19 +1,23 @@
-import Link from "next/link";
-import Image from "next/image";
+import Link from 'next/link';
+import Image from 'next/image';
 
-import { navigationLinks } from "./data";
+import { navigationLinks } from './data';
 
 export function LandingNav() {
   return (
     <header className="absolute inset-x-0 top-0 z-30 px-4 pt-4 md:px-8">
       <div className="mx-auto flex w-full max-w-[1410px] items-center justify-between gap-4">
-        <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="منصة مسار">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-3"
+          aria-label="منصة مسار"
+        >
           <Image
             src="/images/logo.svg"
             width={112}
             height={64}
             className="h-14 w-auto object-contain md:h-16 dark:hidden"
-            style={{ width: "auto", height: "auto" }}
+            style={{ width: 'auto', height: 'auto' }}
             alt="منصة مسار"
             priority
           />
@@ -22,7 +26,7 @@ export function LandingNav() {
             width={64}
             height={64}
             className="h-14 w-auto object-contain md:h-16 hidden dark:block"
-            style={{ width: "auto", height: "auto" }}
+            style={{ width: 'auto', height: 'auto' }}
             alt="منصة مسار"
             priority
           />
@@ -44,7 +48,10 @@ export function LandingNav() {
           <Link href="/login" className="landing-primary-button px-4 sm:px-6">
             تسجيل الدخول
           </Link>
-          <Link href="/register" className="landing-secondary-button hidden sm:inline-flex">
+          <Link
+            href="/register"
+            className="landing-secondary-button hidden sm:inline-flex"
+          >
             ابدأ الآن
           </Link>
         </div>

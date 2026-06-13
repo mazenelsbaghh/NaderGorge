@@ -199,7 +199,7 @@ export function ClockInOutWidget() {
                 })}
               </span>
               {activeSession.lateMinutes > 0 && (
-                <span className="mr-2 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 px-2 py-0.5 text-[10px]">
+                <span className="mr-2 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 px-2 py-0.5 text-xs">
                   متأخر {activeSession.lateMinutes} دقيقة
                 </span>
               )}
@@ -213,7 +213,7 @@ export function ClockInOutWidget() {
             <>
               {/* Stopwatch display */}
               <div className="text-center">
-                <p className="text-[10px] uppercase tracking-widest font-black text-[var(--admin-muted)]">
+                <p className="text-xs uppercase tracking-widest font-black text-[var(--admin-muted)]">
                   مدة العمل المستمرة
                 </p>
                 <div className="text-2xl font-black text-[var(--admin-text)] tracking-wider font-mono mt-0.5">
@@ -238,7 +238,7 @@ export function ClockInOutWidget() {
           ) : (
             <>
               <div className="text-center">
-                <p className="text-[10px] uppercase tracking-widest font-black text-[var(--admin-muted)]">
+                <p className="text-xs uppercase tracking-widest font-black text-[var(--admin-muted)]">
                   حالة الوردية
                 </p>
                 <div className="text-sm font-extrabold text-amber-500 mt-1 flex items-center justify-center gap-1">

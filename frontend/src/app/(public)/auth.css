@@ -33,7 +33,9 @@
   color: var(--admin-text);
   -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 /* ── Redirect / Session Check State ───────────────────── */
@@ -48,8 +50,16 @@
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--admin-primary) 9%, transparent), transparent 34%),
-    linear-gradient(180deg, color-mix(in srgb, var(--admin-card-soft) 45%, transparent), transparent 55%);
+    radial-gradient(
+      circle at 50% 42%,
+      color-mix(in srgb, var(--admin-primary) 9%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--admin-card-soft) 45%, transparent),
+      transparent 55%
+    );
   pointer-events: none;
 }
 
@@ -87,15 +97,14 @@
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      transparent 92deg,
-      color-mix(in srgb, var(--admin-primary) 76%, transparent) 170deg,
-      var(--admin-primary) 238deg,
-      transparent 318deg
-    );
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 92deg,
+    color-mix(in srgb, var(--admin-primary) 76%, transparent) 170deg,
+    var(--admin-primary) 238deg,
+    transparent 318deg
+  );
   animation: auth-redirect-spin 1150ms linear infinite;
   mask: radial-gradient(circle, transparent 58%, #000 60%);
 }
@@ -135,7 +144,11 @@
   height: 0.45rem;
   overflow: hidden;
   border-radius: 9999px;
-  background: color-mix(in srgb, var(--admin-primary) 10%, var(--admin-card-strong));
+  background: color-mix(
+    in srgb,
+    var(--admin-primary) 10%,
+    var(--admin-card-strong)
+  );
 }
 
 .auth-redirect-progress span {
@@ -148,7 +161,8 @@
     var(--admin-primary-strong),
     var(--admin-primary)
   );
-  animation: auth-redirect-progress 1250ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation: auth-redirect-progress 1250ms cubic-bezier(0.22, 1, 0.36, 1)
+    infinite;
 }
 
 @keyframes auth-redirect-enter {
@@ -241,7 +255,9 @@
   background: color-mix(in srgb, var(--admin-card) 90%, transparent);
   backdrop-filter: blur(28px) saturate(180%);
   box-shadow: 0 20px 60px var(--admin-shadow);
-  transition: background 0.3s ease, border-color 0.3s ease;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
 }
 
 /* ── Form Input ──────────────────────────────────────────
@@ -257,7 +273,9 @@
   font-size: 1rem;
   font-weight: 500;
   color: var(--admin-text);
-  transition: box-shadow 0.2s ease, background 0.2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    background 0.2s ease;
   box-shadow: 0 0 0 1.5px transparent;
 }
 
@@ -267,7 +285,8 @@
 }
 
 .auth-input:focus {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--admin-primary) 40%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--admin-primary) 40%, transparent);
   background: var(--admin-card-soft);
 }
 
@@ -378,7 +397,8 @@
     var(--admin-primary-strong) 0%,
     var(--admin-primary) 100%
   );
-  box-shadow: 0 10px 22px color-mix(in srgb, var(--admin-primary) 18%, transparent);
+  box-shadow: 0 10px 22px
+    color-mix(in srgb, var(--admin-primary) 18%, transparent);
 }
 
 .auth-checkbox__input:checked + .auth-checkbox__mark::after {
@@ -433,27 +453,52 @@
     var(--admin-primary) 100%
   );
   color: var(--admin-primary-contrast);
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--admin-primary) 24%, transparent);
-  transition: box-shadow 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--admin-primary) 24%, transparent);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease;
 }
 
 .auth-btn-primary::before {
   content: '';
   position: absolute;
   inset: -45%;
-  background:
-    radial-gradient(circle at center, color-mix(in srgb, var(--admin-primary-contrast) 26%, transparent), transparent 56%);
+  background: radial-gradient(
+    circle at center,
+    color-mix(in srgb, var(--admin-primary-contrast) 26%, transparent),
+    transparent 56%
+  );
   opacity: 0.5;
   transform: translate3d(32%, 18%, 0);
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+  transition:
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
   z-index: 0;
 }
 
 .auth-btn-primary--sphinx {
-  --auth-sphinx-shell: color-mix(in srgb, var(--admin-primary-contrast) 12%, rgba(255, 255, 255, 0.18));
-  --auth-sphinx-shell-border: color-mix(in srgb, var(--admin-primary-contrast) 14%, transparent);
-  --auth-sphinx-primary: color-mix(in srgb, var(--admin-primary-contrast) 90%, var(--admin-primary) 10%);
-  --auth-sphinx-secondary: color-mix(in srgb, var(--admin-primary-contrast) 58%, var(--admin-primary) 42%);
+  --auth-sphinx-shell: color-mix(
+    in srgb,
+    var(--admin-primary-contrast) 12%,
+    rgba(255, 255, 255, 0.18)
+  );
+  --auth-sphinx-shell-border: color-mix(
+    in srgb,
+    var(--admin-primary-contrast) 14%,
+    transparent
+  );
+  --auth-sphinx-primary: color-mix(
+    in srgb,
+    var(--admin-primary-contrast) 90%,
+    var(--admin-primary) 10%
+  );
+  --auth-sphinx-secondary: color-mix(
+    in srgb,
+    var(--admin-primary-contrast) 58%,
+    var(--admin-primary) 42%
+  );
 }
 
 .auth-btn-primary__ornament,
@@ -480,7 +525,8 @@
   border-radius: 9999px;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--auth-sphinx-shell) 85%, rgba(255, 255, 255, 0.3)) 0%,
+    color-mix(in srgb, var(--auth-sphinx-shell) 85%, rgba(255, 255, 255, 0.3))
+      0%,
     color-mix(in srgb, var(--auth-sphinx-shell) 92%, rgba(0, 0, 0, 0.12)) 100%
   );
   border: 1px solid var(--auth-sphinx-shell-border);
@@ -537,7 +583,8 @@
 }
 
 .auth-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 14px 32px color-mix(in srgb, var(--admin-primary) 30%, transparent);
+  box-shadow: 0 14px 32px
+    color-mix(in srgb, var(--admin-primary) 30%, transparent);
   transform: translateY(-1px);
 }
 
@@ -707,7 +754,11 @@
   flex-direction: column;
   justify-content: center;
   padding: 2.5rem;
-  background: color-mix(in srgb, var(--admin-primary) 8%, var(--admin-card-strong));
+  background: color-mix(
+    in srgb,
+    var(--admin-primary) 8%,
+    var(--admin-card-strong)
+  );
 }
 
 .auth-login-intro h2,
@@ -815,7 +866,10 @@
   }
 }
 
-@media (max-width: 767px), (pointer: coarse), (prefers-reduced-motion: reduce), (update: slow) {
+@media (max-width: 767px),
+  (pointer: coarse),
+  (prefers-reduced-motion: reduce),
+  (update: slow) {
   .auth-shell__glow {
     display: none;
   }

@@ -134,7 +134,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
                 value={question.points}
                 onChange={(val) => handlePropChange('points', val)}
               >
-                <NumberField.Label className="text-[10px] uppercase tracking-wider font-bold text-[var(--admin-muted)] block mb-2">عدد الدرجات</NumberField.Label>
+                <NumberField.Label className="text-xs uppercase tracking-wider font-bold text-[var(--admin-muted)] block mb-2">عدد الدرجات</NumberField.Label>
                 <NumberField.Group className="h-[46px] bg-[var(--admin-background)] border-[var(--admin-border)]">
                   <NumberField.DecrementButton className="shrink-0" />
                   <NumberField.Input className="px-1 text-sm font-bold text-[var(--admin-text)] bg-transparent" />
@@ -216,7 +216,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
         </div>
 
         <div className="flex flex-col gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
-          <span className="text-[10px] uppercase tracking-wider font-bold text-[var(--admin-muted)] block">شرح صوتي (اختياري)</span>
+          <span className="text-xs uppercase tracking-wider font-bold text-[var(--admin-muted)] block">شرح صوتي (اختياري)</span>
           <input
             type="file"
             accept="audio/*"

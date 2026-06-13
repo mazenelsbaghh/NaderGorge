@@ -517,7 +517,7 @@ export function AdminShellChrome({
 
             <div className="flex flex-wrap items-center gap-3">
               <div>
-                <p className="mb-1 text-[11px] font-black tracking-[0.22em] text-[var(--admin-primary)]">
+                <p className="mb-1 text-xs font-black tracking-[0.22em] text-[var(--admin-primary)]">
                   {sectionLabel}
                 </p>
                 <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-[var(--admin-text)] lg:text-4xl">
@@ -557,7 +557,7 @@ export function AdminShellChrome({
           <Link
             href="/admin"
             aria-current={activePath === '/admin' ? 'page' : undefined}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${
+            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-xs font-black transition-all ${
               activePath === '/admin'
                 ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
                 : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
@@ -578,7 +578,7 @@ export function AdminShellChrome({
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-[10px] font-black transition-all ${
+                className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] p-2 text-center text-xs font-black transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md border border-transparent'
                     : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)]'
@@ -594,7 +594,7 @@ export function AdminShellChrome({
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] border p-2 text-center text-[10px] font-black transition-all ${
+            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[18px] border p-2 text-center text-xs font-black transition-all ${
               isMoreActive || isMobileMenuOpen
                 ? 'border-transparent bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-md'
                 : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'

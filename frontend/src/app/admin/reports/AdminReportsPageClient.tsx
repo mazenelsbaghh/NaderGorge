@@ -250,7 +250,7 @@ export default function AdminReportsPageClient() {
         <div>
           <div className="font-bold text-xs text-[var(--admin-text)]">{item.performedByUserName || 'نظام تلقائي'}</div>
           {item.performedByUserPhone && (
-            <div className="text-[var(--admin-muted)] text-[10px] font-mono mt-0.5">{item.performedByUserPhone}</div>
+            <div className="text-[var(--admin-muted)] text-xs font-mono mt-0.5">{item.performedByUserPhone}</div>
           )}
         </div>
       ),
@@ -658,7 +658,7 @@ export default function AdminReportsPageClient() {
                       </svg>
                       <div className="absolute text-center">
                         <span className="text-xl font-black text-[var(--admin-text)] block">{kpiData.tasks.completionRate}%</span>
-                        <span className="text-[10px] font-bold text-[var(--admin-muted)]">نسبة الإنجاز</span>
+                        <span className="text-xs font-bold text-[var(--admin-muted)]">نسبة الإنجاز</span>
                       </div>
                     </div>
 
@@ -757,7 +757,7 @@ export default function AdminReportsPageClient() {
                           <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-400 mt-1 block">
                             {kpiData.payments.autoMatchedCount}
                           </span>
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-500 font-bold">({kpiData.payments.autoMatchRate}%)</span>
+                          <span className="text-xs text-emerald-600 dark:text-emerald-500 font-bold">({kpiData.payments.autoMatchRate}%)</span>
                         </div>
 
                         <div className="text-center p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30">
@@ -765,7 +765,7 @@ export default function AdminReportsPageClient() {
                           <span className="font-mono text-base font-black text-amber-700 dark:text-amber-400 mt-1 block">
                             {kpiData.payments.couponActivatedCount}
                           </span>
-                          <span className="text-[10px] text-amber-600 dark:text-amber-500 font-bold">({Math.round(100 - kpiData.payments.autoMatchRate)}%)</span>
+                          <span className="text-xs text-amber-600 dark:text-amber-500 font-bold">({Math.round(100 - kpiData.payments.autoMatchRate)}%)</span>
                         </div>
                       </div>
                     </div>
@@ -817,7 +817,7 @@ export default function AdminReportsPageClient() {
                       <span className="font-mono text-2xl font-black text-[var(--admin-text)]">
                         {kpiData.payrollStatus.reduce((acc, s) => acc + s.count, 0)} سجلات
                       </span>
-                      <p className="text-[10px] text-[var(--admin-muted)] mt-2 leading-relaxed">
+                      <p className="text-xs text-[var(--admin-muted)] mt-2 leading-relaxed">
                         يتم تحديث نسب الاعتمادات والمسودات بمجرد اعتماد المشرفين للرواتب وإقفال الحركات المالية للشهور الجارية.
                       </p>
                     </div>

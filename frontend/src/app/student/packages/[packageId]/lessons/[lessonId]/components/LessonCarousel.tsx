@@ -122,7 +122,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                         router.push(`/student/exams/${video.examId}?packageId=${packageId}`);
                                     }}
                                     className={cn(
-                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black transition-all hover:scale-105 shadow-sm pointer-events-auto",
+                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black transition-all hover:scale-105 shadow-sm pointer-events-auto",
                                         video.examPassed
                                             ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
                                             : "bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse"

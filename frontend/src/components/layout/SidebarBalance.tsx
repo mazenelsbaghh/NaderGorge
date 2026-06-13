@@ -34,7 +34,7 @@ export function SidebarBalance() {
       ) : (
         <>
           <Wallet className="absolute top-1.5 h-3.5 w-3.5 opacity-50 group-hover:opacity-100 transition-opacity group-hover/sidebar:static group-hover/sidebar:h-5 group-hover/sidebar:w-5 flex-shrink-0" />
-          <span className="absolute bottom-1.5 font-sans text-[10px] font-black tracking-tighter group-hover/sidebar:static group-hover/sidebar:text-sm flex-shrink-0">
+          <span className="absolute bottom-1.5 font-sans text-xs font-black tracking-tighter group-hover/sidebar:static group-hover/sidebar:text-sm flex-shrink-0">
             {balance} ج.م
           </span>
           <span className="hidden group-hover/sidebar:block text-xs font-bold text-[var(--admin-muted)] truncate whitespace-nowrap mr-auto">

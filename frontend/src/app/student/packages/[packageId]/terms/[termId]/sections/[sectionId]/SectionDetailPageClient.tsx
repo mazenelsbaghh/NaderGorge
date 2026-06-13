@@ -327,7 +327,7 @@ export default function SectionDetailPageClient() {
                             e.stopPropagation();
                             setPurchaseLesson(lesson);
                           }}
-                          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary)] px-3 py-1.5 text-[10px] font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-95 opacity-100"
+                          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary)] px-3 py-1.5 text-xs font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-95 opacity-100"
                         >
                           <ShoppingCart className="h-3 w-3" />
                           {lesson.price} ج.م
@@ -394,7 +394,7 @@ export default function SectionDetailPageClient() {
                   <div>
                     <h4 className="font-black text-base text-[var(--admin-text)]">أ. {pkg.teacherName}</h4>
                     {pkg.teacherSpecialization && (
-                      <p className="text-[10px] text-[var(--admin-primary)] font-black mt-0.5">
+                      <p className="text-xs text-[var(--admin-primary)] font-black mt-0.5">
                         {pkg.teacherSpecialization
                           .split(",")
                           .map((s) => GRADE_NAMES[s.trim()] || s.trim())

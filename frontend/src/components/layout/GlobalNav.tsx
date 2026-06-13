@@ -1,10 +1,10 @@
 'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useAuthStore } from "@/stores/auth-store";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth-store';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import {
   Navbar,
   NavBody,
@@ -15,12 +15,12 @@ import {
   MobileNavHeader,
   MobileNavToggle,
   MobileNavMenu,
-} from "@/components/ui/resizable-navbar";
-import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
-import { useAdminTheme } from "@/components/admin/useAdminTheme";
-import { ShinyButton } from "@/components/ui/shiny-button";
-import { PlatformLogo } from "@/components/shared/PlatformLogo";
-import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
+} from '@/components/ui/resizable-navbar';
+import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
+import { useAdminTheme } from '@/components/admin/useAdminTheme';
+import { ShinyButton } from '@/components/ui/shiny-button';
+import { PlatformLogo } from '@/components/shared/PlatformLogo';
+import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
 function LoginNavButtonContent() {
   return (
@@ -39,14 +39,17 @@ export function GlobalNav() {
   const router = useRouter();
   const { isDark, toggleTheme } = useAdminTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  const isLanding = pathname === "/";
-  const isStudentArea = pathname.startsWith("/student");
-  const isAdminArea = pathname.startsWith("/admin");
-  const isTeacherArea = pathname.startsWith("/teacher");
-  const isAssistantArea = pathname.startsWith("/assistant");
-  const isAuthRoute = pathname === "/login" || pathname === "/register" || pathname === "/forgot-password";
-  const isFormsPage = pathname.startsWith("/forms");
+
+  const isLanding = pathname === '/';
+  const isStudentArea = pathname.startsWith('/student');
+  const isAdminArea = pathname.startsWith('/admin');
+  const isTeacherArea = pathname.startsWith('/teacher');
+  const isAssistantArea = pathname.startsWith('/assistant');
+  const isAuthRoute =
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/forgot-password';
+  const isFormsPage = pathname.startsWith('/forms');
 
   if (
     isStudentArea ||
@@ -61,43 +64,52 @@ export function GlobalNav() {
 
   const handleLogout = () => {
     clearAuth();
-    router.push("/login");
+    router.push('/login');
   };
 
   // Navigation links based on auth state
   const navLinks = isAuthenticated
-    ? user?.roles?.includes("Admin") || user?.roles?.includes("Teacher") || user?.roles?.includes("Assistant")
+    ? user?.roles?.includes('Admin') ||
+      user?.roles?.includes('Teacher') ||
+      user?.roles?.includes('Assistant')
       ? [
-          { href: "/admin/users", label: "المستخدمين" },
-          { href: "/admin/content", label: "المحتوى" },
-          { href: "/admin/codes", label: "الأكواد" },
-          { href: "/admin/questions", label: "بنك الأسئلة" },
+          { href: '/admin/users', label: 'المستخدمين' },
+          { href: '/admin/content', label: 'المحتوى' },
+          { href: '/admin/codes', label: 'الأكواد' },
+          { href: '/admin/questions', label: 'بنك الأسئلة' },
         ]
       : [
-          { href: "/student", label: "لوحة التحكم" },
-          { href: "/student/packages", label: "باقاتي" },
-          { href: "/student/code-redemption", label: "تفعيل كود" },
+          { href: '/student', label: 'لوحة التحكم' },
+          { href: '/student/packages', label: 'باقاتي' },
+          { href: '/student/code-redemption', label: 'تفعيل كود' },
         ]
     : isLanding
       ? [
-          { href: "/", label: "الرئيسية" },
-          { href: "#courses", label: "الدورات" },
-          { href: "#teachers", label: "المعلمون" },
-          { href: "#about-platform", label: "عن المنصة" },
-          { href: "#testimonials", label: "آراء الطلبة" },
+          { href: '/', label: 'الرئيسية' },
+          { href: '#courses', label: 'الدورات' },
+          { href: '#teachers', label: 'المعلمون' },
+          { href: '#about-platform', label: 'عن المنصة' },
+          { href: '#testimonials', label: 'آراء الطلبة' },
         ]
       : [];
 
   return (
-    <div className={`z-50 w-full ${isLanding ? "absolute inset-x-0 top-0" : "sticky top-0"}`}>
+    <div
+      className={`z-50 w-full ${isLanding ? 'absolute inset-x-0 top-0' : 'sticky top-0'}`}
+    >
       <Navbar isLanding={isLanding}>
         {/* Desktop Navigation */}
         <NavBody isLanding={isLanding}>
           <div className="flex items-center gap-3">
             <NavbarLogo />
           </div>
-          
-          <NavItems items={navLinks.map((link) => ({ name: link.label, link: link.href }))} />
+
+          <NavItems
+            items={navLinks.map((link) => ({
+              name: link.label,
+              link: link.href,
+            }))}
+          />
 
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
@@ -115,10 +127,16 @@ export function GlobalNav() {
               </>
             ) : (
               <>
-                <ShinyButton href="/login" className="hidden md:inline-flex text-[15px] h-[46px] items-center px-8">
+                <ShinyButton
+                  href="/login"
+                  className="hidden md:inline-flex text-[15px] h-[46px] items-center px-8"
+                >
                   <LoginNavButtonContent />
                 </ShinyButton>
-                <InteractiveHoverButton href="/register" className="hidden md:inline-flex text-[15px] h-[46px] items-center px-6">
+                <InteractiveHoverButton
+                  href="/register"
+                  className="hidden md:inline-flex text-[15px] h-[46px] items-center px-6"
+                >
                   احجز مكانك
                 </InteractiveHoverButton>
               </>
@@ -129,8 +147,12 @@ export function GlobalNav() {
               <AnimatedThemeToggler
                 checked={isDark}
                 onToggle={toggleTheme}
-                aria-label={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
-                title={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
+                aria-label={
+                  isDark ? 'التحول إلى الوضع الفاتح' : 'التحول إلى الوضع الداكن'
+                }
+                title={
+                  isDark ? 'التحول إلى الوضع الفاتح' : 'التحول إلى الوضع الداكن'
+                }
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition border border-[var(--landing-line)] text-[var(--landing-ink)] hover:bg-[var(--landing-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--landing-accent)]"
               />
             </div>
@@ -155,8 +177,16 @@ export function GlobalNav() {
                 <AnimatedThemeToggler
                   checked={isDark}
                   onToggle={toggleTheme}
-                  aria-label={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
-                  title={isDark ? "التحول إلى الوضع الفاتح" : "التحول إلى الوضع الداكن"}
+                  aria-label={
+                    isDark
+                      ? 'التحول إلى الوضع الفاتح'
+                      : 'التحول إلى الوضع الداكن'
+                  }
+                  title={
+                    isDark
+                      ? 'التحول إلى الوضع الفاتح'
+                      : 'التحول إلى الوضع الداكن'
+                  }
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition border border-[var(--landing-line)] text-[var(--landing-ink)] hover:bg-[var(--landing-card-strong)] focus-visible:ring-2 focus-visible:ring-[var(--landing-accent)]"
                 />
               </div>
@@ -181,7 +211,7 @@ export function GlobalNav() {
                 <span className="block">{link.label}</span>
               </Link>
             ))}
-            
+
             <div className="mt-4 flex w-full flex-col gap-4 border-t border-[var(--landing-line)] pt-4">
               {isAuthenticated ? (
                 <>
@@ -201,16 +231,20 @@ export function GlobalNav() {
                 </>
               ) : (
                 <>
-                  <ShinyButton 
+                  <ShinyButton
                     href="/login"
-                    onClick={() => { setIsMobileMenuOpen(false); }} 
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                     className="w-full text-base h-12 flex items-center justify-center"
                   >
                     <LoginNavButtonContent />
                   </ShinyButton>
-                  <InteractiveHoverButton 
+                  <InteractiveHoverButton
                     href="/register"
-                    onClick={() => { setIsMobileMenuOpen(false); }} 
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                    }}
                     className="w-full text-base h-12 flex items-center justify-center"
                   >
                     احجز مكانك

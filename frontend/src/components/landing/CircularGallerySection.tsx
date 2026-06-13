@@ -1,18 +1,22 @@
-"use client";
+'use client';
 
-import { ArrowLeft, ArrowRight, Star } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-import { platformStats, teachers as hardcodedTeachers, topStudents } from "./data";
-import { studentService } from "@/services/student-service";
-import { resolveMediaUrl } from "@/utils/resolve-media-url";
+import {
+  platformStats,
+  teachers as hardcodedTeachers,
+  topStudents,
+} from './data';
+import { studentService } from '@/services/student-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 const medalStyles: Record<number, string> = {
-  1: "bg-[#D4A017] text-white",
-  2: "bg-[#9AA6B2] text-white",
-  3: "bg-[#B87333] text-white",
+  1: 'bg-[#D4A017] text-white',
+  2: 'bg-[#9AA6B2] text-white',
+  3: 'bg-[#B87333] text-white',
 };
 
 type TeacherCard = {
@@ -36,13 +40,13 @@ export function CircularGallerySection() {
               name: teacher.fullName,
               subject:
                 teacher.specialization ||
-                teacher.subjectNames.join(" - ") ||
-                "معلم المنصة",
-              rating: "4.9",
+                teacher.subjectNames.join(' - ') ||
+                'معلم المنصة',
+              rating: '4.9',
               avatar: teacher.profileImageUrl
                 ? resolveMediaUrl(teacher.profileImageUrl)
                 : `https://avatar.vercel.sh/${encodeURIComponent(teacher.fullName)}`,
-            })),
+            }))
           );
         } else {
           setActiveTeachers([...hardcodedTeachers]);
@@ -55,11 +59,14 @@ export function CircularGallerySection() {
     void loadTeachers();
   }, []);
 
-  const teachers = activeTeachers.length > 0 ? activeTeachers : hardcodedTeachers;
+  const teachers =
+    activeTeachers.length > 0 ? activeTeachers : hardcodedTeachers;
   const currentStudent = topStudents[currentIndex];
 
   const showPreviousStudent = () => {
-    setCurrentIndex((index) => (index - 1 + topStudents.length) % topStudents.length);
+    setCurrentIndex(
+      (index) => (index - 1 + topStudents.length) % topStudents.length
+    );
   };
 
   const showNextStudent = () => {
@@ -91,7 +98,11 @@ export function CircularGallerySection() {
             aria-roledescription="carousel"
             aria-labelledby="top-students-heading"
           >
-            <div className="w-full max-w-[340px]" aria-live="polite" aria-atomic="true">
+            <div
+              className="w-full max-w-[340px]"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               <article
                 className="landing-panel flex min-h-[320px] flex-col items-center border border-[var(--landing-line-strong)] px-5 py-7 text-center"
                 role="group"
@@ -100,7 +111,8 @@ export function CircularGallerySection() {
               >
                 <span
                   className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${
-                    medalStyles[currentStudent.rank] ?? "bg-[#0E8F8F] text-white"
+                    medalStyles[currentStudent.rank] ??
+                    'bg-[#0E8F8F] text-white'
                   }`}
                 >
                   {currentStudent.rank}
@@ -138,17 +150,22 @@ export function CircularGallerySection() {
                 <ArrowRight className="h-5 w-5" aria-hidden="true" />
               </button>
 
-              <div className="flex justify-center gap-2" aria-label="اختيار طالب من الأوائل">
+              <div
+                className="flex justify-center gap-2"
+                aria-label="اختيار طالب من الأوائل"
+              >
                 {topStudents.map((student, index) => (
                   <button
                     key={student.name}
                     type="button"
                     onClick={() => setCurrentIndex(index)}
                     className={`h-3 w-3 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E8F8F] focus-visible:ring-offset-2 ${
-                      index === currentIndex ? "bg-[#0E8F8F]" : "bg-[var(--landing-line)]"
+                      index === currentIndex
+                        ? 'bg-[#0E8F8F]'
+                        : 'bg-[var(--landing-line)]'
                     }`}
                     aria-label={`عرض ${student.name}`}
-                    aria-current={index === currentIndex ? "true" : undefined}
+                    aria-current={index === currentIndex ? 'true' : undefined}
                   />
                 ))}
               </div>
@@ -164,7 +181,10 @@ export function CircularGallerySection() {
             </div>
           </div>
 
-          <Link href="/register" className="landing-primary-button mx-auto mt-8">
+          <Link
+            href="/register"
+            className="landing-primary-button mx-auto mt-8"
+          >
             عرض المزيد من الأوائل
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -181,9 +201,13 @@ export function CircularGallerySection() {
               تعلم على يد نخبة من أفضل المعلمين
             </h2>
             <p className="mt-4 text-base font-semibold leading-8 text-[var(--landing-muted)] md:text-lg">
-              خبرة عالية، شغف بالتعليم، دعم مستمر، وخطة واضحة تناسب مستوى كل طالب.
+              خبرة عالية، شغف بالتعليم، دعم مستمر، وخطة واضحة تناسب مستوى كل
+              طالب.
             </p>
-            <Link href="/register" className="landing-primary-button mx-auto mt-5">
+            <Link
+              href="/register"
+              className="landing-primary-button mx-auto mt-5"
+            >
               استكشف جميع المعلمين
             </Link>
           </div>
@@ -214,7 +238,10 @@ export function CircularGallerySection() {
                   </p>
                   <div className="mt-3 flex items-center justify-center gap-1 text-sm font-black text-[var(--landing-ink)]">
                     {teacher.rating}
-                    <Star className="h-4 w-4 fill-[#D4A017] text-[#D4A017]" aria-hidden="true" />
+                    <Star
+                      className="h-4 w-4 fill-[#D4A017] text-[#D4A017]"
+                      aria-hidden="true"
+                    />
                   </div>
                 </div>
               </article>

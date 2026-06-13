@@ -262,7 +262,7 @@ export default function MediaPipelineBoard() {
               <div className="flex flex-col gap-3 flex-1 overflow-y-auto max-h-[600px] no-scrollbar">
                 {stageItems.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-4 border-2 border-dashed border-[var(--admin-border)] rounded-2xl opacity-40">
-                    <span className="text-[10px] text-[var(--admin-muted)]">فارغ</span>
+                    <span className="text-xs text-[var(--admin-muted)]">فارغ</span>
                   </div>
                 ) : (
                   stageItems.map((item) => {
@@ -287,7 +287,7 @@ export default function MediaPipelineBoard() {
 
                         {/* Description */}
                         {item.description && (
-                          <p className="text-[10px] text-[var(--admin-muted)] line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-[var(--admin-muted)] line-clamp-2 leading-relaxed">
                             {item.description}
                           </p>
                         )}
@@ -295,7 +295,7 @@ export default function MediaPipelineBoard() {
                         {/* Badges/Details */}
                         <div className="flex flex-col gap-1.5 pt-2 border-t border-[var(--admin-border)]">
                           {/* Assignee */}
-                          <div className="flex items-center gap-1.5 text-[10px] text-[var(--admin-text)] font-medium">
+                          <div className="flex items-center gap-1.5 text-xs text-[var(--admin-text)] font-medium">
                             <User className="h-3 w-3 text-[var(--admin-muted)]" />
                             <span>{item.assignedAgentName || 'غير معين'}</span>
                           </div>
@@ -306,7 +306,7 @@ export default function MediaPipelineBoard() {
                               href={item.assetFolderUrl} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[10px] text-[var(--admin-primary)] font-bold hover:underline"
+                              className="inline-flex items-center gap-1 text-xs text-[var(--admin-primary)] font-bold hover:underline"
                             >
                               <FolderOpen className="h-3 w-3" />
                               <span>المجلد المشترك</span>
@@ -316,7 +316,7 @@ export default function MediaPipelineBoard() {
 
                           {/* Errors */}
                           {item.editingErrorCount > 0 && (
-                            <div className="inline-flex items-center gap-1 text-[10px] text-rose-500 font-bold bg-rose-500/10 rounded px-1.5 py-0.5 w-fit">
+                            <div className="inline-flex items-center gap-1 text-xs text-rose-500 font-bold bg-rose-500/10 rounded px-1.5 py-0.5 w-fit">
                               <AlertTriangle className="h-3 w-3" />
                               <span>{item.editingErrorCount} أخطاء مونتاج</span>
                             </div>
@@ -328,7 +328,7 @@ export default function MediaPipelineBoard() {
                           {prev && (
                             <button
                               onClick={() => handleStageTransition(item, prev)}
-                              className="text-[10px] text-[var(--admin-muted)] hover:text-[var(--admin-text)] flex items-center gap-0.5 hover:underline"
+                              className="text-xs text-[var(--admin-muted)] hover:text-[var(--admin-text)] flex items-center gap-0.5 hover:underline"
                             >
                               <ChevronRight className="h-3 w-3" />
                               <span>السابق</span>
@@ -339,7 +339,7 @@ export default function MediaPipelineBoard() {
                           {next && (
                             <button
                               onClick={() => handleStageTransition(item, next)}
-                              className={`text-[10px] font-bold flex items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${
+                              className={`text-xs font-bold flex items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${
                                 next === 'Published' 
                                   ? 'bg-indigo-500 text-white hover:bg-indigo-600'
                                   : next === 'Review'
