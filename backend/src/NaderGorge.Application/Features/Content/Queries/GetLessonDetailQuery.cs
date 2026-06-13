@@ -14,6 +14,7 @@ public record LessonDetailDto(
     string Summary,
     Guid PackageId,
     Guid? ExamId,
+    bool ExamPassed,
     LessonHomeworkDto? Homework,
     List<VideoDto> Videos,
     bool IsLocked = false,
@@ -239,12 +240,21 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
             homeworkDto = new LessonHomeworkDto(hw.Id, hw.Title, hw.Description ?? "", hw.IsMandatory, hw.PassingScoreThreshold, hw.TotalScore, hwQuestions);
         }
+        // Check if the lesson's own exam has been passed
+        bool lessonExamPassed = false;
+        if (lesson.ExamId.HasValue)
+        {
+            lessonExamPassed = await _db.StudentExamAttempts
+                .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+        }
+
         var detail = new LessonDetailDto(
             lesson.Id,
             lesson.Title,
             lesson.Summary,
             lesson.ContentSection.Term.PackageId,
             lesson.ExamId,
+            lessonExamPassed,
             homeworkDto,
             videoDtos,
             isLocked,

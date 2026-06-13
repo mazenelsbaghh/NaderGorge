@@ -24,6 +24,7 @@ import {
   TriangleAlert,
 
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
@@ -401,7 +402,7 @@ export default function TermDetailPageClient() {
             
             {hasAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                🎉 {isTermPurchased && !isEnrolled ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isTermPurchased && !isEnrolled ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
               </div>
             ) : (
               <div className="flex flex-col gap-3">

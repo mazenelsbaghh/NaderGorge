@@ -168,6 +168,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             }
         }
 
+        // Exam → Video → Homework flow:
+        // The lesson's own exam must be passed BEFORE accessing the video content.
         if (lesson.ExamId.HasValue && !passedExamIds.Contains(lesson.ExamId.Value))
         {
             var currentExam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);

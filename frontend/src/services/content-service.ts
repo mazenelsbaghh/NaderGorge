@@ -112,6 +112,7 @@ export interface LessonDetailDto {
   summary: string;
   packageId: string;
   examId?: string;
+  examPassed?: boolean;
   videos: VideoDto[];
   resources?: ResourceDto[];
   homework?: HomeworkDto;

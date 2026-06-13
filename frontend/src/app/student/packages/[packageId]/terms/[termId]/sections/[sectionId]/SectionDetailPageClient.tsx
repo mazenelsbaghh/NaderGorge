@@ -23,6 +23,8 @@ import {
   Sparkles,
   PlayCircle,
   ShoppingCart,
+  FileEdit,
+  ClipboardList,
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
@@ -326,7 +328,7 @@ export default function SectionDetailPageClient() {
                         {/* Show lock reason for exam/homework locked lessons */}
                         {lesson.isLocked && hasContentAccess && lesson.lockedReason && (
                           <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400 line-clamp-1 font-bold">
-                            🔒 {lesson.lockedReason}
+                            <Lock className="inline h-3.5 w-3.5 mr-1" /> {lesson.lockedReason}
                           </p>
                         )}
                         {lesson.summary && !(lesson.isLocked && hasContentAccess) && (
@@ -344,7 +346,7 @@ export default function SectionDetailPageClient() {
                       {/* Exam/Homework lock indicator - NOT a buy button */}
                       {lesson.isLocked && hasContentAccess && (
                         <span className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 px-3 py-1.5 text-xs font-black text-amber-600 dark:text-amber-400">
-                          {lesson.blockingExamId ? '📝 اذهب للامتحان' : lesson.blockingHomeworkLessonId ? '📋 أكمل الواجب' : '🔒 مقفول'}
+                          {lesson.blockingExamId ? <><FileEdit className="inline h-3.5 w-3.5" /> اذهب للامتحان</> : lesson.blockingHomeworkLessonId ? <><ClipboardList className="inline h-3.5 w-3.5" /> أكمل الواجب</> : <><Lock className="inline h-3.5 w-3.5" /> مقفول</>}
                         </span>
                       )}
 
@@ -388,7 +390,7 @@ export default function SectionDetailPageClient() {
 
               {(isEnrolled || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) ? (
                 <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                  🎉 {isEnrolled ? 'الباقة مفعّلة' : (term?.isPurchased ?? false) ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
+                  <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isEnrolled ? 'الباقة مفعّلة' : (term?.isPurchased ?? false) ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
@@ -400,7 +402,7 @@ export default function SectionDetailPageClient() {
                     <Sparkles className="h-4 w-4" />
                     {(displayPrice as number) > 0
                       ? ((section?.price != null && section.price > 0) ? 'شراء القسم' : (term?.price != null && (term.price ?? 0) > 0) ? 'شراء الترم' : 'شراء الباقة')
-                      : 'تفعيل مجاني ✨'
+                      : 'تفعيل مجاني'
                     }
                   </button>
                   <button

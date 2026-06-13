@@ -334,7 +334,7 @@ export function ExamResultPanel({
                           : 'bg-destructive/10 text-destructive'
                     }`}
                   >
-                    {!q.isAnswered ? '⏭️ عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : 'خاطئة ✗'}
+                    {!q.isAnswered ? 'عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : 'خاطئة ✗'}
                   </span>
                 </div>
 
@@ -349,7 +349,7 @@ export function ExamResultPanel({
                     {q.isAnswered ? (
                       <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تختر إجابة.') }} />
                     ) : (
-                      <p className="mt-1.5 text-sm font-bold leading-6 text-amber-600 dark:text-amber-400">⏭️ عديت السؤال ده</p>
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-amber-600 dark:text-amber-400">عديت السؤال ده</p>
                     )}
                   </div>
 

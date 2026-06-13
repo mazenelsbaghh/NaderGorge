@@ -47,6 +47,7 @@ import {
   ArrowRight,
   ChevronLeft,
   Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
@@ -370,7 +371,7 @@ export default function PackageProfilePageClient() {
             
             {isEnrolled ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                🎉 هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة الأترام مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة الأترام مباشرة.
               </div>
             ) : (
               <div className="flex flex-col gap-3">

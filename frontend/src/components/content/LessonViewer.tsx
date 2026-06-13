@@ -242,16 +242,28 @@ export function LessonViewer({
               <div className="flex items-center gap-3">
                 <FlaskConical className="h-5 w-5 text-[var(--admin-primary)]" />
                 <h3 className="text-xl font-black text-[var(--admin-text)]">اختبار الدرس</h3>
+                {lesson.examPassed && (
+                  <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400">
+                    تم الاجتياز
+                  </span>
+                )}
               </div>
               <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
-                  اختبر استيعابك لهذا الدرس قبل الانتقال إلى المرحلة التالية. الدرجات المسجلة تؤثر على ترتيبك في لوحة الشرف.
+                {lesson.examPassed
+                  ? 'لقد اجتزت هذا الاختبار بنجاح. يمكنك مراجعة إجاباتك ونتائجك.'
+                  : 'اختبر استيعابك لهذا الدرس قبل الانتقال إلى المرحلة التالية. الدرجات المسجلة تؤثر على ترتيبك في لوحة الشرف.'
+                }
               </p>
               <button
                 type="button"
                 onClick={() => router.push(`/student/exams/${lesson.examId}?packageId=${packageId}`)}
-                className="mt-6 w-full rounded-2xl bg-[var(--admin-primary)] px-4 py-4 text-sm font-black text-[var(--admin-primary-contrast)] transition-all hover:-translate-y-1 hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
+                className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
+                  lesson.examPassed
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)]'
+                }`}
               >
-                ابدأ الاختبار الآن
+                {lesson.examPassed ? 'راجع الامتحان' : 'ابدأ الاختبار الآن'}
               </button>
             </div>
           )}
