@@ -123,18 +123,18 @@ export default function SectionDetailPageClient() {
 
   const isEnrolled = pkg?.isEnrolled ?? false;
 
-  /* Determine price to show */
+  /* Determine price to show — price=0 means FREE, only fall back if price is null (not set) */
   const displayPrice =
-    (section?.price != null && section.price > 0)
+    section?.price != null
       ? section.price
-      : (term?.price != null && (term.price ?? 0) > 0)
+      : term?.price != null
         ? term.price
-        : (pkg?.price || 0);
+        : (pkg?.price ?? 0);
 
   const priceLabel =
-    (section?.price != null && section.price > 0)
+    section?.price != null
       ? 'سعر القسم'
-      : (term?.price != null && (term.price ?? 0) > 0)
+      : term?.price != null
         ? 'سعر الترم'
         : 'سعر الباقة';
 
