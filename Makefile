@@ -76,6 +76,46 @@ restart: ## Stop all containers then rebuild and start again
 	docker compose up --build -d
 	@echo "Done."
 
+quick: ## ⚡ Quick rebuild backend + frontend (uses cache, fastest)
+	@echo "⚡ Quick rebuild backend + all frontend surfaces..."
+	docker compose up -d --build backend landing student admin teacher assistant
+	@echo "✅ Done! All services updated."
+
+quick-back: ## ⚡ Quick rebuild backend only
+	@echo "⚡ Rebuilding backend..."
+	docker compose up -d --build backend
+	@echo "✅ Backend updated."
+
+quick-front: ## ⚡ Quick rebuild frontend surfaces only
+	@echo "⚡ Rebuilding frontend surfaces..."
+	docker compose up -d --build landing student admin teacher assistant
+	@echo "✅ Frontend updated."
+
+hot: hot-back hot-front ## 🔥 Ultra-fast: build locally + inject into containers (NO image rebuild)
+
+hot-back: ## 🔥 Build backend locally → copy into container → restart
+	@echo "🔥 Building backend locally..."
+	cd backend && dotnet publish src/NaderGorge.API/NaderGorge.API.csproj -c Release -o /tmp/massar-backend-publish
+	@echo "📦 Injecting into container..."
+	docker cp /tmp/massar-backend-publish/. massar_platform-backend-1:/app/
+	docker restart massar_platform-backend-1
+	@echo "✅ Backend hot-updated! (no image rebuild)"
+
+hot-front: ## 🔥 Build frontend locally → copy into containers → restart
+	@echo "🔥 Building frontend locally..."
+	cd frontend && NEXT_PUBLIC_API_URL=http://localhost:5245/api NEXT_PUBLIC_BACKEND_URL=http://localhost:5245 npm run build
+	@echo "📦 Injecting into admin container..."
+	@docker cp frontend/.next/standalone/. massar_admin:/app/
+	@docker cp frontend/.next/static/. massar_admin:/app/.next/static/
+	@docker restart massar_admin
+	@echo "📦 Injecting into other surfaces..."
+	@for svc in massar_landing massar_student massar_teacher massar_assistant; do \
+		docker cp frontend/.next/standalone/. $$svc:/app/ 2>/dev/null; \
+		docker cp frontend/.next/static/. $$svc:/app/.next/static/ 2>/dev/null; \
+		docker restart $$svc 2>/dev/null; \
+	done || true
+	@echo "✅ All frontends hot-updated! (no image rebuild)"
+
 ps: ## Show status and health of all containers
 	docker compose ps
 
