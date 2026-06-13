@@ -760,7 +760,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | --- | --- | --- | --- | --- |
 | `AccessCodeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `CancellationReason` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
-| `CancelledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ⚠️ Type Mismatch (timestamp with time zone vs timestamp without time zone) |
+| `CancelledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `CancelledByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `ContentSectionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |

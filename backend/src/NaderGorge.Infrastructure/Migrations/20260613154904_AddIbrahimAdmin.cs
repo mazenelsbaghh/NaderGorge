@@ -10,25 +10,34 @@ namespace NaderGorge.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            var userId = new System.Guid("d36c2e35-512c-497b-b8c7-43df9ac3b123");
-            var roleId = new System.Guid("cf96578e-27c7-402e-b394-740e805c5f65"); // Admin Role ID
+            var userId = "d36c2e35-512c-497b-b8c7-43df9ac3b123";
+            var roleId = "cf96578e-27c7-402e-b394-740e805c5f65"; // Admin Role ID
             var passwordHash = "$2b$12$HU77lFd.spR4jOIQaDPxkeZJe6wMc84doMdUsaKyO2NBtveg7jSo."; // Password: "01272629000"
 
-            migrationBuilder.InsertData(
-                table: "users",
-                columns: new[] { "Id", "CreatedAt", "FullName", "PhoneNumber", "PasswordHash", "IsActive", "IsProfileComplete", "SuspensionReason", "UpdatedAt" },
-                values: new object[,]
-                {
-                    { userId, System.DateTime.UtcNow, "ابراهيم", "01272629000", passwordHash, true, true, null, null }
-                });
+            // Ensure admin role exists (safe upsert — catches Id OR Name conflicts)
+            migrationBuilder.Sql($@"
+                INSERT INTO roles (""Id"", ""Name"", ""Type"", ""PermissionsJson"", ""CreatedAt"")
+                SELECT '{roleId}', 'Admin', 0, '[]', NOW()
+                WHERE NOT EXISTS (SELECT 1 FROM roles WHERE ""Name"" = 'Admin');
+            ");
 
-            migrationBuilder.InsertData(
-                table: "user_roles",
-                columns: new[] { "UserId", "RoleId" },
-                values: new object[,]
-                {
-                    { userId, roleId }
-                });
+            // Insert user if not exists
+            migrationBuilder.Sql($@"
+                INSERT INTO users (""Id"", ""CreatedAt"", ""FullName"", ""PhoneNumber"", ""PasswordHash"", ""IsActive"", ""IsProfileComplete"")
+                VALUES ('{userId}', NOW(), 'ابراهيم', '01272629000', '{passwordHash}', true, true)
+                ON CONFLICT (""Id"") DO NOTHING;
+            ");
+
+            // Insert user role if not exists (use actual Admin role ID from DB)
+            migrationBuilder.Sql($@"
+                INSERT INTO user_roles (""UserId"", ""RoleId"")
+                SELECT '{userId}', r.""Id""
+                FROM roles r
+                WHERE r.""Name"" = 'Admin'
+                AND NOT EXISTS (
+                    SELECT 1 FROM user_roles ur WHERE ur.""UserId"" = '{userId}' AND ur.""RoleId"" = r.""Id""
+                );
+            ");
         }
 
         /// <inheritdoc />
