@@ -121,6 +121,8 @@ export default function TermDetailPageClient() {
   }, [load, termId]);
 
   const isEnrolled = pkg?.isEnrolled ?? false;
+  const isTermPurchased = term?.isPurchased ?? false;
+  const hasAccess = isEnrolled || isTermPurchased;
 
   /* ── Loading skeleton ── */
   if (loading) {
@@ -191,9 +193,9 @@ export default function TermDetailPageClient() {
             {sections.length} قسم
           </span>
           <span className={`rounded-full px-3 py-1 text-xs font-black ${
-            isEnrolled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+            hasAccess ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
           }`}>
-            {isEnrolled ? "مفعّل" : "تحتاج تفعيل"}
+            {hasAccess ? "مفعّل" : "تحتاج تفعيل"}
           </span>
         </div>
 
@@ -325,12 +327,12 @@ export default function TermDetailPageClient() {
                             {/* Status badge */}
                             <span
                               className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-black tracking-wider ${
-                                isEnrolled
+                                hasAccess
                                   ? "bg-white/20 text-white backdrop-blur-sm"
                                   : "bg-black/25 text-white/80 backdrop-blur-sm"
                               }`}
                             >
-                              {isEnrolled ? "✦ مفتوح" : "مقفول"}
+                              {hasAccess ? "✦ مفتوح" : "مقفول"}
                             </span>
 
                             {/* Section number pill */}
@@ -385,9 +387,9 @@ export default function TermDetailPageClient() {
               </p>
             </div>
             
-            {isEnrolled ? (
+            {hasAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                🎉 هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة الأقسام مباشرة.
+                🎉 {isTermPurchased && !isEnrolled ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
               </div>
             ) : (
               <div className="flex flex-col gap-3">

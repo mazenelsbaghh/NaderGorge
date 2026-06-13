@@ -9,7 +9,7 @@ namespace NaderGorge.Application.Features.Content.Queries;
 public record GetPackageByIdQuery(Guid Id, Guid? CurrentUserId = null) : IRequest<ApiResponse<PackageDetailDto>>;
 
 public record PackageDetailDto(Guid Id, string Name, string Description, decimal Price, Guid ProgramId, bool IsActive, string? ImageUrl, List<TermDto> Terms);
-public record TermDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl);
+public record TermDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false);
 
 public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, ApiResponse<PackageDetailDto>>
 {

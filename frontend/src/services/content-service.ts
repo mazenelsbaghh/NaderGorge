@@ -26,6 +26,7 @@ export interface TermDto {
   order: number;
   price?: number;
   imageUrl?: string;
+  isPurchased?: boolean;
 }
 
 export interface ContentSectionDto {
