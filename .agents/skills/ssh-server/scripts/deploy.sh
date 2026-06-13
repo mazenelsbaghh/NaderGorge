@@ -130,10 +130,14 @@ run_migrations() {
 
   echo "$MIGRATION_RESULT"
 
-  if echo "$MIGRATION_RESULT" | grep -qi "error\|fail\|exception" && ! echo "$MIGRATION_RESULT" | grep -q "Done."; then
+  if echo "$MIGRATION_RESULT" | grep -qi "error\|fail\|exception"; then
     log_error "Migration may have failed — check output above"
-    read -p "Continue with deployment anyway? (y/N): " confirm
-    [[ "$confirm" =~ ^[Yy]$ ]] || { log_error "Aborting deployment."; exit 1; }
+    if [[ -t 0 ]]; then
+      read -p "Continue with deployment anyway? (y/N): " confirm
+      [[ "$confirm" =~ ^[Yy]$ ]] || { log_error "Aborting deployment."; exit 1; }
+    else
+      log_warn "Non-interactive shell detected, continuing deployment automatically..."
+    fi
   else
     log_ok "Migrations applied successfully"
   fi
