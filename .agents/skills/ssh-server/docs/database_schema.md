@@ -6,14 +6,14 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
-| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
-| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
-| `LessonVideoId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
-| `RejectionReason` | `string` | `character varying(1000)` | `YES` | ❌ Missing Table |
-| `ResolvedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
-| `Status` | `int` | `integer` | `NO` | ❌ Missing Table |
-| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
-| `UserId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LessonVideoId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `RejectionReason` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `ResolvedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
 ## Table: `PlatformSettings`
 
@@ -626,23 +626,23 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
-| `ActivationDescription` | `string` | `character varying(500)` | `YES` | ❌ Missing Table |
-| `ActivationTitle` | `string` | `character varying(120)` | `YES` | ❌ Missing Table |
-| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
-| `HeroDescription` | `string` | `character varying(600)` | `YES` | ❌ Missing Table |
-| `HeroEyebrow` | `string` | `character varying(80)` | `YES` | ❌ Missing Table |
-| `HeroTitle` | `string` | `character varying(140)` | `YES` | ❌ Missing Table |
-| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
-| `OfferDescription` | `string` | `character varying(600)` | `YES` | ❌ Missing Table |
-| `OfferTitle` | `string` | `character varying(120)` | `YES` | ❌ Missing Table |
-| `PackageId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
-| `PublishedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
-| `Status` | `int` | `integer` | `NO` | ❌ Missing Table |
-| `SupportDescription` | `string` | `character varying(400)` | `YES` | ❌ Missing Table |
-| `SupportTitle` | `string` | `character varying(120)` | `YES` | ❌ Missing Table |
-| `ThemeAccentKey` | `string` | `character varying(60)` | `YES` | ❌ Missing Table |
-| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
-| `UpdatedByUserId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `ActivationDescription` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `ActivationTitle` | `string` | `character varying(120)` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `HeroDescription` | `string` | `character varying(600)` | `YES` | ✅ Sync |
+| `HeroEyebrow` | `string` | `character varying(80)` | `YES` | ✅ Sync |
+| `HeroTitle` | `string` | `character varying(140)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OfferDescription` | `string` | `character varying(600)` | `YES` | ✅ Sync |
+| `OfferTitle` | `string` | `character varying(120)` | `YES` | ✅ Sync |
+| `PackageId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PublishedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `SupportDescription` | `string` | `character varying(400)` | `YES` | ✅ Sync |
+| `SupportTitle` | `string` | `character varying(120)` | `YES` | ✅ Sync |
+| `ThemeAccentKey` | `string` | `character varying(60)` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UpdatedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 
 ## Table: `packages`
 

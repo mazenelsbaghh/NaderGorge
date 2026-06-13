@@ -165,7 +165,8 @@ rebuild_containers() {
 
   remote "
     cd ${SERVER_APP_DIR}
-    CURRENT_COMMIT=\$(git rev-parse HEAD)
+    GIT_CMD=\"git --git-dir=${SERVER_GIT_DIR} --work-tree=${SERVER_APP_DIR}\"
+    CURRENT_COMMIT=\$(\$GIT_CMD rev-parse HEAD)
     LAST_COMMIT_FILE=\".last_deployed_commit\"
     
     FORCE_FULL=false
@@ -174,7 +175,7 @@ rebuild_containers() {
       FORCE_FULL=true
     else
       LAST_COMMIT=\$(cat \"\$LAST_COMMIT_FILE\")
-      if ! git cat-file -e \"\$LAST_COMMIT\" 2>/dev/null; then
+      if ! \$GIT_CMD cat-file -e \"\$LAST_COMMIT\" 2>/dev/null; then
         echo \"Last deployed commit \$LAST_COMMIT not found in git history. Triggering full rebuild.\"
         FORCE_FULL=true
       fi
@@ -190,7 +191,7 @@ rebuild_containers() {
       REBUILD_ALL=true
     else
       echo \"Diffing between \$LAST_COMMIT and \$CURRENT_COMMIT...\"
-      CHANGED_FILES=\$(git diff --name-only \"\$LAST_COMMIT\" \"\$CURRENT_COMMIT\")
+      CHANGED_FILES=\$(\$GIT_CMD diff --name-only \"\$LAST_COMMIT\" \"\$CURRENT_COMMIT\")
       echo \"Changed files:\"
       echo \"\$CHANGED_FILES\"
       
