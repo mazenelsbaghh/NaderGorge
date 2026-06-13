@@ -78,17 +78,17 @@ export default function AssistantVacationsPageClient() {
       <div className="mx-auto max-w-5xl space-y-8 text-right animate-[fadeIn_0.4s_ease-out]" dir="rtl">
         {/* Vacation Balance Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">رصيد الإجازات السنوي</span>
             <div className="text-3xl font-black text-[var(--admin-text)] mt-2">21 يوماً</div>
           </div>
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">الرصيد المستهلك</span>
             <div className="text-3xl font-black text-rose-500 mt-2">
               {vacations.filter(v => v.status === 'Approved').reduce((acc, v) => acc + calculateDays(v.startDate, v.endDate), 0)} أيام
             </div>
           </div>
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <span className="block text-xs font-black text-[var(--admin-muted)] uppercase">الرصيد المتبقي</span>
             <div className="text-3xl font-black text-emerald-500 mt-2">
               {21 - vacations.filter(v => v.status === 'Approved').reduce((acc, v) => acc + calculateDays(v.startDate, v.endDate), 0)} يوماً

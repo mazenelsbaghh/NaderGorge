@@ -479,7 +479,7 @@ export default function AdminStudentsPageClient() {
           />
 
           {showFilters && (
-            <div className="mb-8 rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 animate-in fade-in slide-in-from-top-3 duration-200">
+            <div className="mb-8 rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 animate-in fade-in slide-in-from-top-3 duration-200">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <label className="mb-2 block text-sm font-bold text-[var(--admin-text)] text-right">

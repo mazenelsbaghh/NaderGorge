@@ -70,8 +70,8 @@ export default function ParentReportPageClient() {
 
     const getStatusStyle = (status: string) => {
         switch (status) {
-            case 'Excellent': return { bg: 'rgba(34,197,94,0.1)', text: '#22c55e', label: 'ممتاز' };
-            case 'Good': return { bg: 'rgba(34,197,94,0.08)', text: '#16a34a', label: 'جيد' };
+            case 'Excellent': return { bg: 'var(--admin-success-10)', text: 'var(--admin-success)', label: 'ممتاز' };
+            case 'Good': return { bg: 'rgba(34,197,94,0.08)', text: 'var(--admin-success)', label: 'جيد' };
             case 'NeedsAttention': return { bg: 'var(--admin-warning-10)', text: 'var(--admin-warning)', label: 'يحتاج متابعة' };
             case 'AtRisk': return { bg: 'var(--admin-danger-10)', text: 'var(--admin-danger)', label: 'في خطر' };
             default: return { bg: 'var(--muted)', text: 'var(--muted-foreground)', label: status };
@@ -92,14 +92,14 @@ export default function ParentReportPageClient() {
             label: 'الامتحانات الناجحة',
             value: passedExamsCount,
             icon: CheckCircle2,
-            color: '#22c55e',
-            bg: 'rgba(34,197,94,0.1)',
+            color: 'var(--admin-success)',
+            bg: 'var(--admin-success-10)',
         },
         {
             label: 'الامتحانات غير الناجحة',
             value: failedExamsCount,
             icon: XCircle,
-            color: '#ef4444',
+            color: 'var(--admin-danger)',
             bg: 'var(--admin-danger-10)',
         },
     ];
@@ -117,7 +117,7 @@ export default function ParentReportPageClient() {
             <div className="mx-auto max-w-4xl space-y-8">
 
                 {/* Header Profile */}
-                <div className="relative overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--card)] p-8 shadow-[0_20px_60px_rgba(78,70,57,0.08)]">
+                <div className="relative overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--card)] p-8 shadow-[0_20px_60px_var(--admin-shadow)]">
                     <div className="absolute left-0 top-0 h-64 w-64 rounded-br-full bg-[var(--secondary)] opacity-40" />
 
                     <div className="relative flex flex-col items-center justify-between gap-6 md:flex-row md:items-start">
@@ -150,7 +150,7 @@ export default function ParentReportPageClient() {
                     {metrics.map((m, i) => {
                         const Icon = m.icon;
                         return (
-                            <div key={i} className="flex items-center gap-4 rounded-[24px] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[0_12px_40px_rgba(78,70,57,0.06)]">
+                            <div key={i} className="flex items-center gap-4 rounded-[24px] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[0_12px_40px_var(--admin-shadow)]">
                                 <div
                                     className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
                                     style={{ backgroundColor: m.bg }}
@@ -167,7 +167,7 @@ export default function ParentReportPageClient() {
                 </div>
 
                 {/* Warnings */}
-                <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--card)] shadow-[0_12px_40px_rgba(78,70,57,0.06)]">
+                <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--card)] shadow-[0_12px_40px_var(--admin-shadow)]">
                     <div className="bg-[var(--secondary)] p-6">
                         <h2 className="flex items-center gap-3 text-xl font-black text-[var(--foreground)]">
                             <AlertTriangle className="h-6 w-6 text-[var(--admin-warning)]" />
@@ -178,7 +178,7 @@ export default function ParentReportPageClient() {
                     <div className="p-6">
                         {recentWarnings.length === 0 ? (
                             <div className="py-12 text-center">
-                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[color:rgba(34,197,94,0.1)]">
+                                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[var(--admin-success-10)]">
                                     <ShieldCheck className="h-8 w-8 text-[var(--admin-success)]" />
                                 </div>
                                 <h3 className="text-lg font-black text-[var(--foreground)]">لا توجد تنبيهات</h3>

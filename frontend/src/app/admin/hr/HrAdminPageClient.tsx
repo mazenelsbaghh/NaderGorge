@@ -178,7 +178,7 @@ export default function HrAdminPageClient() {
 
     const config = maps[s] || {
       label: String(s),
-      classes: 'bg-gray-100 text-gray-700',
+      classes: 'bg-[var(--admin-card-soft)] text-[var(--admin-text)]',
     };
     return (
       <span
@@ -376,7 +376,7 @@ export default function HrAdminPageClient() {
       pageTitle="إدارة شؤون الموظفين"
       subtitle="إدارة ومتابعة سجلات الحضور والانصراف، وحساب التأخير والمدد، ومراجعة طلبات الإجازات الوظيفية."
       action={
-        <Link href="/admin/hr/my-attendance">
+        <Link href="/admin/hr/my-attendance" prefetch={false}>
           <NeumorphButton intent="primary" size="lg" pill>
             <User className="h-4 w-4" />
             سجلاتي الشخصية

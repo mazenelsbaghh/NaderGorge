@@ -160,7 +160,7 @@ export default function CodeGroupDetailsPageClient() {
       render: (c) => {
         if (!c.isUsed || !c.usedByUserId) return <span className="text-[var(--admin-muted)]">—</span>;
         return (
-          <Link href={`/admin/users/${c.usedByUserId}`} className="group inline-flex flex-col items-start hover:underline">
+          <Link href={`/admin/users/${c.usedByUserId}`} prefetch={false} className="group inline-flex flex-col items-start hover:underline">
             <span className="font-bold text-[var(--admin-primary)] group-hover:text-[var(--admin-primary-strong)] flex items-center gap-1">
               <UserIcon size={14} className="text-[var(--admin-primary)] animate-pulse" />
               {c.usedByStudentName || 'طالب مجهول الاسم'}
@@ -194,7 +194,7 @@ export default function CodeGroupDetailsPageClient() {
       pageTitle={group ? `تفاصيل: ${group.name || 'دفعة أكواد'}` : 'تفاصيل المجموعة'}
       subtitle="استعراض الأكواد، سجل الشحن، الربط، وطباعة كود الـ QR."
       action={
-        <Link href="/admin/codes" passHref legacyBehavior>
+        <Link href="/admin/codes" prefetch={false} passHref legacyBehavior>
           <NeumorphButton intent="ghost" size="md">
             <ArrowRight className="h-4 w-4 ml-1.5" />
             العودة للمجموعات

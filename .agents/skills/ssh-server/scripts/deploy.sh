@@ -245,7 +245,7 @@ run_migrations() {
 
   echo "$MIGRATION_RESULT"
 
-  if echo "$MIGRATION_RESULT" | grep -qi "error\|fail\|exception"; then
+  if echo "$MIGRATION_RESULT" | grep -v -i "0 error\|0 warning\|#[0-9]\|info:\|DONE\|done\|resolve " | grep -qi "error\|fail\|exception"; then
     log_error "Migration may have failed — check output above"
     if [[ -t 0 ]]; then
       read -p "Continue with deployment anyway? (y/N): " confirm

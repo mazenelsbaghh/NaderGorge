@@ -46,6 +46,7 @@ export default function AdminError({
           </button>
           <Link
             href="/admin"
+            prefetch={false}
             className="flex h-11 items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 text-sm font-bold text-[var(--admin-text)] shadow-sm transition-all hover:bg-[var(--admin-hover)]"
           >
             <Home className="h-4 w-4" />

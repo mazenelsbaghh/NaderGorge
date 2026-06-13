@@ -483,6 +483,7 @@ function JobCard({
 
           <Link
             href={`/admin/content/lessons/${video.lessonId}`}
+            prefetch={false}
             className="ai-icon-btn"
             title="انتقل للدرس"
           >
@@ -1390,7 +1391,7 @@ export default function AIMonitorPageClient() {
               <br />
               اذهب لأي درس واضغط على ✨ لبدء تحليل فيديو جديد.
             </p>
-            <Link href="/admin/content" className="ai-refresh-btn ai-refresh-btn--spaced">
+            <Link href="/admin/content" prefetch={false} className="ai-refresh-btn ai-refresh-btn--spaced">
               <ExternalLink className="h-4 w-4" />
               انتقل لإدارة المحتوى
             </Link>

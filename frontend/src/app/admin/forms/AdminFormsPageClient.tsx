@@ -193,6 +193,7 @@ export default function AdminFormsPageClient() {
         <div className="flex gap-2 justify-end">
           <Link
             href={`/admin/forms/${row.id}/submissions`}
+            prefetch={false}
             className="flex items-center gap-1 text-xs font-bold text-[var(--admin-primary)] hover:underline border border-[var(--admin-border)] rounded-xl px-3 py-1.5 hover:bg-[var(--admin-hover)]"
             title="عرض الطلبات"
           >
@@ -201,6 +202,7 @@ export default function AdminFormsPageClient() {
           </Link>
           <Link
             href={`/admin/forms/${row.id}/edit`}
+            prefetch={false}
             className="p-2 text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover)] rounded-xl"
             title="تعديل"
           >
@@ -231,6 +233,7 @@ export default function AdminFormsPageClient() {
       action={
         <Link
           href="/admin/forms/new"
+          prefetch={false}
           className="admin-btn-primary flex items-center gap-2"
         >
           <Plus className="h-5 w-5" />

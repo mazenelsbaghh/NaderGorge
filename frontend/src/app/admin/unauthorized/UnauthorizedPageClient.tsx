@@ -32,6 +32,7 @@ export default function UnauthorizedPageClient() {
         <div className="flex flex-col gap-3">
           <Link
             href="/admin"
+            prefetch={false}
             className="flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-6 py-3.5 text-sm font-bold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] active:scale-95"
           >
             <span>العودة للرئيسية</span>

@@ -259,7 +259,7 @@ export function AssistantShellChrome({
       </aside>
 
       {/* Main Workspace Frame */}
-      <div className="flex h-full flex-col lg:pr-20">
+      <div className="flex h-full flex-col lg:mr-24">
         {/* Header */}
         <header className="flex h-16 items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-bg-overlay)] px-6 backdrop-blur-md z-40">
           <div className="flex items-center gap-4">

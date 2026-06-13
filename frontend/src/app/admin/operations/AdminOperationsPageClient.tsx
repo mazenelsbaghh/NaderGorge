@@ -127,7 +127,7 @@ export default function AdminOperationsPageClient() {
       case 4:
         return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 animate-pulse">حرجة 🚨</span>;
       default:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-gray-100 text-gray-700">غير محددة</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-[var(--admin-card-soft)] text-[var(--admin-text)]">غير محددة</span>;
     }
   };
 
@@ -150,11 +150,11 @@ export default function AdminOperationsPageClient() {
       case 4:
         return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">مكتملة</span>;
       case 5:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">متوقفة مؤقتاً</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-[var(--admin-card-soft)] text-[var(--admin-muted)] dark:bg-[var(--admin-card-strong)] dark:text-[var(--admin-muted)]">متوقفة مؤقتاً</span>;
       case 6:
         return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">متأخرة ⚠️</span>;
       default:
-        return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-gray-100 text-gray-700">غير معروفة</span>;
+        return <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold bg-[var(--admin-card-soft)] text-[var(--admin-text)]">غير معروفة</span>;
     }
   };
 

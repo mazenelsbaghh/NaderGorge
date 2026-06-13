@@ -240,7 +240,7 @@ export default function AdminSettingsPageClient() {
                 dir="rtl"
               >
                 {/* Panel 1: General & Communication */}
-                <div className="bg-[var(--admin-card)] rounded-[26px] border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <Globe className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>إعدادات عامة وتواصل الدعم</span>
@@ -316,7 +316,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 2: Video Settings & Device Limits */}
-                <div className="bg-[var(--admin-card)] rounded-[26px] border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <LockKeyhole className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>الحماية وإعدادات الفيديو</span>
@@ -358,7 +358,7 @@ export default function AdminSettingsPageClient() {
                           type="button"
                           onClick={() => handleSettingChange('EnableWatermark', settings.EnableWatermark === 'true' ? 'false' : 'true')}
                           className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            settings.EnableWatermark === 'true' ? 'bg-[var(--admin-primary)]' : 'bg-gray-300 dark:bg-gray-700'
+                            settings.EnableWatermark === 'true' ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)] dark:bg-[var(--admin-card-strong)]'
                           }`}
                         >
                           <span
@@ -395,7 +395,7 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 3: Watch Requests & Hint Penalty */}
-                <div className="bg-[var(--admin-card)] rounded-[26px] border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
                   <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2 text-right">
                     <Info className="w-5 h-5 text-[var(--admin-primary)]" />
                     <span>إعدادات الطلبات والمكافآت</span>
@@ -434,13 +434,13 @@ export default function AdminSettingsPageClient() {
                 </div>
 
                 {/* Panel 4: Maintenance Mode */}
-                <div className="bg-[var(--admin-card)] rounded-[26px] border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
+                <div className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-[0_4px_30px_var(--admin-shadow)] p-6 sm:p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <button
                       type="button"
                       onClick={() => handleSettingChange('MaintenanceMode', settings.MaintenanceMode === 'true' ? 'false' : 'true')}
                       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        settings.MaintenanceMode === 'true' ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-700'
+                        settings.MaintenanceMode === 'true' ? 'bg-amber-500' : 'bg-[var(--admin-border)] dark:bg-[var(--admin-card-strong)]'
                       }`}
                     >
                       <span
@@ -528,7 +528,7 @@ export default function AdminSettingsPageClient() {
                     return (
                       <div 
                         key={role.id}
-                        className="bg-[var(--admin-card)] rounded-[26px] border border-[var(--admin-border)] shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden"
+                        className="bg-[var(--admin-card)] rounded-3xl border border-[var(--admin-border)] shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden"
                       >
                         <div className="space-y-4">
                           <div className="flex justify-between items-start">
@@ -662,7 +662,7 @@ export default function AdminSettingsPageClient() {
                           }`}
                         >
                           <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
-                            isChecked ? 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-white' : 'border-gray-400 bg-white'
+                            isChecked ? 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-white' : 'border-[var(--admin-border)] bg-[var(--admin-card)]'
                           }`}>
                             {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                           </div>

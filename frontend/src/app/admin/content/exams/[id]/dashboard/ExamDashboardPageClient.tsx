@@ -5,6 +5,7 @@ import { adminService, ExamDashboardDto, StudentExamResultSummaryDto } from '@/s
 import { useRouter } from 'next/navigation';
 import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus } from 'lucide-react';
 import { AdminShellChrome, AdminStatCard, AdminDataTable, AdminBackButton } from '@/components/admin';
+import { ConfirmModal } from '@/components/ui/admin-modal';
 import toast from 'react-hot-toast';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
 
@@ -17,6 +18,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
 
   const loadDashboard = useCallback(() => {
     if (!examId) return;
@@ -32,8 +34,10 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
     loadDashboard();
   }, [loadDashboard]);
 
-  const handleDeleteQuestion = async (examQuestionId: string) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا السؤال نهائياً؟')) return;
+  const handleDeleteQuestion = async () => {
+    if (!deleteConfirm.id) return;
+    const examQuestionId = deleteConfirm.id;
+    setDeleteConfirm({ open: false, id: null });
     setDeletingQuestionId(examQuestionId);
     try {
       await adminService.deleteExamQuestion(examId, examQuestionId);
@@ -167,7 +171,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                   <button
                     type="button"
                     disabled={deletingQuestionId === q.examQuestionId}
-                    onClick={() => handleDeleteQuestion(q.examQuestionId)}
+                    onClick={() => setDeleteConfirm({ open: true, id: q.examQuestionId })}
                     className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-500 transition hover:bg-red-100 disabled:opacity-50"
                     title="حذف السؤال"
                   >
@@ -267,6 +271,18 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
           />
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, id: null })}
+        onConfirm={handleDeleteQuestion}
+        title="حذف السؤال"
+        description="هل أنت متأكد من حذف هذا السؤال نهائياً؟ لا يمكن التراجع عن هذا الإجراء."
+        confirmLabel="حذف"
+        cancelLabel="إلغاء"
+        variant="danger"
+        loading={deletingQuestionId !== null}
+      />
     </AdminShellChrome>
   );
 }

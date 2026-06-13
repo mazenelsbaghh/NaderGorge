@@ -58,7 +58,7 @@ export default function PackagesPageClient() {
         actionLabel="استعرض الباقة"
         emptyTitle="كل الباقات الحالية مفعّلة"
         emptyDescription="ممتاز. لا توجد باقات إضافية مقفولة في هذه اللحظة."
-        onAction={(packageId) => router.push(`/student/packages/${packageId}`)}
+        getHref={(packageId) => `/student/packages/${packageId}`}
       />
     </div>
   );

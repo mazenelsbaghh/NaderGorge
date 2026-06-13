@@ -79,6 +79,7 @@ export default function AdminRootPageClient() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className="group overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-[0_12px_40px_var(--admin-shadow)] backdrop-blur-2xl transition hover:bg-[var(--admin-hover)]"
             >
               <div className="flex items-start justify-between gap-4">

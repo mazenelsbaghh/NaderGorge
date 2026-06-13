@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { GraduationCap, ChevronLeft, BookOpen, ArrowRight, BookOpenText } from "lucide-react";
-import { useRouter } from "next/navigation";
+
 import Image from "next/image";
 import Link from "next/link";
 
@@ -52,7 +52,7 @@ const fadeUp = {
 };
 
 export default function StudentTeachersPageClient() {
-  const router = useRouter();
+
   const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [loading, setLoading] = useState(true);

@@ -16,7 +16,7 @@ export default function AdminCommunityPageClient() {
       pageTitle="مجتمع الطلاب"
       subtitle="مراجعة البوستات المرسلة واعتماد المناسب منها قبل ظهوره للطلاب."
       action={
-        <Link href="/student/community" passHref legacyBehavior>
+        <Link href="/student/community" prefetch={false} passHref legacyBehavior>
           <NeumorphButton intent="primary" size="lg" pill>
             <ExternalLink className="h-4 w-4 ml-1.5" />
             تصفح مجتمع الطلاب

@@ -324,6 +324,7 @@ function LessonRow({ lesson }: { lesson: LessonSummaryDto }) {
       </div>
       <Link
         href={`/admin/content/lessons/${lesson.id}`}
+        prefetch={false}
         className="p-1.5 rounded-lg text-[var(--admin-muted)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] transition"
         title="عرض الدرس"
       >
@@ -372,6 +373,7 @@ function SectionRow({ section }: { section: ContentSectionDto }) {
         </div>
         <Link
           href={`/admin/content/sections/${section.id}`}
+          prefetch={false}
           onClick={(e) => e.stopPropagation()}
           className="p-1.5 rounded-lg text-[var(--admin-muted)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] transition"
           title="عرض القسم"
@@ -434,6 +436,7 @@ function TermRow({ term }: { term: TermDto }) {
         </div>
         <Link
           href={`/admin/content/terms/${term.id}`}
+          prefetch={false}
           onClick={(e) => e.stopPropagation()}
           className="p-1.5 rounded-lg text-[var(--admin-muted)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] transition"
           title="عرض الترم"
@@ -505,6 +508,7 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
         <div className="flex items-center gap-2 shrink-0">
           <Link
             href={`/admin/content/packages/${pkg.id}`}
+            prefetch={false}
             onClick={(e) => e.stopPropagation()}
             className="p-2 rounded-xl text-[var(--admin-muted)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] transition"
             title="عرض تفاصيل الباقة"

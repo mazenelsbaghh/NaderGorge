@@ -928,7 +928,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
           {activeTab === 'notes' && (
               <div className="flex flex-col gap-6">
                   <div className="bg-[var(--admin-card)] p-8 rounded-3xl shadow-sm">
-                     <h3 className="text-xl font-extrabold text-[var(--admin-text)] mb-5">إضافة ملاحظة جديدة</h3>
+                     <h3 className="text-xl font-black text-[var(--admin-text)] mb-5">إضافة ملاحظة جديدة</h3>
                      <form onSubmit={async (e) => {
                        e.preventDefault();
                        if (!noteInput.content.trim()) return;

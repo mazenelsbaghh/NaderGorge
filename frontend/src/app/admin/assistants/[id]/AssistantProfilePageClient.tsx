@@ -330,7 +330,7 @@ export default function AssistantProfilePageClient() {
         {/* Right Column: Account overview & settings */}
         <div className="space-y-6 lg:col-span-1">
           {/* Card 1: Basic Info */}
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <div className="flex flex-col items-center text-center gap-4">
               <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-primary-15)] font-black text-2xl text-[var(--admin-primary)] shadow-sm">
                 {getInitials(assistant.fullName)}
@@ -386,7 +386,7 @@ export default function AssistantProfilePageClient() {
           </div>
 
           {/* Card 2: Job Settings */}
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h4 className="text-md font-black text-[var(--admin-text)] mb-4 flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-[var(--admin-primary)]" />
               إعدادات الوظيفة والراتب
@@ -510,7 +510,7 @@ export default function AssistantProfilePageClient() {
         {/* Left Column: Logs, Timeline, Attendance & Vacations */}
         <div className="space-y-6 lg:col-span-2">
           {/* Section 1: Attendance Log */}
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h4 className="text-md font-black text-[var(--admin-text)] mb-4 flex items-center gap-2">
               <CalendarClock className="h-5 w-5 text-[var(--admin-primary)]" />
               سجل الحضور والانصراف الأخير
@@ -526,7 +526,7 @@ export default function AssistantProfilePageClient() {
           </div>
 
           {/* Section 2: Vacations requests */}
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h4 className="text-md font-black text-[var(--admin-text)] mb-4 flex items-center gap-2">
               <FileText className="h-5 w-5 text-[var(--admin-primary)]" />
               طلبات الإجازات
@@ -598,7 +598,7 @@ export default function AssistantProfilePageClient() {
           </div>
 
           {/* Section 3: Audit Activity Logs */}
-          <div className="rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h4 className="text-md font-black text-[var(--admin-text)] mb-4 flex items-center gap-2">
               <Activity className="h-5 w-5 text-[var(--admin-primary)]" />
               سجل النشاطات والأحداث

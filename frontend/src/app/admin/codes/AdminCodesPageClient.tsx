@@ -207,7 +207,7 @@ export default function AdminCodesPageClient() {
       align: 'left',
       render: (g) => (
         <div className="flex items-center justify-end gap-2">
-          <Link href={`/admin/codes/${g.id}`} passHref legacyBehavior>
+          <Link href={`/admin/codes/${g.id}`} prefetch={false} passHref legacyBehavior>
             <NeumorphButton
               type="button"
               intent="icon"

@@ -78,6 +78,22 @@ html.theme-switching *::after {
   --color-landing-accent-foreground: var(--landing-accent-foreground);
   --color-landing-line: var(--landing-line);
   --color-landing-line-strong: var(--landing-line-strong);
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-text: var(--admin-text);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-strong: var(--admin-primary-strong);
+  --color-admin-primary-contrast: var(--admin-primary-contrast);
+  --color-admin-hover: var(--admin-hover);
+  --color-admin-card: var(--admin-card);
+  --color-admin-card-soft: var(--admin-card-soft);
+  --color-admin-card-strong: var(--admin-card-strong);
+  --color-admin-border: var(--admin-border);
+  --color-admin-shadow: var(--admin-shadow);
+  --color-admin-success: var(--admin-success);
+  --color-admin-danger: var(--admin-danger);
+  --color-admin-warning: var(--admin-warning);
+  --color-admin-primary-15: var(--admin-primary-15);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -424,7 +440,7 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     padding: 0.625rem 1rem;
     font-size: 0.8rem;
     font-weight: 800;
-    color: #087575;
+    color: var(--landing-accent);
   }
 
   .landing-primary-button {
@@ -434,16 +450,16 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     justify-content: center;
     gap: 0.625rem;
     border-radius: 0.5rem;
-    background: linear-gradient(135deg, #0e8f8f, #0b777a);
+    background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 85%, black));
     padding: 0.75rem 1.5rem;
-    color: #ffffff;
+    color: var(--landing-accent-foreground);
     font-weight: 900;
     transition: transform 180ms ease, background-color 180ms ease;
   }
 
   .landing-primary-button:hover {
     transform: translateY(-1px);
-    background: linear-gradient(135deg, #108585, #0a6d72);
+    background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 75%, black));
   }
 
   .landing-secondary-button {
@@ -455,13 +471,13 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
     border: 1px solid rgba(10, 29, 61, 0.18);
     background: rgba(255, 255, 255, 0.82);
     padding: 0.65rem 1.15rem;
-    color: #0a1d3d;
+    color: var(--landing-ink);
     font-weight: 800;
     transition: background-color 180ms ease, color 180ms ease;
   }
 
   .landing-secondary-button:hover {
-    background: #eef1f4;
+    background: var(--landing-card-strong);
   }
 
   .landing-shell {
