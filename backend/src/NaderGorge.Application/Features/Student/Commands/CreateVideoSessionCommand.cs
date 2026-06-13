@@ -61,7 +61,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         int currentCount = watchEvent == null
             ? 0
             : maxCount > 0 ? Math.Min(watchEvent.WatchCount, maxCount) : watchEvent.WatchCount;
-        bool isLocked = watchEvent?.IsLocked ?? false;
+        bool isLocked = (watchEvent?.IsLocked ?? false) || (maxCount > 0 && currentCount >= maxCount);
 
         var isAdminOrTeacher = await _db.UserRoles
             .Include(ur => ur.Role)
@@ -69,6 +69,13 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
         if (isLocked && !isAdminOrTeacher)
         {
+            // Also ensure the flag is persisted so future checks are fast
+            if (watchEvent != null && !watchEvent.IsLocked)
+            {
+                watchEvent.IsLocked = true;
+                await _db.SaveChangesAsync(ct);
+            }
+
             // Return real watch info so the player can display accurate counts (e.g. 5 من أصل 5, not a hardcoded fallback)
             var lockedDto = new VideoSessionDto(
                 Guid.Empty,
