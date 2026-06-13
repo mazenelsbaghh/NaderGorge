@@ -261,7 +261,8 @@ export default function SectionDetailPageClient() {
             ) : (
               <div className="space-y-3">
                 {lessons.map((lesson, idx) => {
-                  const canAccess = (isEnrolled || lesson.hasAccess) && !lesson.isLocked;
+                  const hasContentAccess = isEnrolled || lesson.hasAccess;
+                  const canAccess = hasContentAccess && !lesson.isLocked;
                   return (
                     <button
                       key={lesson.id}
@@ -269,16 +270,25 @@ export default function SectionDetailPageClient() {
                       onClick={() => {
                         if (canAccess) {
                           router.push(`/student/packages/${packageId}/lessons/${lesson.id}`);
-                        } else if (!isEnrolled) {
+                        } else if (lesson.isLocked && hasContentAccess) {
+                          // Has access but locked by exam/homework
+                          if (lesson.blockingExamId) {
+                            router.push(`/student/exams/${lesson.blockingExamId}`);
+                          } else if (lesson.blockingHomeworkLessonId) {
+                            router.push(`/student/packages/${packageId}/lessons/${lesson.blockingHomeworkLessonId}`);
+                          } else {
+                            toast.error(lesson.lockedReason || "هذه الحصة مقفولة.");
+                          }
+                        } else if (!hasContentAccess) {
                           toast.error("فعّل الباقة أولاً للوصول للحصص.");
-                        } else if (lesson.isLocked) {
-                          toast.error(lesson.lockedReason || "هذه الحصة مقفولة.");
                         }
                       }}
                       className={`group relative flex w-full items-center gap-4 rounded-2xl border p-4 text-right transition-all ${
                         canAccess
                           ? "border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--admin-primary-30)] cursor-pointer"
-                          : "border-[var(--admin-border)] bg-[var(--admin-card-soft)] opacity-70 cursor-not-allowed"
+                          : lesson.isLocked && hasContentAccess
+                            ? "border-amber-500/30 bg-amber-500/5 cursor-pointer"
+                            : "border-[var(--admin-border)] bg-[var(--admin-card-soft)] opacity-70 cursor-not-allowed"
                       }`}
                     >
                       {/* Lesson Number */}
@@ -287,10 +297,14 @@ export default function SectionDetailPageClient() {
                           ? "bg-emerald-500/15 text-emerald-600"
                           : canAccess
                             ? "bg-[var(--admin-primary-15)] text-[var(--admin-primary)]"
-                            : "bg-[var(--admin-card-strong)] text-[var(--admin-muted)]"
+                            : lesson.isLocked && hasContentAccess
+                              ? "bg-amber-500/15 text-amber-600"
+                              : "bg-[var(--admin-card-strong)] text-[var(--admin-muted)]"
                       }`}>
                         {lesson.isCompleted ? (
                           <CheckCircle2 className="h-5 w-5" />
+                        ) : lesson.isLocked && hasContentAccess ? (
+                          <Lock className="h-4 w-4" />
                         ) : !canAccess ? (
                           <Lock className="h-4 w-4" />
                         ) : (
@@ -303,11 +317,19 @@ export default function SectionDetailPageClient() {
                         <h3 className={`text-sm font-black leading-snug ${
                           canAccess
                             ? "text-[var(--admin-text)] group-hover:text-[var(--admin-primary)]"
-                            : "text-[var(--admin-muted)]"
+                            : lesson.isLocked && hasContentAccess
+                              ? "text-amber-700 dark:text-amber-400"
+                              : "text-[var(--admin-muted)]"
                         } transition-colors`}>
                           {lesson.title}
                         </h3>
-                        {lesson.summary && (
+                        {/* Show lock reason for exam/homework locked lessons */}
+                        {lesson.isLocked && hasContentAccess && lesson.lockedReason && (
+                          <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400 line-clamp-1 font-bold">
+                            🔒 {lesson.lockedReason}
+                          </p>
+                        )}
+                        {lesson.summary && !(lesson.isLocked && hasContentAccess) && (
                           <p className="mt-0.5 text-xs text-[var(--admin-muted)] line-clamp-1">
                             {lesson.summary}
                           </p>
@@ -319,8 +341,15 @@ export default function SectionDetailPageClient() {
                         <PlayCircle className="h-5 w-5 shrink-0 text-[var(--admin-primary)] opacity-0 transition-opacity group-hover:opacity-100" />
                       )}
 
-                      {/* Buy lesson button / Status */}
-                      {!canAccess && lesson.price != null && lesson.price > 0 && (
+                      {/* Exam/Homework lock indicator - NOT a buy button */}
+                      {lesson.isLocked && hasContentAccess && (
+                        <span className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-amber-500/15 px-3 py-1.5 text-xs font-black text-amber-600 dark:text-amber-400">
+                          {lesson.blockingExamId ? '📝 اذهب للامتحان' : lesson.blockingHomeworkLessonId ? '📋 أكمل الواجب' : '🔒 مقفول'}
+                        </span>
+                      )}
+
+                      {/* Buy lesson button - ONLY when user doesn't have access at all */}
+                      {!hasContentAccess && lesson.price != null && lesson.price > 0 && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -333,7 +362,7 @@ export default function SectionDetailPageClient() {
                           {lesson.price} ج.م
                         </button>
                       )}
-                      {!canAccess && (lesson.price == null || lesson.price === 0) && !lesson.isLocked && (
+                      {!hasContentAccess && (lesson.price == null || lesson.price === 0) && !lesson.isLocked && (
                         <span className="shrink-0 text-xs font-black text-emerald-600 dark:text-emerald-400">مجانية</span>
                       )}
                     </button>
