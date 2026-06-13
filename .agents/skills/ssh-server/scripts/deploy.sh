@@ -18,7 +18,8 @@ SERVER_APP_DIR="/var/www/nadergorge"
 SERVER_GIT_DIR="/var/www/nadergorge.git"
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=15 -o PreferredAuthentications=password -o ServerAliveInterval=30 -o ServerAliveCountMax=5"
-SSH_CMD="sshpass -p '${SERVER_PASS}' ssh ${SSH_OPTS} ${SERVER_USER}@${SERVER_HOST}"
+export SSHPASS="${SERVER_PASS}"
+SSH_CMD="sshpass -e ssh ${SSH_OPTS} ${SERVER_USER}@${SERVER_HOST}"
 
 # ─── Colors ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -52,7 +53,7 @@ done
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 remote() {
-  sshpass -p "${SERVER_PASS}" ssh ${SSH_OPTS} "${SERVER_USER}@${SERVER_HOST}" "$@"
+  sshpass -e ssh ${SSH_OPTS} "${SERVER_USER}@${SERVER_HOST}" "$@"
 }
 
 check_deps() {
@@ -212,7 +213,7 @@ push_to_github() {
 # =============================================================================
 push_to_prod() {
   log_step "Pushing to production server (prod/${BRANCH})"
-  if GIT_SSH_COMMAND="sshpass -p '${SERVER_PASS}' ssh ${SSH_OPTS}" git push prod HEAD 2>&1; then
+  if GIT_SSH_COMMAND="sshpass -e ssh ${SSH_OPTS}" git push prod HEAD 2>&1; then
     log_ok "Production git repo updated"
   else
     log_warn "Prod push had warnings (may already be up to date)"
@@ -427,7 +428,7 @@ health_check() {
   if [[ -n "$UNHEALTHY" ]]; then
     log_error "Some containers are unhealthy:"
     echo "$UNHEALTHY"
-    log_info "Run this to see logs: sshpass -p '${SERVER_PASS}' ssh ${SSH_OPTS} root@${SERVER_HOST} 'docker compose -f ${SERVER_APP_DIR}/docker-compose.yml logs --tail=50'"
+    log_info "Run this to see logs: SSHPASS='${SERVER_PASS}' sshpass -e ssh ${SSH_OPTS} root@${SERVER_HOST} 'docker compose -f ${SERVER_APP_DIR}/docker-compose.yml logs --tail=50'"
   else
     log_ok "All containers are healthy! 🎉"
   fi
