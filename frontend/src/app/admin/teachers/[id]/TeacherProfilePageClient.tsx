@@ -110,28 +110,16 @@ const formatDate = (d?: string | null) => {
   return new Date(d).toLocaleDateString('en-GB');
 };
 
-const mapVacationStatus = (s: string): { label: string; cls: string } => {
-  const m: Record<string, { label: string; cls: string }> = {
-    Pending: { label: 'قيد الانتظار', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' },
-    Approved: { label: 'موافق عليها', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' },
-    Rejected: { label: 'مرفوضة', cls: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' },
-  };
-  return m[s] || { label: s, cls: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300' };
-};
-
-const mapAttendanceStatus = (s: string): { label: string; cls: string } => {
-  const m: Record<string, { label: string; cls: string }> = {
-    Present: { label: 'حاضر', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' },
-    Late: { label: 'متأخر', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' },
-    Absent: { label: 'غائب', cls: 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' },
-    Sick: { label: 'إجازة مرضية', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400' },
-    Leave: { label: 'إجازة', cls: 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400' },
-  };
-  return m[s] || { label: s, cls: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300' };
-};
-
 /* ─── Tab type ─── */
-type TabKey = 'overview' | 'content' | 'students' | 'essays' | 'financials' | 'hr' | 'audit';
+type TabKey = 'overview' | 'content' | 'students' | 'essays' | 'financials' | 'audit';
+
+/** Safely extract an array from an API response that might be { items: [...] }, [...], or null */
+const toArray = (v: unknown): any[] => {
+  if (Array.isArray(v)) return v;
+  if (v && typeof v === 'object' && 'items' in (v as any) && Array.isArray((v as any).items)) return (v as any).items;
+  if (v && typeof v === 'object' && 'data' in (v as any) && Array.isArray((v as any).data)) return (v as any).data;
+  return [];
+};
 
 /* ──────────────────────────────────────────────────────────────────
    Component
@@ -152,10 +140,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const [codeGroups, setCodeGroups] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<UserAuditLogDto[]>([]);
 
-  // HR data
-  const [employee, setEmployee] = useState<EmployeeDto | null>(null);
-  const [attendance, setAttendance] = useState<AdminAttendanceLogDto[]>([]);
-  const [vacations, setVacations] = useState<AdminVacationDto[]>([]);
+
 
   const TABS: AdminTab<TabKey>[] = [
     { key: 'overview', label: 'نظرة عامة' },
@@ -163,7 +148,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
     { key: 'students', label: 'الطلاب' },
     { key: 'essays', label: 'المقالات' },
     { key: 'financials', label: 'الماليات' },
-    { key: 'hr', label: 'الموارد البشرية' },
     { key: 'audit', label: 'سجل النشاط' },
   ];
 
@@ -179,7 +163,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
       const [
         statsRes, studentsRes, essaysRes, activationsRes,
         payoutsRes, codeGroupsRes, auditRes,
-        employeesRes, attendanceRes, vacationsRes,
       ] = await Promise.all([
         adminService.getTeacherStats(id).catch(() => null),
         adminService.getTeacherStudents(id).catch(() => []),
@@ -190,46 +173,17 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         (t as TeacherDto)?.userId
           ? adminService.getUserAuditLogs((t as TeacherDto).userId).catch(() => [])
           : Promise.resolve([]),
-        hrService.listEmployees().catch(() => []),
-        (t as TeacherDto)?.userId
-          ? hrService.getAttendance(undefined, undefined, undefined).catch(() => [])
-          : Promise.resolve([]),
-        (t as TeacherDto)?.userId
-          ? hrService.getVacations().catch(() => [])
-          : Promise.resolve([]),
       ]);
 
       setStats(statsRes);
-      setStudents(studentsRes ?? []);
-      setEssays(essaysRes ?? []);
-      setActivations(activationsRes ?? []);
-      setPayouts(payoutsRes ?? []);
-      // Filter code groups for this teacher
+      setStudents(toArray(studentsRes));
+      setEssays(toArray(essaysRes));
+      setActivations(toArray(activationsRes));
+      setPayouts(toArray(payoutsRes));
       setCodeGroups(
-        ((codeGroupsRes ?? []) as any[]).filter(
-          (g: any) => g.teacherId === id
-        )
+        toArray(codeGroupsRes).filter((g: any) => g.teacherId === id)
       );
-      setAuditLogs((auditRes ?? []) as UserAuditLogDto[]);
-
-      // HR — find this teacher's employee record
-      const userId = (t as TeacherDto)?.userId;
-      if (userId) {
-        const empMatch = ((employeesRes ?? []) as EmployeeDto[]).find(e => e.userId === userId);
-        setEmployee(empMatch ?? null);
-
-        // Filter attendance/vacations for this user
-        setAttendance(
-          ((attendanceRes ?? []) as AdminAttendanceLogDto[]).filter(
-            (a) => a.employeeId === empMatch?.id
-          )
-        );
-        setVacations(
-          ((vacationsRes ?? []) as AdminVacationDto[]).filter(
-            (v) => v.employeeId === empMatch?.id
-          )
-        );
-      }
+      setAuditLogs(toArray(auditRes) as UserAuditLogDto[]);
     } catch (err) {
       devConsole.error("Failed to load teacher profile", err);
       toast.error('فشل في تحميل بيانات المعلم');
@@ -622,96 +576,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
           </div>
         )}
 
-        {/* ══════════════════════════════════════════
-            TAB 6: HR — الموارد البشرية
-            ══════════════════════════════════════════ */}
-        {activeTab === 'hr' && (
-          <div className="flex flex-col gap-6">
-            {/* Employee settings */}
-            <SectionCard icon={Briefcase} title="إعدادات الوظيفة">
-              {employee?.employeeProfile ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <InfoField label="الراتب الأساسي" value={`${employee.employeeProfile.basicSalary} ج.م`} mono />
-                  <InfoField label="ساعة بدء العمل" value={employee.employeeProfile.standardStartTime || '—'} mono />
-                  <InfoField label="ساعات العمل اليومية" value={`${employee.employeeProfile.targetDailyHours} ساعة`} />
-                </div>
-              ) : (
-                <div className="text-center py-8 text-[var(--admin-muted)]">
-                  <Briefcase size={32} className="mx-auto mb-3 opacity-30" />
-                  <p className="text-sm font-bold">لم يتم تهيئة ملف الموظف بعد</p>
-                </div>
-              )}
-            </SectionCard>
-
-            {/* Attendance table */}
-            <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
-              <div className="mb-5">
-                <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل الحضور</h3>
-                <p className="text-[var(--admin-muted)]">سجل الحضور والانصراف اليومي للمعلم.</p>
-              </div>
-
-              <AdminDataTable<AdminAttendanceLogDto>
-                columns={[
-                  { key: 'date', label: 'التاريخ', render: (row) => <span className="font-bold text-[var(--admin-text)]">{formatDate(row.date)}</span> },
-                  { key: 'clockIn', label: 'وقت الحضور', render: (row) => (
-                    <span className="font-mono text-sm">{row.clockIn ? new Date(row.clockIn).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
-                  )},
-                  { key: 'clockOut', label: 'وقت الانصراف', render: (row) => (
-                    <span className="font-mono text-sm">{row.clockOut ? new Date(row.clockOut).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
-                  )},
-                  { key: 'lateMinutes', label: 'دقائق التأخير', render: (row) => (
-                    <span className={`font-mono font-bold ${row.lateMinutes > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{row.lateMinutes} د</span>
-                  )},
-                  { key: 'durationMinutes', label: 'المدة', render: (row) => (
-                    <span className="font-mono text-sm">{row.durationMinutes ? `${Math.floor(row.durationMinutes / 60)}س ${row.durationMinutes % 60}د` : '—'}</span>
-                  )},
-                  { key: 'status', label: 'الحالة', render: (row) => {
-                    const { label, cls } = mapAttendanceStatus(row.status);
-                    return (
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${cls}`}>
-                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        {label}
-                      </span>
-                    );
-                  }},
-                ]}
-                data={attendance}
-                rowKey={(row) => row.id}
-                emptyMessage="لا يوجد سجل حضور مسجل"
-              />
-            </div>
-
-            {/* Vacations table */}
-            <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
-              <div className="mb-5">
-                <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">الإجازات</h3>
-                <p className="text-[var(--admin-muted)]">طلبات الإجازات وحالتها.</p>
-              </div>
-
-              <AdminDataTable<AdminVacationDto>
-                columns={[
-                  { key: 'startDate', label: 'من', render: (row) => <span className="font-bold text-[var(--admin-text)]">{formatDate(row.startDate)}</span> },
-                  { key: 'endDate', label: 'إلى', render: (row) => formatDate(row.endDate) },
-                  { key: 'reason', label: 'السبب', render: (row) => <span className="text-sm text-[var(--admin-text)]">{row.reason || '—'}</span> },
-                  { key: 'status', label: 'الحالة', render: (row) => {
-                    const { label, cls } = mapVacationStatus(row.status);
-                    return (
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${cls}`}>
-                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        {label}
-                      </span>
-                    );
-                  }},
-                  { key: 'handledByName', label: 'بواسطة', render: (row) => <span className="text-sm font-semibold text-[var(--admin-text)]">{row.handledByName || '—'}</span> },
-                  { key: 'handledAt', label: 'تاريخ القرار', render: (row) => row.handledAt ? new Date(row.handledAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' }) : '—' },
-                ]}
-                data={vacations}
-                rowKey={(row) => row.id}
-                emptyMessage="لا توجد إجازات مسجلة"
-              />
-            </div>
-          </div>
-        )}
 
         {/* ══════════════════════════════════════════
             TAB 7: Audit — سجل النشاط
