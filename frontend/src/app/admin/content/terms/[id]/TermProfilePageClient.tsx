@@ -81,6 +81,7 @@ export default function TermProfilePageClient(props: { params: { id: string } })
     title: s.title,
     order: s.order,
     price: s.price,
+    imageUrl: s.imageUrl,
     href: `/admin/content/sections/${s.id}`,
   }));
 
@@ -97,19 +98,23 @@ export default function TermProfilePageClient(props: { params: { id: string } })
         </NeumorphButton>
       }
     >
+      {/* Always visible term image upload at the top */}
+      <div className="mb-8 max-w-3xl">
+        <ContentImageUpload
+          entityId={term.id}
+          contentType="term"
+          imageUrl={term.imageUrl}
+          label="صورة الترم"
+          onUploaded={(imageUrl) => setTerm((current: any) => ({ ...current, imageUrl }))}
+        />
+      </div>
+
       <div className="mb-8">
         <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
       </div>
 
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          <ContentImageUpload
-            entityId={term.id}
-            contentType="term"
-            imageUrl={term.imageUrl}
-            label="صورة الترم"
-            onUploaded={(imageUrl) => setTerm((current: any) => ({ ...current, imageUrl }))}
-          />
           <EntityOverviewDashboard
             entityType="ترم"
             details={{ title: term.title, price: term.price }}
@@ -125,11 +130,19 @@ export default function TermProfilePageClient(props: { params: { id: string } })
             items={sectionItems}
             loading={sectionsLoading}
             loadError={sectionsError}
+            hasImage={true}
             emptyDescription="القسم (الشهر) يجمع مجموعة من الحصص تحت عنوان واحد. أضف القسم الأول لهذا الترم."
             addPlaceholder="اسم القسم، مثال: شهر أكتوبر..."
-            onCreate={async ({ title, order, price }) => {
-              await adminService.createSection({ termId: params.id, title, order, price });
+            onCreate={async ({ title, order, price, imageFile }) => {
+              const sectionId = await adminService.createSection({ termId: params.id, title, order, price });
+              if (imageFile && sectionId?.id) {
+                await adminService.uploadContentImage('section', sectionId.id, imageFile);
+              }
               toast.success('تمت إضافة القسم.');
+              await loadSections();
+            }}
+            onImageUpload={async (id, file) => {
+              await adminService.uploadContentImage('section', id, file);
               await loadSections();
             }}
             onRetry={loadSections}

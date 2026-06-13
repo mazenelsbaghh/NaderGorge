@@ -250,7 +250,7 @@ export default function TermDetailPageClient() {
     return (
       <div className="space-y-6 animate-pulse pb-10">
         <div className="h-9 w-48 rounded-full bg-[var(--admin-card-strong)]" />
-        <div className="h-[clamp(18rem,52vh,40rem)] rounded-[28px] bg-[var(--admin-card-strong)] sm:rounded-2xl" />
+        <div className="aspect-video w-full rounded-[28px] bg-[var(--admin-card-strong)] sm:rounded-2xl" />
         <div className="h-6 w-2/3 rounded-xl bg-[var(--admin-card-strong)]" />
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
@@ -281,7 +281,7 @@ export default function TermDetailPageClient() {
 
       {/* ── Hero Image Banner ── */}
       <div
-        className="relative h-[clamp(14rem,35vh,25rem)] min-h-[14rem] w-full overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-md sm:rounded-2xl"
+        className="relative aspect-video w-full overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-md sm:rounded-2xl"
       >
         <Image
           src={

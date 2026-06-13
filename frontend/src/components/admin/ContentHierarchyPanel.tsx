@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ChevronLeft,
   GripVertical,
@@ -18,10 +19,15 @@ import {
   Trash2,
   Check,
   X,
+  Camera,
+  Loader2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { NumberField } from '@/components/ui/number-field';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import toast from 'react-hot-toast';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +36,7 @@ export interface HierarchyItem {
   title: string;
   order: number;
   price?: number;
+  imageUrl?: string | null;
   /** Optional subtitle (e.g., summary, lesson count) */
   subtitle?: string;
   /** URL to navigate when clicking the item row */
@@ -53,8 +60,12 @@ export interface ContentHierarchyPanelProps {
   addPlaceholder: string;
   /** Whether the add row should include a "summary" textarea */
   hasSummary?: boolean;
-  /** Called with { title, order, price, summary } to create a new child */
-  onCreate: (data: { title: string; order: number; price: number; summary?: string }) => Promise<void>;
+  /** Whether the panel supports uploading/displaying images */
+  hasImage?: boolean;
+  /** Called with { title, order, price, summary, imageFile } to create a new child */
+  onCreate: (data: { title: string; order: number; price: number; summary?: string; imageFile?: File | null }) => Promise<void>;
+  /** Optional callback to upload an image for an existing item */
+  onImageUpload?: (id: string, file: File) => Promise<void>;
   /** Called when deleting an item */
   onDelete?: (id: string) => Promise<void>;
   /** Text for the delete confirm dialog */
@@ -91,7 +102,9 @@ export function ContentHierarchyPanel({
   emptyDescription,
   addPlaceholder,
   hasSummary = false,
+  hasImage = false,
   onCreate,
+  onImageUpload,
   onDelete,
   deleteConfirmText,
   onRetry,
@@ -101,10 +114,14 @@ export function ContentHierarchyPanel({
   const [newSummary, setNewSummary] = useState('');
   const [newOrder, setNewOrder] = useState(1);
   const [newPrice, setNewPrice] = useState(0);
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
+  const [rowUploadingId, setRowUploadingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<HierarchyItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-set order to next available
   useEffect(() => {
@@ -115,15 +132,40 @@ export function ContentHierarchyPanel({
     }
   }, [isAdding, items]);
 
+  async function handleRowImageChange(id: string, file?: File) {
+    if (!file || !onImageUpload) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('اختر ملف صورة صالحًا.');
+      return;
+    }
+    try {
+      setRowUploadingId(id);
+      await onImageUpload(id, file);
+      toast.success('تم تحديث الصورة بنجاح.');
+    } catch {
+      toast.error('تعذر رفع الصورة.');
+    } finally {
+      setRowUploadingId(null);
+    }
+  }
+
   async function handleCreate() {
     if (!newTitle.trim()) return;
     if (hasSummary && !newSummary.trim()) return;
     try {
       setSaving(true);
-      await onCreate({ title: newTitle.trim(), order: newOrder, price: newPrice, summary: newSummary.trim() || undefined });
+      await onCreate({
+        title: newTitle.trim(),
+        order: newOrder,
+        price: newPrice,
+        summary: newSummary.trim() || undefined,
+        imageFile: newImageFile,
+      });
       setNewTitle('');
       setNewSummary('');
       setNewPrice(0);
+      setNewImageFile(null);
+      setNewImagePreview(null);
       setIsAdding(false);
     } finally {
       setSaving(false);
@@ -243,6 +285,54 @@ export function ContentHierarchyPanel({
                 {item.order}
               </span>
 
+              {/* Image Thumbnail */}
+              {hasImage && (
+                <div className="relative h-11 w-[78px] rounded-lg overflow-hidden bg-[var(--admin-card-strong)] border border-[var(--admin-border)] shrink-0 group/img cursor-pointer">
+                  {item.imageUrl ? (
+                    <Image
+                      src={resolveMediaUrl(item.imageUrl)}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                      sizes="78px"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-[var(--admin-muted)]/10 text-[var(--admin-muted)]">
+                      <ImageIcon className="h-4 w-4" />
+                    </div>
+                  )}
+                  
+                  {onImageUpload && (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        id={`row-file-input-${item.id}`}
+                        onChange={(e) => void handleRowImageChange(item.id, e.target.files?.[0])}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        type="button"
+                        disabled={rowUploadingId === item.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          document.getElementById(`row-file-input-${item.id}`)?.click();
+                        }}
+                        className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-opacity"
+                      >
+                        {rowUploadingId === item.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-[var(--admin-text)] leading-tight truncate">{item.title}</p>
@@ -315,7 +405,7 @@ export function ContentHierarchyPanel({
                 )}
               </div>
 
-              <div className="w-24 shrink-0">
+              <div className="w-28 shrink-0">
                 <NumberField value={newOrder} onChange={setNewOrder} minValue={1}>
                   <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] block mb-1.5">ترتيب</NumberField.Label>
                   <NumberField.Group className="h-11 w-full">
@@ -326,7 +416,7 @@ export function ContentHierarchyPanel({
                 </NumberField>
               </div>
 
-              <div className="w-28 shrink-0">
+              <div className="w-32 shrink-0">
                 <NumberField value={newPrice} onChange={setNewPrice} minValue={0}>
                   <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] block mb-1.5">السعر (ج)</NumberField.Label>
                   <NumberField.Group className="h-11 w-full">
@@ -338,10 +428,59 @@ export function ContentHierarchyPanel({
               </div>
             </div>
 
+            {hasImage && (
+              <div className="flex items-center gap-3 border-t border-[var(--admin-border)]/50 pt-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setNewImageFile(file);
+                      setNewImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative h-14 w-24 border border-dashed border-[var(--admin-border)] rounded-xl flex items-center justify-center bg-[var(--admin-card-soft)] cursor-pointer hover:border-[var(--admin-primary)] overflow-hidden shrink-0"
+                >
+                  {newImagePreview ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={newImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNewImageFile(null);
+                          setNewImagePreview(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center gap-1 text-[var(--admin-muted)] text-[10px] font-bold">
+                      <Camera className="h-4 w-4 text-[var(--admin-primary)]" />
+                      <span>صورة الغلاف</span>
+                    </div>
+                  )}
+                </div>
+                <div className="text-xs text-[var(--admin-muted)]">
+                  اضغط لرفع صورة غلاف مخصصة (اختياري). يتم تحويلها تلقائيًا إلى WebP.
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => { setIsAdding(false); setNewTitle(''); setNewSummary(''); }}
+                onClick={() => { setIsAdding(false); setNewTitle(''); setNewSummary(''); setNewImageFile(null); setNewImagePreview(null); }}
                 className="flex items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-4 py-2 text-sm font-bold text-[var(--admin-muted)] transition hover:bg-[var(--admin-card-strong)]"
               >
                 <X className="h-3.5 w-3.5" />

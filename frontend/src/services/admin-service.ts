@@ -670,13 +670,26 @@ export const adminService = {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);
     return res.data?.data;
   },
-  uploadContentImage: async (contentType: ContentImageType, id: string, image: File) => {
+  uploadContentImage: async (
+    contentType: ContentImageType,
+    id: string,
+    image: File,
+    onProgress?: (percent: number) => void
+  ) => {
     const formData = new FormData();
     formData.append('image', image);
     const res = await apiClient.post<ApiResponse<string>>(
       `/admin/content/${contentType}/${id}/image`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(percent);
+          }
+        },
+      }
     );
     return res.data.data;
   },

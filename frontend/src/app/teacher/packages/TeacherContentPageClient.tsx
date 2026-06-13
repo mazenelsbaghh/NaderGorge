@@ -178,7 +178,7 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
           className="relative flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card)] hover:border-[var(--admin-primary)] cursor-pointer transition min-h-[100px]"
         >
           {imagePreview ? (
-            <div className="relative w-full aspect-[21/9] rounded-xl overflow-hidden">
+            <div className="relative w-full aspect-video rounded-xl overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
               <button

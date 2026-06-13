@@ -7,7 +7,7 @@ namespace NaderGorge.API.Services;
 
 public sealed class ContentImageStorage : IContentImageStorage
 {
-    private const int MaximumDimension = 2400;
+    private const int MaximumDimension = 1200;
     private const long MaximumPixelCount = 40_000_000;
     private readonly IWebHostEnvironment _environment;
 
@@ -29,6 +29,12 @@ public sealed class ContentImageStorage : IContentImageStorage
 
         imageStream.Position = 0;
         using var image = await Image.LoadAsync(imageStream, cancellationToken);
+        
+        // Clear metadata to reduce file size
+        image.Metadata.ExifProfile = null;
+        image.Metadata.IccProfile = null;
+        image.Metadata.XmpProfile = null;
+
         image.Mutate(context =>
         {
             context.AutoOrient();
@@ -50,7 +56,7 @@ public sealed class ContentImageStorage : IContentImageStorage
         var physicalPath = Path.Combine(physicalDirectory, randomFileName);
         await image.SaveAsWebpAsync(
             physicalPath,
-            new WebpEncoder { Quality = 82 },
+            new WebpEncoder { Quality = 75 },
             cancellationToken);
 
         return $"/{relativeDirectory.Replace(Path.DirectorySeparatorChar, '/')}/{randomFileName}";

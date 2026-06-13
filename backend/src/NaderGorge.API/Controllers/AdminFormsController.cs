@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Admin.Commands;
 using NaderGorge.Application.Features.Admin.Queries;
+using NaderGorge.Application.Interfaces;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 using NaderGorge.API.Extensions;
@@ -17,10 +19,12 @@ namespace NaderGorge.API.Controllers;
 public class AdminFormsController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IContentImageStorage _imageStorage;
 
-    public AdminFormsController(IMediator mediator)
+    public AdminFormsController(IMediator mediator, IContentImageStorage imageStorage)
     {
         _mediator = mediator;
+        _imageStorage = imageStorage;
     }
 
     [HttpGet]
@@ -89,16 +93,12 @@ public class AdminFormsController : ControllerBase
             var base64Data = dto.Base64Image.Contains(",") ? dto.Base64Image.Split(',')[1] : dto.Base64Image;
             var bytes = Convert.FromBase64String(base64Data);
 
-            var uploadsDir = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads", "form-covers");
-            if (!System.IO.Directory.Exists(uploadsDir))
-                System.IO.Directory.CreateDirectory(uploadsDir);
+            using var memoryStream = new MemoryStream(bytes);
+            var relativeUrl = await _imageStorage.SaveAsWebpAsync(
+                memoryStream,
+                "form-covers",
+                HttpContext.RequestAborted);
 
-            var uniqueFileName = $"{Guid.NewGuid()}_{System.IO.Path.GetFileName(dto.FileName)}";
-            var filePath = System.IO.Path.Combine(uploadsDir, uniqueFileName);
-
-            await System.IO.File.WriteAllBytesAsync(filePath, bytes);
-
-            var relativeUrl = $"/uploads/form-covers/{uniqueFileName}";
             return Ok(new { Success = true, Data = relativeUrl });
         }
         catch (FormatException)

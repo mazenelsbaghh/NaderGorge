@@ -24,6 +24,7 @@ export function ContentImageUpload({
 }: ContentImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   async function uploadSelectedImage(file?: File) {
     if (!file) return;
@@ -38,20 +39,27 @@ export function ContentImageUpload({
 
     try {
       setUploading(true);
-      const uploadedImageUrl = await adminService.uploadContentImage(contentType, entityId, file);
+      setProgress(0);
+      const uploadedImageUrl = await adminService.uploadContentImage(
+        contentType,
+        entityId,
+        file,
+        (p) => setProgress(p)
+      );
       onUploaded(uploadedImageUrl);
       toast.success('تم تحويل الصورة إلى WebP وحفظها بنجاح.');
     } catch {
       toast.error('تعذر رفع الصورة. تأكد أن الملف صورة سليمة.');
     } finally {
       setUploading(false);
+      setProgress(0);
       if (inputRef.current) inputRef.current.value = '';
     }
   }
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
-      <div className="relative aspect-[21/8] bg-[var(--admin-card-strong)]">
+      <div className="relative aspect-video bg-[var(--admin-card-strong)] overflow-hidden">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -63,6 +71,18 @@ export function ContentImageUpload({
           <div className="flex h-full flex-col items-center justify-center gap-2 text-[var(--admin-muted)]">
             <ImageIcon className="h-8 w-8" />
             <span className="text-sm font-bold">لا توجد صورة</span>
+          </div>
+        )}
+
+        {uploading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs p-6 text-white text-center">
+            <span className="mb-2 text-sm font-bold">جاري رفع وتحويل الصورة... {progress}%</span>
+            <div className="w-full max-w-[200px] h-1.5 rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-[var(--admin-primary)] transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
         )}
       </div>

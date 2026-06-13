@@ -138,7 +138,7 @@ export default function PackageProfilePageClient() {
     return (
       <div className="space-y-6 animate-pulse">
         {/* Hero skeleton */}
-        <div className="h-[280px] sm:h-[340px] rounded-[28px] bg-[var(--admin-card-strong)]" />
+        <div className="aspect-video w-full rounded-[28px] bg-[var(--admin-card-strong)]" />
         {/* Two-column skeleton */}
         <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
           <div className="space-y-4">
@@ -183,7 +183,7 @@ export default function PackageProfilePageClient() {
 
       {/* ── Hero Image Banner ── */}
       <div
-        className="relative h-[clamp(14rem,35vh,25rem)] min-h-[14rem] w-full overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-md sm:rounded-2xl"
+        className="relative aspect-video w-full overflow-hidden rounded-3xl border border-[var(--admin-border)] shadow-md sm:rounded-2xl"
         style={{ viewTransitionName: `pkg-image-${packageId}` }}
       >
         <Image

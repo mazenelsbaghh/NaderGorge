@@ -185,13 +185,13 @@ const NumberFieldIncrementButton = React.forwardRef<HTMLButtonElement, React.But
       disabled={disabled}
       onClick={() => setValue(value + step)}
       className={cn(
-        "flex h-full min-h-[44px] w-12 shrink-0 items-center justify-center border-l bg-[var(--admin-card)] border-[var(--admin-border)] text-[var(--admin-text)] transition-colors",
+        "flex h-full min-h-[44px] w-9 shrink-0 items-center justify-center border-l bg-[var(--admin-card)] border-[var(--admin-border)] text-[var(--admin-text)] transition-colors",
         disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--admin-card-strong)] hover:text-[var(--admin-primary)] active:bg-[var(--admin-border)]",
         className
       )}
       {...props}
     >
-      {children || <Plus className="h-5 w-5 shrink-0" />}
+      {children || <Plus className="h-4 w-4 shrink-0" />}
     </button>
   );
 });
@@ -210,13 +210,13 @@ const NumberFieldDecrementButton = React.forwardRef<HTMLButtonElement, React.But
       disabled={disabled}
       onClick={() => setValue(value - step)}
       className={cn(
-        "flex h-full min-h-[44px] w-12 shrink-0 items-center justify-center border-r bg-[var(--admin-card)] border-[var(--admin-border)] text-[var(--admin-text)] transition-colors",
+        "flex h-full min-h-[44px] w-9 shrink-0 items-center justify-center border-r bg-[var(--admin-card)] border-[var(--admin-border)] text-[var(--admin-text)] transition-colors",
         disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[var(--admin-card-strong)] hover:text-[var(--admin-primary)] active:bg-[var(--admin-border)]",
         className
       )}
       {...props}
     >
-      {children || <Minus className="h-5 w-5 shrink-0" />}
+      {children || <Minus className="h-4 w-4 shrink-0" />}
     </button>
   );
 });

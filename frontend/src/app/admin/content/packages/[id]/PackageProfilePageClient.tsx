@@ -90,6 +90,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
     title: t.title,
     order: t.order,
     price: t.price,
+    imageUrl: t.imageUrl,
     href: `/admin/content/terms/${t.id}`,
   }));
 
@@ -106,6 +107,17 @@ export default function PackageProfilePageClient(props: { params: { id: string }
         </NeumorphButton>
       }
     >
+      {/* Always visible package image upload at the top */}
+      <div className="mb-8 max-w-3xl">
+        <ContentImageUpload
+          entityId={pkg.id}
+          contentType="package"
+          imageUrl={pkg.imageUrl}
+          label="صورة الباقة"
+          onUploaded={(imageUrl) => setPkg((current: any) => ({ ...current, imageUrl }))}
+        />
+      </div>
+
       {/* Stats */}
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
         <AdminStatCard variant="accent" icon={BookOpenText}  label="حالة الباقة" value={pkg.isActive !== false ? 'نشطة' : 'مسودة'} />
@@ -138,11 +150,19 @@ export default function PackageProfilePageClient(props: { params: { id: string }
             items={termItems}
             loading={termsLoading}
             loadError={termsError}
+            hasImage={true}
             emptyDescription="الترم هو الوحدة الكبرى التي تجمع الأقسام والدروس. أضف الترم الأول لهذه الباقة."
             addPlaceholder="اسم الترم، مثال: الفصل الدراسي الأول..."
-            onCreate={async ({ title, order, price }) => {
-              await adminService.createTerm({ packageId: params.id, title, order, price });
+            onCreate={async ({ title, order, price, imageFile }) => {
+              const termId = await adminService.createTerm({ packageId: params.id, title, order, price });
+              if (imageFile && termId) {
+                await adminService.uploadContentImage('term', termId, imageFile);
+              }
               toast.success('تمت إضافة الترم.');
+              await loadTerms();
+            }}
+            onImageUpload={async (id, file) => {
+              await adminService.uploadContentImage('term', id, file);
               await loadTerms();
             }}
             onDelete={async (id) => {
@@ -158,13 +178,6 @@ export default function PackageProfilePageClient(props: { params: { id: string }
 
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          <ContentImageUpload
-            entityId={pkg.id}
-            contentType="package"
-            imageUrl={pkg.imageUrl}
-            label="صورة الباقة"
-            onUploaded={(imageUrl) => setPkg((current: any) => ({ ...current, imageUrl }))}
-          />
           <EntityOverviewDashboard 
             entityType="باقة" 
             details={{ title: pkg.name, description: pkg.description, price: pkg.price }} 

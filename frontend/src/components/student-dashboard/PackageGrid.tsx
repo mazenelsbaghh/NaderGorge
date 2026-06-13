@@ -77,7 +77,7 @@ export function PackageGrid({
                   >
                     {/* Image Header */}
                     <div
-                      className="relative aspect-[21/9] w-full overflow-hidden bg-[var(--admin-card-strong)] border-b border-[var(--admin-border)]"
+                      className="relative aspect-video w-full overflow-hidden bg-[var(--admin-card-strong)] border-b border-[var(--admin-border)]"
                       style={{ viewTransitionName: `pkg-image-${pkg.id}` }}
                     >
                       <Image 

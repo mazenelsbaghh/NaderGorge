@@ -103,7 +103,7 @@ export function PackagesGrid({
               className="group relative flex cursor-pointer flex-col overflow-hidden rounded-[1.5rem] border border-[var(--admin-border)] bg-[var(--admin-card)] text-right shadow-sm transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-[var(--admin-primary-10)] hover:border-[var(--admin-primary-30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
             >
               {/* Image Frame */}
-              <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--admin-bg)]">
+              <div className="relative aspect-video w-full overflow-hidden bg-[var(--admin-bg)]">
                 <Image
                   src={pkg.imageUrl ? resolveMediaUrl(pkg.imageUrl) : '/images/default-package.webp'}
                   alt={pkg.name}

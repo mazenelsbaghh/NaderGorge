@@ -3,6 +3,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
 
@@ -12,11 +13,13 @@ public class UploadTeacherProfileImageCommandHandler : IRequestHandler<UploadTea
 {
     private readonly IAppDbContext _db;
     private readonly ILogger<UploadTeacherProfileImageCommandHandler> _logger;
+    private readonly IContentImageStorage _imageStorage;
 
-    public UploadTeacherProfileImageCommandHandler(IAppDbContext db, ILogger<UploadTeacherProfileImageCommandHandler> _logger)
+    public UploadTeacherProfileImageCommandHandler(IAppDbContext db, ILogger<UploadTeacherProfileImageCommandHandler> _logger, IContentImageStorage imageStorage)
     {
         _db = db;
         this._logger = _logger;
+        _imageStorage = imageStorage;
     }
 
     public async Task<ApiResponse<string>> Handle(UploadTeacherProfileImageCommand request, CancellationToken ct)
@@ -34,38 +37,11 @@ public class UploadTeacherProfileImageCommandHandler : IRequestHandler<UploadTea
             var base64Data = request.Base64Image.Contains(",") ? request.Base64Image.Split(',')[1] : request.Base64Image;
             var bytes = Convert.FromBase64String(base64Data);
 
-            // Construct local path
-            var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "teacher");
-            if (!Directory.Exists(uploadsDir))
-                Directory.CreateDirectory(uploadsDir);
-
-            // Determine extension from base64 header if present, otherwise fallback to request.FileName extension
-            var extension = Path.GetExtension(request.FileName);
-            if (request.Base64Image.StartsWith("data:image/"))
-            {
-                var parts = request.Base64Image.Split(';');
-                if (parts.Length > 0)
-                {
-                    var mimePart = parts[0];
-                    if (mimePart.EndsWith("/webp")) extension = ".webp";
-                    else if (mimePart.EndsWith("/png")) extension = ".png";
-                    else if (mimePart.EndsWith("/jpeg") || mimePart.EndsWith("/jpg")) extension = ".jpg";
-                    else if (mimePart.EndsWith("/gif")) extension = ".gif";
-                }
-            }
-
-            var baseName = Path.GetFileNameWithoutExtension(request.FileName);
-            if (extension.Equals(".webp", StringComparison.OrdinalIgnoreCase))
-            {
-                extension = ".webp";
-            }
-            var uniqueFileName = $"{Guid.NewGuid()}_{baseName}{extension}";
-            var filePath = Path.Combine(uploadsDir, uniqueFileName);
-
-            await File.WriteAllBytesAsync(filePath, bytes, ct);
-
-            // Using relative URL suitable for frontend
-            var relativeUrl = $"/uploads/teacher/{uniqueFileName}";
+            using var memoryStream = new MemoryStream(bytes);
+            var relativeUrl = await _imageStorage.SaveAsWebpAsync(
+                memoryStream,
+                "teacher",
+                ct);
 
             profile.ProfileImageUrl = relativeUrl;
             await _db.SaveChangesAsync(ct);
