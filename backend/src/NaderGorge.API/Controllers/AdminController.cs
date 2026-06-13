@@ -192,7 +192,7 @@ public class AdminController : ControllerBase
     [HasPermission("users.manage")]
     public async Task<IActionResult> CancelPackage(Guid userId, Guid accessGrantId, [FromBody] CancelPackageRequest dto)
     {
-        var result = await _mediator.Send(new CancelPackageGrantCommand(accessGrantId, dto.RefundBalance, GetUserId(), dto.Reason));
+        var result = await _mediator.Send(new CancelPackageGrantCommand(accessGrantId, dto.RefundBalance, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

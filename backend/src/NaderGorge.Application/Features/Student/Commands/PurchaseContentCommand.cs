@@ -142,44 +142,10 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
 
             switch (request.ContentType)
             {
-                case CodeType.Package:
-                    grant.PackageId = request.ContentId;
-                    break;
-                case CodeType.Term:
-                {
-                    grant.TermId = request.ContentId;
-                    var termForGrant = await _db.Terms.FirstOrDefaultAsync(t => t.Id == request.ContentId, ct);
-                    if (termForGrant != null) grant.PackageId = termForGrant.PackageId;
-                    break;
-                }
-                case CodeType.Month:
-                {
-                    grant.ContentSectionId = request.ContentId;
-                    var sectionForGrant = await _db.ContentSections
-                        .Include(s => s.Term)
-                        .FirstOrDefaultAsync(s => s.Id == request.ContentId, ct);
-                    if (sectionForGrant != null)
-                    {
-                        grant.TermId = sectionForGrant.TermId;
-                        grant.PackageId = sectionForGrant.Term?.PackageId;
-                    }
-                    break;
-                }
-                case CodeType.Lesson:
-                {
-                    grant.LessonId = request.ContentId;
-                    var lessonForGrant = await _db.Lessons
-                        .Include(l => l.ContentSection)
-                        .ThenInclude(s => s.Term)
-                        .FirstOrDefaultAsync(l => l.Id == request.ContentId, ct);
-                    if (lessonForGrant != null)
-                    {
-                        grant.ContentSectionId = lessonForGrant.ContentSectionId;
-                        grant.TermId = lessonForGrant.ContentSection?.TermId;
-                        grant.PackageId = lessonForGrant.ContentSection?.Term?.PackageId;
-                    }
-                    break;
-                }
+                case CodeType.Package: grant.PackageId = request.ContentId; break;
+                case CodeType.Term: grant.TermId = request.ContentId; break;
+                case CodeType.Month: grant.ContentSectionId = request.ContentId; break;
+                case CodeType.Lesson: grant.LessonId = request.ContentId; break;
             }
 
             _db.StudentAccessGrants.Add(grant);

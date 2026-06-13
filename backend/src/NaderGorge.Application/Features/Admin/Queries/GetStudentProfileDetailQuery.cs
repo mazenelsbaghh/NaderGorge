@@ -50,7 +50,6 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         var packages = await _context.StudentAccessGrants
             .Where(g => g.UserId == request.UserId && g.PackageId.HasValue)
-            .Include(g => g.CancelledByUser)
             .Join(
                 _context.Packages,
                 grant => grant.PackageId!.Value,
@@ -65,11 +64,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                     Progress = 0,
                     IsActive = grant.IsActive,
                     PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
-                    Price = package.Price,
-                    GrantType = grant.GrantType.ToString(),
-                    CancelledByName = grant.CancelledByUser != null ? grant.CancelledByUser.FullName : null,
-                    CancelledAt = grant.CancelledAt,
-                    CancellationReason = grant.CancellationReason
+                    Price = package.Price
                 })
             .OrderByDescending(p => p.EnrolledAt)
             .ToListAsync(cancellationToken);

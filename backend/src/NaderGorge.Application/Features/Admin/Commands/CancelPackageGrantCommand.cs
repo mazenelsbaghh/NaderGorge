@@ -10,7 +10,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CancelPackageGrantCommand(Guid AccessGrantId, bool RefundBalance, Guid AdminId, string? Reason = null) : IRequest<ApiResponse>;
+public record CancelPackageGrantCommand(Guid AccessGrantId, bool RefundBalance, Guid AdminId) : IRequest<ApiResponse>;
 
 public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGrantCommand, ApiResponse>
 {
@@ -31,9 +31,6 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
         if (!grant.IsActive) return ApiResponse.Fail("Subscription is already inactive/canceled.");
 
         grant.IsActive = false;
-        grant.CancelledByUserId = request.AdminId;
-        grant.CancelledAt = DateTime.UtcNow;
-        grant.CancellationReason = request.Reason;
 
         decimal refundedAmount = 0m;
         string? packageName = null;
