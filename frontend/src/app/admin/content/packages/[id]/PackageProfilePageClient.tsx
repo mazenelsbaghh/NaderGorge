@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Video, Clock3, DollarSign, Layers } from 'lucide-react';
+import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Video, Clock3, DollarSign, Layers, Eye, EyeOff } from 'lucide-react';
 import {
   AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
@@ -49,6 +49,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   // Stats state
   const [stats, setStats] = useState<any>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [togglingActive, setTogglingActive] = useState(false);
 
   const loadPkg = useCallback(async () => {
     try {
@@ -90,6 +91,25 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   useEffect(() => { void loadPkg(); }, [loadPkg]);
   useEffect(() => { void loadTerms(); }, [loadTerms]);
   useEffect(() => { void loadStats(); }, [loadStats]);
+
+  const handleToggleActive = async () => {
+    if (!pkg || togglingActive) return;
+    setTogglingActive(true);
+    try {
+      await adminService.updatePackage(pkg.id, {
+        name: pkg.name,
+        description: pkg.description,
+        price: pkg.price,
+        isActive: !pkg.isActive,
+      });
+      setPkg((prev: any) => ({ ...prev, isActive: !prev.isActive }));
+      toast.success(pkg.isActive ? 'تم إخفاء الباقة عن الطلاب' : 'تم إظهار الباقة للطلاب');
+    } catch {
+      toast.error('تعذر تغيير حالة الباقة');
+    } finally {
+      setTogglingActive(false);
+    }
+  };
 
   if (pkgLoading) {
     return (
@@ -161,7 +181,29 @@ export default function PackageProfilePageClient(props: { params: { id: string }
 
       {/* Stats */}
       <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <AdminStatCard variant="accent" icon={BookOpenText}  label="حالة الباقة" value={pkg.isActive !== false ? 'نشطة' : 'مسودة'} />
+        <button
+          type="button"
+          onClick={handleToggleActive}
+          disabled={togglingActive}
+          className={`rounded-2xl border p-4 text-center transition-all hover:brightness-95 active:scale-[0.98] cursor-pointer ${
+            pkg.isActive !== false
+              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800/40 dark:bg-emerald-950/30'
+              : 'border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30'
+          } ${togglingActive ? 'opacity-50' : ''}`}
+        >
+          <div className="flex items-center justify-center gap-2">
+            {pkg.isActive !== false
+              ? <Eye className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              : <EyeOff className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            }
+            <span className={`text-lg font-black ${pkg.isActive !== false ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+              {pkg.isActive !== false ? 'نشطة' : 'مخفية'}
+            </span>
+          </div>
+          <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">
+            {pkg.isActive !== false ? 'ظاهرة للطلاب — اضغط للإخفاء' : 'مخفية عن الطلاب — اضغط للإظهار'}
+          </p>
+        </button>
         <AdminStatCard variant="light"  icon={Calendar}      label="عدد الأترام"  value={terms.length} />
         <AdminStatCard variant="muted"  icon={Link2}         label="السعر"        value={`${pkg.price} ج`} />
         <AdminStatCard

@@ -139,6 +139,35 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 }
 
 // --- Terms ---
+
+// --- Toggle Package Visibility ---
+public record TogglePackageActiveCommand(Guid PackageId, Guid CurrentUserId) : IRequest<ApiResponse<bool>>;
+
+public class TogglePackageActiveCommandHandler : IRequestHandler<TogglePackageActiveCommand, ApiResponse<bool>>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public TogglePackageActiveCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
+
+    public async Task<ApiResponse<bool>> Handle(TogglePackageActiveCommand request, CancellationToken ct)
+    {
+        var canAccess = await _auth.CanAccessPackageAsync(request.CurrentUserId, request.PackageId, ct);
+        if (!canAccess) return ApiResponse<bool>.Fail("Unauthorized access to this package.");
+
+        var pkg = await _db.Packages.FindAsync(new object[] { request.PackageId }, ct);
+        if (pkg == null) return ApiResponse<bool>.Fail("Package not found.");
+
+        pkg.IsActive = !pkg.IsActive;
+        await _db.SaveChangesAsync(ct);
+
+        return ApiResponse<bool>.Ok(pkg.IsActive);
+    }
+}
 public record CreateTermCommand(string Title, int Order, Guid PackageId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiResponse<Guid>>
