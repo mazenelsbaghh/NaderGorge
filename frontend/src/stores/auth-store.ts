@@ -35,11 +35,26 @@ interface AuthState {
   loadFromStorage: () => void;
 }
 
+function loadInitialAuth(): Pick<AuthState, 'user' | 'accessToken' | 'isAuthenticated' | 'isLoading'> {
+  if (typeof window === 'undefined') {
+    return { user: null, accessToken: null, isAuthenticated: false, isLoading: true };
+  }
+  const storedAuth = readStoredAuth();
+  if (storedAuth) {
+    return {
+      user: storedAuth.user as User,
+      accessToken: storedAuth.accessToken,
+      isAuthenticated: true,
+      isLoading: false,
+    };
+  }
+  return { user: null, accessToken: null, isAuthenticated: false, isLoading: false };
+}
+
+const initialAuth = loadInitialAuth();
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-  user: null,
-  accessToken: null,
-  isAuthenticated: false,
-  isLoading: true,
+  ...initialAuth,
 
   setAuth: (user, accessToken, rememberMe) => {
     persistAuthSession({ user, accessToken }, rememberMe);

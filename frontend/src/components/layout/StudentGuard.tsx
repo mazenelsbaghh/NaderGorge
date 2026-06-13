@@ -11,11 +11,7 @@ function hasStudentAccess(roles: string[] | undefined) {
 
 export function StudentGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
-
-  useEffect(() => {
-    loadFromStorage();
-  }, [loadFromStorage]);
+  const { user, isAuthenticated, isLoading } = useAuthStore();
 
   useEffect(() => {
     if (isLoading) return;

@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react"
 import { motion, type HTMLMotionProps } from "framer-motion"
 
 const buttonVariants = cva(
-  "justify-center text-sm font-bold items-center transition-[box-shadow,background-color,filter] disabled:cursor-not-allowed disabled:opacity-50 flex active:transition-none cursor-pointer select-none [&_svg]:shrink-0 [&_svg:not([class*='h-'])]:size-4 gap-2",
+  "justify-center text-sm font-bold items-center transition-[box-shadow,background-color,filter,transform] duration-150 disabled:cursor-not-allowed disabled:opacity-50 flex active:brightness-95 cursor-pointer select-none [&_svg]:shrink-0 [&_svg:not([class*='h-'])]:size-4 gap-2",
   {
     variants: {
       intent: {
@@ -138,9 +138,9 @@ const NeumorphButton: React.FC<NeumorphButtonProps> = ({
     <motion.button
       className={classes}
       disabled={disabled || loading}
-      whileTap={{ scale: 0.97 }}
+      whileTap={{ scale: 0.94 }}
       whileHover={{ scale: 1.015 }}
-      transition={{ type: "spring", stiffness: 450, damping: 15 }}
+      transition={{ type: "spring", stiffness: 300, damping: 18 }}
       {...props}
     >
       {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

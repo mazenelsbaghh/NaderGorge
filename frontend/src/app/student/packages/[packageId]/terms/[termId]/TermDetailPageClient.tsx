@@ -238,12 +238,7 @@ export default function TermDetailPageClient() {
 
   const isEnrolled = pkg?.isEnrolled ?? false;
 
-  // Guard: redirect to package page if not enrolled
-  useEffect(() => {
-    if (!loading && pkg && !pkg.isEnrolled) {
-      router.replace(`/student/packages/${packageId}`);
-    }
-  }, [loading, pkg, packageId, router]);
+
 
   /* ── Loading skeleton ── */
   if (loading) {

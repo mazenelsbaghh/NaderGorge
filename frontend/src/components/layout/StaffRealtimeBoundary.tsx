@@ -1,6 +1,14 @@
 'use client';
 
-import { Fragment, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { usePathname } from 'next/navigation';
 
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
@@ -10,6 +18,17 @@ import {
 } from '@/lib/staff-realtime-scopes';
 
 const REFRESH_DEBOUNCE_MS = 250;
+
+/**
+ * Context that exposes a monotonically-increasing revision counter.
+ * Children subscribe to this via `useStaffRefresh()` and re-fetch data
+ * when the value changes — **without** being remounted.
+ */
+const StaffRefreshContext = createContext<number>(0);
+
+export function useStaffRefresh(): number {
+  return useContext(StaffRefreshContext);
+}
 
 export function StaffRealtimeBoundary({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -39,5 +58,9 @@ export function StaffRealtimeBoundary({ children }: { children: ReactNode }) {
     }
   }, [pathname]);
 
-  return <Fragment key={`${pathname}:${revision}`}>{children}</Fragment>;
+  return (
+    <StaffRefreshContext.Provider value={revision}>
+      {children}
+    </StaffRefreshContext.Provider>
+  );
 }
