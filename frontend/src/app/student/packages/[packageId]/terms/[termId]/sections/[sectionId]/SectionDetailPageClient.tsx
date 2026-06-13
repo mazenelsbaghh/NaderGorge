@@ -349,21 +349,22 @@ export default function SectionDetailPageClient() {
                       )}
 
                       {/* Buy lesson button - ONLY when user doesn't have access at all */}
-                      {!hasContentAccess && lesson.price != null && lesson.price > 0 && (
+                      {!hasContentAccess && !lesson.isLocked && (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setPurchaseLesson(lesson);
                           }}
-                          className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary)] px-3 py-1.5 text-xs font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-95 opacity-100"
+                          className={`shrink-0 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-black shadow transition-all hover:brightness-110 active:scale-95 ${
+                            (lesson.price ?? 0) > 0
+                              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                              : 'bg-emerald-500 text-white'
+                          }`}
                         >
                           <ShoppingCart className="h-3 w-3" />
-                          {lesson.price} ج.م
+                          {(lesson.price ?? 0) > 0 ? `${lesson.price} ج.م` : 'مجاني'}
                         </button>
-                      )}
-                      {!hasContentAccess && (lesson.price == null || lesson.price === 0) && !lesson.isLocked && (
-                        <span className="shrink-0 text-xs font-black text-emerald-600 dark:text-emerald-400">مجانية</span>
                       )}
                     </button>
                   );
@@ -397,7 +398,10 @@ export default function SectionDetailPageClient() {
                     className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
                   >
                     <Sparkles className="h-4 w-4" />
-                    {(section?.price != null && section.price > 0) ? 'شراء القسم' : (term?.price != null && (term.price ?? 0) > 0) ? 'شراء الترم' : 'شراء الباقة'}
+                    {(displayPrice as number) > 0
+                      ? ((section?.price != null && section.price > 0) ? 'شراء القسم' : (term?.price != null && (term.price ?? 0) > 0) ? 'شراء الترم' : 'شراء الباقة')
+                      : 'تفعيل مجاني ✨'
+                    }
                   </button>
                   <button
                     type="button"

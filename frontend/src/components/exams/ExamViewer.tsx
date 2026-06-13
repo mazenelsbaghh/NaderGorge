@@ -53,6 +53,7 @@ export function ExamResultPanel({
   const resolvedLessonId = lessonId ?? result.lessonId;
   const wrongQuestions = reviewedQuestions.filter((q) => q.isAnswered && !q.isCorrect);
   const answeredCount = reviewedQuestions.filter((q) => q.isAnswered).length;
+  const skippedCount = reviewedQuestions.filter((q) => !q.isAnswered).length;
   const accuracy =
     result.totalScore > 0 ? Math.round((result.scoreAchieved / result.totalScore) * 100) : 0;
   const hasReviewData = reviewedQuestions.length > 0;
@@ -163,12 +164,13 @@ export function ExamResultPanel({
         </div>
 
         {/* Stats row */}
-        <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="relative z-10 mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
             { label: 'الدرجة', value: `${result.scoreAchieved} / ${result.totalScore}` },
             { label: 'الدقة', value: `${accuracy}%` },
             { label: 'التقييم', value: result.evaluation },
-            { label: 'الإجابات', value: hasReviewData ? `${answeredCount}/${reviewedQuestions.length}` : '—' },
+            { label: 'الإجابات', value: hasReviewData ? `${answeredCount}` : '—' },
+            { label: 'تم تخطيها', value: hasReviewData ? `${skippedCount}` : '—' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -316,7 +318,7 @@ export function ExamResultPanel({
                     ? q.isCorrect
                       ? 'border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/20'
                       : 'border-destructive/20 bg-destructive/5'
-                    : 'border-border bg-muted/30'
+                    : 'border-amber-200/60 bg-amber-50/40 dark:border-amber-800/40 dark:bg-amber-950/20'
                 }`}
               >
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -326,13 +328,13 @@ export function ExamResultPanel({
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-black ${
                       !q.isAnswered
-                        ? 'bg-muted text-muted-foreground'
+                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400'
                         : q.isCorrect
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400'
                           : 'bg-destructive/10 text-destructive'
                     }`}
                   >
-                    {!q.isAnswered ? 'بدون إجابة' : q.isCorrect ? 'صحيحة ✓' : 'خاطئة ✗'}
+                    {!q.isAnswered ? '⏭️ عديت السؤال ده' : q.isCorrect ? 'صحيحة ✓' : 'خاطئة ✗'}
                   </span>
                 </div>
 
@@ -343,8 +345,12 @@ export function ExamResultPanel({
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-background/60 border border-border/40 p-4">
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">إجابتك</p>
-                    <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تختر إجابة.') }} />
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">{q.isAnswered ? 'إجابتك' : 'حالة السؤال'}</p>
+                    {q.isAnswered ? (
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تختر إجابة.') }} />
+                    ) : (
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-amber-600 dark:text-amber-400">⏭️ عديت السؤال ده</p>
+                    )}
                   </div>
 
                   {q.correctOptionText ? (
