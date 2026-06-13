@@ -82,6 +82,10 @@ public class StudentPackageDto
     public bool IsActive { get; set; }
     public string PurchaseMethod { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public string GrantType { get; set; } = "Package";
+    public string? CancelledByName { get; set; }
+    public DateTime? CancelledAt { get; set; }
+    public string? CancellationReason { get; set; }
 }
 
 public class StudentDeviceDto

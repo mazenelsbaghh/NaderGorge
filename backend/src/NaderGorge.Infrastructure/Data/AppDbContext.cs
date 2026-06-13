@@ -294,8 +294,10 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(s => s.Id);
             e.HasIndex(s => new { s.UserId, s.PackageId });
             e.Property(s => s.GrantType).HasConversion<int>();
+            e.Property(s => s.CancellationReason).HasMaxLength(1000);
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId);
             e.HasOne(s => s.AccessCode).WithMany().HasForeignKey(s => s.AccessCodeId);
+            e.HasOne(s => s.CancelledByUser).WithMany().HasForeignKey(s => s.CancelledByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // Package

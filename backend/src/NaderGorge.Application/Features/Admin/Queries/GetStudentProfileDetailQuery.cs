@@ -48,26 +48,69 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var rankPosition = gamification != null ? await _context.StudentGamifications
             .CountAsync(g => g.TotalPoints > gamification.TotalPoints, cancellationToken) + 1 : 0;
 
-        var packages = await _context.StudentAccessGrants
-            .Where(g => g.UserId == request.UserId && g.PackageId.HasValue)
-            .Join(
-                _context.Packages,
-                grant => grant.PackageId!.Value,
-                package => package.Id,
-                (grant, package) => new StudentPackageDto
-                {
-                    Id = package.Id,
-                    AccessGrantId = grant.Id,
-                    Name = package.Name,
-                    EnrolledAt = grant.CreatedAt,
-                    ExpiresAt = grant.ExpiresAt,
-                    Progress = 0,
-                    IsActive = grant.IsActive,
-                    PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
-                    Price = package.Price
-                })
-            .OrderByDescending(p => p.EnrolledAt)
+        // Load ALL grants (Package, Term, Month, Lesson) with proper names
+        var allGrants = await _context.StudentAccessGrants
+            .Where(g => g.UserId == request.UserId)
+            .Include(g => g.CancelledByUser)
+            .OrderByDescending(g => g.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        var packages = new List<StudentPackageDto>();
+        foreach (var grant in allGrants)
+        {
+            string name = "غير معروف";
+            decimal price = 0m;
+            Guid contentId = Guid.Empty;
+
+            switch (grant.GrantType)
+            {
+                case NaderGorge.Domain.Enums.CodeType.Package:
+                    if (grant.PackageId.HasValue)
+                    {
+                        var pkg = await _context.Packages.FindAsync(new object[] { grant.PackageId.Value }, cancellationToken);
+                        if (pkg != null) { name = pkg.Name; price = pkg.Price; contentId = pkg.Id; }
+                    }
+                    break;
+                case NaderGorge.Domain.Enums.CodeType.Term:
+                    if (grant.TermId.HasValue)
+                    {
+                        var term = await _context.Terms.Include(t => t.Package).FirstOrDefaultAsync(t => t.Id == grant.TermId.Value, cancellationToken);
+                        if (term != null) { name = $"{term.Package?.Name} — {term.Title}"; price = term.Price; contentId = term.Id; }
+                    }
+                    break;
+                case NaderGorge.Domain.Enums.CodeType.Month:
+                    if (grant.ContentSectionId.HasValue)
+                    {
+                        var section = await _context.ContentSections.Include(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(s => s.Id == grant.ContentSectionId.Value, cancellationToken);
+                        if (section != null) { name = $"{section.Term?.Package?.Name} — {section.Title}"; price = section.Price; contentId = section.Id; }
+                    }
+                    break;
+                case NaderGorge.Domain.Enums.CodeType.Lesson:
+                    if (grant.LessonId.HasValue)
+                    {
+                        var lesson = await _context.Lessons.Include(l => l.ContentSection).ThenInclude(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(l => l.Id == grant.LessonId.Value, cancellationToken);
+                        if (lesson != null) { name = $"{lesson.ContentSection?.Term?.Package?.Name} — {lesson.Title}"; price = lesson.Price; contentId = lesson.Id; }
+                    }
+                    break;
+            }
+
+            packages.Add(new StudentPackageDto
+            {
+                Id = contentId,
+                AccessGrantId = grant.Id,
+                Name = name,
+                EnrolledAt = grant.CreatedAt,
+                ExpiresAt = grant.ExpiresAt,
+                Progress = 0,
+                IsActive = grant.IsActive,
+                PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
+                Price = price,
+                GrantType = grant.GrantType.ToString(),
+                CancelledByName = grant.CancelledByUser?.FullName,
+                CancelledAt = grant.CancelledAt,
+                CancellationReason = grant.CancellationReason
+            });
+        }
 
         var overrides = await _context.VideoOverrides
             .Include(o => o.LessonVideo)
