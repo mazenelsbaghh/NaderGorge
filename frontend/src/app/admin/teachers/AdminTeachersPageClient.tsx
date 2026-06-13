@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -486,6 +487,7 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
 export default function AdminTeachersPageClient() {
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -842,7 +844,7 @@ export default function AdminTeachersPageClient() {
             type="button"
             onClick={(e: React.MouseEvent) => {
               e.stopPropagation();
-              setSelectedTeacherProfile(t);
+              router.push(`/admin/teachers/${t.id}`);
             }}
             intent="primary"
             size="icon"
@@ -920,7 +922,7 @@ export default function AdminTeachersPageClient() {
           rowKey={(t) => t.id}
           emptyMessage="لا توجد نتائج مطابقة لفلترة المعلمين."
           onRowClick={(t) => {
-            setSelectedTeacherProfile(t);
+            router.push(`/admin/teachers/${t.id}`);
           }}
         />
       )}
