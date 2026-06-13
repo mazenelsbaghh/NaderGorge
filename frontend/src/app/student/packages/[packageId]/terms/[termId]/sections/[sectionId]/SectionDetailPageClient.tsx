@@ -209,7 +209,7 @@ export default function SectionDetailPageClient() {
                 <BookOpen className="h-4 w-4" />
                 {lessons.length} حصة
               </span>
-              {isEnrolled && (
+              {(isEnrolled || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-0.5 text-xs font-bold text-emerald-300 backdrop-blur-sm">
                   <CheckCircle2 className="h-3 w-3" />
                   مفعّل
@@ -319,7 +319,7 @@ export default function SectionDetailPageClient() {
                         <PlayCircle className="h-5 w-5 shrink-0 text-[var(--admin-primary)] opacity-0 transition-opacity group-hover:opacity-100" />
                       )}
 
-                      {/* Buy lesson button */}
+                      {/* Buy lesson button / Status */}
                       {!canAccess && lesson.price != null && lesson.price > 0 && (
                         <button
                           type="button"
@@ -332,6 +332,9 @@ export default function SectionDetailPageClient() {
                           <ShoppingCart className="h-3 w-3" />
                           {lesson.price} ج.م
                         </button>
+                      )}
+                      {!canAccess && (lesson.price == null || lesson.price === 0) && !lesson.isLocked && (
+                        <span className="shrink-0 text-xs font-black text-emerald-600 dark:text-emerald-400">مجانية</span>
                       )}
                     </button>
                   );
@@ -346,12 +349,16 @@ export default function SectionDetailPageClient() {
             <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm space-y-4 text-right">
               <div>
                 <span className="text-xs font-bold text-[var(--admin-muted)]">{priceLabel}</span>
-                <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{displayPrice} ج.م</p>
+                {(displayPrice as number) > 0 ? (
+                  <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{displayPrice} ج.م</p>
+                ) : (
+                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">مجاني</p>
+                )}
               </div>
 
-              {isEnrolled ? (
+              {(isEnrolled || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) ? (
                 <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                  🎉 هذه الباقة مفعّلة في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
+                  🎉 {isEnrolled ? 'الباقة مفعّلة' : (term?.isPurchased ?? false) ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">

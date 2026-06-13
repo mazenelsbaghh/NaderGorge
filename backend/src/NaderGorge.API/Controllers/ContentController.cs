@@ -59,7 +59,7 @@ public class ContentController : ControllerBase
     [HttpGet("terms/{termId:guid}/sections")]
     public async Task<IActionResult> GetSections(Guid termId)
     {
-        var response = await _mediator.Send(new GetSectionsQuery(termId));
+        var response = await _mediator.Send(new GetSectionsQuery(termId, GetUserId()));
         return Ok(response);
     }
 

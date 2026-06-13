@@ -35,6 +35,7 @@ export interface ContentSectionDto {
   order: number;
   price?: number;
   imageUrl?: string;
+  isPurchased?: boolean;
 }
 
 export interface LessonSummaryDto {

@@ -259,7 +259,8 @@ export default function TermDetailPageClient() {
                       { from: "#0f766e", to: "#38bdf8" },
                     ];
                     const pal = palettes[idx % palettes.length];
-
+                    const sectionPurchased = hasAccess || (section.isPurchased ?? false);
+                    const isFree = section.price == null || section.price === 0;
 
                     return (
                       <div key={section.id} className="flex flex-col">
@@ -327,12 +328,14 @@ export default function TermDetailPageClient() {
                             {/* Status badge */}
                             <span
                               className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-black tracking-wider ${
-                                hasAccess
-                                  ? "bg-white/20 text-white backdrop-blur-sm"
-                                  : "bg-black/25 text-white/80 backdrop-blur-sm"
+                                sectionPurchased
+                                  ? "bg-emerald-500/30 text-white backdrop-blur-sm"
+                                  : isFree
+                                    ? "bg-white/20 text-white backdrop-blur-sm"
+                                    : "bg-black/25 text-white/80 backdrop-blur-sm"
                               }`}
                             >
-                              {hasAccess ? "✦ مفتوح" : "مقفول"}
+                              {sectionPurchased ? "✓ تم الشراء" : isFree ? "مجاني" : "مقفول"}
                             </span>
 
                             {/* Section number pill */}
@@ -354,7 +357,11 @@ export default function TermDetailPageClient() {
                               {section.title}
                             </h2>
                             <div className="mt-auto flex items-center justify-between pt-3">
-                              {section.price != null && section.price > 0 ? (
+                              {sectionPurchased ? (
+                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">✓ مفعّل</span>
+                              ) : isFree ? (
+                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">مجاني</span>
+                              ) : section.price != null && section.price > 0 ? (
                                 <span className="text-xs font-bold text-[var(--admin-muted)]">
                                   {section.price} ج.م
                                 </span>
@@ -382,9 +389,14 @@ export default function TermDetailPageClient() {
               <span className="text-xs font-bold text-[var(--admin-muted)]">
                 {(term?.price != null && term.price > 0) ? 'سعر الترم' : 'سعر الباقة'}
               </span>
-              <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">
-                {(term?.price != null && term.price > 0) ? term.price : (pkg?.price || 0)} ج.م
-              </p>
+              {(() => {
+                const price = (term?.price != null && term.price > 0) ? term.price : (pkg?.price || 0);
+                return price > 0 ? (
+                  <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{price} ج.م</p>
+                ) : (
+                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">مجاني</p>
+                );
+              })()}
             </div>
             
             {hasAccess ? (
