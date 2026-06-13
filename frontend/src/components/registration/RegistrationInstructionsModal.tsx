@@ -17,12 +17,16 @@ interface RegistrationInstructionsModalProps {
   open: boolean;
   onClose: () => void;
   confirmLabel?: string;
+  title?: string;
+  subtitle?: string;
 }
 
 export function RegistrationInstructionsModal({
   open,
   onClose,
   confirmLabel = 'فهمت وموافق على الشروط',
+  title = 'تعليمات وشروط هامة قبل التسجيل',
+  subtitle = 'يرجى قراءتها بدقة قبل إنشاء الحساب أو تسجيل الدخول لأول مرة.',
 }: RegistrationInstructionsModalProps) {
 
   useEffect(() => {
@@ -113,10 +117,10 @@ export function RegistrationInstructionsModal({
                   id="ins-modal-title"
                   className="text-xl font-black text-[var(--admin-text)] tracking-tight"
                 >
-                  تعليمات وشروط هامة قبل التسجيل
+                  {title}
                 </h2>
                 <p className="text-xs font-bold text-[var(--admin-muted)] mt-0.5">
-                  يرجى قراءتها بدقة قبل إنشاء الحساب أو تسجيل الدخول لأول مرة.
+                  {subtitle}
                 </p>
               </div>
             </div>

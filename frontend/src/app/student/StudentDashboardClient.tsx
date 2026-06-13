@@ -37,6 +37,12 @@ export default function StudentDashboardClient() {
   const COOKIE_KEY = `onboarding_ack_${user?.id ?? 'anon'}`;
 
   const getOnboardingCookie = () => {
+    if (typeof window === 'undefined') return false;
+    try {
+      if (localStorage.getItem(COOKIE_KEY) === '1') {
+        return true;
+      }
+    } catch {}
     if (typeof document === 'undefined') return false;
     return document.cookie.split('; ').some((c) => c.startsWith(`${COOKIE_KEY}=1`));
   };
@@ -187,6 +193,8 @@ export default function StudentDashboardClient() {
         open={showInstructionsOnboard}
         onClose={handleCloseOnboard}
         confirmLabel="أوافق وأرغب في استكمال استخدام المنصة"
+        title="تعليمات وشروط هامة قبل الدخول"
+        subtitle="يرجى قراءتها بدقة قبل تسجيل الدخول للجنة التعليمية واستخدام المنصة."
       />
     </motion.div>
   );
