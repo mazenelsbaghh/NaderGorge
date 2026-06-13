@@ -1,11 +1,15 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using NaderGorge.Infrastructure.Data;
 
 #nullable disable
 
 namespace NaderGorge.Infrastructure.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260408190000_AddPackageCodePageProfiles")]
     public partial class AddPackageCodePageProfiles : Migration
     {
         /// <inheritdoc />

@@ -38,11 +38,13 @@ log_info()  { echo -e "${CYAN}   $1${RESET}"; }
 # ─── Flags ────────────────────────────────────────────────────────────────────
 RUN_MIGRATIONS=true
 DEPLOY=true
+FORCE_FULL=false
 
 for arg in "$@"; do
   case "$arg" in
     --no-migrate)    RUN_MIGRATIONS=false ;;
     --migrate-only)  DEPLOY=false ;;
+    --force|--full)  FORCE_FULL=true ;;
   esac
 done
 
@@ -153,12 +155,106 @@ rebuild_containers() {
     cp -r ${SERVER_APP_DIR}/backend/src/NaderGorge.API/wwwroot/uploads/avatars/*.webp /var/lib/docker/volumes/massar_assets/_data/uploads/avatars/ || true
   "
 
-  log_step "Rebuilding and restarting Docker containers"
-  log_info "This may take a few minutes..."
+  log_step "Rebuilding and restarting Docker containers (smart select)"
+  log_info "Determining containers to rebuild..."
+
+  if $FORCE_FULL; then
+    log_info "Force full rebuild flag is set."
+    remote "rm -f ${SERVER_APP_DIR}/.last_deployed_commit || true"
+  fi
 
   remote "
     cd ${SERVER_APP_DIR}
-    docker compose up -d --build --force-recreate --remove-orphans 2>&1
+    CURRENT_COMMIT=\$(git rev-parse HEAD)
+    LAST_COMMIT_FILE=\".last_deployed_commit\"
+    
+    FORCE_FULL=false
+    if [ ! -f \"\$LAST_COMMIT_FILE\" ]; then
+      echo 'No last deployed commit found. Triggering full rebuild.'
+      FORCE_FULL=true
+    else
+      LAST_COMMIT=\$(cat \"\$LAST_COMMIT_FILE\")
+      if ! git cat-file -e \"\$LAST_COMMIT\" 2>/dev/null; then
+        echo \"Last deployed commit \$LAST_COMMIT not found in git history. Triggering full rebuild.\"
+        FORCE_FULL=true
+      fi
+    fi
+    
+    REBUILD_BACKEND=false
+    REBUILD_WORKER=false
+    REBUILD_FRONTEND=false
+    REBUILD_NGINX=false
+    REBUILD_ALL=false
+    
+    if [ \"\$FORCE_FULL\" = true ]; then
+      REBUILD_ALL=true
+    else
+      echo \"Diffing between \$LAST_COMMIT and \$CURRENT_COMMIT...\"
+      CHANGED_FILES=\$(git diff --name-only \"\$LAST_COMMIT\" \"\$CURRENT_COMMIT\")
+      echo \"Changed files:\"
+      echo \"\$CHANGED_FILES\"
+      
+      while IFS= read -r file; do
+        if [ -z \"\$file\" ]; then continue; fi
+        
+        if [[ \"\$file\" =~ ^backend/ ]]; then
+          REBUILD_BACKEND=true
+        elif [[ \"\$file\" =~ ^worker/ ]]; then
+          REBUILD_WORKER=true
+        elif [[ \"\$file\" =~ ^frontend/ ]]; then
+          REBUILD_FRONTEND=true
+        elif [[ \"\$file\" =~ ^docker/nginx/ ]]; then
+          REBUILD_NGINX=true
+        else
+          # Any other file change (like docker-compose.yml, .env, scripts, etc.) triggers full rebuild
+          echo \"Root/infrastructure file change detected: \$file. Forcing full rebuild.\"
+          REBUILD_ALL=true
+          break
+        fi
+      done <<< \"\$CHANGED_FILES\"
+    fi
+    
+    if [ \"\$REBUILD_ALL\" = true ]; then
+      echo \"Rebuilding all containers...\"
+      docker compose up -d --build --force-recreate --remove-orphans 2>&1
+    else
+      # Rebuild and restart selectively
+      SERVICES_TO_UP=\"\"
+      
+      if [ \"\$REBUILD_BACKEND\" = true ]; then
+        echo \"Rebuilding backend...\"
+        docker compose build backend
+        SERVICES_TO_UP=\"\$SERVICES_TO_UP backend\"
+      fi
+      
+      if [ \"\$REBUILD_WORKER\" = true ]; then
+        echo \"Rebuilding worker...\"
+        docker compose build worker
+        SERVICES_TO_UP=\"\$SERVICES_TO_UP worker\"
+      fi
+      
+      if [ \"\$REBUILD_FRONTEND\" = true ]; then
+        echo \"Rebuilding frontend (landing)...\"
+        docker compose build landing
+        SERVICES_TO_UP=\"\$SERVICES_TO_UP landing student admin teacher assistant\"
+      fi
+      
+      if [ \"\$REBUILD_NGINX\" = true ]; then
+        echo \"Rebuilding nginx...\"
+        docker compose build nginx
+        SERVICES_TO_UP=\"\$SERVICES_TO_UP nginx\"
+      fi
+      
+      if [ -n \"\$SERVICES_TO_UP\" ]; then
+        echo \"Starting updated services:\$SERVICES_TO_UP\"
+        docker compose up -d --force-recreate \$SERVICES_TO_UP 2>&1
+      else
+        echo \"No changes detected in backend, worker, frontend, or nginx. Skipping rebuilds.\"
+      fi
+    fi
+    
+    # Save the current commit as last deployed
+    echo \"\$CURRENT_COMMIT\" > \"\$LAST_COMMIT_FILE\"
   " &
   REMOTE_PID=$!
 
@@ -166,14 +262,14 @@ rebuild_containers() {
   SPINNER='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
   i=0
   while kill -0 $REMOTE_PID 2>/dev/null; do
-    printf "\r   ${CYAN}%s Building...${RESET}" "${SPINNER:$((i % ${#SPINNER})):1}"
+    printf "\r   ${CYAN}%s Building/Configuring...${RESET}" "${SPINNER:$((i % ${#SPINNER})):1}"
     sleep 0.2
     ((i++))
   done
   printf "\r   \n"
 
   wait $REMOTE_PID || true
-  log_ok "Docker containers rebuilt"
+  log_ok "Docker configuration applied successfully"
 }
 
 # =============================================================================
@@ -210,6 +306,13 @@ main() {
   get_branch
 
   if $DEPLOY; then
+    log_step "Running database schema verification check..."
+    if python3 "${SCRIPT_DIR}/check_db_schema.py"; then
+      log_ok "Database schema is in sync."
+    else
+      log_warn "Database schema is NOT in sync! Migrations will be applied during deployment."
+    fi
+
     push_to_github
     push_to_prod
     checkout_on_server
@@ -222,11 +325,27 @@ main() {
 
     rebuild_containers
     health_check
+
+    log_step "Final database schema verification check..."
+    if python3 "${SCRIPT_DIR}/check_db_schema.py"; then
+      log_ok "Database schema is 100% in sync! 🎉"
+    else
+      log_error "Database schema is STILL NOT in sync after deployment!"
+      exit 1
+    fi
   elif $RUN_MIGRATIONS; then
     # --migrate-only mode
     log_step "Running migrations only (no push/rebuild)"
     run_migrations
     log_ok "Done — migrations applied"
+
+    log_step "Verifying database schema after migration..."
+    if python3 "${SCRIPT_DIR}/check_db_schema.py"; then
+      log_ok "Database schema is 100% in sync! 🎉"
+    else
+      log_error "Database schema is STILL NOT in sync after migrations!"
+      exit 1
+    fi
   fi
 
   echo ""
