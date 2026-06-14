@@ -519,6 +519,14 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpDelete("videos/{videoId:guid}/exams/{examId:guid}")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> UnlinkVideoExam(Guid videoId, Guid examId)
+    {
+        var result = await _mediator.Send(new UnlinkVideoExamCommand(videoId, examId, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("exams/inline")]
     [HasPermission("exams.manage")]
     public async Task<IActionResult> CreateInlineExam([FromBody] CreateInlineExamCommand command)

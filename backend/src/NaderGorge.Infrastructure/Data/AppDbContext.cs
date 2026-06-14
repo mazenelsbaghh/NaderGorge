@@ -364,6 +364,10 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(l => l.Id);
             e.Property(l => l.Title).HasMaxLength(200).IsRequired();
             e.HasOne(l => l.Lesson).WithMany(le => le.Videos).HasForeignKey(l => l.LessonId);
+            e.HasOne(l => l.Exam)
+             .WithMany()
+             .HasForeignKey(l => l.ExamId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         // VideoChapter
@@ -566,6 +570,10 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.PassingScore).HasColumnType("decimal(18,2)");
             e.Property(x => x.TotalScore).HasColumnType("decimal(18,2)");
             e.HasOne(x => x.CreatedByTeacher).WithMany(t => t.Exams).HasForeignKey(x => x.CreatedByTeacherId);
+            e.HasOne(x => x.LessonVideo)
+             .WithMany()
+             .HasForeignKey(x => x.LessonVideoId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         // QuestionBankItem

@@ -27,6 +27,7 @@ interface VideoModel {
     examId?: string;
     examPassed?: boolean;
     isExamLocked?: boolean;
+    exams?: { examId: string; title: string; passed: boolean; isMandatory: boolean }[];
     chapters?: import("@/services/content-service").VideoChapterDto[];
 }
 
@@ -114,24 +115,51 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                 </span>
                             </button>
 
-                            {video.examId && !isExamLocked && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        router.push(`/student/exams/${video.examId}?packageId=${packageId}`);
-                                    }}
-                                    className={cn(
-                                        "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black transition-all hover:scale-105 shadow-sm pointer-events-auto",
-                                        video.examPassed
-                                            ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
-                                            : "bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse"
+                            {!isExamLocked && (
+                                <div className="flex flex-wrap gap-1 mt-1 pointer-events-auto">
+                                    {video.exams && video.exams.length > 0 ? (
+                                        video.exams.map((exam) => (
+                                            <button
+                                                key={exam.examId}
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/student/exams/${exam.examId}?packageId=${packageId}`);
+                                                }}
+                                                className={cn(
+                                                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black transition-all hover:scale-105 shadow-sm",
+                                                    exam.passed
+                                                        ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
+                                                        : "bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse"
+                                                )}
+                                                title={exam.passed ? "الامتحان مجتاز" : `اذهب لـ ${exam.title}`}
+                                            >
+                                                <Award className="h-3 w-3 shrink-0" />
+                                                <span>{exam.passed ? "مجتاز" : exam.title}</span>
+                                            </button>
+                                        ))
+                                    ) : (
+                                        video.examId && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/student/exams/${video.examId}?packageId=${packageId}`);
+                                                }}
+                                                className={cn(
+                                                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black transition-all hover:scale-105 shadow-sm",
+                                                    video.examPassed
+                                                        ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
+                                                        : "bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse"
+                                                )}
+                                                title={video.examPassed ? "الامتحان مجتاز" : "اذهب للامتحان المرتبط"}
+                                            >
+                                                <Award className="h-3 w-3 shrink-0" />
+                                                <span>{video.examPassed ? "مجتاز" : "امتحان"}</span>
+                                            </button>
+                                        )
                                     )}
-                                    title={video.examPassed ? "الامتحان مجتاز" : "اذهب للامتحان المرتبط"}
-                                >
-                                    <Award className="h-3 w-3 shrink-0" />
-                                    <span>{video.examPassed ? "مجتاز" : "امتحان"}</span>
-                                </button>
+                                </div>
                             )}
                         </motion.li>
                     );

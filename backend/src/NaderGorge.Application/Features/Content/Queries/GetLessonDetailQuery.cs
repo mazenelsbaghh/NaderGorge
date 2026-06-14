@@ -42,6 +42,8 @@ public record LessonHomeworkQuestionDto(
 );
 
 public record VideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
+public record VideoExamDto(Guid ExamId, string Title, bool Passed, bool IsMandatory);
+
 public record VideoDto(
     Guid Id,
     string Title,
@@ -58,6 +60,7 @@ public record VideoDto(
     Guid? ExamId,
     bool ExamPassed,
     bool IsExamLocked,
+    List<VideoExamDto> Exams,
     List<VideoChapterDto> Chapters
 );
 public record ResourceDto(Guid Id, string Title, string FileUrl, string Type);
@@ -199,14 +202,16 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .Where(v => v.UserId == request.UserId && lesson.Videos.Select(x => x.Id).Contains(v.LessonVideoId))
             .ToListAsync(ct);
 
-        var videoExamIds = lesson.Videos
-            .Where(v => v.ExamId.HasValue)
-            .Select(v => v.ExamId!.Value)
-            .Distinct()
-            .ToList();
+        var videoIds = lesson.Videos.Select(v => v.Id).ToList();
+        var allVideoExams = await _db.Exams
+            .Where(e => videoIds.Contains(e.LessonVideoId ?? Guid.Empty) || (e.LessonVideoId == null && lesson.Videos.Select(v => v.ExamId).Contains(e.Id)))
+            .Select(e => new { e.Id, e.Title, e.LessonVideoId, e.IsMandatory })
+            .ToListAsync(ct);
+
+        var allVideoExamIds = allVideoExams.Select(e => e.Id).Distinct().ToList();
 
         var passedExamIds = await _db.StudentExamAttempts
-            .Where(a => a.UserId == request.UserId && videoExamIds.Contains(a.ExamId) && a.IsPassed)
+            .Where(a => a.UserId == request.UserId && allVideoExamIds.Contains(a.ExamId) && a.IsPassed)
             .Select(a => a.ExamId)
             .Distinct()
             .ToListAsync(ct);
@@ -221,6 +226,11 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             var chapters = v.VideoChapters
                 .OrderBy(c => c.Order)
                 .Select(c => new VideoChapterDto(c.Id, c.Title, c.StartTime, c.EndTime, c.SummaryText, c.MindmapImageUrl, c.Order))
+                .ToList();
+
+            var examsForVideo = allVideoExams
+                .Where(e => e.LessonVideoId == v.Id || (e.LessonVideoId == null && v.ExamId == e.Id))
+                .Select(e => new VideoExamDto(e.Id, e.Title, passedExamIds.Contains(e.Id), e.IsMandatory))
                 .ToList();
 
             bool examPassed = v.ExamId.HasValue && passedExamIds.Contains(v.ExamId.Value);
@@ -242,10 +252,11 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 v.ExamId,
                 examPassed,
                 isExamLocked,
+                examsForVideo,
                 chapters
             ));
 
-            if (v.ExamId.HasValue && !examPassed)
+            if (examsForVideo.Any(e => e.IsMandatory && !e.Passed))
             {
                 anyPrecedingExamNotPassed = true;
             }

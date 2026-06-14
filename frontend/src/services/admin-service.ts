@@ -909,6 +909,10 @@ export const adminService = {
     const res = await apiClient.put<ApiResponse>(`/admin/videos/${videoId}/exam`, { examId });
     return res.data;
   },
+  unlinkVideoExam: async (videoId: string, examId: string) => {
+    const res = await apiClient.delete<ApiResponse>(`/admin/videos/${videoId}/exams/${examId}`);
+    return res.data;
+  },
   createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; durationMinutes?: number; timePerQuestionSeconds?: number; displayQuestionCount?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/exams/inline', payload);
     return res.data?.data;

@@ -700,13 +700,14 @@ public record AttachHomeworkCommand(
     List<AttachHomeworkQuestionDto> Questions,
     Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
+public record AttachHomeworkOptionDto(string Text, bool IsCorrect);
+
 public record AttachHomeworkQuestionDto(
     string Text, 
     int Order, 
-    int MaxPoints,
-    string QuestionType,
-    string[]? PossibleAnswers = null,
-    string? CorrectAnswerKey = null,
+    decimal Points,
+    string Type,
+    List<AttachHomeworkOptionDto>? Options = null,
     string? AudioUrl = null,
     string? WrittenCorrection = null,
     string? HintText = null,
@@ -772,22 +773,31 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
 
         foreach (var q in request.Questions)
         {
-            var qType = q.QuestionType switch
+            var qType = q.Type switch
             {
                 "Essay" => NaderGorge.Domain.Entities.Homework.QuestionType.Essay,
                 "FindTheMistake" => NaderGorge.Domain.Entities.Homework.QuestionType.FindTheMistake,
                 _ => NaderGorge.Domain.Entities.Homework.QuestionType.MCQ
             };
 
+            string[]? possibleAnswers = null;
+            string? correctAnswerKey = null;
+
+            if ((qType == NaderGorge.Domain.Entities.Homework.QuestionType.MCQ || qType == NaderGorge.Domain.Entities.Homework.QuestionType.FindTheMistake) && q.Options != null)
+            {
+                possibleAnswers = q.Options.Select(o => o.Text).ToArray();
+                correctAnswerKey = q.Options.FirstOrDefault(o => o.IsCorrect)?.Text;
+            }
+
             hw.Questions.Add(new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
             {
                 HomeworkId = hw.Id,
                 BodyText = q.Text,
                 Order = q.Order,
-                PointsActive = q.MaxPoints,
+                PointsActive = (int)q.Points,
                 QuestionType = qType,
-                PossibleAnswers = q.PossibleAnswers,
-                CorrectAnswerKey = q.CorrectAnswerKey,
+                PossibleAnswers = possibleAnswers,
+                CorrectAnswerKey = correctAnswerKey,
                 AudioUrl = q.AudioUrl,
                 WrittenCorrection = q.WrittenCorrection,
                 HintText = q.HintText,
@@ -971,6 +981,47 @@ public class LinkVideoExamCommandHandler : IRequestHandler<LinkVideoExamCommand,
         if (videoEntity == null) return ApiResponse.Fail("Video not found");
 
         videoEntity.ExamId = request.ExamId;
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
+public record UnlinkVideoExamCommand(Guid VideoId, Guid ExamId, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+
+public class UnlinkVideoExamCommandHandler : IRequestHandler<UnlinkVideoExamCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public UnlinkVideoExamCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
+
+    public async Task<ApiResponse> Handle(UnlinkVideoExamCommand request, CancellationToken ct)
+    {
+        if (request.CurrentUserId.HasValue)
+        {
+            var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
+            if (video == null) return ApiResponse.Fail("Video not found");
+
+            var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, video.LessonId, ct);
+            if (!canAccess) return ApiResponse.Fail("Unauthorized access to this video.");
+        }
+
+        var exam = await _db.Exams.FirstOrDefaultAsync(e => e.Id == request.ExamId, ct);
+        if (exam != null)
+        {
+            exam.LessonVideoId = null;
+        }
+
+        var videoEntity = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
+        if (videoEntity != null && videoEntity.ExamId == request.ExamId)
+        {
+            videoEntity.ExamId = null;
+        }
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok();

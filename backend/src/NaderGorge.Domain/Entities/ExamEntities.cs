@@ -31,6 +31,9 @@ public class Exam : BaseEntity
     public Guid CreatedByTeacherId { get; set; }
     public TeacherProfile CreatedByTeacher { get; set; } = null!;
 
+    public Guid? LessonVideoId { get; set; }
+    public LessonVideo? LessonVideo { get; set; }
+
     public ICollection<ExamQuestion> ExamQuestions { get; set; } = new List<ExamQuestion>();
     public ICollection<StudentExamAttempt> Attempts { get; set; } = new List<StudentExamAttempt>();
 }

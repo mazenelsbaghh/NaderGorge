@@ -247,29 +247,36 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
           )}
 
           {/* Show existing video exams */}
-          {(lesson.videos || []).filter((v: any) => v.examId).length > 0 && (
+          {(lesson.videos || []).some((v: any) => v.exams && v.exams.length > 0) && (
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-[var(--admin-text)] flex items-center gap-2">
                 <Video className="h-5 w-5 text-[var(--admin-primary)]" />
-                امتحانات الفيديوهات ({(lesson.videos || []).filter((v: any) => v.examId).length})
+                امتحانات الفيديوهات ({(lesson.videos || []).reduce((acc: number, v: any) => acc + (v.exams?.length || 0), 0)})
               </h3>
-              {(lesson.videos || []).filter((v: any) => v.examId).map((v: any) => (
-                <div key={v.id} className="space-y-2">
-                  <p className="text-sm font-bold text-[var(--admin-muted)]">فيديو: {v.title}</p>
-                  <AttachedExamViewer 
-                    examId={v.examId} 
-                    onUnlink={async () => {
-                      if (confirm('هل أنت متأكد من إلغاء ربط امتحان هذا الفيديو؟')) {
-                        try {
-                          await adminService.linkVideoExam(v.id, null);
-                          toast.success('تم إلغاء ربط الامتحان بنجاح');
-                          loadData();
-                        } catch {
-                          toast.error('أخفق إلغاء ربط الامتحان');
-                        }
-                      }
-                    }}
-                  />
+              {(lesson.videos || []).filter((v: any) => v.exams && v.exams.length > 0).map((v: any) => (
+                <div key={v.id} className="space-y-4 p-5 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)]">
+                  <p className="text-sm font-bold text-[var(--admin-text)]">فيديو: {v.title}</p>
+                  <div className="space-y-4">
+                    {v.exams.map((exam: any) => (
+                      <div key={exam.examId} className="space-y-2">
+                        <p className="text-xs font-bold text-[var(--admin-muted)]">امتحان: {exam.title}</p>
+                        <AttachedExamViewer 
+                          examId={exam.examId} 
+                          onUnlink={async () => {
+                            if (confirm(`هل أنت متأكد من إلغاء ربط امتحان "${exam.title}"؟`)) {
+                              try {
+                                await adminService.unlinkVideoExam(v.id, exam.examId);
+                                toast.success('تم إلغاء ربط الامتحان بنجاح');
+                                loadData();
+                              } catch {
+                                toast.error('أخفق إلغاء ربط الامتحان');
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

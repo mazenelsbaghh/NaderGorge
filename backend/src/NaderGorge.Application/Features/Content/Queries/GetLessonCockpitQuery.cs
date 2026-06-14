@@ -7,7 +7,8 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.Application.Features.Content.Queries;
 
 public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
-public record LessonCockpitVideoDto(Guid Id, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, Guid? ExamId = null, List<LessonCockpitVideoChapterDto>? Chapters = null);
+public record LessonCockpitVideoExamDto(Guid ExamId, string Title);
+public record LessonCockpitVideoDto(Guid Id, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null);
 public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType);
 public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, decimal? PassingScoreThreshold);
 public record LessonCockpitCommentSummaryDto(int Total, int Pending, int Approved, int Rejected);
@@ -75,6 +76,12 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
             ))
             .FirstOrDefaultAsync(ct) ?? new LessonCockpitCommentSummaryDto(0, 0, 0, 0);
 
+        var videoIds = lesson.Videos.Select(v => v.Id).ToList();
+        var videoExams = await _db.Exams
+            .Where(e => videoIds.Contains(e.LessonVideoId ?? Guid.Empty) || (e.LessonVideoId == null && lesson.Videos.Select(v => v.ExamId).Contains(e.Id)))
+            .Select(e => new { e.Id, e.Title, e.LessonVideoId })
+            .ToListAsync(ct);
+
         var dto = new LessonCockpitDto(
             lesson.Id,
             lesson.Title,
@@ -87,6 +94,11 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                     .Select(c => new LessonCockpitVideoChapterDto(c.Id, c.Title, c.StartTime, c.EndTime, c.SummaryText, c.MindmapImageUrl, c.Order))
                     .ToList();
 
+                var examsForVideo = videoExams
+                    .Where(e => e.LessonVideoId == v.Id || (e.LessonVideoId == null && v.ExamId == e.Id))
+                    .Select(e => new LessonCockpitVideoExamDto(e.Id, e.Title))
+                    .ToList();
+
                 return new LessonCockpitVideoDto(
                     v.Id,
                     v.Title,
@@ -97,6 +109,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                     v.IsProcessingAI,
                     v.IsProcessingMindmaps,
                     v.ExamId,
+                    examsForVideo,
                     chapters
                 );
             }).ToList(),

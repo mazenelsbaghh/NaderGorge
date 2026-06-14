@@ -283,7 +283,11 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
         }
         else if (video != null)
         {
-            video.ExamId = exam.Id;
+            exam.LessonVideoId = video.Id;
+            if (video.ExamId == null)
+            {
+                video.ExamId = exam.Id;
+            }
         }
 
         await _db.SaveChangesAsync(ct);
