@@ -7,7 +7,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.Application.Features.Content.Queries;
 
 public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
-public record LessonCockpitVideoDto(Guid Id, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, List<LessonCockpitVideoChapterDto>? Chapters = null);
+public record LessonCockpitVideoDto(Guid Id, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, Guid? ExamId = null, List<LessonCockpitVideoChapterDto>? Chapters = null);
 public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType);
 public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, decimal? PassingScoreThreshold);
 public record LessonCockpitCommentSummaryDto(int Total, int Pending, int Approved, int Rejected);
@@ -96,6 +96,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                     v.MaxWatchCount,
                     v.IsProcessingAI,
                     v.IsProcessingMindmaps,
+                    v.ExamId,
                     chapters
                 );
             }).ToList(),

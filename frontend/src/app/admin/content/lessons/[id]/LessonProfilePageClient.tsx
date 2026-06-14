@@ -234,6 +234,22 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
             </div>
           )}
 
+          {/* Show existing video exams */}
+          {(lesson.videos || []).filter((v: any) => v.examId).length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-[var(--admin-text)] flex items-center gap-2">
+                <Video className="h-5 w-5 text-[var(--admin-primary)]" />
+                امتحانات الفيديوهات ({(lesson.videos || []).filter((v: any) => v.examId).length})
+              </h3>
+              {(lesson.videos || []).filter((v: any) => v.examId).map((v: any) => (
+                <div key={v.id} className="space-y-2">
+                  <p className="text-sm font-bold text-[var(--admin-muted)]">فيديو: {v.title}</p>
+                  <AttachedExamViewer examId={v.examId} />
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Always show video exam builder if videos exist */}
           {(lesson.videos?.length ?? 0) > 0 && (
             <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">

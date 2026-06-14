@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
-import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, ChevronDown, Image as ImageIcon, Play, X } from 'lucide-react';
+import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
@@ -401,6 +401,12 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
                       ترتيب: {video.order}
                     </span>
+                    {video.examId && (
+                      <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                        <BookCheck className="h-3 w-3" />
+                        امتحان مرفق
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
