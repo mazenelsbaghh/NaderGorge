@@ -936,3 +936,43 @@ public class LinkLessonExamCommandHandler : IRequestHandler<LinkLessonExamComman
         return ApiResponse.Ok();
     }
 }
+
+public record LinkVideoExamCommand(Guid VideoId, Guid? ExamId, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+
+public class LinkVideoExamCommandHandler : IRequestHandler<LinkVideoExamCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public LinkVideoExamCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
+
+    public async Task<ApiResponse> Handle(LinkVideoExamCommand request, CancellationToken ct)
+    {
+        if (request.CurrentUserId.HasValue)
+        {
+            var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
+            if (video == null) return ApiResponse.Fail("Video not found");
+
+            var canAccessLesson = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, video.LessonId, ct);
+            if (!canAccessLesson) return ApiResponse.Fail("Unauthorized access to this video.");
+
+            if (request.ExamId.HasValue)
+            {
+                var canAccessExam = await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId.Value, ct);
+                if (!canAccessExam) return ApiResponse.Fail("Unauthorized access to this exam.");
+            }
+        }
+
+        var videoEntity = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
+        if (videoEntity == null) return ApiResponse.Fail("Video not found");
+
+        videoEntity.ExamId = request.ExamId;
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}

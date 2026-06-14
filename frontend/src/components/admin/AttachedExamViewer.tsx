@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
-import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3 } from 'lucide-react';
+import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3, Trash2 } from 'lucide-react';
 import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
-export function AttachedExamViewer({ examId }: { examId: string }) {
+export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnlink?: () => void }) {
   const router = useRouter();
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,16 +63,28 @@ export function AttachedExamViewer({ examId }: { examId: string }) {
               <p className="text-[var(--admin-muted)] text-sm">{data.description}</p>
             )}
           </div>
-          <NeumorphButton
-            type="button"
-            onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
-            intent="primary"
-            size="md"
-            pill
-            className="shrink-0"
-          >
-            <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
-          </NeumorphButton>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {onUnlink && (
+              <NeumorphButton
+                type="button"
+                onClick={onUnlink}
+                intent="danger"
+                size="md"
+                pill
+              >
+                <Trash2 className="w-4 h-4 ml-2" /> إلغاء ربط الامتحان
+              </NeumorphButton>
+            )}
+            <NeumorphButton
+              type="button"
+              onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
+              intent="primary"
+              size="md"
+              pill
+            >
+              <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
+            </NeumorphButton>
+          </div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">

@@ -155,7 +155,20 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
       {activeTab === "exam" && (
         <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in">
           {lesson.examId ? (
-            <AttachedExamViewer examId={lesson.examId} />
+            <AttachedExamViewer 
+              examId={lesson.examId} 
+              onUnlink={async () => {
+                if (confirm('هل أنت متأكد من إلغاء ربط هذا الامتحان بالحصة؟')) {
+                  try {
+                    await adminService.linkLessonExam(lesson.lessonId, null);
+                    toast.success('تم إلغاء ربط الامتحان بنجاح');
+                    loadData();
+                  } catch {
+                    toast.error('أخفق إلغاء ربط الامتحان');
+                  }
+                }
+              }}
+            />
           ) : (
             <>
               <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">

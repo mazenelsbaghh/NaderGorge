@@ -222,7 +222,20 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       {activeTab === 'exam' && (
         <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in">
           {lesson.examId ? (
-            <AttachedExamViewer examId={lesson.examId} />
+            <AttachedExamViewer 
+              examId={lesson.examId} 
+              onUnlink={async () => {
+                if (confirm('هل أنت متأكد من إلغاء ربط هذا الامتحان بالحصة؟')) {
+                  try {
+                    await adminService.linkLessonExam(lesson.lessonId, null);
+                    toast.success('تم إلغاء ربط الامتحان بنجاح');
+                    loadData();
+                  } catch {
+                    toast.error('أخفق إلغاء ربط الامتحان');
+                  }
+                }
+              }}
+            />
           ) : (
             <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
               <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
@@ -243,7 +256,20 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
               {(lesson.videos || []).filter((v: any) => v.examId).map((v: any) => (
                 <div key={v.id} className="space-y-2">
                   <p className="text-sm font-bold text-[var(--admin-muted)]">فيديو: {v.title}</p>
-                  <AttachedExamViewer examId={v.examId} />
+                  <AttachedExamViewer 
+                    examId={v.examId} 
+                    onUnlink={async () => {
+                      if (confirm('هل أنت متأكد من إلغاء ربط امتحان هذا الفيديو؟')) {
+                        try {
+                          await adminService.linkVideoExam(v.id, null);
+                          toast.success('تم إلغاء ربط الامتحان بنجاح');
+                          loadData();
+                        } catch {
+                          toast.error('أخفق إلغاء ربط الامتحان');
+                        }
+                      }
+                    }}
+                  />
                 </div>
               ))}
             </div>

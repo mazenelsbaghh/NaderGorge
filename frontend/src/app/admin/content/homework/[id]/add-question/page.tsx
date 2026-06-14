@@ -1,5 +1,6 @@
 import AddHomeworkQuestionPageClient from './AddHomeworkQuestionPageClient';
 
-export default function Page({ params }: { params: { id: string } }) {
-  return <AddHomeworkQuestionPageClient params={params} />;
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  return <AddHomeworkQuestionPageClient params={resolvedParams} />;
 }

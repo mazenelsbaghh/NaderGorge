@@ -511,6 +511,14 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPut("videos/{videoId:guid}/exam")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> LinkVideoExam(Guid videoId, [FromBody] LinkLessonExamRequest dto)
+    {
+        var result = await _mediator.Send(new LinkVideoExamCommand(videoId, dto.ExamId, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("exams/inline")]
     [HasPermission("exams.manage")]
     public async Task<IActionResult> CreateInlineExam([FromBody] CreateInlineExamCommand command)
