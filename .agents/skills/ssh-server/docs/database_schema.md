@@ -467,20 +467,20 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
-| `AudioUrl` | `string` | `text` | `YES` | ✅ Sync |
-| `BaseText` | `string` | `text` | `YES` | ✅ Sync |
+| `AudioUrl` | `string` | `text` | `YES` | ❌ Missing Column |
+| `BaseText` | `string` | `text` | `YES` | ❌ Missing Column |
 | `BodyText` | `string` | `text` | `NO` | ✅ Sync |
 | `CorrectAnswerKey` | `string` | `text` | `YES` | ✅ Sync |
-| `HintText` | `string` | `text` | `YES` | ✅ Sync |
+| `HintText` | `string` | `text` | `YES` | ❌ Missing Column |
 | `HomeworkId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `MistakeEndIndex` | `int?` | `integer` | `YES` | ✅ Sync |
-| `MistakeStartIndex` | `int?` | `integer` | `YES` | ✅ Sync |
+| `MistakeEndIndex` | `int?` | `integer` | `YES` | ❌ Missing Column |
+| `MistakeStartIndex` | `int?` | `integer` | `YES` | ❌ Missing Column |
 | `Order` | `int` | `integer` | `NO` | ✅ Sync |
 | `PointsActive` | `int` | `integer` | `NO` | ✅ Sync |
 | `PossibleAnswers` | `string[]` | `text[]` | `NO` | ✅ Sync |
 | `QuestionType` | `int` | `integer` | `NO` | ✅ Sync |
-| `WrittenCorrection` | `string` | `text` | `YES` | ✅ Sync |
+| `WrittenCorrection` | `string` | `text` | `YES` | ❌ Missing Column |
 
 ## Table: `homework_submissions`
 

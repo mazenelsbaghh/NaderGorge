@@ -242,6 +242,8 @@ run_migrations() {
 
   MIGRATION_RESULT=$(remote "
     cd ${SERVER_APP_DIR}
+    # Rebuild migrator to ensure latest migration classes are present
+    docker compose build migrator
     # Run migrator and capture output
     docker compose --profile migration run --rm migrator 2>&1
   ")
