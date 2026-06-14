@@ -97,6 +97,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const embedReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const watchThresholdPercentageRef = useRef<number>(30);
+  const loadingSessionRef = useRef(false);
+  const loadingExtraWatchStatusRef = useRef(false);
+  const requestingExtraRef = useRef(false);
 
   const [isHoveringControls, setIsHoveringControls] = useState(false);
   const [isChapterInfoOpen, setIsChapterInfoOpen] = useState(false);
@@ -128,6 +131,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [isPlaying, handlePlayerInteraction]);
 
   const loadExtraWatchStatus = useCallback(async () => {
+    if (loadingExtraWatchStatusRef.current) return;
+    loadingExtraWatchStatusRef.current = true;
     setExtraWatchStatusError(null);
     try {
       const response = await videoSessionService.getExtraWatchStatus(lessonVideoId);
@@ -136,6 +141,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     } catch (error) {
       devConsole.error(error);
       setExtraWatchStatusError('تعذر التحقق من حالة طلب المشاهدة الإضافية.');
+    } finally {
+      loadingExtraWatchStatusRef.current = false;
     }
   }, [lessonVideoId]);
 
@@ -151,6 +158,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [extraWatchReqStatus, status]);
 
   const handleRequestExtra = async () => {
+    if (requestingExtraRef.current) return;
+    requestingExtraRef.current = true;
     setRequestingExtra(true);
     setExtraWatchStatusError(null);
     try {
@@ -167,6 +176,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       }
     } finally {
       setRequestingExtra(false);
+      requestingExtraRef.current = false;
     }
   };
 
@@ -454,6 +464,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   // ── Load video ──
   const loadVideo = async () => {
+    if (loadingSessionRef.current) return;
+    loadingSessionRef.current = true;
     try {
       setStatus('loading');
       
@@ -573,6 +585,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const msg = err.response?.data?.message || err.message || 'فشل في تحميل الفيديو';
       setErrorMessage(msg);
       if (onSessionError) onSessionError(msg);
+    } finally {
+      loadingSessionRef.current = false;
     }
   };
 
