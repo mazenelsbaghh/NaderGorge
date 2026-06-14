@@ -53,7 +53,30 @@ done
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 remote() {
-  sshpass -e ssh ${SSH_OPTS} "${SERVER_USER}@${SERVER_HOST}" "$@"
+  local max_attempts=3
+  local attempt=1
+  local exit_code=0
+  
+  while [ $attempt -le $max_attempts ]; do
+    # Run the SSH command
+    # Use set +e to avoid exiting the script if a command fails in the loop
+    set +e
+    sshpass -e ssh ${SSH_OPTS} "${SERVER_USER}@${SERVER_HOST}" "$@"
+    exit_code=$?
+    set -e
+    
+    if [ $exit_code -eq 0 ]; then
+      return 0
+    elif [ $exit_code -eq 255 ]; then
+      log_warn "SSH connection failed (attempt $attempt/$max_attempts). Retrying in 2 seconds..."
+      sleep 2
+      attempt=$((attempt + 1))
+    else
+      return $exit_code
+    fi
+  done
+  
+  return $exit_code
 }
 
 check_deps() {
