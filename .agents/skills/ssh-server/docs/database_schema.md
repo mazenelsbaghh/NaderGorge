@@ -425,6 +425,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `IsMandatory` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsRandomized` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `LessonVideoId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `PassingScore` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
 | `Title` | `string` | `character varying(200)` | `NO` | ✅ Sync |
 | `TotalScore` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
