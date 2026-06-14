@@ -100,6 +100,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const loadingSessionRef = useRef(false);
   const loadingExtraWatchStatusRef = useRef(false);
   const requestingExtraRef = useRef(false);
+  const approvedLoadAttemptedRef = useRef(false);
 
   const [isHoveringControls, setIsHoveringControls] = useState(false);
   const [isChapterInfoOpen, setIsChapterInfoOpen] = useState(false);
@@ -151,7 +152,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [loadExtraWatchStatus, status]);
 
   useEffect(() => {
-    if (status === 'locked' && extraWatchReqStatus === 'Approved') {
+    if (extraWatchReqStatus !== 'Approved') {
+      approvedLoadAttemptedRef.current = false;
+    }
+
+    if (status === 'locked' && extraWatchReqStatus === 'Approved' && !approvedLoadAttemptedRef.current) {
+      approvedLoadAttemptedRef.current = true;
       void loadVideo();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
