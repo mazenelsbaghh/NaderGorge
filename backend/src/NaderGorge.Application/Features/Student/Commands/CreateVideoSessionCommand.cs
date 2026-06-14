@@ -85,7 +85,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
                     currentCount,
                     maxCount,
                     IsLocked: true,
-                    TotalTrackedSeconds: watchEvent?.TimeWatchedInSeconds ?? 0),
+                    TotalTrackedSeconds: Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0)),
                 video.Title,
                 30);
             return ApiResponse<VideoSessionDto>.Fail("Watch limit reached for this video", new List<string> { "WATCH_LIMIT_REACHED" }, lockedDto);
@@ -143,7 +143,7 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             session.Id,
             session.ExpiresAt,
             video.Provider,
-            new WatchInfoDto(currentCount, maxCount, isLocked, watchEvent?.TimeWatchedInSeconds ?? 0),
+            new WatchInfoDto(currentCount, maxCount, isLocked, Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0)),
             video.Title,
             thresholdPercentage
         );

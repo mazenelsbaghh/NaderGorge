@@ -143,6 +143,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     if (status === 'locked') void loadExtraWatchStatus();
   }, [loadExtraWatchStatus, status]);
 
+  useEffect(() => {
+    if (status === 'locked' && extraWatchReqStatus === 'Approved') {
+      void loadVideo();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extraWatchReqStatus, status]);
+
   const handleRequestExtra = async () => {
     setRequestingExtra(true);
     setExtraWatchStatusError(null);
@@ -150,9 +157,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       await videoSessionService.requestExtraWatch(lessonVideoId);
       setExtraWatchReqStatus('Pending');
       setExtraWatchRejectionReason(null);
-    } catch(err) {
+    } catch(err: any) {
       devConsole.error(err);
-      setExtraWatchStatusError('تعذر إرسال طلب المشاهدة الإضافية. أعد المحاولة.');
+      const errors = err.response?.data?.errors || [];
+      if (errors.includes('REQUEST_LIMIT_REACHED')) {
+        setExtraWatchStatusError('لقد استنفدت الحد الأقصى لطلبات المشاهدة الإضافية المسموح بها لهذه الحصة.');
+      } else {
+        setExtraWatchStatusError('تعذر إرسال طلب المشاهدة الإضافية. أعد المحاولة.');
+      }
     } finally {
       setRequestingExtra(false);
     }
@@ -698,15 +710,31 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               </button>
            </div>
         ) : extraWatchReqStatus === 'Pending' ? (
-           <div className="px-6 py-3 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 rounded-lg">
-              جاري مراجعة طلبك للمشاهدة الإضافية من قبل الدعم الفني
+           <div className="flex flex-col items-center gap-3">
+             <div className="px-6 py-3 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 rounded-lg">
+                جاري مراجعة طلبك للمشاهدة الإضافية من قبل الدعم الفني
+             </div>
+             <button
+               type="button"
+               onClick={() => void loadExtraWatchStatus()}
+               className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg border border-white/20 transition-colors"
+             >
+               تحديث الحالة
+             </button>
            </div>
         ) : extraWatchReqStatus === 'Rejected' ? (
            <div className="px-6 py-3 bg-red-500/20 text-red-500 border border-red-500/50 rounded-lg flex flex-col items-center gap-2">
               <span>تم رفض طلبك للمشاهدة الإضافية</span>
               {extraWatchRejectionReason ? (
-                <span className="text-sm text-red-200">{extraWatchRejectionReason}</span>
+                <span className="text-sm text-red-200 mb-2">{extraWatchRejectionReason}</span>
               ) : null}
+              <button
+                type="button"
+                onClick={() => void loadExtraWatchStatus()}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg border border-white/20 transition-colors"
+              >
+                تحديث الحالة
+              </button>
            </div>
         ) : (
            <button 

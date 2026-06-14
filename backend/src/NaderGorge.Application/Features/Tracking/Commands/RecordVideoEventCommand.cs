@@ -72,6 +72,12 @@ public class RecordVideoEventCommandHandler : IRequestHandler<RecordVideoEventCo
         var thresholdPercentage = settings.VideoWatchThresholdPercentage;
         var secondsThreshold = VideoWatchProgressCalculator.ResolveThresholdSeconds(request.TotalDurationSeconds, thresholdPercentage);
 
+        // If TimeWatchedInSeconds is negative, it indicates a reset signal (e.g. from an approved extra watch request)
+        if (trackEvent.TimeWatchedInSeconds < 0)
+        {
+            trackEvent.TimeWatchedInSeconds = trackEvent.WatchCount * secondsThreshold;
+        }
+
         var acceptedSeconds = VideoWatchProgressCalculator.ResolveAcceptedSeconds(
             request.WatchedSeconds,
             now,

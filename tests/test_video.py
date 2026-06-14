@@ -90,3 +90,64 @@ def test_video_watch_limit_locks_at_exact_max_and_extra_watch_unlocks(mock_packa
 
     session_ok = student.post("/api/student/video-session", json={"lessonVideoId": video_id})
     assert session_ok.status_code == 200
+
+    # Ensure it doesn't immediately relock on first watch progress sync of the new watch session
+    track_sync = student.post("/api/tracking/video-event", json={
+        "lessonVideoId": video_id,
+        "watchedSeconds": 5,
+        "totalDurationSeconds": 50
+    })
+    assert track_sync.status_code == 200
+    tracking_sync = track_sync.json().get("data", {})
+    assert tracking_sync.get("watchCount") == 2
+    assert tracking_sync.get("maxWatchCount") == 3
+    assert tracking_sync.get("isLocked") is False
+
+    # Sleep to allow elapsed time check to accept 15 seconds
+    import time
+    time.sleep(10)
+
+    # Ensure it locks if we watch past the new limit (3 watches, threshold at 30% of 50s = 15s)
+    # The current watch event has WatchCount = 2, so threshold for 3rd watch is 3 * 15 = 45s.
+    # Total watched so far is 2 * 15 = 30s + 5s = 35s.
+    # We watch 15 more seconds (total 50s), which is >= 45s.
+    track_relock = student.post("/api/tracking/video-event", json={
+        "lessonVideoId": video_id,
+        "watchedSeconds": 15,
+        "totalDurationSeconds": 50
+    })
+    assert track_relock.status_code == 200
+    tracking_relock = track_relock.json().get("data", {})
+    assert tracking_relock.get("watchCount") == 3
+    assert tracking_relock.get("maxWatchCount") == 3
+    assert tracking_relock.get("isLocked") is True
+
+    # Now it is locked again (WatchCount = 3, MaxWatchCount = 3).
+    # Request extra watch (2nd request)
+    req_extra2 = student.post(f"/api/student/video-session/{video_id}/request-extra")
+    assert req_extra2.status_code == 200
+
+    # Approve it
+    req_list2 = admin.get("/api/admin/watch-requests")
+    assert req_list2.status_code == 200
+    pending_reqs2 = [r for r in req_list2.json().get("data", []) if r.get("status") == 0 or r.get("status") == "Pending"]
+    assert len(pending_reqs2) > 0
+    approve_res2 = admin.post(f"/api/admin/watch-requests/{pending_reqs2[0].get('id')}/approve")
+    assert approve_res2.status_code == 200
+
+    # Request extra watch (3rd request)
+    req_extra3 = student.post(f"/api/student/video-session/{video_id}/request-extra")
+    assert req_extra3.status_code == 200
+
+    # Reject it
+    req_list3 = admin.get("/api/admin/watch-requests")
+    assert req_list3.status_code == 200
+    pending_reqs3 = [r for r in req_list3.json().get("data", []) if r.get("status") == 0 or r.get("status") == "Pending"]
+    assert len(pending_reqs3) > 0
+    reject_res3 = admin.post(f"/api/admin/watch-requests/{pending_reqs3[0].get('id')}/reject", json={"reason": "Exceeded limit test"})
+    assert reject_res3.status_code == 200
+
+    # Request extra watch (4th request) - this should fail because we reached the limit of 3 requests
+    req_extra4 = student.post(f"/api/student/video-session/{video_id}/request-extra")
+    assert req_extra4.status_code == 400
+    assert "REQUEST_LIMIT_REACHED" in req_extra4.json().get("errors", [])

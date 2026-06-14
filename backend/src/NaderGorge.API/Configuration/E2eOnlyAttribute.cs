@@ -24,9 +24,9 @@ public sealed class E2eOnlyFilter : IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        if (_environment.EnvironmentName != "E2e")
+        if (!string.Equals(_environment.EnvironmentName, "E2e", System.StringComparison.OrdinalIgnoreCase))
         {
-            context.Result = new NotFoundObjectResult("E2E endpoints only available in E2E environment.");
+            context.Result = new NotFoundObjectResult($"E2E endpoints only available in E2E environment. Current environment: {_environment.EnvironmentName}");
             return;
         }
 

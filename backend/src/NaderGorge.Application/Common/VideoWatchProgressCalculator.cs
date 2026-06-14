@@ -36,6 +36,12 @@ public static class VideoWatchProgressCalculator
             watchEvent.TimeWatchedInSeconds += acceptedSeconds;
         }
 
+        // If the admin recently increased the maxWatchCount (unlocked the student),
+        // their accumulated TimeWatchedInSeconds might be higher than the new max limit threshold.
+        // We reset it to the beginning of their current WatchCount so they must watch the full
+        // thresholdSeconds of new time to register the next watch.
+
+
         if (maxWatchCount > 0 && watchEvent.WatchCount > maxWatchCount)
         {
             watchEvent.WatchCount = maxWatchCount;
@@ -51,6 +57,10 @@ public static class VideoWatchProgressCalculator
         {
             watchEvent.WatchCount = maxWatchCount;
             watchEvent.IsLocked = true;
+            if (watchEvent.TimeWatchedInSeconds > maxWatchCount * thresholdSeconds)
+            {
+                watchEvent.TimeWatchedInSeconds = maxWatchCount * thresholdSeconds;
+            }
         }
 
         var remainingSeconds = maxWatchCount > 0 && watchEvent.WatchCount >= maxWatchCount

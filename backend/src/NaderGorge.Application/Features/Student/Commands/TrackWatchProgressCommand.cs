@@ -74,6 +74,12 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
 
         int maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
 
+        // If TimeWatchedInSeconds is negative, it indicates a reset signal (e.g. from an approved extra watch request)
+        if (watchEvent.TimeWatchedInSeconds < 0)
+        {
+            watchEvent.TimeWatchedInSeconds = watchEvent.WatchCount * thresholdSeconds;
+        }
+
         if (watchEvent.IsLocked)
         {
             await transaction.CommitAsync(ct);
@@ -82,7 +88,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
                 maxLimit,
                 true,
                 false,
-                watchEvent.TimeWatchedInSeconds,
+                Math.Max(0, watchEvent.TimeWatchedInSeconds),
                 thresholdSeconds
             ));
         }
@@ -109,7 +115,7 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             maxLimit,
             watchEvent.IsLocked,
             progressResult.ViewRegistered,
-            watchEvent.TimeWatchedInSeconds,
+            Math.Max(0, watchEvent.TimeWatchedInSeconds),
             thresholdSeconds
         ));
     }

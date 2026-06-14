@@ -50,6 +50,8 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
             if (maxLimit > 0)
             {
                 watchEvent.CustomMaxWatchCount = maxLimit + 1;
+                // Force a progress reset on next play session so they start the new view with a clean threshold baseline
+                watchEvent.TimeWatchedInSeconds = -1;
 
                 var videoOverride = new VideoOverride
                 {

@@ -39,26 +39,34 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
 
     public async Task<ApiResponse<List<PackageDto>>> Handle(GetPackagesQuery request, CancellationToken ct)
     {
-        Guid? teacherId = null;
         var user = await _db.Users
             .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .Include(u => u.TeacherProfile)
             .FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
-
-        if (user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher))
-        {
-            teacherId = user.TeacherProfile?.Id;
-        }
 
         var query = _db.Packages
             .Include(p => p.Subject)
             .Include(p => p.Teacher).ThenInclude(t => t.User)
             .AsQueryable();
 
-        if (teacherId.HasValue)
+        bool isAdminOrStaff = user != null && user.UserRoles.Any(ur =>
+            ur.Role.Type == RoleType.Admin ||
+            ur.Role.Type == RoleType.Assistant ||
+            ur.Role.Type == RoleType.AssistantReviewer ||
+            ur.Role.Type == RoleType.AssistantAcademic ||
+            ur.Role.Type == RoleType.Supervisor ||
+            ur.Role.Type == RoleType.Staff);
+
+        bool isTeacher = user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher);
+
+        if (isAdminOrStaff)
         {
-            // Teachers see their own packages regardless of IsActive
-            query = query.Where(p => p.TeacherId == teacherId.Value);
+            // Admins/Staff see ALL packages in the system regardless of IsActive
+        }
+        else if (isTeacher && user!.TeacherProfile != null)
+        {
+            // Teachers see their own packages (both active & inactive)
+            query = query.Where(p => p.TeacherId == user.TeacherProfile.Id);
         }
         else
         {

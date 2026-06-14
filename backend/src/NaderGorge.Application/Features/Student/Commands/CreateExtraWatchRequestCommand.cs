@@ -12,10 +12,12 @@ public record CreateExtraWatchRequestCommand(Guid LessonVideoId, Guid UserId) : 
 public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtraWatchRequestCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _context;
+    private readonly ICachedPlatformSettingsReader _settingsReader;
 
-    public CreateExtraWatchRequestCommandHandler(IAppDbContext context)
+    public CreateExtraWatchRequestCommandHandler(IAppDbContext context, ICachedPlatformSettingsReader settingsReader)
     {
         _context = context;
+        _settingsReader = settingsReader;
     }
 
     public async Task<ApiResponse<Guid>> Handle(CreateExtraWatchRequestCommand request, CancellationToken cancellationToken)
@@ -33,6 +35,16 @@ public class CreateExtraWatchRequestCommandHandler : IRequestHandler<CreateExtra
 
         if (existingPending)
             return ApiResponse<Guid>.Fail("A pending request already exists.", new List<string> { "REQUEST_EXISTS" });
+
+        // Enforce maximum extra watch requests per video
+        var settings = await _settingsReader.GetAsync(cancellationToken);
+        var maxRequests = settings.MaxExtraWatchRequestsPerVideo;
+
+        var totalRequestsCount = await _context.ExtraWatchRequests
+            .CountAsync(r => r.LessonVideoId == request.LessonVideoId && r.UserId == request.UserId, cancellationToken);
+
+        if (totalRequestsCount >= maxRequests)
+            return ApiResponse<Guid>.Fail("Extra watch request limit reached.", new List<string> { "REQUEST_LIMIT_REACHED" });
 
         var watchRequest = new ExtraWatchRequest
         {
