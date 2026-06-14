@@ -72,7 +72,8 @@ export function PurchaseContentModal({
   if (!isOpen) return null;
 
   const currentBalance = balanceDto?.currentBalance || 0;
-  const isSufficient = currentBalance >= price;
+  const isFree = price === 0;
+  const isSufficient = isFree || currentBalance >= price;
 
   const handlePurchase = async () => {
     try {
@@ -108,13 +109,13 @@ export function PurchaseContentModal({
             <div className="mb-4 rounded-full bg-[var(--admin-success-10)] p-4 text-[var(--admin-success)]">
               <CheckCircle className="h-10 w-10" />
             </div>
-            <h3 id="purchase-modal-title" className="mb-2 text-2xl font-black text-[var(--admin-text)]">تم الشراء بنجاح!</h3>
-            <p className="font-medium text-[var(--admin-muted)]">تمت العملية بنجاح!</p>
+            <h3 id="purchase-modal-title" className="mb-2 text-2xl font-black text-[var(--admin-text)]">{isFree ? 'تم التفعيل بنجاح!' : 'تم الشراء بنجاح!'}</h3>
+            <p className="font-medium text-[var(--admin-muted)]">{isFree ? 'تم تفعيل المحتوى في حسابك.' : 'تمت العملية بنجاح!'}</p>
           </div>
         ) : (
           <>
             <div className="mb-6 flex items-start justify-between gap-4">
-              <h3 id="purchase-modal-title" className="text-xl font-extrabold text-[var(--admin-text)]">تأكيد الشراء</h3>
+              <h3 id="purchase-modal-title" className="text-xl font-extrabold text-[var(--admin-text)]">{isFree ? 'تأكيد التفعيل' : 'تأكيد الشراء'}</h3>
               <button 
                 ref={closeButtonRef}
                 onClick={onClose}
@@ -131,11 +132,18 @@ export function PurchaseContentModal({
                 <p className="mb-2 text-sm font-bold uppercase tracking-wider text-[var(--admin-muted)]">المحتوى المطلوب</p>
                 <p className="text-lg font-black text-[var(--admin-text)]">{contentName}</p>
                 <div className="mt-3 inline-block rounded-full bg-[var(--admin-primary-15)] px-4 py-1.5 text-xl font-black text-[var(--admin-primary)]">
-                  {price} ج.م
+                  {isFree ? 'مجاني' : `${price} ج.م`}
                 </div>
               </div>
 
-              {loading ? (
+              {isFree ? (
+                <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle className="h-4 w-4 shrink-0" />
+                    <p>هذا المحتوى مجاني ولا يحتاج رصيد. اضغط تفعيل للبدء مباشرة.</p>
+                  </div>
+                </div>
+              ) : loading ? (
                 <div className="flex items-center justify-center py-4">
                   <InlineLoader className="text-[var(--admin-primary)]" />
                 </div>
@@ -186,7 +194,7 @@ export function PurchaseContentModal({
                     className="inline-flex min-h-12 flex-[2] items-center justify-center gap-2 rounded-full bg-[var(--admin-primary)] px-4 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg transition hover:bg-[var(--admin-primary-strong)] disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
                   >
                     {purchasing && <InlineLoader />}
-                    <span>تأكيد الخصم والشراء</span>
+                    <span>{isFree ? 'تفعيل مجاني' : 'تأكيد الخصم والشراء'}</span>
                   </button>
                 ) : (
                   <button

@@ -388,10 +388,10 @@ export default function TermDetailPageClient() {
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm space-y-4 text-right">
             <div>
               <span className="text-xs font-bold text-[var(--admin-muted)]">
-                {(term?.price != null && term.price > 0) ? 'سعر الترم' : 'سعر الباقة'}
+                {term?.price != null ? 'سعر الترم' : 'سعر الباقة'}
               </span>
               {(() => {
-                const price = (term?.price != null && term.price > 0) ? term.price : (pkg?.price || 0);
+                const price = term?.price != null ? term.price : (pkg?.price ?? 0);
                 return price > 0 ? (
                   <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{price} ج.م</p>
                 ) : (
@@ -412,7 +412,7 @@ export default function TermDetailPageClient() {
                   className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  {(term?.price != null && term.price > 0) ? 'شراء الترم' : 'شراء الباقة'}
+                  {term?.price != null ? (term.price === 0 ? 'تفعيل مجاني' : 'شراء الترم') : 'شراء الباقة'}
                 </button>
                 <Link
                   href="/student/code-redemption"
@@ -470,24 +470,24 @@ export default function TermDetailPageClient() {
         onClose={() => setIsPurchaseModalOpen(false)}
         onPurchaseSuccess={() => void load()}
         contentType={
-          (term?.price != null && term.price > 0)
+          term?.price != null
             ? ("Term" as CodeType)
             : ("Package" as CodeType)
         }
         contentId={
-          (term?.price != null && term.price > 0)
+          term?.price != null
             ? termId
             : packageId
         }
         contentName={
-          (term?.price != null && term.price > 0)
+          term?.price != null
             ? (term.title || "الترم")
             : (pkg?.name || "الباقة الكاملة")
         }
         price={
-          (term?.price != null && term.price > 0)
+          term?.price != null
             ? term.price
-            : (pkg?.price || 0)
+            : (pkg?.price ?? 0)
         }
       />
     </motion.div>
