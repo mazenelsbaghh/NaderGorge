@@ -242,7 +242,7 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
                 <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
                 إنشاء امتحان الحصة
               </h3>
-              <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} />
+              <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} forceTargetType="Lesson" />
             </div>
           )}
 
@@ -292,7 +292,7 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
               <p className="mb-6 text-sm text-[var(--admin-muted)]">
                 أضف امتحان يظهر بعد مشاهدة فيديو معين — مستقل عن امتحان الحصة.
               </p>
-              <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} />
+              <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} forceTargetType="Video" />
             </div>
           )}
         </div>

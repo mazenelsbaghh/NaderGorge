@@ -6,9 +6,8 @@
 - [x] Phase 4: Implementation (`speckit-implement`)
 - [x] Phase 5: Deep Architectural, Code & UI/UX Critique
 - [x] Phase 6: Clean Code Guard (`clean-code-guard`)
-- [x] Phase 7: Test Guard (`test-guard`) — No changed test files; test-guard reviewed the diff and found no test-code surface to audit.
-- [x] Phase 8: Final Verification & Summary Report
+- [x] Phase 7: Test Guard (`test-guard`)
+- [ ] Phase 8: Final Verification & Summary Report
 
-## Final Build Verification
-- Backend: `dotnet build` → 0 warnings, 0 errors ✅
-- Frontend: `npm run lint` → 0 warnings, 0 errors ✅
+---
+* **Test Guard Note**: No changed test files; test-guard reviewed the diff and found no test-code surface to audit.

@@ -176,7 +176,7 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
                   <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
                   إنشاء امتحان مدمج
                 </h3>
-                <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} />
+                <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} forceTargetType="Lesson" />
               </div>
             </>
           )}

@@ -13,13 +13,15 @@ interface UnifiedAssessmentBuilderProps {
   lessonId: string;
   videos?: { id: string; title: string }[];
   onSuccess?: () => void;
+  forceTargetType?: 'Lesson' | 'Video';
 }
 
 export function UnifiedAssessmentBuilder({ 
   type, 
   lessonId, 
   videos = [], 
-  onSuccess 
+  onSuccess,
+  forceTargetType
 }: UnifiedAssessmentBuilderProps) {
   const isExam = type === 'exam';
 
@@ -29,7 +31,7 @@ export function UnifiedAssessmentBuilder({
   const [passingScore, setPassingScore] = useState(50);
   const [durationMinutes, setDurationMinutes] = useState<number | undefined>();
   const [displayQuestionCount, setDisplayQuestionCount] = useState<number | undefined>();
-  const [targetType, setTargetType] = useState<'Lesson' | 'Video'>('Lesson');
+  const [targetType, setTargetType] = useState<'Lesson' | 'Video'>(forceTargetType || 'Lesson');
   const [targetVideoId, setTargetVideoId] = useState(videos.length > 0 ? videos[0].id : '');
   
   // New Toggles
@@ -251,40 +253,44 @@ export function UnifiedAssessmentBuilder({
             {/* Target Scope for Exams */}
             {isExam && (
               <div className="pt-4 border-t border-[var(--admin-border)] block w-full">
-                <label className="text-sm font-bold text-[var(--admin-text)] mb-4 block">ارتباط الامتحان (الهدف)</label>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setTargetType('Lesson')}
-                    className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
-                      targetType === 'Lesson'
-                        ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
-                        : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
-                    }`}
-                  >
-                    <BookOpen className="w-5 h-5 opacity-80" />
-                    <div className="text-right">
-                      <span className="block font-bold">اختبار الحصة ككل</span>
-                      <span className="text-xs opacity-80">امتحان عام شامل نهاية الحصة</span>
+                {!forceTargetType && (
+                  <>
+                    <label className="text-sm font-bold text-[var(--admin-text)] mb-4 block">ارتباط الامتحان (الهدف)</label>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setTargetType('Lesson')}
+                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
+                          targetType === 'Lesson'
+                            ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
+                            : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
+                        }`}
+                      >
+                        <BookOpen className="w-5 h-5 opacity-80" />
+                        <div className="text-right">
+                          <span className="block font-bold">اختبار الحصة ككل</span>
+                          <span className="text-xs opacity-80">امتحان عام شامل نهاية الحصة</span>
+                        </div>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setTargetType('Video')}
+                        className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
+                          targetType === 'Video'
+                            ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
+                            : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
+                        }`}
+                      >
+                        <Video className="w-5 h-5 opacity-80" />
+                        <div className="text-right">
+                          <span className="block font-bold">اختبار لفيديو (Pop Quiz)</span>
+                          <span className="text-xs opacity-80">يظهر بعد انتهاء الطالب من الفيديو</span>
+                        </div>
+                      </button>
                     </div>
-                  </button>
-                  
-                  <button
-                    type="button"
-                    onClick={() => setTargetType('Video')}
-                    className={`flex-1 flex items-center justify-start gap-4 p-4 rounded-xl border transition-all ${
-                      targetType === 'Video'
-                        ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]'
-                        : 'border-[var(--admin-border)] bg-[var(--admin-background)] text-[var(--admin-muted)] hover:border-[var(--admin-primary)]/50'
-                    }`}
-                  >
-                    <Video className="w-5 h-5 opacity-80" />
-                    <div className="text-right">
-                      <span className="block font-bold">اختبار لفيديو (Pop Quiz)</span>
-                      <span className="text-xs opacity-80">يظهر بعد انتهاء الطالب من الفيديو</span>
-                    </div>
-                  </button>
-                </div>
+                  </>
+                )}
 
                 {targetType === 'Video' && (
                   <div className="mt-4 animate-in slide-in-from-top-2">
@@ -334,7 +340,13 @@ export function UnifiedAssessmentBuilder({
                 className="w-full sm:w-auto px-10 shadow-lg shadow-blue-500/20"
               >
                 <Save className="w-5 h-5 ml-2" />
-                {saving ? 'يتم الحفظ...' : isExam ? 'إنشاء الامتحان الأساسي' : 'إنشاء الواجب الأساسي'}
+                {saving 
+                  ? 'يتم الحفظ...' 
+                  : isExam 
+                    ? targetType === 'Video' 
+                      ? 'إنشاء امتحان الفيديو (Pop Quiz)' 
+                      : 'إنشاء امتحان الحصة ككل' 
+                    : 'إنشاء الواجب الأساسي'}
               </NeumorphButton>
             </div>
           </div>

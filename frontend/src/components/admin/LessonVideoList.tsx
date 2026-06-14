@@ -401,10 +401,10 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
                       ترتيب: {video.order}
                     </span>
-                    {video.examId && (
-                      <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    {(video.examId || (video.exams && video.exams.length > 0)) && (
+                      <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold">
                         <BookCheck className="h-3 w-3" />
-                        امتحان مرفق
+                        امتحان مرفق {video.exams && video.exams.length > 1 ? `(${video.exams.length})` : ''}
                       </span>
                     )}
                   </div>
