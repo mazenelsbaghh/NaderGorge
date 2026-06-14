@@ -48,6 +48,7 @@ export * from './ContentHierarchyPanel';
 export * from './ContentImageUpload';
 export * from './EntityOverviewDashboard';
 export * from './AttachedExamViewer';
+export * from './AttachedHomeworkViewer';
 export * from './EmployeeProfileDrawer';
 export * from './ClockInOutWidget';
 export * from './AttendanceLogTable';

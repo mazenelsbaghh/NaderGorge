@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video } from 'lucide-react';
-import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, LessonHomeworkList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer } from '@/components/admin';
+import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
@@ -208,15 +208,14 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
 
       {activeTab === 'homework' && (
         <div className="space-y-6">
-          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
-            <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة واجب جديد</h3>
-            <UnifiedAssessmentBuilder type="homework" lessonId={lesson.lessonId} onSuccess={loadData} />
-          </div>
-          
-          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
-            <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الواجبات المرفقة ({lesson.homework?.length || 0})</h3>
-            <LessonHomeworkList homework={lesson.homework || []} />
-          </div>
+          {lesson.homework && lesson.homework.length > 0 ? (
+            <AttachedHomeworkViewer homeworkId={lesson.homework[0].id} />
+          ) : (
+            <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+              <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة واجب جديد</h3>
+              <UnifiedAssessmentBuilder type="homework" lessonId={lesson.lessonId} onSuccess={loadData} />
+            </div>
+          )}
         </div>
       )}
 

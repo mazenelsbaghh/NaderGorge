@@ -700,7 +700,20 @@ public record AttachHomeworkCommand(
     List<AttachHomeworkQuestionDto> Questions,
     Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
-public record AttachHomeworkQuestionDto(string Text, int Order, int MaxPoints);
+public record AttachHomeworkQuestionDto(
+    string Text, 
+    int Order, 
+    int MaxPoints,
+    string QuestionType,
+    string[]? PossibleAnswers = null,
+    string? CorrectAnswerKey = null,
+    string? AudioUrl = null,
+    string? WrittenCorrection = null,
+    string? HintText = null,
+    string? BaseText = null,
+    int? MistakeStartIndex = null,
+    int? MistakeEndIndex = null
+);
 
 public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkCommand, ApiResponse<Guid>>
 {
@@ -759,12 +772,28 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
 
         foreach (var q in request.Questions)
         {
+            var qType = q.QuestionType switch
+            {
+                "Essay" => NaderGorge.Domain.Entities.Homework.QuestionType.Essay,
+                "FindTheMistake" => NaderGorge.Domain.Entities.Homework.QuestionType.FindTheMistake,
+                _ => NaderGorge.Domain.Entities.Homework.QuestionType.MCQ
+            };
+
             hw.Questions.Add(new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
             {
                 HomeworkId = hw.Id,
                 BodyText = q.Text,
                 Order = q.Order,
-                PointsActive = q.MaxPoints
+                PointsActive = q.MaxPoints,
+                QuestionType = qType,
+                PossibleAnswers = q.PossibleAnswers,
+                CorrectAnswerKey = q.CorrectAnswerKey,
+                AudioUrl = q.AudioUrl,
+                WrittenCorrection = q.WrittenCorrection,
+                HintText = q.HintText,
+                BaseText = q.BaseText,
+                MistakeStartIndex = q.MistakeStartIndex,
+                MistakeEndIndex = q.MistakeEndIndex
             });
         }
 

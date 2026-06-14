@@ -13,6 +13,7 @@ import { LessonCarousel } from "@/app/student/packages/[packageId]/lessons/[less
 import { LessonCommentsSection } from "@/components/content/LessonCommentsSection";
 import { shuffleArray } from "@/lib/utils";
 import { AnimatedStepper } from "@/components/ui/animated-stepper";
+import { FindTheMistakeInteract } from "@/components/exams/FindTheMistakeInteract";
 
 export function LessonViewer({
   lesson,
@@ -315,7 +316,7 @@ export function LessonViewer({
                         </span> 
                         <span className="pt-2 text-xl font-bold">{q.text}</span>
                       </h4>
-                      {qType === 'Essay' ? (
+                      {qType === 'Essay' && (
                         <textarea 
                           className="w-full rounded-[24px] border border-[var(--admin-border)] p-6 min-h-[180px] bg-[var(--admin-card)] text-[var(--admin-text)] focus:border-[var(--admin-primary)] focus:ring-4 focus:ring-[var(--admin-primary)]/10 transition-all outline-none resize-y text-lg shadow-inner"
                           placeholder="اكتب إجابتك هنا بوضوح..."
@@ -324,10 +325,49 @@ export function LessonViewer({
                           onChange={e => setHomeworkAnswers(prev => ({...prev, [q.id]: e.target.value}))}
                           aria-labelledby={questionLabelId}
                         />
-                      ) : (
-                        <div className="text-sm text-[var(--admin-muted)] font-medium bg-[var(--admin-card)] p-4 rounded-[16px] border border-[var(--admin-border)]/50 text-center">
-                          نوع السؤال هذا غير مدعوم حالياً في هذه الواجهة.
+                      )}
+                      {qType === 'MCQ' && (
+                        <div className="space-y-3">
+                          {q.possibleAnswers?.map((opt, optIdx) => {
+                            const isSelected = homeworkAnswers[q.id] === opt;
+                            return (
+                              <label
+                                key={optIdx}
+                                className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition border ${
+                                  isSelected
+                                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 shadow-[0_0_0_1px_var(--admin-primary)]'
+                                    : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-card-strong)]'
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`q-${q.id}`}
+                                  value={opt}
+                                  checked={isSelected}
+                                  onChange={() => setHomeworkAnswers(prev => ({ ...prev, [q.id]: opt }))}
+                                  className="sr-only"
+                                />
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+                                  isSelected
+                                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]'
+                                    : 'border-[var(--admin-border)]'
+                                }`}>
+                                  {isSelected && (
+                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                  )}
+                                </span>
+                                <span className="text-sm font-bold text-[var(--admin-text)]">{opt}</span>
+                              </label>
+                            );
+                          })}
                         </div>
+                      )}
+                      {qType === 'FindTheMistake' && q.baseText && (
+                        <FindTheMistakeInteract
+                          baseText={q.baseText}
+                          selectedText={homeworkAnswers[q.id] || ''}
+                          onSelect={(txt) => setHomeworkAnswers(prev => ({ ...prev, [q.id]: txt }))}
+                        />
                       )}
                     </div>
                   )

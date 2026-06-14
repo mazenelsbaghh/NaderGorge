@@ -19,8 +19,12 @@ def main():
     migration_files = [f for f in files if f.endswith(".cs") and not f.endswith(".Designer.cs") and f != "AppDbContextModelSnapshot.cs"]
     migration_files.sort()
     
+    if not migration_files:
+        print("❌ No migration files found.")
+        sys.exit(1)
+
     # We want to apply everything EXCEPT the newest one
-    newest_migration = "20260609044847_UpdateDefaultRolePermissions"
+    newest_migration = migration_files[-1][:-3]
     to_seed = []
     
     for filename in migration_files:
@@ -29,7 +33,7 @@ def main():
             continue
         to_seed.append(name)
         
-    print(f"Applying fake history for {len(to_seed)} migrations...")
+    print(f"Applying fake history for {len(to_seed)} migrations (excluding newest: {newest_migration})...")
     
     sql_create_table = 'CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" ("MigrationId" character varying(150) NOT NULL, "ProductVersion" character varying(32) NOT NULL, CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId"));\n'
     values_list = ", ".join([f"('{m}', '9.0.6')" for m in to_seed])

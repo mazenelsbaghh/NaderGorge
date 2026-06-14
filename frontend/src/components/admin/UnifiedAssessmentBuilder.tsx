@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, BookOpen, Video, Shuffle, Plus, Trash2 } from 'lucide-react';
+import { Save, BookOpen, Video, Shuffle } from 'lucide-react';
 import { adminService } from '@/services/admin-service';
 import { NumberField } from '@/components/ui/number-field';
 import { Checkbox, Label } from '@/components/ui/checkbox';
@@ -38,8 +38,7 @@ export function UnifiedAssessmentBuilder({
   
   const [saving, setSaving] = useState(false);
 
-  // Homework inline questions
-  const [hwQuestions, setHwQuestions] = useState<{ text: string; maxPoints: number }[]>([]);
+
 
   const validate = () => {
     if (!title.trim()) {
@@ -101,13 +100,6 @@ export function UnifiedAssessmentBuilder({
         await adminService.createInlineExam(payload);
         toast.success('تم إنشاء الامتحان وإضافته بنجاح');
       } else {
-        // Homework payload mapping
-        const homeworkQuestions = hwQuestions.map((q, idx) => ({
-          text: q.text,
-          order: idx + 1,
-          maxPoints: q.maxPoints,
-        }));
-
         const payload = {
           title,
           instructions: description,
@@ -115,10 +107,10 @@ export function UnifiedAssessmentBuilder({
           isRandomized,
           totalScore,
           requiredPointsToPass: passingScore,
-          questions: homeworkQuestions,
+          questions: [],
         };
         await adminService.attachHomework(lessonId, payload as any);
-        toast.success('تم إنشاء الواجب الممتد وإضافته بنجاح');
+        toast.success('تم إنشاء الواجب بنجاح');
       }
       
       // Reset
@@ -128,7 +120,6 @@ export function UnifiedAssessmentBuilder({
       setDisplayQuestionCount(undefined);
       setIsMandatory(true);
       setIsRandomized(false);
-      setHwQuestions([]);
       onSuccess?.();
     } catch (error: any) {
       const msg = error.response?.data?.message || `حدث خطأ أثناء حفظ ${isExam ? 'الامتحان' : 'الواجب'}`;
@@ -330,71 +321,7 @@ export function UnifiedAssessmentBuilder({
               </div>
             )}
 
-            {/* Homework Inline Questions Builder */}
-            {!isExam && (
-              <div className="pt-4 border-t border-[var(--admin-border)]">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="text-sm font-bold text-[var(--admin-text)]">أسئلة الواجب ({hwQuestions.length})</label>
-                  <button
-                    type="button"
-                    onClick={() => setHwQuestions(prev => [...prev, { text: '', maxPoints: 10 }])}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-primary)] hover:text-white"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    إضافة سؤال
-                  </button>
-                </div>
 
-                {hwQuestions.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-background)] p-6 text-center">
-                    <p className="text-sm text-[var(--admin-muted)]">لم تتم إضافة أسئلة بعد. اضغط &quot;إضافة سؤال&quot; للبدء.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {hwQuestions.map((q, idx) => (
-                      <div key={idx} className="flex gap-3 items-start rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-4">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-card-strong)] text-xs font-bold text-[var(--admin-text)]">{idx + 1}</span>
-                        <div className="flex-1 space-y-2">
-                          <input
-                            type="text"
-                            value={q.text}
-                            onChange={(e) => {
-                              const updated = [...hwQuestions];
-                              updated[idx] = { ...updated[idx], text: e.target.value };
-                              setHwQuestions(updated);
-                            }}
-                            placeholder="نص السؤال..."
-                            className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all"
-                          />
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-[var(--admin-muted)]">الدرجة:</label>
-                            <input
-                              type="number"
-                              min={1}
-                              value={q.maxPoints}
-                              onChange={(e) => {
-                                const updated = [...hwQuestions];
-                                updated[idx] = { ...updated[idx], maxPoints: Number(e.target.value) || 1 };
-                                setHwQuestions(updated);
-                              }}
-                              className="w-20 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-2 py-1 text-sm text-center text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all"
-                            />
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setHwQuestions(prev => prev.filter((_, i) => i !== idx))}
-                          className="shrink-0 rounded-lg p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                          title="حذف السؤال"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
             
             <div className="mt-8 pt-6 border-t border-[var(--admin-border)] flex justify-end">
               <NeumorphButton

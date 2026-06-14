@@ -536,6 +536,14 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
+    [HttpGet("homework/{homeworkId:guid}/dashboard")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetHomeworkDashboard(Guid homeworkId)
+    {
+        var result = await _mediator.Send(new GetHomeworkDashboardQuery(homeworkId));
+        return result.Success ? Ok(result) : NotFound(result);
+    }
+
     [HttpDelete("exams/{examId:guid}/questions/{questionId:guid}")]
     [HasPermission("exams.manage")]
     public async Task<IActionResult> DeleteExamQuestion(Guid examId, Guid questionId)

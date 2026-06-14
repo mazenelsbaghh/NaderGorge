@@ -93,7 +93,15 @@ export interface HomeworkQuestionDto {
   text: string;
   order: number;
   maxPoints: number;
-  questionType?: string; // Currently missing from backend, default to 'Essay' in component
+  questionType?: string;
+  possibleAnswers?: string[];
+  correctAnswerKey?: string;
+  audioUrl?: string;
+  writtenCorrection?: string;
+  hintText?: string;
+  baseText?: string;
+  mistakeStartIndex?: number | null;
+  mistakeEndIndex?: number | null;
 }
 
 export interface HomeworkDto {

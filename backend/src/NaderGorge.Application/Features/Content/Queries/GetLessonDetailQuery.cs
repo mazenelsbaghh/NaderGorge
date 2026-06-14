@@ -24,7 +24,22 @@ public record LessonDetailDto(
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
-public record LessonHomeworkQuestionDto(Guid Id, string Text, int Order, int MaxPoints);
+
+public record LessonHomeworkQuestionDto(
+    Guid Id, 
+    string Text, 
+    int Order, 
+    int MaxPoints,
+    string QuestionType,
+    string[]? PossibleAnswers = null,
+    string? CorrectAnswerKey = null,
+    string? AudioUrl = null,
+    string? WrittenCorrection = null,
+    string? HintText = null,
+    string? BaseText = null,
+    int? MistakeStartIndex = null,
+    int? MistakeEndIndex = null
+);
 
 public record VideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
 public record VideoDto(
@@ -254,7 +269,21 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             }
 
             var hwQuestions = baseQuery.Select(q =>
-                new LessonHomeworkQuestionDto(q.Id, q.BodyText, q.Order, q.PointsActive)
+                new LessonHomeworkQuestionDto(
+                    q.Id, 
+                    q.BodyText, 
+                    q.Order, 
+                    q.PointsActive,
+                    q.QuestionType.ToString(),
+                    q.PossibleAnswers,
+                    q.CorrectAnswerKey,
+                    q.AudioUrl,
+                    q.WrittenCorrection,
+                    q.HintText,
+                    q.BaseText,
+                    q.MistakeStartIndex,
+                    q.MistakeEndIndex
+                )
             ).ToList();
 
             homeworkDto = new LessonHomeworkDto(hw.Id, hw.Title, hw.Description ?? "", hw.IsMandatory, hw.PassingScoreThreshold, hw.TotalScore, hwQuestions);

@@ -294,6 +294,46 @@ export interface ExamDashboardDto {
   questions: ExamQuestionSummaryDto[];
 }
 
+export interface StudentHomeworkResultSummaryDto {
+  studentId: string;
+  studentName: string;
+  studentPhone: string;
+  startedAt: string;
+  submittedAt?: string;
+  scoreAchieved: number;
+  status: string;
+  evaluation: string;
+}
+
+export interface HomeworkQuestionSummaryDto {
+  homeworkQuestionId: string;
+  text: string;
+  type: 'MCQ' | 'Essay' | 'FindTheMistake';
+  points: number;
+  baseText?: string | null;
+  possibleAnswers?: string[] | null;
+  correctAnswerKey?: string | null;
+  audioUrl?: string | null;
+  writtenCorrection?: string | null;
+  hintText?: string | null;
+  mistakeStartIndex?: number | null;
+  mistakeEndIndex?: number | null;
+}
+
+export interface HomeworkDashboardDto {
+  homeworkId: string;
+  lessonId: string;
+  title: string;
+  description?: string;
+  questionCount: number;
+  totalScore: number;
+  passingScore: number;
+  isMandatory: boolean;
+  isRandomized: boolean;
+  submissions: StudentHomeworkResultSummaryDto[];
+  questions: HomeworkQuestionSummaryDto[];
+}
+
 export interface ModerationLessonCommentDto {
   id: string;
   lessonId: string;
@@ -834,7 +874,30 @@ export const adminService = {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/resources', payload);
     return res.data?.data;
   },
-  attachHomework: async (lessonId: string, payload: { title: string; instructions: string; isMandatory: boolean; totalScore: number; requiredPointsToPass: number; questions: { text: string; order: number; maxPoints: number }[] }) => {
+  attachHomework: async (
+    lessonId: string, 
+    payload: { 
+      title: string; 
+      instructions: string; 
+      isMandatory: boolean; 
+      isRandomized: boolean;
+      totalScore: number; 
+      requiredPointsToPass: number; 
+      questions: { 
+        text: string; 
+        type: string; 
+        points: number; 
+        order: number; 
+        options: { text: string; isCorrect: boolean }[]; 
+        audioUrl?: string; 
+        writtenCorrection?: string; 
+        hintText?: string; 
+        baseText?: string; 
+        mistakeStartIndex?: number | null; 
+        mistakeEndIndex?: number | null;
+      }[] 
+    }
+  ) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>(`/admin/content/lessons/${lessonId}/homework`, payload);
     return res.data?.data;
   },
@@ -853,6 +916,10 @@ export const adminService = {
 
   getExamDashboard: async (examId: string) => {
     const res = await apiClient.get<ApiResponse<ExamDashboardDto>>(`/admin/exams/${examId}/dashboard`);
+    return res.data?.data;
+  },
+  getHomeworkDashboard: async (homeworkId: string) => {
+    const res = await apiClient.get<ApiResponse<HomeworkDashboardDto>>(`/admin/homework/${homeworkId}/dashboard`);
     return res.data?.data;
   },
 
