@@ -78,19 +78,29 @@ apiClient.interceptors.response.use(
     }
 
     const status = error.response?.status;
-    const errorMsg = error.response?.data?.message || error.message || 'An error occurred';
+    let errorMsg = error.response?.data?.message || error.message || 'An error occurred';
+    const errors = error.response?.data?.errors || [];
+
+    // Localize common English error messages/keys to Arabic
+    if (errors.includes('REQUEST_LIMIT_REACHED') || errorMsg === 'Extra watch request limit reached.') {
+      errorMsg = 'لقد تجاوزت الحد الأقصى لطلبات المشاهدة الإضافية المسموح بها.';
+    } else if (errors.includes('WATCH_LIMIT_REACHED') || errorMsg === 'Watch limit reached for this video') {
+      errorMsg = 'لقد استنفدت الحد الأقصى للمشاهدات المسموح بها لهذا الفيديو.';
+    } else if (errors.includes('REQUEST_EXISTS')) {
+      errorMsg = 'لديك طلب معلق بالفعل لمشاهدة هذا الفيديو.';
+    }
 
     if (status === 429) {
       const now = Date.now();
       if (now - lastRateLimitToastAt > RATE_LIMIT_TOAST_COOLDOWN_MS) {
         lastRateLimitToastAt = now;
-        toast.error(error.response?.data?.message || 'طلبات كثيرة في وقت قصير. انتظر لحظات ثم حاول مرة أخرى.');
+        toast.error(error.response?.data?.message || 'طلبات كثيرة في وقت قصير. انتظر لحظات ثم حاول مرة أخرى.', { id: 'rate-limit' });
       }
       return Promise.reject(error);
     }
 
     if (status !== 401) {
-      toast.error(errorMsg);
+      toast.error(errorMsg, { id: errorMsg });
     }
     return Promise.reject(error);
   }
