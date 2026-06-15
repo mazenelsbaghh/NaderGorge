@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Interfaces;
 
@@ -60,20 +61,88 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         // Remove existing answers to replace them.
         submission.Answers.Clear();
 
+        var questionLookup = homework.Questions.ToDictionary(q => q.Id);
+        decimal rawPointsEarned = 0;
+        decimal rawPointsPossible = 0;
+        bool hasEssayQuestions = false;
+
         foreach (var answerInput in request.Answers)
         {
-            if (homework.Questions.Any(q => q.Id == answerInput.QuestionId))
+            if (!questionLookup.TryGetValue(answerInput.QuestionId, out var question))
+                continue;
+
+            rawPointsPossible += question.PointsActive;
+
+            var answer = new HomeworkAnswer
             {
-                submission.Answers.Add(new HomeworkAnswer
+                QuestionId = answerInput.QuestionId,
+                ProvidedAnswer = answerInput.ProvidedAnswer
+            };
+
+            switch (question.QuestionType)
+            {
+                case QuestionType.MCQ:
                 {
-                    QuestionId = answerInput.QuestionId,
-                    ProvidedAnswer = answerInput.ProvidedAnswer
-                });
+                    // Auto-grade MCQ: compare provided answer with CorrectAnswerKey
+                    var isCorrect = !string.IsNullOrWhiteSpace(question.CorrectAnswerKey) &&
+                        string.Equals(answerInput.ProvidedAnswer?.Trim(), question.CorrectAnswerKey.Trim(), StringComparison.OrdinalIgnoreCase);
+                    answer.ScoreReceived = isCorrect ? question.PointsActive : 0;
+                    if (isCorrect) rawPointsEarned += question.PointsActive;
+                    break;
+                }
+                case QuestionType.FindTheMistake:
+                {
+                    // Auto-grade FindTheMistake: compare selected text with BaseText[MistakeStartIndex..MistakeEndIndex]
+                    string? correctText = null;
+                    if (!string.IsNullOrEmpty(question.BaseText) &&
+                        question.MistakeStartIndex.HasValue &&
+                        question.MistakeEndIndex.HasValue &&
+                        question.MistakeStartIndex.Value >= 0 &&
+                        question.MistakeEndIndex.Value <= question.BaseText.Length &&
+                        question.MistakeStartIndex.Value < question.MistakeEndIndex.Value)
+                    {
+                        correctText = question.BaseText[question.MistakeStartIndex.Value..question.MistakeEndIndex.Value];
+                    }
+
+                    var isCorrect = !string.IsNullOrWhiteSpace(answerInput.ProvidedAnswer) &&
+                        !string.IsNullOrWhiteSpace(correctText) &&
+                        string.Equals(answerInput.ProvidedAnswer.Trim(), correctText.Trim(), StringComparison.Ordinal);
+                    answer.ScoreReceived = isCorrect ? question.PointsActive : 0;
+                    if (isCorrect) rawPointsEarned += question.PointsActive;
+                    break;
+                }
+                case QuestionType.Essay:
+                {
+                    // Essay questions: leave as null (pending manual review)
+                    answer.ScoreReceived = null;
+                    hasEssayQuestions = true;
+                    break;
+                }
             }
+
+            submission.Answers.Add(answer);
         }
 
-        submission.Status = SubmissionStatus.PendingReview;
+        // Calculate overall score using GradingEvaluationService
+        var scaledScore = GradingEvaluationService.CalculateScaledScore(rawPointsEarned, rawPointsPossible, homework.TotalScore);
+        submission.OverallScore = scaledScore;
+        submission.Evaluation = hasEssayQuestions
+            ? "قيد التصحيح"
+            : GradingEvaluationService.DetermineEvaluation(scaledScore, homework.PassingScoreThreshold ?? 0, homework.TotalScore);
+
         submission.SubmittedAt = DateTime.UtcNow;
+
+        if (hasEssayQuestions)
+        {
+            // Has essays → status = PendingReview (needs manual/AI grading)
+            submission.Status = SubmissionStatus.PendingReview;
+        }
+        else
+        {
+            // All questions are auto-gradable → status = Graded
+            submission.Status = SubmissionStatus.Graded;
+            submission.GradedAt = DateTime.UtcNow;
+        }
 
         var outboxEvent = new NaderGorge.Domain.Entities.OutboxEvent
         {
@@ -110,9 +179,6 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             }
             throw;
         }
-
-        // At this point, Domain Events or background job enqueuing to BullMQ should ideally be triggered
-        // for AI auto-grading (Task T019 for AI pipeline). For now, it stays PendingReview.
 
         await _publisher.Publish(new NaderGorge.Application.Features.Gamification.Commands.AcademicTaskCompletedEvent(request.StudentId, NaderGorge.Domain.Entities.Gamification.GamificationEventType.HomeworkSubmittedOnTime, 20), cancellationToken);
 

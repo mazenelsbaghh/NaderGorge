@@ -1,0 +1,218 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7]:
+      - img [ref=e8]
+    - generic [ref=e11]:
+      - button "Open issues overlay" [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: "3"
+          - generic [ref=e15]: "4"
+        - generic [ref=e16]:
+          - text: Issue
+          - generic [ref=e17]: s
+      - button "Collapse issues badge" [ref=e18]:
+        - img [ref=e19]
+  - main [ref=e22]:
+    - generic [ref=e23]:
+      - navigation "القائمة الرئيسية" [ref=e24]:
+        - generic [ref=e25]:
+          - img [ref=e28]
+          - navigation [ref=e30]:
+            - link "الرئيسية" [ref=e31] [cursor=pointer]:
+              - /url: /admin
+              - img [ref=e32]
+            - button "شؤون الأعضاء" [ref=e36]:
+              - img [ref=e38]
+            - generic [ref=e43]:
+              - button "التعليم والمحتوى" [ref=e44]:
+                - img [ref=e46]
+              - generic [ref=e48]:
+                - link "المحتوى" [ref=e49] [cursor=pointer]:
+                  - /url: /admin/content
+                  - img [ref=e50]
+                - link "المواد الدراسية" [ref=e52] [cursor=pointer]:
+                  - /url: /admin/subjects
+                  - img [ref=e53]
+                - link "الأسئلة" [ref=e55] [cursor=pointer]:
+                  - /url: /admin/questions
+                  - img [ref=e56]
+                - link "النماذج" [ref=e58] [cursor=pointer]:
+                  - /url: /admin/forms
+                  - img [ref=e59]
+            - button "العمليات والتحكم" [ref=e63]:
+              - img [ref=e65]
+            - button "الإدارة والمالية" [ref=e68]:
+              - img [ref=e70]
+            - button "الاتصال والتواصل" [ref=e74]:
+              - img [ref=e76]
+            - button "التقارير والمراقبة" [ref=e81]:
+              - img [ref=e83]
+        - generic [ref=e85]:
+          - button "التحويل إلى الوضع الداكن" [ref=e87]:
+            - img [ref=e88]
+            - generic [ref=e90]: Toggle theme
+          - link "الإعدادات" [ref=e91] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e92]
+          - button "تسجيل الخروج" [ref=e95]:
+            - img [ref=e96]
+      - main [ref=e99]:
+        - generic [ref=e100]:
+          - generic [ref=e101]:
+            - navigation "مسار التنقل" [ref=e102]:
+              - list [ref=e103]:
+                - listitem [ref=e104]:
+                  - img [ref=e105]
+                - listitem [ref=e108]:
+                  - img [ref=e109]
+                - listitem [ref=e111]:
+                  - link "الرئيسية" [ref=e112] [cursor=pointer]:
+                    - /url: /admin
+                - listitem [ref=e113]:
+                  - img [ref=e114]
+                - listitem [ref=e116]:
+                  - link "المحتوى" [ref=e117] [cursor=pointer]:
+                    - /url: /admin/content
+                - listitem [ref=e118]:
+                  - img [ref=e119]
+                - listitem [ref=e121]: الكورسات
+            - generic [ref=e123]:
+              - paragraph [ref=e124]: إدارة المحتوى ▸ الباقات
+              - heading "E2E Student Package" [level=1] [ref=e125]
+              - paragraph [ref=e126]: Test
+          - button "الباقات" [ref=e127] [cursor=pointer]:
+            - generic [ref=e128]:
+              - img [ref=e129]
+              - text: الباقات
+        - generic [ref=e132]:
+          - generic [ref=e134]:
+            - img [ref=e135]
+            - generic [ref=e139]: لا توجد صورة
+          - generic [ref=e140]:
+            - generic [ref=e141]:
+              - heading "صورة الباقة" [level=3] [ref=e142]
+              - paragraph [ref=e143]: يتم التحويل تلقائيًا إلى WebP باسم عشوائي. الحد الأقصى 10 ميجابايت.
+            - button "رفع صورة" [ref=e144]:
+              - img [ref=e145]
+              - text: رفع صورة
+        - generic [ref=e148]:
+          - button "نشطة ظاهرة للطلاب — اضغط للإخفاء" [ref=e149] [cursor=pointer]:
+            - generic [ref=e150]:
+              - img [ref=e151]
+              - generic [ref=e154]: نشطة
+            - paragraph [ref=e155]: ظاهرة للطلاب — اضغط للإخفاء
+          - generic [ref=e156]:
+            - generic:
+              - img
+            - generic [ref=e157]:
+              - generic [ref=e158]:
+                - img [ref=e160]
+                - generic [ref=e162]: عدد الأترام
+              - generic [ref=e164]: "1"
+          - generic [ref=e166]:
+            - generic [ref=e167]:
+              - generic [ref=e168]: السعر
+              - img [ref=e170]
+            - generic [ref=e174]: 100 ج
+          - generic [ref=e175]:
+            - generic:
+              - img
+            - generic [ref=e176]:
+              - generic [ref=e177]:
+                - img [ref=e179]
+                - generic [ref=e182]: صفحة الأكواد
+              - generic [ref=e184]: افتراضية
+        - generic [ref=e186]:
+          - button "نظرة عامة" [ref=e187]:
+            - img [ref=e188]
+            - text: نظرة عامة
+          - button "الأترام" [ref=e190]:
+            - img [ref=e191]
+            - text: الأترام
+          - button "صفحة الأكواد" [active] [ref=e193]:
+            - img [ref=e194]
+            - text: صفحة الأكواد
+        - generic [ref=e197]:
+          - heading "صفحة الأكواد" [level=3] [ref=e198]
+          - paragraph [ref=e199]: عدّل الرسائل الظاهرة للطلاب عند فتح صفحة تفعيل كود هذه الباقة.
+          - generic [ref=e200]:
+            - generic [ref=e202]:
+              - generic [ref=e203]:
+                - paragraph [ref=e204]: Code Page Profile
+                - heading "تخصيص صفحة الأكواد لـ E2E Student Package" [level=4] [ref=e205]
+                - paragraph [ref=e206]: عدّل الرسائل الأساسية التي يراها الطالب عند فتح صفحة تفعيل كود هذه الباقة. النشر فقط هو الذي يظهر للطلاب، أما المسودة فتظل داخل لوحة الإدارة.
+              - generic [ref=e207]: "الحالة الحالية: افتراضي"
+            - generic [ref=e208]:
+              - generic [ref=e209]:
+                - generic [ref=e210]:
+                  - generic [ref=e211]:
+                    - generic [ref=e212]: حالة البروفايل
+                    - combobox "حالة البروفايل" [ref=e213] [cursor=pointer]:
+                      - generic [ref=e214]: Fallback
+                      - img [ref=e215]
+                  - paragraph [ref=e217]: عند اختيار "منشور" يجب أن تكون الحقول الأساسية مكتملة، وإلا سيرفض الحفظ.
+                - generic [ref=e219]:
+                  - generic [ref=e220]: لون التمييز
+                  - combobox "لون التمييز" [ref=e221] [cursor=pointer]:
+                    - generic [ref=e222]: افتراضي أكاديمي
+                    - img [ref=e223]
+                - generic [ref=e225]:
+                  - paragraph [ref=e226]: الوضع الافتراضي
+                  - paragraph [ref=e227]: إذا أردت حذف التخصيصات الحالية والرجوع للنسخة الافتراضية العامة، استخدم زر الإعادة بالأسفل.
+              - generic [ref=e228]:
+                - generic [ref=e229]:
+                  - generic [ref=e230]:
+                    - img [ref=e231]
+                    - generic [ref=e234]: القسم الافتتاحي
+                  - generic [ref=e235]:
+                    - generic [ref=e236]:
+                      - text: الوسم الصغير
+                      - textbox "الوسم الصغير" [ref=e237]: تفعيل الوصول
+                    - generic [ref=e238]:
+                      - text: العنوان الرئيسي
+                      - textbox "العنوان الرئيسي" [ref=e239]: فعّل E2E Student Package
+                    - generic [ref=e240]:
+                      - text: الوصف الرئيسي
+                      - textbox "الوصف الرئيسي" [ref=e241]: Test ستجد هنا كل ما تحتاجه لتفعيل الوصول بشكل واضح وسريع.
+                - generic [ref=e242]:
+                  - generic [ref=e244]: رسالة ما بعد التفعيل
+                  - generic [ref=e245]:
+                    - generic [ref=e246]:
+                      - text: عنوان العرض
+                      - textbox "عنوان العرض" [ref=e247]: ماذا ستحصل بعد التفعيل؟
+                    - generic [ref=e248]:
+                      - text: وصف العرض
+                      - textbox "وصف العرض" [ref=e249]: بمجرد نجاح التفعيل ستتم إضافة E2E Student Package إلى حسابك مع كل محتواها وسعرها الحالي 100 جنيها.
+                - generic [ref=e250]:
+                  - generic [ref=e252]: قسم إدخال الكود
+                  - generic [ref=e253]:
+                    - generic [ref=e254]:
+                      - text: عنوان التفعيل
+                      - textbox "عنوان التفعيل" [ref=e255]: أدخل كود التفعيل
+                    - generic [ref=e256]:
+                      - text: وصف التفعيل
+                      - textbox "وصف التفعيل" [ref=e257]: اكتب الكود كما وصلك وسيتم التحقق منه وربط الوصول بحسابك الحالي مباشرة.
+                - generic [ref=e258]:
+                  - generic [ref=e260]: قسم المساعدة
+                  - generic [ref=e261]:
+                    - generic [ref=e262]:
+                      - text: عنوان المساعدة
+                      - textbox "عنوان المساعدة" [ref=e263]: تحتاج مساعدة؟
+                    - generic [ref=e264]:
+                      - text: وصف المساعدة
+                      - textbox "وصف المساعدة" [ref=e265]: إذا واجهت مشكلة في الكود أو ظهرت بيانات ناقصة، أكمل المطلوب ثم أعد المحاولة أو تواصل مع الإدارة.
+            - generic [ref=e266]:
+              - button "إعادة للوضع الافتراضي" [ref=e267] [cursor=pointer]:
+                - generic [ref=e268]:
+                  - img [ref=e269]
+                  - text: إعادة للوضع الافتراضي
+              - button "حفظ البروفايل" [ref=e272] [cursor=pointer]:
+                - generic [ref=e273]:
+                  - img [ref=e274]
+                  - text: حفظ البروفايل
+        - paragraph [ref=e280]: منصة مسار
+  - alert [ref=e281]
+```

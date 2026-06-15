@@ -1,0 +1,59 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7]:
+      - img [ref=e8]
+    - generic [ref=e11]:
+      - button "Open issues overlay" [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: "3"
+          - generic [ref=e15]: "4"
+        - generic [ref=e16]:
+          - text: Issue
+          - generic [ref=e17]: s
+      - button "Collapse issues badge" [ref=e18]:
+        - img [ref=e19]
+  - main [ref=e22]:
+    - generic [ref=e23]:
+      - navigation "القائمة الرئيسية" [ref=e24]:
+        - generic [ref=e25]:
+          - img [ref=e28]
+          - navigation [ref=e30]:
+            - link "الرئيسية" [ref=e31] [cursor=pointer]:
+              - /url: /admin
+              - img [ref=e32]
+            - link [ref=e35] [cursor=pointer]:
+              - /url: /assistant/dashboard
+              - img [ref=e36]
+            - button "الاتصال والتواصل" [ref=e39]:
+              - img [ref=e41]
+        - generic [ref=e45]:
+          - button "التحويل إلى الوضع الداكن" [ref=e47]:
+            - img [ref=e48]
+            - generic [ref=e50]: Toggle theme
+          - button "تسجيل الخروج" [ref=e51]:
+            - img [ref=e52]
+      - main [ref=e55]:
+        - generic [ref=e59]:
+          - paragraph [ref=e60]: لوحة الإدارة
+          - heading "الرئيسية" [level=1] [ref=e61]
+          - paragraph [ref=e62]: الوصول المباشر إلى الأدوات المتاحة لك حسب صلاحيات حسابك.
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - paragraph [ref=e65]: الأقسام المتاحة
+            - paragraph [ref=e66]: "0"
+          - img [ref=e68]
+        - generic [ref=e76]:
+          - img [ref=e78]
+          - generic [ref=e81]:
+            - heading "ملف الموظف غير مهيأ" [level=3] [ref=e82]
+            - paragraph [ref=e83]: حسابك الحالي لا يمتلك ملف موظف نشط في النظام. يرجى التواصل مع المسؤول أو تهيئة ملف الموظف الخاص بك لتتمكن من تسجيل الحضور والانصراف.
+        - region "أدوات الإدارة" [ref=e84]:
+          - generic [ref=e85]:
+            - heading "أدوات الإدارة" [level=2] [ref=e86]
+            - paragraph [ref=e87]: اختر القسم المطلوب لبدء العمل.
+        - paragraph [ref=e90]: منصة مسار
+  - alert [ref=e91]
+```

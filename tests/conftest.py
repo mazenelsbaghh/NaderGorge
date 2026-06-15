@@ -71,6 +71,20 @@ class NaderGorgeClient:
                 self.token = data.get("accessToken")
         return res
 
+    def login_as(self, phone, password="password", app_surface=None):
+        res = self.login(phone, password, app_surface)
+        assert res.status_code == 200, f"Login failed for {phone}: {res.text}"
+        return res.json().get("data", {}).get("user", {})
+
+
+def grant_package_to_student(package_id, user_id=None):
+    res = requests.post(f"{BASE_URL}/api/e2e/grant-package", json={
+        "packageId": package_id,
+        "userId": user_id,
+    }, headers=e2e_headers())
+    assert res.status_code == 200, f"Grant package failed: {res.text}"
+    return res.json()
+
 @pytest.fixture(scope="function")
 def clean_db():
     # Reset and seed database in E2e mode

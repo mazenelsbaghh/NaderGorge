@@ -2,6 +2,18 @@ import pytest
 from concurrent.futures import ThreadPoolExecutor
 from tests.conftest import NaderGorgeClient
 
+
+def assert_lesson_homework_and_exam_are_available(student, lesson_id, exam_id):
+    lesson_res = student.get(f"/api/content/lessons/{lesson_id}")
+    assert lesson_res.status_code == 200
+    homework = lesson_res.json().get("data", {}).get("homework")
+    assert homework is not None
+    assert len(homework.get("questions", [])) > 0
+
+    exam_res = student.post(f"/api/exams/{exam_id}/start")
+    assert exam_res.status_code == 200
+    assert exam_res.json().get("data", {}).get("attemptId") is not None
+
 def test_unpurchased_access_blocked(mock_package):
     package_id = mock_package.get("packageId")
     lesson_id = mock_package.get("lessonId")
@@ -49,14 +61,7 @@ def test_package_code_purchase_flow(mock_package):
     act_res = student.post("/api/codes/activate", json={"code": code})
     assert act_res.status_code == 200
 
-    # Student 1 can now access the lesson
-    lesson_res = student.get(f"/api/content/lessons/{lesson_id}")
-    assert lesson_res.status_code == 200
-
-    # Student 1 can start the exam
-    exam_res = student.post(f"/api/exams/{exam_id}/start")
-    assert exam_res.status_code == 200
-    assert exam_res.json().get("data", {}).get("attemptId") is not None
+    assert_lesson_homework_and_exam_are_available(student, lesson_id, exam_id)
 
 def test_balance_purchase_flow(mock_package):
     package_id = mock_package.get("packageId")
@@ -107,13 +112,7 @@ def test_balance_purchase_flow(mock_package):
     assert bal_res3.status_code == 200
     assert bal_res3.json().get("data", {}).get("currentBalance") == 50.0
 
-    # Student 1 can now access the lesson
-    lesson_res = student.get(f"/api/content/lessons/{lesson_id}")
-    assert lesson_res.status_code == 200
-
-    # Student 1 can start the exam
-    exam_res = student.post(f"/api/exams/{exam_id}/start")
-    assert exam_res.status_code == 200
+    assert_lesson_homework_and_exam_are_available(student, lesson_id, exam_id)
 
 def test_concurrent_package_purchase_cannot_overspend_balance(mock_package):
     package_id = mock_package.get("packageId")

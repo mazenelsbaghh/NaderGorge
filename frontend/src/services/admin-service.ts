@@ -1115,4 +1115,63 @@ export const adminService = {
       return res.data?.data ?? null;
     } catch { return null; }
   },
+
+  // ── Content Subscribers ────────────────────────────────────────────
+  getContentSubscribers: async (
+    contentType: 'package' | 'term' | 'section',
+    id: string,
+    page = 1,
+    pageSize = 20,
+    search = ''
+  ) => {
+    const res = await apiClient.get<ApiResponse<ContentSubscribersPagedResult>>(
+      `/admin/${contentType}s/${id}/subscribers`,
+      { params: { page, pageSize, ...(search ? { search } : {}) } }
+    );
+    return res.data?.data;
+  },
+
+  exportContentSubscribersCsv: async (
+    contentType: 'package' | 'term' | 'section',
+    id: string,
+    contentName: string
+  ) => {
+    const res = await apiClient.get(`/admin/${contentType}s/${id}/subscribers/export`, {
+      responseType: 'blob',
+    });
+    const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const date = new Date().toISOString().split('T')[0];
+    link.href = url;
+    link.download = `subscribers_${contentName}_${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
 };
+
+// ── Content Subscribers Types ────────────────────────────────────────
+export interface ContentSubscriberDto {
+  studentId: string;
+  fullName: string;
+  phone: string;
+  governorate: string;
+  district?: string;
+  educationStage: string;
+  gradeLevel: string;
+  schoolName?: string;
+  parentPhone?: string;
+  motherPhone?: string;
+  enrolledAt: string;
+  isActive: boolean;
+  avatarSlug?: string;
+}
+
+export interface ContentSubscribersPagedResult {
+  items: ContentSubscriberDto[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}

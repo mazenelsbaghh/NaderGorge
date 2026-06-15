@@ -7,7 +7,8 @@ import {
   AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
-  PackageCodeProfileSummary, ContentImageUpload
+  PackageCodeProfileSummary, ContentImageUpload,
+  ContentSubscribersTab
 } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
@@ -16,11 +17,12 @@ import { contentService, TermDto } from '@/services/content-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
-type ActiveTab = 'overview' | 'terms' | 'codeProfile';
+type ActiveTab = 'overview' | 'terms' | 'subscribers' | 'codeProfile';
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'terms', label: 'الأترام', icon: Calendar },
+  { key: 'subscribers', label: 'الطلاب المشتركين', icon: Users },
   { key: 'codeProfile', label: 'صفحة الأكواد', icon: KeyRound },
 ];
 
@@ -312,6 +314,12 @@ export default function PackageProfilePageClient(props: { params: { id: string }
             <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>
             <PackageDetailsForm pkg={pkg} />
           </div>
+        </div>
+      )}
+
+      {activeTab === 'subscribers' && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <ContentSubscribersTab contentType="package" contentId={params.id} contentName={pkg.name} />
         </div>
       )}
 

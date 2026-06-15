@@ -1,0 +1,173 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e6] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e7]:
+      - img [ref=e8]
+    - generic [ref=e11]:
+      - button "Open issues overlay" [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: "3"
+          - generic [ref=e15]: "4"
+        - generic [ref=e16]:
+          - text: Issue
+          - generic [ref=e17]: s
+      - button "Collapse issues badge" [ref=e18]:
+        - img [ref=e19]
+  - main [ref=e22]:
+    - generic [ref=e23]:
+      - navigation "القائمة الرئيسية" [ref=e24]:
+        - generic [ref=e25]:
+          - img [ref=e28]
+          - navigation [ref=e30]:
+            - link "الرئيسية" [ref=e31] [cursor=pointer]:
+              - /url: /admin
+              - img [ref=e32]
+            - generic [ref=e35]:
+              - button "شؤون الأعضاء" [ref=e36]:
+                - img [ref=e38]
+              - generic [ref=e43]:
+                - link "الطلاب" [ref=e44] [cursor=pointer]:
+                  - /url: /admin/students
+                  - img [ref=e45]
+                - link "المساعدين" [ref=e50] [cursor=pointer]:
+                  - /url: /admin/assistants
+                  - img [ref=e51]
+                - link "المديرين" [ref=e54] [cursor=pointer]:
+                  - /url: /admin/admins
+                  - img [ref=e55]
+                - link "المعلمين" [ref=e67] [cursor=pointer]:
+                  - /url: /admin/teachers
+                  - img [ref=e68]
+            - button "التعليم والمحتوى" [ref=e72]:
+              - img [ref=e74]
+            - button "العمليات والتحكم" [ref=e77]:
+              - img [ref=e79]
+            - button "الإدارة والمالية" [ref=e82]:
+              - img [ref=e84]
+            - button "الاتصال والتواصل" [ref=e88]:
+              - img [ref=e90]
+            - button "التقارير والمراقبة" [ref=e95]:
+              - img [ref=e97]
+        - generic [ref=e99]:
+          - button "التحويل إلى الوضع الداكن" [ref=e101]:
+            - img [ref=e102]
+            - generic [ref=e104]: Toggle theme
+          - link "الإعدادات" [ref=e105] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e106]
+          - button "تسجيل الخروج" [ref=e109]:
+            - img [ref=e110]
+      - main [ref=e113]:
+        - generic [ref=e114]:
+          - generic [ref=e117]:
+            - paragraph [ref=e118]: الطلاب
+            - heading "إدارة الطلاب" [level=1] [ref=e119]
+            - paragraph [ref=e120]: البحث عن الطلاب، فلترة المراحل، تفعيل أو تعليق الحسابات وتصدير البيانات الأكاديمية.
+          - button "إضافة طالب جديد" [ref=e121] [cursor=pointer]:
+            - generic [ref=e122]:
+              - img [ref=e123]
+              - text: إضافة طالب جديد
+        - generic [ref=e126]:
+          - generic [ref=e127]:
+            - generic:
+              - img
+            - generic [ref=e128]:
+              - generic [ref=e129]:
+                - img [ref=e131]
+                - generic [ref=e136]: إجمالي الطلاب
+              - generic [ref=e137]:
+                - generic [ref=e138]: "2"
+                - generic [ref=e139]: إجمالي الطلاب المسجلين بالمنصة
+          - generic [ref=e140]:
+            - generic:
+              - img
+            - generic [ref=e141]:
+              - generic [ref=e142]:
+                - generic [ref=e143]: النشطون
+                - img [ref=e145]
+              - generic [ref=e148]:
+                - generic [ref=e149]: "2"
+                - generic [ref=e150]: طلاب حساباتهم نشطة وموثقة
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - generic [ref=e154]: المعلقون
+              - img [ref=e156]
+            - generic [ref=e158]:
+              - generic [ref=e159]: "0"
+              - generic [ref=e160]: حسابات طلاب معلقة مؤقتاً
+        - generic [ref=e161]:
+          - generic [ref=e162]:
+            - generic [ref=e163]: البحث
+            - textbox "البحث" [ref=e164]:
+              - /placeholder: البحث بكود الطالب، الاسم، أو رقم الهاتف...
+            - img [ref=e165]
+          - generic [ref=e168]:
+            - button "تصفية" [ref=e169]:
+              - img [ref=e170]
+              - text: تصفية
+            - button "تصدير البيانات" [ref=e172]:
+              - img [ref=e173]
+              - text: تصدير البيانات
+        - generic [ref=e177]:
+          - table [ref=e179]:
+            - rowgroup [ref=e180]:
+              - row "الطالب المرحلة والصف كود الطالب الحالة تاريخ التسجيل الإجراءات الإجراء" [ref=e181]:
+                - columnheader "الطالب" [ref=e182]
+                - columnheader "المرحلة والصف" [ref=e183]
+                - columnheader "كود الطالب" [ref=e184]
+                - columnheader "الحالة" [ref=e185]
+                - columnheader "تاريخ التسجيل" [ref=e186]
+                - columnheader "الإجراءات" [ref=e187]
+                - columnheader "الإجراء" [ref=e188]
+            - rowgroup [ref=e189]:
+              - row "ES E2E Student MaxDevices 20000000002 — — نشط منذ 3 ساعة عرض تفاصيل الصف" [ref=e190]:
+                - cell "ES E2E Student MaxDevices 20000000002" [ref=e191]:
+                  - generic [ref=e192]:
+                    - generic [ref=e193]: ES
+                    - generic [ref=e194]:
+                      - generic [ref=e195]: E2E Student MaxDevices
+                      - generic [ref=e196]: "20000000002"
+                - cell "—" [ref=e197]:
+                  - generic [ref=e199]: —
+                - cell "—" [ref=e200]
+                - cell "نشط" [ref=e201]:
+                  - generic [ref=e202]: نشط
+                - cell "منذ 3 ساعة" [ref=e204]
+                - cell [ref=e205]:
+                  - button "تعليق حساب الطالب" [ref=e207] [cursor=pointer]:
+                    - img [ref=e209]
+                - cell "عرض تفاصيل الصف" [ref=e214]:
+                  - button "عرض تفاصيل الصف" [ref=e215]:
+                    - img [ref=e216]
+              - row "ES E2E Student 1 20000000001 — — نشط منذ 3 ساعة عرض تفاصيل الصف" [ref=e220]:
+                - cell "ES E2E Student 1 20000000001" [ref=e221]:
+                  - generic [ref=e222]:
+                    - generic [ref=e223]: ES
+                    - generic [ref=e224]:
+                      - generic [ref=e225]: E2E Student 1
+                      - generic [ref=e226]: "20000000001"
+                - cell "—" [ref=e227]:
+                  - generic [ref=e229]: —
+                - cell "—" [ref=e230]
+                - cell "نشط" [ref=e231]:
+                  - generic [ref=e232]: نشط
+                - cell "منذ 3 ساعة" [ref=e234]
+                - cell [ref=e235]:
+                  - button "تعليق حساب الطالب" [ref=e237] [cursor=pointer]:
+                    - img [ref=e239]
+                - cell "عرض تفاصيل الصف" [ref=e244]:
+                  - button "عرض تفاصيل الصف" [ref=e245]:
+                    - img [ref=e246]
+          - generic [ref=e250]:
+            - generic [ref=e251]: عرض 1-2 من أصل 2 عنصر
+            - generic [ref=e252]:
+              - button "الصفحة السابقة" [disabled] [ref=e253]:
+                - img [ref=e254]
+              - generic "الصفحة 1" [ref=e256]: "1"
+              - button "الصفحة التالية" [disabled] [ref=e257]:
+                - img [ref=e258]
+        - paragraph [ref=e262]: منصة مسار
+  - alert [ref=e263]
+```

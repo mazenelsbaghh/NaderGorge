@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpenText, ChevronRight, Video, Clock3 } from 'lucide-react';
-import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from '@/components/admin';
+import { BookOpenText, ChevronRight, Video, Clock3, Users } from 'lucide-react';
+import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
@@ -11,11 +11,12 @@ import { contentService, LessonSummaryDto } from '@/services/content-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
-type ActiveTab = 'overview' | 'lessons';
+type ActiveTab = 'overview' | 'lessons' | 'subscribers';
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'lessons', label: 'الحصص', icon: BookOpenText },
+  { key: 'subscribers', label: 'الطلاب المشتركين', icon: Users },
 ];
 
 function formatWatchTime(seconds?: number): string {
@@ -184,6 +185,11 @@ export default function SectionProfilePageClient(props: { params: { id: string }
             }}
             onRetry={loadLessons}
           />
+        </div>
+      )}
+      {activeTab === 'subscribers' && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <ContentSubscribersTab contentType="section" contentId={params.id} contentName={section.title} />
         </div>
       )}
     </AdminShellChrome>

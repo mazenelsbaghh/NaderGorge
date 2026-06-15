@@ -768,13 +768,12 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             hw.IsRandomized = request.IsRandomized;
             hw.PassingScoreThreshold = request.RequiredPointsToPass;
             hw.TotalScore = request.TotalScore;
+            hw.UpdatedAt = DateTime.UtcNow;
 
-            // Delete old questions via ExecuteDeleteAsync — bypasses change tracker entirely
-            await _db.HomeworkQuestions
+            var existingQuestions = await _db.HomeworkQuestions
                 .Where(q => q.HomeworkId == hw.Id)
-                .ExecuteDeleteAsync(ct);
-
-            await _db.SaveChangesAsync(ct);
+                .ToListAsync(ct);
+            _db.HomeworkQuestions.RemoveRange(existingQuestions);
         }
 
         // Build new questions as standalone entities (not via navigation property)

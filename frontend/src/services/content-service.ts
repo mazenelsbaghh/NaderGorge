@@ -121,6 +121,8 @@ export interface LessonDetailDto {
   packageId: string;
   examId?: string;
   examPassed?: boolean;
+  homeworkId?: string;
+  homeworkPassed?: boolean;
   videos: VideoDto[];
   resources?: ResourceDto[];
   homework?: HomeworkDto;
@@ -129,6 +131,7 @@ export interface LessonDetailDto {
   blockingExamId?: string;
   blockingHomeworkLessonId?: string;
 }
+
 
 export interface LessonCommentDto {
   id: string;

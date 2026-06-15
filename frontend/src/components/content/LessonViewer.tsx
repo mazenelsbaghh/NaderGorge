@@ -187,7 +187,9 @@ export function LessonViewer({
             <LessonCarousel 
               videos={lesson.videos} 
               activeStep={activeVideoIndex} 
-              onStepChange={setActiveVideoIndex} 
+              onStepChange={setActiveVideoIndex}
+              homeworkId={lesson.homeworkId}
+              homeworkPassed={lesson.homeworkPassed}
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-12 text-center text-[var(--admin-muted)] font-medium">

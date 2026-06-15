@@ -53,3 +53,4 @@ export * from './EmployeeProfileDrawer';
 export * from './ClockInOutWidget';
 export * from './AttendanceLogTable';
 export * from './VacationRequestModal';
+export { default as ContentSubscribersTab } from './ContentSubscribersTab';

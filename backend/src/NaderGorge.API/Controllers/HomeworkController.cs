@@ -34,4 +34,19 @@ public class HomeworkController : ControllerBase
         var result = await _mediator.Send(command);
         return result.Success ? Ok(result) : BadRequest(result);
     }
+
+    [HttpGet("{homeworkId}/start")]
+    public async Task<IActionResult> StartHomework(Guid homeworkId)
+    {
+        var result = await _mediator.Send(new StartHomeworkAttemptQuery(homeworkId, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("{homeworkId}/result")]
+    public async Task<IActionResult> GetHomeworkResult(Guid homeworkId)
+    {
+        var result = await _mediator.Send(new GetHomeworkResultQuery(homeworkId, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
 }
+

@@ -10,7 +10,7 @@ import { WatchStatusBar } from "../../../../../../../components/video/WatchStatu
 import { ChapterList } from "../../../../../../../components/video/ChapterList";
 import { LessonMindmapDisplay } from "../../../../../../../components/video/LessonMindmapDisplay";
 import { useRouter, useParams } from "next/navigation";
-import { Lock, Award } from "lucide-react";
+import { Lock, Award, ClipboardCheck } from "lucide-react";
 
 // --- Icons ---
 function IconCheck({ className, ...props }: React.ComponentProps<"svg">) {
@@ -35,6 +35,8 @@ interface LessonCarouselProps {
     videos: VideoModel[];
     activeStep: number;
     onStepChange: (index: number) => void;
+    homeworkId?: string;
+    homeworkPassed?: boolean;
 }
 
 // --- Subcomponents ---
@@ -169,8 +171,35 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
     );
 }
 
+// --- Homework Button ---
+function HomeworkButton({ homeworkId, homeworkPassed }: { homeworkId: string; homeworkPassed?: boolean }) {
+    const router = useRouter();
+    const params = useParams();
+    const packageId = params?.packageId as string;
+
+    return (
+        <button
+            type="button"
+            onClick={(e) => {
+                e.stopPropagation();
+                router.push(`/student/homework/${homeworkId}?packageId=${packageId}`);
+            }}
+            className={cn(
+                "flex w-full items-center justify-center gap-2 px-4 py-2.5 rounded-full text-xs font-black transition-all hover:scale-[1.02] shadow-sm",
+                homeworkPassed
+                    ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
+                    : "bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25"
+            )}
+            title={homeworkPassed ? "تم اجتياز الواجب" : "حل الواجب"}
+        >
+            <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
+            <span>{homeworkPassed ? "تم اجتياز الواجب ✓" : "حل الواجب"}</span>
+        </button>
+    );
+}
+
 // --- Main Component ---
-export function LessonCarousel({ videos, activeStep, onStepChange }: LessonCarouselProps) {
+export function LessonCarousel({ videos, activeStep, onStepChange, homeworkId, homeworkPassed }: LessonCarouselProps) {
     const [mounted, setMounted] = useState(false);
     const [watchStatus, setWatchStatus] = useState<WatchStatus | null>(null);
     const [mobilePanel, setMobilePanel] = useState<"chapters" | "mindmap">("chapters");
@@ -216,6 +245,13 @@ export function LessonCarousel({ videos, activeStep, onStepChange }: LessonCarou
                     {/* Left Column (Titles & Animated Progress Steps) */}
                     <div className="flex w-full flex-col xl:w-[35%] shrink-0 pt-2 relative z-30">
                         <Steps current={activeStep} onChange={onStepChange} videos={videos} />
+
+                        {/* Homework button (per-lesson) */}
+                        {homeworkId && (
+                            <div className="px-4 md:px-10 mt-3">
+                                <HomeworkButton homeworkId={homeworkId} homeworkPassed={homeworkPassed} />
+                            </div>
+                        )}
 
                         <div className="mt-4 flex flex-col gap-4 px-6 md:px-10 xl:mt-12">
                             <AnimatePresence mode="wait">

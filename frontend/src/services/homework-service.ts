@@ -21,6 +21,67 @@ export interface AnswerSubmissionDto {
     providedAnswer: string;
 }
 
+export interface StartHomeworkAttemptDto {
+    homeworkId: string;
+    submissionId: string;
+    title: string;
+    instructions?: string;
+    totalScore: number;
+    passingScore?: number;
+    alreadyCompleted: boolean;
+    score?: number;
+    evaluation?: string;
+    questions: StartHomeworkQuestionDto[];
+}
+
+export interface StartHomeworkQuestionDto {
+    id: string;
+    order: number;
+    questionType: number; // 0=MCQ, 1=Essay, 2=FindTheMistake
+    text: string;
+    maxPoints: number;
+    possibleAnswers?: string[];
+    audioUrl?: string;
+    hintText?: string;
+    baseText?: string;
+    mistakeStartIndex?: number;
+    mistakeEndIndex?: number;
+}
+
+export interface HomeworkResultDto {
+    homeworkId: string;
+    submissionId: string;
+    title: string;
+    score: number;
+    totalScore: number;
+    passingScore?: number;
+    isPassed: boolean;
+    evaluation?: string;
+    submittedAt?: string;
+    gradedAt?: string;
+    status: string;
+    totalQuestions: number;
+    correctAnswers: number;
+    wrongAnswers: number;
+    ungradedAnswers: number;
+    questionReviews: HomeworkQuestionReviewDto[];
+}
+
+export interface HomeworkQuestionReviewDto {
+    questionId: string;
+    order: number;
+    questionType: number;
+    text: string;
+    providedAnswer?: string;
+    correctAnswer?: string;
+    maxPoints: number;
+    scoreReceived?: number;
+    isCorrect?: boolean;
+    writtenCorrection?: string;
+    audioUrl?: string;
+    possibleAnswers?: string[];
+}
+
 export const homeworkService = {
     getPending: async () => {
         return apiClient.get<{ data: HomeworkDto[] }>('/homework/pending');
@@ -28,5 +89,11 @@ export const homeworkService = {
 
     submitHomework: async (homeworkId: string, answers: AnswerSubmissionDto[]) => {
         return apiClient.post(`/homework/${homeworkId}/submit`, answers);
-    }
+    },
+
+    startHomework: (homeworkId: string) =>
+        apiClient.get<{ data: StartHomeworkAttemptDto }>(`/homework/${homeworkId}/start`),
+
+    getHomeworkResult: (homeworkId: string) =>
+        apiClient.get<{ data: HomeworkResultDto }>(`/homework/${homeworkId}/result`),
 };

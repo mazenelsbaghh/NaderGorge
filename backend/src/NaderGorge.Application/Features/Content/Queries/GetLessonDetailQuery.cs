@@ -15,6 +15,8 @@ public record LessonDetailDto(
     Guid PackageId,
     Guid? ExamId,
     bool ExamPassed,
+    Guid? HomeworkId,
+    bool HomeworkPassed,
     LessonHomeworkDto? Homework,
     List<VideoDto> Videos,
     bool IsLocked = false,
@@ -32,13 +34,12 @@ public record LessonHomeworkQuestionDto(
     int MaxPoints,
     string QuestionType,
     string[]? PossibleAnswers = null,
-    string? CorrectAnswerKey = null,
     string? AudioUrl = null,
-    string? WrittenCorrection = null,
     string? HintText = null,
     string? BaseText = null,
     int? MistakeStartIndex = null,
     int? MistakeEndIndex = null
+    // NO CorrectAnswerKey! NO WrittenCorrection! (security - prevents cheating)
 );
 
 public record VideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
@@ -134,7 +135,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             {
                 var submission = await _db.HomeworkSubmissions
                     .Where(s => s.StudentId == request.UserId && s.HomeworkId == prevHomework.Id)
-                    .OrderByDescending(s => s.StartedAt)
+                    .OrderByDescending(s => s.SubmittedAt)
                     .FirstOrDefaultAsync(ct);
 
                 if (submission == null)
@@ -143,15 +144,16 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     lockedReason = $"يجب إتمام واجب '{prevHomework.Title}' التابع للحصة '{previousLesson.Title}' أولاً.";
                     blockingHomeworkLessonId = previousLesson.Id;
                 }
-                else if (submission.Status != NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded &&
-                         submission.OverallScore < (prevHomework.PassingScoreThreshold ?? 0))
+                else if (submission.Status != NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
                 {
+                    // Submission exists but not yet graded (InProgress or PendingReview)
                     isLocked = true;
                     lockedReason = $"يجب اجتياز واجب '{prevHomework.Title}' التابع للحصة '{previousLesson.Title}' بنجاح.";
                     blockingHomeworkLessonId = previousLesson.Id;
                 }
                 else if (submission.OverallScore < (prevHomework.PassingScoreThreshold ?? 0))
                 {
+                    // Graded but did not reach passing score
                     isLocked = true;
                     lockedReason = $"يجب تحقيق درجة النجاح في واجب '{prevHomework.Title}' التابع للحصة '{previousLesson.Title}'.";
                     blockingHomeworkLessonId = previousLesson.Id;
@@ -287,9 +289,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     q.PointsActive,
                     q.QuestionType.ToString(),
                     q.PossibleAnswers,
-                    q.CorrectAnswerKey,
                     q.AudioUrl,
-                    q.WrittenCorrection,
                     q.HintText,
                     q.BaseText,
                     q.MistakeStartIndex,
@@ -307,6 +307,19 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
         }
 
+        // Check if the lesson's homework has been passed
+        bool homeworkPassed = false;
+        Guid? homeworkId = hw?.Id;
+        if (hw != null)
+        {
+            var hwSubmission = await _db.HomeworkSubmissions
+                .Where(s => s.StudentId == request.UserId && s.HomeworkId == hw.Id && s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
+                .OrderByDescending(s => s.SubmittedAt)
+                .FirstOrDefaultAsync(ct);
+
+            homeworkPassed = hwSubmission != null && hwSubmission.OverallScore >= (hw.PassingScoreThreshold ?? 0);
+        }
+
         var detail = new LessonDetailDto(
             lesson.Id,
             lesson.Title,
@@ -314,6 +327,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             lesson.ContentSection.Term.PackageId,
             lesson.ExamId,
             lessonExamPassed,
+            homeworkId,
+            homeworkPassed,
             homeworkDto,
             videoDtos,
             isLocked,

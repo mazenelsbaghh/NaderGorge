@@ -220,6 +220,46 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetPackageStats(Guid id)
         => Ok(await _mediator.Send(new GetPackageStatsQuery(id)));
 
+    // --- Content Subscribers ---
+    [HttpGet("packages/{id:guid}/subscribers")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetPackageSubscribers(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
+        => Ok(await _mediator.Send(new GetContentSubscribersQuery("package", id, page, pageSize, search)));
+
+    [HttpGet("packages/{id:guid}/subscribers/export")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> ExportPackageSubscribers(Guid id, [FromQuery] string? search = null)
+    {
+        var bytes = await _mediator.Send(new ExportContentSubscribersQuery("package", id, search));
+        return File(bytes, "text/csv", $"subscribers_package_{id:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
+    }
+
+    [HttpGet("terms/{id:guid}/subscribers")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetTermSubscribers(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
+        => Ok(await _mediator.Send(new GetContentSubscribersQuery("term", id, page, pageSize, search)));
+
+    [HttpGet("terms/{id:guid}/subscribers/export")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> ExportTermSubscribers(Guid id, [FromQuery] string? search = null)
+    {
+        var bytes = await _mediator.Send(new ExportContentSubscribersQuery("term", id, search));
+        return File(bytes, "text/csv", $"subscribers_term_{id:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
+    }
+
+    [HttpGet("sections/{id:guid}/subscribers")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetSectionSubscribers(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
+        => Ok(await _mediator.Send(new GetContentSubscribersQuery("section", id, page, pageSize, search)));
+
+    [HttpGet("sections/{id:guid}/subscribers/export")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> ExportSectionSubscribers(Guid id, [FromQuery] string? search = null)
+    {
+        var bytes = await _mediator.Send(new ExportContentSubscribersQuery("section", id, search));
+        return File(bytes, "text/csv", $"subscribers_section_{id:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
+    }
+
     [HttpPut("packages/{id:guid}")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdatePackage(Guid id, [FromBody] UpdatePackageDto dto)

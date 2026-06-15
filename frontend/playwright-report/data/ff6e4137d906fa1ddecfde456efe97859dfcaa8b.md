@@ -1,0 +1,326 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - button "التحويل إلى الوضع الداكن" [ref=e5]:
+      - img [ref=e6]
+      - generic [ref=e8]: Toggle theme
+    - main [ref=e9]:
+      - img "شعار منصة مسار" [ref=e11]
+      - generic [ref=e12]:
+        - heading "افتح حسابك خطوة بخطوة" [level=1] [ref=e13]
+        - paragraph [ref=e14]: اكتب البيانات المطلوبة فقط ليظهر لك المسار الدراسي الصحيح.
+        - button "تعليمات التسجيل" [ref=e15] [cursor=pointer]:
+          - img [ref=e16]
+          - generic [ref=e18]: تعليمات التسجيل
+      - generic [ref=e19]:
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - heading "بياناتك الشخصية" [level=2] [ref=e25]
+            - paragraph [ref=e27]: ستظهر هذه البيانات في ملفك الشخصي وللمدرسين.
+          - generic [ref=e29]:
+            - generic [ref=e30]:
+              - generic [ref=e33]:
+                - generic [ref=e34]:
+                  - generic [ref=e35]: اختر الأفاتار الخاص بك (شخصيات تاريخية وعلماء)
+                  - generic [ref=e36]:
+                    - button "أينشتاين أينشتاين" [ref=e37]:
+                      - img "أينشتاين" [ref=e39]
+                      - generic [ref=e40]: أينشتاين
+                    - button "ابن سينا ابن سينا" [ref=e41]:
+                      - img "ابن سينا" [ref=e43]
+                      - generic [ref=e44]: ابن سينا
+                    - button "ماري كوري ماري كوري" [ref=e45]:
+                      - img "ماري كوري" [ref=e47]
+                      - generic [ref=e48]: ماري كوري
+                    - button "نيوتن نيوتن" [ref=e49]:
+                      - img "نيوتن" [ref=e51]
+                      - generic [ref=e52]: نيوتن
+                    - button "الخوارزمي الخوارزمي" [ref=e53]:
+                      - img "الخوارزمي" [ref=e55]
+                      - generic [ref=e56]: الخوارزمي
+                    - button "كليوباترا كليوباترا" [ref=e57]:
+                      - img "كليوباترا" [ref=e59]
+                      - generic [ref=e60]: كليوباترا
+                    - button "دا فينشي دا فينشي" [ref=e61]:
+                      - img "دا فينشي" [ref=e63]
+                      - generic [ref=e64]: دا فينشي
+                    - button "فيثاغورس فيثاغورس" [ref=e65]:
+                      - img "فيثاغورس" [ref=e67]
+                      - generic [ref=e68]: فيثاغورس
+                    - button "هيباتيا هيباتيا" [ref=e69]:
+                      - img "هيباتيا" [ref=e71]
+                      - generic [ref=e72]: هيباتيا
+                    - button "نيكولا تسلا نيكولا تسلا" [ref=e73]:
+                      - img "نيكولا تسلا" [ref=e75]
+                      - generic [ref=e76]: نيكولا تسلا
+                    - button "آدا لوفليس آدا لوفليس" [ref=e77]:
+                      - img "آدا لوفليس" [ref=e79]
+                      - generic [ref=e80]: آدا لوفليس
+                    - button "جاليليو جاليليو" [ref=e81]:
+                      - img "جاليليو" [ref=e83]
+                      - generic [ref=e84]: جاليليو
+                    - button "محمد علي باشا محمد علي باشا" [ref=e85]:
+                      - img "محمد علي باشا" [ref=e87]
+                      - generic [ref=e88]: محمد علي باشا
+                    - button "جمال عبد الناصر جمال عبد الناصر" [ref=e89]:
+                      - img "جمال عبد الناصر" [ref=e91]
+                      - generic [ref=e92]: جمال عبد الناصر
+                    - button "أنور السادات أنور السادات" [ref=e93]:
+                      - img "أنور السادات" [ref=e95]
+                      - generic [ref=e96]: أنور السادات
+                    - button "سعد زغلول سعد زغلول" [ref=e97]:
+                      - img "سعد زغلول" [ref=e99]
+                      - generic [ref=e100]: سعد زغلول
+                    - button "أحمد زويل أحمد زويل" [ref=e101]:
+                      - img "أحمد زويل" [ref=e103]
+                      - generic [ref=e104]: أحمد زويل
+                    - button "نجيب محفوظ نجيب محفوظ" [ref=e105]:
+                      - img "نجيب محفوظ" [ref=e107]
+                      - generic [ref=e108]: نجيب محفوظ
+                - generic [ref=e109]:
+                  - generic [ref=e110]: الاسم الرباعي
+                  - textbox "الاسم الرباعي" [ref=e111]:
+                    - /placeholder: "مثال: أحمد محمد محمود علي"
+                    - text: Student 40 test test
+                - generic [ref=e112]:
+                  - generic [ref=e113]:
+                    - generic [ref=e114]: رقم الهاتف الأساسي
+                    - textbox "رقم الهاتف الأساسي" [ref=e115]:
+                      - /placeholder: "مثال: 01012345678"
+                      - text: "01558068140"
+                  - generic [ref=e116]:
+                    - generic [ref=e117]: رقم هاتف إضافي (اختياري)
+                    - textbox "رقم هاتف إضافي (اختياري)" [ref=e118]:
+                      - /placeholder: "مثال: 01112345678"
+                  - generic [ref=e119]:
+                    - generic [ref=e120]: تاريخ الميلاد
+                    - textbox "تاريخ الميلاد" [ref=e121]: 2005-06-15
+                - generic [ref=e122]:
+                  - generic [ref=e123]:
+                    - generic [ref=e124]: النوع
+                    - combobox "النوع" [ref=e125]:
+                      - option "اختر النوع..." [disabled]
+                      - option "ذكر" [selected]
+                      - option "أنثى"
+                  - generic [ref=e126]:
+                    - generic [ref=e127]: الجنسية
+                    - combobox "الجنسية" [ref=e128]:
+                      - option "اختر الجنسية..." [disabled]
+                      - option "مصري" [selected]
+                      - option "سعودي"
+                      - option "إماراتي"
+                      - option "كويتي"
+                      - option "قطري"
+                      - option "بحريني"
+                      - option "عُماني"
+                      - option "يمني"
+                      - option "أردني"
+                      - option "لبناني"
+                      - option "سوري"
+                      - option "عراقي"
+                      - option "فلسطيني"
+                      - option "ليبي"
+                      - option "تونسي"
+                      - option "جزائري"
+                      - option "مغربي"
+                      - option "موريتاني"
+                      - option "سوداني"
+                      - option "صومالي"
+                      - option "جيبوتي"
+                      - option "جزر القمر"
+                - generic [ref=e129]:
+                  - generic [ref=e130]:
+                    - generic [ref=e131]: المحافظة
+                    - combobox "المحافظة" [ref=e132]:
+                      - option "اختر المحافظة..." [disabled]
+                      - option "القاهرة" [selected]
+                      - option "الجيزة"
+                      - option "الإسكندرية"
+                      - option "الدقهلية"
+                      - option "البحيرة"
+                      - option "الفيوم"
+                      - option "الغربية"
+                      - option "الإسماعيلية"
+                      - option "المنوفية"
+                      - option "المنيا"
+                      - option "القليوبية"
+                      - option "الوادي الجديد"
+                      - option "السويس"
+                      - option "أسوان"
+                      - option "أسيوط"
+                      - option "بني سويف"
+                      - option "بورسعيد"
+                      - option "دمياط"
+                      - option "الشرقية"
+                      - option "جنوب سيناء"
+                      - option "كفر الشيخ"
+                      - option "مطروح"
+                      - option "الأقصر"
+                      - option "قنا"
+                      - option "شمال سيناء"
+                      - option "سوهاج"
+                      - option "البحر الأحمر"
+                  - generic [ref=e133]:
+                    - generic [ref=e134]: المنطقة / الحي
+                    - combobox "المنطقة / الحي" [ref=e135]:
+                      - option "اختر المنطقة / الحي..." [disabled]
+                      - option "مصر الجديدة" [selected]
+                      - option "مدينة نصر"
+                      - option "النزهة"
+                      - option "المطرية"
+                      - option "عين شمس"
+                      - option "السلام"
+                      - option "المرج"
+                      - option "منشأة ناصر"
+                      - option "الوايلي"
+                      - option "باب الشعرية"
+                      - option "وسط القاهرة"
+                      - option "الموسكي"
+                      - option "الأزبكية"
+                      - option "عابدين"
+                      - option "بولاق"
+                      - option "غرب القاهرة"
+                      - option "الزيتون"
+                      - option "حدائق القبة"
+                      - option "الزاوية الحمراء"
+                      - option "الشرابية"
+                      - option "الساحل"
+                      - option "شبرا"
+                      - option "روض الفرج"
+                      - option "الأميرية"
+                      - option "السيدة زينب"
+                      - option "مصر القديمة"
+                      - option "الخليفة"
+                      - option "المقطم"
+                      - option "البساتين"
+                      - option "دار السلام"
+                      - option "المعادي"
+                      - option "طرة"
+                      - option "حلوان"
+                      - option "التبين"
+                      - option "15 مايو"
+                      - option "القاهرة الجديدة"
+                      - option "التجمع الخامس"
+                      - option "التجمع الأول"
+                      - option "التجمع الثالث"
+                      - option "الرحاب"
+                      - option "مدينتي"
+                      - option "الشروق"
+                      - option "بدر"
+                      - option "العبور"
+                      - option "العاشر من رمضان"
+                      - option "العاصمة الإدارية الجديدة"
+                - generic [ref=e136]:
+                  - generic [ref=e137]: العنوان بالتفصيل
+                  - textbox "العنوان بالتفصيل" [active] [ref=e138]:
+                    - /placeholder: "مثال: 15 شارع المحطة، الدور الثاني، بجوار المسجد"
+                    - text: 123 Test St
+              - button "التالي التالي" [ref=e140] [cursor=pointer]:
+                - generic [ref=e143]: التالي
+                - generic [ref=e144]:
+                  - generic [ref=e145]: التالي
+                  - img [ref=e146]
+              - generic [ref=e148]:
+                - img [ref=e149]
+                - generic [ref=e153]: بياناتك محفوظة محليًا في هذه الصفحة، ولن يتم إرسالها أو حفظها بشكل نهائي إلا بعد الضغط على "إنشاء الحساب".
+            - generic [ref=e156]:
+              - generic [ref=e157]:
+                - generic [ref=e158]:
+                  - paragraph [ref=e159]: بطاقة الطالب
+                  - generic [ref=e160]:
+                    - generic [ref=e162]: S4
+                    - heading "Student 40 test test" [level=3] [ref=e163]
+                - generic [ref=e164]:
+                  - generic [ref=e165]: "01558068140"
+                  - generic [ref=e166]: القاهرة
+              - generic [ref=e167]:
+                - generic [ref=e168]:
+                  - paragraph [ref=e169]: المنطقة السكنية
+                  - paragraph [ref=e170]: مصر الجديدة
+                - generic [ref=e171]:
+                  - paragraph [ref=e172]: سنك دلوقتي
+                  - paragraph [ref=e173]:
+                    - text: "21"
+                    - generic [ref=e174]: سنة
+                - generic [ref=e175]:
+                  - paragraph [ref=e176]: عيد ميلادك 🎂
+                  - paragraph [ref=e177]: باقي 0 يوم
+          - navigation "Progress" [ref=e179]:
+            - list [ref=e180]:
+              - listitem [ref=e181]:
+                - button "1 بياناتك الشخصية" [ref=e182] [cursor=pointer]:
+                  - generic [ref=e183]:
+                    - generic [ref=e185]: "1"
+                    - generic [ref=e186]: بياناتك الشخصية
+              - listitem [ref=e187]:
+                - button "2 ولي الأمر والمتابعة" [ref=e188] [cursor=pointer]:
+                  - generic [ref=e189]:
+                    - generic [ref=e191]: "2"
+                    - generic [ref=e192]: ولي الأمر والمتابعة
+              - listitem [ref=e193]:
+                - button "3 المسار الدراسي" [ref=e194] [cursor=pointer]:
+                  - generic [ref=e195]:
+                    - generic [ref=e197]: "3"
+                    - generic [ref=e198]: المسار الدراسي
+              - listitem [ref=e199]:
+                - button "4 كلمة المرور" [ref=e200] [cursor=pointer]:
+                  - generic [ref=e201]:
+                    - generic [ref=e203]: "4"
+                    - generic [ref=e204]: كلمة المرور
+        - paragraph [ref=e206]:
+          - text: لديك حساب بالفعل؟
+          - link "تسجيل الدخول" [ref=e207] [cursor=pointer]:
+            - /url: /login
+      - paragraph [ref=e208]: © 2026 منصة مسار
+    - dialog "تعليمات وشروط هامة قبل التسجيل" [ref=e209]:
+      - generic [ref=e211]:
+        - generic [ref=e212]:
+          - generic [ref=e213]:
+            - img [ref=e215]
+            - generic [ref=e217]:
+              - heading "تعليمات وشروط هامة قبل التسجيل" [level=2] [ref=e218]
+              - paragraph [ref=e219]: يرجى قراءتها بدقة قبل إنشاء الحساب أو تسجيل الدخول لأول مرة.
+          - button "إغلاق" [ref=e220]:
+            - img [ref=e221]
+        - generic [ref=e224]:
+          - generic [ref=e225]:
+            - generic [ref=e226]:
+              - img [ref=e228]
+              - generic [ref=e231]:
+                - heading "الاسم رباعي وحقيقي" [level=4] [ref=e232]
+                - paragraph [ref=e233]: يجب كتابة الاسم رباعياً ومطابقاً للبطاقة الشخصية أو شهادة الميلاد الرسمية لتجنب إلغاء الحساب.
+            - generic [ref=e234]:
+              - img [ref=e236]
+              - generic [ref=e241]:
+                - heading "بيانات ولي الأمر والمتابعة" [level=4] [ref=e242]
+                - paragraph [ref=e243]: تأكد من إدخال رقم هاتف الأب والأم بدقة، حيث يتم إرسال تقارير الغياب، الدرجات، ونسب مشاهدة المحاضرات إليهم بشكل دوري وتلقائي.
+            - generic [ref=e244]:
+              - img [ref=e246]
+              - generic [ref=e249]:
+                - heading "حد الأجهزة المسموح بها (Device Limit)" [level=4] [ref=e250]
+                - paragraph [ref=e251]: الحساب مخصص لجهازين فقط كحد أقصى (مثل هاتف وكمبيوتر). مشاركة الحساب أو تسجيل الدخول من أجهزة متعددة يعرض الحساب للإيقاف التلقائي والنهائي فوراً.
+            - generic [ref=e252]:
+              - img [ref=e254]
+              - generic [ref=e256]:
+                - heading "حظر الحسابات المتعددة" [level=4] [ref=e257]
+                - paragraph [ref=e258]: يمنع تماماً إنشاء أكثر من حساب لنفس الطالب. في حال وجود مشكلة في حسابك السابق، يرجى التواصل مع الدعم الفني مباشرة بدلاً من إنشاء حساب جديد.
+            - generic [ref=e259]:
+              - img [ref=e261]
+              - generic [ref=e264]:
+                - heading "دقة الصف الدراسي والمحافظة" [level=4] [ref=e265]
+                - paragraph [ref=e266]: يرجى التأكد من اختيار المحافظة والصف الدراسي بدقة، حيث لا يمكن تعديل هذه البيانات بعد إتمام التسجيل إلا من خلال التواصل مع الدعم الفني ومراجعة الأوراق الثبوتية.
+            - generic [ref=e267]:
+              - img [ref=e269]
+              - generic [ref=e273]:
+                - heading "أرقام واتساب نشطة ومفعلة" [level=4] [ref=e274]
+                - paragraph [ref=e275]: تأكد من أن الأرقام المسجلة (الهاتف الشخصي وأرقام أولياء الأمور) تحتوي على حسابات واتساب نشطة لاستلام أكواد التفعيل وتقارير الأداء.
+          - generic [ref=e276]:
+            - img [ref=e277]
+            - generic [ref=e279]: "ملاحظة: تلتزم الأكاديمية بحماية خصوصية بياناتك وتوفير المحتوى بأعلى معايير الأمان والجودة. مخالفة الشروط أعلاه قد يعرض حسابك للتجميد الفوري."
+        - button "فهمت وموافق على الشروط" [ref=e281]
+  - button "Open Next.js Dev Tools" [ref=e287] [cursor=pointer]:
+    - img [ref=e288]
+  - alert [ref=e291]
+```
