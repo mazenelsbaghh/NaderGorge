@@ -23,21 +23,27 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
 
     public async Task<ApiResponse<LoginResponse>> Handle(RefreshTokenCommand request, CancellationToken ct)
     {
+        // Atomically revoke the token. If it's already revoked or doesn't exist, rowsAffected will be 0.
+        var rowsAffected = await _db.RefreshTokens
+            .Where(r => r.Token == request.RefreshToken && !r.IsRevoked)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.IsRevoked, true), ct);
+
+        if (rowsAffected == 0)
+        {
+            throw new UnauthorizedAccessException("Refresh token has been replayed or is invalid");
+        }
+
+        // Now load the token to verify expiration and get user details
         var storedToken = await _db.RefreshTokens
             .Include(r => r.User).ThenInclude(u => u.UserRoles).ThenInclude(ur => ur.Role)
             .Include(r => r.User).ThenInclude(u => u.StudentProfile)
-            .FirstOrDefaultAsync(r => r.Token == request.RefreshToken && !r.IsRevoked, ct)
+            .FirstOrDefaultAsync(r => r.Token == request.RefreshToken, ct)
             ?? throw new UnauthorizedAccessException("Invalid or expired refresh token");
 
         if (storedToken.ExpiresAt < DateTime.UtcNow)
         {
-            storedToken.IsRevoked = true;
-            await _db.SaveChangesAsync(ct);
             throw new UnauthorizedAccessException("Refresh token has expired");
         }
-
-        // Revoke old token (rotation)
-        storedToken.IsRevoked = true;
 
         var user = storedToken.User;
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();

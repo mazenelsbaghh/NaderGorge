@@ -26,6 +26,11 @@ public class MindmapsCompletedCommandHandler : IRequestHandler<MindmapsCompleted
 
         if (video == null) return ApiResponse.Fail("Video not found");
 
+        if (!video.IsProcessingMindmaps)
+        {
+            return ApiResponse.Ok("Mindmaps already processed");
+        }
+
         foreach (var mindmapData in request.Mindmaps)
         {
             var chapter = video.VideoChapters.FirstOrDefault(c => c.Title == mindmapData.Title);

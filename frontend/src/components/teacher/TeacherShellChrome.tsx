@@ -112,7 +112,7 @@ export function TeacherShellChrome({
   children,
 }: TeacherShellChromeProps) {
   const router = useRouter();
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const { themeVars } = useAdminTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -120,8 +120,9 @@ export function TeacherShellChrome({
   useRootOverscrollBackground();
 
   const handleLogout = () => {
-    clearAuth();
-    router.replace('/login');
+    void logout().finally(() => {
+      router.replace('/login');
+    });
   };
 
   return (

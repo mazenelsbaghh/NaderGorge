@@ -57,10 +57,6 @@ public static class VideoWatchProgressCalculator
         {
             watchEvent.WatchCount = maxWatchCount;
             watchEvent.IsLocked = true;
-            if (watchEvent.TimeWatchedInSeconds > maxWatchCount * thresholdSeconds)
-            {
-                watchEvent.TimeWatchedInSeconds = maxWatchCount * thresholdSeconds;
-            }
         }
 
         var remainingSeconds = maxWatchCount > 0 && watchEvent.WatchCount >= maxWatchCount

@@ -172,7 +172,7 @@ function makeOutsideContentInert(drawerLayer: HTMLElement) {
 export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const {
     isDark,
@@ -230,8 +230,9 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   }, [pathname]);
 
   const handleLogout = () => {
-    clearAuth();
-    router.replace('/login');
+    void logout().finally(() => {
+      router.replace('/login');
+    });
   };
 
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);

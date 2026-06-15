@@ -37,18 +37,16 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
     public async Task<ApiResponse<ActiveExamAttemptDto>> Handle(StartExamAttemptCommand request, CancellationToken ct)
     {
+        var hasAccess = await _access.HasAccessToExamAsync(request.UserId, request.ExamId, ct);
+        if (!hasAccess)
+        {
+            return ApiResponse<ActiveExamAttemptDto>.Fail("You do not have access to this exam.");
+        }
+
         var lesson = await _db.Lessons
             .Include(l => l.ContentSection)
             .ThenInclude(cs => cs.Term)
             .FirstOrDefaultAsync(l => l.ExamId == request.ExamId, ct);
-        if (lesson != null)
-        {
-            var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, lesson.Id, ct);
-            if (!hasAccess)
-            {
-                return ApiResponse<ActiveExamAttemptDto>.Fail("You do not have access to this exam's lesson.");
-            }
-        }
 
         var exam = await _db.Exams
             .Include(e => e.ExamQuestions)

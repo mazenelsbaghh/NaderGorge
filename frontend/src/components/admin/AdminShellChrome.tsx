@@ -260,7 +260,7 @@ export function AdminShellChrome({
   floatingAction,
 }: AdminShellChromeProps) {
   const router = useRouter();
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const roles = user?.roles || [];
   const { hasPermission } = useHasPermission();
@@ -311,8 +311,9 @@ export function AdminShellChrome({
   }).filter((group) => group.items.length > 0);
 
   const handleLogout = () => {
-    clearAuth();
-    router.replace('/login');
+    void logout().finally(() => {
+      router.replace('/login');
+    });
   };
 
   const mobilePrimaryItems = filteredNavItems.slice(0, 3);

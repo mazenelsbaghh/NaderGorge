@@ -6,12 +6,13 @@ import { useRouter } from 'next/navigation';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
 
 export function Navbar() {
-  const { user, isAuthenticated, clearAuth } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = () => {
-    clearAuth();
-    router.push('/login');
+    void logout().finally(() => {
+      router.push('/login');
+    });
   };
 
   return (

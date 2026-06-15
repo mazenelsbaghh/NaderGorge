@@ -1,5 +1,5 @@
 # ─── Stage 1: Install & Build ────────────────────────────────────────────────
-FROM node:20-slim AS builder
+FROM node:20.18.3-slim AS builder
 
 WORKDIR /app
 ENV NPM_CONFIG_AUDIT=false \
@@ -22,7 +22,7 @@ COPY . .
 RUN npm run build
 
 # ─── Stage 2: Runtime ────────────────────────────────────────────────────────
-FROM node:20-slim AS runner
+FROM node:20.18.3-slim AS runner
 
 WORKDIR /app
 

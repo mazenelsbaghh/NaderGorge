@@ -260,6 +260,41 @@ async function startWorker() {
   }
   app.use(express.json());
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  app.get('/ready', async (_req, res) => {
+    let dbOk = false;
+    let redisOk = false;
+    try {
+      await pool.query('SELECT 1');
+      dbOk = true;
+    } catch (err: any) {
+      console.error('[Worker Ready Check] DB failure:', err.message);
+    }
+
+    try {
+      const pingRes = await redis.ping();
+      if (pingRes === 'PONG') {
+        redisOk = true;
+      }
+    } catch (err: any) {
+      console.error('[Worker Ready Check] Redis failure:', err.message);
+    }
+
+    if (!dbOk || !redisOk) {
+      return res.status(503).json({
+        status: 'unhealthy',
+        database: dbOk ? 'healthy' : 'unhealthy',
+        redis: redisOk ? 'healthy' : 'unhealthy'
+      });
+    }
+
+    return res.json({
+      status: 'healthy',
+      database: 'healthy',
+      redis: 'healthy',
+      timestamp: new Date().toISOString()
+    });
+  });
   
   // Custom API endpoint to fetch Job Status directly for frontend
   app.get('/api/status/:id', requireWorkerAdminToken, async (req, res) => {
@@ -343,92 +378,139 @@ async function startWorker() {
     console.log('[Worker] Bull Board Dashboard running on http://localhost:3001/ui');
   });
 
-  // Dedicated loop for AI ingestion from .NET
-  (async () => {
-    console.log('Worker listening on ai-video-queue...');
-    while (true) {
-        try {
-            const result = await redis.brpop('ai-video-queue', 0);
-            if (result) {
-                const wrapper = JSON.parse(result[1]);
-                const payload = wrapper.data || wrapper; // Fallback to raw if no wrapper
-                logQueueEvent('ai-video-queue', 'Enqueueing BullMQ job', { lessonVideoId: payload.lessonVideoId });
-                await aiQueue.add('analyze', payload, {
-                    jobId: payload.lessonVideoId,
-                    ...JOB_RETENTION_OPTIONS,
-                });
-            }
-        } catch (e) {
-            console.error('AI Redis loop error', e);
-            await new Promise(r => setTimeout(r, 5000));
-        }
-    }
-  })();
+  async function handleStreamMessage(
+    messageStreamId: string,
+    fields: string[]
+  ) {
+      const obj: any = {};
+      for (let i = 0; i < fields.length; i += 2) {
+          const key = fields[i];
+          if (key !== undefined) {
+              obj[key] = fields[i + 1];
+          }
+      }
 
-  const mindmapsSubRedis = new Redis(DEFAULT_REDIS_URL);
-  
-  // Dedicated loop for Mindmaps ingestion from .NET
-  (async () => {
-    console.log('Worker listening on ai-mindmaps-queue...');
-    while (true) {
-        try {
-            const result = await mindmapsSubRedis.brpop('ai-mindmaps-queue', 0);
-            if (result) {
-                let wrapper;
-                try {
-                    wrapper = JSON.parse(result[1]);
-                } catch(err) {
-                    console.error("JSON PARSE ERROR", err);
-                    continue;
-                }
-                const payload = wrapper.data || wrapper;
-                const chapId = payload.chapterId || payload.ChapterId;
-                const vidId = payload.lessonVideoId || payload.LessonVideoId;
-                // Use chapterId-based jobId for single-chapter regen, videoId for batch
-                const jobId = chapId
-                    ? `${vidId}_mindmap_${chapId}`
-                    : `${vidId}_mindmaps`;
-                logQueueEvent('ai-mindmaps-queue', 'Enqueueing BullMQ job', { jobId, lessonVideoId: vidId, chapterId: chapId });
-                await mindmapsQueue.add('generate', payload, {
-                    jobId,
-                    ...JOB_RETENTION_OPTIONS,
-                });
-            }
-        } catch (e) {
-            console.error('Mindmaps Redis loop error', e);
-            await new Promise(r => setTimeout(r, 5000));
-        }
-    }
-  })();
+      const { messageId, jobType, jobId, payload } = obj;
+      if (!jobType || !payload) {
+          console.warn(`[Worker] Invalid stream message: ${messageStreamId}`);
+          await redis.xack('job-stream', 'worker-group', messageStreamId);
+          await redis.xdel('job-stream', messageStreamId);
+          return;
+      }
 
-  const essaySubRedis = new Redis(DEFAULT_REDIS_URL);
-  
-  // Dedicated loop for Essay Ingestion from .NET
+      let parsedPayload: any;
+      try {
+          parsedPayload = JSON.parse(payload);
+      } catch (err) {
+          console.error(`[Worker] Failed to parse payload for message ${messageStreamId}`, err);
+          await redis.xack('job-stream', 'worker-group', messageStreamId);
+          await redis.xdel('job-stream', messageStreamId);
+          return;
+      }
+
+      let targetQueue: Queue;
+      let bullmqJobName: string;
+      let targetJobId: string;
+
+      if (jobType === 'video analysis') {
+          targetQueue = aiQueue;
+          bullmqJobName = 'analyze';
+          targetJobId = jobId;
+      } else if (jobType === 'mind maps') {
+          targetQueue = mindmapsQueue;
+          bullmqJobName = 'generate';
+          const chapId = parsedPayload.chapterId || parsedPayload.ChapterId;
+          const vidId = parsedPayload.lessonVideoId || parsedPayload.LessonVideoId;
+          targetJobId = chapId ? `${vidId}_mindmap_${chapId}` : `${vidId}_mindmaps`;
+      } else if (jobType === 'essay') {
+          targetQueue = essayQueue;
+          bullmqJobName = 'evaluate';
+          targetJobId = jobId;
+      } else if (jobType === 'notification') {
+          targetQueue = notifQueue;
+          bullmqJobName = parsedPayload.WarningId ? 'send-warning' : 'chat-mention';
+          targetJobId = jobId;
+      } else {
+          console.warn(`[Worker] Unknown jobType: ${jobType}`);
+          await redis.xack('job-stream', 'worker-group', messageStreamId);
+          await redis.xdel('job-stream', messageStreamId);
+          return;
+      }
+
+      logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
+
+      try {
+          await targetQueue.add(bullmqJobName, parsedPayload, {
+              jobId: targetJobId,
+              ...JOB_RETENTION_OPTIONS,
+              attempts: 5,
+              backoff: {
+                  type: 'exponential',
+                  delay: 5000
+              }
+          });
+
+          await redis.xack('job-stream', 'worker-group', messageStreamId);
+          await redis.xdel('job-stream', messageStreamId);
+      } catch (err: any) {
+          console.error(`[Worker] Failed to enqueue job ${targetJobId} into BullMQ: ${err.message}`);
+      }
+  }
+
   (async () => {
-    console.log('Worker listening on ai-essay-queue...');
-    while (true) {
-        try {
-            const result = await essaySubRedis.brpop('ai-essay-queue', 0);
-            if (result) {
-                let wrapper;
-                try {
-                    wrapper = JSON.parse(result[1]);
-                } catch(err) {
-                    console.error("JSON PARSE ERROR", err);
-                    continue;
-                }
-                const payload = wrapper.data || wrapper;
-                logQueueEvent('ai-essay-queue', 'Enqueueing BullMQ job', { essaySubmissionId: payload.essaySubmissionId });
-                await essayQueue.add('evaluate', payload, {
-                    jobId: payload.essaySubmissionId,
-                    ...JOB_RETENTION_OPTIONS,
-                });
-            }
-        } catch (e) {
-            console.error('Essay Redis loop error', e);
-            await new Promise(r => setTimeout(r, 5000));
-        }
-    }
+      const consumerName = `worker-consumer-${crypto.randomUUID().substring(0, 8)}`;
+      console.log(`[Worker] Starting Redis Stream consumer ${consumerName} on job-stream...`);
+
+      try {
+          await redis.xgroup('CREATE', 'job-stream', 'worker-group', '0', 'MKSTREAM');
+          console.log('[Worker] Created consumer group worker-group for job-stream');
+      } catch (err: any) {
+          if (!err.message.includes('BUSYGROUP')) {
+              console.error('[Worker] Error creating consumer group:', err.message);
+          }
+      }
+
+      while (true) {
+          try {
+              const pendingData = (await redis.xreadgroup(
+                  'GROUP', 'worker-group', consumerName,
+                  'COUNT', '10',
+                  'STREAMS', 'job-stream',
+                  '0'
+              )) as any;
+
+              if (pendingData && pendingData.length > 0) {
+                  const [_, messages] = pendingData[0];
+                  if (messages && messages.length > 0) {
+                      console.log(`[Worker] Processing ${messages.length} pending messages from backlog...`);
+                      for (const [messageStreamId, fields] of messages) {
+                          await handleStreamMessage(messageStreamId, fields);
+                      }
+                      continue;
+                  }
+              }
+
+              const newData = (await redis.xreadgroup(
+                  'GROUP', 'worker-group', consumerName,
+                  'COUNT', '10',
+                  'BLOCK', '2000',
+                  'STREAMS', 'job-stream',
+                  '>'
+              )) as any;
+
+              if (newData && newData.length > 0) {
+                  const [_, messages] = newData[0];
+                  if (messages && messages.length > 0) {
+                      for (const [messageStreamId, fields] of messages) {
+                          await handleStreamMessage(messageStreamId, fields);
+                      }
+                  }
+              }
+          } catch (e: any) {
+              console.error('[Worker] Redis Stream consumer loop error:', e.message);
+              await new Promise(r => setTimeout(r, 5000));
+          }
+      }
   })();
 }
 

@@ -137,6 +137,24 @@ public class AuthController : ControllerBase
         return Ok(ToClientResponse(result));
     }
 
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromBody] LogoutRequestDto? request)
+    {
+        var refreshToken = request?.RefreshToken;
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            refreshToken = Request.Cookies[RefreshCookieName];
+        }
+
+        if (!string.IsNullOrWhiteSpace(refreshToken))
+        {
+            await _mediator.Send(new LogoutCommand(refreshToken));
+        }
+
+        ClearRefreshCookie();
+        return Ok(ApiResponse.Ok("Logged out successfully"));
+    }
+
     [Authorize]
     [HttpPost("complete-profile")]
     public async Task<IActionResult> CompleteProfile([FromBody] CompleteProfileRequest body)
@@ -211,4 +229,5 @@ public record CompleteProfileRequest(string ParentPhone, string Governorate, str
 public record CurrentUserResponse(Guid Id, string FullName, string Phone, string[] Roles, bool ProfileComplete);
 public record LoginRequest(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName);
 public record RefreshRequest(string? RefreshToken);
+public record LogoutRequestDto(string? RefreshToken);
 public record AuthClientResponse(string AccessToken, UserDto User);

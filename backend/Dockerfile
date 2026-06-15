@@ -1,5 +1,5 @@
 # ─── Stage 1: Build & Publish ────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:9.0.201 AS builder
 
 WORKDIR /src
 
@@ -18,7 +18,7 @@ RUN dotnet publish src/NaderGorge.API/NaderGorge.API.csproj \
     -o /app/publish
 
 # ─── Stage 2: Runtime ────────────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runner
+FROM mcr.microsoft.com/dotnet/aspnet:9.0.2 AS runner
 
 WORKDIR /app
 

@@ -1,5 +1,5 @@
 # ─── Stage 1: Build ──────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20.18.3-alpine AS builder
 
 WORKDIR /app
 ENV NPM_CONFIG_AUDIT=false \
@@ -25,7 +25,7 @@ ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
 RUN npm run build
 
 # ─── Stage 2: Runtime shared by landing, student, and admin surfaces ─────────
-FROM node:20-alpine AS runner
+FROM node:20.18.3-alpine AS runner
 
 WORKDIR /app
 

@@ -63,6 +63,7 @@ export const authService = {
   register: (data: RegisterData) => apiClient.post('/auth/register', data),
   login: (data: LoginData) => apiClient.post('/auth/login', data),
   refresh: () => apiClient.post('/auth/refresh', {}),
+  logout: () => apiClient.post('/auth/logout', {}),
   completeProfile: (data: CompleteProfileData) => apiClient.post('/auth/complete-profile', data),
   activateCode: (code: string) => apiClient.post('/codes/activate', { code }),
   validateCode: (code: string) => apiClient.get(`/codes/validate/${code}`),

@@ -31,7 +31,7 @@ services:
 
   # Database
   db:
-    image: postgres:16-alpine
+    image: postgres:16.2-alpine
     container_name: massar_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -39,7 +39,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-massar_platform}
       TZ: Africa/Cairo
     ports:
-      - "${MASSAR_POSTGRES_PORT:-5435}:5432"
+      - "127.0.0.1:${MASSAR_POSTGRES_PORT:-5435}:5432"
     volumes:
       - masar_pgdata:/var/lib/postgresql/data
     networks:
@@ -54,10 +54,10 @@ services:
 
   # Cache / Queue Broker
   redis:
-    image: redis:7-alpine
+    image: redis:7.2.4-alpine
     container_name: massar_redis
     ports:
-      - "${MASSAR_REDIS_PORT:-6382}:6379"
+      - "127.0.0.1:${MASSAR_REDIS_PORT:-6382}:6379"
     volumes:
       - masar_redisdata:/data
     networks:
@@ -97,7 +97,7 @@ services:
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       ParentReports__SigningSecret: ${PARENT_REPORT_SIGNING_SECRET:?PARENT_REPORT_SIGNING_SECRET is required}
     ports:
-      - "${MASSAR_BACKEND_PORT:-5245-5246}:5245"
+      - "127.0.0.1:${MASSAR_BACKEND_PORT:-5245-5246}:5245"
     volumes:
       - massar_assets:/app/wwwroot
     networks:
@@ -137,7 +137,7 @@ services:
       NODE_ENV: production
       TZ: Africa/Cairo
     ports:
-      - "${MASSAR_WORKER_PORT:-3001}:3001"
+      - "127.0.0.1:${MASSAR_WORKER_PORT:-3001}:3001"
     volumes:
       - massar_assets:/backend/src/NaderGorge.API/wwwroot
       - ./worker:/app/host-worker
@@ -167,7 +167,7 @@ services:
       APP_SURFACE: landing
       NEXT_PUBLIC_APP_SURFACE: landing
     ports:
-      - "${MASSAR_LANDING_PORT:-8738}:8738"
+      - "127.0.0.1:${MASSAR_LANDING_PORT:-8738}:8738"
     networks:
       - massar_net
     depends_on:
@@ -191,7 +191,7 @@ services:
       APP_SURFACE: student
       NEXT_PUBLIC_APP_SURFACE: student
     ports:
-      - "${MASSAR_STUDENT_PORT:-8739}:8738"
+      - "127.0.0.1:${MASSAR_STUDENT_PORT:-8739}:8738"
     networks:
       - massar_net
     depends_on:
@@ -215,7 +215,7 @@ services:
       APP_SURFACE: admin
       NEXT_PUBLIC_APP_SURFACE: admin
     ports:
-      - "${MASSAR_ADMIN_PORT:-8740}:8738"
+      - "127.0.0.1:${MASSAR_ADMIN_PORT:-8740}:8738"
     networks:
       - massar_net
     depends_on:
@@ -239,7 +239,7 @@ services:
       APP_SURFACE: teacher
       NEXT_PUBLIC_APP_SURFACE: teacher
     ports:
-      - "${MASSAR_TEACHER_PORT:-8741}:8738"
+      - "127.0.0.1:${MASSAR_TEACHER_PORT:-8741}:8738"
     networks:
       - massar_net
     depends_on:
@@ -263,7 +263,7 @@ services:
       APP_SURFACE: assistant
       NEXT_PUBLIC_APP_SURFACE: assistant
     ports:
-      - "${MASSAR_ASSISTANT_PORT:-8742}:8738"
+      - "127.0.0.1:${MASSAR_ASSISTANT_PORT:-8742}:8738"
     networks:
       - massar_net
     depends_on:

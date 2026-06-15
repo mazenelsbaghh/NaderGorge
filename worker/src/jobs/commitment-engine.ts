@@ -33,10 +33,13 @@ export async function runNightlySweep() {
             
             for (const student of inactiveStudents) {
                 const warningId = crypto.randomUUID();
+                const dateStr = new Date().toISOString().split('T')[0];
+                const occurrenceKey = `commitment:${student.Id}:inactive_7d:${dateStr}`;
                 await client.query(`
-                    INSERT INTO "warning_events" ("Id", "StudentId", "Severity", "TriggerReason", "IsResolved", "CreatedAt")
-                    VALUES ($1, $2, $3, $4, $5, NOW())
-                `, [warningId, student.Id, 1, 'Inactive for more than 7 days', false]); // 1 = Medium severity usually
+                    INSERT INTO "warning_events" ("Id", "StudentId", "Severity", "TriggerReason", "IsResolved", "OccurrenceKey", "CreatedAt")
+                    VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                    ON CONFLICT ("OccurrenceKey") DO NOTHING
+                `, [warningId, student.Id, 1, 'Inactive for more than 7 days', false, occurrenceKey]);
             }
         } else {
             console.log('[CommitmentEngine] No inactive students found.');

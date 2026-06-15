@@ -1022,6 +1022,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsProfileComplete` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `PasswordHash` | `string` | `text` | `NO` | ✅ Sync |
+| `PasswordResetVersion` | `int` | `integer` | `NO` | ✅ Sync |
 | `PhoneNumber` | `string` | `character varying(20)` | `NO` | ✅ Sync |
 | `SuspensionReason` | `string` | `text` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
@@ -1077,6 +1078,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `IsResolved` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `OccurrenceKey` | `string` | `character varying(200)` | `YES` | ✅ Sync |
 | `ResolutionNotes` | `string` | `text` | `YES` | ✅ Sync |
 | `ResolvedByAssistantId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `Severity` | `int` | `integer` | `NO` | ✅ Sync |

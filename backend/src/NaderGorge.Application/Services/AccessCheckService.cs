@@ -73,4 +73,61 @@ public class AccessCheckService : IAccessCheckService
 
         return hasAccess;
     }
+
+    public async Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken ct = default)
+    {
+        var userRoles = await _db.UserRoles
+            .Include(ur => ur.Role)
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role.Name)
+            .ToListAsync(ct);
+
+        if (userRoles.Contains("Admin") || userRoles.Contains("Teacher"))
+            return true;
+
+        // 1. Direct Exam access grant
+        var hasDirectAccess = await _db.StudentAccessGrants
+            .AnyAsync(g => g.UserId == userId &&
+                           g.IsActive &&
+                           g.GrantType == CodeType.Exam &&
+                           g.ExamId == examId &&
+                           (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
+
+        if (hasDirectAccess) return true;
+
+        // 2. Lesson-linked Exam access
+        var lessonIds = await _db.Lessons
+            .Where(l => l.ExamId == examId)
+            .Select(l => l.Id)
+            .ToListAsync(ct);
+
+        foreach (var lessonId in lessonIds)
+        {
+            if (await HasAccessToLessonAsync(userId, lessonId, ct))
+                return true;
+        }
+
+        // 3. Video-linked Exam access
+        var videoLessons = await _db.LessonVideos
+            .Where(v => v.ExamId == examId)
+            .Select(v => new { v.Id, v.LessonId })
+            .ToListAsync(ct);
+
+        foreach (var video in videoLessons)
+        {
+            if (await HasAccessToLessonAsync(userId, video.LessonId, ct))
+                return true;
+
+            var hasVideoGrant = await _db.StudentAccessGrants
+                .AnyAsync(g => g.UserId == userId &&
+                               g.IsActive &&
+                               g.GrantType == CodeType.Video &&
+                               g.LessonVideoId == video.Id &&
+                               (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
+
+            if (hasVideoGrant) return true;
+        }
+
+        return false;
+    }
 }

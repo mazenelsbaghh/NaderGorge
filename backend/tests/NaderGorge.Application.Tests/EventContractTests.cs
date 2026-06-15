@@ -18,6 +18,18 @@ public class EventContractTests
     {
         await using var db = TestAppDbContextFactory.Create();
         var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "700");
+
+        var adminRole = new Role
+        {
+            Id = Guid.NewGuid(),
+            Name = "Admin",
+            Type = RoleType.Admin,
+            PermissionsJson = "[\"codes.manage\"]"
+        };
+        db.Roles.Add(adminRole);
+        db.UserRoles.Add(new UserRole { UserId = admin.Id, RoleId = adminRole.Id });
+        await db.SaveChangesAsync();
+
         await SeedTeacherAsync(db);
         var handler = new BulkGenerateCodesCommandHandler(db, new NoOpAuditService());
 

@@ -25,6 +25,13 @@ public class WebhookEssayGradedCommandHandler
             return ApiResponse<WebhookEssayGradedResultDto>.Fail("Essay submission not found.");
         }
 
+        if (submission.Status != EssaySubmissionStatus.WaitAI)
+        {
+            return ApiResponse<WebhookEssayGradedResultDto>.Ok(
+                new WebhookEssayGradedResultDto(submission.Id, submission.Status.ToString()),
+                "Essay submission has already processed or left WaitAI state.");
+        }
+
         submission.AiInitialScore = request.AiScore;
         submission.AiFeedback = request.AiFeedback;
 

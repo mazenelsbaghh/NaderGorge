@@ -58,8 +58,16 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
         if (user == null)
             throw new UnauthorizedAccessException("رمز إعادة التعيين منتهي الصلاحية أو غير صالح.");
 
+        // Validate PasswordResetVersion claim against database
+        var prVersionClaim = principal.FindFirst("passwordResetVersion")?.Value;
+        if (string.IsNullOrEmpty(prVersionClaim) || !int.TryParse(prVersionClaim, out var prVersion) || user.PasswordResetVersion != prVersion)
+        {
+            throw new UnauthorizedAccessException("رمز إعادة التعيين منتهي الصلاحية أو غير صالح.");
+        }
+
         // Hash and update the password
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        user.PasswordResetVersion += 1;
 
         var activeRefreshTokens = await _db.RefreshTokens
             .Where(rt => rt.UserId == user.Id && !rt.IsRevoked)

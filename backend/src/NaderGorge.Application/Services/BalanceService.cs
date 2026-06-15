@@ -54,61 +54,71 @@ public class BalanceService
     {
         if (amount <= 0) throw new ArgumentException("Credit amount must be positive", nameof(amount));
 
-        var balance = await GetOrCreateBalance(userId, ct);
-        var now = DateTime.UtcNow;
-        int affectedRows;
-        if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        try
         {
-            balance.CurrentBalance += amount;
-            balance.UpdatedAt = now;
-            _db.StudentBalances.Update(balance);
-            await _db.SaveChangesAsync(ct);
-            affectedRows = 1;
-        }
-        else
-        {
-            affectedRows = await _db.StudentBalances
-                .Where(b => b.Id == balance.Id)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance + amount)
-                    .SetProperty(b => b.UpdatedAt, now), ct);
-        }
-
-        if (affectedRows != 1)
-            throw new InvalidOperationException("Unable to update student balance.");
-
-        await _db.Entry(balance).ReloadAsync(ct);
-
-        var tx = new BalanceTransaction
-        {
-            StudentBalanceId = balance.Id,
-            Amount = amount,
-            BalanceAfter = balance.CurrentBalance,
-            TransactionType = "CodeRedemption",
-            ReferenceId = referenceId,
-            Description = description
-        };
-
-        _db.BalanceTransactions.Add(tx);
-
-        var outboxEvent = new OutboxEvent
-        {
-            Type = "BalanceChanged",
-            TargetUserId = userId.ToString(),
-            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            var balance = await GetOrCreateBalance(userId, ct);
+            var now = DateTime.UtcNow;
+            int affectedRows;
+            if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
             {
-                newBalance = balance.CurrentBalance,
-                formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
-            })
-        };
-        _db.OutboxEvents.Add(outboxEvent);
+                balance.CurrentBalance += amount;
+                balance.UpdatedAt = now;
+                _db.StudentBalances.Update(balance);
+                await _db.SaveChangesAsync(ct);
+                affectedRows = 1;
+            }
+            else
+            {
+                affectedRows = await _db.StudentBalances
+                    .Where(b => b.Id == balance.Id)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance + amount)
+                        .SetProperty(b => b.UpdatedAt, now), ct);
+            }
 
-        await _db.SaveChangesAsync(ct);
+            if (affectedRows != 1)
+                throw new InvalidOperationException("Unable to update student balance.");
 
-        _logger.LogInformation("Added {Amount} credit to user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
-            amount, userId, balance.CurrentBalance, description);
+            await _db.Entry(balance).ReloadAsync(ct);
 
-        return tx;
+            var tx = new BalanceTransaction
+            {
+                StudentBalanceId = balance.Id,
+                Amount = amount,
+                BalanceAfter = balance.CurrentBalance,
+                TransactionType = "CodeRedemption",
+                ReferenceId = referenceId,
+                Description = description
+            };
+
+            _db.BalanceTransactions.Add(tx);
+
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "BalanceChanged",
+                TargetUserId = userId.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    newBalance = balance.CurrentBalance,
+                    formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
+
+            await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            _logger.LogInformation("Added {Amount} credit to user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
+                amount, userId, balance.CurrentBalance, description);
+
+            return tx;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     /// <summary>
@@ -123,69 +133,79 @@ public class BalanceService
     {
         if (amount <= 0) throw new ArgumentException("Deduction amount must be positive", nameof(amount));
 
-        var balance = await GetOrCreateBalance(userId, ct);
-
-        var now = DateTime.UtcNow;
-        int affectedRows;
-        if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+        using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        try
         {
-            if (balance.CurrentBalance >= amount)
+            var balance = await GetOrCreateBalance(userId, ct);
+
+            var now = DateTime.UtcNow;
+            int affectedRows;
+            if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
             {
-                balance.CurrentBalance -= amount;
-                balance.UpdatedAt = now;
-                _db.StudentBalances.Update(balance);
-                await _db.SaveChangesAsync(ct);
-                affectedRows = 1;
+                if (balance.CurrentBalance >= amount)
+                {
+                    balance.CurrentBalance -= amount;
+                    balance.UpdatedAt = now;
+                    _db.StudentBalances.Update(balance);
+                    await _db.SaveChangesAsync(ct);
+                    affectedRows = 1;
+                }
+                else
+                {
+                    affectedRows = 0;
+                }
             }
             else
             {
-                affectedRows = 0;
+                affectedRows = await _db.StudentBalances
+                    .Where(b => b.Id == balance.Id && b.CurrentBalance >= amount)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance - amount)
+                        .SetProperty(b => b.UpdatedAt, now), ct);
             }
-        }
-        else
-        {
-            affectedRows = await _db.StudentBalances
-                .Where(b => b.Id == balance.Id && b.CurrentBalance >= amount)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance - amount)
-                    .SetProperty(b => b.UpdatedAt, now), ct);
-        }
 
-        if (affectedRows != 1)
-            throw new InvalidOperationException($"Insufficient balance. Current: {balance.CurrentBalance}, Required: {amount}");
+            if (affectedRows != 1)
+                throw new InvalidOperationException($"Insufficient balance. Current: {balance.CurrentBalance}, Required: {amount}");
 
-        await _db.Entry(balance).ReloadAsync(ct);
+            await _db.Entry(balance).ReloadAsync(ct);
 
-        var tx = new BalanceTransaction
-        {
-            StudentBalanceId = balance.Id,
-            Amount = -amount, // Negative for debi
-            BalanceAfter = balance.CurrentBalance,
-            TransactionType = "ContentPurchase",
-            ReferenceId = referenceId,
-            Description = description
-        };
-
-        _db.BalanceTransactions.Add(tx);
-
-        var outboxEvent = new OutboxEvent
-        {
-            Type = "BalanceChanged",
-            TargetUserId = userId.ToString(),
-            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            var tx = new BalanceTransaction
             {
-                newBalance = balance.CurrentBalance,
-                formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
-            })
-        };
-        _db.OutboxEvents.Add(outboxEvent);
+                StudentBalanceId = balance.Id,
+                Amount = -amount, // Negative for debit
+                BalanceAfter = balance.CurrentBalance,
+                TransactionType = "ContentPurchase",
+                ReferenceId = referenceId,
+                Description = description
+            };
 
-        await _db.SaveChangesAsync(ct);
+            _db.BalanceTransactions.Add(tx);
 
-        _logger.LogInformation("Deducted {Amount} from user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
-            amount, userId, balance.CurrentBalance, description);
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "BalanceChanged",
+                TargetUserId = userId.ToString(),
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    newBalance = balance.CurrentBalance,
+                    formattedBalance = $"{balance.CurrentBalance:F2} جنيها"
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
 
-        return tx;
+            await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            _logger.LogInformation("Deducted {Amount} from user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
+                amount, userId, balance.CurrentBalance, description);
+
+            return tx;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
     }
 
     /// <summary>

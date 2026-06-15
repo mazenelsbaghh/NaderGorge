@@ -36,7 +36,8 @@ public class TokenService : ITokenService
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.FullName),
             new("phone", user.PhoneNumber),
-            new("profileComplete", user.IsProfileComplete.ToString().ToLower())
+            new("profileComplete", user.IsProfileComplete.ToString().ToLower()),
+            new("passwordResetVersion", user.PasswordResetVersion.ToString())
         };
 
         foreach (var role in roles)

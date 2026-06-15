@@ -272,6 +272,7 @@ public class SecureDownloadTests : IDisposable
         public bool HasAccessResult { get; set; } = true;
         public Task<bool> HasAccessToPackageAsync(Guid userId, Guid packageId, CancellationToken ct = default) => Task.FromResult(HasAccessResult);
         public Task<bool> HasAccessToLessonAsync(Guid userId, Guid lessonId, CancellationToken ct = default) => Task.FromResult(HasAccessResult);
+        public Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken ct = default) => Task.FromResult(HasAccessResult);
     }
 
     private class FakeWebHostEnvironment : IWebHostEnvironment

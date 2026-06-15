@@ -31,6 +31,7 @@ public class PlatformHubTests
     {
         public bool PackageAccessAllowed { get; set; } = true;
         public bool LessonAccessAllowed { get; set; } = true;
+        public bool ExamAccessAllowed { get; set; } = true;
 
         public Task<bool> HasAccessToPackageAsync(Guid userId, Guid packageId, CancellationToken cancellationToken = default)
         {
@@ -40,6 +41,11 @@ public class PlatformHubTests
         public Task<bool> HasAccessToLessonAsync(Guid userId, Guid lessonId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(LessonAccessAllowed);
+        }
+
+        public Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ExamAccessAllowed);
         }
     }
 

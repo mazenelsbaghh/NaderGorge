@@ -10,11 +10,13 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 {
     private readonly IAppDbContext _dbContext;
     private readonly IPublisher _publisher;
+    private readonly IAccessCheckService _access;
 
-    public SubmitHomeworkCommandHandler(IAppDbContext dbContext, IPublisher publisher)
+    public SubmitHomeworkCommandHandler(IAppDbContext dbContext, IPublisher publisher, IAccessCheckService access)
     {
         _dbContext = dbContext;
         _publisher = publisher;
+        _access = access;
     }
 
     public async Task<ApiResponse<bool>> Handle(SubmitHomeworkCommand request, CancellationToken cancellationToken)
@@ -25,6 +27,12 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
         if (homework == null)
             return ApiResponse<bool>.Fail("Homework not found");
+
+        var hasAccess = await _access.HasAccessToLessonAsync(request.StudentId, homework.LessonId, cancellationToken);
+        if (!hasAccess)
+        {
+            return ApiResponse<bool>.Fail("You do not have access to this homework's lesson.");
+        }
 
         // Check if a submission already exists
         var submission = await _dbContext.HomeworkSubmissions
@@ -80,7 +88,28 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         };
         _dbContext.OutboxEvents.Add(outboxEvent);
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+        {
+            var msg = ex.InnerException?.Message ?? ex.Message;
+            if (msg.Contains("IX_HomeworkSubmissions_HomeworkId_StudentId") ||
+                msg.Contains("unique constraint") ||
+                msg.Contains("UNIQUE constraint") ||
+                msg.Contains("duplicate key"))
+            {
+                var existing = await _dbContext.HomeworkSubmissions
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, cancellationToken);
+                if (existing != null)
+                {
+                    return ApiResponse<bool>.Ok(true, "Homework already submitted.");
+                }
+            }
+            throw;
+        }
 
         // At this point, Domain Events or background job enqueuing to BullMQ should ideally be triggered
         // for AI auto-grading (Task T019 for AI pipeline). For now, it stays PendingReview.

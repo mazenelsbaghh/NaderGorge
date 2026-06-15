@@ -29,6 +29,7 @@ interface AuthState {
     rememberMe: boolean
   ) => void;
   clearAuth: () => void;
+  logout: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   updateProfile: (profileComplete: boolean) => void;
   updateAvatar: (avatarSlug: string | null) => void;
@@ -69,6 +70,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: false,
       isLoading: false,
     });
+  },
+
+  logout: async () => {
+    try {
+      const { authService } = await import('@/services/auth-service');
+      await authService.logout();
+    } catch (err) {
+      console.error('Logout request failed:', err);
+    } finally {
+      get().clearAuth();
+    }
   },
 
   setLoading: (loading) => set({ isLoading: loading }),

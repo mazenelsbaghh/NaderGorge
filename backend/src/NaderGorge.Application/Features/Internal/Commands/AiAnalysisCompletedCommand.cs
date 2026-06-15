@@ -46,6 +46,12 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
             return ApiResponse.Fail("Video not found");
         }
 
+        if (!video.IsProcessingAI)
+        {
+            _logger.LogInformation("[AI Callback] Video {VideoId} is not in processing state. Terminal state already reached. Skipping.", request.VideoId);
+            return ApiResponse.Ok("AI chapters already processed");
+        }
+
         // 2. Delete old chapters by fetching them separately (no tracking on the parent video)
         var oldChapters = await _db.VideoChapters
             .Where(vc => vc.LessonVideoId == request.VideoId)

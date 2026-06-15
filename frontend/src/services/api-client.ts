@@ -8,6 +8,7 @@ import {
 } from '@/lib/auth-storage';
 
 import { getSurfaceName } from '@/packages/surface-runtime/config';
+import { useAuthStore } from '@/stores/auth-store';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5245/api';
 
@@ -23,6 +24,8 @@ const apiClient = axios.create({
 const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/parent/reports'];
 const RATE_LIMIT_TOAST_COOLDOWN_MS = 4_000;
 let lastRateLimitToastAt = 0;
+
+let refreshPromise: Promise<string> | null = null;
 
 // Request interceptor: attach JWT token and dynamic surface header
 apiClient.interceptors.request.use(
@@ -56,24 +59,47 @@ apiClient.interceptors.response.use(
     ) {
       originalRequest._retry = true;
 
+      if (!refreshPromise) {
+        refreshPromise = (async () => {
+          try {
+            const { data } = await axios.post(
+              `${API_BASE_URL}/auth/refresh`,
+              {},
+              { withCredentials: true }
+            );
+
+            const token = data.data.accessToken;
+            replaceStoredTokens(token);
+
+            // Update Zustand store atomically
+            useAuthStore.setState({
+              user: data.data.user,
+              accessToken: token,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+
+            return token;
+          } catch (refreshError) {
+            clearStoredAuth();
+            useAuthStore.getState().clearAuth();
+            if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+              window.location.href = '/login';
+            }
+            throw refreshError;
+          } finally {
+            refreshPromise = null;
+          }
+        })();
+      }
+
       try {
-        const { data } = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
-
-        replaceStoredTokens(data.data.accessToken);
-
+        const token = await refreshPromise;
         originalRequest.headers = originalRequest.headers ?? {};
-        originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${token}`;
         return apiClient(originalRequest);
-      } catch {
-        clearStoredAuth();
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-        return Promise.reject(error);
+      } catch (refreshErr) {
+        return Promise.reject(refreshErr);
       }
     }
 

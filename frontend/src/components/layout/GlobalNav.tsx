@@ -35,7 +35,7 @@ function LoginNavButtonContent() {
 
 export function GlobalNav() {
   const pathname = usePathname();
-  const { user, isAuthenticated, clearAuth } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const router = useRouter();
   const { isDark, toggleTheme } = useAdminTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -63,8 +63,9 @@ export function GlobalNav() {
   }
 
   const handleLogout = () => {
-    clearAuth();
-    router.push('/login');
+    void logout().finally(() => {
+      router.push('/login');
+    });
   };
 
   // Navigation links based on auth state

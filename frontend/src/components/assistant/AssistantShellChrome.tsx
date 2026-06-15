@@ -129,7 +129,7 @@ export function AssistantShellChrome({
   children,
 }: AssistantShellChromeProps) {
   const router = useRouter();
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const { hasPermission } = useHasPermission();
   const { themeVars } = useAdminTheme();
@@ -149,8 +149,9 @@ export function AssistantShellChrome({
   };
 
   const handleLogout = () => {
-    clearAuth();
-    router.replace('/login');
+    void logout().finally(() => {
+      router.replace('/login');
+    });
   };
 
   return (
