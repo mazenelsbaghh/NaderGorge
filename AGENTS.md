@@ -74,6 +74,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
-- 128-lesson-content-enhancements: specs/128-lesson-content-enhancements/plan.md
+- 129-comprehensive-e2e-testing: specs/129-comprehensive-e2e-testing/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->
