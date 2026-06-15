@@ -126,21 +126,25 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
                     .OrderByDescending(l => l.Order)
                     .FirstOrDefault();
 
+                bool blockedByPrevExam = false;
+                bool blockedByPrevHomework = false;
+
                 if (prevLesson != null)
                 {
-                    bool blockedByPrevExam = prevLesson.ExamId.HasValue && !passedExamIds.Contains(prevLesson.ExamId.Value);
+                    blockedByPrevExam = prevLesson.ExamId.HasValue && !passedExamIds.Contains(prevLesson.ExamId.Value);
 
-                    bool blockedByPrevHomework = mandatoryHomeworks
+                    blockedByPrevHomework = mandatoryHomeworks
                         .Where(h => h.LessonId == prevLesson.Id)
                         .Any(h => !passedHomeworkIds.Contains(h.Id));
-
-                    bool blockedByCurrentExam = lesson.ExamId.HasValue && !passedExamIds.Contains(lesson.ExamId.Value);
-
-                    if ((blockedByPrevExam || blockedByPrevHomework || blockedByCurrentExam) && !manuallyUnlockedIds.Contains(lesson.Id))
-                    {
-                        isLocked = true;
-                    }
                 }
+
+                bool blockedByCurrentExam = lesson.ExamId.HasValue && !passedExamIds.Contains(lesson.ExamId.Value);
+
+                if ((blockedByPrevExam || blockedByPrevHomework || blockedByCurrentExam) && !manuallyUnlockedIds.Contains(lesson.Id))
+                {
+                    isLocked = true;
+                }
+
 
                 lessonItems.Add(new LessonProgressItemDto(lesson.Id, lesson.Title, lesson.Order, isCompleted, isLocked, hasExam, examPassed));
             }

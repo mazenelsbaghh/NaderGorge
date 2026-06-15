@@ -1,9 +1,11 @@
 using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+
 
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
@@ -95,8 +97,36 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
         };
         _context.OutboxEvents.Add(limitChangedEvent);
 
+
+        // Automatically approve any pending extra watch request for this video/student since their limit is overridden
+        var pendingRequests = await _context.ExtraWatchRequests
+            .Where(r => r.UserId == request.UserId && r.LessonVideoId == request.VideoId && r.Status == NaderGorge.Domain.Enums.RequestStatus.Pending)
+            .ToListAsync(cancellationToken);
+
+        foreach (var req in pendingRequests)
+        {
+            req.Status = NaderGorge.Domain.Enums.RequestStatus.Approved;
+            req.ResolvedAt = DateTime.UtcNow;
+            req.RejectionReason = $"تم زيادة المشاهدات تلقائيًا بواسطة التجاوز: {request.Reason}";
+
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "ExtraWatchRequestUpdated",
+                TargetUserId = req.UserId.ToString(),
+                PayloadJson = JsonSerializer.Serialize(new
+                {
+                    lessonId = watchEvent.LessonVideo.LessonId,
+                    videoId = req.LessonVideoId,
+                    status = "Approved",
+                    allowedWatchCount = watchEvent.CustomMaxWatchCount.Value
+                })
+            };
+            _context.OutboxEvents.Add(outboxEvent);
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return ApiResponse.Ok("Video limit overridden successfully.");
     }
 }
+

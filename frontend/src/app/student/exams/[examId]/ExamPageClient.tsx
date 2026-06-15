@@ -33,9 +33,11 @@ export default function ExamPageClient() {
         setExam(null);
         return;
       } catch (err: unknown) {
-        const passedResultError = err as { response?: { status?: number } };
+        const passedResultError = err as { response?: { status?: number; data?: { message?: string } } };
         if (passedResultError.response?.status && passedResultError.response.status !== 404) {
-          if (passedResultError.response.status === 403) {
+          if (passedResultError.response.data?.message) {
+            setError(passedResultError.response.data.message);
+          } else if (passedResultError.response.status === 403) {
             setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
           } else {
             setError('تعذر تحميل نتيجة الامتحان الحالية.');
@@ -49,9 +51,11 @@ export default function ExamPageClient() {
         const res = await examService.startExam(examId);
         setExam(res.data.data);
       } catch (err: unknown) {
-        const apiError = err as { response?: { status?: number; data?: { errors?: string[] } } };
+        const apiError = err as { response?: { status?: number; data?: { errors?: string[]; message?: string } } };
 
-        if (apiError.response?.status === 403) {
+        if (apiError.response?.data?.message) {
+          setError(apiError.response.data.message);
+        } else if (apiError.response?.status === 403) {
           setError('لا يمكنك الوصول لهذا الامتحان أو أن الحصة الخاصة به ما زالت مغلقة.');
         } else if (apiError.response?.data?.errors?.includes('لقد اجتزت هذا الامتحان بالفعل.')) {
           try {
@@ -67,6 +71,7 @@ export default function ExamPageClient() {
         }
         setExam(null);
       }
+
     } finally {
       setLoading(false);
     }

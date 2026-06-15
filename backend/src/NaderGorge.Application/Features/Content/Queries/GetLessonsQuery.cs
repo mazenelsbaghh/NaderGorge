@@ -133,27 +133,29 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 }
             }
 
-            // 3. Check if current lesson's own exam is passed
-            if (lesson.ExamId.HasValue)
-            {
-                var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
-                if (exam != null && exam.IsMandatory)
-                {
-                    var passedExam = await _db.StudentExamAttempts
-                        .AnyAsync(a => a.UserId == userId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+        }
 
-                    if (!passedExam)
-                    {
-                        return (
-                            true,
-                            $"يجب اجتياز امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.",
-                            exam.Id,
-                            null
-                        );
-                    }
+        // 3. Check if current lesson's own exam is passed
+        if (lesson.ExamId.HasValue)
+        {
+            var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
+            if (exam != null && exam.IsMandatory)
+            {
+                var passedExam = await _db.StudentExamAttempts
+                    .AnyAsync(a => a.UserId == userId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+
+                if (!passedExam)
+                {
+                    return (
+                        true,
+                        $"يجب اجتياز امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.",
+                        exam.Id,
+                        null
+                    );
                 }
             }
         }
+
 
         return (false, null, null, null);
     }

@@ -53,10 +53,16 @@ public class RecordVideoEventCommandHandler : IRequestHandler<RecordVideoEventCo
             _db.VideoWatchEvents.Add(trackEvent);
         }
 
-        if (trackEvent.IsLocked)
+        var lockedMaxLimit = trackEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
+        bool isLocked = lockedMaxLimit > 0 && trackEvent.WatchCount >= lockedMaxLimit;
+        if (isLocked)
         {
+            if (!trackEvent.IsLocked)
+            {
+                trackEvent.IsLocked = true;
+                await _db.SaveChangesAsync(ct);
+            }
             await transaction.CommitAsync(ct);
-            var lockedMaxLimit = trackEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
             var lockedContext = new VideoTrackingContext(
                 lockedMaxLimit,
                 lockedMaxLimit > 0 ? Math.Min(trackEvent.WatchCount, lockedMaxLimit) : trackEvent.WatchCount,
@@ -67,6 +73,12 @@ public class RecordVideoEventCommandHandler : IRequestHandler<RecordVideoEventCo
                 new List<string> { "WATCH_LIMIT_REACHED" },
                 lockedContext);
         }
+        else if (trackEvent.IsLocked)
+        {
+            trackEvent.IsLocked = false;
+            await _db.SaveChangesAsync(ct);
+        }
+
 
         var settings = await _cachedPlatformSettingsReader.GetAsync(ct);
         var thresholdPercentage = settings.VideoWatchThresholdPercentage;

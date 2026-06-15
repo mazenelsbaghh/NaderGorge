@@ -80,8 +80,14 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             watchEvent.TimeWatchedInSeconds = watchEvent.WatchCount * thresholdSeconds;
         }
 
-        if (watchEvent.IsLocked)
+        bool isLocked = maxLimit > 0 && watchEvent.WatchCount >= maxLimit;
+        if (isLocked)
         {
+            if (!watchEvent.IsLocked)
+            {
+                watchEvent.IsLocked = true;
+                await _db.SaveChangesAsync(ct);
+            }
             await transaction.CommitAsync(ct);
             return ApiResponse<WatchProgressDto>.Ok(new WatchProgressDto(
                 maxLimit > 0 ? Math.Min(watchEvent.WatchCount, maxLimit) : watchEvent.WatchCount,
@@ -92,6 +98,12 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
                 thresholdSeconds
             ));
         }
+        else if (watchEvent.IsLocked)
+        {
+            watchEvent.IsLocked = false;
+            await _db.SaveChangesAsync(ct);
+        }
+
 
         var trackedSecondsDelta = VideoWatchProgressCalculator.ResolveAcceptedSeconds(
             request.SecondsWatched,

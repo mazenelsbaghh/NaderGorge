@@ -124,6 +124,28 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                     }
                 }
             }
+                // 3. Current lesson's exam
+                if (lesson.ExamId.HasValue)
+                {
+                    var currentExam = await _dbContext.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
+                    if (currentExam != null && currentExam.IsMandatory)
+                    {
+                        var passedCurrentExam = await _dbContext.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+
+                        if (!passedCurrentExam)
+                        {
+                            var attemptedCurrentExam = await _dbContext.StudentExamAttempts
+                                .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == lesson.ExamId.Value, ct);
+
+                            string reason = attemptedCurrentExam
+                                ? $"يجب اجتياز امتحان الحصة الحالية '{currentExam.Title}' بنجاح أولاً قبل بدء هذا الواجب."
+                                : $"يجب حل امتحان الحصة الحالية '{currentExam.Title}' أولاً قبل بدء هذا الواجب.";
+
+                            return ApiResponse<StartHomeworkAttemptDto>.Fail(reason);
+                        }
+                }
+            }
         }
 
         // Check for existing submission

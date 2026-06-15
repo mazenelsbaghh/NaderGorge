@@ -357,8 +357,8 @@ public class E2eTestingController : ControllerBase
         var lesson2 = new Lesson { Id = lesson2Id, ContentSectionId = sectionId, Title = "E2E Lesson 2", Summary = "Essay lesson", Order = 1 };
         var lesson3 = new Lesson { Id = lesson3Id, ContentSectionId = sectionId, Title = "E2E Lesson 3", Summary = "Exam lesson", Order = 2, ExamId = examId };
         var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "youtube", ProviderVideoId = "dQw4w9WgXcQ", MaxWatchCount = 2, Order = 0 };
-        var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
-        var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id };
+        var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id, IsMandatory = false };
+        var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id, IsMandatory = false };
 
         // Link exam to lesson
         lesson2.ExamId = essayExamId;
@@ -371,8 +371,9 @@ public class E2eTestingController : ControllerBase
             LessonId = lessonId,
             PassingScoreThreshold = 5,
             TotalScore = 40,
-            IsMandatory = true
+            IsMandatory = false
         };
+
 
         // MCQ Question 1: "What is 1+1?" → correct answer "2"
         var hwMcqQuestion1 = new NaderGorge.Domain.Entities.Homework.HomeworkQuestion

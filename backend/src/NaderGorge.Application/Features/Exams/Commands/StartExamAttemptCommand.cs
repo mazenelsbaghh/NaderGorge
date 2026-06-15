@@ -117,28 +117,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 }
             }
 
-            // 3. Current homework
-            var homework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == lesson.Id, ct);
-            if (homework != null && homework.IsMandatory)
-            {
-                var latestSubmission = await _db.HomeworkSubmissions
-                    .Where(s => s.StudentId == request.UserId && s.HomeworkId == homework.Id)
-                    .OrderByDescending(s => s.StartedAt)
-                    .FirstOrDefaultAsync(ct);
 
-                if (latestSubmission == null)
-                {
-                    return ApiResponse<ActiveExamAttemptDto>.Fail($"يجب حل واجب '{homework.Title}' أولاً قبل بدء هذا الاختبار.");
-                }
-
-                bool homeworkPassed = latestSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
-                                      && latestSubmission.OverallScore >= (homework.PassingScoreThreshold ?? 0);
-
-                if (!homeworkPassed)
-                {
-                    return ApiResponse<ActiveExamAttemptDto>.Fail($"يجب اجتياز واجب '{homework.Title}' أولاً قبل بدء هذا الاختبار.");
-                }
-            }
         }
 
         var exam = await _db.Exams

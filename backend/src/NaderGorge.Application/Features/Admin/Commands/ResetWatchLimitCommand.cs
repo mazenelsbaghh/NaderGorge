@@ -1,3 +1,5 @@
+using System.Linq;
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -28,6 +30,32 @@ public class ResetWatchLimitCommandHandler : IRequestHandler<ResetWatchLimitComm
 
         _db.VideoWatchEvents.RemoveRange(events);
 
+        // Automatically approve any pending extra watch request for this video/student since their watch progress was reset
+        var pendingRequests = await _db.ExtraWatchRequests
+            .Where(r => r.UserId == request.StudentId && r.LessonVideoId == request.LessonVideoId && r.Status == NaderGorge.Domain.Enums.RequestStatus.Pending)
+            .ToListAsync(ct);
+
+        foreach (var req in pendingRequests)
+        {
+            req.Status = NaderGorge.Domain.Enums.RequestStatus.Approved;
+            req.ResolvedAt = DateTime.UtcNow;
+            req.RejectionReason = "تم تصفير عداد المشاهدات يدوياً عن طريق الإدارة";
+
+            var outboxEvent = new OutboxEvent
+            {
+                Type = "ExtraWatchRequestUpdated",
+                TargetUserId = req.UserId.ToString(),
+                PayloadJson = JsonSerializer.Serialize(new
+                {
+                    lessonId = video.LessonId,
+                    videoId = req.LessonVideoId,
+                    status = "Approved",
+                    allowedWatchCount = video.MaxWatchCount
+                })
+            };
+            _db.OutboxEvents.Add(outboxEvent);
+        }
+
         _db.AuditLogs.Add(new AuditLog
         {
             Action = "ResetWatchLimit",
@@ -42,3 +70,4 @@ public class ResetWatchLimitCommandHandler : IRequestHandler<ResetWatchLimitComm
         return ApiResponse.Ok($"Successfully reset {events.Count} watch events. Student can now re-watch.");
     }
 }
+

@@ -20,6 +20,8 @@ def test_mcq_exam_lifecycle(mock_package):
     # Step 1: Start exam attempt
     start_res = student.post(f"/api/exams/{exam_id}/start")
     assert start_res.status_code == 200
+
+
     attempt_data = start_res.json().get("data", {})
     print("ATTEMPT DATA:", attempt_data)
     attempt_id = attempt_data.get("attemptId")

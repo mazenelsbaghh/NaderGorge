@@ -130,6 +130,27 @@ export default function WatchRequestsPageClient() {
       )
     },
     {
+      key: 'watchCount',
+      label: 'المشاهدات الحالية',
+      render: (req) => {
+        const isUnlimited = req.maxWatchCount === 0;
+        return (
+          <div className="flex flex-col items-start gap-1">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+              req.reachedLimit 
+                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-500' 
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500'
+            }`}>
+              {req.currentWatchCount} / {isUnlimited ? '∞' : req.maxWatchCount}
+            </span>
+            {req.reachedLimit && (
+              <span className="text-[10px] text-rose-500 font-bold">وصل للحد الأقصى</span>
+            )}
+          </div>
+        );
+      }
+    },
+    {
       key: 'date',
       label: 'التاريخ',
       render: (req) => (
@@ -138,6 +159,7 @@ export default function WatchRequestsPageClient() {
         </span>
       )
     },
+
     {
       key: 'status',
       label: 'الحالة',

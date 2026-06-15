@@ -204,35 +204,36 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     }
                 }
             }
+        }
 
-            // 3. Check if current lesson's own exam is passed
-            if (!isLocked && lesson.ExamId.HasValue)
+        // 3. Check if current lesson's own exam is passed
+        if (!isLocked && lesson.ExamId.HasValue)
+        {
+            var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
+            if (exam != null && exam.IsMandatory)
             {
-                var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
-                if (exam != null && exam.IsMandatory)
+                var passedExam = await _db.StudentExamAttempts
+                    .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+
+                if (!passedExam)
                 {
-                    var passedExam = await _db.StudentExamAttempts
-                        .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+                    isLocked = true;
+                    var attemptedExam = await _db.StudentExamAttempts
+                        .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value, ct);
 
-                    if (!passedExam)
+                    if (!attemptedExam)
                     {
-                        isLocked = true;
-                        var attemptedExam = await _db.StudentExamAttempts
-                            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value, ct);
-
-                        if (!attemptedExam)
-                        {
-                            lockedReason = $"يجب حل امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.";
-                        }
-                        else
-                        {
-                            lockedReason = $"يجب اجتياز امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.";
-                        }
-                        blockingExamId = exam.Id;
+                        lockedReason = $"يجب حل امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.";
                     }
+                    else
+                    {
+                        lockedReason = $"يجب اجتياز امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.";
+                    }
+                    blockingExamId = exam.Id;
                 }
             }
         }
+
 
         var watchEvents = await _db.VideoWatchEvents
             .AsNoTracking()
@@ -412,30 +413,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             }
         }
 
-        if (!lessonExamLocked && hw != null && hw.IsMandatory)
-        {
-            var hwSubmission = await _db.HomeworkSubmissions
-                .Where(s => s.StudentId == request.UserId && s.HomeworkId == hw.Id)
-                .OrderByDescending(s => s.SubmittedAt)
-                .FirstOrDefaultAsync(ct);
 
-            bool hwPassed = hwSubmission != null 
-                           && hwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
-                           && hwSubmission.OverallScore >= (hw.PassingScoreThreshold ?? 0);
-
-            if (!hwPassed)
-            {
-                lessonExamLocked = true;
-                if (hwSubmission == null)
-                {
-                    examLockedReason = $"يجب حل واجب الحصة الحالية '{hw.Title}' أولاً لفتح اختبار هذه الحصة.";
-                }
-                else
-                {
-                    examLockedReason = $"يجب اجتياز واجب الحصة الحالية '{hw.Title}' أولاً لفتح اختبار هذه الحصة.";
-                }
-            }
-        }
 
         string? examStatus = null;
         if (lesson.ExamId.HasValue)

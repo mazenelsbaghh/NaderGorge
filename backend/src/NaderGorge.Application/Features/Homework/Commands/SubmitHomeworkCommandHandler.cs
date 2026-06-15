@@ -35,6 +35,69 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
             return ApiResponse<bool>.Fail("You do not have access to this homework's lesson.");
         }
 
+        var lesson = await _dbContext.Lessons.FirstOrDefaultAsync(l => l.Id == homework.LessonId, cancellationToken);
+        if (lesson != null)
+        {
+            var previousLesson = await _dbContext.Lessons
+                .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order < lesson.Order)
+                .OrderByDescending(l => l.Order)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (previousLesson != null)
+            {
+                // 1. Previous exam
+                if (previousLesson.ExamId.HasValue)
+                {
+                    var exam = await _dbContext.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, cancellationToken);
+                    if (exam != null && exam.IsMandatory)
+                    {
+                        var passedExam = await _dbContext.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, cancellationToken);
+
+                        if (!passedExam)
+                        {
+                            return ApiResponse<bool>.Fail("Previous lesson's exam is not passed.");
+                        }
+                    }
+                }
+
+                // 2. Previous homework
+                var prevHomework = await _dbContext.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, cancellationToken);
+                if (prevHomework != null && prevHomework.IsMandatory)
+                {
+                    var prevHwSubmission = await _dbContext.HomeworkSubmissions
+                        .Where(s => s.StudentId == request.StudentId && s.HomeworkId == prevHomework.Id)
+                        .OrderByDescending(s => s.SubmittedAt)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    bool prevHwPassed = prevHwSubmission != null 
+                                      && prevHwSubmission.Status == SubmissionStatus.Graded 
+                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+
+                    if (!prevHwPassed)
+                    {
+                        return ApiResponse<bool>.Fail("Previous lesson's homework is not passed.");
+                    }
+                }
+            }
+
+            // 3. Current lesson's exam
+            if (lesson.ExamId.HasValue)
+            {
+                var currentExam = await _dbContext.Exams.FindAsync(new object[] { lesson.ExamId.Value }, cancellationToken);
+                if (currentExam != null && currentExam.IsMandatory)
+                {
+                    var passedCurrentExam = await _dbContext.StudentExamAttempts
+                        .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == lesson.ExamId.Value && a.IsPassed, cancellationToken);
+
+                    if (!passedCurrentExam)
+                    {
+                        return ApiResponse<bool>.Fail("Current lesson's exam is not passed.");
+                    }
+                }
+            }
+        }
+
         // Check if a submission already exists
         var submission = await _dbContext.HomeworkSubmissions
             .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, cancellationToken);

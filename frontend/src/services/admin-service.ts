@@ -186,7 +186,11 @@ export interface AdminWatchRequestDto {
   createdAt: string;
   resolvedAt?: string | null;
   reason?: string | null;
+  currentWatchCount: number;
+  maxWatchCount: number;
+  reachedLimit: boolean;
 }
+
 
 export interface StudentProfileExtendedDto {
   id: string;
