@@ -24,6 +24,7 @@ Use these scripts from this skill folder to make the workflow deterministic:
 - `scripts/extract_test_commands.py --spec-dir <specs/feature-dir>`: list likely test commands from `tasks.md`, `quickstart.md`, and `plan.md` before Phase 9 execution.
 - `scripts/validate_run.py --root <repo-root> --spec-dir <specs/feature-dir>`: verify final artifacts, progress checklists, clarification/planning artifacts, AGENTS.md plan reference, feature-test evidence, and quality-gate ordering before the final report.
 
+Read `references/subagent-handoff-template.md` before Phases 1-3 when subagents are available.
 Read `references/feature-test-matrix.md` during Phase 9 before building the final feature test matrix.
 
 ### Mandatory Order
@@ -82,32 +83,47 @@ Assume the implementation model is much weaker than you. Every spec, plan, task,
 - For backend work, specify validation, authorization, database transaction/concurrency behavior, error responses, and migration expectations.
 - For tests, define happy path, permission/access negative path, validation failure path, persistence/state transition path, and regression path when applicable.
 
+### Subagent Usage For Phases 1-3
+
+If a subagent facility is available, use it in Phases 1, 2, and 3 for context gathering, ambiguity discovery, and planning support. If unavailable, continue inline and record that explicitly.
+
+- The main agent MUST own user interaction, Arabic clarification questions, file writes, phase marking, validation, and final acceptance.
+- Subagents MUST NOT ask the user questions directly.
+- Subagents MUST NOT mark phases complete.
+- Subagents MUST NOT overwrite `spec.md`, `plan.md`, `tasks.md`, or `achievements.md` unless the main agent explicitly assigns that exact file ownership.
+- Use `references/subagent-handoff-template.md` for the handoff prompts and acceptance checks.
+- Record results in `achievements.md` under `### Subagent Evidence / إثبات استخدام الوكلاء الفرعيين`.
+- If subagent output is vague, contradicts the spec/constitution, omits artifact paths, asks non-Arabic clarification questions, or leaves high-impact assumptions unresolved, reject or repair it before proceeding.
+
 ### Phase 1: Feature Specification (`speckit-specify`)
 
 1. Create `achievements.md` by running `python .agents/skills/speckit-all/scripts/init_achievements.py --root .`.
-2. Execute **`speckit-specify`** using `$ARGUMENTS` as the feature description.
-3. Ensure `spec.md` and `checklists/requirements.md` are created under one `specs/<feature>/` directory.
-4. Do not proceed if the feature description is empty or the spec directory cannot be identified.
-5. Mark Phase 1 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 1 --root .`.
+2. If subagents are available, run a Phase 1 specify-support subagent using `references/subagent-handoff-template.md`; otherwise record `Phase 1 specify support: unavailable`.
+3. Execute **`speckit-specify`** using `$ARGUMENTS` and the accepted subagent context packet as the feature description context.
+4. Ensure `spec.md` and `checklists/requirements.md` are created under one `specs/<feature>/` directory.
+5. Do not proceed if the feature description is empty or the spec directory cannot be identified.
+6. Mark Phase 1 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 1 --root .`.
 
 ### Phase 2: Arabic Clarification (`speckit-clarify`)
 
 1. Execute **`speckit-clarify`** immediately after Phase 1 and before planning.
 2. All clarification questions shown to the user MUST be in Arabic. Option labels may be `A/B/C`, but question text, recommendation reasoning, option descriptions, and answer instructions must be Arabic.
-3. Ask up to 5 targeted questions exactly as `speckit-clarify` allows, one question at a time.
-4. If no critical ambiguities exist, record that result and continue.
-5. Save every accepted answer back into `spec.md` through the `speckit-clarify` workflow.
-6. Do not run `speckit-plan` while clarification questions are unanswered.
-7. Mark Phase 2 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 2 --root .`.
+3. If subagents are available, run a Phase 2 clarify-support subagent using `references/subagent-handoff-template.md`; otherwise record `Phase 2 clarify support: unavailable`.
+4. Ask up to 5 targeted questions exactly as `speckit-clarify` allows, one question at a time. The main agent asks the user; the subagent only drafts candidates.
+5. If no critical ambiguities exist, record that result and continue.
+6. Save every accepted answer back into `spec.md` through the `speckit-clarify` workflow.
+7. Do not run `speckit-plan` while clarification questions are unanswered.
+8. Mark Phase 2 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 2 --root .`.
 
 ### Phase 3: Technical Planning (`speckit-plan`)
 
 1. Take the clarified `spec.md` and pass it as the planning input/context for **`speckit-plan`**.
-2. **MANDATORY SKILL HANDOFF**: Execute standalone **`speckit-plan`** and follow its `SKILL.md` workflow exactly to create `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, and the AGENTS.md plan reference update.
-3. `speckit-all` MUST NOT perform Phase 3 planning inline, recreate the plan workflow itself, or write `plan.md` without applying `speckit-plan`.
-4. Ensure the plan conforms to `.specify/memory/constitution.md`.
-5. If UI is touched, pass `ui-ux-pro-max-skill` and `impeccable` expectations into the `speckit-plan` planning context.
-6. Mark Phase 3 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 3 --root .`.
+2. If subagents are available, run a Phase 3 plan-support subagent using `references/subagent-handoff-template.md`; otherwise record `Phase 3 plan support: unavailable`.
+3. **MANDATORY SKILL HANDOFF**: Execute standalone **`speckit-plan`** and follow its `SKILL.md` workflow exactly to create `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, and the AGENTS.md plan reference update.
+4. `speckit-all` MUST NOT perform Phase 3 planning inline, recreate the plan workflow itself, or write `plan.md` without applying `speckit-plan`.
+5. Ensure the plan conforms to `.specify/memory/constitution.md`.
+6. If UI is touched, pass `ui-ux-pro-max-skill` and `impeccable` expectations into the `speckit-plan` planning context.
+7. Mark Phase 3 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 3 --root .`.
 
 ### Phase 4: Detailed Task Breakdown (`speckit-tasks`)
 

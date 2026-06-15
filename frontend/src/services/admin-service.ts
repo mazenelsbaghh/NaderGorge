@@ -279,6 +279,10 @@ export interface ExamQuestionSummaryDto {
   type: string;
   points: number;
   baseText?: string | null;
+  totalAttempts?: number;
+  correctCount?: number;
+  wrongCount?: number;
+  correctPercentage?: number;
 }
 
 export interface ExamDashboardDto {

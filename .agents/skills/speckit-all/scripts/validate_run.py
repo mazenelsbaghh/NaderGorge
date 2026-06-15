@@ -66,6 +66,14 @@ def validate_achievements(root: Path) -> None:
         fail("achievements.md must list Feature Tests after Test Guard")
     if "Feature Test Evidence" not in text and "إثبات اختبارات الفيتشر" not in text:
         fail("achievements.md is missing Feature Test Evidence")
+    if "Subagent Evidence" not in text and "إثبات استخدام الوكلاء الفرعيين" not in text:
+        fail("achievements.md is missing Subagent Evidence")
+    subagent_start = max(text.find("Subagent Evidence"), text.find("إثبات استخدام الوكلاء الفرعيين"))
+    if subagent_start != -1:
+        subagent_evidence = text[subagent_start:]
+        for phase in ["Phase 1", "Phase 2", "Phase 3"]:
+            if phase not in subagent_evidence:
+                fail(f"Subagent Evidence must mention {phase}")
     evidence_start = max(text.find("Feature Test Evidence"), text.find("إثبات اختبارات الفيتشر"))
     if evidence_start != -1:
         evidence = text[evidence_start:]

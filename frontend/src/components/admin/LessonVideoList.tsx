@@ -1,13 +1,16 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
-import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X } from 'lucide-react';
+import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
+import NeumorphButton from '@/components/ui/neumorph-button';
+import { Dropdown } from '@/components/ui/dropdown';
+import { NumberField } from '@/components/ui/number-field';
 
 function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
@@ -264,6 +267,13 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editProvider, setEditProvider] = useState('YouTube');
+  const [editUrlOrEmbedCode, setEditUrlOrEmbedCode] = useState('');
+  const [editOrder, setEditOrder] = useState(1);
+  const [editMaxWatchCount, setEditMaxWatchCount] = useState(3);
+  const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
 
   const toggleChapters = (videoId: string) =>
     setExpandedChapters(prev => prev === videoId ? null : videoId);
@@ -294,44 +304,53 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     }
   };
 
-  const handleEditVideo = async (video: any) => {
-    const title = window.prompt('عنوان الفيديو', video.title ?? '');
-    if (title === null) return;
+  const startEditVideo = (video: any) => {
+    setEditingVideoId(video.id);
+    setEditTitle(video.title || '');
+    setEditProvider(video.provider || 'YouTube');
+    setEditUrlOrEmbedCode(video.providerVideoId || '');
+    setEditOrder(video.order || 1);
+    setEditMaxWatchCount(video.maxWatchCount || 3);
+  };
 
-    const urlOrEmbedCode = window.prompt('رابط الفيديو أو المعرف', video.providerVideoId ?? '');
-    if (urlOrEmbedCode === null) return;
+  const handleUpdateVideo = async (videoId: string) => {
+    const trimmedTitle = editTitle.trim();
+    const trimmedUrl = editUrlOrEmbedCode.trim();
 
-    const orderInput = window.prompt('ترتيب العرض', String(video.order ?? 1));
-    if (orderInput === null) return;
-
-    const limitInput = window.prompt('الحد الأقصى للمشاهدات', String(video.maxWatchCount ?? 3));
-    if (limitInput === null) return;
-
-    const trimmedTitle = title.trim();
-    const trimmedUrl = urlOrEmbedCode.trim();
-    const order = Number(orderInput);
-    const limit = Number(limitInput);
-
-    if (!trimmedTitle || !trimmedUrl || !Number.isInteger(order) || order < 1 || !Number.isInteger(limit) || limit < 1) {
+    if (!trimmedTitle || !trimmedUrl || editOrder < 1 || editMaxWatchCount < 1) {
       toast.error('بيانات التعديل غير صالحة');
       return;
     }
 
     try {
-      setUpdatingId(video.id);
-      await adminService.updateVideo(video.id, {
+      setUpdatingId(videoId);
+      await adminService.updateVideo(videoId, {
         title: trimmedTitle,
-        provider: video.provider,
+        provider: editProvider,
         urlOrEmbedCode: trimmedUrl,
-        order,
-        limit,
+        order: editOrder,
+        limit: editMaxWatchCount,
       });
-      toast.success('تم تعديل الفيديو');
+      toast.success('تم تعديل الفيديو بنجاح');
+      setEditingVideoId(null);
       onRefresh?.();
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'تعذر تعديل الفيديو');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleToggleActive = async (video: any) => {
+    try {
+      setTogglingActiveId(video.id);
+      await adminService.toggleVideoActive(video.id);
+      toast.success(video.isActive ? 'تم إخفاء الفيديو عن الطلاب' : 'تم تفعيل الفيديو للطلاب');
+      onRefresh?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'تعذر تغيير حالة الفيديو');
+    } finally {
+      setTogglingActiveId(null);
     }
   };
 
@@ -379,7 +398,9 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
         return (
           <div
             key={video.id}
-            className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm group overflow-hidden"
+            className={`rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] shadow-sm group overflow-hidden transition-all ${
+              !video.isActive ? 'opacity-60 border-dashed bg-[var(--admin-bg)]' : ''
+            }`}
           >
             <div className="flex flex-col sm:flex-row sm:items-center items-start justify-between gap-4 sm:gap-0 p-4">
               <div className="flex items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
@@ -405,6 +426,12 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                       <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold">
                         <BookCheck className="h-3 w-3" />
                         امتحان مرفق {video.exams && video.exams.length > 1 ? `(${video.exams.length})` : ''}
+                      </span>
+                    )}
+                    {!video.isActive && (
+                      <span className="rounded bg-red-500/10 px-1.5 py-0.5 border border-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-1 font-bold">
+                        <EyeOff className="h-3 w-3" />
+                        مخفي عن الطلاب
                       </span>
                     )}
                   </div>
@@ -490,11 +517,31 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                     <Play className="h-4 w-4" />
                   </button>
                 </div>
+
+                <div className="relative group/toggle-active">
+                  <button
+                    type="button"
+                    aria-label={video.isActive ? "إخفاء الفيديو" : "تفعيل الفيديو"}
+                    onClick={() => handleToggleActive(video)}
+                    disabled={togglingActiveId === video.id}
+                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:opacity-40"
+                    title={video.isActive ? "إخفاء الفيديو عن الطلاب" : "تفعيل الفيديو للطلاب"}
+                  >
+                    {togglingActiveId === video.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : video.isActive ? (
+                      <Eye className="h-4 w-4" />
+                    ) : (
+                      <EyeOff className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+
                 <div className="relative group/edit">
                   <button
                     type="button"
                     aria-label="تعديل الفيديو"
-                    onClick={() => handleEditVideo(video)}
+                    onClick={() => startEditVideo(video)}
                     disabled={updatingId === video.id || deletingId === video.id}
                     className="rounded-lg p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-bg)] disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -513,7 +560,102 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                   </button>
                 </div>
               </div>
-            </div>{/* end row */}
+            </div>
+
+            {/* Inline Edit Form */}
+            {editingVideoId === video.id && (
+              <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4 space-y-4" dir="rtl">
+                <div className="text-sm font-bold text-[var(--admin-text)]">تعديل بيانات الفيديو</div>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex-1 space-y-2 min-w-[200px]">
+                    <label className="text-xs font-bold text-[var(--admin-muted)]">عنوان الفيديو</label>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="مثال: الدرس الأول - مراجعة"
+                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                      required
+                    />
+                  </div>
+                  <div className="w-40 space-y-2">
+                    <Dropdown
+                      label="المنصة"
+                      value={editProvider}
+                      onChange={(v) => setEditProvider(v as string)}
+                      size="sm"
+                      options={[
+                        { value: 'YouTube', label: 'YouTube' },
+                        { value: 'vk', label: 'VK (فيكونتاكتي)' },
+                      ]}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2 min-w-[200px]">
+                    <label className="text-xs font-bold text-[var(--admin-muted)]">رابط الفيديو (أو المعرف)</label>
+                    <input
+                      type="text"
+                      value={editUrlOrEmbedCode}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
+                          setEditProvider('vk');
+                        } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
+                          setEditProvider('YouTube');
+                        }
+                        setEditUrlOrEmbedCode(val);
+                      }}
+                      placeholder={editProvider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : 'رابط الفيديو'}
+                      className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="w-32">
+                    <NumberField value={editOrder} onChange={setEditOrder} minValue={1}>
+                      <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">ترتيب العرض</NumberField.Label>
+                      <NumberField.Group className="h-[46px] w-full bg-[var(--admin-bg)] hover:shadow-none">
+                        <NumberField.DecrementButton />
+                        <NumberField.Input className="bg-[var(--admin-bg)]" />
+                        <NumberField.IncrementButton />
+                      </NumberField.Group>
+                    </NumberField>
+                  </div>
+                  <div className="w-40">
+                    <NumberField value={editMaxWatchCount} onChange={setEditMaxWatchCount} minValue={1}>
+                      <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">الحد الأقصى للمشاهدات</NumberField.Label>
+                      <NumberField.Group className="h-[46px] w-full bg-[var(--admin-bg)] hover:shadow-none">
+                        <NumberField.DecrementButton />
+                        <NumberField.Input className="bg-[var(--admin-bg)]" />
+                        <NumberField.IncrementButton />
+                      </NumberField.Group>
+                    </NumberField>
+                  </div>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <NeumorphButton
+                      type="button"
+                      onClick={() => setEditingVideoId(null)}
+                      intent="ghost"
+                      size="md"
+                      pill
+                    >
+                      إلغاء
+                    </NeumorphButton>
+                    <NeumorphButton
+                      type="button"
+                      onClick={() => handleUpdateVideo(video.id)}
+                      disabled={updatingId === video.id || !editTitle.trim() || !editUrlOrEmbedCode.trim()}
+                      loading={updatingId === video.id}
+                      intent="primary"
+                      size="md"
+                      pill
+                    >
+                      حفظ التعديلات
+                    </NeumorphButton>
+                  </div>
+                </div>
+              </div>
+            )}{/* end row */}
 
             {/* Chapters panel */}
             {hasChapters && expandedChapters === video.id && (

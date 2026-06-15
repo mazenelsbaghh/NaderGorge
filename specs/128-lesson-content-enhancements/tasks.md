@@ -35,13 +35,13 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 **⚠️ CRITICAL**: No frontend story work can begin until these endpoints exist
 
-- [ ] T005 Create `ToggleVideoActiveCommand.cs` (MediatR command + handler) in `backend/src/NaderGorge.Application/Features/Admin/Commands/ToggleVideoActiveCommand.cs`
-- [ ] T006 [P] Add `PATCH videos/{id:guid}/toggle-active` endpoint to `backend/src/NaderGorge.API/Controllers/AdminController.cs`
-- [ ] T007 [P] Add `POST resources/upload` endpoint (IFormFile, 10MB limit, saves to `wwwroot/uploads/resources/`) to `backend/src/NaderGorge.API/Controllers/AdminController.cs`
-- [ ] T008 [P] Enhance `GetExamDashboardQuery` to include per-question stats (`CorrectCount`, `WrongCount`, `CorrectPercentage`) by joining `StudentAnswer` data in `backend/src/NaderGorge.Application/Features/Admin/Queries/GetExamDashboardQuery.cs`
-- [ ] T009 [P] Add `CorrectCount`, `WrongCount`, `TotalAttempts`, `CorrectPercentage` fields to `ExamQuestionSummaryDto` in the same query file
-- [ ] T010 Filter `IsActive == true` on videos in student-side lesson content queries (e.g., `GetLessonContentQuery` or equivalent student endpoint)
-- [ ] T011 Verify `dotnet build` passes with 0 errors in `backend/`
+- [x] T005 Create `ToggleVideoActiveCommand.cs` (MediatR command + handler) in `backend/src/NaderGorge.Application/Features/Admin/Commands/ToggleVideoActiveCommand.cs`
+- [x] T006 [P] Add `PATCH videos/{id:guid}/toggle-active` endpoint to `backend/src/NaderGorge.API/Controllers/AdminController.cs`
+- [x] T007 [P] Add `POST resources/upload` endpoint (IFormFile, 10MB limit, saves to `wwwroot/uploads/resources/`) to `backend/src/NaderGorge.API/Controllers/AdminController.cs`
+- [x] T008 [P] Enhance `GetExamDashboardQuery` to include per-question stats (`CorrectCount`, `WrongCount`, `CorrectPercentage`) by joining `StudentAnswer` data in `backend/src/NaderGorge.Application/Features/Admin/Queries/GetExamDashboardQuery.cs`
+- [x] T009 [P] Add `CorrectCount`, `WrongCount`, `TotalAttempts`, `CorrectPercentage` fields to `ExamQuestionSummaryDto` in the same query file
+- [x] T010 Filter `IsActive == true` on videos in student-side lesson content queries (e.g., `GetLessonContentQuery` or equivalent student endpoint)
+- [x] T011 Verify `dotnet build` passes with 0 errors in `backend/`
 
 **Checkpoint**: All backend endpoints ready — frontend story work can begin
 
@@ -55,11 +55,11 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Remove `handleEditVideo` function (window.prompt-based) from `frontend/src/components/admin/LessonVideoList.tsx`
-- [ ] T013 [US1] Add `editingVideoId` state and inline `VideoEditForm` component within `LessonVideoList.tsx` that renders below the video row being edited
-- [ ] T014 [US1] Pre-populate form fields (title, provider Dropdown, urlOrEmbedCode, order NumberField, maxWatchCount NumberField) from the video's current data
-- [ ] T015 [US1] Wire form submit to `adminService.updateVideo()`, on success clear editing state and call `onRefresh()`
-- [ ] T016 [US1] Add Cancel button that clears the editing state without saving
+- [x] T012 [US1] Remove `handleEditVideo` function (window.prompt-based) from `frontend/src/components/admin/LessonVideoList.tsx`
+- [x] T013 [US1] Add `editingVideoId` state and inline `VideoEditForm` component within `LessonVideoList.tsx` that renders below the video row being edited
+- [x] T014 [US1] Pre-populate form fields (title, provider Dropdown, urlOrEmbedCode, order NumberField, maxWatchCount NumberField) from the video's current data
+- [x] T015 [US1] Wire form submit to `adminService.updateVideo()`, on success clear editing state and call `onRefresh()`
+- [x] T016 [US1] Add Cancel button that clears the editing state without saving
 
 **Checkpoint**: Video editing works via inline form instead of browser prompts
 
@@ -73,10 +73,10 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 ### Implementation for User Story 2
 
-- [ ] T017 [P] [US2] Add Eye/EyeOff toggle button to the action buttons area in `frontend/src/components/admin/LessonVideoList.tsx`
-- [ ] T018 [P] [US2] Wire toggle button to call `adminService.toggleVideoActive(videoId)` with loading state
-- [ ] T019 [US2] Add dimmed row styling (`opacity-50`) and "مخفي" badge for inactive videos in `LessonVideoList.tsx`
-- [ ] T020 [US2] Ensure video `isActive` field is included in lesson cockpit DTO response so the frontend can read it
+- [x] T017 [P] [US2] Add Eye/EyeOff toggle button to the action buttons area in `frontend/src/components/admin/LessonVideoList.tsx`
+- [x] T018 [P] [US2] Wire toggle button to call `adminService.toggleVideoActive(videoId)` with loading state
+- [x] T019 [US2] Add dimmed row styling (`opacity-50`) and "مخفي" badge for inactive videos in `LessonVideoList.tsx`
+- [x] T020 [US2] Ensure video `isActive` field is included in lesson cockpit DTO response so the frontend can read it
 
 **Checkpoint**: Admin can toggle video visibility, students only see active videos
 
@@ -90,11 +90,11 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Refactor `AddResourceForm.tsx` to add tab/radio toggle between "رفع ملف" and "لينك مباشر" modes in `frontend/src/components/admin/AddResourceForm.tsx`
-- [ ] T022 [US3] Implement file upload tab with `<input type="file">` and drag-over styling, accepted types: PDF, images, Word docs
-- [ ] T023 [US3] Wire file upload to `adminService.uploadResourceFile(file)` which calls `POST /api/admin/resources/upload`
-- [ ] T024 [US3] On upload success, use the returned URL as `fileUrl` and auto-submit resource creation via `adminService.createResource()`
-- [ ] T025 [US3] Add upload progress indicator and error handling (max 10MB validation client-side)
+- [x] T021 [US3] Refactor `AddResourceForm.tsx` to add tab/radio toggle between "رفع ملف" and "لينك مباشر" modes in `frontend/src/components/admin/AddResourceForm.tsx`
+- [x] T022 [US3] Implement file upload tab with `<input type="file">` and drag-over styling, accepted types: PDF, images, Word docs
+- [x] T023 [US3] Wire file upload to `adminService.uploadResourceFile(file)` which calls `POST /api/admin/resources/upload`
+- [x] T024 [US3] On upload success, use the returned URL as `fileUrl` and auto-submit resource creation via `adminService.createResource()`
+- [x] T025 [US3] Add upload progress indicator and error handling (max 10MB validation client-side)
 
 **Checkpoint**: Admin can upload files directly or paste URLs for lesson resources
 

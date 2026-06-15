@@ -23,7 +23,11 @@ public record ExamQuestionSummaryDto(
     string Text,
     string Type,
     decimal Points,
-    string? BaseText
+    string? BaseText,
+    int TotalAttempts,
+    int CorrectCount,
+    int WrongCount,
+    decimal CorrectPercentage
 );
 
 public record ExamDashboardDto(
@@ -96,15 +100,32 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                 );
             }).ToList();
 
+        var answers = await _context.StudentAnswers
+            .Where(sa => sa.ExamQuestion.ExamId == request.ExamId)
+            .ToListAsync(cancellationToken);
+
         var questionsDto = exam.ExamQuestions
             .OrderBy(eq => eq.Order)
-            .Select(eq => new ExamQuestionSummaryDto(
-                eq.Id,
-                eq.Question?.Text ?? "سؤال محذوف",
-                eq.Question?.Type.ToString() ?? "Essay",
-                eq.Points,
-                eq.Question is FindTheMistakeQuestion ftm ? ftm.BaseText : null
-            )).ToList();
+            .Select(eq =>
+            {
+                var qAnswers = answers.Where(sa => sa.ExamQuestionId == eq.Id).ToList();
+                var total = qAnswers.Count;
+                var correct = qAnswers.Count(sa => sa.IsCorrect);
+                var wrong = total - correct;
+                var pct = total > 0 ? Math.Round((decimal)correct / total * 100, 2) : 0m;
+
+                return new ExamQuestionSummaryDto(
+                    eq.Id,
+                    eq.Question?.Text ?? "سؤال محذوف",
+                    eq.Question?.Type.ToString() ?? "Essay",
+                    eq.Points,
+                    eq.Question is FindTheMistakeQuestion ftm ? ftm.BaseText : null,
+                    total,
+                    correct,
+                    wrong,
+                    pct
+                );
+            }).ToList();
 
         var dto = new ExamDashboardDto(
             exam.Id,

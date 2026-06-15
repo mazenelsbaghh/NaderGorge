@@ -91,7 +91,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var lesson = await _db.Lessons
             .AsNoTracking()
-            .Include(l => l.Videos)
+            .Include(l => l.Videos.Where(v => v.IsActive))
                 .ThenInclude(v => v.VideoChapters)
             .Include(l => l.ContentSection)
             .ThenInclude(cs => cs.Term)

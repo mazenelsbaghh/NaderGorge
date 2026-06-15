@@ -77,6 +77,15 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
             )}
             <NeumorphButton
               type="button"
+              onClick={() => router.push(`/admin/content/exams/${examId}`)}
+              intent="primary"
+              size="md"
+              pill
+            >
+              <BarChart3 className="w-4 h-4 ml-2" /> عرض البروفايل
+            </NeumorphButton>
+            <NeumorphButton
+              type="button"
               onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
               intent="primary"
               size="md"
@@ -136,11 +145,45 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
 
                     {/* Statistics Container */}
                     <div className="xl:w-64 shrink-0 rounded-xl bg-[var(--admin-card)] border border-[var(--admin-border)] p-4">
-                      <BarChart3 className="mb-3 h-5 w-5 text-[var(--admin-primary)]" />
-                      <p className="text-sm font-black text-[var(--admin-text)]">إحصائيات الإجابات غير متاحة</p>
-                      <p className="mt-2 text-xs leading-5 text-[var(--admin-muted)]">
-                        لن يتم عرض نسب صحيحة أو خاطئة إلا بعد توفير بيانات فعلية من نتائج الطلاب.
-                      </p>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <BarChart3 className="h-4 w-4 text-[var(--admin-primary)]" />
+                        <span className="text-xs font-bold text-[var(--admin-text)]">إحصائيات الإجابات</span>
+                      </div>
+                      {q.totalAttempts && q.totalAttempts > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-[var(--admin-muted)]">نسبة الإجابة الصحيحة:</span>
+                            <span className="font-bold text-green-600 dark:text-green-400">{q.correctPercentage}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-[var(--admin-bg)] rounded-full overflow-hidden border border-[var(--admin-border)]">
+                            <div 
+                              className="h-full bg-green-500 rounded-full" 
+                              style={{ width: `${q.correctPercentage}%` }}
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-[var(--admin-muted)] text-center pt-1 border-t border-[var(--admin-border)]/50">
+                            <div>
+                              <div className="font-bold text-green-600 dark:text-green-400">{q.correctCount}</div>
+                              <div>صح</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-red-500">{q.wrongCount}</div>
+                              <div>خطأ</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-[var(--admin-text)]">{q.totalAttempts}</div>
+                              <div>إجمالي</div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-xs font-bold text-[var(--admin-muted)]">لم يتم حل السؤال بعد</p>
+                          <p className="text-[10px] leading-relaxed text-[var(--admin-muted)] opacity-85">
+                            بمجرد قيام الطلاب بحل هذا السؤال، ستظهر الإحصائيات هنا بالتفصيل.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

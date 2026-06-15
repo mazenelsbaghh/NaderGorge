@@ -516,6 +516,58 @@ public class AdminController : ControllerBase
         return result.Success ? CreatedAtAction(nameof(CreateResource), new { id = result.Data }, result) : BadRequest(result);
     }
 
+    [HttpPost("resources/upload")]
+    [HasPermission("content.manage")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadResourceFile(
+        IFormFile file,
+        [FromServices] Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return BadRequest(ApiResponse.Fail("No file uploaded"));
+        }
+
+        if (file.Length > 10 * 1024 * 1024)
+        {
+            return BadRequest(ApiResponse.Fail("File size must not exceed 10 MB"));
+        }
+
+        var allowedMimes = new[]
+        {
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/zip",
+            "application/x-zip-compressed"
+        };
+
+        var isAllowed = file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
+                         allowedMimes.Any(mime => string.Equals(mime, file.ContentType, StringComparison.OrdinalIgnoreCase));
+
+        if (!isAllowed)
+        {
+            return BadRequest(ApiResponse.Fail("Unsupported file type. Allowed types: Images, PDFs, Word/Excel documents, and ZIP files."));
+        }
+
+        var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "resources");
+        Directory.CreateDirectory(uploadsFolder);
+
+        var safeFileName = $"{Guid.NewGuid():N}_{Path.GetFileName(file.FileName)}";
+        var physicalPath = Path.Combine(uploadsFolder, safeFileName);
+
+        await using (var fileStream = new FileStream(physicalPath, FileMode.Create))
+        {
+            await file.CopyToAsync(fileStream, cancellationToken);
+        }
+
+        var relativeUrl = $"/uploads/resources/{safeFileName}";
+        return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl }));
+    }
+
     [HttpPost("teacher-photos/upload")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> UploadTeacherPhoto([FromBody] UploadTeacherPhotoRequest dto)
