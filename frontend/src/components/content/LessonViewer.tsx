@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileText, FlaskConical, Maximize, Minimize } from "lucide-react";
+import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLessonFocusStore } from "@/stores/lesson-focus-store";
 import apiClient from "@/services/api-client";
@@ -213,41 +213,84 @@ export function LessonViewer({
             </ul>
           </div>
 
-          {lesson.examId && (
-            <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
-              <div className="flex items-center gap-3">
-                <FlaskConical className="h-5 w-5 text-[var(--admin-primary)]" />
-                <h3 className="text-xl font-black text-[var(--admin-text)]">اختبار الدرس</h3>
-                {lesson.examPassed && (
-                  <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400">
-                    تم الاجتياز
-                  </span>
-                )}
-              </div>
-              <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
-                {lesson.examPassed
-                  ? 'لقد اجتزت هذا الاختبار بنجاح. يمكنك مراجعة إجاباتك ونتائجك.'
-                  : lesson.isExamLocked
-                  ? lesson.examLockedReason || 'هذا الاختبار مغلق حالياً.'
-                  : 'اختبر استيعابك لهذا الدرس قبل الانتقال إلى المرحلة التالية. الدرجات المسجلة تؤثر على ترتيبك في لوحة الشرف.'
-                }
-              </p>
-              <button
-                type="button"
-                disabled={lesson.isExamLocked && !lesson.examPassed}
-                onClick={() => router.push(`/student/exams/${lesson.examId}?packageId=${packageId}`)}
-                className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
-                  lesson.examPassed
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
-                    : lesson.isExamLocked
-                    ? 'bg-gray-400 text-white opacity-60 cursor-not-allowed'
-                    : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:-translate-y-1'
-                }`}
-              >
-                {lesson.examPassed ? 'راجع الامتحان' : 'ابدأ الاختبار الآن'}
-              </button>
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
+            <div className="flex items-center gap-3">
+              <FlaskConical className="h-5 w-5 text-[var(--admin-primary)]" />
+              <h3 className="text-xl font-black text-[var(--admin-text)]">اختبار الدرس</h3>
+              {lesson.examId && lesson.examPassed && (
+                <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400">
+                  تم الاجتياز
+                </span>
+              )}
             </div>
-          )}
+            {lesson.examId ? (
+              <>
+                <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
+                  {lesson.examPassed
+                    ? 'لقد اجتزت هذا الاختبار بنجاح. يمكنك مراجعة إجاباتك ونتائجك.'
+                    : lesson.isExamLocked
+                    ? lesson.examLockedReason || 'هذا الاختبار مغلق حالياً.'
+                    : 'اختبر استيعابك لهذا الدرس قبل الانتقال إلى المرحلة التالية. الدرجات المسجلة تؤثر على ترتيبك في لوحة الشرف.'
+                  }
+                </p>
+                <button
+                  type="button"
+                  disabled={lesson.isExamLocked && !lesson.examPassed}
+                  onClick={() => router.push(`/student/exams/${lesson.examId}?packageId=${packageId}`)}
+                  className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
+                    lesson.examPassed
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
+                      : lesson.isExamLocked
+                      ? 'bg-gray-400 text-white opacity-60 cursor-not-allowed'
+                      : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:-translate-y-1'
+                  }`}
+                >
+                  {lesson.examPassed ? 'راجع الامتحان' : 'ابدأ الاختبار الآن'}
+                </button>
+              </>
+            ) : (
+              <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
+                لا يوجد اختبار متاح لهذا الدرس.
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-5 shadow-sm sm:p-8">
+            <div className="flex items-center gap-3">
+              <ClipboardCheck className="h-5 w-5 text-[var(--admin-primary)]" />
+              <h3 className="text-xl font-black text-[var(--admin-text)]">واجب الدرس</h3>
+              {lesson.homeworkId && lesson.homeworkPassed && (
+                <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 text-xs font-black text-emerald-700 dark:text-emerald-400">
+                  تم الاجتياز
+                </span>
+              )}
+            </div>
+            {lesson.homeworkId ? (
+              <>
+                <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
+                  {lesson.homeworkPassed
+                    ? 'لقد قمت بحل هذا الواجب بنجاح واجتيازه. يمكنك مراجعة إجاباتك ونتائجك.'
+                    : 'حل واجب الدرس للتأكد من فهمك للموضوع واستكمال متطلبات الانتقال للدرس التالي.'
+                  }
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/student/homework/${lesson.homeworkId}?packageId=${packageId}`)}
+                  className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
+                    lesson.homeworkPassed
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
+                      : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:-translate-y-1'
+                  }`}
+                >
+                  {lesson.homeworkPassed ? 'عرض نتيجة الواجب' : 'ابدأ حل الواجب الآن'}
+                </button>
+              </>
+            ) : (
+              <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
+                لا يوجد واجب متاح لهذا الدرس.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>
