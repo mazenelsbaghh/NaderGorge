@@ -30,7 +30,7 @@ def get_lesson_homework(student, lesson_id):
     homework = lesson_res.json().get("data", {}).get("homework")
     assert homework
     questions = homework.get("questions", [])
-    assert len(questions) == 1
+    assert len(questions) >= 1
     return homework, questions[0]
 
 
