@@ -198,6 +198,10 @@ export default function SocialPlannerView() {
     });
   };
 
+  const sortedPlans = [...plans].sort(
+    (a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime()
+  );
+
   return (
     <div dir="rtl" className="w-full">
       {/* Header */}
@@ -233,8 +237,8 @@ export default function SocialPlannerView() {
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="rounded-[28px] border border-[var(--admin-border)] overflow-hidden bg-[var(--admin-card)] shadow-lg">
+      {/* Calendar Grid - Desktop Only */}
+      <div className="hidden md:block rounded-[28px] border border-[var(--admin-border)] overflow-hidden bg-[var(--admin-card)] shadow-lg">
         {/* Days of Week Header */}
         <div className="grid grid-cols-7 border-b border-[var(--admin-border)] bg-[var(--admin-hover)] text-center py-3">
           {daysOfWeekArabic.map(day => (
@@ -309,6 +313,62 @@ export default function SocialPlannerView() {
             );
           })}
         </div>
+      </div>
+
+      {/* Agenda List - Mobile Only */}
+      <div className="block md:hidden space-y-4">
+        {sortedPlans.length === 0 ? (
+          <div className="p-8 text-center rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]">
+            لا توجد منشورات مجدولة لهذا الشهر.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {sortedPlans.map(plan => {
+              const planDate = new Date(plan.scheduledDate);
+              const platInfo = PLATFORM_INFOS[plan.platform] || PLATFORM_INFOS.YouTube;
+              const PlatIcon = platInfo.icon;
+
+              return (
+                <div 
+                  key={plan.id}
+                  className="p-4 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] flex flex-col gap-3 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    {/* Date/Time Badge */}
+                    <span className="text-xs font-extrabold text-[var(--admin-primary)] bg-[var(--admin-primary-15)] px-3 py-1 rounded-full">
+                      {planDate.getDate()} {monthNamesArabic[planDate.getMonth()]} - {planDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {/* Platform */}
+                    <span className={`flex items-center gap-1.5 text-xs font-bold ${platInfo.color}`}>
+                      <PlatIcon className="h-4 w-4" />
+                      {platInfo.label}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h4 className="font-black text-sm text-[var(--admin-text)]">{plan.title}</h4>
+                    {plan.description && (
+                      <p className="text-xs text-[var(--admin-muted)] mt-1 line-clamp-2">{plan.description}</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-[var(--admin-border)]/50">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLORS[plan.status]}`}>
+                      {STATUS_LABELS[plan.status]}
+                    </span>
+
+                    {plan.mediaProductionPipelineId && (
+                      <span className="text-xs bg-[var(--admin-primary-15)] text-[var(--admin-primary)] px-2.5 py-0.5 rounded-full flex items-center gap-1 font-bold">
+                        <Link className="h-3 w-3" />
+                        مرتبط بفيديو
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* CREATE MODAL */}

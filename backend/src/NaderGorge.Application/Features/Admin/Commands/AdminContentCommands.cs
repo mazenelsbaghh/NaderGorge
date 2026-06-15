@@ -741,8 +741,8 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
 
         if (lesson == null) return ApiResponse<Guid>.Fail("Lesson not found");
 
+        // Load homework WITHOUT including questions to avoid EF tracking issues
         var hw = await _db.Homeworks
-            .Include(h => h.Questions)
             .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
 
         if (hw == null)
@@ -758,6 +758,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 TotalScore = request.TotalScore
             };
             _db.Homeworks.Add(hw);
+            await _db.SaveChangesAsync(ct);
         }
         else
         {
@@ -768,20 +769,16 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             hw.PassingScoreThreshold = request.RequiredPointsToPass;
             hw.TotalScore = request.TotalScore;
 
-            var oldQuestions = hw.Questions.ToList();
-            hw.Questions.Clear();
-            _db.HomeworkQuestions.RemoveRange(oldQuestions);
+            // Delete old questions via ExecuteDeleteAsync — bypasses change tracker entirely
+            await _db.HomeworkQuestions
+                .Where(q => q.HomeworkId == hw.Id)
+                .ExecuteDeleteAsync(ct);
 
-            // Flush the deletes to the database
             await _db.SaveChangesAsync(ct);
-
-            // Detach the deleted entities from the change tracker
-            // so EF Core doesn't generate UPDATE statements for them
-            // when new questions are added in the same request.
-            foreach (var oldQ in oldQuestions)
-                _db.Entry(oldQ).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
         }
 
+        // Build new questions as standalone entities (not via navigation property)
+        var newQuestions = new List<NaderGorge.Domain.Entities.Homework.HomeworkQuestion>();
         foreach (var q in request.Questions)
         {
             var qType = q.Type switch
@@ -800,7 +797,7 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 correctAnswerKey = q.Options.FirstOrDefault(o => o.IsCorrect)?.Text;
             }
 
-            hw.Questions.Add(new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
+            newQuestions.Add(new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
             {
                 HomeworkId = hw.Id,
                 BodyText = q.Text,
@@ -817,6 +814,9 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
                 MistakeEndIndex = q.MistakeEndIndex
             });
         }
+
+        // Add all new questions directly via DbSet — clean INSERT, no tracking conflicts
+        _db.HomeworkQuestions.AddRange(newQuestions);
 
         if (lesson.ContentSection?.Term != null)
         {

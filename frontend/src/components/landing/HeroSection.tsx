@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { ArrowUpLeft, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -40,17 +41,23 @@ export function HeroSection({
   return (
     <section
       className="landing-hero relative min-h-screen overflow-hidden px-5 pb-9 pt-28 text-[var(--landing-ink)] md:px-12 md:pb-12 md:pt-32 lg:px-16"
-      style={{
-        backgroundImage: `linear-gradient(90deg, var(--hero-overlay-start) 0%, var(--hero-overlay-mid) 32%, var(--hero-overlay-subtle) 58%, var(--hero-overlay-end) 100%), url('${
-          isDark
-            ? '/images/landing-hero-dark.webp'
-            : '/images/landing-hero.webp'
-        }')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
-      }}
     >
+      {/* Background Image */}
+      <Image
+        src={isDark ? '/images/landing-hero-dark.webp' : '/images/landing-hero.webp'}
+        alt="خلفية الصفحة الرئيسية"
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover -z-10"
+      />
+      {/* Gradient Overlay */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{
+          backgroundImage: 'linear-gradient(90deg, var(--hero-overlay-start) 0%, var(--hero-overlay-mid) 32%, var(--hero-overlay-subtle) 58%, var(--hero-overlay-end) 100%)'
+        }}
+      />
       <div className="relative z-10 mx-auto grid min-h-[calc(100vh-9rem)] w-full max-w-[1440px] items-center lg:grid-cols-[0.72fr_1fr] lg:[direction:ltr]">
         <div className="max-w-xl text-right lg:[direction:rtl]">
           <h1 className="text-balance text-[clamp(2.3rem,4vw,4.2rem)] font-black leading-[1.22] tracking-normal text-[var(--landing-ink)]">

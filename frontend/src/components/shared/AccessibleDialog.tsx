@@ -61,23 +61,23 @@ function makeOutsideContentInert(modalRoot: HTMLElement) {
   };
 }
 
-export interface AdminModalProps {
+export interface AccessibleDialogProps {
   open: boolean;
   onClose: () => void;
   title?: string;
   subtitle?: string;
-  maxWidth?: string;
+  className?: string;
   children: React.ReactNode;
 }
 
-export function AdminModal({
+export function AccessibleDialog({
   open,
   onClose,
   title,
   subtitle,
-  maxWidth = 'max-w-xl',
+  className = '',
   children,
-}: AdminModalProps) {
+}: AccessibleDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const modalRootRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
@@ -151,24 +151,40 @@ export function AdminModal({
     };
   }, [open]);
 
+  // Framer motion variants respecting reduced motion settings
+  const backdropVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1 },
+  };
+
+  const dialogVariants = {
+    hidden: prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: 16 },
+    visible: prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 },
+  };
+
   return (
     <AnimatePresence>
       {open && (
         <motion.div
           ref={modalRootRef}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--admin-text)]/30 p-4 backdrop-blur-[2px]"
-          onClick={onClose}
+          initial="hidden"
+          animate="visible"
+          exit="hidden"
+          variants={backdropVariants}
           transition={{ duration: prefersReducedMotion ? 0.05 : 0.2 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[color:rgba(28,28,22,0.5)] backdrop-blur-sm"
+          onClick={onClose}
         >
           <motion.div
             ref={dialogRef}
-            initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, y: 14, opacity: 0 }}
-            animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, y: 0, opacity: 1 }}
-            exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, y: 14, opacity: 0 }}
-            transition={{ duration: prefersReducedMotion ? 0.05 : 0.18, ease: [0.16, 1, 0.3, 1] }}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={dialogVariants}
+            transition={{
+              duration: prefersReducedMotion ? 0.05 : 0.3,
+              ease: [0.16, 1, 0.3, 1]
+            }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -176,27 +192,15 @@ export function AdminModal({
             aria-labelledby={title ? titleId : undefined}
             aria-describedby={subtitle ? subtitleId : undefined}
             tabIndex={-1}
-            className={`flex max-h-[90vh] w-full flex-col rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-5 shadow-[0_16px_40px_var(--admin-shadow)] sm:p-6 ${maxWidth}`}
+            className={`relative flex max-h-[90vh] w-full flex-col outline-none ${className}`}
           >
-            {(title || subtitle) && (
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  {title && <h3 id={titleId} className="text-2xl font-black text-[var(--admin-text)]">{title}</h3>}
-                  {subtitle && <p id={subtitleId} className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">{subtitle}</p>}
-                </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="shrink-0 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
-                >
-                  إغلاق
-                </button>
+            {title && (
+              <div className="mb-4">
+                <h2 id={titleId} className="text-xl font-black text-[var(--admin-text)]">{title}</h2>
+                {subtitle && <p id={subtitleId} className="text-sm font-medium text-[var(--admin-muted)] mt-1">{subtitle}</p>}
               </div>
             )}
-            
-            <div className="min-h-0 overflow-y-auto">
-              {children}
-            </div>
+            {children}
           </motion.div>
         </motion.div>
       )}

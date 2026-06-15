@@ -43,8 +43,8 @@ export interface LoginData {
 export interface CompleteProfileData {
   parentPhone: string;
   governorate: string;
-  city: string;
-  school: string;
+  district: string;
+  schoolName: string;
 }
 
 export interface VerifyResetFieldsData {

@@ -1,10 +1,20 @@
 # Operations Master Plan
 
-**Last Updated**: 2026-06-11
+**Last Updated**: 2026-06-15
 
 ---
 
 ## Active Plans
+
+### Comprehensive Audit Remediation (2026-06-15)
+- [x] Clean up tracked SQL dumps and temporary database backups from the Git active tree and `.gitignore` them.
+- [x] Create CI security script `verify-no-sensitive-tracked-files.mjs` to block commit of secrets or dumps.
+- [x] Re-architect worker loops to consume from Redis Stream `job-stream` under worker group consumer, retry jobs up to 5 times with exponential backoff, and acknowledge them on success.
+- [x] Expose worker liveness and database/Redis/queue readiness endpoint `/ready`.
+- [x] Isolate Docker internal network host ports to `127.0.0.1` for PG, Redis, worker, backend, and frontend containers.
+- [x] Pin all Docker base images and tool inputs to exact patch versions.
+- [x] Upgrade `MessagePack` transitive dependency to secure version `2.5.301` inside C# backend.
+- [x] Add package overrides to `package.json` in frontend and worker to lock dependencies.
 
 ### Real-time Platform Speed & Sync (2026-06-11)
 - [x] Apply EF Core migrations for the `OutboxEvents` table on the database.
@@ -82,10 +92,11 @@
 ---
 
 ## History
+- **2026-06-15**: Completed security and operations audit remediation: isolated host bindings, pinned Docker images, updated MessagePack/npm dependencies, and switched queue pipeline to Redis Streams.
 - **2026-06-11**: Integrated Telegram bot audio extraction client in the worker to download YouTube audios via Telegram bots.
 - **2026-06-06**: Cleaned naming conflicts, rebuilt the frontend image, and deployed the student 3D Card auto-cycle swiper features successfully to Docker.
 - **2026-06-06**: Rebuilt frontend image and deployed the draggable 3D Card Stack Swiper and kinetic reveals updates to Docker.
 - **2026-06-06**: Rebuilt the shared frontend Docker image and recreated containers (landing, student, admin) to deploy the landing page Overdrive enhancements.
 - **2026-06-05**: Checked impeccable skills installation via `npx impeccable skills install`.
 - **2026-06-04**: Fixed watch requests 500 internal server error, updated production environment secrets, resolved deployment variable interpolation issue, and refactored deployment script to run on VPS side.
-- **2026-06-04**: Initialized Ops master plan directory.
+- - Initialized Ops master plan directory.

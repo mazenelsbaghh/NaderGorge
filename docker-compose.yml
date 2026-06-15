@@ -73,6 +73,7 @@ services:
   # Backend API (.NET 9 ASP.NET Core)
   backend:
     image: massar_backend:local
+    container_name: massar_backend
     build:
       context: ./backend
       dockerfile: Dockerfile

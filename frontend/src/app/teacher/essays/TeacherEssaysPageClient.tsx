@@ -12,6 +12,7 @@ import {
 } from "@/components/admin";
 import { teacherService, PendingEssayDto } from "@/services/teacher-service";
 import toast from "react-hot-toast";
+import { sanitizeRichHtml } from '@/lib/sanitize-html';
 
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 
@@ -245,9 +246,7 @@ export default function TeacherEssaysPageClient() {
                 {/* Student's Answer */}
                 <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5">
                   <h4 className="text-xs font-black text-[var(--admin-muted)] mb-2">إجابة الطالب:</h4>
-                  <p className="text-sm text-[var(--admin-text)] bg-[var(--admin-bg)] p-4 rounded-xl border border-[var(--admin-border)]/5 leading-relaxed whitespace-pre-line font-mono">
-                    {selectedEssay.answerText || "لم يكتب الطالب إجابة نصية."}
-                  </p>
+                  <div className="text-sm text-[var(--admin-text)] bg-[var(--admin-bg)] p-4 rounded-xl border border-[var(--admin-border)]/5 leading-relaxed font-mono" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(selectedEssay.answerText || "لم يكتب الطالب إجابة نصية.") }} />
 
                   {selectedEssay.audioUrl && (
                     <div className="mt-4 p-3 rounded-xl bg-[var(--admin-primary-15)] flex flex-col gap-2">

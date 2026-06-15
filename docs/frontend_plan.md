@@ -6,6 +6,13 @@
 
 ## Active Plans
 
+### Comprehensive Audit Remediation (2026-06-15)
+- [x] Implement frontend-wide HTML sanitizer `sanitizeRichHtml` using DOMPurify/custom rules and apply it to essay/grading renderers.
+- [x] Align profile completion form fields to submit backend-compatible `District` and `SchoolName` values instead of legacy `City`/`School`.
+- [x] Create style-agnostic accessible `AccessibleDialog` container supporting focus trap containment, Escape key, backdrop click, and reduced motion.
+- [x] Migrate `ProfileCompletionModal` to the new `AccessibleDialog` component.
+- [x] Optimize SignalR chat connection to keep socket alive and reuse connection context on room switching using React callback refs.
+
 ### Admin & Teacher Content Page Dropdown Fix (2026-06-15)
 - [x] Replace native select elements with custom Dropdown component on the Admin Content and Teacher Content pages to fix macOS Chrome RTL rendering bug.
 
@@ -91,7 +98,8 @@
 ---
 
 ## History
+- **2026-06-15**: Completed frontend security audit remediation: HTML sanitization in essay feeds, district/schoolName alignment in profile completions, shared accessible dialog wrapper, and SignalR socket connection reuse on room switches.
 - **2026-06-15**: Fixed native select rendering bug on macOS Chrome (RTL) by replacing selects with the custom Dropdown component on Admin Content and Teacher Content pages.
 - **2026-06-06**: Upgraded Landing Page Overdrive with auto-cycling 3D Card Stack Swiper and continuous horizontal marquee animations.
 - **2026-06-06**: Completed Landing Page Overdrive visual layout and Framer Motion integration.
-- Initialized frontend master plan directory.
+- - Initialized frontend master plan directory.

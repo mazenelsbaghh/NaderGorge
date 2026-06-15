@@ -32,6 +32,15 @@ export const useSignalR = (
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Keep references to latest callbacks to avoid breaking connection on room switch
+  const onMessageReceivedRef = useRef(onMessageReceived);
+  const onUserTypingRef = useRef(onUserTyping);
+
+  useEffect(() => {
+    onMessageReceivedRef.current = onMessageReceived;
+    onUserTypingRef.current = onUserTyping;
+  });
+
   useEffect(() => {
     if (!isAuthenticated || !accessToken) {
       if (connectionRef.current) {
@@ -54,11 +63,11 @@ export const useSignalR = (
       .build();
 
     connection.on('ReceiveMessage', (message: SignalRMessage) => {
-      onMessageReceived?.(message);
+      onMessageReceivedRef.current?.(message);
     });
 
     connection.on('UserTyping', (roomId: string, userId: string, userName: string) => {
-      onUserTyping?.(roomId, userId, userName);
+      onUserTypingRef.current?.(roomId, userId, userName);
     });
 
     connection.on('ReceiveNotification', (notification: { Title: string; Body: string; RoomId: string }) => {
@@ -90,7 +99,7 @@ export const useSignalR = (
         setIsConnected(false);
       }
     };
-  }, [accessToken, isAuthenticated, onMessageReceived, onUserTyping]);
+  }, [accessToken, isAuthenticated]);
 
   const sendMessage = useCallback(async (roomId: string, content: string, mediaUrl?: string, mediaMetadata?: string) => {
     if (connectionRef.current && isConnected) {

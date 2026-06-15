@@ -1,10 +1,23 @@
 # Backend Master Plan
 
-**Last Updated**: 2026-06-11
+**Last Updated**: 2026-06-15
 
 ---
 
 ## Active Plans
+
+### Comprehensive Audit Remediation (2026-06-15)
+- [x] Restrict teacher profile queries to own profile IDs and deny teacher code generation API routes.
+- [x] Restrict manual lesson unlock endpoint to users with `watch_requests.manage` permission.
+- [x] Require explicit `codes.manage` permission in MediatR handler for bulk code generation.
+- [x] Enforce lesson access authorization check inside exam startup command.
+- [x] Enforce single-use refresh token rotation utilizing atomic conditional DB updates in a transaction.
+- [x] Implement token revocation and cookie cleanup at `POST /api/auth/logout`.
+- [x] Enforce password reset version validation on tokens and reset commands.
+- [x] Wrap balance adjustments, ledger, and outbox logs in atomic database transactions.
+- [x] Intercept homework database constraint violations to ensure idempotent submissions.
+- [x] Publish background jobs to Redis Streams (`job-stream`) instead of lists.
+- [x] Expose `GET /api/health/ready` checking PostgreSQL and Redis connection health.
 
 ### Real-time Platform Speed & Sync (2026-06-11)
 - [x] Implement database schema migration `AddOutboxEvents` and transactional entity `OutboxEvent` to capture balance and notification updates.
@@ -59,4 +72,6 @@
 ---
 
 ## History
-- Initialized backend master plan directory.
+- **2026-06-15**: Completed backend security audit changes: authorization logic, database transactions, idempotency checks, token rotations, and background streams.
+- **2026-06-11**: Added outbox dispatcher service and real-time synchronization updates.
+- - Initialized backend master plan directory.

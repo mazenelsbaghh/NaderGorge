@@ -160,7 +160,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> CompleteProfile([FromBody] CompleteProfileRequest body)
     {
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var command = new CompleteProfileCommand(userId, body.ParentPhone, body.Governorate);
+        var command = new CompleteProfileCommand(userId, body.ParentPhone, body.Governorate, body.District, body.SchoolName);
         var result = await _mediator.Send(command);
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -225,7 +225,7 @@ public class AuthController : ControllerBase
     }
 }
 
-public record CompleteProfileRequest(string ParentPhone, string Governorate, string City, string School);
+public record CompleteProfileRequest(string ParentPhone, string Governorate, string District, string SchoolName);
 public record CurrentUserResponse(Guid Id, string FullName, string Phone, string[] Roles, bool ProfileComplete);
 public record LoginRequest(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName);
 public record RefreshRequest(string? RefreshToken);

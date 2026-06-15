@@ -6,7 +6,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Auth.Commands;
 
-public record CompleteProfileCommand(Guid UserId, string ParentPhone, string Governorate) : IRequest<ApiResponse>;
+public record CompleteProfileCommand(Guid UserId, string ParentPhone, string Governorate, string District, string SchoolName) : IRequest<ApiResponse>;
 
 public class CompleteProfileCommandValidator : AbstractValidator<CompleteProfileCommand>
 {
@@ -14,6 +14,8 @@ public class CompleteProfileCommandValidator : AbstractValidator<CompleteProfile
     {
         RuleFor(x => x.ParentPhone).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Governorate).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.District).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.SchoolName).NotEmpty().MaximumLength(200);
     }
 }
 
@@ -41,6 +43,8 @@ public class CompleteProfileCommandHandler : IRequestHandler<CompleteProfileComm
 
         user.StudentProfile.ParentPhone = request.ParentPhone;
         user.StudentProfile.Governorate = request.Governorate;
+        user.StudentProfile.District = request.District;
+        user.StudentProfile.SchoolName = request.SchoolName;
         user.IsProfileComplete = true;
 
         await _db.SaveChangesAsync(ct);
