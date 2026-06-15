@@ -767,7 +767,10 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             hw.IsRandomized = request.IsRandomized;
             hw.PassingScoreThreshold = request.RequiredPointsToPass;
             hw.TotalScore = request.TotalScore;
-            _db.HomeworkQuestions.RemoveRange(hw.Questions);
+
+            var oldQuestions = hw.Questions.ToList();
+            hw.Questions.Clear();
+            _db.HomeworkQuestions.RemoveRange(oldQuestions);
         }
 
         foreach (var q in request.Questions)

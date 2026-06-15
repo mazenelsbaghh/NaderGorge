@@ -62,9 +62,6 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     return ApiResponse<bool>.Fail("نوع المحتوى غير مدعوم للشراء.");
             }
 
-            if (price <= 0)
-                return ApiResponse<bool>.Fail("هذا المحتوى مجاني ولا يحتاج شراء.");
-
             // 2. Check if already purchased
             bool alreadyPurchased = false;
             switch (request.ContentType)
@@ -186,32 +183,35 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 return ApiResponse<bool>.Fail($"أنت مشترك بالفعل في {coveredBy} — لا يمكن شراء {contentName} بشكل منفصل لأنها مغطاة بالاشتراك الحالي.");
             }
 
-            try
+            if (price > 0)
             {
-                await _balanceService.DeductBalance(
-                    request.StudentId,
-                    price,
-                    $"شراء {contentName} ({request.ContentType})",
-                    request.ContentId,
-                    ct);
-            }
-            catch (InvalidOperationException)
-            {
-                var failEvent = new OutboxEvent
+                try
                 {
-                    Type = "PurchaseFailed",
-                    TargetUserId = request.StudentId.ToString(),
-                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    await _balanceService.DeductBalance(
+                        request.StudentId,
+                        price,
+                        $"شراء {contentName} ({request.ContentType})",
+                        request.ContentId,
+                        ct);
+                }
+                catch (InvalidOperationException)
+                {
+                    var failEvent = new OutboxEvent
                     {
-                        studentId = request.StudentId,
-                        contentType = request.ContentType.ToString(),
-                        contentId = request.ContentId,
-                        reason = "insufficient_balance"
-                    })
-                };
-                _db.OutboxEvents.Add(failEvent);
-                await _db.SaveChangesAsync(ct);
-                return ApiResponse<bool>.Fail($"رصيدك الحالي لا يكفي لشراء {contentName} بسعر ({price} ج.م)");
+                        Type = "PurchaseFailed",
+                        TargetUserId = request.StudentId.ToString(),
+                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            studentId = request.StudentId,
+                            contentType = request.ContentType.ToString(),
+                            contentId = request.ContentId,
+                            reason = "insufficient_balance"
+                        })
+                    };
+                    _db.OutboxEvents.Add(failEvent);
+                    await _db.SaveChangesAsync(ct);
+                    return ApiResponse<bool>.Fail($"رصيدك الحالي لا يكفي لشراء {contentName} بسعر ({price} ج.م)");
+                }
             }
 
             // 5. Grant Access
