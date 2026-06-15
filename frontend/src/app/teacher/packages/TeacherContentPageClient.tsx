@@ -10,6 +10,7 @@ import { adminService } from "@/services/admin-service";
 import { teacherService, SubjectDto } from "@/services/teacher-service";
 import NeumorphButton from "@/components/ui/neumorph-button";
 import toast from "react-hot-toast";
+import { Dropdown } from "@/components/ui/dropdown";
 
 const GRADE_NAMES: Record<string, string> = {
   FirstSecondary: 'الأول الثانوي',
@@ -212,28 +213,28 @@ function CreatePackageRow({ onSuccess, subjects, profile }: { onSuccess: () => v
         </div>
       </div>
       
-      <select
+      <Dropdown
         value={selectedSubjectId}
-        onChange={(e) => setSelectedSubjectId(e.target.value)}
-        className="admin-input"
-      >
-        <option value="">اختر المادة...</option>
-        {subjects.map((s) => (
-          <option key={s.id} value={s.id}>{s.name}</option>
-        ))}
-      </select>
+        onChange={(val) => {
+          const stringVal = Array.isArray(val) ? val[0] : val;
+          setSelectedSubjectId(stringVal);
+        }}
+        options={subjects.map((s) => ({ value: s.id, label: s.name }))}
+        placeholder="اختر المادة..."
+        className="w-full"
+      />
 
-      <select
+      <Dropdown
         value={selectedGrade}
-        onChange={(e) => setSelectedGrade(e.target.value)}
-        className="admin-input"
+        onChange={(val) => {
+          const stringVal = Array.isArray(val) ? val[0] : val;
+          setSelectedGrade(stringVal);
+        }}
+        options={getTeacherPackageGrades(profile)}
+        placeholder="اختر الصف الدراسي..."
         disabled={!selectedSubjectId}
-      >
-        <option value="">اختر الصف الدراسي...</option>
-        {getTeacherPackageGrades(profile).map((g) => (
-          <option key={g.value} value={g.value}>{g.label}</option>
-        ))}
-      </select>
+        className="w-full"
+      />
 
       <div className="flex justify-end gap-2 pt-1">
         <button

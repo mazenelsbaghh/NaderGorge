@@ -12,6 +12,7 @@ import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-servi
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { Dropdown } from '@/components/ui/dropdown';
 
 const GRADE_NAMES: Record<string, string> = {
   FirstSecondary: 'الأول الثانوي',
@@ -153,6 +154,22 @@ function CreatePackageRow({
     }
   }
 
+  const teacherOptions = teachers.map((t) => ({
+    value: t.id,
+    label: t.fullName,
+  }));
+
+  const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
+  const filteredSubjects = selectedTeacher
+    ? subjects.filter(s => selectedTeacher.subjectIds?.includes(s.id))
+    : [];
+  const subjectOptions = filteredSubjects.map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
+
+  const teacherGrades = getTeacherPackageGrades(selectedTeacher);
+
   if (!open) {
     return (
       <button
@@ -237,60 +254,44 @@ function CreatePackageRow({
       </div>
       
       {!activeTeacherId && (
-        <select
+        <Dropdown
           value={selectedTeacherId}
-          onChange={(e) => {
-            setSelectedTeacherId(e.target.value);
+          onChange={(val) => {
+            const stringVal = Array.isArray(val) ? val[0] : val;
+            setSelectedTeacherId(stringVal);
             setSelectedSubjectId('');
             setSelectedGrade('');
           }}
-          className="admin-input"
-        >
-          <option value="">اختر المدرس...</option>
-          {teachers.map((t) => (
-            <option key={t.id} value={t.id}>{t.fullName}</option>
-          ))}
-        </select>
+          options={teacherOptions}
+          placeholder="اختر المدرس..."
+          className="w-full"
+        />
       )}
 
-      <select
+      <Dropdown
         value={selectedSubjectId}
-        onChange={(e) => {
-          setSelectedSubjectId(e.target.value);
+        onChange={(val) => {
+          const stringVal = Array.isArray(val) ? val[0] : val;
+          setSelectedSubjectId(stringVal);
           setSelectedGrade('');
         }}
-        className="admin-input"
+        options={subjectOptions}
+        placeholder={selectedTeacherId ? 'اختر المادة...' : 'يرجى اختيار المدرس أولاً...'}
         disabled={!selectedTeacherId}
-      >
-        <option value="">
-          {selectedTeacherId ? 'اختر المادة...' : 'يرجى اختيار المدرس أولاً...'}
-        </option>
-        {(() => {
-          const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
-          const filteredSubjects = selectedTeacher
-            ? subjects.filter(s => selectedTeacher.subjectIds?.includes(s.id))
-            : [];
-          return filteredSubjects.map((s) => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ));
-        })()}
-      </select>
+        className="w-full"
+      />
 
-      <select
+      <Dropdown
         value={selectedGrade}
-        onChange={(e) => setSelectedGrade(e.target.value)}
-        className="admin-input"
+        onChange={(val) => {
+          const stringVal = Array.isArray(val) ? val[0] : val;
+          setSelectedGrade(stringVal);
+        }}
+        options={teacherGrades}
+        placeholder="اختر الصف الدراسي..."
         disabled={!selectedSubjectId}
-      >
-        <option value="">اختر الصف الدراسي...</option>
-        {(() => {
-          const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
-          const teacherGrades = getTeacherPackageGrades(selectedTeacher);
-          return teacherGrades.map((g) => (
-            <option key={g.value} value={g.value}>{g.label}</option>
-          ));
-        })()}
-      </select>
+        className="w-full"
+      />
 
       <div className="flex justify-end gap-2 pt-1">
         <button
@@ -658,16 +659,21 @@ export default function AdminContentPageClient() {
                 </div>
                 
                 <div className="min-w-[200px]">
-                  <select
+                  <Dropdown
                     value={selectedSubjectId}
-                    onChange={(e) => setSelectedSubjectId(e.target.value)}
-                    className="admin-input w-full"
-                  >
-                    <option value="All">كل المواد</option>
-                    {subjects.filter(s => activeTeacher.subjectIds?.includes(s.id)).map((sub) => (
-                      <option key={sub.id} value={sub.id}>{sub.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => {
+                      const stringVal = Array.isArray(val) ? val[0] : val;
+                      setSelectedSubjectId(stringVal);
+                    }}
+                    options={[
+                      { value: 'All', label: 'كل المواد' },
+                      ...subjects.filter(s => activeTeacher?.subjectIds?.includes(s.id)).map((sub) => ({
+                        value: sub.id,
+                        label: sub.name,
+                      }))
+                    ]}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -712,16 +718,21 @@ export default function AdminContentPageClient() {
                 </div>
                 
                 <div className="min-w-[200px]">
-                  <select
+                  <Dropdown
                     value={selectedSubjectId}
-                    onChange={(e) => setSelectedSubjectId(e.target.value)}
-                    className="admin-input w-full"
-                  >
-                    <option value="All">كل المواد</option>
-                    {subjects.map((sub) => (
-                      <option key={sub.id} value={sub.id}>{sub.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => {
+                      const stringVal = Array.isArray(val) ? val[0] : val;
+                      setSelectedSubjectId(stringVal);
+                    }}
+                    options={[
+                      { value: 'All', label: 'كل المواد' },
+                      ...subjects.map((sub) => ({
+                        value: sub.id,
+                        label: sub.name,
+                      }))
+                    ]}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
