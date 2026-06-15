@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
 import { AdminBackButton } from '@/components/admin/AdminBackButton';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
-import { Plus, Save, AlertCircle } from 'lucide-react';
+import { Plus, Save, AlertCircle, Trash2 } from 'lucide-react';
 import { adminService, ExamDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -17,6 +17,7 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
 
   const [examData, setExamData] = useState<ExamDashboardDto | null>(null);
   const [loadingContext, setLoadingContext] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const getDefaultQuestion = (order: number): InlineExamQuestionDto => ({
     text: '',
@@ -31,9 +32,7 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
     ],
   });
 
-  const [questions, setQuestions] = useState<InlineExamQuestionDto[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<InlineExamQuestionDto>(getDefaultQuestion(1));
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     adminService.getExamDashboard(params.id)
@@ -48,7 +47,7 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
       .finally(() => setLoadingContext(false));
   }, [params.id]);
 
-  const handleAddQuestionToList = () => {
+  const handleAddQuestionAndSave = async () => {
     if (currentQuestion.type !== 'FindTheMistake' && !currentQuestion.text.trim()) {
       toast.error('يرجى كتابة نص السؤال');
       return;
@@ -74,37 +73,41 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
       }
     }
 
-    setQuestions([...questions, currentQuestion]);
-    const nextOrder = (examData?.questionCount || 0) + questions.length + 2;
-    setCurrentQuestion(getDefaultQuestion(nextOrder));
-    toast.success('تمت إضافة السؤال للقائمة المؤقتة، لا تنس الحفظ');
+    try {
+      setSaveStatus('saving');
+      
+      const cleanQuestion = { ...currentQuestion };
+      delete cleanQuestion.audioFile;
+
+      // Save question immediately
+      await adminService.addQuestionsToExam(params.id, { questions: [cleanQuestion] });
+      
+      setSaveStatus('saved');
+      toast.success('تم حفظ وإضافة السؤال للامتحان بنجاح!');
+      
+      // Reload exam stats
+      const updatedData = await adminService.getExamDashboard(params.id);
+      setExamData(updatedData);
+      setCurrentQuestion(getDefaultQuestion(updatedData.questionCount + 1));
+    } catch (err: any) {
+      setSaveStatus('error');
+      toast.error(err.response?.data?.message || 'فشل حفظ السؤال تلقائياً، يرجى المحاولة مجدداً');
+    }
   };
 
-  const handleRemoveQuestion = (index: number) => {
-    setQuestions(questions.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async () => {
-     if (questions.length === 0) {
-        toast.error('يجب تقديم سؤال واحد على الأقل للحفظ');
-        return;
-     }
-     
-     try {
-       setSaving(true);
-       const cleanQuestions = questions.map((question) => {
-         const cleanQuestion = { ...question };
-         delete cleanQuestion.audioFile;
-         return cleanQuestion;
-       });
-       await adminService.addQuestionsToExam(params.id, { questions: cleanQuestions });
-       toast.success('تم رفع الأسئلة وإضافتها للامتحان بنجاح!');
-       router.back();
-     } catch (err: any) {
-        toast.error(err.response?.data?.message || 'حدث خطأ أثناء حفظ الأسئلة');
-     } finally {
-        setSaving(false);
-     }
+  const handleRemoveQuestion = async (examQuestionId: string) => {
+    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا السؤال؟')) return;
+    
+    try {
+      await adminService.deleteExamQuestion(params.id, examQuestionId);
+      toast.success('تم حذف السؤال بنجاح');
+      
+      const updatedData = await adminService.getExamDashboard(params.id);
+      setExamData(updatedData);
+      setCurrentQuestion(getDefaultQuestion(updatedData.questionCount + 1));
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'أخفق حذف السؤال');
+    }
   };
 
   return (
@@ -112,7 +115,7 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
       activePath="/admin/content"
       sectionLabel="إدارة المحتوى ▸ تعديل الامتحان"
       pageTitle="إضافة أسئلة أُخرى"
-      subtitle={`إرفاق أسئلة إضافية لامتحان موجود مسبقاً (${params.id.split('-')[0]})`}
+      subtitle={`إرفاق أسئلة إضافية مع الحفظ التلقائي الفوري`}
       action={<AdminBackButton />}
     >
       <div className="flex flex-col gap-6">
@@ -139,30 +142,28 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
                </div>
             </div>
 
-            {/* Added Questions List */}
-            {questions.length > 0 && (
+            {/* Existing Questions List */}
+            {examData.questions && examData.questions.length > 0 && (
             <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm animate-in fade-in zoom-in-95">
               <div className="p-6 border-b border-[var(--admin-border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h3 className="text-lg font-bold text-[var(--admin-text)]">
-                  الأسئلة الجديدة المراد رفعها ({questions.length})
+                  أسئلة الامتحان الحالية ({examData.questions.length})
                 </h3>
-                <span className="bg-[var(--admin-background)] px-3 py-1 rounded-full text-sm font-bold text-[var(--admin-muted)] border border-[var(--admin-border)]">
-                  إجمالي النقاط المضافة: {questions.reduce((sum, q) => sum + (q.points || 0), 0)}
-                </span>
               </div>
               
               <div className="p-6 flex flex-col gap-3">
-                  {questions.map((q, index) => (
-                    <div key={index} className="flex justify-between items-center p-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)]">
+                  {examData.questions.map((q, index) => (
+                    <div key={q.examQuestionId} className="flex justify-between items-center p-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)]">
                        <div className="flex gap-4 items-center">
-                          <span className="w-8 h-8 rounded-full bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] flex items-center justify-center font-bold">{(examData.questionCount || 0) + index + 1}</span>
-                          <p className="font-bold text-sm md:text-base">{q.text.substring(0, 50)}{q.text.length > 50 ? '...' : ''}</p>
+                          <span className="w-8 h-8 rounded-full bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] flex items-center justify-center font-bold">{index + 1}</span>
+                          <p className="font-bold text-sm md:text-base" dangerouslySetInnerHTML={{ __html: q.text.substring(0, 80) + (q.text.length > 80 ? '...' : '') }} />
                        </div>
                        <button 
-                         onClick={() => handleRemoveQuestion(index)}
-                         className="text-red-500 hover:bg-red-50 p-2 rounded-lg text-sm font-bold"
+                         onClick={() => handleRemoveQuestion(q.examQuestionId)}
+                         className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 border border-red-200/50"
                        >
-                          حذف الإضافة
+                          <Trash2 size={14} />
+                          حذف السؤال
                        </button>
                     </div>
                   ))}
@@ -172,53 +173,52 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
 
             {/* Add New Question Section */}
             <div className="rounded-2xl border border-[var(--admin-primary)] bg-[var(--admin-card)] shadow-sm overflow-hidden mt-2">
-              <div className="bg-[var(--admin-primary)]/10 p-4 border-b border-[var(--admin-primary)]/20">
-                 <h3 className="font-bold text-[var(--admin-primary)] text-center">إضافة سؤال جديد للقائمة</h3>
+              <div className="bg-[var(--admin-primary)]/10 p-4 border-b border-[var(--admin-primary)]/20 flex items-center justify-between">
+                 <h3 className="font-bold text-[var(--admin-primary)]">إضافة سؤال جديد (يتم حفظه تلقائياً)</h3>
+                 
+                 {/* Auto-Save Indicator Component */}
+                 <div className="text-xs font-bold">
+                   {saveStatus === 'saving' && <span className="text-blue-500 animate-pulse">⏳ جارٍ الحفظ...</span>}
+                   {saveStatus === 'saved' && <span className="text-green-500">✓ تم الحفظ بنجاح</span>}
+                   {saveStatus === 'error' && <span className="text-red-500">✕ خطأ في الحفظ</span>}
+                 </div>
               </div>
               <div className="p-6">
                  <QuestionEditor
                     question={currentQuestion}
-                    index={0}
-                    onChange={(_, q) => setCurrentQuestion(q)}
+                    index={examData.questionCount}
+                    onChange={(_, q) => {
+                      setCurrentQuestion(q);
+                      if (saveStatus !== 'idle') setSaveStatus('idle');
+                    }}
                     onRemove={() => {}} // Disabled here
                  />
                  <NeumorphButton
                     type="button"
-                    onClick={handleAddQuestionToList}
+                    onClick={handleAddQuestionAndSave}
+                    disabled={saveStatus === 'saving'}
+                    loading={saveStatus === 'saving'}
                     intent="ghost"
                     size="lg"
                     fullWidth
                     className="mt-6 border-dashed border-[var(--admin-primary)] text-[var(--admin-primary)] bg-[var(--admin-primary)]/5 hover:bg-[var(--admin-primary)]/10"
                  >
                     <Plus className="w-5 h-5" />
-                    تحضير السؤال للرفع
+                    حفظ وإرفاق السؤال تلقائياً للامتحان
                  </NeumorphButton>
               </div>
             </div>
 
-            <div className="flex flex-col-reverse md:flex-row justify-end pt-4 mt-8 gap-4">
+            <div className="flex justify-end pt-4 mt-8">
               <NeumorphButton
                 type="button"
                 onClick={() => router.back()}
-                intent="ghost"
-                size="xl"
-                pill
-                className="w-full md:w-auto"
-              >
-                رجوع وإلغاء
-              </NeumorphButton>
-              <NeumorphButton
-                type="button"
-                onClick={handleSubmit}
-                disabled={saving || questions.length === 0}
-                loading={saving}
                 intent="primary"
                 size="xl"
                 pill
-                className="w-full md:w-auto"
+                className="w-full md:w-auto px-8"
               >
-                <Save className="w-5 h-5" />
-                حفظ وإرفاق الأسئلة للامتحان
+                إنهاء والعودة لبروفايل الامتحان
               </NeumorphButton>
             </div>
           </>

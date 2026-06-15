@@ -18,8 +18,15 @@ public record StudentExamResultSummaryDto(
     bool IsTimeExpired
 );
 
+public record ExamQuestionOptionDto(
+    Guid Id,
+    string Text,
+    bool IsCorrect
+);
+
 public record ExamQuestionSummaryDto(
     Guid ExamQuestionId,
+    Guid QuestionBankItemId,
     string Text,
     string Type,
     decimal Points,
@@ -27,7 +34,13 @@ public record ExamQuestionSummaryDto(
     int TotalAttempts,
     int CorrectCount,
     int WrongCount,
-    decimal CorrectPercentage
+    decimal CorrectPercentage,
+    string? AudioUrl = null,
+    string? WrittenCorrection = null,
+    string? HintText = null,
+    int? MistakeStartIndex = null,
+    int? MistakeEndIndex = null,
+    List<ExamQuestionOptionDto>? Options = null
 );
 
 public record ExamDashboardDto(
@@ -58,6 +71,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
         var exam = await _context.Exams
             .Include(e => e.ExamQuestions)
                 .ThenInclude(eq => eq.Question)
+                    .ThenInclude(q => q.Options)
             .Include(e => e.Attempts)
                 .ThenInclude(a => a.User)
             .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
@@ -116,6 +130,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
                 return new ExamQuestionSummaryDto(
                     eq.Id,
+                    eq.QuestionBankItemId,
                     eq.Question?.Text ?? "سؤال محذوف",
                     eq.Question?.Type.ToString() ?? "Essay",
                     eq.Points,
@@ -123,7 +138,13 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                     total,
                     correct,
                     wrong,
-                    pct
+                    pct,
+                    eq.Question?.AudioUrl,
+                    eq.Question?.WrittenCorrection,
+                    eq.Question?.HintText,
+                    eq.Question is FindTheMistakeQuestion ftm2 ? ftm2.MistakeStartIndex : null,
+                    eq.Question is FindTheMistakeQuestion ftm3 ? ftm3.MistakeEndIndex : null,
+                    eq.Question?.Options?.Select(o => new ExamQuestionOptionDto(o.Id, o.Text, o.IsCorrect)).ToList() ?? new List<ExamQuestionOptionDto>()
                 );
             }).ToList();
 

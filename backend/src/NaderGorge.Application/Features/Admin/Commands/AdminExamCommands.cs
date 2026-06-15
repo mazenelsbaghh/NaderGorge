@@ -501,3 +501,92 @@ public class DeleteExamQuestionCommandHandler : IRequestHandler<DeleteExamQuesti
     }
 }
 
+public class UpdateExamQuestionCommand : IRequest<ApiResponse<bool>>
+{
+    public Guid ExamId { get; set; }
+    public Guid ExamQuestionId { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public decimal Points { get; set; }
+    public string? AudioUrl { get; set; }
+    public string? WrittenCorrection { get; set; }
+    public string? HintText { get; set; }
+    public string? BaseText { get; set; }
+    public int? MistakeStartIndex { get; set; }
+    public int? MistakeEndIndex { get; set; }
+    public List<InlineExamOptionDto> Options { get; set; } = new();
+    public Guid? CurrentUserId { get; set; }
+}
+
+public class UpdateExamQuestionCommandHandler : IRequestHandler<UpdateExamQuestionCommand, ApiResponse<bool>>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public UpdateExamQuestionCommandHandler(IAppDbContext db, TeacherAuthorizationService auth)
+    {
+        _db = db;
+        _auth = auth;
+    }
+
+    public async Task<ApiResponse<bool>> Handle(UpdateExamQuestionCommand request, CancellationToken ct)
+    {
+        var examQuestion = await _db.ExamQuestions
+            .Include(eq => eq.Question)
+                .ThenInclude(q => q.Options)
+            .FirstOrDefaultAsync(eq => eq.Id == request.ExamQuestionId && eq.ExamId == request.ExamId, ct);
+
+        if (examQuestion == null)
+            return ApiResponse<bool>.Fail("السؤال غير موجود في هذا الامتحان.");
+
+        if (request.CurrentUserId.HasValue)
+        {
+            var canAccess = await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId, ct);
+            if (!canAccess) return ApiResponse<bool>.Fail("Unauthorized access to this exam.");
+        }
+
+        var question = examQuestion.Question;
+        if (question == null)
+            return ApiResponse<bool>.Fail("سؤال البنك التابع غير موجود.");
+
+        // Update ExamQuestion properties
+        examQuestion.Points = request.Points;
+
+        // Update QuestionBankItem properties
+        question.Text = request.Text;
+        question.AudioUrl = request.AudioUrl;
+        question.WrittenCorrection = request.WrittenCorrection;
+        question.HintText = request.HintText;
+
+        if (question is FindTheMistakeQuestion ftm)
+        {
+            ftm.BaseText = request.BaseText ?? string.Empty;
+            ftm.MistakeStartIndex = request.MistakeStartIndex ?? 0;
+            ftm.MistakeEndIndex = request.MistakeEndIndex ?? 0;
+        }
+
+        // Update options
+        _db.QuestionOptions.RemoveRange(question.Options);
+        question.Options.Clear();
+
+        if (question.Type == QuestionType.MCQ || question.Type == QuestionType.FindTheMistake)
+        {
+            if (request.Options != null)
+            {
+                foreach (var opt in request.Options)
+                {
+                    _db.QuestionOptions.Add(new QuestionOption
+                    {
+                        Text = opt.Text,
+                        IsCorrect = opt.IsCorrect,
+                        QuestionBankItemId = question.Id,
+                        Question = question
+                    });
+                }
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse<bool>.Ok(true);
+    }
+}
+

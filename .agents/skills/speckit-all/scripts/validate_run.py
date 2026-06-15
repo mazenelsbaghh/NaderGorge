@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -123,8 +125,31 @@ def validate_plan_artifacts(root: Path, spec_dir: Path, require_contracts: bool)
     if "NEEDS CLARIFICATION" in plan_text:
         fail("plan.md still contains NEEDS CLARIFICATION")
 
+    spec_plan_validator = Path(__file__).with_name("validate_spec_plan_quality.py")
+    spec_plan_result = subprocess.run(
+        [sys.executable, str(spec_plan_validator), "--spec-dir", str(spec_dir)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if spec_plan_result.returncode != 0:
+        fail(
+            spec_plan_result.stdout.strip()
+            or spec_plan_result.stderr.strip()
+            or "spec/plan quality validation failed"
+        )
+
     tasks_text = require_file(spec_dir / "tasks.md")
     validate_tasks(tasks_text)
+    validator = Path(__file__).with_name("validate_tasks_quality.py")
+    result = subprocess.run(
+        [sys.executable, str(validator), "--tasks", str(spec_dir / "tasks.md")],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        fail(result.stdout.strip() or result.stderr.strip() or "tasks quality validation failed")
 
     contracts_dir = spec_dir / "contracts"
     if require_contracts and not contracts_dir.is_dir():

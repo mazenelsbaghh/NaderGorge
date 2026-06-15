@@ -275,6 +275,7 @@ export interface StudentExamResultSummaryDto {
 
 export interface ExamQuestionSummaryDto {
   examQuestionId: string;
+  questionBankItemId: string;
   text: string;
   type: string;
   points: number;
@@ -283,6 +284,12 @@ export interface ExamQuestionSummaryDto {
   correctCount?: number;
   wrongCount?: number;
   correctPercentage?: number;
+  audioUrl?: string | null;
+  writtenCorrection?: string | null;
+  hintText?: string | null;
+  mistakeStartIndex?: number | null;
+  mistakeEndIndex?: number | null;
+  options?: { id: string; text: string; isCorrect: boolean }[] | null;
 }
 
 export interface ExamDashboardDto {
@@ -951,6 +958,11 @@ export const adminService = {
 
   deleteExamQuestion: async (examId: string, examQuestionId: string) => {
     const res = await apiClient.delete<ApiResponse>(`/admin/exams/${examId}/questions/${examQuestionId}`);
+    return res.data;
+  },
+
+  updateExamQuestion: async (examId: string, examQuestionId: string, payload: any) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/exams/${examId}/questions/${examQuestionId}`, payload);
     return res.data;
   },
 

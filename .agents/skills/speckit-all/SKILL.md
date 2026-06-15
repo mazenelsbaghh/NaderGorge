@@ -22,6 +22,8 @@ Use these scripts from this skill folder to make the workflow deterministic:
 - `scripts/init_achievements.py --root <repo-root>`: create the required `achievements.md` tracker at the start of Phase 1.
 - `scripts/mark_phase.py <1-9> --root <repo-root>`: mark each phase complete immediately after it finishes.
 - `scripts/extract_test_commands.py --spec-dir <specs/feature-dir>`: list likely test commands from `tasks.md`, `quickstart.md`, and `plan.md` before Phase 9 execution.
+- `scripts/validate_spec_plan_quality.py --spec-dir <specs/feature-dir>`: reject unresolved or vague spec/plan artifacts before task generation.
+- `scripts/validate_tasks_quality.py --tasks <specs/feature-dir/tasks.md>`: reject vague task files before implementation.
 - `scripts/validate_run.py --root <repo-root> --spec-dir <specs/feature-dir>`: verify final artifacts, progress checklists, clarification/planning artifacts, AGENTS.md plan reference, feature-test evidence, and quality-gate ordering before the final report.
 
 Read `references/subagent-handoff-template.md` before Phases 1-3 when subagents are available.
@@ -123,7 +125,8 @@ If a subagent facility is available, use it in Phases 1, 2, and 3 for context ga
 4. `speckit-all` MUST NOT perform Phase 3 planning inline, recreate the plan workflow itself, or write `plan.md` without applying `speckit-plan`.
 5. Ensure the plan conforms to `.specify/memory/constitution.md`.
 6. If UI is touched, pass `ui-ux-pro-max-skill` and `impeccable` expectations into the `speckit-plan` planning context.
-7. Mark Phase 3 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 3 --root .`.
+7. Run `python .agents/skills/speckit-all/scripts/validate_spec_plan_quality.py --spec-dir <specs/feature-dir>` and fix every failure before task generation.
+8. Mark Phase 3 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 3 --root .`.
 
 ### Phase 4: Detailed Task Breakdown (`speckit-tasks`)
 
@@ -133,7 +136,8 @@ If a subagent facility is available, use it in Phases 1, 2, and 3 for context ga
 3. Tasks MUST be atomic, ordered, self-contained, and include exact file paths and expected code structure.
 4. Tasks MUST include explicit tests for every user story and every changed critical workflow.
 5. Add final task checklist items requiring this exact order: deep critique fixes, `clean-code-guard`, `test-guard`, feature tests, final build verification.
-6. Mark Phase 4 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 4 --root .`.
+6. Run `python .agents/skills/speckit-all/scripts/validate_tasks_quality.py --tasks <specs/feature-dir/tasks.md>` and fix every failure before implementation.
+7. Mark Phase 4 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 4 --root .`.
 
 ### Phase 5: Implementation (`speckit-implement`)
 

@@ -668,6 +668,17 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPut("exams/{examId:guid}/questions/{questionId:guid}")]
+    [HasPermission("exams.manage")]
+    public async Task<IActionResult> UpdateExamQuestion(Guid examId, Guid questionId, [FromBody] UpdateExamQuestionCommand command)
+    {
+        command.ExamId = examId;
+        command.ExamQuestionId = questionId;
+        command.CurrentUserId = GetUserId();
+        var result = await _mediator.Send(command);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     // --- Questions ---
     [HttpGet("questions")]
     [HasPermission("exams.manage")]

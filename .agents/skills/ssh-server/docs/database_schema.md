@@ -559,6 +559,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `ExamId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsProcessingAI` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsProcessingMindmaps` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `LessonId` | `Guid` | `uuid` | `NO` | ✅ Sync |
