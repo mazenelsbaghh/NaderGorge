@@ -26,7 +26,9 @@ public record LessonDetailDto(
     decimal Price = 0,
     bool HasAccess = true,
     bool IsExamLocked = false,
-    string? ExamLockedReason = null
+    string? ExamLockedReason = null,
+    string? ExamStatus = null,
+    string? HomeworkStatus = null
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
@@ -117,6 +119,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 lesson.Price,
                 false,
                 false,
+                null,
+                null,
                 null
             );
             return ApiResponse<LessonDetailDto>.Ok(minimalDetail);
@@ -155,7 +159,17 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     if (!passedExam)
                     {
                         isLocked = true;
-                        lockedReason = $"يجب اجتياز امتحان '{exam.Title}' التابع للحصة '{previousLesson.Title}' بنجاح.";
+                        var attemptedExam = await _db.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value, ct);
+
+                        if (!attemptedExam)
+                        {
+                            lockedReason = $"يجب حل امتحان '{exam.Title}' التابع للحصة '{previousLesson.Title}' أولاً لفتح هذه الحصة.";
+                        }
+                        else
+                        {
+                            lockedReason = $"يجب اجتياز امتحان '{exam.Title}' التابع للحصة '{previousLesson.Title}' بنجاح لفتح هذه الحصة.";
+                        }
                         blockingExamId = exam.Id;
                     }
                 }
@@ -168,15 +182,24 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 if (prevHomework != null && prevHomework.IsMandatory)
                 {
                     var prevHwSubmission = await _db.HomeworkSubmissions
-                        .Where(s => s.StudentId == request.UserId && s.HomeworkId == prevHomework.Id && s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
+                        .Where(s => s.StudentId == request.UserId && s.HomeworkId == prevHomework.Id)
                         .OrderByDescending(s => s.SubmittedAt)
                         .FirstOrDefaultAsync(ct);
 
-                    bool prevHwPassed = prevHwSubmission != null && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                    bool prevHwPassed = prevHwSubmission != null 
+                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
                     if (!prevHwPassed)
                     {
                         isLocked = true;
-                        lockedReason = $"يجب اجتياز واجب الحصة السابقة '{prevHomework.Title}' أولاً لفتح هذه الحصة.";
+                        if (prevHwSubmission == null)
+                        {
+                            lockedReason = $"يجب حل واجب الحصة السابقة '{prevHomework.Title}' أولاً لفتح هذه الحصة.";
+                        }
+                        else
+                        {
+                            lockedReason = $"يجب اجتياز واجب الحصة السابقة '{prevHomework.Title}' أولاً لفتح هذه الحصة.";
+                        }
                         blockingHomeworkLessonId = previousLesson.Id;
                     }
                 }
@@ -194,7 +217,17 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     if (!passedExam)
                     {
                         isLocked = true;
-                        lockedReason = $"يجب اجتياز امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.";
+                        var attemptedExam = await _db.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value, ct);
+
+                        if (!attemptedExam)
+                        {
+                            lockedReason = $"يجب حل امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.";
+                        }
+                        else
+                        {
+                            lockedReason = $"يجب اجتياز امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.";
+                        }
                         blockingExamId = exam.Id;
                     }
                 }
@@ -331,15 +364,24 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             if (prevHomework != null && prevHomework.IsMandatory)
             {
                 var prevHwSubmission = await _db.HomeworkSubmissions
-                    .Where(s => s.StudentId == request.UserId && s.HomeworkId == prevHomework.Id && s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
+                    .Where(s => s.StudentId == request.UserId && s.HomeworkId == prevHomework.Id)
                     .OrderByDescending(s => s.SubmittedAt)
                     .FirstOrDefaultAsync(ct);
 
-                bool prevHwPassed = prevHwSubmission != null && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                bool prevHwPassed = prevHwSubmission != null 
+                                  && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                                  && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
                 if (!prevHwPassed)
                 {
                     lessonExamLocked = true;
-                    examLockedReason = $"يجب اجتياز واجب الحصة السابقة '{prevHomework.Title}' أولاً لفتح اختبار هذه الحصة.";
+                    if (prevHwSubmission == null)
+                    {
+                        examLockedReason = $"يجب حل واجب الحصة السابقة '{prevHomework.Title}' أولاً لفتح اختبار هذه الحصة.";
+                    }
+                    else
+                    {
+                        examLockedReason = $"يجب اجتياز واجب الحصة السابقة '{prevHomework.Title}' أولاً لفتح اختبار هذه الحصة.";
+                    }
                 }
             }
 
@@ -354,9 +396,99 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     if (!passedPrevExam)
                     {
                         lessonExamLocked = true;
-                        examLockedReason = $"يجب اجتياز امتحان الحصة السابقة '{prevExam.Title}' أولاً لفتح اختبار هذه الحصة.";
+                        var attemptedPrevExam = await _db.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value, ct);
+
+                        if (!attemptedPrevExam)
+                        {
+                            examLockedReason = $"يجب حل امتحان الحصة السابقة '{prevExam.Title}' أولاً لفتح اختبار هذه الحصة.";
+                        }
+                        else
+                        {
+                            examLockedReason = $"يجب اجتياز امتحان الحصة السابقة '{prevExam.Title}' أولاً لفتح اختبار هذه الحصة.";
+                        }
                     }
                 }
+            }
+        }
+
+        if (!lessonExamLocked && hw != null && hw.IsMandatory)
+        {
+            var hwSubmission = await _db.HomeworkSubmissions
+                .Where(s => s.StudentId == request.UserId && s.HomeworkId == hw.Id)
+                .OrderByDescending(s => s.SubmittedAt)
+                .FirstOrDefaultAsync(ct);
+
+            bool hwPassed = hwSubmission != null 
+                           && hwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                           && hwSubmission.OverallScore >= (hw.PassingScoreThreshold ?? 0);
+
+            if (!hwPassed)
+            {
+                lessonExamLocked = true;
+                if (hwSubmission == null)
+                {
+                    examLockedReason = $"يجب حل واجب الحصة الحالية '{hw.Title}' أولاً لفتح اختبار هذه الحصة.";
+                }
+                else
+                {
+                    examLockedReason = $"يجب اجتياز واجب الحصة الحالية '{hw.Title}' أولاً لفتح اختبار هذه الحصة.";
+                }
+            }
+        }
+
+        string? examStatus = null;
+        if (lesson.ExamId.HasValue)
+        {
+            if (lessonExamPassed)
+            {
+                examStatus = "Passed";
+            }
+            else
+            {
+                var latestAttempt = await _db.StudentExamAttempts
+                    .Where(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value)
+                    .OrderByDescending(a => a.StartedAt)
+                    .FirstOrDefaultAsync(ct);
+
+                if (latestAttempt == null)
+                {
+                    examStatus = "NotAttempted";
+                }
+                else if (latestAttempt.Evaluation != null)
+                {
+                    examStatus = "Failed";
+                }
+                else
+                {
+                    examStatus = "InProgress";
+                }
+            }
+        }
+
+        string? homeworkStatus = null;
+        if (hw != null)
+        {
+            var latestHwSubmission = await _db.HomeworkSubmissions
+                .Where(s => s.StudentId == request.UserId && s.HomeworkId == hw.Id)
+                .OrderByDescending(s => s.StartedAt)
+                .FirstOrDefaultAsync(ct);
+
+            if (latestHwSubmission == null)
+            {
+                homeworkStatus = "NotAttempted";
+            }
+            else if (latestHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
+            {
+                homeworkStatus = latestHwSubmission.OverallScore >= (hw.PassingScoreThreshold ?? 0) ? "Passed" : "Failed";
+            }
+            else if (latestHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.PendingReview)
+            {
+                homeworkStatus = "PendingReview";
+            }
+            else
+            {
+                homeworkStatus = "InProgress";
             }
         }
 
@@ -378,7 +510,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             lesson.Price,
             true,
             lessonExamLocked,
-            examLockedReason
+            examLockedReason,
+            examStatus,
+            homeworkStatus
         );
         return ApiResponse<LessonDetailDto>.Ok(detail);
     }

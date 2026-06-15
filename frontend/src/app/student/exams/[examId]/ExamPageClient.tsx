@@ -12,6 +12,7 @@ export default function ExamPageClient() {
   
   const examId = params.examId as string;
   const packageId = searchParams.get('packageId') || undefined;
+  const lessonId = searchParams.get('lessonId') || undefined;
   
   const [exam, setExam] = useState<ActiveExamAttemptDto | null>(null);
   const [passedResult, setPassedResult] = useState<ExamResultDto | null>(null);
@@ -101,7 +102,13 @@ export default function ExamPageClient() {
         <p className="mb-6 text-[var(--admin-text)]">{error}</p>
         <button 
           type="button"
-          onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
+          onClick={() => {
+            if (packageId && lessonId) {
+              router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+            } else {
+              router.push(packageId ? `/student/packages/${packageId}` : '/student');
+            }
+          }}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[var(--admin-danger)] px-6 py-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-danger-10)] sm:w-auto"
         >
           العودة
@@ -115,7 +122,13 @@ export default function ExamPageClient() {
       {!passedResult && (
         <button 
           type="button"
-          onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
+          onClick={() => {
+            if (packageId && lessonId) {
+              router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+            } else {
+              router.push(packageId ? `/student/packages/${packageId}` : '/student');
+            }
+          }}
           className="mb-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-text)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] sm:mb-8 sm:w-auto sm:justify-start sm:rounded-full sm:border-transparent sm:bg-transparent sm:px-3"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -125,7 +138,7 @@ export default function ExamPageClient() {
         </button>
       )}
 
-      <ExamViewer examId={examId} examTitle={exam.title} examDescription={exam.description} attempt={exam} packageId={packageId} onRestart={loadExam} />
+      <ExamViewer examId={examId} examTitle={exam.title} examDescription={exam.description} attempt={exam} packageId={packageId} lessonId={lessonId} onRestart={loadExam} />
     </div>
   );
 }

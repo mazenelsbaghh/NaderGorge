@@ -84,7 +84,7 @@ export default function HomeworkPageClient() {
     if (completedResult) {
       return (
         <div className="mx-auto max-w-5xl pb-16">
-          <HomeworkResultPanel result={completedResult} packageId={packageId} lessonId={lessonId} />
+          <HomeworkResultPanel result={completedResult} packageId={packageId} lessonId={lessonId} onRestart={loadHomework} />
         </div>
       );
     }
@@ -95,7 +95,13 @@ export default function HomeworkPageClient() {
         <p className="mb-6 text-[var(--admin-text)]">{error}</p>
         <button
           type="button"
-          onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
+          onClick={() => {
+          if (packageId && lessonId) {
+            router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+          } else {
+            router.push(packageId ? `/student/packages/${packageId}` : '/student');
+          }
+        }}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[var(--admin-danger)] px-6 py-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-danger-10)] sm:w-auto"
         >
           العودة
@@ -108,13 +114,19 @@ export default function HomeworkPageClient() {
     <div className="mx-auto max-w-5xl pb-16">
       <button
         type="button"
-        onClick={() => router.push(packageId ? `/student/packages/${packageId}` : '/student')}
+        onClick={() => {
+          if (packageId && lessonId) {
+            router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+          } else {
+            router.push(packageId ? `/student/packages/${packageId}` : '/student');
+          }
+        }}
         className="mb-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-text)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] sm:mb-8 sm:w-auto sm:justify-start sm:rounded-full sm:border-transparent sm:bg-transparent sm:px-3"
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
-        العودة
+        إلغاء حل الواجب
       </button>
 
       <HomeworkViewer
@@ -122,6 +134,7 @@ export default function HomeworkPageClient() {
         attempt={attempt}
         packageId={packageId}
         lessonId={lessonId}
+        onRestart={loadHomework}
       />
     </div>
   );

@@ -62,14 +62,77 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 
         if (lesson != null)
         {
+            // Find previous lesson
+            var previousLesson = await _db.Lessons
+                .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order < lesson.Order)
+                .OrderByDescending(l => l.Order)
+                .FirstOrDefaultAsync(ct);
+
+            if (previousLesson != null)
+            {
+                // 1. Previous exam
+                if (previousLesson.ExamId.HasValue)
+                {
+                    var prevExam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
+                    if (prevExam != null && prevExam.IsMandatory)
+                    {
+                        var passedExam = await _db.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
+
+                        if (!passedExam)
+                        {
+                            var attemptedExam = await _db.StudentExamAttempts
+                                .AnyAsync(a => a.UserId == request.UserId && a.ExamId == previousLesson.ExamId.Value, ct);
+
+                            string reason = attemptedExam
+                                ? $"يجب اجتياز امتحان '{prevExam.Title}' التابع للحصة '{previousLesson.Title}' بنجاح أولاً."
+                                : $"يجب حل امتحان '{prevExam.Title}' التابع للحصة '{previousLesson.Title}' أولاً.";
+
+                            return ApiResponse<ActiveExamAttemptDto>.Fail(reason);
+                        }
+                    }
+                }
+
+                // 2. Previous homework
+                var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+                if (prevHomework != null && prevHomework.IsMandatory)
+                {
+                    var prevHwSubmission = await _db.HomeworkSubmissions
+                        .Where(s => s.StudentId == request.UserId && s.HomeworkId == prevHomework.Id)
+                        .OrderByDescending(s => s.SubmittedAt)
+                        .FirstOrDefaultAsync(ct);
+
+                    bool prevHwPassed = prevHwSubmission != null 
+                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+
+                    if (!prevHwPassed)
+                    {
+                        string reason = prevHwSubmission == null
+                            ? $"يجب حل واجب الحصة السابقة '{prevHomework.Title}' أولاً."
+                            : $"يجب اجتياز واجب الحصة السابقة '{prevHomework.Title}' أولاً.";
+
+                        return ApiResponse<ActiveExamAttemptDto>.Fail(reason);
+                    }
+                }
+            }
+
+            // 3. Current homework
             var homework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == lesson.Id, ct);
             if (homework != null && homework.IsMandatory)
             {
-                var homeworkPassed = await _db.HomeworkSubmissions
-                    .AnyAsync(s => s.StudentId == request.UserId 
-                                && s.HomeworkId == homework.Id 
-                                && s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
-                                && s.OverallScore >= (homework.PassingScoreThreshold ?? 0), ct);
+                var latestSubmission = await _db.HomeworkSubmissions
+                    .Where(s => s.StudentId == request.UserId && s.HomeworkId == homework.Id)
+                    .OrderByDescending(s => s.StartedAt)
+                    .FirstOrDefaultAsync(ct);
+
+                if (latestSubmission == null)
+                {
+                    return ApiResponse<ActiveExamAttemptDto>.Fail($"يجب حل واجب '{homework.Title}' أولاً قبل بدء هذا الاختبار.");
+                }
+
+                bool homeworkPassed = latestSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                                      && latestSubmission.OverallScore >= (homework.PassingScoreThreshold ?? 0);
 
                 if (!homeworkPassed)
                 {

@@ -37,6 +37,10 @@ interface LessonCarouselProps {
     onStepChange: (index: number) => void;
     homeworkId?: string;
     homeworkPassed?: boolean;
+    examId?: string;
+    examPassed?: boolean;
+    isExamLocked?: boolean;
+    examLockedReason?: string;
 }
 
 // --- Subcomponents ---
@@ -117,52 +121,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                 </span>
                             </button>
 
-                            {!isExamLocked && (
-                                <div className="flex flex-wrap gap-1 mt-1 pointer-events-auto">
-                                    {video.exams && video.exams.length > 0 ? (
-                                        video.exams.map((exam) => (
-                                            <button
-                                                key={exam.examId}
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    router.push(`/student/exams/${exam.examId}?packageId=${packageId}`);
-                                                }}
-                                                className={cn(
-                                                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black transition-all hover:scale-105 shadow-sm",
-                                                    exam.passed
-                                                        ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
-                                                        : "bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse"
-                                                )}
-                                                title={exam.passed ? "الامتحان مجتاز" : `اذهب لـ ${exam.title}`}
-                                            >
-                                                <Award className="h-3 w-3 shrink-0" />
-                                                <span>{exam.passed ? "مجتاز" : exam.title}</span>
-                                            </button>
-                                        ))
-                                    ) : (
-                                        video.examId && (
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    router.push(`/student/exams/${video.examId}?packageId=${packageId}`);
-                                                }}
-                                                className={cn(
-                                                    "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black transition-all hover:scale-105 shadow-sm",
-                                                    video.examPassed
-                                                        ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
-                                                        : "bg-amber-500/15 text-amber-500 border border-amber-500/30 animate-pulse"
-                                                )}
-                                                title={video.examPassed ? "الامتحان مجتاز" : "اذهب للامتحان المرتبط"}
-                                            >
-                                                <Award className="h-3 w-3 shrink-0" />
-                                                <span>{video.examPassed ? "مجتاز" : "امتحان"}</span>
-                                            </button>
-                                        )
-                                    )}
-                                </div>
-                            )}
+                            {/* Removed nested exam badges from list items per request */}
                         </motion.li>
                     );
                 })}
@@ -199,7 +158,22 @@ function HomeworkButton({ homeworkId, homeworkPassed }: { homeworkId: string; ho
 }
 
 // --- Main Component ---
-export function LessonCarousel({ videos, activeStep, onStepChange, homeworkId, homeworkPassed }: LessonCarouselProps) {
+export function LessonCarousel({
+    videos,
+    activeStep,
+    onStepChange,
+    homeworkId,
+    homeworkPassed,
+    examId,
+    examPassed,
+    isExamLocked,
+    examLockedReason
+}: LessonCarouselProps) {
+    const router = useRouter();
+    const params = useParams();
+    const lessonId = params?.lessonId as string;
+    const packageId = params?.packageId as string;
+
     const [mounted, setMounted] = useState(false);
     const [watchStatus, setWatchStatus] = useState<WatchStatus | null>(null);
     const [mobilePanel, setMobilePanel] = useState<"chapters" | "mindmap">("chapters");
@@ -244,14 +218,50 @@ export function LessonCarousel({ videos, activeStep, onStepChange, homeworkId, h
 
                     {/* Left Column (Titles & Animated Progress Steps) */}
                     <div className="flex w-full flex-col xl:w-[35%] shrink-0 pt-2 relative z-30">
-                        <Steps current={activeStep} onChange={onStepChange} videos={videos} />
-
-                        {/* Homework button (per-lesson) */}
-                        {homeworkId && (
-                            <div className="px-4 md:px-10 mt-3">
-                                <HomeworkButton homeworkId={homeworkId} homeworkPassed={homeworkPassed} />
+                        {/* Exam & Homework buttons right above the steps list */}
+                        {(examId || homeworkId) && (
+                            <div className="flex flex-col gap-2 px-4 md:px-10 mb-2 mt-2">
+                                <div className="flex gap-2">
+                                    {examId && (
+                                        <button
+                                            type="button"
+                                            disabled={isExamLocked && !examPassed}
+                                            onClick={() => router.push(`/student/exams/${examId}?packageId=${packageId}&lessonId=${lessonId}`)}
+                                            className={cn(
+                                                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.02] shadow-sm",
+                                                examPassed
+                                                    ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
+                                                    : isExamLocked
+                                                    ? "bg-gray-500/10 text-gray-400 border border-gray-500/20 opacity-60 cursor-not-allowed"
+                                                    : "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)]"
+                                            )}
+                                            title={examPassed ? "الاختبار مجتاز" : "ابدأ اختبار الدرس"}
+                                        >
+                                            <Award className="h-3.5 w-3.5 shrink-0" />
+                                            <span>{examPassed ? "الاختبار مجتاز" : "اختبار الدرس"}</span>
+                                        </button>
+                                    )}
+                                    {homeworkId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => router.push(`/student/homework/${homeworkId}?packageId=${packageId}&lessonId=${lessonId}`)}
+                                            className={cn(
+                                                "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.02] shadow-sm",
+                                                homeworkPassed
+                                                    ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
+                                                    : "bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25"
+                                            )}
+                                            title={homeworkPassed ? "تم اجتياز الواجب" : "حل الواجب"}
+                                        >
+                                            <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
+                                            <span>{homeworkPassed ? "الواجب مجتاز" : "واجب الدرس"}</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         )}
+
+                        <Steps current={activeStep} onChange={onStepChange} videos={videos} />
 
                         <div className="mt-4 flex flex-col gap-4 px-6 md:px-10 xl:mt-12">
                             <AnimatePresence mode="wait">

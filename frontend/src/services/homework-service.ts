@@ -31,6 +31,9 @@ export interface StartHomeworkAttemptDto {
     alreadyCompleted: boolean;
     score?: number;
     evaluation?: string;
+    startedAt: string;
+    durationMinutes?: number;
+    remainingSeconds?: number;
     questions: StartHomeworkQuestionDto[];
 }
 

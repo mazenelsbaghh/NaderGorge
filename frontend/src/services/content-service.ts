@@ -134,6 +134,8 @@ export interface LessonDetailDto {
   hasAccess?: boolean;
   isExamLocked?: boolean;
   examLockedReason?: string;
+  examStatus?: string;
+  homeworkStatus?: string;
 }
 
 

@@ -17,6 +17,9 @@ public record StartHomeworkAttemptDto(
     bool AlreadyCompleted,
     decimal? Score,
     string? Evaluation,
+    DateTime StartedAt,
+    int? DurationMinutes,
+    int? RemainingSeconds,
     List<HomeworkQuestionDto> Questions
 );
 
@@ -64,6 +67,65 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
         if (!hasAccess)
             return ApiResponse<StartHomeworkAttemptDto>.Fail("You do not have access to this homework's lesson.");
 
+        // Find the previous lesson of this homework's lesson and enforce locks
+        var lesson = await _dbContext.Lessons.FirstOrDefaultAsync(l => l.Id == homework.LessonId, ct);
+        if (lesson != null)
+        {
+            var previousLesson = await _dbContext.Lessons
+                .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order < lesson.Order)
+                .OrderByDescending(l => l.Order)
+                .FirstOrDefaultAsync(ct);
+
+            if (previousLesson != null)
+            {
+                // 1. Previous exam
+                if (previousLesson.ExamId.HasValue)
+                {
+                    var exam = await _dbContext.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
+                    if (exam != null && exam.IsMandatory)
+                    {
+                        var passedExam = await _dbContext.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == previousLesson.ExamId.Value && a.IsPassed, ct);
+
+                        if (!passedExam)
+                        {
+                            var attemptedExam = await _dbContext.StudentExamAttempts
+                                .AnyAsync(a => a.UserId == request.StudentId && a.ExamId == previousLesson.ExamId.Value, ct);
+
+                            string reason = attemptedExam
+                                ? $"يجب اجتياز امتحان '{exam.Title}' التابع للحصة '{previousLesson.Title}' بنجاح أولاً قبل بدء هذا الواجب."
+                                : $"يجب حل امتحان '{exam.Title}' التابع للحصة '{previousLesson.Title}' أولاً قبل بدء هذا الواجب.";
+
+                            return ApiResponse<StartHomeworkAttemptDto>.Fail(reason);
+                        }
+                    }
+                }
+
+                // 2. Previous homework
+                var prevHomework = await _dbContext.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+                if (prevHomework != null && prevHomework.IsMandatory)
+                {
+                    var prevHwSubmission = await _dbContext.HomeworkSubmissions
+                        .Where(s => s.StudentId == request.StudentId && s.HomeworkId == prevHomework.Id)
+                        .OrderByDescending(s => s.SubmittedAt)
+                        .FirstOrDefaultAsync(ct);
+
+                    bool prevHwPassed = prevHwSubmission != null 
+                                      && prevHwSubmission.Status == SubmissionStatus.Graded 
+                                      && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+
+                    if (!prevHwPassed)
+                    {
+                        string reason = prevHwSubmission == null
+                            ? $"يجب حل واجب الحصة السابقة '{prevHomework.Title}' أولاً قبل بدء هذا الواجب."
+                            : $"يجب اجتياز واجب الحصة السابقة '{prevHomework.Title}' أولاً قبل بدء هذا الواجب.";
+
+                        return ApiResponse<StartHomeworkAttemptDto>.Fail(reason);
+                    }
+                }
+            }
+        }
+
         // Check for existing submission
         var submission = await _dbContext.HomeworkSubmissions
             .Include(s => s.Answers)
@@ -94,26 +156,48 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
             q.MistakeEndIndex
         )).ToList();
 
-        // If existing Graded submission → return result with AlreadyCompleted = true
+        // If existing Graded submission
         if (submission != null && submission.Status == SubmissionStatus.Graded)
         {
-            return ApiResponse<StartHomeworkAttemptDto>.Ok(new StartHomeworkAttemptDto(
-                homework.Id,
-                submission.Id,
-                homework.Title,
-                homework.Description,
-                homework.TotalScore,
-                homework.PassingScoreThreshold,
-                AlreadyCompleted: true,
-                Score: submission.OverallScore,
-                Evaluation: submission.Evaluation,
-                Questions: questions
-            ), "Homework already completed.");
+            var passingScore = homework.PassingScoreThreshold ?? 0;
+            bool passed = submission.OverallScore >= passingScore;
+
+            if (passed)
+            {
+                var durationMinutes = 30; // Default 30 minutes
+                var remainingSeconds = (int)Math.Max(0, (TimeSpan.FromMinutes(durationMinutes) - (DateTime.UtcNow - submission.StartedAt)).TotalSeconds);
+
+                return ApiResponse<StartHomeworkAttemptDto>.Ok(new StartHomeworkAttemptDto(
+                    homework.Id,
+                    submission.Id,
+                    homework.Title,
+                    homework.Description,
+                    homework.TotalScore,
+                    homework.PassingScoreThreshold,
+                    AlreadyCompleted: true,
+                    Score: submission.OverallScore,
+                    Evaluation: submission.Evaluation,
+                    submission.StartedAt,
+                    durationMinutes,
+                    remainingSeconds,
+                    questions
+                ), "Homework already completed.");
+            }
+            else
+            {
+                // Delete failed attempt and answers to allow retaking
+                _dbContext.HomeworkSubmissions.Remove(submission);
+                await _dbContext.SaveChangesAsync(ct);
+                submission = null;
+            }
         }
 
         // If existing InProgress or PendingReview submission → reuse it
         if (submission != null && (submission.Status == SubmissionStatus.InProgress || submission.Status == SubmissionStatus.PendingReview))
         {
+            var durationMinutes = 30; // Default 30 minutes
+            var remainingSeconds = (int)Math.Max(0, (TimeSpan.FromMinutes(durationMinutes) - (DateTime.UtcNow - submission.StartedAt)).TotalSeconds);
+
             return ApiResponse<StartHomeworkAttemptDto>.Ok(new StartHomeworkAttemptDto(
                 homework.Id,
                 submission.Id,
@@ -124,7 +208,10 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
                 AlreadyCompleted: submission.Status == SubmissionStatus.PendingReview,
                 Score: submission.Status == SubmissionStatus.PendingReview ? submission.OverallScore : null,
                 Evaluation: submission.Status == SubmissionStatus.PendingReview ? submission.Evaluation : null,
-                Questions: questions
+                submission.StartedAt,
+                durationMinutes,
+                remainingSeconds,
+                questions
             ));
         }
 
@@ -139,6 +226,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
         _dbContext.HomeworkSubmissions.Add(newSubmission);
         await _dbContext.SaveChangesAsync(ct);
 
+        var defaultDurationMinutes = 30; // Default 30 minutes
+
         return ApiResponse<StartHomeworkAttemptDto>.Ok(new StartHomeworkAttemptDto(
             homework.Id,
             newSubmission.Id,
@@ -149,7 +238,10 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
             AlreadyCompleted: false,
             Score: null,
             Evaluation: null,
-            Questions: questions
+            newSubmission.StartedAt,
+            defaultDurationMinutes,
+            defaultDurationMinutes * 60,
+            questions
         ));
     }
 }

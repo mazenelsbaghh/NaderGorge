@@ -241,8 +241,8 @@ export function ExamResultPanel({
             type="button"
             onClick={() =>
               router.push(
-                resolvedLessonId
-                  ? `/student/lessons/${resolvedLessonId}${resolvedPackageId ? `?packageId=${resolvedPackageId}` : ''}`
+                resolvedLessonId && resolvedPackageId
+                  ? `/student/packages/${resolvedPackageId}/lessons/${resolvedLessonId}`
                   : resolvedPackageId
                     ? `/student/packages/${resolvedPackageId}`
                     : '/student'
@@ -653,6 +653,7 @@ export function ExamViewer({
   examDescription,
   attempt,
   packageId,
+  lessonId,
   onRestart,
 }: {
   examId: string;
@@ -660,6 +661,7 @@ export function ExamViewer({
   examDescription: string;
   attempt: ActiveExamAttemptDto;
   packageId?: string;
+  lessonId?: string;
   onRestart?: () => Promise<void> | void;
 }) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -809,7 +811,7 @@ export function ExamViewer({
       <ExamResultPanel
         result={result}
         packageId={packageId ?? attempt.packageId}
-        lessonId={attempt.lessonId}
+        lessonId={lessonId ?? attempt.lessonId}
         onRestart={onRestart}
       />
     );

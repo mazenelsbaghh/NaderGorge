@@ -10,6 +10,7 @@ import {
   ShieldX,
   Award,
   BookOpen,
+  RotateCcw,
 } from 'lucide-react';
 import type { HomeworkResultDto } from '@/services/homework-service';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
@@ -18,10 +19,12 @@ export function HomeworkResultPanel({
   result,
   packageId,
   lessonId,
+  onRestart,
 }: {
   result: HomeworkResultDto;
   packageId?: string;
   lessonId?: string;
+  onRestart?: () => Promise<void> | void;
 }) {
   const router = useRouter();
   const reviewedQuestions = result.questionReviews ?? [];
@@ -115,12 +118,22 @@ export function HomeworkResultPanel({
 
         {/* CTA button */}
         <div className="relative z-10 mt-6 flex flex-wrap gap-3">
+          {!result.isPassed && onRestart && (
+            <button
+              type="button"
+              onClick={() => { void onRestart(); }}
+              className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-foreground px-6 py-3 text-sm font-black text-background transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <RotateCcw className="h-4 w-4" />
+              إعادة حل الواجب
+            </button>
+          )}
           <button
             type="button"
             onClick={() =>
               router.push(
-                lessonId
-                  ? `/student/lessons/${lessonId}${packageId ? `?packageId=${packageId}` : ''}`
+                lessonId && packageId
+                  ? `/student/packages/${packageId}/lessons/${lessonId}`
                   : packageId
                     ? `/student/packages/${packageId}`
                     : '/student'

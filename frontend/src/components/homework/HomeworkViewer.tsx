@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useId } from 'react';
+import { useState, useCallback, useId, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
@@ -20,6 +20,8 @@ import { HomeworkResultPanel } from '@/components/homework/HomeworkResultPanel';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { useLessonFocusStore } from '@/stores/lesson-focus-store';
+import { CountdownTimer } from '@/components/exams/CountdownTimer';
 
 // ─── Question Card ──────────────────────────────────────────────────────────────
 
@@ -79,7 +81,7 @@ function HomeworkQuestionCard({
         ) : qType === 1 ? (
           <div>
             <label htmlFor={essayAnswerId} className="mb-2 block text-sm font-black text-foreground">
-              إجابتك
+              إجابتك المقالية
             </label>
             <textarea
               id={essayAnswerId}
@@ -121,9 +123,11 @@ function HomeworkQuestionCard({
                   >
                     {String.fromCharCode(0x0627 + optIdx)}
                   </span>
-                  <span className="flex-1 text-base font-bold leading-7 text-foreground" dir="auto">
-                    {opt}
-                  </span>
+                  <span
+                    className="flex-1 text-base font-bold leading-7 text-foreground"
+                    dir="auto"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(opt) }}
+                  />
                   {isSelected && (
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-primary mt-1.5" />
                   )}
@@ -144,12 +148,20 @@ export function HomeworkViewer({
   attempt,
   packageId,
   lessonId,
+  onRestart,
 }: {
   homeworkId: string;
   attempt: StartHomeworkAttemptDto;
   packageId?: string;
   lessonId?: string;
+  onRestart?: () => Promise<void> | void;
 }) {
+  const { setFocusMode } = useLessonFocusStore();
+
+  useEffect(() => {
+    setFocusMode(true);
+    return () => setFocusMode(false);
+  }, [setFocusMode]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<HomeworkResultDto | null>(null);
@@ -167,17 +179,32 @@ export function HomeworkViewer({
   const progress = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0;
   const currentQ = questions[currentIdx];
 
-  const handleAnswer = useCallback((qId: string, value: string) => {
-    if (!value) {
-      setAnswers((prev) => {
-        const next = { ...prev };
-        delete next[qId];
-        return next;
-      });
-    } else {
-      setAnswers((prev) => ({ ...prev, [qId]: value }));
+  // Restore answers from localStorage on mount
+  useEffect(() => {
+    const key = `homework_answers_${attempt.submissionId}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        setAnswers(JSON.parse(saved));
+      } catch {
+        // ignore
+      }
     }
-  }, []);
+  }, [attempt.submissionId]);
+
+  const handleAnswer = useCallback((qId: string, value: string) => {
+    setAnswers((prev) => {
+      const next = { ...prev };
+      if (!value) {
+        delete next[qId];
+      } else {
+        next[qId] = value;
+      }
+      const key = `homework_answers_${attempt.submissionId}`;
+      localStorage.setItem(key, JSON.stringify(next));
+      return next;
+    });
+  }, [attempt.submissionId]);
 
   const navigateTo = (idx: number) => {
     setDirection(idx > currentIdx ? 1 : -1);
@@ -203,7 +230,12 @@ export function HomeworkViewer({
 
     try {
       await homeworkService.submitHomework(homeworkId, submissions);
-      // Fetch the result
+      
+      // Clear localStorage answers and timer on success
+      const key = `homework_answers_${attempt.submissionId}`;
+      localStorage.removeItem(key);
+      localStorage.removeItem(`homework_attempt_${homeworkId}_start_time`);
+
       const res = await homeworkService.getHomeworkResult(homeworkId);
       setResult(res.data.data);
     } catch (err: unknown) {
@@ -220,6 +252,7 @@ export function HomeworkViewer({
         result={result}
         packageId={packageId}
         lessonId={lessonId}
+        onRestart={onRestart}
       />
     );
   }
@@ -233,6 +266,18 @@ export function HomeworkViewer({
   return (
     <div className="relative mx-auto max-w-3xl pb-16" role="form" aria-label={`واجب: ${attempt.title}`} dir="rtl">
 
+      {/* ─── Countdown ─── */}
+      {attempt.durationMinutes && (
+        <div className="mb-4 flex justify-start">
+          <CountdownTimer
+            startedAt={attempt.startedAt}
+            durationMinutes={attempt.durationMinutes}
+            remainingSeconds={attempt.remainingSeconds}
+            onTimeExpired={() => handleSubmit(true)}
+          />
+        </div>
+      )}
+
       {/* ─── Homework header ─── */}
       <div className="mb-6 rounded-3xl border border-border bg-card px-6 py-5">
         <h1 className="text-2xl font-black text-foreground">{attempt.title}</h1>
@@ -242,6 +287,7 @@ export function HomeworkViewer({
         <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-black text-primary">
           <span>الدرجة الكلية: {attempt.totalScore} نقطة</span>
           {attempt.passingScore && <span>درجة النجاح: {attempt.passingScore} نقطة</span>}
+          {attempt.durationMinutes && <span>الزمن: {attempt.durationMinutes} دقيقة</span>}
         </div>
       </div>
 
@@ -281,10 +327,21 @@ export function HomeworkViewer({
       {/* ─── Question nav bubbles ─── */}
       {totalQ > 0 && (
         <div className="mb-5">
+          <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-muted-foreground" aria-label="دليل حالات الأسئلة">
+            <span>● الحالي</span>
+            <span>✓ تمت الإجابة</span>
+            <span>○ بدون إجابة</span>
+          </div>
           <div className="flex flex-wrap gap-2">
             {questions.map((q, idx) => {
               const isCurrent = idx === currentIdx;
               const hasAns = !!answers[q.id];
+              const stateLabel = isCurrent
+                ? 'السؤال الحالي'
+                : hasAns
+                  ? 'تمت الإجابة'
+                  : 'بدون إجابة';
+              const stateMark = isCurrent ? '●' : hasAns ? '✓' : '○';
 
               return (
                 <button
@@ -292,8 +349,8 @@ export function HomeworkViewer({
                   type="button"
                   onClick={() => navigateTo(idx)}
                   disabled={loading}
-                  title={`سؤال ${idx + 1}`}
-                  aria-label={`سؤال ${idx + 1}: ${isCurrent ? 'الحالي' : hasAns ? 'تمت الإجابة' : 'بدون إجابة'}`}
+                  title={`سؤال ${idx + 1}: ${stateLabel}`}
+                  aria-label={`سؤال ${idx + 1}: ${stateLabel}`}
                   aria-current={isCurrent ? 'step' : undefined}
                   className={`relative flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary ${
                     isCurrent
@@ -303,6 +360,7 @@ export function HomeworkViewer({
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
+                  <span aria-hidden="true" className="absolute left-1 top-0.5 text-xs leading-none">{stateMark}</span>
                   {idx + 1}
                 </button>
               );
