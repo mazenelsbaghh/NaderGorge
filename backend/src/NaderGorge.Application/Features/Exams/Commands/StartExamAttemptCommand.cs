@@ -48,6 +48,36 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
             .ThenInclude(cs => cs.Term)
             .FirstOrDefaultAsync(l => l.ExamId == request.ExamId, ct);
 
+        if (lesson == null)
+        {
+            var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.ExamId == request.ExamId, ct);
+            if (video != null)
+            {
+                lesson = await _db.Lessons
+                    .Include(l => l.ContentSection)
+                    .ThenInclude(cs => cs.Term)
+                    .FirstOrDefaultAsync(l => l.Id == video.LessonId, ct);
+            }
+        }
+
+        if (lesson != null)
+        {
+            var homework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == lesson.Id, ct);
+            if (homework != null && homework.IsMandatory)
+            {
+                var homeworkPassed = await _db.HomeworkSubmissions
+                    .AnyAsync(s => s.StudentId == request.UserId 
+                                && s.HomeworkId == homework.Id 
+                                && s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                                && s.OverallScore >= (homework.PassingScoreThreshold ?? 0), ct);
+
+                if (!homeworkPassed)
+                {
+                    return ApiResponse<ActiveExamAttemptDto>.Fail($"يجب اجتياز واجب '{homework.Title}' أولاً قبل بدء هذا الاختبار.");
+                }
+            }
+        }
+
         var exam = await _db.Exams
             .Include(e => e.ExamQuestions)
             .ThenInclude(eq => eq.Question)

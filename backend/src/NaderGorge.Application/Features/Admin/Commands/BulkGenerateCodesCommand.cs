@@ -90,7 +90,8 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
             }
         }
 
-        if (!permissionsList.Contains("codes.manage"))
+        var isAdmin = user.UserRoles.Any(ur => ur.Role.Type == RoleType.Admin);
+        if (!isAdmin && !permissionsList.Contains("codes.manage"))
         {
             return ApiResponse<BulkGenerateCodesResponse>.Fail("Unauthorized: You do not have permission to manage codes.");
         }

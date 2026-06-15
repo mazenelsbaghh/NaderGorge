@@ -43,36 +43,71 @@ test.describe('Student Academic Journey & Gamification', () => {
     // Navigate to the enrolled package directly
     await page.goto(`http://app.localhost:3000/student/packages/${mockPackageData.packageId}`);
 
-    // Expand the "E2E Section" accordion
-    const sectionTitle = page.getByRole('heading', { name: 'E2E Section' });
-    await sectionTitle.waitFor({ state: 'visible', timeout: 15000 });
-    await sectionTitle.click();
+    // Click the Term card to go to Term page
+    const termCard = page.locator('text=E2E Term').first();
+    await termCard.waitFor({ state: 'visible', timeout: 15000 });
+    await termCard.click();
 
-    // Navigate to the lesson page
-    const viewButton = page.locator('button:has-text("مشاهدة")').first();
-    await viewButton.waitFor({ state: 'visible', timeout: 10000 });
-    await viewButton.click();
+    // Click the Section card to go to Section page
+    const sectionCard = page.locator('text=E2E Section').first();
+    await sectionCard.waitFor({ state: 'visible', timeout: 15000 });
+    await sectionCard.click();
+
+    // Click the Lesson row to go to Lesson page
+    const lessonRow = page.locator('text=E2E Lesson').first();
+    await lessonRow.waitFor({ state: 'visible', timeout: 15000 });
+    await lessonRow.click();
 
     await expect(page).toHaveURL(
       new RegExp(`/lessons/${mockPackageData.lessonId}`),
       { timeout: 10000 }
     );
 
-    // Answer the essay question
-    const textarea = page.locator('textarea, [placeholder*="إجابتك"]').first();
-    await textarea.waitFor({ state: 'visible' });
-    await textarea.fill(
-      'This is a test essay answering the E2E homework question.'
+    // Find and click the "حل الواجب" or "اذهب لحل الواجب" button
+    const homeworkBtn = page.locator(
+      'button:has-text("حل الواجب"), a:has-text("حل الواجب"), button:has-text("اذهب لحل الواجب"), a:has-text("اذهب لحل الواجب")'
+    ).first();
+    await expect(homeworkBtn).toBeVisible({ timeout: 15000 });
+    await homeworkBtn.click({ force: true });
+
+    // Verify homework page loads
+    await expect(page).toHaveURL(
+      new RegExp(`/student/homework/${mockPackageData.homeworkId}`),
+      { timeout: 10000 }
     );
 
-    // Submit homework
-    const submitBtn = page.locator('button:has-text("تسليم وإنهاء")');
-    await submitBtn.click();
 
-    // Await success message
-    await expect(page.locator('text=تم تسليم الواجب بنجاح')).toBeVisible({
-      timeout: 10000,
-    });
+
+    // ─── Answer Question 1 (MCQ: "ما ناتج 1+1؟") ───
+    const mcq1Option = page.locator('label').filter({ hasText: '2' }).first();
+    await mcq1Option.click({ force: true });
+    await page.locator('button:has-text("التالي")').click({ force: true });
+
+    // ─── Answer Question 2 (MCQ: "ما الغاز الذي تنتجه النباتات؟") ───
+    const mcq2Option = page.locator('label').filter({ hasText: 'الأكسجين' }).first();
+    await mcq2Option.click({ force: true });
+    await page.locator('button:has-text("التالي")').click({ force: true });
+
+    // ─── Skip Question 3 (FindTheMistake) ───
+    await page.locator('button:has-text("التالي")').click({ force: true });
+
+    // ─── Answer Question 4 (Essay) ───
+    const textarea = page.locator('textarea').first();
+    await textarea.waitFor({ state: 'visible', timeout: 5000 });
+    await textarea.fill('This is a test essay answering the E2E homework question.');
+
+    // Click submit button ("تسليم الواجب")
+    await page.locator('button:has-text("تسليم الواجب")').click({ force: true });
+
+    // A confirmation dialog should appear because we skipped question 3
+    const confirmBtn = page.locator('button:has-text("نعم، سلّم الآن")');
+    await expect(confirmBtn).toBeVisible({ timeout: 5000 });
+    await confirmBtn.click({ force: true });
+
+    // Await result view
+    await expect(
+      page.locator('text=العودة للحصة').first()
+    ).toBeVisible({ timeout: 15000 });
 
     // Navigate back to the student dashboard where the sidebar containing the gamification widget is present
     await page.goto('http://app.localhost:3000/student');

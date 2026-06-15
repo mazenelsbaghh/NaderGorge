@@ -89,64 +89,9 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             .OrderByDescending(l => l.Order)
             .FirstOrDefaultAsync(ct);
 
-        if (previousLesson == null)
-        {
-            var previousSection = await _db.ContentSections
-                .Where(s => s.TermId == section.TermId && s.Order < section.Order)
-                .OrderByDescending(s => s.Order)
-                .FirstOrDefaultAsync(ct);
-
-            if (previousSection != null)
-            {
-                previousLesson = await _db.Lessons
-                    .Where(l => l.ContentSectionId == previousSection.Id)
-                    .OrderByDescending(l => l.Order)
-                    .FirstOrDefaultAsync(ct);
-            }
-        }
-
         if (previousLesson != null)
         {
-            var previousHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
-            if (previousHomework != null && previousHomework.IsMandatory)
-            {
-                var submission = await _db.HomeworkSubmissions
-                    .Where(s => s.StudentId == userId && s.HomeworkId == previousHomework.Id)
-                    .OrderByDescending(s => s.StartedAt)
-                    .FirstOrDefaultAsync(ct);
-
-                if (submission == null)
-                {
-                    return (
-                        true,
-                        $"يجب إتمام واجب '{previousHomework.Title}' التابع للحصة '{previousLesson.Title}' أولاً.",
-                        null,
-                        previousLesson.Id
-                    );
-                }
-
-                if (submission.Status != NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded &&
-                    submission.OverallScore < (previousHomework.PassingScoreThreshold ?? 0))
-                {
-                    return (
-                        true,
-                        $"يجب اجتياز واجب '{previousHomework.Title}' التابع للحصة '{previousLesson.Title}' بنجاح.",
-                        null,
-                        previousLesson.Id
-                    );
-                }
-
-                if (submission.OverallScore < (previousHomework.PassingScoreThreshold ?? 0))
-                {
-                    return (
-                        true,
-                        $"يجب تحقيق درجة النجاح في واجب '{previousHomework.Title}' التابع للحصة '{previousLesson.Title}'.",
-                        null,
-                        previousLesson.Id
-                    );
-                }
-            }
-
+            // 1. Check if previous lesson has a mandatory exam and if it is passed
             if (previousLesson.ExamId.HasValue)
             {
                 var exam = await _db.Exams.FindAsync(new object[] { previousLesson.ExamId.Value }, ct);
@@ -166,21 +111,47 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                     }
                 }
             }
-        }
 
-        // Exam → Video → Homework flow:
-        // The lesson's own exam must be passed BEFORE accessing the video content.
-        if (lesson.ExamId.HasValue && !passedExamIds.Contains(lesson.ExamId.Value))
-        {
-            var currentExam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
-            if (currentExam != null)
+            // 2. Check if previous lesson's mandatory homework is passed
+            var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
+            if (prevHomework != null && prevHomework.IsMandatory)
             {
-                return (
-                    true,
-                    $"يجب اجتياز امتحان '{currentExam.Title}' أولاً للدخول لهذه الحصة.",
-                    currentExam.Id,
-                    null
-                );
+                var prevHwSubmission = await _db.HomeworkSubmissions
+                    .Where(s => s.StudentId == userId && s.HomeworkId == prevHomework.Id && s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded)
+                    .OrderByDescending(s => s.SubmittedAt)
+                    .FirstOrDefaultAsync(ct);
+
+                bool prevHwPassed = prevHwSubmission != null && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
+                if (!prevHwPassed)
+                {
+                    return (
+                        true,
+                        $"يجب اجتياز واجب الحصة السابقة '{prevHomework.Title}' أولاً لفتح هذه الحصة.",
+                        null,
+                        previousLesson.Id
+                    );
+                }
+            }
+
+            // 3. Check if current lesson's own exam is passed
+            if (lesson.ExamId.HasValue)
+            {
+                var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
+                if (exam != null && exam.IsMandatory)
+                {
+                    var passedExam = await _db.StudentExamAttempts
+                        .AnyAsync(a => a.UserId == userId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
+
+                    if (!passedExam)
+                    {
+                        return (
+                            true,
+                            $"يجب اجتياز امتحان الحصة الحالية '{exam.Title}' لفتح هذه الحصة.",
+                            exam.Id,
+                            null
+                        );
+                    }
+                }
             }
         }
 

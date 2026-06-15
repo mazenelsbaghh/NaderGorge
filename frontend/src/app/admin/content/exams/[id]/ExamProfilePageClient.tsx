@@ -212,7 +212,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
     try {
       setSavingAdd(true);
       
-      let finalAudioUrl = addingQuestionData.audioUrl;
+      const finalAudioUrl = addingQuestionData.audioUrl;
       
       // We will first add the question to get an ID if we wanted to upload audio, 
       // but since adding expects questions payload, we add questions first.

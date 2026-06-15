@@ -45,7 +45,7 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Select(p => new {
                 p.Id,
                 p.Name,
-                Lessons = p.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).Select(l => new { l.Id, l.Title, l.Order, l.ExamId }).ToList()
+                Lessons = p.Terms.SelectMany(t => t.Sections).SelectMany(s => s.Lessons).Select(l => new { l.Id, l.Title, l.Order, l.ExamId, l.ContentSectionId }).ToList()
             })
             .ToListAsync(ct);
 
@@ -83,10 +83,16 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Select(h => new { h.Id, h.LessonId })
             .ToListAsync(ct);
 
-        var submittedHomeworkIds = await _db.HomeworkSubmissions
+        var passedHomeworkIds = await _db.HomeworkSubmissions
             .AsNoTracking()
-            .Where(s => s.StudentId == request.UserId && s.Status != Domain.Entities.Homework.SubmissionStatus.InProgress)
-            .Select(s => s.HomeworkId)
+            .Where(s => s.StudentId == request.UserId && s.Status == Domain.Entities.Homework.SubmissionStatus.Graded)
+            .Join(_db.Homeworks,
+                s => s.HomeworkId,
+                h => h.Id,
+                (s, h) => new { s.HomeworkId, s.OverallScore, PassingScore = h.PassingScoreThreshold ?? 0 })
+            .Where(x => x.OverallScore >= x.PassingScore)
+            .Select(x => x.HomeworkId)
+            .Distinct()
             .ToListAsync(ct);
 
         int totalLessons = 0;
@@ -110,19 +116,27 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
                 var hasExam = lesson.ExamId.HasValue;
                 var examPassed = hasExam && passedExamIds.Contains(lesson.ExamId!.Value);
 
-                // Lesson is locked if previous lesson has an exam that wasn't passed (and not manually unlocked)
-                // OR if the previous lesson has mandatory homework that was not submitted.
+                // Lesson is locked if:
+                // - Previous lesson (in the same section) has a mandatory exam that wasn't passed
+                // - OR previous lesson (in the same section) has a mandatory homework that wasn't passed
+                // - OR current lesson has a mandatory exam that wasn't passed (and there is a previous lesson in the same section)
                 bool isLocked = false;
-                if (i > 0)
+                var prevLesson = orderedLessons
+                    .Where(l => l.ContentSectionId == lesson.ContentSectionId && l.Order < lesson.Order)
+                    .OrderByDescending(l => l.Order)
+                    .FirstOrDefault();
+
+                if (prevLesson != null)
                 {
-                    var prevLesson = orderedLessons[i - 1];
-                    bool blockedByExam = prevLesson.ExamId.HasValue && !passedExamIds.Contains(prevLesson.ExamId.Value);
+                    bool blockedByPrevExam = prevLesson.ExamId.HasValue && !passedExamIds.Contains(prevLesson.ExamId.Value);
 
-                    bool blockedByHomework = mandatoryHomeworks
+                    bool blockedByPrevHomework = mandatoryHomeworks
                         .Where(h => h.LessonId == prevLesson.Id)
-                        .Any(h => !submittedHomeworkIds.Contains(h.Id));
+                        .Any(h => !passedHomeworkIds.Contains(h.Id));
 
-                    if ((blockedByExam || blockedByHomework) && !manuallyUnlockedIds.Contains(lesson.Id))
+                    bool blockedByCurrentExam = lesson.ExamId.HasValue && !passedExamIds.Contains(lesson.ExamId.Value);
+
+                    if ((blockedByPrevExam || blockedByPrevHomework || blockedByCurrentExam) && !manuallyUnlockedIds.Contains(lesson.Id))
                     {
                         isLocked = true;
                     }

@@ -33,8 +33,8 @@ async function loginViaApi(
   });
   expect(loginRes.ok(), `Login failed for ${phone}: ${loginRes.status()}`).toBeTruthy();
   const loginData = await loginRes.json();
-  // Token is returned in data.token
-  return loginData.data?.token || loginData.token;
+  // Token is returned in data.accessToken or data.token
+  return loginData.data?.accessToken || loginData.data?.token || loginData.token;
 }
 
 /**
@@ -54,6 +54,16 @@ async function loginStudentUI(page: import('@playwright/test').Page) {
 
   // Wait for redirect to student dashboard
   await expect(page).toHaveURL(/.*\/(student|onboarding)$/, { timeout: 15000 });
+
+  // Dismiss terms and conditions dialog if it appears
+  try {
+    const termsBtn = page.locator('button:has-text("أوافق وأرغب في استكمال استخدام المنصة")');
+    if (await termsBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await termsBtn.click({ force: true });
+    }
+  } catch (e) {
+    // ignore
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -65,12 +75,6 @@ test.describe.serial('Homework Solving Flow', () => {
   let mockPackageData: any;
 
   test.beforeAll(async ({ request }) => {
-    // Clear devices to avoid login limits
-    // مسح الأجهزة لتجنب حدود الأجهزة
-    await request.post(`${API_BASE}/e2e/clear-devices`, {
-      data: { phoneNumber: STUDENT_PHONE },
-    });
-
     // Setup mock package (includes homework with MCQ, FindTheMistake, and Essay questions)
     // إعداد الباقة الوهمية (تشمل واجب بأسئلة اختيارات وأوجد الخطأ ومقالية)
     const setupResponse = await request.post(`${API_BASE}/e2e/setup-mock-package`);
@@ -81,6 +85,13 @@ test.describe.serial('Homework Solving Flow', () => {
     // منح الباقة للطالب
     await request.post(`${API_BASE}/e2e/grant-package`, {
       data: { packageId: mockPackageData.packageId },
+    });
+  });
+
+  test.beforeEach(async ({ request }) => {
+    // Clear devices to avoid login limits before each test
+    await request.post(`${API_BASE}/e2e/clear-devices`, {
+      data: { phoneNumber: STUDENT_PHONE },
     });
   });
 
@@ -96,17 +107,20 @@ test.describe.serial('Homework Solving Flow', () => {
       `http://app.localhost:3000/student/packages/${mockPackageData.packageId}`
     );
 
-    // Expand the "E2E Section" accordion
-    // فتح قسم "E2E Section"
-    const sectionTitle = page.getByRole('heading', { name: 'E2E Section' });
-    await sectionTitle.waitFor({ state: 'visible', timeout: 15000 });
-    await sectionTitle.click();
+    // Click the Term card to go to Term page
+    const termCard = page.locator('text=E2E Term').first();
+    await termCard.waitFor({ state: 'visible', timeout: 15000 });
+    await termCard.click();
 
-    // Navigate to the lesson page
-    // الانتقال لصفحة الحصة
-    const viewButton = page.locator('button:has-text("مشاهدة")').first();
-    await viewButton.waitFor({ state: 'visible', timeout: 10000 });
-    await viewButton.click();
+    // Click the Section card to go to Section page
+    const sectionCard = page.locator('text=E2E Section').first();
+    await sectionCard.waitFor({ state: 'visible', timeout: 15000 });
+    await sectionCard.click();
+
+    // Click the Lesson row to go to Lesson page
+    const lessonRow = page.locator('text=E2E Lesson').first();
+    await lessonRow.waitFor({ state: 'visible', timeout: 15000 });
+    await lessonRow.click();
 
     await expect(page).toHaveURL(
       new RegExp(`/lessons/${mockPackageData.lessonId}`),
@@ -203,7 +217,7 @@ test.describe.serial('Homework Solving Flow', () => {
     // انتظار التسليم وظهور لوحة النتائج
     // The result panel shows "اجتزت الواجب" or "لم تجتز الواجب"
     await expect(
-      page.locator('text=اجتزت الواجب, text=لم تجتز الواجب').first()
+      page.locator('text=اجتزت الواجب').or(page.locator('text=لم تجتز الواجب')).first()
     ).toBeVisible({ timeout: 15000 });
   });
 
@@ -222,7 +236,7 @@ test.describe.serial('Homework Solving Flow', () => {
     // Wait for result panel to appear (AlreadyCompleted should redirect to result view)
     // انتظار ظهور لوحة النتائج
     await expect(
-      page.locator('text=اجتزت الواجب, text=لم تجتز الواجب').first()
+      page.locator('text=اجتزت الواجب').or(page.locator('text=لم تجتز الواجب')).first()
     ).toBeVisible({ timeout: 15000 });
 
     // Verify score is displayed (الدرجة section in stats grid)
@@ -592,6 +606,9 @@ test.describe('Purchase Flow Fix', () => {
     await request.post(`${API_BASE}/e2e/clear-devices`, {
       data: { phoneNumber: STUDENT_PHONE },
     });
+    await request.post(`${API_BASE}/e2e/clear-devices`, {
+      data: { phoneNumber: '20000000000' },
+    });
 
     // Setup mock package for purchase test
     const setupResponse = await request.post(`${API_BASE}/e2e/setup-mock-package`);
@@ -614,6 +631,14 @@ test.describe('Purchase Flow Fix', () => {
     // Login as admin in a separate context
     const adminContext = await page.context().browser()!.newContext();
     const adminPage = await adminContext.newPage();
+
+    adminPage.on('console', msg => console.log('ADMIN PAGE LOG:', msg.text()));
+    adminPage.on('pageerror', err => console.log('ADMIN PAGE ERROR:', err.message));
+    adminPage.on('response', async response => {
+      if (response.status() >= 400) {
+        console.log('ADMIN RESPONSE ERROR:', response.url(), response.status(), await response.text().catch(() => ''));
+      }
+    });
 
     await adminPage.goto('http://admin.localhost:3000/login');
     await adminPage.fill('input[name="phoneNumber"]', '20000000000');
@@ -683,11 +708,11 @@ test.describe('Purchase Flow Fix', () => {
     await page.goto('http://app.localhost:3000/student/packages');
 
     // Click "استعرض الباقة" for the mock package
-    await page.locator('button:has-text("استعرض الباقة")').first().click();
+    await page.locator('text=استعرض الباقة').first().click({ force: true });
     await expect(page).toHaveURL(/.*\/packages\/.*/);
 
     // Click "شراء الباقة"
-    await page.click('button:has-text("شراء الباقة")');
+    await page.locator('text=شراء الباقة').first().click({ force: true });
 
     // Click "تأكيد الخصم والشراء" inside the purchase modal
     await page.click('button:has-text("تأكيد الخصم والشراء")');

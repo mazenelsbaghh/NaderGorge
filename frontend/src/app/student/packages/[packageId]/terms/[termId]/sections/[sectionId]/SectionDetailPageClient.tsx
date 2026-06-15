@@ -123,18 +123,21 @@ export default function SectionDetailPageClient() {
 
   const isEnrolled = pkg?.isEnrolled ?? false;
 
-  /* Determine price to show — price=0 means FREE, only fall back if price is null (not set) */
+  const sectionPrice = section?.price != null && section.price > 0 ? section.price : null;
+  const termPrice = term?.price != null && term.price > 0 ? term.price : null;
+  const packagePrice = pkg?.price ?? 0;
+
   const displayPrice =
-    section?.price != null
-      ? section.price
-      : term?.price != null
-        ? term.price
-        : (pkg?.price ?? 0);
+    sectionPrice !== null
+      ? sectionPrice
+      : termPrice !== null
+        ? termPrice
+        : packagePrice;
 
   const priceLabel =
-    section?.price != null
+    sectionPrice !== null
       ? 'سعر القسم'
-      : term?.price != null
+      : termPrice !== null
         ? 'سعر الترم'
         : 'سعر الباقة';
 
@@ -399,8 +402,8 @@ export default function SectionDetailPageClient() {
                     className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
                   >
                     <Sparkles className="h-4 w-4" />
-                    {(displayPrice as number) > 0
-                      ? ((section?.price != null && section.price > 0) ? 'شراء القسم' : (term?.price != null && (term.price ?? 0) > 0) ? 'شراء الترم' : 'شراء الباقة')
+                    {displayPrice > 0
+                      ? (sectionPrice !== null ? 'شراء القسم' : termPrice !== null ? 'شراء الترم' : 'شراء الباقة')
                       : 'تفعيل مجاني'
                     }
                   </button>
@@ -461,27 +464,27 @@ export default function SectionDetailPageClient() {
         onClose={() => setIsPurchaseModalOpen(false)}
         onPurchaseSuccess={() => void load()}
         contentType={
-          (section?.price != null && section.price > 0)
+          sectionPrice !== null
             ? ("Month" as CodeType)
-            : (term?.price != null && (term.price ?? 0) > 0)
+            : termPrice !== null
               ? ("Term" as CodeType)
               : ("Package" as CodeType)
         }
         contentId={
-          (section?.price != null && section.price > 0)
+          sectionPrice !== null
             ? sectionId
-            : (term?.price != null && (term.price ?? 0) > 0)
+            : termPrice !== null
               ? termId
               : packageId
         }
         contentName={
-          (section?.price != null && section.price > 0)
-            ? (section.title || "القسم")
-            : (term?.price != null && (term.price ?? 0) > 0)
+          sectionPrice !== null
+            ? (section?.title || "القسم")
+            : termPrice !== null
               ? (term?.title || "الترم")
               : (pkg?.name || "الباقة الكاملة")
         }
-        price={displayPrice as number}
+        price={displayPrice}
       />
 
       {/* Lesson-level purchase modal */}

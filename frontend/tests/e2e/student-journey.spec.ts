@@ -46,7 +46,7 @@ test.describe('Student Lesson Consumption and Exams', () => {
 
     // Click the card that has entry button
     const enterPackageBtn = page
-      .locator('button:has-text("دخول الباقة")')
+      .getByText('دخول الباقة')
       .first();
     await enterPackageBtn.waitFor({ state: 'visible', timeout: 10000 });
     await enterPackageBtn.click();

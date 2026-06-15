@@ -11,9 +11,7 @@ import { contentService, type LessonDetailDto, type ResourceDto } from "@/servic
 
 import { LessonCarousel } from "@/app/student/packages/[packageId]/lessons/[lessonId]/components/LessonCarousel";
 import { LessonCommentsSection } from "@/components/content/LessonCommentsSection";
-import { shuffleArray } from "@/lib/utils";
-import { AnimatedStepper } from "@/components/ui/animated-stepper";
-import { FindTheMistakeInteract } from "@/components/exams/FindTheMistakeInteract";
+
 
 export function LessonViewer({
   lesson,
@@ -31,10 +29,7 @@ export function LessonViewer({
   }, [setFocusMode]);
 
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
-  const [homeworkAnswers, setHomeworkAnswers] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [homeworkSubmitted, setHomeworkSubmitted] = useState(false);
-  const [shuffledQuestions, setShuffledQuestions] = useState<Exclude<LessonDetailDto['homework'], undefined>['questions']>([]);
+
   const [downloadingResourceId, setDownloadingResourceId] = useState<string | null>(null);
   const [resources, setResources] = useState<ResourceDto[]>([]);
   const [loadingResources, setLoadingResources] = useState(true);
@@ -79,29 +74,7 @@ export function LessonViewer({
     }
   };
 
-  useEffect(() => {
-    if (lesson.homework?.questions) {
-      setShuffledQuestions(shuffleArray(lesson.homework.questions));
-    }
-  }, [lesson.homework]);
 
-  const handleHomeworkSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!lesson.homework) return;
-    setIsSubmitting(true);
-    try {
-      const answersList = Object.entries(homeworkAnswers).map(([qid, val]) => ({
-        questionId: qid,
-        providedAnswer: val
-      }));
-      await apiClient.post(`/homework/${lesson.homework.id}/submit`, answersList);
-      setHomeworkSubmitted(true);
-    } catch {
-      toast.error('فشل في تسليم الواجب');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (lesson.isLocked) {
     return (
@@ -254,16 +227,21 @@ export function LessonViewer({
               <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)]">
                 {lesson.examPassed
                   ? 'لقد اجتزت هذا الاختبار بنجاح. يمكنك مراجعة إجاباتك ونتائجك.'
+                  : lesson.isExamLocked
+                  ? lesson.examLockedReason || 'هذا الاختبار مغلق حالياً.'
                   : 'اختبر استيعابك لهذا الدرس قبل الانتقال إلى المرحلة التالية. الدرجات المسجلة تؤثر على ترتيبك في لوحة الشرف.'
                 }
               </p>
               <button
                 type="button"
+                disabled={lesson.isExamLocked && !lesson.examPassed}
                 onClick={() => router.push(`/student/exams/${lesson.examId}?packageId=${packageId}`)}
-                className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
+                className={`mt-6 w-full rounded-2xl px-4 py-4 text-sm font-black transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] ${
                   lesson.examPassed
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)]'
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700 hover:-translate-y-1'
+                    : lesson.isExamLocked
+                    ? 'bg-gray-400 text-white opacity-60 cursor-not-allowed'
+                    : 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)] hover:-translate-y-1'
                 }`}
               >
                 {lesson.examPassed ? 'راجع الامتحان' : 'ابدأ الاختبار الآن'}
@@ -272,113 +250,6 @@ export function LessonViewer({
           )}
         </div>
       </div>
-
-      {lesson.homework && (
-        <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-6 shadow-sm lg:p-10">
-          <div className="mb-8 sm:mb-10">
-            <div>
-              <h2 className="text-2xl font-black tracking-tight text-[var(--admin-text)] sm:text-3xl">{lesson.homework.title}</h2>
-              {lesson.homework.instructions && (
-                <p className="mt-3 text-sm leading-relaxed text-[var(--admin-muted)] font-medium">{lesson.homework.instructions}</p>
-              )}
-            </div>
-          </div>
-
-          {homeworkSubmitted ? (
-            <div className="rounded-[28px] border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] p-10 text-center">
-              <svg className="mx-auto mb-6 h-16 w-16 text-[var(--admin-success)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-3xl font-black text-[var(--admin-success)] tracking-tight">تم تسليم الواجب بنجاح</h3>
-              <p className="mt-4 text-lg font-medium text-[var(--admin-muted)]">تم حفظ إجاباتك وإضافة النقاط إلى رصيدك.</p>
-              <button 
-                type="button"
-                onClick={() => {
-                   window.scrollTo({ top: 0, behavior: 'smooth' });
-                }} 
-                className="mt-8 rounded-[20px] bg-[var(--admin-success)] px-10 py-4 font-black text-[var(--admin-primary-contrast)] transition-all hover:-translate-y-1 hover:brightness-110"
-              >
-                العودة لأعلى
-              </button>
-            </div>
-          ) : (
-            <AnimatedStepper
-              isSubmitting={isSubmitting}
-              onComplete={() => handleHomeworkSubmit()}
-              steps={shuffledQuestions.map((q, idx) => {
-                const qType = q.questionType || 'Essay';
-                const questionLabelId = `lesson-homework-answer-label-${q.id}`;
-                return {
-                  id: q.id,
-                  content: (
-                    <div className="bg-[var(--admin-bg)] border border-[var(--admin-border)] rounded-[28px] p-6 sm:p-8 shadow-sm mx-auto max-w-4xl">
-                      <h4 id={questionLabelId} className="font-bold text-lg mb-8 text-[var(--admin-text)] leading-relaxed flex items-start gap-4">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] font-black text-base shadow-inner">
-                          {idx + 1}
-                        </span> 
-                        <span className="pt-2 text-xl font-bold">{q.text}</span>
-                      </h4>
-                      {qType === 'Essay' && (
-                        <textarea 
-                          className="w-full rounded-[24px] border border-[var(--admin-border)] p-6 min-h-[180px] bg-[var(--admin-card)] text-[var(--admin-text)] focus:border-[var(--admin-primary)] focus:ring-4 focus:ring-[var(--admin-primary)]/10 transition-all outline-none resize-y text-lg shadow-inner"
-                          placeholder="اكتب إجابتك هنا بوضوح..."
-                          required
-                          value={homeworkAnswers[q.id] || ''}
-                          onChange={e => setHomeworkAnswers(prev => ({...prev, [q.id]: e.target.value}))}
-                          aria-labelledby={questionLabelId}
-                        />
-                      )}
-                      {qType === 'MCQ' && (
-                        <div className="space-y-3">
-                          {q.possibleAnswers?.map((opt, optIdx) => {
-                            const isSelected = homeworkAnswers[q.id] === opt;
-                            return (
-                              <label
-                                key={optIdx}
-                                className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition border ${
-                                  isSelected
-                                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/10 shadow-[0_0_0_1px_var(--admin-primary)]'
-                                    : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-card-strong)]'
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={`q-${q.id}`}
-                                  value={opt}
-                                  checked={isSelected}
-                                  onChange={() => setHomeworkAnswers(prev => ({ ...prev, [q.id]: opt }))}
-                                  className="sr-only"
-                                />
-                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
-                                  isSelected
-                                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]'
-                                    : 'border-[var(--admin-border)]'
-                                }`}>
-                                  {isSelected && (
-                                    <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                                  )}
-                                </span>
-                                <span className="text-sm font-bold text-[var(--admin-text)]">{opt}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {qType === 'FindTheMistake' && q.baseText && (
-                        <FindTheMistakeInteract
-                          baseText={q.baseText}
-                          selectedText={homeworkAnswers[q.id] || ''}
-                          onSelect={(txt) => setHomeworkAnswers(prev => ({ ...prev, [q.id]: txt }))}
-                        />
-                      )}
-                    </div>
-                  )
-                };
-              })}
-            />
-          )}
-        </div>
-      )}
     </div>
   );
 }

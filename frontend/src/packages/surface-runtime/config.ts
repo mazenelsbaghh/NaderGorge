@@ -249,7 +249,7 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       return { action: 'rewrite', destination: '/assistant', surface };
     }
 
-    if (pathname.startsWith('/student') || pathname.startsWith('/teacher')) {
+    if (pathname.startsWith('/student') || pathname.startsWith('/teacher') || pathname.startsWith('/admin')) {
       return {
         action: 'rewrite',
         destination: '/not-found',

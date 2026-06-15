@@ -37,7 +37,6 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
         // Check if a submission already exists
         var submission = await _dbContext.HomeworkSubmissions
-            .Include(s => s.Answers)
             .FirstOrDefaultAsync(s => s.HomeworkId == request.HomeworkId && s.StudentId == request.StudentId, cancellationToken);
 
         if (submission != null && submission.Status != SubmissionStatus.InProgress)
@@ -49,18 +48,23 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         {
             submission = new HomeworkSubmission
             {
+                Id = Guid.NewGuid(),
                 HomeworkId = request.HomeworkId,
                 StudentId = request.StudentId,
                 StartedAt = DateTime.UtcNow
             };
             _dbContext.HomeworkSubmissions.Add(submission);
         }
+        else
+        {
+            // Remove existing answers to replace them.
+            var existingAnswers = await _dbContext.HomeworkAnswers
+                .Where(a => a.HomeworkSubmissionId == submission.Id)
+                .ToListAsync(cancellationToken);
+            _dbContext.HomeworkAnswers.RemoveRange(existingAnswers);
+        }
 
         // Process answers.
-
-        // Remove existing answers to replace them.
-        submission.Answers.Clear();
-
         var questionLookup = homework.Questions.ToDictionary(q => q.Id);
         decimal rawPointsEarned = 0;
         decimal rawPointsPossible = 0;
@@ -75,6 +79,8 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
 
             var answer = new HomeworkAnswer
             {
+                Id = Guid.NewGuid(),
+                HomeworkSubmissionId = submission.Id,
                 QuestionId = answerInput.QuestionId,
                 ProvidedAnswer = answerInput.ProvidedAnswer
             };
@@ -120,7 +126,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 }
             }
 
-            submission.Answers.Add(answer);
+            _dbContext.HomeworkAnswers.Add(answer);
         }
 
         // Calculate overall score using GradingEvaluationService

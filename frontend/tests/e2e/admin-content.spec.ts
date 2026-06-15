@@ -25,7 +25,7 @@ test.describe('Admin Content Management Flow', () => {
     test.setTimeout(60000);
     // Navigate to content management
     await page.goto('http://admin.localhost:3000/admin/content');
-    await expect(page.locator('text=إدارة المحتوى')).toBeVisible();
+    await expect(page.getByText('إدارة المحتوى', { exact: true }).first()).toBeVisible();
 
     // 1. Create Package
     // Click the "إضافة باقة جديدة" button

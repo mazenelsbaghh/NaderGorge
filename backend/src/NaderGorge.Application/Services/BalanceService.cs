@@ -54,13 +54,15 @@ public class BalanceService
     {
         if (amount <= 0) throw new ArgumentException("Credit amount must be positive", nameof(amount));
 
-        using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        var transaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null
+            ? null
+            : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
         try
         {
             var balance = await GetOrCreateBalance(userId, ct);
             var now = DateTime.UtcNow;
             int affectedRows;
-            if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            if (_db is DbContext efDb2 && efDb2.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
             {
                 balance.CurrentBalance += amount;
                 balance.UpdatedAt = now;
@@ -107,7 +109,10 @@ public class BalanceService
             _db.OutboxEvents.Add(outboxEvent);
 
             await _db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(ct);
+            }
 
             _logger.LogInformation("Added {Amount} credit to user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
                 amount, userId, balance.CurrentBalance, description);
@@ -116,8 +121,18 @@ public class BalanceService
         }
         catch
         {
-            await transaction.RollbackAsync(ct);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(ct);
+            }
             throw;
+        }
+        finally
+        {
+            if (transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
     }
 
@@ -133,14 +148,16 @@ public class BalanceService
     {
         if (amount <= 0) throw new ArgumentException("Deduction amount must be positive", nameof(amount));
 
-        using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        var transaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null
+            ? null
+            : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
         try
         {
             var balance = await GetOrCreateBalance(userId, ct);
 
             var now = DateTime.UtcNow;
             int affectedRows;
-            if (_db is DbContext efDb && efDb.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
+            if (_db is DbContext efDb2 && efDb2.Database.ProviderName == "Microsoft.EntityFrameworkCore.InMemory")
             {
                 if (balance.CurrentBalance >= amount)
                 {
@@ -194,7 +211,10 @@ public class BalanceService
             _db.OutboxEvents.Add(outboxEvent);
 
             await _db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
+            if (transaction != null)
+            {
+                await transaction.CommitAsync(ct);
+            }
 
             _logger.LogInformation("Deducted {Amount} from user {UserId}. New Balance: {BalanceAfter}. Reason: {Description}",
                 amount, userId, balance.CurrentBalance, description);
@@ -203,8 +223,18 @@ public class BalanceService
         }
         catch
         {
-            await transaction.RollbackAsync(ct);
+            if (transaction != null)
+            {
+                await transaction.RollbackAsync(ct);
+            }
             throw;
+        }
+        finally
+        {
+            if (transaction != null)
+            {
+                await transaction.DisposeAsync();
+            }
         }
     }
 

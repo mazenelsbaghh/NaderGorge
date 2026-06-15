@@ -570,6 +570,20 @@ public class E2eTestingController : ControllerBase
         return BCrypt.Net.BCrypt.HashPassword(password);
     }
 
+    [HttpGet("users")]
+    public async Task<IActionResult> GetUsers()
+    {
+        var users = await _dbContext.Set<User>().Select(u => new { u.Id, u.PhoneNumber, u.FullName }).ToListAsync();
+        return Ok(users);
+    }
+
+    [HttpGet("grants")]
+    public async Task<IActionResult> GetGrants()
+    {
+        var grants = await _dbContext.Set<StudentAccessGrant>().ToListAsync();
+        return Ok(grants);
+    }
+
     private bool UsesE2eDatabase()
     {
         var connectionString = _dbContext.Database.GetConnectionString() ?? string.Empty;

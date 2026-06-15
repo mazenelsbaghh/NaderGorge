@@ -130,6 +130,10 @@ export interface LessonDetailDto {
   lockedReason?: string;
   blockingExamId?: string;
   blockingHomeworkLessonId?: string;
+  price?: number;
+  hasAccess?: boolean;
+  isExamLocked?: boolean;
+  examLockedReason?: string;
 }
 
 

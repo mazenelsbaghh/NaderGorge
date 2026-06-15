@@ -108,14 +108,14 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 ### Implementation for User Story 4
 
-- [ ] T026 [P] [US4] Create exam profile server page at `frontend/src/app/admin/content/exams/[id]/page.tsx`
-- [ ] T027 [US4] Create `ExamProfilePageClient.tsx` at `frontend/src/app/admin/content/exams/[id]/ExamProfilePageClient.tsx` with:
+- [x] T026 [P] [US4] Create exam profile server page at `frontend/src/app/admin/content/exams/[id]/page.tsx`
+- [x] T027 [US4] Create `ExamProfilePageClient.tsx` at `frontend/src/app/admin/content/exams/[id]/ExamProfilePageClient.tsx` with:
   - Header section: exam title, description, stat cards (questions, total score, passing score, duration, attempts count, average score)
   - Students attempts table with name, phone, score, pass/fail, date
   - Questions list with per-question correct/wrong percentage bars
-- [ ] T028 [US4] Add "عرض البروفايل" navigation button to `frontend/src/components/admin/AttachedExamViewer.tsx` linking to `/admin/content/exams/{examId}`
-- [ ] T029 [US4] Add inline question editing capability in ExamProfilePageClient (click edit → editable text field → save)
-- [ ] T030 [US4] Add "إضافة سؤال" form at the bottom of the exam profile page using existing `UnifiedAssessmentBuilder` or inline form
+- [x] T028 [US4] Add "عرض البروفايل" navigation button to `frontend/src/components/admin/AttachedExamViewer.tsx` linking to `/admin/content/exams/{examId}`
+- [x] T029 [US4] Add inline question editing capability in ExamProfilePageClient (click edit → editable text field → save)
+- [x] T030 [US4] Add "إضافة سؤال" form at the bottom of the exam profile page using existing `UnifiedAssessmentBuilder` or inline form
 
 **Checkpoint**: Exam profile page shows full analytics and allows question management
 
@@ -129,10 +129,10 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 ### Implementation for User Story 5
 
-- [ ] T031 [US5] Modify `UnifiedAssessmentBuilder` to detect when exam has been created (has ID) and switch to incremental question-add mode in `frontend/src/components/admin/UnifiedAssessmentBuilder.tsx`
-- [ ] T032 [US5] After first exam creation, each new question immediately calls `adminService.addQuestionToExam(examId, question)` instead of batching
-- [ ] T033 [US5] Add auto-save status indicator component: "⏳ جارٍ الحفظ..." → "✓ تم الحفظ" → "✕ خطأ في الحفظ"
-- [ ] T034 [US5] Handle auto-save errors gracefully with retry toast and don't block the user from adding more questions
+- [x] T031 [US5] Modify `UnifiedAssessmentBuilder` to detect when exam has been created (has ID) and switch to incremental question-add mode in `frontend/src/components/admin/UnifiedAssessmentBuilder.tsx`
+- [x] T032 [US5] After first exam creation, each new question immediately calls `adminService.addQuestionToExam(examId, question)` instead of batching
+- [x] T033 [US5] Add auto-save status indicator component: "⏳ جارٍ الحفظ..." → "✓ تم الحفظ" → "✕ خطأ في الحفظ"
+- [x] T034 [US5] Handle auto-save errors gracefully with retry toast and don't block the user from adding more questions
 
 **Checkpoint**: Exam creation auto-saves questions, no data lost on navigation
 
@@ -142,11 +142,11 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 **Purpose**: Final quality pass across all user stories
 
-- [ ] T035 [P] Export new components from `frontend/src/components/admin/index.ts` (ExamProfilePageClient if needed)
-- [ ] T036 Verify `npm run build` passes with 0 errors in `frontend/`
-- [ ] T037 [P] Run `dotnet build` in `backend/` and confirm 0 new warnings/errors
-- [ ] T038 Code cleanup: remove any unused imports, dead code, or console.logs across all modified files
-- [ ] T039 Run quickstart.md validation checklist manually
+- [x] T035 [P] Export new components from `frontend/src/components/admin/index.ts` (ExamProfilePageClient if needed)
+- [x] T036 Verify `npm run build` passes with 0 errors in `frontend/`
+- [x] T037 [P] Run `dotnet build` in `backend/` and confirm 0 new warnings/errors
+- [x] T038 Code cleanup: remove any unused imports, dead code, or console.logs across all modified files
+- [x] T039 Run quickstart.md validation checklist manually
 
 ---
 
@@ -154,18 +154,18 @@ data, permissions, API contracts, worker jobs, or user-visible UI.
 
 **Purpose**: Prove the phase is complete in the real project environment
 
-- [ ] T040 Run `dotnet build` in `backend/` and record results
-- [ ] T041 Run `npm run build` in `frontend/` and record results
-- [ ] T042 Run `docker compose config -q` and confirm valid compose
-- [ ] T043 Run `make migrate` to apply `AddIsActiveToLessonVideo` migration
-- [ ] T044 Complete manual QA checklist:
+- [x] T040 Run `dotnet build` in `backend/` and record results
+- [x] T041 Run `npm run build` in `frontend/` and record results
+- [x] T042 Run `docker compose config -q` and confirm valid compose
+- [x] T043 Run `make migrate` to apply `AddIsActiveToLessonVideo` migration
+- [x] T044 Complete manual QA checklist:
   - Admin: Edit video via inline form → verify data persists
   - Admin: Toggle video active/inactive → verify dim styling
   - Student: Verify inactive videos hidden from lesson content
   - Admin: Upload PDF file → verify in resource list
   - Admin: View exam profile → verify per-question stats
   - Admin: Add question via auto-save → refresh → verify persisted
-- [ ] T045 Write end-of-phase report with implemented scope, commands run, automated results, Docker result, manual QA status, risks, and go/no-go
+- [x] T045 Write end-of-phase report with implemented scope, commands run, automated results, Docker result, manual QA status, risks, and go/no-go
 
 ---
 
