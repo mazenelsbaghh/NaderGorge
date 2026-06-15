@@ -167,6 +167,8 @@ export function LessonViewer({
               examPassed={lesson.examPassed}
               isExamLocked={lesson.isExamLocked}
               examLockedReason={lesson.examLockedReason}
+              lessonPrice={lesson.price}
+              lessonId={lesson.id}
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)]/90 backdrop-blur-xl p-12 text-center text-[var(--admin-muted)] font-medium">

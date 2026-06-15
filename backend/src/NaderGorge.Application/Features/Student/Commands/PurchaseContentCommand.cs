@@ -61,6 +61,38 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     return ApiResponse<bool>.Fail("نوع المحتوى غير مدعوم للشراء.");
             }
 
+            // Check if this is a repurchase of a lesson with exhausted/locked video views or rejected watch requests
+            bool isRepurchase = false;
+            if (request.ContentType == CodeType.Lesson)
+            {
+                var lessonVideos = await _db.LessonVideos
+                    .Where(v => v.LessonId == request.ContentId)
+                    .ToListAsync(ct);
+
+                if (lessonVideos.Any())
+                {
+                    var videoIds = lessonVideos.Select(v => v.Id).ToList();
+                    var watchEvents = await _db.VideoWatchEvents
+                        .Where(we => we.UserId == request.StudentId && videoIds.Contains(we.LessonVideoId))
+                        .ToListAsync(ct);
+
+                    var hasRejectedRequest = await _db.ExtraWatchRequests
+                        .AnyAsync(r => r.UserId == request.StudentId && videoIds.Contains(r.LessonVideoId) && r.Status == RequestStatus.Rejected, ct);
+
+                    bool hasExhaustedVideo = lessonVideos.Any(v => {
+                        var we = watchEvents.FirstOrDefault(e => e.LessonVideoId == v.Id);
+                        if (we == null) return false;
+                        int maxCount = we.CustomMaxWatchCount ?? v.MaxWatchCount;
+                        return we.IsLocked || (maxCount > 0 && we.WatchCount >= maxCount);
+                    });
+
+                    if (hasExhaustedVideo || hasRejectedRequest)
+                    {
+                        isRepurchase = true;
+                    }
+                }
+            }
+
             // 2. Check if already purchased
             bool alreadyPurchased = false;
             switch (request.ContentType)
@@ -79,7 +111,7 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                     break;
             }
 
-            if (alreadyPurchased)
+            if (alreadyPurchased && !isRepurchase)
             {
                 var failEvent = new OutboxEvent
                 {
@@ -102,78 +134,81 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             // Hierarchy: Package > Term > Section (Month) > Lesson
             // If they own the parent, they can't buy the child (it's already included)
             string? coveredBy = null;
-            switch (request.ContentType)
+            if (!isRepurchase)
             {
-                case CodeType.Term:
+                switch (request.ContentType)
                 {
-                    // Can't buy a Term if they already own its Package
-                    var termCheck = await _db.Terms.FirstOrDefaultAsync(t => t.Id == request.ContentId, ct);
-                    if (termCheck != null)
+                    case CodeType.Term:
                     {
-                        bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
-                            g.UserId == request.StudentId && g.IsActive &&
-                            g.GrantType == CodeType.Package && g.PackageId == termCheck.PackageId, ct);
-                        if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
-                    }
-                    break;
-                }
-                case CodeType.Month:
-                {
-                    // Can't buy a Section if they own its Term or its Package
-                    var sectionCheck = await _db.ContentSections
-                        .Include(s => s.Term)
-                        .FirstOrDefaultAsync(s => s.Id == request.ContentId, ct);
-                    if (sectionCheck != null)
-                    {
-                        bool hasTerm = await _db.StudentAccessGrants.AnyAsync(g =>
-                            g.UserId == request.StudentId && g.IsActive &&
-                            g.GrantType == CodeType.Term && g.TermId == sectionCheck.TermId, ct);
-                        if (hasTerm) { coveredBy = "الترم"; break; }
-
-                        var sectionPackageId = sectionCheck.Term?.PackageId;
-                        if (sectionPackageId != null)
+                        // Can't buy a Term if they already own its Package
+                        var termCheck = await _db.Terms.FirstOrDefaultAsync(t => t.Id == request.ContentId, ct);
+                        if (termCheck != null)
                         {
                             bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
                                 g.UserId == request.StudentId && g.IsActive &&
-                                g.GrantType == CodeType.Package && g.PackageId == sectionPackageId, ct);
+                                g.GrantType == CodeType.Package && g.PackageId == termCheck.PackageId, ct);
                             if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
                         }
+                        break;
                     }
-                    break;
-                }
-                case CodeType.Lesson:
-                {
-                    // Can't buy a Lesson if they own its Section, Term, or Package
-                    var lessonCheck = await _db.Lessons
-                        .Include(l => l.ContentSection)
-                        .ThenInclude(s => s.Term)
-                        .FirstOrDefaultAsync(l => l.Id == request.ContentId, ct);
-                    if (lessonCheck != null)
+                    case CodeType.Month:
                     {
-                        bool hasSection = await _db.StudentAccessGrants.AnyAsync(g =>
-                            g.UserId == request.StudentId && g.IsActive &&
-                            g.GrantType == CodeType.Month && g.ContentSectionId == lessonCheck.ContentSectionId, ct);
-                        if (hasSection) { coveredBy = "القسم"; break; }
-
-                        var lessonTermId = lessonCheck.ContentSection?.TermId;
-                        if (lessonTermId != null)
+                        // Can't buy a Section if they own its Term or its Package
+                        var sectionCheck = await _db.ContentSections
+                            .Include(s => s.Term)
+                            .FirstOrDefaultAsync(s => s.Id == request.ContentId, ct);
+                        if (sectionCheck != null)
                         {
                             bool hasTerm = await _db.StudentAccessGrants.AnyAsync(g =>
                                 g.UserId == request.StudentId && g.IsActive &&
-                                g.GrantType == CodeType.Term && g.TermId == lessonTermId, ct);
+                                g.GrantType == CodeType.Term && g.TermId == sectionCheck.TermId, ct);
                             if (hasTerm) { coveredBy = "الترم"; break; }
-                        }
 
-                        var lessonPackageId = lessonCheck.ContentSection?.Term?.PackageId;
-                        if (lessonPackageId != null)
-                        {
-                            bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
-                                g.UserId == request.StudentId && g.IsActive &&
-                                g.GrantType == CodeType.Package && g.PackageId == lessonPackageId, ct);
-                            if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
+                            var sectionPackageId = sectionCheck.Term?.PackageId;
+                            if (sectionPackageId != null)
+                            {
+                                bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
+                                    g.UserId == request.StudentId && g.IsActive &&
+                                    g.GrantType == CodeType.Package && g.PackageId == sectionPackageId, ct);
+                                if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
+                            }
                         }
+                        break;
                     }
-                    break;
+                    case CodeType.Lesson:
+                    {
+                        // Can't buy a Lesson if they own its Section, Term, or Package
+                        var lessonCheck = await _db.Lessons
+                            .Include(l => l.ContentSection)
+                            .ThenInclude(s => s.Term)
+                            .FirstOrDefaultAsync(l => l.Id == request.ContentId, ct);
+                        if (lessonCheck != null)
+                        {
+                            bool hasSection = await _db.StudentAccessGrants.AnyAsync(g =>
+                                g.UserId == request.StudentId && g.IsActive &&
+                                g.GrantType == CodeType.Month && g.ContentSectionId == lessonCheck.ContentSectionId, ct);
+                            if (hasSection) { coveredBy = "القسم"; break; }
+
+                            var lessonTermId = lessonCheck.ContentSection?.TermId;
+                            if (lessonTermId != null)
+                            {
+                                bool hasTerm = await _db.StudentAccessGrants.AnyAsync(g =>
+                                    g.UserId == request.StudentId && g.IsActive &&
+                                    g.GrantType == CodeType.Term && g.TermId == lessonTermId, ct);
+                                if (hasTerm) { coveredBy = "الترم"; break; }
+                            }
+
+                            var lessonPackageId = lessonCheck.ContentSection?.Term?.PackageId;
+                            if (lessonPackageId != null)
+                            {
+                                bool hasPackage = await _db.StudentAccessGrants.AnyAsync(g =>
+                                    g.UserId == request.StudentId && g.IsActive &&
+                                    g.GrantType == CodeType.Package && g.PackageId == lessonPackageId, ct);
+                                if (hasPackage) coveredBy = "الباقة الكاملة (السنة)";
+                            }
+                        }
+                        break;
+                    }
                 }
             }
 
@@ -295,6 +330,50 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 })
             };
             _db.OutboxEvents.Add(purchaseCompletedEvent);
+
+            if (isRepurchase)
+            {
+                var lessonVideos = await _db.LessonVideos
+                    .Where(v => v.LessonId == request.ContentId)
+                    .ToListAsync(ct);
+                var videoIds = lessonVideos.Select(v => v.Id).ToList();
+
+                var watchEvents = await _db.VideoWatchEvents
+                    .Where(we => we.UserId == request.StudentId && videoIds.Contains(we.LessonVideoId))
+                    .ToListAsync(ct);
+
+                foreach (var we in watchEvents)
+                {
+                    we.WatchCount = 0;
+                    we.IsLocked = false;
+                    we.CustomMaxWatchCount = null;
+                    we.TimeWatchedInSeconds = 0;
+                    we.UpdatedAt = DateTime.UtcNow;
+                }
+
+                var requestsToDelete = await _db.ExtraWatchRequests
+                    .Where(r => r.UserId == request.StudentId && videoIds.Contains(r.LessonVideoId))
+                    .ToListAsync(ct);
+                _db.ExtraWatchRequests.RemoveRange(requestsToDelete);
+
+                foreach (var videoId in videoIds)
+                {
+                    var v = lessonVideos.FirstOrDefault(e => e.Id == videoId);
+                    var outboxEvent = new OutboxEvent
+                    {
+                        Type = "ExtraWatchRequestUpdated",
+                        TargetUserId = request.StudentId.ToString(),
+                        PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            lessonId = request.ContentId,
+                            videoId = videoId,
+                            status = "Approved",
+                            allowedWatchCount = v?.MaxWatchCount ?? 0
+                        })
+                    };
+                    _db.OutboxEvents.Add(outboxEvent);
+                }
+            }
 
             await _db.SaveChangesAsync(ct);
 

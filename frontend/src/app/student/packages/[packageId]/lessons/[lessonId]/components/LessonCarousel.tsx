@@ -41,6 +41,8 @@ interface LessonCarouselProps {
     examPassed?: boolean;
     isExamLocked?: boolean;
     examLockedReason?: string;
+    lessonPrice?: number;
+    lessonId?: string;
 }
 
 // --- Subcomponents ---
@@ -167,7 +169,8 @@ export function LessonCarousel({
     examId,
     examPassed,
     isExamLocked,
-    examLockedReason
+    examLockedReason,
+    lessonPrice
 }: LessonCarouselProps) {
     const router = useRouter();
     const params = useParams();
@@ -329,6 +332,8 @@ export function LessonCarousel({
                                                     onStepChange(activeStep + 1);
                                                 }
                                             }}
+                                            lessonPrice={lessonPrice}
+                                            lessonId={lessonId}
                                         />
                                     </div>
 

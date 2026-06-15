@@ -14,6 +14,7 @@ const SplitText = dynamic(() => import('@/components/ui/SplitText'), { ssr: fals
 import { applyDomShields } from '@/utils/dom-shield';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { useRouter, useParams } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 export interface WatchStatus {
   current: number;
@@ -34,6 +35,8 @@ interface SecureVideoPlayerProps {
   onEnded?: () => void;
   className?: string;
   onSessionError?: (error: string) => void;
+  lessonPrice?: number;
+  lessonId?: string;
 }
 
 /**
@@ -61,7 +64,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   onWatchStatusChange,
   onEnded,
   className = '',
-  onSessionError
+  onSessionError,
+  lessonPrice,
+  lessonId
 }, ref) => {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,6 +95,33 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [extraWatchRejectionReason, setExtraWatchRejectionReason] = useState<string | null>(null);
   const [extraWatchStatusError, setExtraWatchStatusError] = useState<string | null>(null);
   const [requestingExtra, setRequestingExtra] = useState(false);
+  const [isBuyingAgain, setIsBuyingAgain] = useState(false);
+
+  const handleRepurchaseLesson = async () => {
+    if (!lessonId || isBuyingAgain) return;
+    
+    const confirmBuy = window.confirm(
+      `هل أنت متأكد من رغبتك في شراء هذه الحصة مجدداً بسعر (${lessonPrice} ج.م)؟ سيتم إعادة تعيين عدد المشاهدات للفيديوهات إلى الصفر.`
+    );
+    if (!confirmBuy) return;
+
+    setIsBuyingAgain(true);
+    try {
+      const { balanceService } = await import('@/services/balance-service');
+      const success = await balanceService.purchaseContent('Lesson', lessonId);
+      if (success) {
+        toast.success('تم إعادة شراء الحصة بنجاح!');
+        window.location.reload();
+      } else {
+        toast.error('فشل في إعادة شراء الحصة');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'فشل في إعادة شراء الحصة. تأكد من رصيدك.');
+    } finally {
+      setIsBuyingAgain(false);
+    }
+  };
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
   
@@ -718,54 +750,67 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         <h3 className="text-xl font-bold text-white mb-2">تم الوصول للحد الأقصى للمشاهدات</h3>
         <p className="text-gray-300 mb-6">لقد استنفدت الحد المسموح به لمشاهدة هذا الفيديو ({watchInfo?.max} مرات).</p>
         
-        {extraWatchStatusError ? (
-           <div role="alert" className="flex max-w-md flex-col items-center gap-3 rounded-xl border border-red-500/50 bg-red-500/20 px-5 py-4 text-red-100">
-              <span>{extraWatchStatusError}</span>
-              <button
-                type="button"
-                onClick={() => void loadExtraWatchStatus()}
-                className="min-h-11 rounded-lg border border-red-200/50 px-4 font-bold"
-              >
-                إعادة التحقق
-              </button>
-           </div>
-        ) : extraWatchReqStatus === 'Pending' ? (
-           <div className="flex flex-col items-center gap-3">
-             <div className="px-6 py-3 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 rounded-lg">
-                جاري مراجعة طلبك للمشاهدة الإضافية من قبل الدعم الفني
-             </div>
-             <button
-               type="button"
-               onClick={() => void loadExtraWatchStatus()}
-               className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg border border-white/20 transition-colors"
-             >
-               تحديث الحالة
-             </button>
-           </div>
-        ) : extraWatchReqStatus === 'Rejected' ? (
-           <div className="px-6 py-3 bg-red-500/20 text-red-500 border border-red-500/50 rounded-lg flex flex-col items-center gap-2">
-              <span>تم رفض طلبك للمشاهدة الإضافية</span>
-              {extraWatchRejectionReason ? (
-                <span className="text-sm text-red-200 mb-2">{extraWatchRejectionReason}</span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => void loadExtraWatchStatus()}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg border border-white/20 transition-colors"
-              >
-                تحديث الحالة
-              </button>
-           </div>
-        ) : (
-           <button 
+        <div className="flex flex-col gap-4 items-center justify-center">
+          {lessonPrice !== undefined && lessonId && (
+            <button
               type="button"
-              onClick={handleRequestExtra}
-              disabled={requestingExtra}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-lg transition-colors flex items-center justify-center min-w-[200px]"
-           >
-              {requestingExtra ? 'جاري الطلب...' : 'طلب مشاهدة إضافية'}
-           </button>
-        )}
+              onClick={handleRepurchaseLesson}
+              disabled={isBuyingAgain}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center min-w-[200px] shadow-lg shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+            >
+              {isBuyingAgain ? 'جاري الشراء...' : `شراء الحصة مجدداً (${lessonPrice} ج.م)`}
+            </button>
+          )}
+
+          {extraWatchStatusError ? (
+             <div role="alert" className="flex max-w-md flex-col items-center gap-3 rounded-xl border border-red-500/50 bg-red-500/20 px-5 py-4 text-red-100">
+                <span>{extraWatchStatusError}</span>
+                <button
+                  type="button"
+                  onClick={() => void loadExtraWatchStatus()}
+                  className="min-h-11 rounded-lg border border-red-200/50 px-4 font-bold"
+                >
+                  إعادة التحقق
+                </button>
+             </div>
+          ) : extraWatchReqStatus === 'Pending' ? (
+             <div className="flex flex-col items-center gap-3">
+               <div className="px-6 py-3 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 rounded-lg text-sm">
+                  جاري مراجعة طلبك للمشاهدة الإضافية من قبل الدعم الفني
+               </div>
+               <button
+                 type="button"
+                 onClick={() => void loadExtraWatchStatus()}
+                 className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg border border-white/20 transition-colors"
+               >
+                 تحديث الحالة
+               </button>
+             </div>
+          ) : extraWatchReqStatus === 'Rejected' ? (
+             <div className="px-6 py-3 bg-red-500/20 text-red-500 border border-red-500/50 rounded-lg flex flex-col items-center gap-2 text-sm">
+                <span>تم رفض طلبك للمشاهدة الإضافية</span>
+                {extraWatchRejectionReason ? (
+                  <span className="text-sm text-red-200 mb-2">{extraWatchRejectionReason}</span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void loadExtraWatchStatus()}
+                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-lg border border-white/20 transition-colors"
+                >
+                  تحديث الحالة
+                </button>
+             </div>
+          ) : (
+             <button 
+                type="button"
+                onClick={handleRequestExtra}
+                disabled={requestingExtra}
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-lg transition-colors flex items-center justify-center min-w-[200px] disabled:opacity-50"
+             >
+                {requestingExtra ? 'جاري الطلب...' : 'طلب مشاهدة إضافية'}
+             </button>
+          )}
+        </div>
       </div>
     );
   }

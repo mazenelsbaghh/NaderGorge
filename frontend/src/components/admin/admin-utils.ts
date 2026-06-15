@@ -3,9 +3,10 @@ export function formatCompactNumber(value: number) {
 }
 
 export function formatDate(value: string | Date, options?: Intl.DateTimeFormatOptions) {
-  const dateStr = value instanceof Date ? value.toISOString() : value;
-  // If the string starts with a year but doesn't have a Z or offset, and looks like a raw DB string
-  // It's safer to just let Date parse it, but we can default the options
+  let dateStr = value instanceof Date ? value.toISOString() : value;
+  if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+') && !/[-+]\d{2}:\d{2}$/.test(dateStr)) {
+    dateStr += 'Z';
+  }
   return new Intl.DateTimeFormat('en-GB', {
     dateStyle: 'medium',
     ...options
@@ -13,7 +14,10 @@ export function formatDate(value: string | Date, options?: Intl.DateTimeFormatOp
 }
 
 export function formatRelativeDate(value: string | Date) {
-  const dateStr = value instanceof Date ? value.toISOString() : value;
+  let dateStr = value instanceof Date ? value.toISOString() : value;
+  if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+') && !/[-+]\d{2}:\d{2}$/.test(dateStr)) {
+    dateStr += 'Z';
+  }
   const diffMs = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.max(1, Math.floor(diffMs / 60000));
 

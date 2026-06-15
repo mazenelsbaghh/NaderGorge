@@ -23,10 +23,12 @@ export default function WatchRequestsPageClient() {
   const [error, setError] = useState('');
 
   // Custom modal states
-  const [activeModal, setActiveModal] = useState<'approve' | 'reject' | null>(null);
+  const [activeModal, setActiveModal] = useState<'approve' | 'reject' | 'edit' | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<AdminWatchRequestDto | null>(null);
   const [reasonText, setReasonText] = useState('');
   const [validationError, setValidationError] = useState('');
+  const [editStatus, setEditStatus] = useState<1 | 2>(1);
+  const [addedViews, setAddedViews] = useState<number>(1);
 
   useEffect(() => {
     fetchRequests();
@@ -49,6 +51,7 @@ export default function WatchRequestsPageClient() {
   const handleApproveClick = (req: AdminWatchRequestDto) => {
     setSelectedRequest(req);
     setReasonText('تمت الموافقة بواسطة الإدارة');
+    setAddedViews(1);
     setValidationError('');
     setActiveModal('approve');
   };
@@ -60,6 +63,15 @@ export default function WatchRequestsPageClient() {
     setActiveModal('reject');
   };
 
+  const handleEditClick = (req: AdminWatchRequestDto) => {
+    setSelectedRequest(req);
+    setReasonText(req.reason || '');
+    setEditStatus(req.status as 1 | 2);
+    setAddedViews(1);
+    setValidationError('');
+    setActiveModal('edit');
+  };
+
   const handleApproveSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRequest) return;
@@ -67,7 +79,7 @@ export default function WatchRequestsPageClient() {
     setActionLoading(selectedRequest.id);
     setActiveModal(null);
     try {
-      await adminService.approveWatchRequest(selectedRequest.id, reasonText.trim());
+      await adminService.approveWatchRequest(selectedRequest.id, reasonText.trim(), addedViews);
       await fetchRequests();
       toast.success('تم قبول طلب المشاهدة الإضافية.');
     } catch (err) {
@@ -77,6 +89,7 @@ export default function WatchRequestsPageClient() {
       setActionLoading(null);
       setSelectedRequest(null);
       setReasonText('');
+      setAddedViews(1);
     }
   };
 
@@ -102,6 +115,37 @@ export default function WatchRequestsPageClient() {
       setActionLoading(null);
       setSelectedRequest(null);
       setReasonText('');
+    }
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRequest) return;
+
+    if (editStatus === 2 && !reasonText.trim()) {
+      setValidationError('سبب الرفض إجباري.');
+      return;
+    }
+
+    setActionLoading(selectedRequest.id);
+    setActiveModal(null);
+    try {
+      if (editStatus === 1) {
+        await adminService.approveWatchRequest(selectedRequest.id, reasonText.trim(), addedViews);
+        toast.success('تم تعديل القرار إلى مقبول وزيادة المشاهدات.');
+      } else {
+        await adminService.rejectWatchRequest(selectedRequest.id, reasonText.trim());
+        toast.success('تم تعديل القرار إلى مرفوض.');
+      }
+      await fetchRequests();
+    } catch (err) {
+      devConsole.error(err);
+      toast.error('فشل في تعديل القرار');
+    } finally {
+      setActionLoading(null);
+      setSelectedRequest(null);
+      setReasonText('');
+      setAddedViews(1);
     }
   };
 
@@ -236,7 +280,17 @@ export default function WatchRequestsPageClient() {
             </NeumorphButton>
           </div>
         ) : (
-          <span className="text-[var(--admin-muted)] text-sm text-left w-full block ml-8 opacity-50">-</span>
+          <div className="flex items-center justify-end gap-2">
+            <NeumorphButton
+              type="button"
+              onClick={() => handleEditClick(req)}
+              disabled={actionLoading !== null}
+              intent="ghost"
+              size="sm"
+            >
+              تعديل القرار
+            </NeumorphButton>
+          </div>
         )
       )
     }
@@ -303,40 +357,146 @@ export default function WatchRequestsPageClient() {
           setReasonText('');
           setValidationError('');
         }}
-        title={activeModal === 'approve' ? 'موافقة على طلب المشاهدة' : 'رفض طلب المشاهدة'}
+        title={
+          activeModal === 'approve' 
+            ? 'موافقة على طلب المشاهدة' 
+            : activeModal === 'reject' 
+              ? 'رفض طلب المشاهدة' 
+              : 'تعديل قرار طلب المشاهدة'
+        }
       >
-        <form onSubmit={activeModal === 'approve' ? handleApproveSubmit : handleRejectSubmit} className="space-y-5 text-right">
-          <div>
-            <p className="text-sm text-[var(--admin-muted)] mb-3 leading-relaxed">
-              {activeModal === 'approve' 
-                ? `هل أنت متأكد من الموافقة على طلب الطالب ${selectedRequest?.studentName} لمشاهدة فيديو "${selectedRequest?.videoTitle}"؟`
-                : `برجاء كتابة سبب رفض طلب الطالب ${selectedRequest?.studentName} لمشاهدة فيديو "${selectedRequest?.videoTitle}".`
-              }
-            </p>
-            
-            <label htmlFor="reason-input" className="block text-xs font-bold text-[var(--admin-text)] mb-2">
-              السبب {activeModal === 'reject' ? <span className="text-rose-500 font-black">* (إجباري ويظهر للطالب)</span> : '(اختياري)'}
-            </label>
-            <textarea
-              id="reason-input"
-              rows={3}
-              value={reasonText}
-              onChange={(e) => {
-                setReasonText(e.target.value);
-                if (e.target.value.trim()) {
-                  setValidationError('');
+        <form 
+          onSubmit={
+            activeModal === 'approve' 
+              ? handleApproveSubmit 
+              : activeModal === 'reject' 
+                ? handleRejectSubmit 
+                : handleEditSubmit
+          } 
+          className="space-y-5 text-right"
+        >
+          {activeModal === 'edit' ? (
+            // Edit Decision Modal
+            <div className="space-y-4">
+              <p className="text-sm text-[var(--admin-muted)] mb-3 leading-relaxed">
+                تعديل قرار طلب الطالب {selectedRequest?.studentName} لمشاهدة فيديو "{selectedRequest?.videoTitle}".
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">القرار الجديد</label>
+                <div className="flex gap-4 animate-fadeIn">
+                  <label className="flex items-center gap-2 text-sm text-[var(--admin-text)] font-semibold cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="editStatus" 
+                      checked={editStatus === 1} 
+                      onChange={() => setEditStatus(1)}
+                      className="accent-[var(--admin-primary)]"
+                    />
+                    مقبول وزيادة المشاهدات
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-[var(--admin-text)] font-semibold cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="editStatus" 
+                      checked={editStatus === 2} 
+                      onChange={() => setEditStatus(2)}
+                      className="accent-[var(--admin-primary)]"
+                    />
+                    مرفوض
+                  </label>
+                </div>
+              </div>
+
+              {editStatus === 1 && (
+                <div className="animate-slideDown">
+                  <label htmlFor="added-views-input-edit" className="block text-xs font-bold text-[var(--admin-text)] mb-2">
+                    عدد المشاهدات الإضافية لزيادتها
+                  </label>
+                  <input
+                    id="added-views-input-edit"
+                    type="number"
+                    min={1}
+                    value={addedViews}
+                    onChange={(e) => setAddedViews(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-all duration-200 text-sm font-bold"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="reason-input-edit" className="block text-xs font-bold text-[var(--admin-text)] mb-2">
+                  السبب {editStatus === 2 ? <span className="text-rose-500 font-black">* (إجباري ويظهر للطالب)</span> : '(اختياري)'}
+                </label>
+                <textarea
+                  id="reason-input-edit"
+                  rows={3}
+                  value={reasonText}
+                  onChange={(e) => {
+                    setReasonText(e.target.value);
+                    if (e.target.value.trim()) setValidationError('');
+                  }}
+                  placeholder={editStatus === 2 ? "اكتب سبب الرفض بالتفصيل هنا..." : "اكتب ملاحظة أو سبب الموافقة..."}
+                  className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
+                    validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
+                  } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
+                  required={editStatus === 2}
+                />
+                {validationError && (
+                  <p className="text-xs text-rose-500 font-bold mt-1">{validationError}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            // Approve / Reject Modal
+            <div>
+              <p className="text-sm text-[var(--admin-muted)] mb-3 leading-relaxed">
+                {activeModal === 'approve' 
+                  ? `هل أنت متأكد من الموافقة على طلب الطالب ${selectedRequest?.studentName} لمشاهدة فيديو "${selectedRequest?.videoTitle}"؟`
+                  : `برجاء كتابة سبب رفض طلب الطالب ${selectedRequest?.studentName} لمشاهدة فيديو "${selectedRequest?.videoTitle}".`
                 }
-              }}
-              placeholder={activeModal === 'reject' ? "اكتب سبب الرفض بالتفصيل هنا ليظهر للطالب..." : "اكتب ملاحظة أو سبب الموافقة..."}
-              className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
-                validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
-              } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
-              required={activeModal === 'reject'}
-            />
-            {validationError && (
-              <p className="text-xs text-rose-500 font-bold mt-1">{validationError}</p>
-            )}
-          </div>
+              </p>
+
+              {activeModal === 'approve' && (
+                <div className="mb-4">
+                  <label htmlFor="added-views-input" className="block text-xs font-bold text-[var(--admin-text)] mb-2">
+                    عدد المشاهدات الإضافية لزيادتها
+                  </label>
+                  <input
+                    id="added-views-input"
+                    type="number"
+                    min={1}
+                    value={addedViews}
+                    onChange={(e) => setAddedViews(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full bg-[var(--admin-surface)] p-3 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)] outline-none focus:ring-2 transition-all duration-200 text-sm font-bold"
+                  />
+                </div>
+              )}
+              
+              <label htmlFor="reason-input" className="block text-xs font-bold text-[var(--admin-text)] mb-2">
+                السبب {activeModal === 'reject' ? <span className="text-rose-500 font-black">* (إجباري ويظهر للطالب)</span> : '(اختياري)'}
+              </label>
+              <textarea
+                id="reason-input"
+                rows={3}
+                value={reasonText}
+                onChange={(e) => {
+                  setReasonText(e.target.value);
+                  if (e.target.value.trim()) {
+                    setValidationError('');
+                  }
+                }}
+                placeholder={activeModal === 'reject' ? "اكتب سبب الرفض بالتفصيل هنا ليظهر للطالب..." : "اكتب ملاحظة أو سبب الموافقة..."}
+                className={`w-full bg-[var(--admin-surface)] p-3.5 rounded-2xl text-[var(--admin-text)] border ${
+                  validationError ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-[var(--admin-border)] focus:border-[var(--admin-primary)] focus:ring-[var(--admin-primary-15)]'
+                } outline-none focus:ring-2 resize-none transition-all duration-200 text-sm`}
+                required={activeModal === 'reject'}
+              />
+              {validationError && (
+                <p className="text-xs text-rose-500 font-bold mt-1">{validationError}</p>
+              )}
+            </div>
+          )}
           
           <div className="flex gap-3 justify-end pt-4 border-t border-[var(--admin-border)]">
             <button
@@ -354,14 +514,24 @@ export default function WatchRequestsPageClient() {
             </button>
             <button
               type="submit"
-              disabled={actionLoading !== null || (activeModal === 'reject' && !reasonText.trim())}
+              disabled={
+                actionLoading !== null || 
+                (activeModal === 'reject' && !reasonText.trim()) || 
+                (activeModal === 'edit' && editStatus === 2 && !reasonText.trim())
+              }
               className={`rounded-2xl px-6 py-2.5 text-sm font-bold transition-all duration-200 ${
-                activeModal === 'approve'
+                activeModal === 'approve' || (activeModal === 'edit' && editStatus === 1)
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_12px_rgba(16,185,129,0.15)] disabled:opacity-50'
                   : 'bg-rose-600 hover:bg-rose-700 text-white shadow-[0_4px_12px_rgba(244,63,94,0.15)] disabled:opacity-50 disabled:cursor-not-allowed'
               }`}
             >
-              {actionLoading !== null ? 'جاري الحفظ...' : activeModal === 'approve' ? 'تأكيد القبول' : 'تأكيد الرفض'}
+              {actionLoading !== null 
+                ? 'جاري الحفظ...' 
+                : activeModal === 'approve' 
+                  ? 'تأكيد القبول' 
+                  : activeModal === 'reject' 
+                    ? 'تأكيد الرفض' 
+                    : 'حفظ التغييرات'}
             </button>
           </div>
         </form>

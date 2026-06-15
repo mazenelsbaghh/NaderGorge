@@ -1,3 +1,4 @@
-display_name: Spec Kit All
-short_description: End-to-end Spec Kit workflow with strict planning, guards, and feature tests.
-default_prompt: Run the full Spec Kit workflow for this feature, including Arabic clarification, speckit-plan, strict tasks, implementation, guards, and final feature tests.
+interface:
+  display_name: "Spec Kit All"
+  short_description: "Deep Spec Kit workflow with strict planning"
+  default_prompt: "Use $speckit-all to run the full feature workflow with Arabic clarification, standalone speckit-plan deep planning, strict tasks, guards, and final tests."

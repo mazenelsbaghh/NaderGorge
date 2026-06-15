@@ -1016,8 +1016,8 @@ export const adminService = {
     return res.data;
   },
 
-  approveWatchRequest: async (id: string, reason?: string) => {
-    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/approve`, { reason });
+  approveWatchRequest: async (id: string, reason?: string, addedViews?: number) => {
+    const res = await apiClient.post<ApiResponse<boolean>>(`/admin/watch-requests/${id}/approve`, { reason, addedViews });
     return res.data;
   },
 

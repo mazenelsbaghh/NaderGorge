@@ -27,17 +27,43 @@ public class RejectWatchRequestCommandHandler : IRequestHandler<RejectWatchReque
         if (req == null)
             return ApiResponse<bool>.Fail("Request not found", new List<string> { "NOT_FOUND" });
 
-        if (req.Status != RequestStatus.Pending)
-            return ApiResponse<bool>.Fail("Request is already resolved", new List<string> { "ALREADY_RESOLVED" });
-
         if (string.IsNullOrWhiteSpace(request.Reason))
             return ApiResponse<bool>.Fail("Rejection reason is required.", new List<string> { "REJECTION_REASON_REQUIRED" });
 
         var reason = request.Reason.Trim();
+        var oldStatus = req.Status;
 
         req.Status = RequestStatus.Rejected;
         req.ResolvedAt = DateTime.UtcNow;
         req.RejectionReason = reason;
+
+        var watchEvent = await _context.VideoWatchEvents
+            .FirstOrDefaultAsync(v => v.UserId == req.UserId && v.LessonVideoId == req.LessonVideoId, cancellationToken);
+
+        if (watchEvent != null)
+        {
+            if (oldStatus == RequestStatus.Approved)
+            {
+                watchEvent.IsLocked = true;
+                int maxLimit = watchEvent.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount;
+                if (maxLimit > req.LessonVideo.MaxWatchCount)
+                {
+                    watchEvent.CustomMaxWatchCount = maxLimit - 1;
+                }
+                else
+                {
+                    watchEvent.CustomMaxWatchCount = req.LessonVideo.MaxWatchCount;
+                }
+            }
+            else
+            {
+                int maxLimit = watchEvent.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount;
+                if (maxLimit > 0 && watchEvent.WatchCount >= maxLimit)
+                {
+                    watchEvent.IsLocked = true;
+                }
+            }
+        }
 
         var outboxEvent = new OutboxEvent
         {

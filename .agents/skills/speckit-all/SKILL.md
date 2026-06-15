@@ -1,6 +1,6 @@
 ---
 name: speckit-all
-description: Execute the complete Spec-Driven Development workflow from feature specification, mandatory Arabic speckit-clarify, mandatory speckit-plan-driven technical planning, strict cheaper-LLM task breakdown, implementation, deep review, clean-code-guard, test-guard, feature test verification, and final reporting. Use when the user invokes $speckit-all or asks for an end-to-end Spec Kit feature workflow; Phase 3 planning must be performed by executing speckit-plan, never by inline planning inside speckit-all; always finish by running clean-code-guard before test-guard, then feature tests, before the final report.
+description: Execute the complete Spec-Driven Development workflow from feature specification, mandatory Arabic speckit-clarify, mandatory standalone speckit-plan-driven deep technical planning, strict cheaper-LLM task breakdown, implementation, deep review, clean-code-guard, test-guard, feature test verification, and final reporting. Use when the user invokes $speckit-all or asks for an end-to-end Spec Kit feature workflow; Phase 3 planning must spend the deepest research effort and must be performed by reading and executing speckit-plan, never by inline planning inside speckit-all; always finish by running clean-code-guard before test-guard, then feature tests, before the final report.
 ---
 
 ## User Input
@@ -42,6 +42,17 @@ Read `references/feature-test-matrix.md` during Phase 9 before building the fina
 9. Final feature tests, build verification, and report
 
 `clean-code-guard` MUST run before `test-guard`. Feature tests MUST run after implementation, critique fixes, clean-code-guard, and test-guard. The final report MUST NOT be written until all phases and all dynamic issue checkboxes are checked.
+
+### Mandatory Speckit-Plan Delegation
+
+Phase 3 is a strict handoff to `speckit-plan`, not a planning shortcut inside this skill.
+
+- Before Phase 3 work begins, read the active `speckit-plan/SKILL.md` from disk completely and follow its workflow exactly.
+- Do not write, patch, summarize, or "fill in" `plan.md`, `research.md`, `data-model.md`, `contracts/`, or `quickstart.md` from `speckit-all` unless `speckit-plan` explicitly requires that exact file write as part of its own workflow.
+- Treat Phase 3 as the highest-effort phase before implementation. Spend more context gathering, repository inspection, dependency checking, contract tracing, and risk analysis here than in any other pre-implementation phase.
+- If the plan appears obvious, still perform the `speckit-plan` setup, load context, research, design, contract, quickstart, agent-context update, and constitution checks. Obvious plans still require evidence.
+- If `speckit-plan` cannot run, stop Phase 3, record the blocker in `achievements.md`, and do not continue to `speckit-tasks`.
+- Record the executed `speckit-plan` handoff, generated artifact paths, research evidence, and any unresolved blockers in `achievements.md` under `### Phase 3 Speckit-Plan Evidence / إثبات التخطيط`.
 
 ### Mandatory Progress Tracking
 
@@ -119,14 +130,19 @@ If a subagent facility is available, use it in Phases 1, 2, and 3 for context ga
 
 ### Phase 3: Technical Planning (`speckit-plan`)
 
-1. Take the clarified `spec.md` and pass it as the planning input/context for **`speckit-plan`**.
-2. If subagents are available, run a Phase 3 plan-support subagent using `references/subagent-handoff-template.md`; otherwise record `Phase 3 plan support: unavailable`.
-3. **MANDATORY SKILL HANDOFF**: Execute standalone **`speckit-plan`** and follow its `SKILL.md` workflow exactly to create `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, and the AGENTS.md plan reference update.
-4. `speckit-all` MUST NOT perform Phase 3 planning inline, recreate the plan workflow itself, or write `plan.md` without applying `speckit-plan`.
-5. Ensure the plan conforms to `.specify/memory/constitution.md`.
-6. If UI is touched, pass `ui-ux-pro-max-skill` and `impeccable` expectations into the `speckit-plan` planning context.
-7. Run `python .agents/skills/speckit-all/scripts/validate_spec_plan_quality.py --spec-dir <specs/feature-dir>` and fix every failure before task generation.
-8. Mark Phase 3 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 3 --root .`.
+1. Read the active **`speckit-plan/SKILL.md`** from disk completely. Use that skill as the owner of Phase 3. If the file cannot be read, stop and record the blocker.
+2. Take the clarified `spec.md` and pass it as the planning input/context for **`speckit-plan`**.
+3. If subagents are available, run a Phase 3 plan-support subagent using `references/subagent-handoff-template.md`; otherwise record `Phase 3 plan support: unavailable`.
+4. Use the longest and most careful research budget in this phase. Inspect the repository structure, existing implementations, related tests, API/service contracts, database schema/migrations, UI patterns, deployment/runtime constraints, and known risks before finalizing technical decisions.
+5. **MANDATORY SKILL HANDOFF**: Execute standalone **`speckit-plan`** and follow its `SKILL.md` workflow exactly to create `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`, and the AGENTS.md plan reference update.
+6. `speckit-all` MUST NOT perform Phase 3 planning inline, recreate the plan workflow itself, or write `plan.md` without applying `speckit-plan`.
+7. `research.md` MUST include concrete decisions with rationale and alternatives for every unknown, dependency, integration point, external API, data model change, authorization rule, UI architecture choice, test strategy, and deployment/migration risk relevant to the feature.
+8. `plan.md` MUST include exact implementation scope, exact files/modules likely to change, contracts, data persistence implications, failure modes, test commands, and rollout/verification notes. Do not accept generic statements.
+9. Ensure the plan conforms to `.specify/memory/constitution.md`.
+10. If UI is touched, pass `ui-ux-pro-max-skill` and `impeccable` expectations into the `speckit-plan` planning context.
+11. Before leaving Phase 3, verify that the `speckit-plan` output generated or updated all required artifacts and that `AGENTS.md` contains the current plan reference between the Spec Kit markers.
+12. Run `python .agents/skills/speckit-all/scripts/validate_spec_plan_quality.py --spec-dir <specs/feature-dir>` and fix every failure before task generation.
+13. Mark Phase 3 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 3 --root .`.
 
 ### Phase 4: Detailed Task Breakdown (`speckit-tasks`)
 

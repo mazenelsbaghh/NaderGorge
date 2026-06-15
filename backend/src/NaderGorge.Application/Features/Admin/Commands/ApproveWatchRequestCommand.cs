@@ -7,7 +7,7 @@ using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record ApproveWatchRequestCommand(Guid RequestId, Guid AdminId, string? Reason = null) : IRequest<ApiResponse<bool>>;
+public record ApproveWatchRequestCommand(Guid RequestId, Guid AdminId, string? Reason = null, int AddedViews = 1) : IRequest<ApiResponse<bool>>;
 
 public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchRequestCommand, ApiResponse<bool>>
 {
@@ -27,9 +27,6 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
         if (req == null)
             return ApiResponse<bool>.Fail("Request not found", new List<string> { "NOT_FOUND" });
 
-        if (req.Status != RequestStatus.Pending)
-            return ApiResponse<bool>.Fail("Request is already resolved", new List<string> { "ALREADY_RESOLVED" });
-
         var reason = string.IsNullOrWhiteSpace(request.Reason)
             ? "تمت الموافقة بواسطة الإدارة"
             : request.Reason.Trim();
@@ -45,11 +42,12 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
         {
             watchEvent.IsLocked = false;
             // MaxWatchCount might be 0 meaning unlimited, but if it was locked, it has a limit.
-            // Increment the custom max limit by 1 to allow 1 more view
+            // Increment the custom max limit by AddedViews
             int maxLimit = watchEvent.CustomMaxWatchCount ?? req.LessonVideo.MaxWatchCount;
             if (maxLimit > 0)
             {
-                watchEvent.CustomMaxWatchCount = maxLimit + 1;
+                int addedViews = request.AddedViews > 0 ? request.AddedViews : 1;
+                watchEvent.CustomMaxWatchCount = maxLimit + addedViews;
                 // Force a progress reset on next play session so they start the new view with a clean threshold baseline
                 watchEvent.TimeWatchedInSeconds = -1;
 
@@ -59,8 +57,8 @@ public class ApproveWatchRequestCommandHandler : IRequestHandler<ApproveWatchReq
                     LessonVideoId = req.LessonVideoId,
                     OriginalLimit = maxLimit,
                     NewLimit = watchEvent.CustomMaxWatchCount.Value,
-                    AddedViews = 1,
-                    Reason = $"قبول طلب مشاهدة إضافية: {reason}",
+                    AddedViews = addedViews,
+                    Reason = $"قبول/تعديل طلب مشاهدة إضافية: {reason}",
                     PerformedByUserId = request.AdminId,
                     CreatedAt = DateTime.UtcNow
                 };
