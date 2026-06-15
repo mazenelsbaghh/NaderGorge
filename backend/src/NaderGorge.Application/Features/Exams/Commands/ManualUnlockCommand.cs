@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Exams.Commands;
@@ -19,6 +20,34 @@ public class ManualUnlockCommandHandler : IRequestHandler<ManualUnlockCommand, A
 
     public async Task<ApiResponse> Handle(ManualUnlockCommand request, CancellationToken ct)
     {
+        var user = await _db.Users
+            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
+            .FirstOrDefaultAsync(u => u.Id == request.AdminId, ct);
+
+        if (user == null)
+            return ApiResponse.Fail("Unauthorized: User not found.");
+
+        var permissionsList = new List<string>();
+        foreach (var ur in user.UserRoles)
+        {
+            if (ur.Role != null && !string.IsNullOrEmpty(ur.Role.PermissionsJson))
+            {
+                try
+                {
+                    var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
+                    if (perms != null)
+                        permissionsList.AddRange(perms);
+                }
+                catch { }
+            }
+        }
+
+        var isAdmin = user.UserRoles.Any(ur => ur.Role.Type == RoleType.Admin);
+        if (!isAdmin && !permissionsList.Contains("watch_requests.manage"))
+        {
+            return ApiResponse.Fail("Unauthorized: You do not have permission to manage watch requests.");
+        }
+
         var lesson = await _db.Lessons.FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
         if (lesson == null) return ApiResponse.Fail("Lesson not found");
 

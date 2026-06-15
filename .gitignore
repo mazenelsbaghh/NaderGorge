@@ -42,3 +42,19 @@ nginx/logs/
 pgdata/
 redisdata/
 
+# Backups / SQL Dumps / Sensitive data
+*.sql
+*.sql.gz
+*.sql.zip
+*.bak
+*.dump
+*.db.bak
+.env.production
+.env.staging
+.env.test
+.env.development
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+

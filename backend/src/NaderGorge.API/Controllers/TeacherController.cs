@@ -126,28 +126,6 @@ public class TeacherController : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
-    [HttpPost("codes/bulk-generate")]
-    public async Task<IActionResult> BulkGenerateCodes([FromBody] BulkGenerateRequest dto)
-    {
-        var result = await _mediator.Send(new BulkGenerateCodesCommand(
-            GroupName: dto.GroupName,
-            CodeType: dto.CodeType,
-            Count: dto.Count,
-            CodeLength: dto.CodeLength,
-            AdminId: GetUserId(),
-            PackageId: dto.PackageId,
-            TermId: dto.TermId,
-            ContentSectionId: dto.ContentSectionId,
-            LessonId: dto.LessonId,
-            ExamId: dto.ExamId,
-            VideoTargetIds: dto.VideoTargetIds,
-            BalanceAmount: dto.BalanceAmount,
-            DiscountPercentage: dto.DiscountPercentage,
-            ExpiresAt: dto.ExpiresAt
-        ));
-
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
 }
 
 public class GradeEssayRequestDto

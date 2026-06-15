@@ -19,6 +19,7 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
     public async Task<ApiResponse<List<CodeGroupDto>>> Handle(ListCodeGroupsQuery request, CancellationToken ct)
     {
         Guid? teacherId = null;
+        bool isTeacher = false;
         if (request.CurrentUserId.HasValue)
         {
             var user = await _db.Users
@@ -28,15 +29,17 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
 
             if (user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher))
             {
+                isTeacher = true;
                 teacherId = user.TeacherProfile?.Id;
             }
         }
 
         var query = _db.CodeGroups.AsQueryable();
 
-        if (teacherId.HasValue)
+        if (isTeacher)
         {
-            query = query.Where(cg => cg.TeacherId == teacherId.Value);
+            var targetId = teacherId ?? Guid.Empty;
+            query = query.Where(cg => cg.TeacherId == targetId);
         }
 
         var dtos = await query

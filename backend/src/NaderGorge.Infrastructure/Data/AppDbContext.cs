@@ -680,6 +680,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(s => s.Homework).WithMany(h => h.Submissions).HasForeignKey(s => s.HomeworkId);
             e.HasOne(s => s.Student).WithMany().HasForeignKey(s => s.StudentId);
             e.HasOne(s => s.AssistantReviewer).WithMany().HasForeignKey(s => s.AssistantReviewerId);
+            e.HasIndex(s => new { s.HomeworkId, s.StudentId }).IsUnique();
         });
 
         modelBuilder.Entity<HomeworkAnswer>(e =>
@@ -724,6 +725,8 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(w => w.Id);
             e.HasOne(w => w.Student).WithMany().HasForeignKey(w => w.StudentId);
             e.HasOne(w => w.ResolvedByAssistant).WithMany().HasForeignKey(w => w.ResolvedByAssistantId);
+            e.Property(w => w.OccurrenceKey).HasMaxLength(200);
+            e.HasIndex(w => w.OccurrenceKey).IsUnique();
         });
 
         modelBuilder.Entity<AssistantTaskQueue>(e =>

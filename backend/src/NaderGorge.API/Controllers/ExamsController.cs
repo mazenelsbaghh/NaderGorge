@@ -5,6 +5,7 @@ using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Exams.Queries;
 using System.Security.Claims;
 using NaderGorge.API.Filters;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
@@ -110,7 +111,7 @@ public class ExamsController : ControllerBase
     }
 
     [HttpPost("admin/lessons/{lessonId:guid}/students/{studentId:guid}/unlock")]
-    [Authorize(Roles = "Admin,Teacher,Assistant")]
+    [HasPermission("watch_requests.manage")]
     public async Task<IActionResult> ManualUnlock(Guid lessonId, Guid studentId)
     {
         var response = await _mediator.Send(new ManualUnlockCommand(lessonId, studentId, GetUserId()));

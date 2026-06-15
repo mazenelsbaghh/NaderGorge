@@ -10,6 +10,7 @@ public class User : BaseEntity
     public bool IsActive { get; set; } = true;
     public bool IsProfileComplete { get; set; } = false;
     public string? SuspensionReason { get; set; }
+    public int PasswordResetVersion { get; set; } = 0;
 
     // Navigation properties
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();

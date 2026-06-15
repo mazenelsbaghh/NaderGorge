@@ -66,50 +66,39 @@ public class BulkGenerateCodesCommandHandler : IRequestHandler<BulkGenerateCodes
             .Include(u => u.TeacherProfile)
             .FirstOrDefaultAsync(u => u.Id == request.AdminId, ct);
 
-        var isTeacher = user?.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher) ?? false;
-        var teacherProfileId = user?.TeacherProfile?.Id;
+        if (user == null)
+            return ApiResponse<BulkGenerateCodesResponse>.Fail("User not found.");
 
+        var isTeacher = user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher);
         if (isTeacher)
         {
-            var authService = new TeacherAuthorizationService(_db);
-            bool isAuthorized = false;
+            return ApiResponse<BulkGenerateCodesResponse>.Fail("Unauthorized: Teachers are not allowed to generate codes.");
+        }
 
-            if (request.CodeType == CodeType.Package && request.PackageId.HasValue)
-                isAuthorized = await authService.CanAccessPackageAsync(request.AdminId, request.PackageId.Value, ct);
-            else if (request.CodeType == CodeType.Term && request.TermId.HasValue)
-                isAuthorized = await authService.CanAccessTermAsync(request.AdminId, request.TermId.Value, ct);
-            else if (request.CodeType == CodeType.Month && request.ContentSectionId.HasValue)
-                isAuthorized = await authService.CanAccessSectionAsync(request.AdminId, request.ContentSectionId.Value, ct);
-            else if (request.CodeType == CodeType.Lesson && request.LessonId.HasValue)
-                isAuthorized = await authService.CanAccessLessonAsync(request.AdminId, request.LessonId.Value, ct);
-            else if (request.CodeType == CodeType.Exam && request.ExamId.HasValue)
-                isAuthorized = await authService.CanAccessExamAsync(request.AdminId, request.ExamId.Value, ct);
-            else if (request.CodeType == CodeType.Video && request.VideoTargetIds != null && request.VideoTargetIds.Any())
+        var permissionsList = new List<string>();
+        foreach (var ur in user.UserRoles)
+        {
+            if (ur.Role != null && !string.IsNullOrEmpty(ur.Role.PermissionsJson))
             {
-                isAuthorized = true;
-                foreach (var vidId in request.VideoTargetIds)
+                try
                 {
-                    var video = await _db.LessonVideos.FindAsync(new object[] { vidId }, ct);
-                    if (video == null || !await authService.CanAccessLessonAsync(request.AdminId, video.LessonId, ct))
-                    {
-                        isAuthorized = false;
-                        break;
-                    }
+                    var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
+                    if (perms != null)
+                        permissionsList.AddRange(perms);
                 }
-            }
-            else if (request.CodeType == CodeType.Balance)
-                isAuthorized = true;
-
-            if (!isAuthorized)
-            {
-                return ApiResponse<BulkGenerateCodesResponse>.Fail("Unauthorized: You do not own the target resource.");
+                catch { }
             }
         }
 
-        Guid groupTeacherId = Guid.Empty;
-        if (isTeacher && teacherProfileId.HasValue)
+        if (!permissionsList.Contains("codes.manage"))
         {
-            groupTeacherId = teacherProfileId.Value;
+            return ApiResponse<BulkGenerateCodesResponse>.Fail("Unauthorized: You do not have permission to manage codes.");
+        }
+
+        Guid groupTeacherId = Guid.Empty;
+        if (false) // Legacy teacher branch disabled
+        {
+            groupTeacherId = Guid.Empty;
         }
         else
         {

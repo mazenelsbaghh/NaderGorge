@@ -771,6 +771,11 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             var oldQuestions = hw.Questions.ToList();
             hw.Questions.Clear();
             _db.HomeworkQuestions.RemoveRange(oldQuestions);
+
+            // Flush the deletes first so EF Core doesn't confuse
+            // old tracked entities with new ones in the same batch,
+            // which causes DbUpdateConcurrencyException.
+            await _db.SaveChangesAsync(ct);
         }
 
         foreach (var q in request.Questions)

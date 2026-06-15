@@ -23,6 +23,7 @@ public class WarningEvent
     public string? ResolutionNotes { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? OccurrenceKey { get; set; }
 
     public User Student { get; set; } = null!;
     public User? ResolvedByAssistant { get; set; }

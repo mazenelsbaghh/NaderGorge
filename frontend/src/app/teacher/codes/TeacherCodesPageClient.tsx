@@ -1,37 +1,26 @@
 "use client";
 
 import { devConsole } from "@/utils/dev-console";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import { Eye, KeyRound, Plus, Sparkles, Search } from "lucide-react";
+import { Eye, KeyRound, Sparkles, Search } from "lucide-react";
 import Link from "next/link";
 
 import {
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
-  AdminModal,
 } from "@/components/admin";
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 import { formatCompactNumber, formatDate } from "@/components/admin/admin-utils";
 import { adminService, CodeGroupDto } from "@/services/admin-service";
 import { PackageDto, contentService } from "@/services/content-service";
-import { codeService } from "@/services/code-service";
-import { CodeTypeSelector, CodeTypeSelection } from "@/components/codes/CodeTypeSelector";
-import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
 export default function TeacherCodesPageClient() {
   const [groups, setGroups] = useState<CodeGroupDto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showGenModal, setShowGenModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Generation Form State
-  const [genCount, setGenCount] = useState(10);
-  const [genSelection, setGenSelection] = useState<CodeTypeSelection>({ codeType: "Package" });
-  const [genGroupName, setGenGroupName] = useState("");
-  const [genLoading, setGenLoading] = useState(false);
 
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const loadDataInFlightRef = useRef<Promise<void> | null>(null);
@@ -74,44 +63,7 @@ export default function TeacherCodesPageClient() {
     }
   }
 
-  async function handleGenerate(event: FormEvent) {
-    event.preventDefault();
-    
-    try {
-      setGenLoading(true);
-      
-      await codeService.createCodeGroup({
-        groupName: genGroupName,
-        codeType: genSelection.codeType,
-        count: genCount,
-        codeLength: 12,
-        packageId: genSelection.packageId || undefined,
-        termId: genSelection.termId || undefined,
-        contentSectionId: genSelection.contentSectionId || undefined,
-        lessonId: genSelection.lessonId || undefined,
-        examId: genSelection.examId || undefined,
-        videoTargetIds: genSelection.videoTargetIds && genSelection.videoTargetIds.length > 0 ? genSelection.videoTargetIds : undefined,
-        balanceAmount: genSelection.balanceAmount || undefined,
-        discountPercentage: genSelection.discountPercentage || undefined,
-        expiresAt: genSelection.expiresAt || undefined,
-      });
 
-      toast.success("تم التوليد بنجاح!");
-      setShowGenModal(false);
-      setGenSelection({ codeType: "Package" });
-      setGenGroupName("");
-      setGenCount(10);
-      await loadData({ force: true });
-    } catch (error: unknown) {
-      devConsole.error(error);
-      const msg = isAxiosError<{ message?: string }>(error)
-        ? error.response?.data?.message || "تعذر إنشاء الأكواد. تأكد من إدخال جميع الحقول المطلوبة."
-        : "تعذر إنشاء الأكواد. تأكد من إدخال جميع الحقول المطلوبة.";
-      toast.error(msg);
-    } finally {
-      setGenLoading(false);
-    }
-  }
 
   const packageNameMap = useMemo(() => {
     return Object.fromEntries(packages.map((pkg) => [pkg.id, pkg.name]));
@@ -202,26 +154,8 @@ export default function TeacherCodesPageClient() {
       activePath="/teacher/codes"
       sectionLabel="إدارة الأكواد"
       pageTitle="مجموعات أكواد الوصول"
-      subtitle="إدارة التوليد والطباعة (QR) والاستخدام في شاشة واحدة."
-      action={
-        <NeumorphButton onClick={() => setShowGenModal(true)} intent="primary" size="lg" pill>
-          <Plus className="h-4 w-4" />
-          إنشاء دفعة جديدة
-        </NeumorphButton>
-      }
+      subtitle="عرض وتفاصيل مجموعات أكواد الوصول والطباعة."
     >
-      {/* Mobile Fab */}
-      <NeumorphButton
-        type="button"
-        onClick={() => setShowGenModal(true)}
-        intent="primary"
-        size="icon"
-        pill
-        className="fixed bottom-24 left-8 z-40 !h-14 !w-14 shadow-2xl md:hidden"
-      >
-        <Plus className="h-5 w-5" />
-      </NeumorphButton>
-
       {/* Stats */}
       <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
         <AdminStatCard
@@ -265,59 +199,6 @@ export default function TeacherCodesPageClient() {
         rowKey={(g) => g.id}
         emptyMessage="لا توجد مجموعات أكواد بعد."
       />
-
-      {/* Generation Modal */}
-      <AdminModal
-        open={showGenModal}
-        onClose={() => setShowGenModal(false)}
-        title="إنشاء دفعة أكواد"
-        subtitle="توليد دفعة جديدة مع تحديد نوع الوصول"
-        maxWidth="max-w-4xl"
-      >
-        <form onSubmit={handleGenerate} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">اسم المجموعة (اختياري)</label>
-              <input
-                type="text"
-                value={genGroupName}
-                onChange={(e) => setGenGroupName(e.target.value)}
-                className="admin-input"
-                placeholder="مثلاً: دفعة الكورس المكثف"
-                dir="auto"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 block">عدد الأكواد للمجموعة</label>
-              <input
-                type="number"
-                min={1}
-                max={10000}
-                value={genCount}
-                onChange={(e) => setGenCount(Number(e.target.value))}
-                className="admin-input"
-                placeholder="عدد الأكواد (مثلا: 100)"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-[var(--admin-border)]">
-            <CodeTypeSelector
-              value={genSelection}
-              onChange={setGenSelection}
-              packages={packages}
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--admin-border)]">
-            <NeumorphButton type="button" onClick={() => setShowGenModal(false)} intent="ghost" size="md">إلغاء</NeumorphButton>
-            <NeumorphButton type="submit" disabled={genLoading} loading={genLoading} intent="primary" size="md" pill>
-              توليد الدفعة
-            </NeumorphButton>
-          </div>
-        </form>
-      </AdminModal>
     </TeacherShellChrome>
   );
 }
