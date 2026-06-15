@@ -14,10 +14,11 @@ interface AddVideoFormProps {
 
 export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
   const [title, setTitle] = useState('');
-    const [provider, setProvider] = useState('YouTube');
+  const [provider, setProvider] = useState('YouTube');
   const [urlOrEmbedCode, setUrlOrEmbedCode] = useState('');
   const [order, setOrder] = useState(1);
   const [limit, setLimit] = useState(3);
+  const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -26,7 +27,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
 
     try {
       setSaving(true);
-      await adminService.createVideo({ lessonId, title, provider, urlOrEmbedCode, order, limit });
+      await adminService.createVideo({ lessonId, title, provider, urlOrEmbedCode, order, limit, isActive });
       toast.success('تمت إضافة الفيديو بنجاح.');
       setTitle('');
       setUrlOrEmbedCode('');
@@ -105,6 +106,18 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
               <NumberField.IncrementButton />
             </NumberField.Group>
           </NumberField>
+        </div>
+        <div className="flex items-center gap-2 h-[46px] px-2">
+          <input
+            id="new-video-is-active"
+            type="checkbox"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--admin-border)] text-[var(--admin-primary)] focus:ring-[var(--admin-primary)] cursor-pointer"
+          />
+          <label htmlFor="new-video-is-active" className="text-sm font-bold text-[var(--admin-text)] cursor-pointer select-none">
+            تفعيل الفيديو مباشرة للطلاب
+          </label>
         </div>
         <NeumorphButton
           type="submit"

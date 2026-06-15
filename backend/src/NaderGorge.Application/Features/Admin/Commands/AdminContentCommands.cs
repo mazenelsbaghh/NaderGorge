@@ -518,7 +518,7 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
     }
 }
 
-public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, bool IsActive = true, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
@@ -561,7 +561,8 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             ProviderVideoId = extractedId,
             Order = request.Order,
             MaxWatchCount = request.Limit,
-            LessonId = request.LessonId
+            LessonId = request.LessonId,
+            IsActive = request.IsActive
         };
         _db.LessonVideos.Add(video);
 

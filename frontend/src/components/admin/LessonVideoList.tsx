@@ -308,7 +308,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     setEditingVideoId(video.id);
     setEditTitle(video.title || '');
     setEditProvider(video.provider || 'YouTube');
-    setEditUrlOrEmbedCode(video.providerVideoId || '');
+    setEditUrlOrEmbedCode(video.url || video.providerVideoId || '');
     setEditOrder(video.order || 1);
     setEditMaxWatchCount(video.maxWatchCount || 3);
   };
