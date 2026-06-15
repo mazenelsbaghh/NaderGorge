@@ -26,7 +26,6 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
     {
         try
         {
-            await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
             // 1. Validate content exists and get its price
             decimal price = 0;
@@ -298,7 +297,6 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             _db.OutboxEvents.Add(purchaseCompletedEvent);
 
             await _db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
 
             return ApiResponse<bool>.Ok(true, "تم الشراء بنجاح");
         }
