@@ -459,6 +459,14 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPatch("videos/{id:guid}/toggle-active")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> ToggleVideoActive(Guid id)
+    {
+        var result = await _mediator.Send(new ToggleVideoActiveCommand(id, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("videos/{videoId:guid}/analyze-ai")]
     [HasPermission("content.manage")]
     [EnableRateLimiting("ai-analysis")]

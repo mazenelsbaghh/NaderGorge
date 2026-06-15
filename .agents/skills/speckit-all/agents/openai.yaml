@@ -1,0 +1,3 @@
+display_name: Spec Kit All
+short_description: End-to-end Spec Kit workflow with strict planning, guards, and feature tests.
+default_prompt: Run the full Spec Kit workflow for this feature, including Arabic clarification, speckit-plan, strict tasks, implementation, guards, and final feature tests.

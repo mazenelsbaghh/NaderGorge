@@ -75,6 +75,7 @@ public class LessonVideo : BaseEntity
     public string? SubtitleUrl { get; set; }
     public bool IsProcessingAI { get; set; } = false;
     public bool IsProcessingMindmaps { get; set; } = false;
+    public bool IsActive { get; set; } = true;
 
     public Guid LessonId { get; set; }
     public Lesson Lesson { get; set; } = null!;

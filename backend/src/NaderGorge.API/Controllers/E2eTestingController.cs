@@ -275,6 +275,9 @@ public class E2eTestingController : ControllerBase
         var optionId = Guid.NewGuid();
         var homeworkId = Guid.NewGuid();
         var hwQuestionId = Guid.NewGuid();
+        var hwMcqQuestion1Id = Guid.NewGuid();
+        var hwMcqQuestion2Id = Guid.NewGuid();
+        var hwFtmQuestionId = Guid.NewGuid();
 
         var teacher = await _dbContext.Set<TeacherProfile>()
             .Include(t => t.User)
@@ -367,9 +370,51 @@ public class E2eTestingController : ControllerBase
             Description = "Upload your solution",
             LessonId = lessonId,
             PassingScoreThreshold = 5,
+            TotalScore = 40,
             IsMandatory = true
         };
 
+        // MCQ Question 1: "What is 1+1?" → correct answer "2"
+        var hwMcqQuestion1 = new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
+        {
+            Id = hwMcqQuestion1Id,
+            HomeworkId = homeworkId,
+            BodyText = "ما ناتج 1+1؟",
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.MCQ,
+            PointsActive = 10,
+            Order = 1,
+            PossibleAnswers = new[] { "1", "2", "3", "4" },
+            CorrectAnswerKey = "2"
+        };
+
+        // MCQ Question 2: "What gas do plants produce?" → correct answer "الأكسجين"
+        var hwMcqQuestion2 = new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
+        {
+            Id = hwMcqQuestion2Id,
+            HomeworkId = homeworkId,
+            BodyText = "ما الغاز الذي تنتجه النباتات؟",
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.MCQ,
+            PointsActive = 10,
+            Order = 2,
+            PossibleAnswers = new[] { "النيتروجين", "الأكسجين", "ثاني أكسيد الكربون", "الهيدروجين" },
+            CorrectAnswerKey = "الأكسجين"
+        };
+
+        // FindTheMistake Question: base text has a mistake at indices 4-10
+        var hwFtmQuestion = new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
+        {
+            Id = hwFtmQuestionId,
+            HomeworkId = homeworkId,
+            BodyText = "أوجد الخطأ في النص التالي:",
+            QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.FindTheMistake,
+            PointsActive = 10,
+            Order = 3,
+            BaseText = "الشمس كوكبة تدور حولها الأرض",
+            MistakeStartIndex = 6,
+            MistakeEndIndex = 11
+        };
+
+        // Essay Question (existing)
         var hwQuestion = new NaderGorge.Domain.Entities.Homework.HomeworkQuestion
         {
             Id = hwQuestionId,
@@ -377,7 +422,7 @@ public class E2eTestingController : ControllerBase
             BodyText = "Write an essay about AI",
             QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.Essay,
             PointsActive = 10,
-            Order = 1
+            Order = 4
         };
 
         var questionItem = new QuestionBankItem { Id = questionId, Text = "1+1=?", DefaultPoints = 10, Tags = "Inline", SubjectId = subject.Id, CreatedByTeacherId = teacher.Id };
@@ -399,7 +444,7 @@ public class E2eTestingController : ControllerBase
         _dbContext.Set<ExamQuestion>().AddRange(examQuestion, essayExamQuestion);
 
         _dbContext.Set<NaderGorge.Domain.Entities.Homework.Homework>().Add(homework);
-        _dbContext.Set<NaderGorge.Domain.Entities.Homework.HomeworkQuestion>().Add(hwQuestion);
+        _dbContext.Set<NaderGorge.Domain.Entities.Homework.HomeworkQuestion>().AddRange(hwMcqQuestion1, hwMcqQuestion2, hwFtmQuestion, hwQuestion);
 
         await _dbContext.SaveChangesAsync();
 

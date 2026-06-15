@@ -846,6 +846,10 @@ export const adminService = {
     const res = await apiClient.put<ApiResponse>(`/admin/videos/${videoId}`, payload);
     return res.data;
   },
+  toggleVideoActive: async (videoId: string) => {
+    const res = await apiClient.patch<ApiResponse<{ videoId: string; isActive: boolean }>>(`/admin/videos/${videoId}/toggle-active`);
+    return res.data?.data;
+  },
   deleteVideo: async (videoId: string) => {
     const res = await apiClient.delete<ApiResponse>(`/admin/videos/${videoId}`);
     return res.data;
@@ -872,6 +876,16 @@ export const adminService = {
   },
   createResource: async (payload: { lessonId: string; title: string; fileUrl: string; resourceType: string }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/resources', payload);
+    return res.data?.data;
+  },
+  uploadResourceFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post<ApiResponse<{ url: string }>>('/admin/resources/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return res.data?.data;
   },
   attachHomework: async (
