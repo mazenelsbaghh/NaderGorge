@@ -163,7 +163,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 WatchCount = v.WatchCount,
                 MaxWatchCount = v.CustomMaxWatchCount ?? v.LessonVideo.MaxWatchCount,
                 WatchedSeconds = Math.Max(0, v.TimeWatchedInSeconds),
-                IsLocked = v.IsLocked,
+                IsLocked = v.IsLocked && v.WatchCount >= (v.CustomMaxWatchCount ?? v.LessonVideo.MaxWatchCount),
                 LastWatchedAt = v.UpdatedAt ?? v.CreatedAt
             })
             .ToListAsync(cancellationToken);
