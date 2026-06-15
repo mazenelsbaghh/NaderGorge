@@ -768,7 +768,6 @@ public class AttachHomeworkCommandHandler : IRequestHandler<AttachHomeworkComman
             hw.PassingScoreThreshold = request.RequiredPointsToPass;
             hw.TotalScore = request.TotalScore;
             _db.HomeworkQuestions.RemoveRange(hw.Questions);
-            hw.Questions.Clear();
         }
 
         foreach (var q in request.Questions)

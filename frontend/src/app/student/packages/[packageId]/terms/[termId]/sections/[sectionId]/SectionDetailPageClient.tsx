@@ -266,9 +266,8 @@ export default function SectionDetailPageClient() {
                   const hasContentAccess = isEnrolled || lesson.hasAccess;
                   const canAccess = hasContentAccess && !lesson.isLocked;
                   return (
-                    <button
+                    <div
                       key={lesson.id}
-                      type="button"
                       onClick={() => {
                         if (canAccess) {
                           router.push(`/student/packages/${packageId}/lessons/${lesson.id}`);
@@ -282,15 +281,15 @@ export default function SectionDetailPageClient() {
                             toast.error(lesson.lockedReason || "هذه الحصة مقفولة.");
                           }
                         } else if (!hasContentAccess) {
-                          toast.error("فعّل الباقة أولاً للوصول للحصص.");
+                          setPurchaseLesson(lesson);
                         }
                       }}
-                      className={`group relative flex w-full items-center gap-4 rounded-2xl border p-4 text-right transition-all ${
+                      className={`group relative flex w-full items-center gap-4 rounded-2xl border p-4 text-right transition-all cursor-pointer ${
                         canAccess
-                          ? "border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--admin-primary-30)] cursor-pointer"
+                          ? "border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--admin-primary-30)]"
                           : lesson.isLocked && hasContentAccess
-                            ? "border-amber-500/30 bg-amber-500/5 cursor-pointer"
-                            : "border-[var(--admin-border)] bg-[var(--admin-card-soft)] opacity-70 cursor-not-allowed"
+                            ? "border-amber-500/30 bg-amber-500/5"
+                            : "border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--admin-primary-30)] opacity-90"
                       }`}
                     >
                       {/* Lesson Number */}
@@ -351,7 +350,7 @@ export default function SectionDetailPageClient() {
                       )}
 
                       {/* Buy lesson button - ONLY when user doesn't have access at all */}
-                      {!hasContentAccess && !lesson.isLocked && (
+                      {!hasContentAccess && (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -368,7 +367,7 @@ export default function SectionDetailPageClient() {
                           {(lesson.price ?? 0) > 0 ? `${lesson.price} ج.م` : 'مجاني'}
                         </button>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
