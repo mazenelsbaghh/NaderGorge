@@ -1,10 +1,13 @@
 # Frontend Master Plan
 
-**Last Updated**: 2026-06-11
+**Last Updated**: 2026-06-15
 
 ---
 
 ## Active Plans
+
+### Admin & Teacher Content Page Dropdown Fix (2026-06-15)
+- [x] Replace native select elements with custom Dropdown component on the Admin Content and Teacher Content pages to fix macOS Chrome RTL rendering bug.
 
 ### Real-time Platform Speed & Sync (2026-06-11)
 - [x] Create universal `usePlatformEvents` custom React hook wrapping `@microsoft/signalr` to manage unified real-time event subscriptions (NotificationCreated, BalanceChanged, LessonPublished, VideoReady, ResourceReady, AiJobProgress).
@@ -88,6 +91,7 @@
 ---
 
 ## History
+- **2026-06-15**: Fixed native select rendering bug on macOS Chrome (RTL) by replacing selects with the custom Dropdown component on Admin Content and Teacher Content pages.
 - **2026-06-06**: Upgraded Landing Page Overdrive with auto-cycling 3D Card Stack Swiper and continuous horizontal marquee animations.
 - **2026-06-06**: Completed Landing Page Overdrive visual layout and Framer Motion integration.
 - Initialized frontend master plan directory.

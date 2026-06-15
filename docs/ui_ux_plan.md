@@ -1,10 +1,13 @@
 # UI/UX Master Plan
 
-**Last Updated**: 2026-06-11
+**Last Updated**: 2026-06-15
 
 ---
 
 ## Active Plans
+
+### Admin & Teacher Content Page Dropdown Fix (2026-06-15)
+- [x] Replace native select elements with custom Dropdown component on the Admin Content and Teacher Content pages to fix macOS Chrome RTL rendering bug.
 
 ### Real-time Platform Speed & Sync (2026-06-11)
 - [x] Integrate real-time notification toasts and count badge updates in student sidebar and bottom nav bar immediately upon SignalR events.
@@ -60,6 +63,7 @@
 ---
 
 ## History
+- **2026-06-15**: Fixed native select rendering bug on macOS Chrome (RTL) by replacing selects with the custom Dropdown component on Admin Content and Teacher Content pages.
 - **2026-06-06**: Upgraded Landing Page Overdrive with a draggable auto-cycling 3D Card Stack Swiper for student ranks, kinetic typography reveals in the Hero, and an infinite auto-scrolling row for teachers.
 - **2026-06-06**: Completed Landing Page Overdrive with custom interactive canvas particles and Framer Motion viewport reveal animations.
 - **2026-06-05**: Analyzed the new Brand Identity PDF and Logo SVG, and drafted the migration plan to Massar Academy.
