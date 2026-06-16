@@ -83,7 +83,7 @@ export default function LessonDetailPageClient() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-6 animate-pulse">
+      <div className="mx-auto max-w-6xl space-y-6 animate-pulse pt-6 px-4 sm:px-6 lg:px-8">
         <div className="h-28 w-full rounded-[24px] bg-[var(--admin-card-strong)] sm:h-32"></div>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
@@ -97,30 +97,32 @@ export default function LessonDetailPageClient() {
 
   if (error || !lesson) {
     return (
-      <div className="mx-auto max-w-2xl rounded-[24px] border border-red-200 bg-red-50 p-6 text-center sm:p-8">
-        <h2 className="mb-4 text-xl font-bold text-red-600">الدرس غير متاح</h2>
-        <p className="mb-6 text-sm leading-7 text-red-900 sm:text-base">
-          {error}
-          <br />
-          <br />
-          <span className="font-semibold">الإجراء المطلوب:</span> أكمل المتطلبات السابقة
-          أو تواصل مع المدرس إذا كنت تتوقع أن الدرس يجب أن يكون مفتوحًا.
-        </p>
-        <button
-          onClick={() => router.push(backUrl)}
-          className="rounded-xl bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700"
-        >
-          {backLabel}
-        </button>
+      <div className="mx-auto max-w-2xl pt-6 px-4 sm:px-6 pb-12">
+        <div className="rounded-[24px] border border-red-200 bg-red-50 p-6 text-center sm:p-8">
+          <h2 className="mb-4 text-xl font-bold text-red-600">الدرس غير متاح</h2>
+          <p className="mb-6 text-sm leading-7 text-red-900 sm:text-base">
+            {error}
+            <br />
+            <br />
+            <span className="font-semibold">الإجراء المطلوب:</span> أكمل المتطلبات السابقة
+            أو تواصل مع المدرس إذا كنت تتوقع أن الدرس يجب أن يكون مفتوحًا.
+          </p>
+          <button
+            onClick={() => router.back()}
+            className="rounded-xl bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700"
+          >
+            {backLabel}
+          </button>
+        </div>
       </div>
     );
   }
 
   if (lesson && lesson.hasAccess === false) {
     return (
-      <div className="mx-auto max-w-2xl pb-12 text-right" dir="rtl">
+      <div className="mx-auto max-w-2xl pb-12 text-right pt-6 px-4 sm:px-6" dir="rtl">
         <button
-          onClick={() => router.push(backUrl)}
+          onClick={() => router.back()}
           className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] sm:mb-8"
         >
           <ArrowRight className="h-4 w-4" />
@@ -188,9 +190,9 @@ export default function LessonDetailPageClient() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl pb-12">
+    <div className="mx-auto max-w-7xl pb-12 pt-6 px-4 sm:px-6 lg:px-8">
       <button
-        onClick={() => router.push(backUrl)}
+        onClick={() => router.back()}
         className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] sm:mb-8"
       >
         <ArrowRight className="h-4 w-4" />
