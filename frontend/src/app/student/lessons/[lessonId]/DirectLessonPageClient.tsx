@@ -48,6 +48,12 @@ export default function DirectLessonPageClient() {
 
   const resolvedPackageId = searchParams.get("packageId") || lesson?.packageId;
 
+  const backUrl = resolvedPackageId
+    ? `/student/packages/${resolvedPackageId}`
+    : "/student";
+
+  const backLabel = "العودة إلى الباقة";
+
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6 animate-pulse">
@@ -71,10 +77,10 @@ export default function DirectLessonPageClient() {
         </p>
         <button
           type="button"
-          onClick={() => router.push(resolvedPackageId ? `/student/packages/${resolvedPackageId}` : "/student")}
+          onClick={() => router.push(backUrl)}
           className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-[var(--admin-primary)] px-6 py-3 font-semibold text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-danger-10)] sm:w-auto"
         >
-          العودة
+          {backLabel}
         </button>
       </div>
     );
@@ -85,11 +91,11 @@ export default function DirectLessonPageClient() {
       <div className="mx-auto max-w-2xl pb-12 text-right" dir="rtl">
         <button
           type="button"
-          onClick={() => router.push(resolvedPackageId ? `/student/packages/${resolvedPackageId}` : "/student")}
+          onClick={() => router.push(backUrl)}
           className="mb-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] sm:mb-8 sm:w-auto sm:justify-start sm:rounded-full sm:border-transparent sm:bg-transparent sm:px-3"
         >
           <ArrowRight className="h-4 w-4" />
-          <span>العودة إلى الباقة</span>
+          <span>{backLabel}</span>
         </button>
 
         <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-xl space-y-6 text-center">
@@ -156,11 +162,11 @@ export default function DirectLessonPageClient() {
     <div className="mx-auto max-w-7xl pb-12">
       <button
         type="button"
-        onClick={() => router.push(resolvedPackageId ? `/student/packages/${resolvedPackageId}` : "/student")}
+        onClick={() => router.push(backUrl)}
         className="mb-6 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)] sm:mb-8 sm:w-auto sm:justify-start sm:rounded-full sm:border-transparent sm:bg-transparent sm:px-3"
       >
         <ArrowRight className="h-4 w-4" />
-        <span>العودة إلى الباقة</span>
+        <span>{backLabel}</span>
       </button>
 
       <LessonViewer lesson={lesson} packageId={resolvedPackageId} />

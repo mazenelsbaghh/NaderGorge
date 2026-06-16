@@ -53,6 +53,33 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         if (!hasAccess)
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
 
+        // 1b. Check if the current video or any preceding video in the same lesson has an unpassed mandatory exam
+        var precedingAndCurrentVideoIds = await _db.LessonVideos
+            .Where(lv => lv.LessonId == video.LessonId && lv.Order <= video.Order)
+            .Select(lv => lv.Id)
+            .ToListAsync(ct);
+
+        var videoExams = await _db.Exams
+            .Where(e => e.IsMandatory && (
+                (e.LessonVideo != null && precedingAndCurrentVideoIds.Contains(e.LessonVideo.Id)) ||
+                _db.LessonVideos.Any(lv => precedingAndCurrentVideoIds.Contains(lv.Id) && lv.ExamId == e.Id)
+            ))
+            .Select(e => e.Id)
+            .ToListAsync(ct);
+
+        if (videoExams.Any())
+        {
+            var passedVideoExamIds = await _db.StudentExamAttempts
+                .Where(a => a.UserId == request.UserId && videoExams.Contains(a.ExamId) && a.IsPassed)
+                .Select(a => a.ExamId)
+                .ToListAsync(ct);
+
+            if (passedVideoExamIds.Count < videoExams.Count)
+            {
+                return ApiResponse<VideoSessionDto>.Fail("This video is locked by a mandatory exam.", new List<string> { "EXAM_LOCKED" });
+            }
+        }
+
         // 2. Check watch limits
         var watchEvent = await _db.VideoWatchEvents
             .FirstOrDefaultAsync(v => v.UserId == request.UserId && v.LessonVideoId == request.LessonVideoId, ct);

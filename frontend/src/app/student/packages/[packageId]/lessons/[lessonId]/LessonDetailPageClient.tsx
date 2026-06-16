@@ -78,6 +78,9 @@ export default function LessonDetailPageClient() {
     };
   }, [lessonId, joinLesson, leaveLesson]);
 
+  const backUrl = `/student/packages/${packageId}`;
+  const backLabel = "العودة إلى محتوى الباقة";
+
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6 animate-pulse">
@@ -104,10 +107,10 @@ export default function LessonDetailPageClient() {
           أو تواصل مع المدرس إذا كنت تتوقع أن الدرس يجب أن يكون مفتوحًا.
         </p>
         <button
-          onClick={() => router.push(`/student/packages/${packageId}`)}
+          onClick={() => router.push(backUrl)}
           className="rounded-xl bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700"
         >
-          العودة للباقة
+          {backLabel}
         </button>
       </div>
     );
@@ -117,11 +120,11 @@ export default function LessonDetailPageClient() {
     return (
       <div className="mx-auto max-w-2xl pb-12 text-right" dir="rtl">
         <button
-          onClick={() => router.push(`/student/packages/${packageId}`)}
+          onClick={() => router.push(backUrl)}
           className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] sm:mb-8"
         >
           <ArrowRight className="h-4 w-4" />
-          <span>العودة إلى محتوى الباقة</span>
+          <span>{backLabel}</span>
         </button>
 
         <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-xl space-y-6 text-center">
@@ -187,11 +190,11 @@ export default function LessonDetailPageClient() {
   return (
     <div className="mx-auto max-w-7xl pb-12">
       <button
-        onClick={() => router.push(`/student/packages/${packageId}`)}
+        onClick={() => router.push(backUrl)}
         className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] sm:mb-8"
       >
         <ArrowRight className="h-4 w-4" />
-        <span>العودة إلى محتوى الباقة</span>
+        <span>{backLabel}</span>
       </button>
 
       <LessonViewer lesson={lesson} packageId={packageId} />

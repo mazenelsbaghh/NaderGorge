@@ -379,7 +379,7 @@ export default function WatchRequestsPageClient() {
             // Edit Decision Modal
             <div className="space-y-4">
               <p className="text-sm text-[var(--admin-muted)] mb-3 leading-relaxed">
-                تعديل قرار طلب الطالب {selectedRequest?.studentName} لمشاهدة فيديو "{selectedRequest?.videoTitle}".
+                تعديل قرار طلب الطالب {selectedRequest?.studentName} لمشاهدة فيديو &quot;{selectedRequest?.videoTitle}&quot;.
               </p>
 
               <div>

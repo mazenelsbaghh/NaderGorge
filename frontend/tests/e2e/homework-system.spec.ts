@@ -61,7 +61,7 @@ async function loginStudentUI(page: import('@playwright/test').Page) {
     if (await termsBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await termsBtn.click({ force: true });
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
@@ -617,7 +617,6 @@ test.describe('Purchase Flow Fix', () => {
 
   test('T009: Student with sufficient balance can purchase content', async ({
     page,
-    request,
   }) => {
     test.setTimeout(60000);
 

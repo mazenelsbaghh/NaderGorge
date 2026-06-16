@@ -112,6 +112,34 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 }
             }
 
+            // 1b. Check if any video in the previous lesson has a mandatory exam and if it is passed
+            var prevVideoExams = await _db.Exams
+                .Where(e => e.IsMandatory && (
+                    (e.LessonVideo != null && e.LessonVideo.LessonId == previousLesson.Id) ||
+                    _db.LessonVideos.Any(lv => lv.LessonId == previousLesson.Id && lv.ExamId == e.Id)
+                ))
+                .ToListAsync(ct);
+
+            if (prevVideoExams.Any())
+            {
+                var prevVideoExamIds = prevVideoExams.Select(e => e.Id).ToList();
+                var passedPrevVideoExamIds = await _db.StudentExamAttempts
+                    .Where(a => a.UserId == userId && prevVideoExamIds.Contains(a.ExamId) && a.IsPassed)
+                    .Select(a => a.ExamId)
+                    .ToListAsync(ct);
+
+                var unpassedVideoExam = prevVideoExams.FirstOrDefault(e => !passedPrevVideoExamIds.Contains(e.Id));
+                if (unpassedVideoExam != null)
+                {
+                    return (
+                        true,
+                        $"يجب اجتياز امتحان الفيديو '{unpassedVideoExam.Title}' التابع للحصة السابقة '{previousLesson.Title}' بنجاح.",
+                        unpassedVideoExam.Id,
+                        null
+                    );
+                }
+            }
+
             // 2. Check if previous lesson's mandatory homework is passed
             var prevHomework = await _db.Homeworks.FirstOrDefaultAsync(h => h.LessonId == previousLesson.Id, ct);
             if (prevHomework != null && prevHomework.IsMandatory)

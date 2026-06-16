@@ -47,10 +47,6 @@ interface LessonCarouselProps {
 
 // --- Subcomponents ---
 function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: number; onChange: (index: number) => void; }) {
-    const router = useRouter();
-    const params = useParams();
-    const packageId = params?.packageId as string;
-
     if (videos.length <= 1) return null;
 
     return (
@@ -132,33 +128,6 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
     );
 }
 
-// --- Homework Button ---
-function HomeworkButton({ homeworkId, homeworkPassed }: { homeworkId: string; homeworkPassed?: boolean }) {
-    const router = useRouter();
-    const params = useParams();
-    const packageId = params?.packageId as string;
-
-    return (
-        <button
-            type="button"
-            onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/student/homework/${homeworkId}?packageId=${packageId}`);
-            }}
-            className={cn(
-                "flex w-full items-center justify-center gap-2 px-4 py-2.5 rounded-full text-xs font-black transition-all hover:scale-[1.02] shadow-sm",
-                homeworkPassed
-                    ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
-                    : "bg-amber-500/15 text-amber-600 border border-amber-500/30 hover:bg-amber-500/25"
-            )}
-            title={homeworkPassed ? "تم اجتياز الواجب" : "حل الواجب"}
-        >
-            <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
-            <span>{homeworkPassed ? "تم اجتياز الواجب ✓" : "حل الواجب"}</span>
-        </button>
-    );
-}
-
 // --- Main Component ---
 export function LessonCarousel({
     videos,
@@ -168,14 +137,13 @@ export function LessonCarousel({
     homeworkPassed,
     examId,
     examPassed,
-    isExamLocked,
-    examLockedReason,
     lessonPrice
 }: LessonCarouselProps) {
     const router = useRouter();
     const params = useParams();
     const lessonId = params?.lessonId as string;
     const packageId = params?.packageId as string;
+    const precedingVideoExamUnpassed = videos.slice(0, activeStep).some(v => v.examId && !v.examPassed);
 
     const [mounted, setMounted] = useState(false);
     const [watchStatus, setWatchStatus] = useState<WatchStatus | null>(null);
@@ -228,13 +196,13 @@ export function LessonCarousel({
                                     {examId && (
                                         <button
                                             type="button"
-                                            disabled={isExamLocked && !examPassed}
+                                            disabled={precedingVideoExamUnpassed && !examPassed}
                                             onClick={() => router.push(`/student/exams/${examId}?packageId=${packageId}&lessonId=${lessonId}`)}
                                             className={cn(
                                                 "flex flex-1 items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all hover:scale-[1.02] shadow-sm",
                                                 examPassed
                                                     ? "bg-[var(--admin-success-10)] text-[var(--admin-success)] border border-[var(--admin-success-20)]"
-                                                    : isExamLocked
+                                                    : precedingVideoExamUnpassed
                                                     ? "bg-gray-500/10 text-gray-400 border border-gray-500/20 opacity-60 cursor-not-allowed"
                                                     : "bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)]"
                                             )}

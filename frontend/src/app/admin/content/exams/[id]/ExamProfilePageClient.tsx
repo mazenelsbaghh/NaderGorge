@@ -2,7 +2,6 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
   BookCheck, 
   FileQuestion, 
@@ -17,8 +16,7 @@ import {
   Save, 
   X,
   AlertCircle,
-  HelpCircle,
-  Play
+  HelpCircle
 } from 'lucide-react';
 import { 
   AdminShellChrome, 
@@ -32,7 +30,6 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
 export default function ExamProfilePageClient({ id }: { id: string }) {
-  const router = useRouter();
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -131,7 +128,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
           const uploadedUrl = await adminService.uploadQuestionAudio(questionBankItemId, editingQuestionData.audioFile);
           finalAudioUrl = uploadedUrl;
           toast.success('تم رفع الملف الصوتي بنجاح', { id: 'audio-upload' });
-        } catch (uploadErr) {
+        } catch {
           toast.error('فشل رفع الملف الصوتي، سيتم المتابعة بدون تحديث الصوت', { id: 'audio-upload' });
         }
       }
@@ -211,8 +208,6 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
 
     try {
       setSavingAdd(true);
-      
-      const finalAudioUrl = addingQuestionData.audioUrl;
       
       // We will first add the question to get an ID if we wanted to upload audio, 
       // but since adding expects questions payload, we add questions first.

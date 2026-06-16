@@ -8,7 +8,6 @@ import {
   ArrowRight,
   ShieldCheck,
   ShieldX,
-  Award,
   BookOpen,
   RotateCcw,
 } from 'lucide-react';

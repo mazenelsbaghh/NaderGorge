@@ -28,7 +28,9 @@ public record LessonDetailDto(
     bool IsExamLocked = false,
     string? ExamLockedReason = null,
     string? ExamStatus = null,
-    string? HomeworkStatus = null
+    string? HomeworkStatus = null,
+    Guid? TermId = null,
+    Guid? SectionId = null
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
@@ -121,7 +123,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 false,
                 null,
                 null,
-                null
+                null,
+                lesson.ContentSection?.TermId,
+                lesson.ContentSectionId
             );
             return ApiResponse<LessonDetailDto>.Ok(minimalDetail);
         }
@@ -171,6 +175,44 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                             lockedReason = $"يجب اجتياز امتحان '{exam.Title}' التابع للحصة '{previousLesson.Title}' بنجاح لفتح هذه الحصة.";
                         }
                         blockingExamId = exam.Id;
+                    }
+                }
+            }
+
+            // 1b. Check if any video in the previous lesson has a mandatory exam and if it is passed
+            if (!isLocked)
+            {
+                var prevVideoExams = await _db.Exams
+                    .Where(e => e.IsMandatory && (
+                        (e.LessonVideo != null && e.LessonVideo.LessonId == previousLesson.Id) ||
+                        _db.LessonVideos.Any(lv => lv.LessonId == previousLesson.Id && lv.ExamId == e.Id)
+                    ))
+                    .ToListAsync(ct);
+
+                if (prevVideoExams.Any())
+                {
+                    var prevVideoExamIds = prevVideoExams.Select(e => e.Id).ToList();
+                    var passedPrevVideoExamIds = await _db.StudentExamAttempts
+                        .Where(a => a.UserId == request.UserId && prevVideoExamIds.Contains(a.ExamId) && a.IsPassed)
+                        .Select(a => a.ExamId)
+                        .ToListAsync(ct);
+
+                    var unpassedVideoExam = prevVideoExams.FirstOrDefault(e => !passedPrevVideoExamIds.Contains(e.Id));
+                    if (unpassedVideoExam != null)
+                    {
+                        isLocked = true;
+                        var attemptedExam = await _db.StudentExamAttempts
+                            .AnyAsync(a => a.UserId == request.UserId && a.ExamId == unpassedVideoExam.Id, ct);
+
+                        if (!attemptedExam)
+                        {
+                            lockedReason = $"يجب حل امتحان الفيديو '{unpassedVideoExam.Title}' التابع للحصة السابقة '{previousLesson.Title}' أولاً لفتح هذه الحصة.";
+                        }
+                        else
+                        {
+                            lockedReason = $"يجب اجتياز امتحان الفيديو '{unpassedVideoExam.Title}' التابع للحصة السابقة '{previousLesson.Title}' بنجاح لفتح هذه الحصة.";
+                        }
+                        blockingExamId = unpassedVideoExam.Id;
                     }
                 }
             }
@@ -272,7 +314,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 .ToList();
 
             bool examPassed = v.ExamId.HasValue && passedExamIds.Contains(v.ExamId.Value);
-            bool isExamLocked = anyPrecedingExamNotPassed;
+            bool isExamLocked = anyPrecedingExamNotPassed || examsForVideo.Any(e => e.IsMandatory && !e.Passed);
 
             videoDtos.Add(new VideoDto(
                 v.Id,
@@ -490,7 +532,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             lessonExamLocked,
             examLockedReason,
             examStatus,
-            homeworkStatus
+            homeworkStatus,
+            lesson.ContentSection?.TermId,
+            lesson.ContentSectionId
         );
         return ApiResponse<LessonDetailDto>.Ok(detail);
     }

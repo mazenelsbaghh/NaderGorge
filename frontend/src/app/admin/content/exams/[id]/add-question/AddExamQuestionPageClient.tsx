@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
 import { AdminBackButton } from '@/components/admin/AdminBackButton';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
-import { Plus, Save, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, AlertCircle, Trash2 } from 'lucide-react';
 import { adminService, ExamDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';

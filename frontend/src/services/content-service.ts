@@ -136,6 +136,8 @@ export interface LessonDetailDto {
   examLockedReason?: string;
   examStatus?: string;
   homeworkStatus?: string;
+  termId?: string;
+  sectionId?: string;
 }
 
 
