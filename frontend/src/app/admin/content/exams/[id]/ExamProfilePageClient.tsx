@@ -1,6 +1,7 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
   BookCheck, 
@@ -478,7 +479,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                                 {q.audioUrl && (
                                   <div className="flex items-center gap-1">
                                     <span className="font-bold text-[var(--admin-muted)]">تفسير صوتي: </span>
-                                    <audio src={q.audioUrl} className="h-6 w-32" controls />
+                                    <audio src={resolveMediaUrl(q.audioUrl)} className="h-6 w-32" controls />
                                   </div>
                                 )}
                               </div>

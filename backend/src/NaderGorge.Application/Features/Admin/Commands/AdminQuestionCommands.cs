@@ -184,7 +184,16 @@ public class UploadQuestionAudioCommandHandler : IRequestHandler<UploadQuestionA
         var question = await _db.QuestionBankItems.FindAsync(new object[] { request.QuestionId }, ct);
         if (question == null) return ApiResponse<string>.Fail("Question not found.");
 
-        var audioUrl = $"/uploads/audio/{Guid.NewGuid()}_{request.FileName}";
+        var extension = System.IO.Path.GetExtension(request.FileName)?.ToLowerInvariant() ?? "";
+        var uniqueFileName = $"{Guid.NewGuid():N}{extension}";
+        var audioUrl = $"/uploads/audio/{uniqueFileName}";
+
+        var uploadsFolder = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot", "uploads", "audio");
+        System.IO.Directory.CreateDirectory(uploadsFolder);
+
+        var physicalPath = System.IO.Path.Combine(uploadsFolder, uniqueFileName);
+        var bytes = Convert.FromBase64String(request.Base64Audio);
+        await System.IO.File.WriteAllBytesAsync(physicalPath, bytes, ct);
 
         question.AudioUrl = audioUrl;
         await _db.SaveChangesAsync(ct);

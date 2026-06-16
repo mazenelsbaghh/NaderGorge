@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Student.Commands;
 using NaderGorge.Application.Features.Student.Queries;
+using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
@@ -119,6 +120,45 @@ public class StudentController : ControllerBase
     {
         var result = await _mediator.Send(new ClearNotificationsCommand(GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("upload-audio")]
+    public async Task<IActionResult> UploadStudentAudio(
+        [FromForm] Microsoft.AspNetCore.Http.IFormFile audio,
+        [FromServices] Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment,
+        CancellationToken cancellationToken)
+    {
+        if (audio == null || audio.Length == 0)
+        {
+            return BadRequest(ApiResponse.Fail("لم يتم رفع أي ملف."));
+        }
+
+        var contentType = audio.ContentType?.ToLowerInvariant() ?? "";
+        var extension = System.IO.Path.GetExtension(audio.FileName)?.ToLowerInvariant() ?? "";
+
+        var allowedExtensions = new[] { ".mp3", ".wav", ".m4a", ".webm", ".ogg", ".aac", ".amr", ".flac" };
+        var isAudioExtension = allowedExtensions.Contains(extension);
+        var isAudioMime = contentType.StartsWith("audio/");
+
+        if (!isAudioMime || !isAudioExtension)
+        {
+            return BadRequest(ApiResponse.Fail("عذراً، يجب اختيار ملف صوتي فقط."));
+        }
+
+        var wwwroot = environment.WebRootPath ?? System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "wwwroot");
+        var uploadsFolder = System.IO.Path.Combine(wwwroot, "uploads", "audio");
+        System.IO.Directory.CreateDirectory(uploadsFolder);
+
+        var safeFileName = $"{Guid.NewGuid():N}{extension}";
+        var physicalPath = System.IO.Path.Combine(uploadsFolder, safeFileName);
+
+        await using (var fileStream = new FileStream(physicalPath, FileMode.Create))
+        {
+            await audio.CopyToAsync(fileStream, cancellationToken);
+        }
+
+        var relativeUrl = $"/uploads/audio/{safeFileName}";
+        return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl }));
     }
 }
 

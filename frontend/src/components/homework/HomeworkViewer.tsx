@@ -16,6 +16,8 @@ import {
   type AnswerSubmissionDto,
   type HomeworkResultDto,
 } from '@/services/homework-service';
+import { studentService } from '@/services/student-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { HomeworkResultPanel } from '@/components/homework/HomeworkResultPanel';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -83,13 +85,63 @@ function HomeworkQuestionCard({
             <label htmlFor={essayAnswerId} className="mb-2 block text-sm font-black text-foreground">
               إجابتك المقالية
             </label>
-            <textarea
-              id={essayAnswerId}
-              className="w-full rounded-2xl border border-border bg-background/70 px-5 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[160px] resize-none"
-              placeholder="اكتب إجابتك هنا..."
-              value={answers[q.id] || ''}
-              onChange={(e) => onAnswer(q.id, e.target.value)}
-            />
+            {answers[q.id]?.startsWith('/uploads/audio/') ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-primary">تم إرفاق إجابة صوتية</span>
+                  <button
+                    type="button"
+                    onClick={() => onAnswer(q.id, '')}
+                    className="rounded-xl bg-destructive/10 px-3 py-2 text-xs font-black text-destructive hover:bg-destructive/20 transition-colors"
+                  >
+                    حذف الصوت
+                  </button>
+                </div>
+                <audio src={resolveMediaUrl(answers[q.id])} controls className="h-9 w-full" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <textarea
+                  id={essayAnswerId}
+                  className="w-full rounded-2xl border border-border bg-background/70 px-5 py-4 text-base font-bold text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[160px] resize-none"
+                  placeholder="اكتب إجابتك هنا..."
+                  value={answers[q.id] || ''}
+                  onChange={(e) => onAnswer(q.id, e.target.value)}
+                />
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    id={`audio-upload-${q.id}`}
+                    className="sr-only"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (!file.type.startsWith('audio/')) {
+                        alert('عذراً، يجب اختيار ملف صوتي فقط.');
+                        return;
+                      }
+                      try {
+                        const res = await studentService.uploadAudio(file);
+                        if (res && res.url) {
+                          onAnswer(q.id, res.url);
+                        }
+                      } catch (err) {
+                        alert('فشل رفع الملف الصوتي. يرجى التأكد من نوع الملف وحجمه.');
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor={`audio-upload-${q.id}`}
+                    className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 px-5 py-4 transition-all duration-200"
+                  >
+                    <span className="text-sm font-bold text-muted-foreground">
+                      أو ارفع إجابة صوتية بدلاً من الكتابة
+                    </span>
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           /* MCQ - qType === 0 */

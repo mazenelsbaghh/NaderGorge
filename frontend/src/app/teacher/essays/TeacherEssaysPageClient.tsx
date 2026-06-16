@@ -13,6 +13,7 @@ import {
 import { teacherService, PendingEssayDto } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
 
@@ -251,7 +252,7 @@ export default function TeacherEssaysPageClient() {
                   {selectedEssay.audioUrl && (
                     <div className="mt-4 p-3 rounded-xl bg-[var(--admin-primary-15)] flex flex-col gap-2">
                       <h5 className="text-xs font-black text-[var(--admin-primary)]">الإجابة الصوتية المرفقة:</h5>
-                      <audio src={selectedEssay.audioUrl} controls className="w-full mt-1" />
+                      <audio src={resolveMediaUrl(selectedEssay.audioUrl)} controls className="w-full mt-1" />
                     </div>
                   )}
                 </div>

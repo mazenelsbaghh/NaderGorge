@@ -74,9 +74,10 @@ public class GetLatestPassedExamResultQueryHandler : IRequestHandler<GetLatestPa
 
             snapshots[examQuestionId] = new QuestionReviewSnapshot(
                 essay.AnswerText,
-                !string.IsNullOrWhiteSpace(essay.AnswerText),
+                !string.IsNullOrWhiteSpace(essay.AnswerText) || !string.IsNullOrWhiteSpace(essay.AudioUrl),
                 essay.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded,
-                essay.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded ? essay.TeacherFinalScore ?? 0 : 0
+                essay.Status == NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded ? essay.TeacherFinalScore ?? 0 : 0,
+                essay.AudioUrl
             );
         }
 

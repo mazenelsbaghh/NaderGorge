@@ -64,6 +64,7 @@ export interface ExamQuestionReviewDto {
   correctOptionText?: string;
   audioUrl?: string;
   writtenCorrection?: string;
+  studentAudioUrl?: string;
 }
 
 export interface EssayGradingStatusItemDto {

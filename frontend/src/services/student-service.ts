@@ -264,6 +264,17 @@ export const studentService = {
   markNotificationAsRead: async (id: string): Promise<void> => {
     const res = await apiClient.post(`/student/notifications/${id}/read`);
     return res.data?.data;
+  },
+
+  uploadAudio: async (file: File): Promise<{ url: string }> => {
+    const formData = new FormData();
+    formData.append('audio', file);
+    const res = await apiClient.post('/student/upload-audio', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data?.data;
   }
 };
 

@@ -386,11 +386,13 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
         _db.EssaySubmissions.Add(essaySubmission);
 
+        var studentAudioUrl = string.IsNullOrWhiteSpace(submission.AudioUrl) ? null : submission.AudioUrl.Trim();
         questionSnapshotsByQuestion[examQuestion.Id] = new QuestionReviewSnapshot(
             answerText,
-            !string.IsNullOrWhiteSpace(answerText),
+            !string.IsNullOrWhiteSpace(answerText) || !string.IsNullOrWhiteSpace(studentAudioUrl),
             false,
-            0);
+            0,
+            studentAudioUrl);
     }
 
     private static decimal HandleFindTheMistakeSubmission(
@@ -428,7 +430,8 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             submittedText,
             !string.IsNullOrWhiteSpace(submittedText),
             isCorrect,
-            pointsAwarded);
+            pointsAwarded,
+            null);
 
         return pointsAwarded;
     }
@@ -465,7 +468,8 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             selectedOption.Text,
             true,
             isCorrect,
-            pointsAwarded);
+            pointsAwarded,
+            null);
 
         return pointsAwarded;
     }
@@ -513,9 +517,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             var isTeacherGraded = essay.Status == EssaySubmissionStatus.TeacherGraded;
             snapshots[examQuestionId] = new QuestionReviewSnapshot(
                 essay.AnswerText,
-                !string.IsNullOrWhiteSpace(essay.AnswerText),
+                !string.IsNullOrWhiteSpace(essay.AnswerText) || !string.IsNullOrWhiteSpace(essay.AudioUrl),
                 isTeacherGraded,
-                isTeacherGraded ? essay.TeacherFinalScore ?? 0 : 0);
+                isTeacherGraded ? essay.TeacherFinalScore ?? 0 : 0,
+                essay.AudioUrl);
         }
 
         return snapshots;

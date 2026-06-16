@@ -699,6 +699,18 @@ public class AdminController : ControllerBase
     {
         if (audio == null || audio.Length == 0) return BadRequest(new { Success = false, Message = "No file uploaded" });
 
+        var contentType = audio.ContentType?.ToLowerInvariant() ?? "";
+        var extension = Path.GetExtension(audio.FileName)?.ToLowerInvariant() ?? "";
+
+        var allowedExtensions = new[] { ".mp3", ".wav", ".m4a", ".webm", ".ogg", ".aac", ".amr", ".flac" };
+        var isAudioExtension = allowedExtensions.Contains(extension);
+        var isAudioMime = contentType.StartsWith("audio/");
+
+        if (!isAudioMime || !isAudioExtension)
+        {
+            return BadRequest(ApiResponse.Fail("عذراً، يجب اختيار ملف صوتي فقط."));
+        }
+
         using var ms = new MemoryStream();
         await audio.CopyToAsync(ms);
         var base64 = Convert.ToBase64String(ms.ToArray());

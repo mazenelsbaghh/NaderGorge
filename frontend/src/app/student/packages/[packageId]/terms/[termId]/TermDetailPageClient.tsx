@@ -391,7 +391,7 @@ export default function TermDetailPageClient() {
                 {term != null ? 'سعر الترم' : 'سعر الباقة'}
               </span>
               {(() => {
-                const price = term != null ? term.price : (pkg?.price ?? 0);
+                const price = term != null ? (term.price ?? 0) : (pkg?.price ?? 0);
                 return price > 0 ? (
                   <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{price} ج.م</p>
                 ) : (
@@ -412,7 +412,7 @@ export default function TermDetailPageClient() {
                   className="w-full inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow transition-all hover:brightness-110 active:scale-[0.98]"
                 >
                   <Sparkles className="h-4 w-4" />
-                  {term != null ? (term.price > 0 ? 'شراء الترم' : 'تفعيل الترم مجاناً') : 'شراء الباقة'}
+                  {term != null ? ((term.price ?? 0) > 0 ? 'شراء الترم' : 'تفعيل الترم مجاناً') : 'شراء الباقة'}
                 </button>
                 <Link
                   href="/student/code-redemption"
@@ -486,7 +486,7 @@ export default function TermDetailPageClient() {
         }
         price={
           term != null
-            ? term.price
+            ? (term.price ?? 0)
             : (pkg?.price ?? 0)
         }
       />

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type { HomeworkResultDto } from '@/services/homework-service';
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
 export function HomeworkResultPanel({
   result,
@@ -175,7 +176,15 @@ export function HomeworkResultPanel({
                 />
                 <p className="mt-3 text-sm font-bold text-muted-foreground">
                   إجابتك:{' '}
-                  <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.providedAnswer || 'لم تُجب') }} />
+                  {q.providedAnswer && (q.providedAnswer.startsWith('/uploads/audio/') || q.providedAnswer.match(/\.(mp3|wav|m4a|webm|ogg|aac|amr|flac)$/i)) ? (
+                    <span className="block mt-1">
+                      <audio controls className="h-9 w-full" preload="none">
+                        <source src={resolveMediaUrl(q.providedAnswer)} />
+                      </audio>
+                    </span>
+                  ) : (
+                    <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.providedAnswer || 'لم تُجب') }} />
+                  )}
                 </p>
                 {q.correctAnswer && (
                   <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-400">
@@ -236,7 +245,15 @@ export function HomeworkResultPanel({
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-background/60 border border-border/40 p-4">
                     <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">إجابتك</p>
-                    <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.providedAnswer || 'لم تُجب') }} />
+                    {q.providedAnswer && (q.providedAnswer.startsWith('/uploads/audio/') || q.providedAnswer.match(/\.(mp3|wav|m4a|webm|ogg|aac|amr|flac)$/i)) ? (
+                      <div className="mt-2">
+                        <audio controls className="h-9 w-full" preload="none">
+                          <source src={resolveMediaUrl(q.providedAnswer)} />
+                        </audio>
+                      </div>
+                    ) : (
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.providedAnswer || 'لم تُجب') }} />
+                    )}
                   </div>
 
                   {q.correctAnswer ? (
@@ -261,7 +278,7 @@ export function HomeworkResultPanel({
                             تصحيح صوتي
                           </p>
                           <audio controls className="h-9 w-full" preload="none">
-                            <source src={q.audioUrl} type="audio/mpeg" />
+                            <source src={resolveMediaUrl(q.audioUrl)} />
                           </audio>
                         </div>
                       )}

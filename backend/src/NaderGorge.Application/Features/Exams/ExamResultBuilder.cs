@@ -12,14 +12,16 @@ public record ExamQuestionReviewDto(
     decimal PointsAwarded,
     string? CorrectOptionText,
     string? AudioUrl,
-    string? WrittenCorrection
+    string? WrittenCorrection,
+    string? StudentAudioUrl = null
 );
 
 public record QuestionReviewSnapshot(
     string? SelectedText,
     bool IsAnswered,
     bool IsCorrect,
-    decimal PointsAwarded
+    decimal PointsAwarded,
+    string? StudentAudioUrl = null
 );
 
 internal static class ExamResultBuilder
@@ -64,7 +66,8 @@ internal static class ExamResultBuilder
                     revealCorrectAnswers ? eq.Question.AudioUrl : null,
                     string.Equals(resultState ?? "Completed", "Completed", StringComparison.Ordinal)
                         ? eq.Question.WrittenCorrection
-                        : null
+                        : null,
+                    snapshot?.StudentAudioUrl
                 );
             })
             .ToList();
@@ -102,7 +105,8 @@ internal static class ExamResultBuilder
                         selectedText,
                         isAnswered,
                         latest.IsCorrect,
-                        latest.PointsAwarded
+                        latest.PointsAwarded,
+                        null
                     );
                 });
     }

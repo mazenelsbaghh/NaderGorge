@@ -79,5 +79,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 133-e2e-flow-subject-teacher-package: specs/133-e2e-flow-subject-teacher-package/plan.md
 - 134-package-partial-enrollment: specs/134-package-partial-enrollment/plan.md
 - 135-video-exam-locking: specs/135-video-exam-locking/plan.md
+- 136-audio-upload-restrictions-and-reviews: specs/136-audio-upload-restrictions-and-reviews/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->
