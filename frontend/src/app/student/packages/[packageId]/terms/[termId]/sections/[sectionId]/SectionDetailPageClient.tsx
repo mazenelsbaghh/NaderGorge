@@ -97,9 +97,9 @@ export default function SectionDetailPageClient() {
         contentService.getSections(termId),
         contentService.getLessons(sectionId),
       ]);
-      setPkg(pkgRes.data?.data?.find((p: PackageDto) => p.id === packageId) ?? null);
-      setTerm(termsRes.data?.data?.find((t: TermDto) => t.id === termId) ?? null);
-      setSection(sectRes.data?.data?.find((s: ContentSectionDto) => s.id === sectionId) ?? null);
+      setPkg(pkgRes.data?.data?.find((p: PackageDto) => p.id.toLowerCase() === packageId.toLowerCase()) ?? null);
+      setTerm(termsRes.data?.data?.find((t: TermDto) => t.id.toLowerCase() === termId.toLowerCase()) ?? null);
+      setSection(sectRes.data?.data?.find((s: ContentSectionDto) => s.id.toLowerCase() === sectionId.toLowerCase()) ?? null);
       setLessons(
         (lessonsRes.data?.data ?? [])
           .sort((a: LessonSummaryDto, b: LessonSummaryDto) => a.order - b.order)

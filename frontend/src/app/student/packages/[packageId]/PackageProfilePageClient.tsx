@@ -101,7 +101,7 @@ export default function PackageProfilePageClient() {
     ])
       .then(([pkgRes, termRes]) => {
         const found = pkgRes.data?.data?.find(
-          (p: PackageDto) => p.id === packageId
+          (p: PackageDto) => p.id.toLowerCase() === packageId.toLowerCase()
         );
         setPkg(found ?? cachedPackage ?? null);
         setTerms(termRes.data.data);

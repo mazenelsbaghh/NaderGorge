@@ -101,9 +101,9 @@ export default function TermDetailPageClient() {
         contentService.getSections(termId),
         contentService.getTerms(packageId),
       ]);
-      setPkg(pkgRes.data?.data?.find((p: PackageDto) => p.id === packageId) ?? null);
+      setPkg(pkgRes.data?.data?.find((p: PackageDto) => p.id.toLowerCase() === packageId.toLowerCase()) ?? null);
       setSections(sectRes.data?.data ?? []);
-      setTerm(termsRes.data?.data?.find((t: TermDto) => t.id === termId) ?? null);
+      setTerm(termsRes.data?.data?.find((t: TermDto) => t.id.toLowerCase() === termId.toLowerCase()) ?? null);
     } catch {
       setError("تعذر تحميل محتوى الترم. تحقق من اتصالك وأعد المحاولة.");
     } finally {
