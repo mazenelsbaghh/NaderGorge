@@ -107,7 +107,7 @@ public class AccessCheckService : IAccessCheckService
                 return true;
         }
 
-        // 3. Video-linked Exam access
+        // 3. Video-linked Exam access (both foreign key directions)
         var videoLessons = await _db.LessonVideos
             .Where(v => v.ExamId == examId)
             .Select(v => new { v.Id, v.LessonId })
@@ -126,6 +126,30 @@ public class AccessCheckService : IAccessCheckService
                                (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
 
             if (hasVideoGrant) return true;
+        }
+
+        var examWithVideo = await _db.Exams
+            .Where(e => e.Id == examId && e.LessonVideoId != null)
+            .Select(e => new { e.LessonVideoId })
+            .FirstOrDefaultAsync(ct);
+
+        if (examWithVideo != null)
+        {
+            var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == examWithVideo.LessonVideoId.Value, ct);
+            if (video != null)
+            {
+                if (await HasAccessToLessonAsync(userId, video.LessonId, ct))
+                    return true;
+
+                var hasVideoGrant = await _db.StudentAccessGrants
+                    .AnyAsync(g => g.UserId == userId &&
+                                   g.IsActive &&
+                                   g.GrantType == CodeType.Video &&
+                                   g.LessonVideoId == video.Id &&
+                                   (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
+
+                if (hasVideoGrant) return true;
+            }
         }
 
         return false;

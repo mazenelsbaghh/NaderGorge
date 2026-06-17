@@ -30,6 +30,7 @@ interface SecureVideoPlayerProps {
   lessonVideoId: string;
   isExamLocked?: boolean;
   blockingExamId?: string;
+  videoExamId?: string;
   chapters?: import("@/services/content-service").VideoChapterDto[];
   onWatchProgress?: (secondsWatched: number) => void;
   onWatchStatusChange?: (status: WatchStatus) => void;
@@ -60,6 +61,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   lessonVideoId, 
   isExamLocked = false,
   blockingExamId,
+  videoExamId,
   chapters,
   onWatchProgress,
   onWatchStatusChange,
@@ -704,6 +706,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   // ── Render States ──
   if (isExamLocked) {
+    const isSelfLocked = blockingExamId && videoExamId && blockingExamId.toLowerCase() === videoExamId.toLowerCase();
     return (
       <div className={`relative w-full aspect-video bg-black rounded-xl overflow-hidden flex flex-col items-center justify-center border border-[var(--admin-primary)]/30 p-8 text-center ${className}`}>
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--admin-primary)]/20 bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] shadow-inner">
@@ -712,12 +715,16 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           </svg>
         </div>
         <h3 className="text-xl font-bold text-white mb-2">هذا الفيديو مغلق</h3>
-        <p className="text-gray-300 mb-6 max-w-md">الفيديو مغلق. يرجى اجتياز امتحان الفيديو السابق أولاً.</p>
+        <p className="text-gray-300 mb-6 max-w-md">
+          {isSelfLocked 
+            ? "الفيديو مغلق. يرجى اجتياز امتحان هذا الفيديو أولاً لفتح المشاهدة."
+            : "الفيديو مغلق. يرجى اجتياز امتحان الفيديو السابق أولاً."}
+        </p>
         
         {blockingExamId && (
           <button 
             type="button"
-            onClick={() => router.push(`/student/exams/${blockingExamId}?packageId=${packageId}`)}
+            onClick={() => router.push(`/student/exams/${blockingExamId}?packageId=${packageId}&lessonId=${lessonId}`)}
             className="px-6 py-3 bg-[var(--admin-primary)] hover:bg-[var(--admin-primary-strong)] border border-[var(--admin-primary)] text-[var(--admin-primary-contrast)] font-bold rounded-lg transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
           >
             اذهب للامتحان

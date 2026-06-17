@@ -76,10 +76,10 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                 type="button"
                                 className={cn(
                                     "group flex items-center focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]",
-                                    (isCurrent || isExamLocked) && "pointer-events-none"
+                                    isCurrent && "pointer-events-none"
                                 )}
-                                onClick={() => !isExamLocked && onChange(stepIdx)}
-                                disabled={isCurrent || isExamLocked}
+                                onClick={() => onChange(stepIdx)}
+                                disabled={isCurrent}
                                 aria-current={isCurrent ? "step" : undefined}
                             >
                                 <span className="flex items-center gap-3 text-sm font-bold">
@@ -292,6 +292,7 @@ export function LessonCarousel({
                                             lessonVideoId={activeVideo.id}
                                             isExamLocked={activeVideo.isExamLocked}
                                             blockingExamId={activeVideo.isExamLocked ? videos.find(v => v.examId && !v.examPassed)?.examId : undefined}
+                                            videoExamId={activeVideo.examId}
                                             chapters={activeVideo.chapters}
                                             onWatchStatusChange={(s: WatchStatus) => setWatchStatus(s)}
                                             onWatchProgress={(time) => setCurrentTime(time)}

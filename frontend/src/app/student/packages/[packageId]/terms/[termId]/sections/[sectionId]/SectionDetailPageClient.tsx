@@ -123,16 +123,12 @@ export default function SectionDetailPageClient() {
 
   const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
 
-  const sectionPrice = section?.price != null && section.price > 0 ? section.price : null;
-  const termPrice = term?.price != null && term.price > 0 ? term.price : null;
+  const sectionPrice = section?.price ?? null;
+  const termPrice = term?.price ?? null;
   const packagePrice = pkg?.price ?? 0;
 
   const displayPrice =
-    sectionPrice !== null
-      ? sectionPrice
-      : termPrice !== null
-        ? termPrice
-        : packagePrice;
+    sectionPrice ?? termPrice ?? packagePrice;
 
   const priceLabel =
     sectionPrice !== null

@@ -51,6 +51,15 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         if (lesson == null)
         {
             var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.ExamId == request.ExamId, ct);
+            if (video == null)
+            {
+                var examEntity = await _db.Exams.FirstOrDefaultAsync(e => e.Id == request.ExamId, ct);
+                if (examEntity?.LessonVideoId != null)
+                {
+                    video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == examEntity.LessonVideoId.Value, ct);
+                }
+            }
+
             if (video != null)
             {
                 lesson = await _db.Lessons
