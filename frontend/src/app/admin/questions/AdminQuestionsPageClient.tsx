@@ -17,6 +17,7 @@ import { adminService, QuestionBankItemDto, QuestionOptionDto } from '@/services
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { questionTextToPlainText } from '@/lib/question-text';
 
 export default function AdminQuestionsPageClient() {
   const [questions, setQuestions] = useState<QuestionBankItemDto[]>([]);
@@ -175,7 +176,7 @@ export default function AdminQuestionsPageClient() {
 
     return list.filter(
       (question) =>
-        question.text.toLowerCase().includes(term) ||
+        questionTextToPlainText(question.text).toLowerCase().includes(term) ||
         question.tags.toLowerCase().includes(term),
     );
   }, [questions, search, selectedSubjectId, selectedTeacherId]);
@@ -193,7 +194,7 @@ export default function AdminQuestionsPageClient() {
     {
       key: 'text',
       label: 'السؤال',
-      render: (q) => <div className="font-bold text-[var(--admin-text)]">{q.text}</div>,
+      render: (q) => <div className="font-bold text-[var(--admin-text)]">{questionTextToPlainText(q.text)}</div>,
     },
     {
       key: 'tags',

@@ -11,6 +11,7 @@ export interface ExamQuestionDto {
   type?: string;
   points: number;
   hintText?: string;
+  imageUrl?: string;
   baseText?: string;
   options: QuestionOptionDto[];
 }
@@ -63,6 +64,7 @@ export interface ExamQuestionReviewDto {
   pointsAwarded: number;
   correctOptionText?: string;
   audioUrl?: string;
+  imageUrl?: string;
   writtenCorrection?: string;
   studentAudioUrl?: string;
 }

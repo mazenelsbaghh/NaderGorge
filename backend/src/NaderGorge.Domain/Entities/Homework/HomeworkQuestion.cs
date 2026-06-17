@@ -21,6 +21,7 @@ public class HomeworkQuestion
     public int PointsActive { get; set; }
 
     public string? AudioUrl { get; set; }
+    public string? ImageUrl { get; set; }
     public string? WrittenCorrection { get; set; }
     public string? HintText { get; set; }
     public string? BaseText { get; set; }

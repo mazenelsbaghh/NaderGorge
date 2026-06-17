@@ -10,6 +10,7 @@ import { Plus, Save, AlertCircle, Trash2 } from 'lucide-react';
 import { adminService, HomeworkDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { questionTextToPlainText } from '@/lib/question-text';
 
 export default function AddHomeworkQuestionPageClient(props: { params: { id: string } }) {
   const params = props.params;
@@ -51,6 +52,7 @@ export default function AddHomeworkQuestionPageClient(props: { params: { id: str
               isCorrect: ansText === q.correctAnswerKey
             })) : [],
             audioUrl: q.audioUrl || undefined,
+            imageUrl: q.imageUrl || undefined,
             writtenCorrection: q.writtenCorrection || undefined,
             hintText: q.hintText || undefined,
             baseText: q.baseText || undefined,
@@ -122,6 +124,7 @@ export default function AddHomeworkQuestionPageClient(props: { params: { id: str
          type: q.type,
          options: q.options || [],
          audioUrl: q.audioUrl,
+         imageUrl: q.imageUrl,
          writtenCorrection: q.writtenCorrection,
          hintText: q.hintText,
          baseText: q.baseText,
@@ -197,7 +200,7 @@ export default function AddHomeworkQuestionPageClient(props: { params: { id: str
                      <div key={index} className="flex justify-between items-center p-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)]">
                         <div className="flex gap-4 items-center">
                            <span className="w-8 h-8 rounded-full bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] flex items-center justify-center font-bold">{index + 1}</span>
-                           <div className="font-bold text-sm md:text-base" dangerouslySetInnerHTML={{ __html: q.text.substring(0, 100) + (q.text.length > 100 ? '...' : '') }} />
+                           <div className="font-bold text-sm md:text-base">{questionTextToPlainText(q.text).slice(0, 100)}{questionTextToPlainText(q.text).length > 100 ? '...' : ''}</div>
                         </div>
                         <button 
                           onClick={() => handleRemoveQuestion(index)}

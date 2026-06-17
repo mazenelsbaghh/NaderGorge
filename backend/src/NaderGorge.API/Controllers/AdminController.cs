@@ -9,6 +9,7 @@ using NaderGorge.Application.Features.Admin.Commands.TeacherPhotoOps;
 using NaderGorge.Application.Common;
 using NaderGorge.API.Extensions;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Teachers.Queries;
 using NaderGorge.Application.Features.Admin.Content.Queries;
 using SixLabors.ImageSharp;
@@ -21,8 +22,13 @@ namespace NaderGorge.API.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IContentImageStorage _imageStorage;
 
-    public AdminController(IMediator mediator) => _mediator = mediator;
+    public AdminController(IMediator mediator, IContentImageStorage imageStorage)
+    {
+        _mediator = mediator;
+        _imageStorage = imageStorage;
+    }
 
     private Guid GetUserId() => User.RequireUserId();
 
@@ -302,6 +308,37 @@ public class AdminController : ControllerBase
                 new UploadContentImageCommand(id, parsedContentType, memoryStream.ToArray()),
                 cancellationToken);
             return result.Success ? Ok(result) : BadRequest(result);
+        }
+        catch (UnknownImageFormatException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidImageContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded image is invalid or too large"));
+        }
+    }
+
+    [HttpPost("questions/image")]
+    [HasPermission("exams.manage")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadQuestionImage(IFormFile image, CancellationToken cancellationToken)
+    {
+        if (image.Length == 0 || image.Length > 10 * 1024 * 1024)
+        {
+            return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
+        }
+
+        if (!image.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file must be an image"));
+        }
+
+        try
+        {
+            await using var imageStream = image.OpenReadStream();
+            var imageUrl = await _imageStorage.SaveAsWebpAsync(imageStream, "questions", cancellationToken);
+            return Ok(ApiResponse<string>.Ok(imageUrl, "Question image uploaded successfully"));
         }
         catch (UnknownImageFormatException)
         {

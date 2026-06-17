@@ -31,10 +31,11 @@ import { studentService } from '@/services/student-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
 import { shuffleArray } from '@/lib/utils';
-import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { normalizeQuestionRichText } from '@/lib/question-text';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { QuestionImage } from '@/components/assessment/QuestionImage';
 
 // ─── Result Panel ───────────────────────────────────────────────────────────────
 
@@ -283,8 +284,11 @@ export function ExamResultPanel({
                 </div>
                 <div
                   className="text-base font-bold leading-8 text-foreground"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.questionText) }}
+                  dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.questionText) }}
                 />
+                <div className="mt-3">
+                  <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الامتحان ${q.order}`} />
+                </div>
                 <p className="mt-3 text-sm font-bold text-muted-foreground">
                   إجابتك:{' '}
                   {q.studentAudioUrl ? (
@@ -294,12 +298,12 @@ export function ExamResultPanel({
                       </audio>
                     </span>
                   ) : (
-                    <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تُجب') }} />
+                    <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.selectedOptionText || 'لم تُجب') }} />
                   )}
                 </p>
                 {q.correctOptionText && (
                   <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                    الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.correctOptionText) }} />
+                    الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctOptionText) }} />
                   </p>
                 )}
               </article>
@@ -350,8 +354,11 @@ export function ExamResultPanel({
 
                 <div
                   className="text-base font-bold leading-8 text-foreground"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.questionText) }}
+                  dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.questionText) }}
                 />
+                <div className="mt-3">
+                  <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الامتحان ${q.order}`} />
+                </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-background/60 border border-border/40 p-4">
@@ -363,11 +370,11 @@ export function ExamResultPanel({
                             <source src={resolveMediaUrl(q.studentAudioUrl)} />
                           </audio>
                           {q.selectedOptionText && (
-                            <p className="mt-2 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText) }} />
+                            <p className="mt-2 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.selectedOptionText) }} />
                           )}
                         </div>
                       ) : (
-                        <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.selectedOptionText || 'لم تختر إجابة.') }} />
+                        <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.selectedOptionText || 'لم تختر إجابة.') }} />
                       )
                     ) : (
                       <p className="mt-1.5 text-sm font-bold leading-6 text-amber-600 dark:text-amber-400">عديت السؤال ده</p>
@@ -379,7 +386,7 @@ export function ExamResultPanel({
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                         الإجابة الصحيحة
                       </p>
-                      <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.correctOptionText) }} />
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctOptionText) }} />
                       {q.writtenCorrection && (
                         <div className="mt-3 border-t border-border/30 pt-3">
                           <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
@@ -517,8 +524,11 @@ function QuestionCard({
           </div>
           <div
             className="text-xl font-black leading-8 text-foreground sm:text-2xl"
-            dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }}
+            dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.text) }}
           />
+          <div className="mt-4">
+            <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الامتحان ${qIndex + 1}`} />
+          </div>
         </div>
       </div>
 
@@ -671,7 +681,7 @@ function QuestionCard({
                         if (res && res.url) {
                           onAudioAnswer(q.id, res.url);
                         }
-                      } catch (err) {
+                      } catch {
                         alert('فشل رفع الملف الصوتي. يرجى التأكد من نوع الملف وحجمه.');
                       }
                     }}
@@ -721,7 +731,7 @@ function QuestionCard({
                   >
                     {String.fromCharCode(0x0627 + optIdx) /* أ ب ج د */}
                   </span>
-                  <span className="flex-1 text-base font-bold leading-7 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(opt.text) }} />
+                  <span className="flex-1 text-base font-bold leading-7 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(opt.text) }} />
                   {isSelected && (
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-primary mt-1.5" />
                   )}

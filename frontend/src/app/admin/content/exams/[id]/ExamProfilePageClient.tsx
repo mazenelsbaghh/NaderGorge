@@ -29,6 +29,7 @@ import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/Questi
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
+import { normalizeQuestionRichText } from '@/lib/question-text';
 
 export default function ExamProfilePageClient({ id }: { id: string }) {
   const [data, setData] = useState<ExamDashboardDto | null>(null);
@@ -93,6 +94,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
     order: order,
     options: q.options ? q.options.map((o: any) => ({ text: o.text, isCorrect: o.isCorrect })) : [],
     audioUrl: q.audioUrl || '',
+    imageUrl: q.imageUrl || '',
     writtenCorrection: q.writtenCorrection || '',
     hintText: q.hintText || '',
     baseText: q.baseText || '',
@@ -139,6 +141,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
         text: editingQuestionData.text,
         points: editingQuestionData.points,
         audioUrl: finalAudioUrl,
+        imageUrl: editingQuestionData.imageUrl,
         writtenCorrection: editingQuestionData.writtenCorrection,
         hintText: editingQuestionData.hintText,
         baseText: editingQuestionData.baseText,
@@ -434,7 +437,17 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                             {idx + 1}
                           </div>
                           <div className="flex-1 space-y-3">
-                            <div className="text-[var(--admin-text)] font-semibold text-base leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: q.text }} />
+                            <div className="text-[var(--admin-text)] font-semibold text-base leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.text) }} />
+                            {q.imageUrl && (
+                              <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-background)] p-3">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={resolveMediaUrl(q.imageUrl)}
+                                  alt={`صورة السؤال ${idx + 1}`}
+                                  className="max-h-64 w-full object-contain"
+                                />
+                              </div>
+                            )}
                             
                             {q.baseText && (
                               <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3 bg-[var(--admin-background)] py-1 rounded">

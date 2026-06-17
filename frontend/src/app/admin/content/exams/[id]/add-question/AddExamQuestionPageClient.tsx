@@ -10,6 +10,7 @@ import { Plus, AlertCircle, Trash2 } from 'lucide-react';
 import { adminService, ExamDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { questionTextToPlainText } from '@/lib/question-text';
 
 export default function AddExamQuestionPageClient(props: { params: { id: string } }) {
   const params = props.params;
@@ -156,7 +157,7 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
                     <div key={q.examQuestionId} className="flex justify-between items-center p-4 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)]">
                        <div className="flex gap-4 items-center">
                           <span className="w-8 h-8 rounded-full bg-[var(--admin-primary)]/10 text-[var(--admin-primary)] flex items-center justify-center font-bold">{index + 1}</span>
-                          <p className="font-bold text-sm md:text-base" dangerouslySetInnerHTML={{ __html: q.text.substring(0, 80) + (q.text.length > 80 ? '...' : '') }} />
+                          <p className="font-bold text-sm md:text-base">{questionTextToPlainText(q.text).slice(0, 80)}{questionTextToPlainText(q.text).length > 80 ? '...' : ''}</p>
                        </div>
                        <button 
                          onClick={() => handleRemoveQuestion(q.examQuestionId)}

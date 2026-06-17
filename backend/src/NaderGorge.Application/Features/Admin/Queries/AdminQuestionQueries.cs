@@ -10,7 +10,7 @@ public record ListQuestionsQuery(int Page = 1, int PageSize = 20, string? Search
 
 public record QuestionOptionDto(Guid Id, string Text, bool IsCorrect);
 
-public record QuestionBankItemDto(Guid Id, string Text, decimal DefaultPoints, string Tags, List<QuestionOptionDto> Options, Guid CreatedByTeacherId, Guid SubjectId);
+public record QuestionBankItemDto(Guid Id, string Text, decimal DefaultPoints, string Tags, string? ImageUrl, List<QuestionOptionDto> Options, Guid CreatedByTeacherId, Guid SubjectId);
 
 public class ListQuestionsQueryHandler : IRequestHandler<ListQuestionsQuery, ApiResponse<PagedResult<QuestionBankItemDto>>>
 {
@@ -61,6 +61,7 @@ public class ListQuestionsQueryHandler : IRequestHandler<ListQuestionsQuery, Api
             q.Text,
             q.DefaultPoints,
             q.Tags,
+            q.ImageUrl,
             q.Options.Select(o => new QuestionOptionDto(o.Id, o.Text, o.IsCorrect)).ToList(),
             q.CreatedByTeacherId,
             q.SubjectId

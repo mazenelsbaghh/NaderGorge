@@ -722,13 +722,22 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         </p>
         
         {blockingExamId && (
-          <button 
-            type="button"
-            onClick={() => router.push(`/student/exams/${blockingExamId}?packageId=${packageId}&lessonId=${lessonId}`)}
-            className="px-6 py-3 bg-[var(--admin-primary)] hover:bg-[var(--admin-primary-strong)] border border-[var(--admin-primary)] text-[var(--admin-primary-contrast)] font-bold rounded-lg transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
-          >
-            اذهب للامتحان
-          </button>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button 
+              type="button"
+              onClick={() => router.push(`/student/exams/${blockingExamId}?packageId=${packageId}&lessonId=${lessonId}`)}
+              className="px-6 py-3 bg-[var(--admin-primary)] hover:bg-[var(--admin-primary-strong)] border border-[var(--admin-primary)] text-[var(--admin-primary-contrast)] font-bold rounded-lg transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
+            >
+              اذهب للامتحان
+            </button>
+            <button 
+              type="button"
+              onClick={() => router.push(`/student/exams/${blockingExamId}?packageId=${packageId}&lessonId=${lessonId}`)}
+              className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-lg transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black min-w-[200px]"
+            >
+              عرض النتيجة
+            </button>
+          </div>
         )}
       </div>
     );

@@ -21,7 +21,7 @@ public record ActiveExamAttemptDto(
     List<ExamQuestionViewDto> Questions
 );
 
-public record ExamQuestionViewDto(Guid Id, string Text, string Type, decimal Points, string? HintText, string? BaseText, int? MistakeStartIndex, int? MistakeEndIndex, List<QuestionOptionViewDto> Options);
+public record ExamQuestionViewDto(Guid Id, string Text, string Type, decimal Points, string? HintText, string? ImageUrl, string? BaseText, int? MistakeStartIndex, int? MistakeEndIndex, List<QuestionOptionViewDto> Options);
 public record QuestionOptionViewDto(Guid Id, string Text);
 
 public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCommand, ApiResponse<ActiveExamAttemptDto>>
@@ -259,7 +259,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 mistakeEndIndex = ftm.MistakeEndIndex;
             }
 
-            return new ExamQuestionViewDto(eq.Id, eq.Question.Text, eq.Question.Type.ToString(), eq.Points, eq.Question.HintText, baseText, mistakeStartIndex, mistakeEndIndex, options);
+            return new ExamQuestionViewDto(eq.Id, eq.Question.Text, eq.Question.Type.ToString(), eq.Points, eq.Question.HintText, eq.Question.ImageUrl, baseText, mistakeStartIndex, mistakeEndIndex, options);
         }).ToList();
 
 

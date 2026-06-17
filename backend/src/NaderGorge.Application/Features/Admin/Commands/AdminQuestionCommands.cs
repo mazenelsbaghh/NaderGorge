@@ -16,6 +16,7 @@ public record CreateQuestionCommand(
     decimal DefaultPoints, 
     string Tags, 
     string? AudioUrl, 
+    string? ImageUrl,
     string? WrittenCorrection, 
     string? HintText, 
     List<CreateQuestionOptionDto> Options, 
@@ -99,6 +100,7 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                 DefaultPoints = request.DefaultPoints,
                 Tags = request.Tags,
                 AudioUrl = request.AudioUrl,
+                ImageUrl = request.ImageUrl,
                 WrittenCorrection = request.WrittenCorrection,
                 HintText = request.HintText,
                 BaseText = request.BaseText ?? string.Empty,
@@ -120,6 +122,7 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                     DefaultPoints = request.DefaultPoints,
                     Tags = request.Tags,
                     AudioUrl = request.AudioUrl,
+                    ImageUrl = request.ImageUrl,
                     WrittenCorrection = request.WrittenCorrection,
                     HintText = request.HintText,
                     Options = request.Options?.Select(o => new QuestionOption
@@ -140,6 +143,7 @@ public class CreateQuestionCommandHandler : IRequestHandler<CreateQuestionComman
                     DefaultPoints = request.DefaultPoints,
                     Tags = request.Tags,
                     AudioUrl = request.AudioUrl,
+                    ImageUrl = request.ImageUrl,
                     WrittenCorrection = request.WrittenCorrection,
                     HintText = request.HintText,
                     Options = request.Options?.Select(o => new QuestionOption

@@ -49,6 +49,8 @@ public class QuestionBankItem : BaseEntity
 
     // Optional audio explanation
     public string? AudioUrl { get; set; }
+    // Optional visual prompt/diagram
+    public string? ImageUrl { get; set; }
     // Written correction for student review
     public string? WrittenCorrection { get; set; }
     // Optional hint to display without penalty

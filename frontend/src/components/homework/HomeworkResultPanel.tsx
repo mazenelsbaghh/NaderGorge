@@ -12,8 +12,9 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import type { HomeworkResultDto } from '@/services/homework-service';
-import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { normalizeQuestionRichText } from '@/lib/question-text';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { QuestionImage } from '@/components/assessment/QuestionImage';
 
 export function HomeworkResultPanel({
   result,
@@ -172,8 +173,11 @@ export function HomeworkResultPanel({
                 </div>
                 <div
                   className="text-base font-bold leading-8 text-foreground"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }}
+                  dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.text) }}
                 />
+                <div className="mt-3">
+                  <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الواجب ${q.order}`} />
+                </div>
                 <p className="mt-3 text-sm font-bold text-muted-foreground">
                   إجابتك:{' '}
                   {q.providedAnswer && (q.providedAnswer.startsWith('/uploads/audio/') || q.providedAnswer.match(/\.(mp3|wav|m4a|webm|ogg|aac|amr|flac)$/i)) ? (
@@ -183,12 +187,12 @@ export function HomeworkResultPanel({
                       </audio>
                     </span>
                   ) : (
-                    <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.providedAnswer || 'لم تُجب') }} />
+                    <span className="font-black text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.providedAnswer || 'لم تُجب') }} />
                   )}
                 </p>
                 {q.correctAnswer && (
                   <p className="mt-1 text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                    الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.correctAnswer) }} />
+                    الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctAnswer) }} />
                   </p>
                 )}
               </article>
@@ -239,8 +243,11 @@ export function HomeworkResultPanel({
 
                 <div
                   className="text-base font-bold leading-8 text-foreground"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }}
+                  dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.text) }}
                 />
+                <div className="mt-3">
+                  <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الواجب ${q.order}`} />
+                </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl bg-background/60 border border-border/40 p-4">
@@ -252,7 +259,7 @@ export function HomeworkResultPanel({
                         </audio>
                       </div>
                     ) : (
-                      <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.providedAnswer || 'لم تُجب') }} />
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-foreground" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.providedAnswer || 'لم تُجب') }} />
                     )}
                   </div>
 
@@ -261,7 +268,7 @@ export function HomeworkResultPanel({
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                         الإجابة الصحيحة
                       </p>
-                      <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.correctAnswer) }} />
+                      <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctAnswer) }} />
                       {q.writtenCorrection && (
                         <div className="mt-3 border-t border-border/30 pt-3">
                           <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">

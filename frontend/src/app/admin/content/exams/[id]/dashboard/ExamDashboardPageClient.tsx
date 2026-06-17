@@ -7,7 +7,7 @@ import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus } from 'lu
 import { AdminShellChrome, AdminStatCard, AdminDataTable, AdminBackButton } from '@/components/admin';
 import { ConfirmModal } from '@/components/ui/admin-modal';
 import toast from 'react-hot-toast';
-import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { normalizeQuestionRichText } from '@/lib/question-text';
 
 export default function ExamDashboardPageClient(props: { params: { id: string } }) {
   const params = props.params;
@@ -148,7 +148,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                       {idx + 1}
                     </span>
                     <div className="min-w-0">
-                      <p className="font-bold text-[var(--admin-text)] truncate" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }} />
+                      <p className="font-bold text-[var(--admin-text)] truncate" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.text) }} />
                       <div className="mt-1 flex items-center gap-3 flex-wrap">
                         <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-black uppercase tracking-wider ${
                           q.type === 'FindTheMistake'
@@ -160,6 +160,9 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                           {q.type === 'FindTheMistake' ? 'اكتشف الغلطة' : q.type === 'Essay' ? 'مقال' : 'اختيار'}
                         </span>
                         <span className="text-xs text-[var(--admin-muted)] font-mono">{q.points} نقطة</span>
+                        {q.imageUrl && (
+                          <span className="text-xs font-black text-[var(--admin-primary)]">به صورة</span>
+                        )}
                         {q.type === 'FindTheMistake' && !q.baseText && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-black text-red-600">
                             <AlertCircle className="h-3 w-3" /> baseText مفقود

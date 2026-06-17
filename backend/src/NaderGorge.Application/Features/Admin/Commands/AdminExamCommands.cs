@@ -37,6 +37,7 @@ public class InlineExamQuestionDto
     public int Order { get; set; }
     public List<InlineExamOptionDto> Options { get; set; } = new();
     public string? AudioUrl { get; set; }
+    public string? ImageUrl { get; set; }
     public string? WrittenCorrection { get; set; }
     public string? HintText { get; set; }
     public string? BaseText { get; set; }
@@ -203,6 +204,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                     DefaultPoints = q.Points,
                     Tags = "Inline",
                     AudioUrl = q.AudioUrl,
+                    ImageUrl = q.ImageUrl,
                     WrittenCorrection = q.WrittenCorrection,
                     HintText = q.HintText,
                     BaseText = q.BaseText ?? string.Empty,
@@ -224,6 +226,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                         DefaultPoints = q.Points,
                         Tags = "Inline",
                         AudioUrl = q.AudioUrl,
+                        ImageUrl = q.ImageUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
                         CreatedByTeacherId = teacherId,
@@ -239,6 +242,7 @@ public class CreateInlineExamCommandHandler : IRequestHandler<CreateInlineExamCo
                         DefaultPoints = q.Points,
                         Tags = "Inline",
                         AudioUrl = q.AudioUrl,
+                        ImageUrl = q.ImageUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
                         CreatedByTeacherId = teacherId,
@@ -387,6 +391,7 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                     DefaultPoints = q.Points,
                     Tags = "Added",
                     AudioUrl = q.AudioUrl,
+                    ImageUrl = q.ImageUrl,
                     WrittenCorrection = q.WrittenCorrection,
                     HintText = q.HintText,
                     BaseText = q.BaseText ?? string.Empty,
@@ -408,6 +413,7 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                         DefaultPoints = q.Points,
                         Tags = "Added",
                         AudioUrl = q.AudioUrl,
+                        ImageUrl = q.ImageUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
                         CreatedByTeacherId = teacherId,
@@ -423,6 +429,7 @@ public class AddQuestionsToExamCommandHandler : IRequestHandler<AddQuestionsToEx
                         DefaultPoints = q.Points,
                         Tags = "Added",
                         AudioUrl = q.AudioUrl,
+                        ImageUrl = q.ImageUrl,
                         WrittenCorrection = q.WrittenCorrection,
                         HintText = q.HintText,
                         CreatedByTeacherId = teacherId,
@@ -508,6 +515,7 @@ public class UpdateExamQuestionCommand : IRequest<ApiResponse<bool>>
     public string Text { get; set; } = string.Empty;
     public decimal Points { get; set; }
     public string? AudioUrl { get; set; }
+    public string? ImageUrl { get; set; }
     public string? WrittenCorrection { get; set; }
     public string? HintText { get; set; }
     public string? BaseText { get; set; }
@@ -554,6 +562,7 @@ public class UpdateExamQuestionCommandHandler : IRequestHandler<UpdateExamQuesti
         // Update QuestionBankItem properties
         question.Text = request.Text;
         question.AudioUrl = request.AudioUrl;
+        question.ImageUrl = request.ImageUrl;
         question.WrittenCorrection = request.WrittenCorrection;
         question.HintText = request.HintText;
 
@@ -589,4 +598,3 @@ public class UpdateExamQuestionCommandHandler : IRequestHandler<UpdateExamQuesti
         return ApiResponse<bool>.Ok(true);
     }
 }
-

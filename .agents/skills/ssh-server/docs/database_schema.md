@@ -475,6 +475,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `HintText` | `string` | `text` | `YES` | ✅ Sync |
 | `HomeworkId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ImageUrl` | `string` | `character varying(500)` | `YES` | ❌ Missing Column |
 | `MistakeEndIndex` | `int?` | `integer` | `YES` | ✅ Sync |
 | `MistakeStartIndex` | `int?` | `integer` | `YES` | ✅ Sync |
 | `Order` | `int` | `integer` | `NO` | ✅ Sync |
@@ -705,6 +706,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `DefaultPoints` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
 | `HintText` | `string` | `text` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ImageUrl` | `string` | `character varying(500)` | `YES` | ❌ Missing Column |
 | `SubjectId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `Tags` | `string` | `character varying(500)` | `NO` | ✅ Sync |
 | `Text` | `string` | `text` | `NO` | ✅ Sync |

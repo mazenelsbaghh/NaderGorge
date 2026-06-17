@@ -12,6 +12,7 @@ public record ExamQuestionReviewDto(
     decimal PointsAwarded,
     string? CorrectOptionText,
     string? AudioUrl,
+    string? ImageUrl,
     string? WrittenCorrection,
     string? StudentAudioUrl = null
 );
@@ -64,6 +65,7 @@ internal static class ExamResultBuilder
                     snapshot?.PointsAwarded ?? 0,
                     revealCorrectAnswers ? correctText : null,
                     revealCorrectAnswers ? eq.Question.AudioUrl : null,
+                    eq.Question.ImageUrl,
                     string.Equals(resultState ?? "Completed", "Completed", StringComparison.Ordinal)
                         ? eq.Question.WrittenCorrection
                         : null,

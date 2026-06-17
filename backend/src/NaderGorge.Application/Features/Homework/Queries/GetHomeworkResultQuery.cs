@@ -38,6 +38,7 @@ public record HomeworkQuestionReviewDto(
     bool? IsCorrect,
     string? WrittenCorrection,
     string? AudioUrl,
+    string? ImageUrl,
     string[]? PossibleAnswers
 );
 
@@ -129,6 +130,7 @@ public class GetHomeworkResultQueryHandler : IRequestHandler<GetHomeworkResultQu
                 IsCorrect: isCorrect,
                 WrittenCorrection: question.WrittenCorrection,
                 AudioUrl: question.AudioUrl,
+                ImageUrl: question.ImageUrl,
                 PossibleAnswers: question.PossibleAnswers
             ));
         }

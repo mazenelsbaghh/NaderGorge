@@ -45,6 +45,7 @@ export interface StartHomeworkQuestionDto {
     maxPoints: number;
     possibleAnswers?: string[];
     audioUrl?: string;
+    imageUrl?: string;
     hintText?: string;
     baseText?: string;
     mistakeStartIndex?: number;
@@ -82,6 +83,7 @@ export interface HomeworkQuestionReviewDto {
     isCorrect?: boolean;
     writtenCorrection?: string;
     audioUrl?: string;
+    imageUrl?: string;
     possibleAnswers?: string[];
 }
 

@@ -7,6 +7,8 @@ import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3
 import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { normalizeQuestionRichText } from '@/lib/question-text';
 
 export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
   const router = useRouter();
@@ -105,7 +107,17 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
                         {idx + 1}
                       </div>
                       <div className="flex-1">
-                        <div className="text-[var(--admin-text)] font-semibold text-base leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: q.text }} />
+                        <div className="text-[var(--admin-text)] font-semibold text-base leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.text) }} />
+                        {q.imageUrl && (
+                          <div className="mt-3 overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-3">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={resolveMediaUrl(q.imageUrl)}
+                              alt={`صورة سؤال الواجب ${idx + 1}`}
+                              className="max-h-64 w-full object-contain"
+                            />
+                          </div>
+                        )}
                         {q.baseText && (
                           <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3">
                             {q.baseText}

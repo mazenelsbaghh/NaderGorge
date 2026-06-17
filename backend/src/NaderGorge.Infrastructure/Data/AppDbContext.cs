@@ -582,6 +582,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("question_bank_items");
             e.HasKey(q => q.Id);
             e.Property(q => q.Text).IsRequired();
+            e.Property(q => q.ImageUrl).HasMaxLength(500);
             e.Property(q => q.DefaultPoints).HasColumnType("decimal(18,2)");
             e.Property(q => q.Tags).HasMaxLength(500);
             e.HasOne(q => q.CreatedByTeacher).WithMany(t => t.QuestionBankItems).HasForeignKey(q => q.CreatedByTeacherId);
@@ -669,6 +670,7 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("homework_questions");
             e.HasKey(q => q.Id);
+            e.Property(q => q.ImageUrl).HasMaxLength(500);
             e.HasOne(q => q.Homework).WithMany(h => h.Questions).HasForeignKey(q => q.HomeworkId);
         });
 

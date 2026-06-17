@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, type CSSProperties } from 'react';
-import { Trash2, Plus, Check } from 'lucide-react';
+import { Trash2, Plus, Check, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { NumberField } from '@/components/ui/number-field';
 import { Dropdown } from '@/components/ui/dropdown';
 import dynamic from 'next/dynamic';
 import { FindTheMistakeBuilder } from './FindTheMistakeBuilder';
 import { studentService } from '@/services/student-service';
+import { adminService } from '@/services/admin-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import toast from 'react-hot-toast';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { 
@@ -28,6 +30,7 @@ export interface InlineExamQuestionDto {
   options: InlineExamOptionDto[];
   audioUrl?: string;
   audioFile?: File | null;
+  imageUrl?: string;
   writtenCorrection?: string;
   hintText?: string;
   baseText?: string;
@@ -61,6 +64,8 @@ const formats = [
 
 export function QuestionEditor({ question, index, onChange, onRemove }: QuestionEditorProps) {
   const [uploading, setUploading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageProgress, setImageProgress] = useState(0);
 
   const handlePropChange = (
     field: keyof InlineExamQuestionDto,
@@ -84,7 +89,7 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
   const handleToggleCorrectOption = (optIndex: number) => {
     const newOptions = question.options.map((opt, i) => ({
       ...opt,
-      isCorrect: i === optIndex ? !opt.isCorrect : opt.isCorrect, // Keep it multi-select friendly or just single. Let's do multi-select friendly. Wait, usually MCQ has 1 correct. If we want single, we map and set false to others. We'll leave it multi as backend supports it.
+      isCorrect: i === optIndex ? !opt.isCorrect : false,
     }));
     onChange(index, { ...question, options: newOptions });
   };
@@ -217,6 +222,77 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
             placeholder="تصحيح نصي (يظهر بعد الإجابة)"
             className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
           />
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="text-xs uppercase tracking-wider font-bold text-[var(--admin-muted)] block">صورة السؤال (اختياري)</span>
+              <p className="mt-1 text-xs text-[var(--admin-muted)]">تظهر للطالب وقت الحل والمراجعة. يتم رفعها على دومين assets كـ WebP.</p>
+            </div>
+            {question.imageUrl && (
+              <button
+                type="button"
+                onClick={() => handlePropChange('imageUrl', '')}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-red-500/25 bg-red-500/10 px-3 text-xs font-black text-red-600 transition-colors hover:bg-red-500/15"
+              >
+                <X className="h-4 w-4" />
+                حذف الصورة
+              </button>
+            )}
+          </div>
+
+          {question.imageUrl ? (
+            <div className="overflow-hidden rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolveMediaUrl(question.imageUrl)}
+                alt="معاينة صورة السؤال"
+                className="max-h-72 w-full object-contain"
+              />
+            </div>
+          ) : (
+            <div className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]">
+              <ImageIcon className="h-8 w-8" />
+              <span className="text-sm font-bold">لا توجد صورة مرفقة</span>
+            </div>
+          )}
+
+          <label className="inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 text-sm font-black text-[var(--admin-primary-contrast)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
+            <Upload className="h-4 w-4" />
+            {imageUploading ? `جاري الرفع ${imageProgress}%` : question.imageUrl ? 'تغيير الصورة' : 'رفع صورة'}
+            <input
+              type="file"
+              accept="image/*"
+              disabled={imageUploading}
+              className="sr-only"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.currentTarget.value = '';
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                  toast.error('اختر ملف صورة صالحًا.');
+                  return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                  toast.error('حجم الصورة يجب ألا يتجاوز 10 ميجابايت.');
+                  return;
+                }
+                try {
+                  setImageUploading(true);
+                  setImageProgress(0);
+                  const uploadedUrl = await adminService.uploadQuestionImage(file, setImageProgress);
+                  handlePropChange('imageUrl', uploadedUrl);
+                  toast.success('تم رفع صورة السؤال على assets.');
+                } catch {
+                  toast.error('تعذر رفع الصورة. تأكد أن الملف صورة سليمة.');
+                } finally {
+                  setImageUploading(false);
+                  setImageProgress(0);
+                }
+              }}
+            />
+          </label>
         </div>
 
         <div className="flex flex-col gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">

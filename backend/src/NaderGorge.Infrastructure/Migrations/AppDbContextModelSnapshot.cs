@@ -1393,6 +1393,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("HintText")
                         .HasColumnType("text");
 
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("HomeworkId")
                         .HasColumnType("uuid");
 
@@ -2074,6 +2078,10 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<string>("HintText")
                         .HasColumnType("text");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("SubjectId")
                         .HasColumnType("uuid");

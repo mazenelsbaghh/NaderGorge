@@ -118,6 +118,7 @@ public class SwapQuestionCommandHandler : IRequestHandler<SwapQuestionCommand, A
             newExamQuestion.Question.Type.ToString(),
             newExamQuestion.Points,
             newExamQuestion.Question.HintText,
+            newExamQuestion.Question.ImageUrl,
             baseText,
             mistakeStartIndex,
             mistakeEndIndex,

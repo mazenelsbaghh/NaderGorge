@@ -106,6 +106,7 @@ export interface QuestionBankItemDto {
   defaultPoints: number;
   tags: string;
   audioUrl?: string; // New: Optional audio
+  imageUrl?: string;
   writtenCorrection?: string; // New: Text correction
   hintText?: string; // New: Hint text available during practice
   baseText?: string; // For FindTheMistake
@@ -289,6 +290,7 @@ export interface ExamQuestionSummaryDto {
   wrongCount?: number;
   correctPercentage?: number;
   audioUrl?: string | null;
+  imageUrl?: string | null;
   writtenCorrection?: string | null;
   hintText?: string | null;
   mistakeStartIndex?: number | null;
@@ -329,6 +331,7 @@ export interface HomeworkQuestionSummaryDto {
   possibleAnswers?: string[] | null;
   correctAnswerKey?: string | null;
   audioUrl?: string | null;
+  imageUrl?: string | null;
   writtenCorrection?: string | null;
   hintText?: string | null;
   mistakeStartIndex?: number | null;
@@ -678,6 +681,7 @@ export const adminService = {
     type?: number;
     defaultPoints: number;
     tags: string;
+    imageUrl?: string;
     hintText?: string;
     writtenCorrection?: string;
     baseText?: string;
@@ -920,6 +924,7 @@ export const adminService = {
         order: number; 
         options: { text: string; isCorrect: boolean }[]; 
         audioUrl?: string; 
+        imageUrl?: string;
         writtenCorrection?: string; 
         hintText?: string; 
         baseText?: string; 
@@ -930,6 +935,23 @@ export const adminService = {
   ) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>(`/admin/content/lessons/${lessonId}/homework`, payload);
     return res.data?.data;
+  },
+  uploadQuestionImage: async (
+    image: File,
+    onProgress?: (percent: number) => void
+  ) => {
+    const formData = new FormData();
+    formData.append('image', image);
+    const res = await apiClient.post<ApiResponse<string>>('/admin/questions/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && onProgress) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
+        }
+      },
+    });
+    return res.data.data;
   },
   linkLessonExam: async (lessonId: string, examId: string | null) => {
     const res = await apiClient.put<ApiResponse>(`/admin/lessons/${lessonId}/exam`, { examId });
@@ -943,11 +965,11 @@ export const adminService = {
     const res = await apiClient.delete<ApiResponse>(`/admin/videos/${videoId}/exams/${examId}`);
     return res.data;
   },
-  createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; durationMinutes?: number; timePerQuestionSeconds?: number; displayQuestionCount?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
+  createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; isMandatory?: boolean; isRandomized?: boolean; durationMinutes?: number; timePerQuestionSeconds?: number; displayQuestionCount?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; imageUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/exams/inline', payload);
     return res.data?.data;
   },
-  addQuestionsToExam: async (examId: string, payload: { questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
+  addQuestionsToExam: async (examId: string, payload: { questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; imageUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
     const res = await apiClient.post<ApiResponse>(`/admin/exams/${examId}/questions`, payload);
     return res.data;
   },

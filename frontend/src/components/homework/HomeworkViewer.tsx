@@ -21,9 +21,10 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { HomeworkResultPanel } from '@/components/homework/HomeworkResultPanel';
 import { FindTheMistakeInteract } from '@/components/exams/FindTheMistakeInteract';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { sanitizeRichHtml } from '@/lib/sanitize-html';
+import { normalizeQuestionRichText } from '@/lib/question-text';
 import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { CountdownTimer } from '@/components/exams/CountdownTimer';
+import { QuestionImage } from '@/components/assessment/QuestionImage';
 
 // ─── Question Card ──────────────────────────────────────────────────────────────
 
@@ -64,8 +65,11 @@ function HomeworkQuestionCard({
           </div>
           <div
             className="text-xl font-black leading-8 text-foreground sm:text-2xl"
-            dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(q.text) }}
+            dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.text) }}
           />
+          <div className="mt-4">
+            <QuestionImage imageUrl={q.imageUrl} alt={`صورة سؤال الواجب ${qIndex + 1}`} />
+          </div>
         </div>
       </div>
 
@@ -126,7 +130,7 @@ function HomeworkQuestionCard({
                         if (res && res.url) {
                           onAnswer(q.id, res.url);
                         }
-                      } catch (err) {
+                      } catch {
                         alert('فشل رفع الملف الصوتي. يرجى التأكد من نوع الملف وحجمه.');
                       }
                     }}
@@ -178,7 +182,7 @@ function HomeworkQuestionCard({
                   <span
                     className="flex-1 text-base font-bold leading-7 text-foreground"
                     dir="auto"
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(opt) }}
+                    dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(opt) }}
                   />
                   {isSelected && (
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-primary mt-1.5" />
