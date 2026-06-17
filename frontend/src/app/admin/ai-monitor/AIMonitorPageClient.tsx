@@ -678,6 +678,7 @@ export default function AIMonitorPageClient() {
   // Tracks IDs of videos we're already monitoring — so we never drop them
   // even after isProcessingAI flips to false in the DB.
   const trackedIdsRef = useRef<Set<string>>(new Set());
+  const loadingVideosRef = useRef(false);
 
   const handleAiJobProgress = (payload: { jobId: string; progress: number; status: string; message: string }) => {
     setItems((prevItems) => {
@@ -712,44 +713,67 @@ export default function AIMonitorPageClient() {
 
   // ── Load all processing videos from the content tree ──────────────────────
   async function loadProcessingVideos() {
+    if (loadingVideosRef.current) return;
+    loadingVideosRef.current = true;
     try {
       const packagesRes = await contentService.getPackages({ force: true });
       const packages = packagesRes.data?.data ?? [];
 
       const freshVideos: MonitoredVideo['video'][] = [];
 
-      for (const pkg of packages) {
-        const termsRes = await contentService.getTerms(pkg.id);
-        const terms = termsRes.data?.data ?? [];
+      // Fetch terms for all packages in parallel
+      const termsPromises = packages.map(pkg =>
+        contentService.getTerms(pkg.id).catch(() => null)
+      );
+      const termsResponses = await Promise.all(termsPromises);
+      const terms = termsResponses.flatMap(res => res?.data?.data ?? []);
 
-        for (const term of terms) {
-          const sectionsRes = await contentService.getSections(term.id);
-          const sections = sectionsRes.data?.data ?? [];
+      // Fetch sections for all terms in parallel
+      const sectionsPromises = terms.map(term =>
+        contentService.getSections(term.id).catch(() => null)
+      );
+      const sectionsResponses = await Promise.all(sectionsPromises);
+      const sections = sectionsResponses.flatMap(res => res?.data?.data ?? []);
 
-          for (const section of sections) {
-            const lessonsRes = await contentService.getLessons(section.id);
-            const lessons = lessonsRes.data?.data ?? [];
+      // Fetch lessons for all sections in parallel and attach sectionTitle
+      const lessonsPromises = sections.map(async (sec) => {
+        try {
+          const res = await contentService.getLessons(sec.id);
+          const list = res.data?.data ?? [];
+          return list.map((l: any) => ({
+            ...l,
+            sectionTitle: sec.title
+          }));
+        } catch {
+          return [];
+        }
+      });
+      const lessonsResponses = await Promise.all(lessonsPromises);
+      const lessons = lessonsResponses.flatMap(list => list);
 
-            for (const lesson of lessons) {
-              const detailRes = await contentService.getLessonDetail(lesson.id);
-              const detail = detailRes.data?.data;
-              if (!detail?.videos) continue;
+      // Fetch lesson details in parallel to check for processing videos
+      const detailsPromises = lessons.map(async (lesson) => {
+        try {
+          const res = await contentService.getLessonDetail(lesson.id);
+          const detail = res.data?.data;
+          if (!detail?.videos) return;
 
-              for (const video of detail.videos) {
-                if (video.isProcessingAI || video.isProcessingMindmaps) {
-                  freshVideos.push({
-                    ...video,
-                    lessonId: lesson.id,
-                    lessonTitle: lesson.title,
-                    sectionTitle: section.title,
-                  });
-                  trackedIdsRef.current.add(video.id);
-                }
-              }
+          for (const video of detail.videos) {
+            if (video.isProcessingAI || video.isProcessingMindmaps) {
+              freshVideos.push({
+                ...video,
+                lessonId: lesson.id,
+                lessonTitle: lesson.title,
+                sectionTitle: lesson.sectionTitle,
+              });
+              trackedIdsRef.current.add(video.id);
             }
           }
+        } catch {
+          // ignore
         }
-      }
+      });
+      await Promise.all(detailsPromises);
 
       setItems((prev) => {
         const existingMap = new Map(prev.map((i) => [i.video.id, i]));
@@ -785,6 +809,7 @@ export default function AIMonitorPageClient() {
     } catch {
       // silently handle
     } finally {
+      loadingVideosRef.current = false;
       setLoading(false);
     }
   }
