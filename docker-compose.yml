@@ -102,7 +102,7 @@ services:
       BunnyStream__ApiKey: ${BUNNY_STREAM_API_KEY:-}
       BunnyStream__TusUploadExpiryMinutes: ${BUNNY_STREAM_TUS_UPLOAD_EXPIRY_MINUTES:-180}
     ports:
-      - "127.0.0.1:${MASSAR_BACKEND_PORT:-5245-5246}:5245"
+      - "127.0.0.1:${MASAR_BACKEND_PORT:-${MASSAR_BACKEND_PORT:-5245}}:5245"
     volumes:
       - massar_assets:/app/wwwroot
     networks:
