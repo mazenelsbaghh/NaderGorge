@@ -286,13 +286,8 @@ internal static class BunnyUploadAuthorization
 
         var isAdmin = user.UserRoles.Any(ur => ur.Role.Type == RoleType.Admin || ur.Role.Name == "Admin");
         var isTeacher = user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher || ur.Role.Name == "Teacher");
-        var teacherId = isAdmin ? requestedTeacherId.GetValueOrDefault() : user.TeacherProfile?.Id ?? Guid.Empty;
 
-        if (teacherId == Guid.Empty)
-        {
-            return (false, "Teacher is required for Bunny upload.", Guid.Empty, Guid.Empty);
-        }
-
+        // Fetch lesson ownership first so we can auto-resolve teacher/package
         var lessonOwnership = await db.Lessons
             .Where(l => l.Id == lessonId)
             .Select(l => new
@@ -307,7 +302,24 @@ internal static class BunnyUploadAuthorization
             return (false, "Lesson not found.", Guid.Empty, Guid.Empty);
         }
 
-        if ((packageId.HasValue && lessonOwnership.PackageId != packageId.Value) || lessonOwnership.TeacherId != teacherId)
+        // Resolve teacher: for admins, default to lesson owner if not explicitly provided
+        var teacherId = isAdmin
+            ? (requestedTeacherId.HasValue && requestedTeacherId.Value != Guid.Empty
+                ? requestedTeacherId.Value
+                : lessonOwnership.TeacherId)
+            : user.TeacherProfile?.Id ?? Guid.Empty;
+
+        if (teacherId == Guid.Empty)
+        {
+            return (false, "Teacher is required for Bunny upload.", Guid.Empty, Guid.Empty);
+        }
+
+        // Resolve package: default to lesson's package if not explicitly provided
+        var resolvedPackageId = packageId.HasValue && packageId.Value != Guid.Empty
+            ? packageId.Value
+            : lessonOwnership.PackageId;
+
+        if (resolvedPackageId != lessonOwnership.PackageId || lessonOwnership.TeacherId != teacherId)
         {
             return (false, "Selected teacher, package, and lesson do not match.", Guid.Empty, Guid.Empty);
         }
@@ -317,7 +329,7 @@ internal static class BunnyUploadAuthorization
             return (false, "Unauthorized Bunny upload role.", Guid.Empty, Guid.Empty);
         }
 
-        return (true, string.Empty, teacherId, lessonOwnership.PackageId);
+        return (true, string.Empty, teacherId, resolvedPackageId);
     }
 
     public static async Task<bool> CanAccessAssetAsync(IAppDbContext db, Guid currentUserId, BunnyVideoAsset asset, CancellationToken cancellationToken)

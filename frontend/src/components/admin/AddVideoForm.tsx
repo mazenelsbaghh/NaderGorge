@@ -102,7 +102,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="مثال: الدرس الأول - مراجعة"
             className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
-            required={!(provider === 'bunny' && bunnyMode !== 'manual')}
+            required
           />
         </div>
         <div className="w-40 space-y-2">
@@ -136,7 +136,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             }}
             placeholder={provider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : provider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
             className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
-            required
+            required={!(provider === 'bunny' && bunnyMode !== 'manual')}
           />
         </div>
       </div>

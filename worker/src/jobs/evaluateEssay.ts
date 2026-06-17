@@ -12,7 +12,10 @@ if (!apiKeyStr) {
 const ai = new GoogleGenAI({
   apiKey: apiKeyStr
 });
-const API_URL = process.env.BACKEND_API_URL || 'http://localhost:5245/api/v1'; // Standard backend URL used alongside AI Chaptering
+const API_URL = (() => {
+  const base = process.env.BACKEND_API_URL || 'http://localhost:5245';
+  return base.endsWith('/api/v1') ? base : `${base}/api/v1`;
+})();
 const API_CALLBACK_SECRET = process.env.AI_CALLBACK_SECRET || process.env.API_CALLBACK_SECRET;
 
 export interface EvaluateEssayJobData {

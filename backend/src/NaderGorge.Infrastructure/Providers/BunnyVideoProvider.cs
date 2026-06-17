@@ -23,12 +23,15 @@ public sealed class BunnyVideoProvider : IVideoProvider
         }
 
         var trimmed = url.Trim();
-        var playerMatch = Regex.Match(trimmed, @"mediadelivery\.net/embed/\d+/([a-f0-9-]{32,36})", RegexOptions.IgnoreCase);
+
+        // Match any mediadelivery.net URL pattern: /embed/, /play/, or other paths containing libraryId/videoGuid
+        var playerMatch = Regex.Match(trimmed, @"mediadelivery\.net/(?:embed|play)/\d+/([a-f0-9-]{32,36})", RegexOptions.IgnoreCase);
         if (playerMatch.Success)
         {
             return playerMatch.Groups[1].Value;
         }
 
+        // Match standalone GUID
         var guidMatch = Regex.Match(trimmed, @"^[a-f0-9-]{32,36}$", RegexOptions.IgnoreCase);
         return guidMatch.Success ? trimmed : trimmed;
     }
