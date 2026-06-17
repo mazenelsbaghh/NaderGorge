@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { adminService, type EssaySubmissionDto } from '@/services/admin-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import toast from 'react-hot-toast';
 import { Loader2, CheckCircle2 } from 'lucide-react';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -72,6 +73,12 @@ function EssayCard({ essay, onGraded, gradingId, setGradingId }: {
           <div>
              <span className="text-xs font-bold uppercase tracking-wider text-[var(--admin-muted)]">إجابة الطالب</span>
              <div className="mt-2 text-sm leading-7 text-[var(--admin-text)] bg-[var(--admin-card-soft)] p-4 rounded-xl border border-[var(--admin-border)] min-h-[100px] whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(essay.answerText) }} />
+             {essay.audioUrl && (
+               <div className="mt-3 bg-[var(--admin-card-soft)] p-4 rounded-xl border border-[var(--admin-border)]">
+                 <span className="text-xs font-bold text-[var(--admin-muted)] block mb-2">التسجيل الصوتي للطالب:</span>
+                 <audio src={resolveMediaUrl(essay.audioUrl)} controls className="w-full" />
+               </div>
+             )}
           </div>
           {essay.status === 'WaitAI' && (
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 text-blue-500 text-xs font-bold">

@@ -65,7 +65,8 @@ test.describe('Package code page profiles', () => {
     await page.getByRole('button', { name: 'صفحة الأكواد' }).click();
 
     await expect(page.getByText('تخصيص صفحة الأكواد لـ')).toBeVisible();
-    await page.locator('select').first().selectOption('Published');
+    await page.getByRole('combobox', { name: 'حالة البروفايل' }).click();
+    await page.getByRole('option', { name: 'منشور' }).click();
     await page.getByLabel('العنوان الرئيسي').fill('عنوان مخصص للأولى');
     await page.getByLabel('وصف العرض').fill('هذا وصف مخصص للحزمة الأولى فقط.');
     await page.getByRole('button', { name: 'حفظ البروفايل' }).click({ force: true });
@@ -93,7 +94,8 @@ test.describe('Package code page profiles', () => {
     await adminPage.getByRole('button', { name: 'صفحة الأكواد' }).click();
 
     await expect(adminPage.getByText('تخصيص صفحة الأكواد لـ')).toBeVisible();
-    await adminPage.locator('select').first().selectOption('Published');
+    await adminPage.getByRole('combobox', { name: 'حالة البروفايل' }).click();
+    await adminPage.getByRole('option', { name: 'منشور' }).click();
     await adminPage.getByLabel('العنوان الرئيسي').fill('');
     await adminPage.getByRole('button', { name: 'حفظ البروفايل' }).click({ force: true });
     await expect(adminPage.getByText('Hero title is required for publishing.').first()).toBeVisible();

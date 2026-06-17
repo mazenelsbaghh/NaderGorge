@@ -297,6 +297,16 @@ export function HomeworkResultPanel({
                           لا توجد ملاحظات.
                         </p>
                       )}
+                      {q.audioUrl && (
+                        <div className="mt-3 border-t border-border/30 pt-3">
+                          <p className="mb-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                            تصحيح صوتي
+                          </p>
+                          <audio controls className="h-9 w-full" preload="none">
+                            <source src={resolveMediaUrl(q.audioUrl)} />
+                          </audio>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

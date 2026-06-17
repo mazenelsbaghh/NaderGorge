@@ -27,7 +27,10 @@ test.describe('Admin Content Management Flow', () => {
     await page.goto('http://admin.localhost:3000/admin/content');
     await expect(page.getByText('إدارة المحتوى', { exact: true }).first()).toBeVisible();
 
-    // 1. Create Package
+    // Click on the teacher card
+    await page.click('text=E2E Teacher');
+    await expect(page.locator('text=إضافة باقة جديدة')).toBeVisible({ timeout: 10000 });
+
     // Click the "إضافة باقة جديدة" button
     await page.click('text=إضافة باقة جديدة');
 
@@ -37,10 +40,12 @@ test.describe('Admin Content Management Flow', () => {
     await page.fill('textarea[placeholder*="وصف مختصر"]', 'E2E test package');
     await page.fill('input[placeholder*="السعر"]', '100');
 
-    // Select Teacher, Subject, and Grade Level
-    await page.selectOption('select:has-text("اختر المدرس")', { index: 1 });
-    await page.selectOption('select:has-text("اختر المادة")', { index: 1 });
-    await page.selectOption('select:has-text("اختر الصف الدراسي")', { index: 1 });
+    // Select Subject and Grade Level (Teacher is already selected by context)
+    await page.getByRole('combobox', { name: 'اختر المادة...' }).click();
+    await page.getByRole('option').first().click();
+
+    await page.getByRole('combobox', { name: 'اختر الصف الدراسي...' }).click();
+    await page.getByRole('option').first().click();
 
     // Submit
     await page.click('button:has-text("حفظ الباقة")', { force: true });
@@ -60,34 +65,34 @@ test.describe('Admin Content Management Flow', () => {
     // Click "إضافة" to create a Term
     await page.click('button:has-text("إضافة")', { force: true });
     await page.fill('input[placeholder*="اسم الترم"]', 'E2E Term');
-    await page.click('button:has-text("حفظ")', { force: true });
+    await page.locator('button:has-text("حفظ"):visible').first().dispatchEvent('click');
 
     // Wait for the term to appear and click it to go to Term details
     await expect(page.locator('text=E2E Term')).toBeVisible({ timeout: 10000 });
     await page.click('text=E2E Term', { force: true });
 
     // Wait for Term details page to load
-    await expect(page.locator('text=الشهور / الأقسام')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('button:has-text("الشهور / الأقسام")')).toBeVisible({ timeout: 15000 });
 
     // 3. We are on Term details. Go to sections tab
-    await page.click('text=الشهور / الأقسام', { force: true });
+    await page.click('button:has-text("الشهور / الأقسام")', { force: true });
     await page.click('button:has-text("إضافة")', { force: true });
     await page.fill('input[placeholder*="اسم القسم"]', 'E2E Section');
-    await page.click('button:has-text("حفظ")', { force: true });
+    await page.locator('button:has-text("حفظ"):visible').first().dispatchEvent('click');
 
     // Wait for section and click it to go to Section details
     await expect(page.locator('text=E2E Section')).toBeVisible({ timeout: 10000 });
     await page.click('text=E2E Section', { force: true });
 
     // Wait for Section details page to load
-    await expect(page.locator('text=الحصص')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('button:has-text("الحصص")')).toBeVisible({ timeout: 15000 });
 
     // 4. We are on Section details. Go to lessons tab
-    await page.click('text=الحصص', { force: true });
+    await page.click('button:has-text("الحصص")', { force: true });
     await page.click('button:has-text("إضافة")', { force: true });
     await page.fill('input[placeholder*="عنوان الحصة"]', 'E2E Lesson');
     await page.fill('textarea[placeholder*="نبذة قصيرة"]', 'E2E lesson summary');
-    await page.click('button:has-text("حفظ")', { force: true });
+    await page.locator('button:has-text("حفظ"):visible').first().dispatchEvent('click');
 
     // Wait for lesson to appear
     await expect(page.locator('text=E2E Lesson')).toBeVisible({ timeout: 10000 });

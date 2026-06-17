@@ -1,11 +1,13 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { Trash2, Plus, Check } from 'lucide-react';
 import { NumberField } from '@/components/ui/number-field';
 import { Dropdown } from '@/components/ui/dropdown';
 import dynamic from 'next/dynamic';
 import { FindTheMistakeBuilder } from './FindTheMistakeBuilder';
+import { studentService } from '@/services/student-service';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { 
@@ -58,6 +60,8 @@ const formats = [
 ];
 
 export function QuestionEditor({ question, index, onChange, onRemove }: QuestionEditorProps) {
+  const [uploading, setUploading] = useState(false);
+
   const handlePropChange = (
     field: keyof InlineExamQuestionDto,
     value: InlineExamQuestionDto[keyof InlineExamQuestionDto]
@@ -217,15 +221,46 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
 
         <div className="flex flex-col gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">
           <span className="text-xs uppercase tracking-wider font-bold text-[var(--admin-muted)] block">شرح صوتي (اختياري)</span>
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handlePropChange('audioFile', file);
-            }}
-            className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-all cursor-pointer"
-          />
+          {question.audioUrl ? (
+            <div className="flex flex-col gap-2">
+              <audio src={resolveMediaUrl(question.audioUrl)} controls className="w-full max-w-md" />
+              <button
+                type="button"
+                onClick={() => {
+                  handlePropChange('audioUrl', '');
+                  handlePropChange('audioFile', null);
+                }}
+                className="self-start text-xs font-bold text-red-500 hover:text-red-700 mt-1"
+              >
+                حذف الشرح الصوتي
+              </button>
+            </div>
+          ) : (
+            <>
+              <input
+                type="file"
+                accept="audio/*"
+                disabled={uploading}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setUploading(true);
+                    try {
+                      const res = await studentService.uploadAudio(file);
+                      handlePropChange('audioUrl', res.url);
+                      handlePropChange('audioFile', file);
+                    } catch (err) {
+                      console.error("Failed to upload audio", err);
+                    } finally {
+                      setUploading(false);
+                    }
+                  }
+                }}
+                className="text-sm font-bold text-[var(--admin-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border file:border-[var(--admin-primary)] file:text-sm file:font-semibold file:bg-[var(--admin-primary)]/10 file:text-[var(--admin-primary)] hover:file:bg-[var(--admin-primary)] hover:file:text-white transition-all cursor-pointer"
+              />
+              {uploading && <span className="text-xs text-[var(--admin-muted)]">جاري الرفع...</span>}
+            </>
+          )}
         </div>
 
         {question.type === 'MCQ' && (

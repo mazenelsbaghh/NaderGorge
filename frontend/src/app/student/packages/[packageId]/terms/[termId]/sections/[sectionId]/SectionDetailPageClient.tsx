@@ -121,7 +121,7 @@ export default function SectionDetailPageClient() {
     }
   }, [load, sectionId]);
 
-  const isEnrolled = pkg?.isEnrolled ?? false;
+  const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
 
   const sectionPrice = section?.price != null && section.price > 0 ? section.price : null;
   const termPrice = term?.price != null && term.price > 0 ? term.price : null;
@@ -214,7 +214,7 @@ export default function SectionDetailPageClient() {
                 <BookOpen className="h-4 w-4" />
                 {lessons.length} حصة
               </span>
-              {(isEnrolled || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) && (
+              {(hasDirectPackageAccess || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-3 py-0.5 text-xs font-bold text-emerald-300 backdrop-blur-sm">
                   <CheckCircle2 className="h-3 w-3" />
                   مفعّل
@@ -266,7 +266,7 @@ export default function SectionDetailPageClient() {
             ) : (
               <div className="space-y-3">
                 {lessons.map((lesson, idx) => {
-                  const hasContentAccess = isEnrolled || lesson.hasAccess;
+                  const hasContentAccess = hasDirectPackageAccess || lesson.hasAccess;
                   const canAccess = hasContentAccess && !lesson.isLocked;
                   return (
                     <div
@@ -390,9 +390,9 @@ export default function SectionDetailPageClient() {
                 )}
               </div>
 
-              {(isEnrolled || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) ? (
+              {(hasDirectPackageAccess || (term?.isPurchased ?? false) || (section?.isPurchased ?? false)) ? (
                 <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                  <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isEnrolled ? 'الباقة مفعّلة' : (term?.isPurchased ?? false) ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
+                  <CheckCircle2 className="inline h-4 w-4 mr-1" /> {hasDirectPackageAccess ? 'الباقة مفعّلة' : (term?.isPurchased ?? false) ? 'الترم مفعّل' : 'القسم مفعّل'} في حسابك بالفعل. يمكنك مشاهدة الحصص مباشرة.
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">

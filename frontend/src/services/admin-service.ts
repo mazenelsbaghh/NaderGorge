@@ -413,6 +413,7 @@ export interface EssaySubmissionDto {
   studentId: string;
   questionId: string;
   answerText: string;
+  audioUrl?: string;
   aiInitialScore?: number;
   aiFeedback?: string;
   status: string;

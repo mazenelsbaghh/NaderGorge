@@ -16,6 +16,7 @@ public record PackageDto(
     decimal Price, 
     Guid ProgramId, 
     bool IsEnrolled, 
+    bool HasDirectPackageAccess,
     Guid TeacherId, 
     Guid SubjectId,
     string TeacherName,
@@ -139,6 +140,8 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 }
             }
 
+            bool hasDirectPackageAccess = hasGlobalAccess || activeGrants.Any(g => g.GrantType == CodeType.Package && g.PackageId == pk.Id);
+
             dtos.Add(new PackageDto(
                 pk.Id, 
                 pk.Name, 
@@ -146,6 +149,7 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.Price, 
                 pk.SubjectId, 
                 isEnrolled, 
+                hasDirectPackageAccess,
                 pk.TeacherId, 
                 pk.SubjectId,
                 pk.Teacher?.User?.FullName ?? "Unknown",

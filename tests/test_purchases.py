@@ -27,8 +27,8 @@ def test_unpurchased_access_blocked(mock_package):
     student.login("20000000001", "password")
 
     lesson_res = student.get(f"/api/content/lessons/{lesson_id}")
-    assert lesson_res.status_code in [400, 403]
-    assert "access" in lesson_res.text.lower() or "have" in lesson_res.text.lower()
+    assert lesson_res.status_code == 200
+    assert lesson_res.json().get("data", {}).get("hasAccess") is False
 
     # Student 1 tries to start the exam of the unpurchased lesson
     exam_res = student.post(f"/api/exams/{exam_id}/start")

@@ -158,6 +158,7 @@ export default function PackageProfilePageClient() {
   }
 
   const isEnrolled = pkg?.isEnrolled ?? false;
+  const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
 
   return (
     <motion.div
@@ -204,9 +205,13 @@ export default function PackageProfilePageClient() {
             </span>
           )}
           <span className={`rounded-full px-3 py-1 text-xs font-black ${
-            isEnrolled ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+            hasDirectPackageAccess
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              : isEnrolled
+                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
           }`}>
-            {isEnrolled ? "باقة مفعّلة" : "تحتاج تفعيل"}
+            {hasDirectPackageAccess ? "باقة مفعّلة" : isEnrolled ? "تفعيل جزئي" : "تحتاج تفعيل"}
           </span>
           <span className="rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 px-3 py-1 text-xs font-black">
             {terms.length} ترم
@@ -319,12 +324,12 @@ export default function PackageProfilePageClient() {
                         {/* Status badge */}
                         <span
                           className={`absolute right-4 top-4 rounded-full px-3 py-1 text-xs font-black tracking-wider ${
-                            isEnrolled
+                            (hasDirectPackageAccess || term.isPurchased)
                               ? "bg-white/20 text-white backdrop-blur-sm"
                               : "bg-black/25 text-white/80 backdrop-blur-sm"
                           }`}
                         >
-                          {isEnrolled ? "✦ مفتوح" : "مقفول"}
+                          {(hasDirectPackageAccess || term.isPurchased) ? "✦ مفتوح" : "مقفول"}
                         </span>
 
                         {/* Term number pill */}
@@ -369,7 +374,7 @@ export default function PackageProfilePageClient() {
               <p className="text-3xl font-black text-[var(--admin-primary)] mt-1">{pkg?.price || 0} ج.م</p>
             </div>
             
-            {isEnrolled ? (
+            {hasDirectPackageAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
                 <CheckCircle2 className="inline h-4 w-4 mr-1" /> هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة الأترام مباشرة.
               </div>

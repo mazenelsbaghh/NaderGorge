@@ -773,7 +773,7 @@ public class AdminController : ControllerBase
         var list = listQuery
             .Where(e => e.Status != NaderGorge.Domain.Entities.EssaySubmissionStatus.TeacherGraded)
             .OrderBy(e => e.CreatedAt)
-            .Select(e => new { e.Id, e.StudentId, e.QuestionId, e.AnswerText, e.AiInitialScore, e.AiFeedback, e.Status })
+            .Select(e => new { e.Id, e.StudentId, e.QuestionId, e.AnswerText, e.AudioUrl, e.AiInitialScore, e.AiFeedback, e.Status })
             .ToList();
         return Ok(NaderGorge.Application.Common.ApiResponse<object>.Ok(list));
     }

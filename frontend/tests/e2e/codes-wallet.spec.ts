@@ -83,6 +83,10 @@ test.describe('US1: Codes & Wallet Lifecycle', () => {
     test.setTimeout(60000);
     await page.goto('http://app.localhost:3000/register');
 
+    // Dismiss instructions modal
+    await page.click('button:has-text("فهمت وموافق على الشروط")');
+    await page.waitForTimeout(500);
+
     // Step 1: Identity
     await page.fill(
       'input[name="fullName"]',
@@ -146,7 +150,7 @@ test.describe('US1: Codes & Wallet Lifecycle', () => {
     await page.goto('http://app.localhost:3000/student/packages');
     
     // Click "استعرض الباقة" for the mock package
-    await page.locator('button:has-text("استعرض الباقة")').first().click();
+    await page.locator('text=استعرض الباقة').first().click();
     await expect(page).toHaveURL(/.*\/packages\/.*/);
 
     // Click "شراء الباقة" (Buy Package)

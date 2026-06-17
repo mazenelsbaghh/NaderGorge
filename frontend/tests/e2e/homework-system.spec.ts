@@ -175,7 +175,7 @@ test.describe.serial('Homework Solving Flow', () => {
     await mcq1Option.click({ force: true });
 
     // Verify answer is selected (check for "تمت الإجابة")
-    await expect(page.locator('text=تمت الإجابة')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text=تمت الإجابة').first()).toBeVisible({ timeout: 5000 });
 
     // Navigate to question 2 using التالي button
     // الانتقال للسؤال التالي

@@ -9,6 +9,7 @@ export interface PackageDto {
   price: number;
   programId: string;
   isEnrolled: boolean;
+  hasDirectPackageAccess?: boolean;
   imageUrl?: string;
   teacherId?: string;
   subjectId?: string;

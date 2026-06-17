@@ -298,7 +298,6 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var sortedVideos = lesson.Videos.OrderBy(v => v.Order).ToList();
         var videoDtos = new List<VideoDto>();
-        bool anyPrecedingExamNotPassed = false;
 
         foreach (var v in sortedVideos)
         {
@@ -314,7 +313,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 .ToList();
 
             bool examPassed = v.ExamId.HasValue && passedExamIds.Contains(v.ExamId.Value);
-            bool isExamLocked = anyPrecedingExamNotPassed || examsForVideo.Any(e => e.IsMandatory && !e.Passed);
+            bool isExamLocked = examsForVideo.Any(e => e.IsMandatory && !e.Passed);
 
             videoDtos.Add(new VideoDto(
                 v.Id,
@@ -335,11 +334,6 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 examsForVideo,
                 chapters
             ));
-
-            if (examsForVideo.Any(e => e.IsMandatory && !e.Passed))
-            {
-                anyPrecedingExamNotPassed = true;
-            }
         }
 
         var hw = await _db.Homeworks

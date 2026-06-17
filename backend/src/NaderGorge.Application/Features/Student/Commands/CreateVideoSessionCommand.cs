@@ -53,16 +53,11 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         if (!hasAccess)
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
 
-        // 1b. Check if the current video or any preceding video in the same lesson has an unpassed mandatory exam
-        var precedingAndCurrentVideoIds = await _db.LessonVideos
-            .Where(lv => lv.LessonId == video.LessonId && lv.Order <= video.Order)
-            .Select(lv => lv.Id)
-            .ToListAsync(ct);
-
+        // 1b. Check if the current video has an unpassed mandatory exam
         var videoExams = await _db.Exams
             .Where(e => e.IsMandatory && (
-                (e.LessonVideo != null && precedingAndCurrentVideoIds.Contains(e.LessonVideo.Id)) ||
-                _db.LessonVideos.Any(lv => precedingAndCurrentVideoIds.Contains(lv.Id) && lv.ExamId == e.Id)
+                e.LessonVideoId == video.Id ||
+                (video.ExamId == e.Id)
             ))
             .Select(e => e.Id)
             .ToListAsync(ct);

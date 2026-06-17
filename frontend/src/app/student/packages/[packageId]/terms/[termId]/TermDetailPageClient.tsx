@@ -121,9 +121,9 @@ export default function TermDetailPageClient() {
     }
   }, [load, termId]);
 
-  const isEnrolled = pkg?.isEnrolled ?? false;
+  const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
   const isTermPurchased = term?.isPurchased ?? false;
-  const hasAccess = isEnrolled || isTermPurchased;
+  const hasAccess = hasDirectPackageAccess || isTermPurchased;
 
   /* ── Loading skeleton ── */
   if (loading) {
@@ -402,7 +402,7 @@ export default function TermDetailPageClient() {
             
             {hasAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isTermPurchased && !isEnrolled ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isTermPurchased && !hasDirectPackageAccess ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
               </div>
             ) : (
               <div className="flex flex-col gap-3">
