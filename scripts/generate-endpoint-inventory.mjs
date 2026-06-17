@@ -686,7 +686,10 @@ function routePathsMatch(frontendPath, backendPath) {
 
   return frontendSegments.every((segment, index) => {
     const backendSegment = backendSegments[index];
-    return segment === backendSegment || (isRouteParameter(segment) && isRouteParameter(backendSegment));
+    if (segment === backendSegment) return true;
+    if (isRouteParameter(segment) && isRouteParameter(backendSegment)) return true;
+    if (segment === '{contenttype}s' && ['packages', 'terms', 'sections'].includes(backendSegment)) return true;
+    return false;
   });
 }
 
