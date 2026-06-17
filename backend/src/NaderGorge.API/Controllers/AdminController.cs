@@ -905,6 +905,84 @@ public class AdminController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPost("bunny/uploads/tus")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> CreateBunnyTusUpload([FromBody] CreateBunnyTusUploadRequest req, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new CreateBunnyTusUploadCommand(
+            req.TeacherId,
+            req.PackageId,
+            req.LessonId,
+            req.Title,
+            req.Order,
+            req.MaxWatchCount,
+            req.FileName,
+            req.FileSizeBytes,
+            GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("bunny/uploads/{assetId:guid}/complete")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> CompleteBunnyUpload(Guid assetId, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new CompleteBunnyUploadCommand(assetId, GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("bunny/uploads/fetch")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> FetchBunnyVideo([FromBody] FetchBunnyVideoRequest req, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new FetchBunnyVideoCommand(
+            req.TeacherId,
+            req.PackageId,
+            req.LessonId,
+            req.Title,
+            req.Order,
+            req.MaxWatchCount,
+            req.SourceUrl,
+            GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("bunny/videos/{assetId:guid}/refresh-status")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> RefreshBunnyVideoStatus(Guid assetId, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new RefreshBunnyVideoStatusCommand(assetId, GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpPost("bunny/usage/sync")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> SyncBunnyUsage([FromBody] SyncBunnyUsageRequest req, CancellationToken ct)
+    {
+        var response = await _mediator.Send(new SyncBunnyUsageCommand(
+            req.PeriodStart,
+            req.PeriodEnd,
+            req.TeacherId,
+            req.PackageId,
+            req.ForceRefresh,
+            GetUserId()), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
+    [HttpGet("bunny/reports/costs")]
+    [HasPermission("settings.manage")]
+    public async Task<IActionResult> GetBunnyCostReport([FromQuery] string month, [FromQuery] Guid? teacherId, [FromQuery] Guid? packageId, CancellationToken ct)
+    {
+        if (!DateTime.TryParse($"{month}-01", out var parsedMonth))
+        {
+            return BadRequest(ApiResponse.Fail("Month must be in yyyy-MM format."));
+        }
+
+        var periodStart = DateTime.SpecifyKind(parsedMonth.Date, DateTimeKind.Utc);
+        var periodEnd = periodStart.AddMonths(1);
+        var response = await _mediator.Send(new GetBunnyCostReportQuery(periodStart, periodEnd, teacherId, packageId), ct);
+        return response.Success ? Ok(response) : BadRequest(response);
+    }
+
     // --- Roles CRUD ---
     [HttpGet("roles")]
     [HasPermission("roles.manage")]
@@ -1064,6 +1142,9 @@ public record BulkGenerateRequest(
     decimal? DiscountPercentage = null,
     DateTime? ExpiresAt = null
 );
+public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, string? FileName, long? FileSizeBytes);
+public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, string SourceUrl);
+public record SyncBunnyUsageRequest(DateTime PeriodStart, DateTime PeriodEnd, Guid? TeacherId, Guid? PackageId, bool ForceRefresh);
 public record UpdateVideoRequest(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit);
 public record AttachHomeworkRequest(string Title, string Instructions, bool IsMandatory, bool IsRandomized, int RequiredPointsToPass, decimal TotalScore, List<AttachHomeworkQuestionDto> Questions);
 public record LinkLessonExamRequest(Guid? ExamId);

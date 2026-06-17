@@ -36,6 +36,8 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ContentSection> ContentSections => Set<ContentSection>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonVideo> LessonVideos => Set<LessonVideo>();
+    public DbSet<BunnyVideoAsset> BunnyVideoAssets => Set<BunnyVideoAsset>();
+    public DbSet<BunnyUsageSnapshot> BunnyUsageSnapshots => Set<BunnyUsageSnapshot>();
     public DbSet<VideoChapter> VideoChapters => Set<VideoChapter>();
     public DbSet<LessonResource> LessonResources => Set<LessonResource>();
     public DbSet<LessonComment> LessonComments => Set<LessonComment>();
@@ -368,6 +370,47 @@ public class AppDbContext : DbContext, IAppDbContext
              .WithMany()
              .HasForeignKey(l => l.ExamId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<BunnyVideoAsset>(e =>
+        {
+            e.ToTable("bunny_video_assets");
+            e.HasKey(b => b.Id);
+            e.HasIndex(b => b.LessonVideoId).IsUnique();
+            e.HasIndex(b => b.BunnyVideoGuid).IsUnique();
+            e.HasIndex(b => new { b.TeacherId, b.PackageId, b.LessonId });
+            e.HasIndex(b => new { b.Status, b.LastStatusSyncedAtUtc });
+            e.Property(b => b.BunnyVideoGuid).HasMaxLength(100).IsRequired();
+            e.Property(b => b.BunnyCollectionId).HasMaxLength(100);
+            e.Property(b => b.Title).HasMaxLength(200).IsRequired();
+            e.Property(b => b.UploadMethod).HasMaxLength(40).IsRequired();
+            e.Property(b => b.Status).HasMaxLength(40).IsRequired();
+            e.Property(b => b.OriginalFileName).HasMaxLength(500);
+            e.Property(b => b.SourceUrlHash).HasMaxLength(128);
+            e.Property(b => b.ErrorMessage).HasMaxLength(2000);
+            e.HasOne(b => b.LessonVideo).WithOne(v => v.BunnyVideoAsset).HasForeignKey<BunnyVideoAsset>(b => b.LessonVideoId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(b => b.Teacher).WithMany().HasForeignKey(b => b.TeacherId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.Package).WithMany().HasForeignKey(b => b.PackageId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.Lesson).WithMany().HasForeignKey(b => b.LessonId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(b => b.UploadedByUser).WithMany().HasForeignKey(b => b.UploadedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<BunnyUsageSnapshot>(e =>
+        {
+            e.ToTable("bunny_usage_snapshots");
+            e.HasKey(s => s.Id);
+            e.HasIndex(s => new { s.BunnyVideoAssetId, s.PeriodStartUtc, s.PeriodEndUtc }).IsUnique();
+            e.HasIndex(s => new { s.TeacherId, s.PeriodStartUtc, s.PeriodEndUtc });
+            e.HasIndex(s => new { s.PackageId, s.PeriodStartUtc, s.PeriodEndUtc });
+            e.Property(s => s.BandwidthSource).HasMaxLength(80).IsRequired();
+            e.Property(s => s.StorageRateUsdPerGb).HasPrecision(18, 6);
+            e.Property(s => s.BandwidthRateUsdPerGb).HasPrecision(18, 6);
+            e.Property(s => s.StorageCostUsd).HasPrecision(18, 6);
+            e.Property(s => s.BandwidthCostUsd).HasPrecision(18, 6);
+            e.Property(s => s.TotalCostUsd).HasPrecision(18, 6);
+            e.Property(s => s.Notes).HasMaxLength(1000);
+            e.HasOne(s => s.BunnyVideoAsset).WithMany(b => b.UsageSnapshots).HasForeignKey(s => s.BunnyVideoAssetId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.SyncedByUser).WithMany().HasForeignKey(s => s.SyncedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // VideoChapter

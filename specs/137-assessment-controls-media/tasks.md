@@ -42,10 +42,15 @@
 
 ## Final Phase: Polish & Validation
 
-- [ ] T024 Run `dotnet test backend/NaderGorge.sln` and fix any build/test failures caused by this feature.
-- [ ] T025 Run `npm run lint` in `frontend` and fix any errors caused by this feature.
-- [ ] T026 Review UI against Massar product rules: clear labels, 44px controls, visible focus, no raw tags, no layout shift from image previews.
-- [ ] T027 Update this `tasks.md` with completed checkboxes and summarize verification evidence.
+- [X] T024 Run `dotnet test backend/NaderGorge.sln` and fix any build/test failures caused by this feature.
+- [X] T025 Run `npm run lint` in `frontend` and fix any errors caused by this feature.
+- [X] T026 Review UI against Massar product rules: clear labels, 44px controls, visible focus, no raw tags, no layout shift from image previews.
+- [X] T027 Update this `tasks.md` with completed checkboxes and summarize verification evidence.
+
+## Verification Evidence
+
+- `dotnet test backend/NaderGorge.sln`: Passed, 127 passed / 1 skipped. Remaining compiler warnings are pre-existing nullable/unreachable-code warnings outside this feature.
+- `npm run lint` from `frontend`: Passed with 0 errors. Remaining warnings are pre-existing unused `backUrl` warnings in student lesson pages outside this feature.
 
 ## Dependencies
 

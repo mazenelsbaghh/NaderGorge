@@ -68,7 +68,9 @@ export default function AdminSettingsPageClient() {
     EnableWatermark: 'false',
     WatermarkOpacity: '0.15',
     MaintenanceMode: 'false',
-    MaintenanceMessage: 'المنصة في أعمال صيانة مجدولة. سنعود قريباً!'
+    MaintenanceMessage: 'المنصة في أعمال صيانة مجدولة. سنعود قريباً!',
+    BunnyStreamStorageRateUsdPerGb: '0.01',
+    BunnyStreamBandwidthRateUsdPerGb: '0.005'
   });
 
   // Roles States
@@ -390,6 +392,40 @@ export default function AdminSettingsPageClient() {
                           />
                         </div>
                       )}
+                    </div>
+
+                    <div className="space-y-2 text-right">
+                      <label className="block text-sm font-bold text-[var(--admin-text)]">سعر تخزين Bunny لكل GB</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.000001"
+                          value={settings.BunnyStreamStorageRateUsdPerGb}
+                          onChange={(e) => handleSettingChange('BunnyStreamStorageRateUsdPerGb', e.target.value)}
+                          className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 pl-10 pr-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] font-mono text-left"
+                          dir="ltr"
+                        />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]">$</span>
+                      </div>
+                      <p className="text-xs text-[var(--admin-muted)]">القيمة الافتراضية من Bunny Stream: 0.01 دولار لكل GB.</p>
+                    </div>
+
+                    <div className="space-y-2 text-right">
+                      <label className="block text-sm font-bold text-[var(--admin-text)]">سعر باندويث Bunny لكل GB</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.000001"
+                          value={settings.BunnyStreamBandwidthRateUsdPerGb}
+                          onChange={(e) => handleSettingChange('BunnyStreamBandwidthRateUsdPerGb', e.target.value)}
+                          className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 pl-10 pr-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] font-mono text-left"
+                          dir="ltr"
+                        />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--admin-muted)]">$</span>
+                      </div>
+                      <p className="text-xs text-[var(--admin-muted)]">القيمة الافتراضية من Bunny Stream: 0.005 دولار لكل GB.</p>
                     </div>
                   </div>
                 </div>

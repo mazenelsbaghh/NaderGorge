@@ -17,7 +17,9 @@ public sealed record CachedPlatformSettings(
     bool EnableWatermark,
     decimal WatermarkOpacity,
     bool MaintenanceMode,
-    string MaintenanceMessage
+    string MaintenanceMessage,
+    decimal BunnyStreamStorageRateUsdPerGb,
+    decimal BunnyStreamBandwidthRateUsdPerGb
 )
 {
     public static CachedPlatformSettings Default { get; } = new(
@@ -33,7 +35,9 @@ public sealed record CachedPlatformSettings(
         true,
         0.15m,
         false,
-        "المنصة في أعمال الصيانة حالياً، سنعود قريباً."
+        "المنصة في أعمال الصيانة حالياً، سنعود قريباً.",
+        0.01m,
+        0.005m
     );
 }
 
@@ -79,7 +83,9 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
                 GetBool(settings, PlatformSettingKeys.EnableWatermark, CachedPlatformSettings.Default.EnableWatermark),
                 GetDecimal(settings, PlatformSettingKeys.WatermarkOpacity, CachedPlatformSettings.Default.WatermarkOpacity, minValue: 0m),
                 GetBool(settings, PlatformSettingKeys.MaintenanceMode, CachedPlatformSettings.Default.MaintenanceMode),
-                GetString(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage)
+                GetString(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage),
+                GetDecimal(settings, PlatformSettingKeys.BunnyStreamStorageRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamStorageRateUsdPerGb, minValue: 0m),
+                GetDecimal(settings, PlatformSettingKeys.BunnyStreamBandwidthRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamBandwidthRateUsdPerGb, minValue: 0m)
             );
         })!;
     }

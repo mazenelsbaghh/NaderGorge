@@ -30,6 +30,7 @@ export * from './PackageDetailsForm';
 export * from './PackageCodeProfileForm';
 export * from './LessonVideoList';
 export * from './AddVideoForm';
+export * from './BunnyCostReports';
 export * from './LessonResourceList';
 export * from './AddResourceForm';
 export * from './LessonHomeworkList';

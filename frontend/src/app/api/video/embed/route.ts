@@ -122,6 +122,8 @@ export async function GET(request: NextRequest) {
       const oid = match[1];
       const id = match[2];
       html = generateVkEmbedHtml(oid, id, studentName, studentPhone);
+    } else if (provider === 'bunny') {
+      html = generateBunnyEmbedHtml(videoId, studentName, studentPhone);
     } else {
       html = generateYouTubeEmbedHtml(videoId, studentName, studentPhone);
     }
@@ -140,6 +142,66 @@ export async function GET(request: NextRequest) {
     console.error('[video-embed] Decryption failed:', error);
     return iframeError('Session expired or invalid', 403);
   }
+}
+
+function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPhone: string): string {
+  const libraryId = process.env.BUNNY_STREAM_LIBRARY_ID || process.env.NEXT_PUBLIC_BUNNY_STREAM_LIBRARY_ID || '';
+  if (!libraryId) {
+    return `<!DOCTYPE html><html lang="ar" dir="rtl"><body style="margin:0;background:#000;color:#fff;font-family:system-ui,sans-serif;display:grid;place-items:center;height:100vh">Bunny player is not configured</body></html>`;
+  }
+
+  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${libraryId}/${videoId}`);
+  const watermarkBrand = escapeHtml('Massar Platform');
+  const watermarkStudentName = escapeHtml(studentName);
+  const watermarkStudentPhone = escapeHtml(studentPhone);
+
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+    #wrap { position: relative; width: 100%; height: 100%; background: #000; }
+    iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    #video-watermark {
+      position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none;
+      color: rgba(255,255,255,.18); font-size: 1.4rem; font-family: Tajawal, Montserrat, system-ui, sans-serif;
+      text-shadow: 1px 1px 2px rgba(0,0,0,.5); user-select: none; white-space: pre-wrap;
+      transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3;
+    }
+  </style>
+</head>
+<body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
+  <div id="wrap">
+    <iframe src=${safeSrc} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;" allowfullscreen></iframe>
+    <div id="video-watermark">
+      <span style="font-weight:900">${watermarkBrand}</span><br>
+      <span style="font-size:.75em;font-weight:700">${watermarkStudentName}</span><br>
+      <span style="font-size:.6em">${watermarkStudentPhone}</span>
+    </div>
+  </div>
+  <script>
+    var watermark = document.getElementById('video-watermark');
+    setInterval(function() {
+      var x = 5 + Math.random() * 70;
+      var y = 5 + Math.random() * 70;
+      watermark.style.transform = 'translate3d(' + x + 'vw,' + y + 'vh,0)';
+    }, 7000);
+  </script>
+</body>
+</html>`;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 

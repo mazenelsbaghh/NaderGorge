@@ -86,6 +86,8 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
 builder.Services.AddScoped<IVideoProvider, YouTubeVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, VkVideoProvider>();
+builder.Services.AddScoped<IVideoProvider, BunnyVideoProvider>();
+builder.Services.AddHttpClient<IBunnyStreamClient, BunnyStreamClient>();
 builder.Services.AddScoped<IAccessCheckService, AccessCheckService>();
 builder.Services.AddScoped<IVideoEncryptionService, VideoEncryptionService>();
 builder.Services.AddScoped<IJobEnqueuer, RedisJobEnqueuer>();

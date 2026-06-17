@@ -85,6 +85,71 @@ public class LessonVideo : BaseEntity
     public Exam? Exam { get; set; }
 
     public ICollection<VideoChapter> VideoChapters { get; set; } = new List<VideoChapter>();
+    public BunnyVideoAsset? BunnyVideoAsset { get; set; }
+}
+
+public class BunnyVideoAsset : BaseEntity
+{
+    public Guid LessonVideoId { get; set; }
+    public LessonVideo LessonVideo { get; set; } = null!;
+
+    public Guid TeacherId { get; set; }
+    public TeacherProfile Teacher { get; set; } = null!;
+
+    public Guid PackageId { get; set; }
+    public Package Package { get; set; } = null!;
+
+    public Guid LessonId { get; set; }
+    public Lesson Lesson { get; set; } = null!;
+
+    public Guid UploadedByUserId { get; set; }
+    public User UploadedByUser { get; set; } = null!;
+
+    public long BunnyLibraryId { get; set; }
+    public string BunnyVideoGuid { get; set; } = string.Empty;
+    public string? BunnyCollectionId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string UploadMethod { get; set; } = string.Empty;
+    public string Status { get; set; } = "Created";
+    public string? OriginalFileName { get; set; }
+    public string? SourceUrlHash { get; set; }
+    public long? FileSizeBytes { get; set; }
+    public int? DurationSeconds { get; set; }
+    public long? StorageBytes { get; set; }
+    public long? BandwidthBytes { get; set; }
+    public int? BunnyEncodeProgress { get; set; }
+    public DateTime? LastStatusSyncedAtUtc { get; set; }
+    public DateTime? LastUsageSyncedAtUtc { get; set; }
+    public string? ErrorMessage { get; set; }
+
+    public ICollection<BunnyUsageSnapshot> UsageSnapshots { get; set; } = new List<BunnyUsageSnapshot>();
+}
+
+public class BunnyUsageSnapshot : BaseEntity
+{
+    public Guid BunnyVideoAssetId { get; set; }
+    public BunnyVideoAsset BunnyVideoAsset { get; set; } = null!;
+
+    public Guid TeacherId { get; set; }
+    public Guid PackageId { get; set; }
+    public Guid LessonId { get; set; }
+
+    public DateTime PeriodStartUtc { get; set; }
+    public DateTime PeriodEndUtc { get; set; }
+    public long StorageBytes { get; set; }
+    public long BandwidthBytes { get; set; }
+    public bool IsBandwidthEstimated { get; set; }
+    public string BandwidthSource { get; set; } = "Unavailable";
+    public decimal StorageRateUsdPerGb { get; set; }
+    public decimal BandwidthRateUsdPerGb { get; set; }
+    public decimal StorageCostUsd { get; set; }
+    public decimal BandwidthCostUsd { get; set; }
+    public decimal TotalCostUsd { get; set; }
+    public DateTime? BunnyStorageCalculatedAtUtc { get; set; }
+    public DateTime SyncedAtUtc { get; set; }
+    public Guid? SyncedByUserId { get; set; }
+    public User? SyncedByUser { get; set; }
+    public string? Notes { get; set; }
 }
 
 public class LessonResource : BaseEntity

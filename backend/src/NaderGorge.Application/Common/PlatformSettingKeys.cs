@@ -17,4 +17,6 @@ public static class PlatformSettingKeys
     public const string WatermarkOpacity = "WatermarkOpacity";
     public const string MaintenanceMode = "MaintenanceMode";
     public const string MaintenanceMessage = "MaintenanceMessage";
+    public const string BunnyStreamStorageRateUsdPerGb = "BunnyStreamStorageRateUsdPerGb";
+    public const string BunnyStreamBandwidthRateUsdPerGb = "BunnyStreamBandwidthRateUsdPerGb";
 }

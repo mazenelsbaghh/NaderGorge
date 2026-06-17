@@ -13,8 +13,12 @@ setGlobalDispatcher(new Agent({
 }));
 
 // Initialize the API using the new genai SDK.
-// It automatically picks up GEMINI_API_KEY from environment.
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+    console.error("[Gemini] ERROR: GEMINI_API_KEY is not set in environment variables!");
+}
 const ai = new GoogleGenAI({
+    apiKey: apiKey || '',
     httpOptions: { timeout: 60 * 60 * 1000 } // 60 mins fallback timeout for genai request
 });
 

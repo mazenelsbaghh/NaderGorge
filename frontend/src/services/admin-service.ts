@@ -1,6 +1,85 @@
 import apiClient from './api-client';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
 
+export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
+
+export type CreateVideoPayload = {
+  lessonId: string;
+  title: string;
+  provider: VideoProvider;
+  urlOrEmbedCode: string;
+  order: number;
+  limit: number;
+  isActive?: boolean;
+};
+
+export type UpdateVideoPayload = Omit<CreateVideoPayload, 'lessonId' | 'isActive'>;
+
+export type BunnyTusUploadRequest = {
+  teacherId?: string;
+  packageId?: string;
+  lessonId: string;
+  title: string;
+  order: number;
+  maxWatchCount: number;
+  fileName?: string;
+  fileSizeBytes?: number;
+};
+
+export type BunnyTusUploadSession = {
+  lessonVideoId: string;
+  bunnyVideoAssetId: string;
+  bunnyVideoGuid: string;
+  libraryId: number;
+  tusEndpoint: string;
+  authorizationSignature: string;
+  authorizationExpire: number;
+  uploadHeaders: Record<string, string>;
+  status: string;
+};
+
+export type BunnyFetchVideoRequest = {
+  teacherId?: string;
+  packageId?: string;
+  lessonId: string;
+  title: string;
+  order: number;
+  maxWatchCount: number;
+  sourceUrl: string;
+};
+
+export type BunnyUploadStatus = {
+  assetId: string;
+  lessonVideoId: string;
+  status: string;
+  encodeProgress?: number;
+  message?: string;
+};
+
+export type BunnyCostReport = {
+  periodStart: string;
+  periodEnd: string;
+  platformTotalCostUsd: number;
+  platformStorageBytes: number;
+  platformBandwidthBytes: number;
+  estimatedBandwidthCount: number;
+  videos: Array<{
+    lessonVideoId: string;
+    bunnyVideoAssetId: string;
+    title: string;
+    teacherId: string;
+    packageId: string;
+    storageBytes: number;
+    bandwidthBytes: number;
+    storageCostUsd: number;
+    bandwidthCostUsd: number;
+    totalCostUsd: number;
+    isBandwidthEstimated: boolean;
+  }>;
+  teachers: Array<{ id: string; name: string; storageBytes: number; bandwidthBytes: number; totalCostUsd: number }>;
+  packages: Array<{ id: string; name: string; storageBytes: number; bandwidthBytes: number; totalCostUsd: number }>;
+};
+
 export interface ApiResponse<T = any> {
   data: T;
   success: boolean;
@@ -858,11 +937,11 @@ export const adminService = {
     const res = await apiClient.post<ApiResponse<ModerateLessonCommentResponse>>(`/admin/comments/${commentId}/reject`, {});
     return res.data?.data;
   },
-  createVideo: async (payload: any) => {
+  createVideo: async (payload: CreateVideoPayload) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/videos', payload);
     return res.data?.data;
   },
-  updateVideo: async (videoId: string, payload: any) => {
+  updateVideo: async (videoId: string, payload: UpdateVideoPayload) => {
     const res = await apiClient.put<ApiResponse>(`/admin/videos/${videoId}`, payload);
     return res.data;
   },
@@ -889,6 +968,33 @@ export const adminService = {
   cancelMindmapGeneration: async (videoId: string) => {
     const res = await apiClient.post<ApiResponse>(`/admin/videos/${videoId}/cancel-mindmap`);
     return res.data;
+  },
+  createBunnyTusUpload: async (payload: BunnyTusUploadRequest) => {
+    const res = await apiClient.post<ApiResponse<BunnyTusUploadSession>>('/admin/bunny/uploads/tus', payload);
+    return res.data?.data;
+  },
+  completeBunnyUpload: async (assetId: string) => {
+    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(`/admin/bunny/uploads/${assetId}/complete`);
+    return res.data?.data;
+  },
+  fetchBunnyVideo: async (payload: BunnyFetchVideoRequest) => {
+    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>('/admin/bunny/uploads/fetch', payload);
+    return res.data?.data;
+  },
+  refreshBunnyVideoStatus: async (assetId: string) => {
+    const res = await apiClient.post<ApiResponse<BunnyUploadStatus>>(`/admin/bunny/videos/${assetId}/refresh-status`);
+    return res.data?.data;
+  },
+  syncBunnyUsage: async (payload: { periodStart: string; periodEnd: string; teacherId?: string; packageId?: string; forceRefresh?: boolean }) => {
+    const res = await apiClient.post<ApiResponse>('/admin/bunny/usage/sync', {
+      ...payload,
+      forceRefresh: payload.forceRefresh ?? false,
+    });
+    return res.data;
+  },
+  getBunnyCostReport: async (params: { month: string; teacherId?: string; packageId?: string }) => {
+    const res = await apiClient.get<ApiResponse<BunnyCostReport>>('/admin/bunny/reports/costs', { params });
+    return res.data?.data;
   },
   regenerateChapterMindmap: async (chapterId: string) => {
     const res = await apiClient.post<ApiResponse>(`/admin/chapters/${chapterId}/regenerate-mindmap`);

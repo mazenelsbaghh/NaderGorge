@@ -81,5 +81,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 135-video-exam-locking: specs/135-video-exam-locking/plan.md
 - 136-audio-upload-restrictions-and-reviews: specs/136-audio-upload-restrictions-and-reviews/plan.md
 - 137-assessment-controls-media: specs/137-assessment-controls-media/plan.md
+- 138-bunny-video-provider: specs/138-bunny-video-provider/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

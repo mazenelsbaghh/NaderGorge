@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
 import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminService } from '@/services/admin-service';
+import { adminService, type VideoProvider } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
@@ -269,7 +269,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
   const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [editProvider, setEditProvider] = useState('YouTube');
+  const [editProvider, setEditProvider] = useState<VideoProvider>('YouTube');
   const [editUrlOrEmbedCode, setEditUrlOrEmbedCode] = useState('');
   const [editOrder, setEditOrder] = useState(1);
   const [editMaxWatchCount, setEditMaxWatchCount] = useState(3);
@@ -307,7 +307,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
   const startEditVideo = (video: any) => {
     setEditingVideoId(video.id);
     setEditTitle(video.title || '');
-    setEditProvider(video.provider || 'YouTube');
+    setEditProvider((video.provider || 'YouTube') as VideoProvider);
     setEditUrlOrEmbedCode(video.url || video.providerVideoId || '');
     setEditOrder(video.order || 1);
     setEditMaxWatchCount(video.maxWatchCount || 3);
@@ -582,11 +582,12 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                     <Dropdown
                       label="المنصة"
                       value={editProvider}
-                      onChange={(v) => setEditProvider(v as string)}
+                      onChange={(v) => setEditProvider(v as VideoProvider)}
                       size="sm"
                       options={[
                         { value: 'YouTube', label: 'YouTube' },
                         { value: 'vk', label: 'VK (فيكونتاكتي)' },
+                        { value: 'bunny', label: 'Bunny.net' },
                       ]}
                     />
                   </div>
@@ -601,10 +602,12 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                           setEditProvider('vk');
                         } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
                           setEditProvider('YouTube');
+                        } else if (val.includes('mediadelivery.net')) {
+                          setEditProvider('bunny');
                         }
                         setEditUrlOrEmbedCode(val);
                       }}
-                      placeholder={editProvider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : 'رابط الفيديو'}
+                      placeholder={editProvider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : editProvider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
                       className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
                       required
                     />

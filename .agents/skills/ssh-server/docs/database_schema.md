@@ -145,6 +145,62 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `TransactionType` | `string` | `character varying(50)` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
+## Table: `bunny_usage_snapshots`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BandwidthBytes` | `long` | `bigint` | `NO` | ❌ Missing Table |
+| `BandwidthCostUsd` | `decimal` | `numeric(18,6)` | `NO` | ❌ Missing Table |
+| `BandwidthRateUsdPerGb` | `decimal` | `numeric(18,6)` | `NO` | ❌ Missing Table |
+| `BandwidthSource` | `string` | `character varying(80)` | `NO` | ❌ Missing Table |
+| `BunnyStorageCalculatedAtUtc` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `BunnyVideoAssetId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `IsBandwidthEstimated` | `bool` | `boolean` | `NO` | ❌ Missing Table |
+| `LessonId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Notes` | `string` | `character varying(1000)` | `YES` | ❌ Missing Table |
+| `PackageId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `PeriodEndUtc` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `PeriodStartUtc` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `StorageBytes` | `long` | `bigint` | `NO` | ❌ Missing Table |
+| `StorageCostUsd` | `decimal` | `numeric(18,6)` | `NO` | ❌ Missing Table |
+| `StorageRateUsdPerGb` | `decimal` | `numeric(18,6)` | `NO` | ❌ Missing Table |
+| `SyncedAtUtc` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `SyncedByUserId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `TeacherId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `TotalCostUsd` | `decimal` | `numeric(18,6)` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+
+## Table: `bunny_video_assets`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BandwidthBytes` | `long?` | `bigint` | `YES` | ❌ Missing Table |
+| `BunnyCollectionId` | `string` | `character varying(100)` | `YES` | ❌ Missing Table |
+| `BunnyEncodeProgress` | `int?` | `integer` | `YES` | ❌ Missing Table |
+| `BunnyLibraryId` | `long` | `bigint` | `NO` | ❌ Missing Table |
+| `BunnyVideoGuid` | `string` | `character varying(100)` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `DurationSeconds` | `int?` | `integer` | `YES` | ❌ Missing Table |
+| `ErrorMessage` | `string` | `character varying(2000)` | `YES` | ❌ Missing Table |
+| `FileSizeBytes` | `long?` | `bigint` | `YES` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `LastStatusSyncedAtUtc` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `LastUsageSyncedAtUtc` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `LessonId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `LessonVideoId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `OriginalFileName` | `string` | `character varying(500)` | `YES` | ❌ Missing Table |
+| `PackageId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `SourceUrlHash` | `string` | `character varying(128)` | `YES` | ❌ Missing Table |
+| `Status` | `string` | `character varying(40)` | `NO` | ❌ Missing Table |
+| `StorageBytes` | `long?` | `bigint` | `YES` | ❌ Missing Table |
+| `TeacherId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Title` | `string` | `character varying(200)` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `UploadMethod` | `string` | `character varying(40)` | `NO` | ❌ Missing Table |
+| `UploadedByUserId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+
 ## Table: `chat_message_read_states`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
@@ -475,7 +531,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `HintText` | `string` | `text` | `YES` | ✅ Sync |
 | `HomeworkId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `ImageUrl` | `string` | `character varying(500)` | `YES` | ❌ Missing Column |
+| `ImageUrl` | `string` | `character varying(500)` | `YES` | ✅ Sync |
 | `MistakeEndIndex` | `int?` | `integer` | `YES` | ✅ Sync |
 | `MistakeStartIndex` | `int?` | `integer` | `YES` | ✅ Sync |
 | `Order` | `int` | `integer` | `NO` | ✅ Sync |
@@ -706,7 +762,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `DefaultPoints` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
 | `HintText` | `string` | `text` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `ImageUrl` | `string` | `character varying(500)` | `YES` | ❌ Missing Column |
+| `ImageUrl` | `string` | `character varying(500)` | `YES` | ✅ Sync |
 | `SubjectId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `Tags` | `string` | `character varying(500)` | `NO` | ✅ Sync |
 | `Text` | `string` | `text` | `NO` | ✅ Sync |

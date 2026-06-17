@@ -58,3 +58,4 @@ redisdata/
 .env.test.local
 .env.production.local
 
+.env.prod

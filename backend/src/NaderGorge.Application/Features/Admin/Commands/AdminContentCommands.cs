@@ -541,13 +541,13 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this lesson.");
         }
 
-        if (!string.Equals(request.Provider, "youtube", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(request.Provider, "vk", StringComparison.OrdinalIgnoreCase))
+        if (!VideoProviders.IsSupported(request.Provider))
         {
-            return ApiResponse<Guid>.Fail("Invalid provider. Supported: youtube, vk");
+            return ApiResponse<Guid>.Fail("Invalid provider. Supported: youtube, vk, bunny");
         }
 
-        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(request.Provider, StringComparison.OrdinalIgnoreCase));
+        var normalizedProvider = VideoProviders.Normalize(request.Provider);
+        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
         string extractedId = request.UrlOrEmbedCode;
         if (providerImpl != null)
         {
@@ -557,7 +557,7 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
         var video = new LessonVideo
         {
             Title = request.Title,
-            Provider = request.Provider,
+            Provider = normalizedProvider,
             ProviderVideoId = extractedId,
             Order = request.Order,
             MaxWatchCount = request.Limit,
@@ -610,13 +610,13 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
             if (!canAccess) return ApiResponse.Fail("Unauthorized access to this video.");
         }
 
-        if (!string.Equals(request.Provider, "youtube", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(request.Provider, "vk", StringComparison.OrdinalIgnoreCase))
+        if (!VideoProviders.IsSupported(request.Provider))
         {
-            return ApiResponse.Fail("Invalid provider. Supported: youtube, vk");
+            return ApiResponse.Fail("Invalid provider. Supported: youtube, vk, bunny");
         }
 
-        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(request.Provider, StringComparison.OrdinalIgnoreCase));
+        var normalizedProvider = VideoProviders.Normalize(request.Provider);
+        var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
         var extractedId = request.UrlOrEmbedCode;
         if (providerImpl != null)
         {
@@ -624,7 +624,7 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
         }
 
         video.Title = request.Title;
-        video.Provider = request.Provider;
+        video.Provider = normalizedProvider;
         video.ProviderVideoId = extractedId;
         video.Order = request.Order;
         video.MaxWatchCount = request.Limit;
