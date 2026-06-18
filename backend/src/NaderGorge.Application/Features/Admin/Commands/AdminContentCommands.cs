@@ -671,6 +671,38 @@ public class DeleteVideoCommandHandler : IRequestHandler<DeleteVideoCommand, Api
             if (!canAccess) return ApiResponse.Fail("Unauthorized access to this video.");
         }
 
+        // Cascade-delete all dependent records to avoid FK constraint violations
+        var playbackSessions = await _db.VideoPlaybackSessions
+            .Where(s => s.LessonVideoId == video.Id).ToListAsync(ct);
+        if (playbackSessions.Count > 0) _db.VideoPlaybackSessions.RemoveRange(playbackSessions);
+
+        var chapters = await _db.VideoChapters
+            .Where(c => c.LessonVideoId == video.Id).ToListAsync(ct);
+        if (chapters.Count > 0) _db.VideoChapters.RemoveRange(chapters);
+
+        var bunnyAssets = await _db.BunnyVideoAssets
+            .Where(a => a.LessonVideoId == video.Id).ToListAsync(ct);
+        if (bunnyAssets.Count > 0)
+        {
+            var assetIds = bunnyAssets.Select(a => a.Id).ToList();
+            var snapshots = await _db.BunnyUsageSnapshots
+                .Where(s => assetIds.Contains(s.BunnyVideoAssetId)).ToListAsync(ct);
+            if (snapshots.Count > 0) _db.BunnyUsageSnapshots.RemoveRange(snapshots);
+            _db.BunnyVideoAssets.RemoveRange(bunnyAssets);
+        }
+
+        var codeTargets = await _db.CodeVideoTargets
+            .Where(t => t.LessonVideoId == video.Id).ToListAsync(ct);
+        if (codeTargets.Count > 0) _db.CodeVideoTargets.RemoveRange(codeTargets);
+
+        var overrides = await _db.VideoOverrides
+            .Where(o => o.LessonVideoId == video.Id).ToListAsync(ct);
+        if (overrides.Count > 0) _db.VideoOverrides.RemoveRange(overrides);
+
+        var extraWatchRequests = await _db.ExtraWatchRequests
+            .Where(r => r.LessonVideoId == video.Id).ToListAsync(ct);
+        if (extraWatchRequests.Count > 0) _db.ExtraWatchRequests.RemoveRange(extraWatchRequests);
+
         _db.LessonVideos.Remove(video);
 
         var outboxEvent = new OutboxEvent
