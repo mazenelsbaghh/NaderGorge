@@ -150,7 +150,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     return `<!DOCTYPE html><html lang="ar" dir="rtl"><body style="margin:0;background:#000;color:#fff;font-family:system-ui,sans-serif;display:grid;place-items:center;height:100vh">Bunny player is not configured</body></html>`;
   }
 
-  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${libraryId}/${videoId}`);
+  const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=true`);
   const watermarkBrand = escapeHtml('Massar Platform');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
@@ -165,9 +165,13 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     #wrap { position: relative; width: 100%; height: 100%; background: #000; }
-    iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    #bunny-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    .click-overlay {
+      position: absolute; inset: 0; z-index: 10;
+      background: transparent; cursor: pointer;
+    }
     #video-watermark {
-      position: absolute; top: 0; left: 0; z-index: 10; pointer-events: none;
+      position: absolute; top: 0; left: 0; z-index: 20; pointer-events: none;
       color: rgba(255,255,255,.18); font-size: 1.4rem; font-family: Tajawal, Montserrat, system-ui, sans-serif;
       text-shadow: 1px 1px 2px rgba(0,0,0,.5); user-select: none; white-space: pre-wrap;
       transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3;
@@ -176,16 +180,145 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 </head>
 <body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
   <div id="wrap">
-    <iframe src=${safeSrc} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;" allowfullscreen></iframe>
+    <iframe id="bunny-frame" src=${safeSrc} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;" allowfullscreen></iframe>
+    <div class="click-overlay" id="click-overlay"></div>
     <div id="video-watermark">
       <span style="font-weight:900">${watermarkBrand}</span><br>
       <span style="font-size:.75em;font-weight:700">${watermarkStudentName}</span><br>
       <span style="font-size:.6em">${watermarkStudentPhone}</span>
     </div>
   </div>
+
+  <script src="//assets.mediadelivery.net/playerjs/player-0.1.0.min.js"></script>
   <script>
+    // ═══════════════════════════════════════════════════════
+    // Bunny Player.js → Parent PostMessage Bridge
+    // ═══════════════════════════════════════════════════════
+    function postToParent(type, data) {
+      try {
+        window.parent.postMessage({ source: 'video-embed', type: type, data: data }, window.location.origin);
+      } catch (e) {}
+    }
+
+    var iframe = document.getElementById('bunny-frame');
+    var player = null;
+    var isPlaying = false;
+    var progressInterval = null;
+    var playerReady = false;
+
+    function initPlayer() {
+      try {
+        player = new playerjs.Player(iframe);
+      } catch (e) {
+        postToParent('error', { message: 'Failed to initialize Bunny player: ' + e.message });
+        return;
+      }
+
+      player.on('ready', function () {
+        playerReady = true;
+        player.getDuration(function (dur) {
+          player.getVolume(function (vol) {
+            postToParent('ready', {
+              duration: dur || 0,
+              volume: Math.round((vol || 0) * 100),
+              isMuted: (vol || 0) === 0,
+              provider: 'bunny'
+            });
+          });
+        });
+
+        player.play();
+
+        // Start periodic time updates
+        if (progressInterval) clearInterval(progressInterval);
+        progressInterval = setInterval(function () {
+          if (!playerReady) return;
+          try {
+            player.getCurrentTime(function (time) {
+              player.getDuration(function (dur) {
+                player.getVolume(function (vol) {
+                  postToParent('timeUpdate', {
+                    currentTime: time,
+                    duration: dur,
+                    volume: Math.round((vol || 0) * 100),
+                    isMuted: (vol || 0) === 0,
+                    state: isPlaying ? 1 : 2
+                  });
+                });
+              });
+            });
+          } catch (e) {}
+        }, 500);
+      });
+
+      player.on('play', function () {
+        isPlaying = true;
+        postToParent('stateChange', { state: 1, isPlaying: true });
+      });
+
+      player.on('pause', function () {
+        isPlaying = false;
+        postToParent('stateChange', { state: 2, isPlaying: false });
+      });
+
+      player.on('ended', function () {
+        isPlaying = false;
+        postToParent('stateChange', { state: 0, isPlaying: false });
+      });
+
+      player.on('error', function (err) {
+        postToParent('error', { message: err || 'Bunny playback error' });
+      });
+    }
+
+    // Wait for playerjs script to load, then init
+    if (typeof playerjs !== 'undefined') {
+      initPlayer();
+    } else {
+      // Fallback: poll for playerjs availability
+      var pollCount = 0;
+      var pollTimer = setInterval(function () {
+        pollCount++;
+        if (typeof playerjs !== 'undefined') {
+          clearInterval(pollTimer);
+          initPlayer();
+        } else if (pollCount > 40) {
+          // 40 * 250ms = 10s timeout
+          clearInterval(pollTimer);
+          postToParent('error', { message: 'Failed to load Bunny player library' });
+        }
+      }, 250);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Listen for commands from parent SecureVideoPlayer
+    // ═══════════════════════════════════════════════════════
+    window.addEventListener('message', function (event) {
+      if (event.origin !== window.location.origin) return;
+      if (!player || !playerReady) return;
+      var msg = event.data;
+      if (!msg || !msg.type || msg.source === 'video-embed') return;
+      switch (msg.type) {
+        case 'play': player.play(); break;
+        case 'pause': player.pause(); break;
+        case 'seekTo': player.setCurrentTime(msg.time); break;
+        case 'setVolume': player.setVolume(msg.volume / 100); break;
+        case 'mute': player.setVolume(0); break;
+        case 'unmute': player.setVolume(1); break;
+      }
+    });
+
+    // Click overlay to toggle play/pause
+    document.getElementById('click-overlay').addEventListener('click', function () {
+      if (!player || !playerReady) return;
+      if (isPlaying) { player.pause(); }
+      else { player.play(); }
+    });
+
+    // Watermark drift
     var watermark = document.getElementById('video-watermark');
-    setInterval(function() {
+    setInterval(function () {
+      if (!watermark) return;
       var x = 5 + Math.random() * 70;
       var y = 5 + Math.random() * 70;
       watermark.style.transform = 'translate3d(' + x + 'vw,' + y + 'vh,0)';

@@ -549,63 +549,32 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       };
 
       // 2. Render appropriately based on provider
-      if (session.provider?.toLowerCase() === 'vk') {
-        setProvider('vk');
-        // Build the embed URL pointing to our own API route for VK.
-        const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
+      const providerName = session.provider?.toLowerCase() || 'youtube';
+      setProvider(providerName);
+      const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
 
-        if (containerRef.current) {
-          containerRef.current.innerHTML = '';
-          
-          const iframe = document.createElement('iframe');
-          iframe.src = embedUrl;
-          iframe.onload = consumeAfterIframeLoad;
-          iframe.style.position = 'absolute';
-          iframe.style.top = '0';
-          iframe.style.left = '0';
-          iframe.style.width = '100%';
-          iframe.style.height = '100%';
-          iframe.style.border = 'none';
-          iframe.setAttribute('allow', 'autoplay; encrypted-media');
-          iframe.setAttribute('allowfullscreen', '');
-          
-          iframeRef.current = iframe;
-          containerRef.current.appendChild(iframe);
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+        
+        const iframe = document.createElement('iframe');
+        iframe.src = embedUrl;
+        iframe.onload = consumeAfterIframeLoad;
+        iframe.style.position = 'absolute';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.setAttribute('allow', 'autoplay; encrypted-media');
+        iframe.setAttribute('allowfullscreen', '');
+        
+        iframeRef.current = iframe;
+        containerRef.current.appendChild(iframe);
 
-          applyDomShields(containerRef.current, () => {
-             setStatus('error');
-             setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
-          });
-        }
-      } else {
-        // Fallback or explicit youtube
-        setProvider('youtube');
-        // Build the embed URL pointing to our own API route for YouTube.
-        const embedUrl = `/api/video/embed?s=${encodeURIComponent(session.sessionId)}`;
-
-        if (containerRef.current) {
-          containerRef.current.innerHTML = '';
-          
-          const iframe = document.createElement('iframe');
-          iframe.src = embedUrl;
-          iframe.onload = consumeAfterIframeLoad;
-          iframe.style.position = 'absolute';
-          iframe.style.top = '0';
-          iframe.style.left = '0';
-          iframe.style.width = '100%';
-          iframe.style.height = '100%';
-          iframe.style.border = 'none';
-          iframe.setAttribute('allow', 'autoplay; encrypted-media');
-          iframe.setAttribute('allowfullscreen', '');
-          
-          iframeRef.current = iframe;
-          containerRef.current.appendChild(iframe);
-
-          applyDomShields(containerRef.current, () => {
-            setStatus('error');
-            setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
-          });
-        }
+        applyDomShields(containerRef.current, () => {
+           setStatus('error');
+           setErrorMessage('تم اكتشاف محاولة تعديل المشغل. لإعادة المشاهدة، قم بتحديث الصفحة.');
+        });
       }
 
     } catch (err: any) {
