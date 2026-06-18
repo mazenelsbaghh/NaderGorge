@@ -874,8 +874,11 @@ export default function AIMonitorPageClient() {
       setItems(updated);
     })();
 
-    // Fall back to slow polling: 60s when SignalR connected, 30s when disconnected
-    const pollInterval = isConnected ? 60000 : 30000;
+    // Fast polling (5s) when jobs are active, slower (15s) when all done/idle
+    const hasActiveJobs = items.some(
+      (i) => i.jobStatus?.state === 'active' || i.jobStatus?.state === 'waiting' || !i.jobStatus
+    );
+    const pollInterval = hasActiveJobs ? 5000 : 15000;
     intervalRef.current = setInterval(pollJobStatuses, pollInterval);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
