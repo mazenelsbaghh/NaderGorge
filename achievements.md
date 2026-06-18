@@ -70,6 +70,8 @@
 - [x] Rollback snapshot created at `/root/nadergorge-rollbacks/feature139-20260618-031952` with prior image `sha256:b15a3ca88740a58cba9e34a2561d99b975878d694c666a14d2e7e7331b5ec244`, Compose, environment, and baseline health evidence.
 - [x] Service-account JSON transferred outside Git to `/var/www/nadergorge/secrets/google-application-credentials.json`; directory mode `0700`, file mode `0600`, root-owned, and credential identity validated without reading key material.
 - [x] Production Vertex settings written atomically; the existing Developer API credential was copied internally to fallback without output. Hardened the pre-existing production `.env` from mode `0644` to `0600 root:root`.
+- [x] Published feature branch to GitHub and production remotes. Deployed commit `54ef464c` by rebuilding/recreating only `massar_worker`; Docker health, `/health`, and `/ready` all passed.
+- [x] Production-container live smoke passed: Vertex returned exact `OK`; GCS upload/metadata/delete confirmed cleanup; ADC mount is read-only; worker logs contain zero private-key, API-key-pattern, or `gs://massar` matches.
 
 - [x] Added Vertex/provider configuration, structured quota-only fallback, GCS temporary audio lifecycle, startup bucket validation, and provider-routed chapters, essay, and mind-map generation.
 - [x] Preserved existing BullMQ data, Arabic progress values, callbacks, SRT/chapter output, teacher-photo ordering, and mind-map URLs.
@@ -78,6 +80,8 @@
 
 ### Phase 6 Deep Review Findings / نتائج المراجعة العميقة
 
+- [x] Production smoke exposed an SDK warning because Compose passed both the legacy `GEMINI_API_KEY` and explicit Vertex project/location. Removed the redundant legacy key mapping; Vertex now receives ADC and only the separately named fallback credential.
+- [x] Verified credential isolation, bucket lifecycle and object permissions, rollback snapshot, cross-project principal grants, worker-only recreation, database readiness URI, provider fallback boundary, startup validation ordering, and absence of backend/frontend/schema changes.
 - [x] Sanitized all non-quota primary/developer and GCS diagnostics so raw provider/storage messages cannot leak object references or response bodies.
 - [x] Delete a newly uploaded GCS object if post-upload metadata retrieval fails before the normal `finally` can receive its handle; regression test passes.
 - [x] Ran `npm --prefix worker audit fix`: reduced findings from six to five moderate transitive `uuid` paths. npm offers only a forced downgrade to `@google-cloud/storage@5.18.3`; rejected as a breaking, stale remediation. No high/critical finding remains.
@@ -85,6 +89,7 @@
 
 ### Phase 7 Clean Code Guard / بوابة جودة الكود
 
+- [x] Production-completion guard removed the redundant legacy API-key container mapping, dead uncalled `processJob` implementation, and unused `messageId` binding. Provider/storage abstractions have active primary/fallback callers and external SDK calls were verified by build and live production probes.
 - [x] Split long AI orchestration into resource-lifecycle, audio-generation, prompt, and image-persistence functions; production functions remain below the guard's hard complexity/size ceiling.
 - [x] Replaced generic local identifiers, removed mixed abstraction levels, and verified external SDK calls against installed versions.
 - [x] Broad catches remain only where the documented contract recovers: cleanup logs while preserving truthful output, and per-chapter mind-map generation returns `null` as the pre-existing batch contract requires.
@@ -92,6 +97,7 @@
 
 ### Phase 8 Test Guard / بوابة جودة الاختبارات
 
+- [x] Production-completion test guard reconfirmed all Google AI/GCS/filesystem fakes are external-boundary seams, tests assert outputs/cleanup/provider behavior rather than prompt wording, and one-fallback call counts are justified by the explicit availability/billing contract. `npm --prefix worker test` passed 28/28.
 - [x] Split mixed configuration, fallback-diagnostic, and lifecycle tests so each test owns one scenario.
 - [x] Bound generated teacher-photo and mind-map files to `testContext.after()` cleanup so failed assertions cannot leave artifacts.
 - [x] Third-party AI/GCS clients remain mocked only at external boundaries; tests assert returned outputs, cleanup side effects, provider selection, and public payload contracts.

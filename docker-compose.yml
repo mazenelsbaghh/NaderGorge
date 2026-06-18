@@ -138,7 +138,6 @@ services:
       AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gemini-2.5-flash}
       AI_IMAGE_MODEL: ${AI_IMAGE_MODEL:-gemini-3-pro-image-preview}
       GEMINI_FALLBACK_API_KEY: ${GEMINI_FALLBACK_API_KEY:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-application-credentials.json
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}

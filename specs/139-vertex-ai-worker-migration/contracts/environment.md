@@ -21,6 +21,7 @@ Startup behavior:
 - Verify bucket metadata access and surface a sanitized capability-specific failure.
 - Do not require a fallback key for primary-only operation.
 - In developer-primary mode, require `GEMINI_API_KEY` or `GEMINI_FALLBACK_API_KEY`; GCS is not required.
+- Production Compose passes only `GEMINI_FALLBACK_API_KEY`; developer-primary rollback uses that same explicit fallback credential and does not expose the legacy alias to the container.
 - Never print variable values for credential-bearing settings.
 - In production, set `GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/google-application-credentials.json`; never set it to the host path.
 - The host credential file MUST be outside Git, mode `0600`, and mounted read-only into only the worker service.

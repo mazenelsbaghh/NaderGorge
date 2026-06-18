@@ -43,56 +43,6 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.DB_CONNECTION_STRING || 'postgresql://postgres:postgres@localhost:5435/nadergorge?schema=public'
 });
 
-async function processJob(json: string) {
-  const payload = JSON.parse(json);
-  const { packageId, lessonId, count, codeLength, adminId } = payload;
-  const groupId = crypto.randomUUID();
-  
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    
-    // Create CodeGroup
-    await client.query(
-      `INSERT INTO code_groups ("Id", "Name", "TotalCodes", "PackageId", "LessonId", "CreatedByUserId", "CreatedAt", "UpdatedAt") 
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
-      [groupId, `Batch-${Date.now()}`, count, packageId, lessonId, adminId]
-    );
-
-    // Batch generate and insert
-    const insertValues = [];
-    const BATCH_SIZE = 5000;
-    let valuesClause = [];
-    let bindIdx = 1;
-
-    for (let i = 0; i < count; i++) {
-        // Simple random alphanum
-        const code = crypto.randomBytes(codeLength / 2 || 4).toString('hex').toUpperCase();
-        const codeHash = crypto.createHash('sha256').update(code, 'utf8').digest('base64');
-        const codeId = crypto.randomUUID();
-        
-        insertValues.push(codeId, codeHash, code, groupId, false);
-        valuesClause.push(`($${bindIdx++}, $${bindIdx++}, $${bindIdx++}, $${bindIdx++}, $${bindIdx++}, NOW(), NOW())`);
-
-        if (insertValues.length >= BATCH_SIZE * 5 || i === count - 1) { // 5 params
-            const query = `INSERT INTO access_codes ("Id", "CodeHash", "CodePlaintext", "CodeGroupId", "IsConsumed", "CreatedAt", "UpdatedAt") VALUES ${valuesClause.join(', ')}`;
-            await client.query(query, insertValues);
-            insertValues.length = 0;
-            valuesClause.length = 0;
-            bindIdx = 1;
-        }
-    }
-
-    await client.query('COMMIT');
-    console.log(`Generated ${count} codes for group ${groupId}`);
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Job failed', error);
-  } finally {
-    client.release();
-  }
-}
-
 // BullMQ Connection Shared config
 const connection = {
   host: new URL(DEFAULT_REDIS_URL).hostname,
@@ -408,7 +358,7 @@ async function startWorker() {
           }
       }
 
-      const { messageId, jobType, jobId, payload } = obj;
+      const { jobType, jobId, payload } = obj;
       if (!jobType || !payload) {
           console.warn(`[Worker] Invalid stream message: ${messageStreamId}`);
           await redis.xack('job-stream', 'worker-group', messageStreamId);
