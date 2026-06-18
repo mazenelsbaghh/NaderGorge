@@ -3,7 +3,7 @@
 import { devConsole } from '@/utils/dev-console';
 import Image from 'next/image';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { videoSessionService, type ExtraWatchRequestStatus } from '@/services/video-session-service';
+import { videoSessionService, type ExtraWatchRequestStatus, type WatchProgressResponse } from '@/services/video-session-service';
 import { AlertCircle, Play, Info, X, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinnerLoader } from '@/components/ui/loading-indicator';
@@ -91,7 +91,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     pause: () => sendCommand('pause')
   }));
 
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error' | 'locked'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error' | 'locked' | 'superseded'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [watchInfo, setWatchInfo] = useState<{current: number, max: number, isLocked?: boolean} | null>(null);
   const [extraWatchReqStatus, setExtraWatchReqStatus] = useState<ExtraWatchRequestStatus | null>(null);
@@ -350,12 +350,45 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [displayedWatched, setDisplayedWatched] = useState(0);
   const pendingTrackedSeconds = useRef(0);
   const flushInFlight = useRef(false);
+  const activeSessionIdRef = useRef<string | null>(null);
+  const nextProgressSequenceRef = useRef(1);
+  const activeProgressRequestRef = useRef<{ sequence: number; seconds: number } | null>(null);
   const trackingInterval = useRef<NodeJS.Timeout | null>(null);
   const [thresholdSeconds, setThresholdSeconds] = useState(60);
 
   const capWatchCount = useCallback((current: number, max: number) => {
     return max > 0 ? Math.min(current, max) : current;
   }, []);
+
+  const stopSessionTracking = useCallback((nextStatus: 'error' | 'superseded', message?: string) => {
+    activeProgressRequestRef.current = null;
+    pendingTrackedSeconds.current = 0;
+    if (trackingInterval.current) clearInterval(trackingInterval.current);
+    sendCommand('pause');
+    setIsPlaying(false);
+    if (message) setErrorMessage(message);
+    setStatus(nextStatus);
+  }, [sendCommand]);
+
+  const applyProgressResponse = useCallback((progressResponse: WatchProgressResponse) => {
+    const newThreshold = progressResponse.thresholdSeconds || 60;
+    setThresholdSeconds(newThreshold);
+    const maxCount = progressResponse.maxCount ?? watchInfo?.max ?? 0;
+    const cappedCurrent = capWatchCount(progressResponse.currentCount, maxCount);
+    watchCountRef.current = cappedCurrent;
+    setWatchInfo(previous => ({
+      current: cappedCurrent,
+      max: maxCount || previous?.max || 0,
+      isLocked: progressResponse.isLocked,
+    }));
+    actualWatchedSeconds.current = progressResponse.totalTrackedSeconds;
+    setDisplayedWatched(progressResponse.totalTrackedSeconds % Math.max(1, newThreshold));
+    if (progressResponse.isLocked) pendingTrackedSeconds.current = 0;
+    if (progressResponse.viewRegistered) {
+      setViewTracked(true);
+      viewTrackedRef.current = true;
+    }
+  }, [capWatchCount, watchInfo?.max]);
 
   useEffect(() => {
     if (duration > 0) {
@@ -366,57 +399,50 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [duration]);
 
   const flushTrackedProgress = useCallback(async () => {
-    if (flushInFlight.current || pendingTrackedSeconds.current <= 0) {
+    const sessionId = activeSessionIdRef.current;
+    if (flushInFlight.current || !sessionId) {
       return;
     }
 
-    const secondsToFlush = pendingTrackedSeconds.current;
-    pendingTrackedSeconds.current = 0;
+    if (!activeProgressRequestRef.current) {
+      if (pendingTrackedSeconds.current <= 0) return;
+      activeProgressRequestRef.current = {
+        sequence: nextProgressSequenceRef.current,
+        seconds: pendingTrackedSeconds.current,
+      };
+      pendingTrackedSeconds.current = 0;
+    }
+
+    const progressRequest = activeProgressRequestRef.current;
     flushInFlight.current = true;
 
     try {
-      const res = await videoSessionService.trackProgress(
+      const res = await videoSessionService.trackProgress({
         lessonVideoId,
-        secondsToFlush,
-        Math.round(duration || 0),
-        false
-      );
-      const data = res.data.data;
-      if (data) {
-        const newThreshold = data.thresholdSeconds || 60;
-        setThresholdSeconds(newThreshold);
-        const maxCount = data.maxCount ?? watchInfo?.max ?? 0;
-        const cappedCurrent = capWatchCount(data.currentCount, maxCount);
-        watchCountRef.current = cappedCurrent;
-        setWatchInfo(prev => ({
-          current: cappedCurrent,
-          max: maxCount || prev?.max || 0,
-          isLocked: data.isLocked
-        }));
-        const total = data.totalTrackedSeconds ?? actualWatchedSeconds.current;
-        actualWatchedSeconds.current = total;
-        setDisplayedWatched(total % Math.max(1, newThreshold));
-        if (data.isLocked) {
-          pendingTrackedSeconds.current = 0;
-          // Do not kick out actively watching students; they will be blocked on their next session attempt.
-        }
-        if (data.viewRegistered) {
-          setViewTracked(true);
-          viewTrackedRef.current = true;
-        }
-      }
+        sessionId,
+        progressSequence: progressRequest.sequence,
+        secondsWatched: progressRequest.seconds,
+        totalDurationSeconds: Math.round(duration || 0),
+      });
+      activeProgressRequestRef.current = null;
+      nextProgressSequenceRef.current += 1;
+      applyProgressResponse(res.data.data);
     } catch (err) {
       const apiError = err as { response?: { data?: { errors?: string[] } } };
-      if (apiError.response?.data?.errors?.includes('DURATION_REQUIRED')) {
+      const errors = apiError.response?.data?.errors ?? [];
+      if (errors.includes('SESSION_SUPERSEDED')) {
+        stopSessionTracking('superseded');
+      } else if (errors.includes('SESSION_EXPIRED') || errors.includes('SESSION_INVALID')) {
+        stopSessionTracking('error', 'انتهت جلسة تشغيل الفيديو. أعد تحميل الفيديو للمتابعة.');
+      } else if (errors.includes('DURATION_REQUIRED')) {
         setStatus('error');
         setErrorMessage('تعذر تتبع المشاهدة لأن مدة الفيديو غير متاحة.');
       }
-      pendingTrackedSeconds.current += secondsToFlush;
       devConsole.error("Failed to sync progress:", err);
     } finally {
       flushInFlight.current = false;
     }
-  }, [capWatchCount, duration, lessonVideoId, watchInfo?.max]);
+  }, [applyProgressResponse, duration, lessonVideoId, stopSessionTracking]);
 
   useEffect(() => {
     if (status !== 'ready') return;
@@ -425,14 +451,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
     trackingInterval.current = setInterval(() => {
       if (isPlaying) {
-        actualWatchedSeconds.current += 1;
-        setDisplayedWatched(actualWatchedSeconds.current % Math.max(1, thresholdSeconds));
         pendingTrackedSeconds.current += 1;
 
-        const targetSeconds = (watchCountRef.current + 1) * thresholdSeconds;
-        if (!viewTrackedRef.current && actualWatchedSeconds.current >= targetSeconds) {
-          viewTrackedRef.current = true;
-          setViewTracked(true);
+        if (!viewTrackedRef.current) {
+          actualWatchedSeconds.current += 1;
+          setDisplayedWatched(actualWatchedSeconds.current % Math.max(1, thresholdSeconds));
+
+          const targetSeconds = (watchCountRef.current + 1) * thresholdSeconds;
+          if (actualWatchedSeconds.current >= targetSeconds) {
+            viewTrackedRef.current = true;
+            setViewTracked(true);
+          }
         }
 
         if (pendingTrackedSeconds.current >= 10) {
@@ -513,6 +542,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       
       const response = await videoSessionService.createSession(lessonVideoId);
       const session = response.data.data;
+      activeSessionIdRef.current = session.sessionId;
+      nextProgressSequenceRef.current = 1;
+      activeProgressRequestRef.current = null;
+      pendingTrackedSeconds.current = 0;
       if (session.thresholdPercentage) {
         watchThresholdPercentageRef.current = session.thresholdPercentage;
       }
@@ -823,6 +856,23 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         <p className="text-gray-300">{errorMessage}</p>
         <button type="button" onClick={loadVideo} className="mt-6 min-h-11 rounded-md bg-red-600 px-6 font-medium text-white shadow-md transition-colors hover:bg-red-500">
           حاول مرة أخرى
+        </button>
+      </div>
+    );
+  }
+
+  if (status === 'superseded') {
+    return (
+      <div className={`relative flex aspect-video w-full flex-col items-center justify-center overflow-hidden rounded-lg bg-black p-8 text-center ${className}`} role="alert">
+        <AlertCircle className="mb-4 h-12 w-12 text-amber-400" />
+        <h3 className="mb-2 text-xl font-bold text-white">توقفت المشاهدة هنا</h3>
+        <p className="max-w-md text-gray-300">تم فتح الفيديو في تبويب أو جهاز أحدث. أعد تحميل الفيديو للمتابعة هنا.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-6 min-h-11 rounded-md bg-[var(--admin-primary)] px-6 font-bold text-[var(--admin-primary-contrast)] transition-opacity hover:opacity-90"
+        >
+          إعادة تحميل الفيديو
         </button>
       </div>
     );

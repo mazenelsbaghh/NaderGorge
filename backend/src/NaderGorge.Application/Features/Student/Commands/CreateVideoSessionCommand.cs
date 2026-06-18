@@ -1,4 +1,5 @@
 using MediatR;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
@@ -123,44 +124,49 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
 
 
 
-        // 3. Prevent duplicate active sessions (optional, but good for security)
-        var activeSession = await _db.VideoPlaybackSessions
-            .Where(s => s.UserId == request.UserId && s.LessonVideoId == request.LessonVideoId && !s.IsConsumed && s.ExpiresAt > DateTime.UtcNow)
-            .OrderByDescending(s => s.CreatedAt)
-            .FirstOrDefaultAsync(ct);
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var now = DateTime.UtcNow;
+        var priorActiveSessions = await _db.VideoPlaybackSessions
+            .Where(s => s.UserId == request.UserId
+                        && s.LessonVideoId == request.LessonVideoId
+                        && !s.IsSuperseded
+                        && s.ExpiresAt > now)
+            .ToListAsync(ct);
 
-        VideoPlaybackSession session;
-
-        if (activeSession != null)
+        foreach (var priorSession in priorActiveSessions)
         {
-            // Reuse active session to prevent spam
-            session = activeSession;
+            priorSession.IsSuperseded = true;
+            priorSession.UpdatedAt = now;
         }
-        else
+
+        var user = await _db.Users.FindAsync(new object[] { request.UserId }, ct);
+        var session = new VideoPlaybackSession
         {
-            var user = await _db.Users.FindAsync(new object[] { request.UserId }, ct);
+            Id = Guid.NewGuid(),
+            UserId = request.UserId,
+            LessonVideoId = request.LessonVideoId,
+            EncryptionKey = _encryption.GenerateSessionKey(),
+            CreatedAt = now,
+            ExpiresAt = now.AddMinutes(5),
+            IsConsumed = false,
+            HasRegisteredView = false,
+            LastProgressSequence = 0,
+            IsSuperseded = false,
+            IpAddress = request.IpAddress
+        };
 
-            // Create new session
-            session = new VideoPlaybackSession
-            {
-                Id = Guid.NewGuid(),
-                UserId = request.UserId,
-                LessonVideoId = request.LessonVideoId,
-                EncryptionKey = _encryption.GenerateSessionKey(),
-                CreatedAt = DateTime.UtcNow,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(5),
-                IsConsumed = false,
-                IpAddress = request.IpAddress
-            };
+        string studentName = user?.FullName ?? "Unknown";
+        string studentPhone = user?.PhoneNumber ?? "Unknown";
+        session.SessionToken = _encryption.EncryptVideoInfo(
+            video.Provider,
+            video.ProviderVideoId,
+            session.EncryptionKey,
+            studentName,
+            studentPhone);
 
-            // Generate the encrypted token
-            string studentName = user?.FullName ?? "Unknown";
-            string studentPhone = user?.PhoneNumber ?? "Unknown";
-            session.SessionToken = _encryption.EncryptVideoInfo(video.Provider, video.ProviderVideoId, session.EncryptionKey, studentName, studentPhone);
-
-            _db.VideoPlaybackSessions.Add(session);
-            await _db.SaveChangesAsync(ct);
-        }
+        _db.VideoPlaybackSessions.Add(session);
+        await _db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
 
         // 4. Fetch the global threshold percentage (default 30%)
         var thresholdSetting = await _db.PlatformSettings.FirstOrDefaultAsync(s => s.Key == "VideoWatchThresholdPercentage", ct);

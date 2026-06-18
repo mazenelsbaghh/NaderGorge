@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-06-09
+Auto-generated from all feature plans. Last updated: 2026-06-18
 
 ## Active Technologies
 - C# (.NET 8), TypeScript 5.x (strict mode) + Next.js 14 (App Router), .NET Web API, Entity Framework Core, MediatR, React Query (TanStack Query v5), Zustand, Shadcn/UI, Tailwind CSS, Framer Motion, BullMQ (003-phase1-foundation-mvp)
@@ -46,6 +46,8 @@ Auto-generated from all feature plans. Last updated: 2026-06-09
 - PostgreSQL (Entity Framework Core) (032-assessment-ui-fixes)
 - TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand (112-surface-login-access-contract)
 - N/A (Stateless cookie/Zustand validation) (112-surface-login-access-contract)
+- C# 13 / .NET 9 backend; TypeScript 5.x strict / Next.js 16.2.7 / React 19.2.4 frontend + ASP.NET Core Web API, MediatR 12.4.1, EF Core 9.0.6, Npgsql 9.0.4, Axios 1.17, existing `SecureVideoPlayer` and service layer (140-fix-video-session-counting)
+- PostgreSQL; new lifecycle/idempotency fields on existing `VideoPlaybackSession`; existing `VideoWatchEvent` remains aggregate source of truth (140-fix-video-session-counting)
 
 - Markdown (documentation-only phase — no application code) + N/A (no code dependencies) (001-phase0-discovery-blueprint)
 
@@ -65,9 +67,9 @@ tests/
 Markdown (documentation-only phase — no application code): Follow standard conventions
 
 ## Recent Changes
+- 140-fix-video-session-counting: Added C# 13 / .NET 9 backend; TypeScript 5.x strict / Next.js 16.2.7 / React 19.2.4 frontend + ASP.NET Core Web API, MediatR 12.4.1, EF Core 9.0.6, Npgsql 9.0.4, Axios 1.17, existing `SecureVideoPlayer` and service layer
 - 112-surface-login-access-contract: Added TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand
 - 056-extra-watch-request: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
-- 032-assessment-ui-fixes: Added TypeScript (Next.js 14+), C# (.NET 8.0) + React, Tailwind CSS, Framer Motion, ASP.NET Core
 
 
 <!-- MANUAL ADDITIONS START -->

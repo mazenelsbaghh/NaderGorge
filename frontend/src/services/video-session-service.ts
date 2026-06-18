@@ -16,6 +16,25 @@ export interface VideoSession {
   thresholdPercentage: number;
 }
 
+export interface TrackProgressRequest {
+  lessonVideoId: string;
+  sessionId: string;
+  progressSequence: number;
+  secondsWatched: number;
+  totalDurationSeconds: number;
+}
+
+export interface WatchProgressResponse {
+  currentCount: number;
+  maxCount: number;
+  isLocked: boolean;
+  viewRegistered: boolean;
+  totalTrackedSeconds: number;
+  thresholdSeconds: number;
+  sessionExpiresAt: string;
+  duplicate: boolean;
+}
+
 export type ExtraWatchRequestStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface ExtraWatchStatusDto {
@@ -44,11 +63,12 @@ export const videoSessionService = {
     return apiClient.get<{ data: ExtraWatchStatusDto }>(`/student/video-session/${lessonVideoId}/request-status`);
   },
 
-  trackProgress: (lessonVideoId: string, secondsWatched: number, totalDurationSeconds: number, registerView: boolean = false) => {
-    return apiClient.post(`/student/video-session/${lessonVideoId}/track-progress`, {
-      secondsWatched,
-      totalDurationSeconds,
-      registerView
+  trackProgress: (request: TrackProgressRequest) => {
+    return apiClient.post<{ data: WatchProgressResponse }>(`/student/video-session/${request.lessonVideoId}/track-progress`, {
+      sessionId: request.sessionId,
+      progressSequence: request.progressSequence,
+      secondsWatched: request.secondsWatched,
+      totalDurationSeconds: request.totalDurationSeconds,
     });
   },
 };

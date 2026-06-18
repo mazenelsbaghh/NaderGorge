@@ -103,13 +103,17 @@ public class VideoSessionController : ControllerBase
         var command = new TrackWatchProgressCommand(
             lessonVideoId,
             userId,
+            request.SessionId,
+            request.ProgressSequence,
             request.SecondsWatched,
-            request.TotalDurationSeconds,
-            request.RegisterView
+            request.TotalDurationSeconds
         );
         var result = await _mediator.Send(command, ct);
 
         if (result.Success) return Ok(result);
+        if (result.Errors?.Contains("SESSION_INVALID") == true) return NotFound(result);
+        if (result.Errors?.Contains("SESSION_EXPIRED") == true) return Conflict(result);
+        if (result.Errors?.Contains("SESSION_SUPERSEDED") == true) return Conflict(result);
         return BadRequest(result);
     }
 
@@ -148,9 +152,10 @@ public class VideoSessionController : ControllerBase
 
 public class TrackProgressRequest
 {
+    public Guid SessionId { get; set; }
+    public long ProgressSequence { get; set; }
     public double SecondsWatched { get; set; }
     public int TotalDurationSeconds { get; set; }
-    public bool RegisterView { get; set; }
 }
 
 public class CreateVideoSessionRequest

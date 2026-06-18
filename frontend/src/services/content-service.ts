@@ -242,8 +242,6 @@ export const contentService = {
   getMyLessonComments: (lessonId: string) => apiClient.get<ContentApiResponse<LessonCommentDto[]>>(`/content/lessons/${lessonId}/comments/mine`),
   createLessonComment: (lessonId: string, body: string) =>
     apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body }),
-  recordVideoEvent: (lessonVideoId: string, watchedSeconds: number, totalDurationSeconds = 0) => 
-    apiClient.post('/tracking/video-event', { lessonVideoId, watchedSeconds, totalDurationSeconds }),
 };
 
 // Register with centralized cache invalidation registry

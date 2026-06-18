@@ -16,4 +16,10 @@ public class VideoPlaybackSession : BaseEntity
     public DateTime ExpiresAt { get; set; }
     public bool IsConsumed { get; set; }
     public string? IpAddress { get; set; }
+
+    // Progress lifecycle is separate from one-time embed material consumption.
+    public bool HasRegisteredView { get; set; }
+    public long LastProgressSequence { get; set; }
+    public DateTime? LastProgressAt { get; set; }
+    public bool IsSuperseded { get; set; }
 }

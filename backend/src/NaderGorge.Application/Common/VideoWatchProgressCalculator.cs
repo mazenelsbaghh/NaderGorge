@@ -47,8 +47,8 @@ public static class VideoWatchProgressCalculator
             watchEvent.WatchCount = maxWatchCount;
         }
 
-        while (watchEvent.TimeWatchedInSeconds >= (watchEvent.WatchCount + 1) * thresholdSeconds
-               && (maxWatchCount <= 0 || watchEvent.WatchCount < maxWatchCount))
+        if (watchEvent.TimeWatchedInSeconds >= (watchEvent.WatchCount + 1) * thresholdSeconds
+            && (maxWatchCount <= 0 || watchEvent.WatchCount < maxWatchCount))
         {
             watchEvent.WatchCount++;
         }
@@ -66,6 +66,16 @@ public static class VideoWatchProgressCalculator
         return new VideoWatchProgressCalculationResult(
             watchEvent.WatchCount > previousWatchCount,
             remainingSeconds);
+    }
+
+    public static int CapAtNextViewBoundary(
+        VideoWatchEvent watchEvent,
+        int acceptedSeconds,
+        int thresholdSeconds)
+    {
+        var nextBoundary = (watchEvent.WatchCount + 1) * thresholdSeconds;
+        var remainingSeconds = Math.Max(0, nextBoundary - watchEvent.TimeWatchedInSeconds);
+        return Math.Min(Math.Max(0, acceptedSeconds), remainingSeconds);
     }
 }
 

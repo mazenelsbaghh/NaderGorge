@@ -572,6 +572,15 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(v => v.LessonVideo).WithMany().HasForeignKey(v => v.LessonVideoId);
         });
 
+        modelBuilder.Entity<VideoPlaybackSession>(e =>
+        {
+            e.Property(s => s.HasRegisteredView).HasDefaultValue(false);
+            e.Property(s => s.LastProgressSequence).HasDefaultValue(0L);
+            e.Property(s => s.IsSuperseded).HasDefaultValue(false);
+            e.HasIndex(s => s.UserId);
+            e.HasIndex(s => new { s.UserId, s.LessonVideoId, s.CreatedAt });
+        });
+
         modelBuilder.Entity<ExtraWatchRequest>(e =>
         {
             e.ToTable("ExtraWatchRequests");

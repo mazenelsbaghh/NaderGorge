@@ -24,6 +24,23 @@ def grant_package_and_get_video(mock_package):
     return student, admin, lesson_id, videos[0].get("id")
 
 
+def create_video_session(student, video_id):
+    response = student.post("/api/student/video-session", json={"lessonVideoId": video_id})
+    assert response.status_code == 200
+    session_id = response.json().get("data", {}).get("sessionId")
+    assert session_id is not None
+    return session_id
+
+
+def track_progress(student, video_id, session_id, sequence, seconds, duration):
+    return student.post(f"/api/student/video-session/{video_id}/track-progress", json={
+        "sessionId": session_id,
+        "progressSequence": sequence,
+        "secondsWatched": seconds,
+        "totalDurationSeconds": duration,
+    })
+
+
 def test_video_session_does_not_expose_embed_material_and_forged_seconds_are_capped(mock_package):
     student, _admin, lesson_id, video_id = grant_package_and_get_video(mock_package)
     assert video_id is not None
@@ -35,14 +52,18 @@ def test_video_session_does_not_expose_embed_material_and_forged_seconds_are_cap
     assert "token" not in session_data
     assert "key" not in session_data
 
-    track_res = student.post("/api/tracking/video-event", json={
+    legacy_res = student.post("/api/tracking/video-event", json={
         "lessonVideoId": video_id,
         "watchedSeconds": 10_000,
         "totalDurationSeconds": 100
     })
+    assert legacy_res.status_code == 400
+    assert "SESSION_REQUIRED" in legacy_res.json().get("errors", [])
+
+    track_res = track_progress(student, video_id, session_data["sessionId"], 1, 10_000, 100)
     assert track_res.status_code == 200
     tracking = track_res.json().get("data", {})
-    assert tracking.get("watchCount") == 1
+    assert tracking.get("currentCount") == 1
     assert tracking.get("isLocked") is False
 
     lesson_res = student.get(f"/api/content/lessons/{lesson_id}")
@@ -57,15 +78,17 @@ def test_video_watch_limit_locks_at_exact_max_and_extra_watch_unlocks(mock_packa
     student, admin, lesson_id, video_id = grant_package_and_get_video(mock_package)
     assert video_id is not None
 
-    track_res = student.post("/api/tracking/video-event", json={
-        "lessonVideoId": video_id,
-        "watchedSeconds": 10_000,
-        "totalDurationSeconds": 50
-    })
+    first_session = create_video_session(student, video_id)
+    first_view = track_progress(student, video_id, first_session, 1, 10_000, 10)
+    assert first_view.status_code == 200
+    assert first_view.json().get("data", {}).get("currentCount") == 1
+
+    second_session = create_video_session(student, video_id)
+    track_res = track_progress(student, video_id, second_session, 1, 10_000, 10)
     assert track_res.status_code == 200
     tracking = track_res.json().get("data", {})
-    assert tracking.get("watchCount") == 2
-    assert tracking.get("maxWatchCount") == 2
+    assert tracking.get("currentCount") == 2
+    assert tracking.get("maxCount") == 2
     assert tracking.get("isLocked") is True
 
     lesson_res = student.get(f"/api/content/lessons/{lesson_id}")
@@ -92,15 +115,12 @@ def test_video_watch_limit_locks_at_exact_max_and_extra_watch_unlocks(mock_packa
     assert session_ok.status_code == 200
 
     # Ensure it doesn't immediately relock on first watch progress sync of the new watch session
-    track_sync = student.post("/api/tracking/video-event", json={
-        "lessonVideoId": video_id,
-        "watchedSeconds": 5,
-        "totalDurationSeconds": 50
-    })
+    approved_session = session_ok.json().get("data", {}).get("sessionId")
+    track_sync = track_progress(student, video_id, approved_session, 1, 5, 50)
     assert track_sync.status_code == 200
     tracking_sync = track_sync.json().get("data", {})
-    assert tracking_sync.get("watchCount") == 2
-    assert tracking_sync.get("maxWatchCount") == 3
+    assert tracking_sync.get("currentCount") == 2
+    assert tracking_sync.get("maxCount") == 3
     assert tracking_sync.get("isLocked") is False
 
     # Sleep to allow elapsed time check to accept 15 seconds
@@ -111,15 +131,11 @@ def test_video_watch_limit_locks_at_exact_max_and_extra_watch_unlocks(mock_packa
     # The current watch event has WatchCount = 2, so threshold for 3rd watch is 3 * 15 = 45s.
     # Total watched so far is 2 * 15 = 30s + 5s = 35s.
     # We watch 15 more seconds (total 50s), which is >= 45s.
-    track_relock = student.post("/api/tracking/video-event", json={
-        "lessonVideoId": video_id,
-        "watchedSeconds": 15,
-        "totalDurationSeconds": 50
-    })
+    track_relock = track_progress(student, video_id, approved_session, 2, 15, 50)
     assert track_relock.status_code == 200
     tracking_relock = track_relock.json().get("data", {})
-    assert tracking_relock.get("watchCount") == 3
-    assert tracking_relock.get("maxWatchCount") == 3
+    assert tracking_relock.get("currentCount") == 3
+    assert tracking_relock.get("maxCount") == 3
     assert tracking_relock.get("isLocked") is True
 
     # Now it is locked again (WatchCount = 3, MaxWatchCount = 3).

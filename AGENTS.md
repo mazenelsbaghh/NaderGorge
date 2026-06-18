@@ -85,5 +85,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 137-assessment-controls-media: specs/137-assessment-controls-media/plan.md
 - 138-bunny-video-provider: specs/138-bunny-video-provider/plan.md
 - 139-vertex-ai-worker-migration: specs/139-vertex-ai-worker-migration/plan.md
+- 140-fix-video-session-counting: specs/140-fix-video-session-counting/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

@@ -12,109 +12,82 @@
 
 ### Approved Feature Brief / ملخص الميزة المعتمد
 
-- [x] Convert every Gemini operation in the worker to Vertex AI as the primary provider: video transcription and chapters, essay evaluation, and mind-map generation.
-- [x] Upload analysis audio to a pre-provisioned temporary object bucket, reference it during analysis, and delete it after success, failure, or cancellation.
-- [x] Enforce a 24-hour storage lifecycle as a safety net for orphaned objects.
-- [x] Fall back to Gemini Developer API only when the Vertex quota is exhausted; do not fall back for permission, validation, or implementation errors.
-- [x] Read provider, project, location, bucket, and separate fallback credentials from environment configuration.
-- [x] Preserve existing job state, cancellation, callback, chapter, essay, and mind-map behavior.
-- [x] Complete production rollout for feature 139 using cloud project `project-d32eb428-fe1c-4551-b6d`, location `global`, and the existing `massar` temporary bucket.
-- [x] Supply the service-account credential outside Git and mount it read-only into the worker runtime; never bake or commit credential material.
-- [x] Reuse the already configured production Developer API key only as one quota-exhaustion fallback while Vertex remains primary.
-- [x] Provision least-privilege Vertex/storage access, a 24-hour bucket lifecycle safeguard, and automatic rollback when worker readiness or live cloud checks fail.
-- [x] Deployment scope is worker and Docker/runtime configuration only; backend, frontend, and database schema are out of scope.
+- [x] إصلاح احتساب مشاهدة الفيديو بحيث تُسجل مشاهدة واحدة كحد أقصى لكل جلسة تشغيل.
+- [x] يستمر تجميع وقت المشاهدة غير المكتمل عبر تحديث الصفحة أو إغلاق الفيديو وفتحه مجددًا.
+- [x] بعد تسجيل مشاهدة، لا يضيف باقي وقت الجلسة تقدمًا للمشاهدة التالية.
+- [x] يبدأ تجميع المشاهدة التالية فقط في جلسة جديدة بعد التحديث أو إعادة الفتح.
+- [x] التقديم والإرجاع داخل الجلسة لا يسجلان مشاهدة إضافية.
+- [x] أحدث جلسة متزامنة فقط تكون فعالة، وتُرفض تحديثات الجلسات الأقدم.
+- [x] تظل نسبة الاحتساب وحدود المشاهدة والقفل وطلبات المشاهدات الإضافية وإعادة الشراء دون تغيير.
+- [x] الطلبات المكررة لا تكرر الوقت أو عدد المشاهدات.
 
 ### Subagent Evidence / إثبات استخدام الوكلاء الفرعيين
 
-- [x] Production-completion rerun: subagent support was unavailable under the active session delegation policy; the primary agent owns specification, clarification, planning, validation, and deployment evidence.
-
-- [x] Phase 1 specify support: unavailable by tool policy; the user did not request subagent delegation, so context gathering remains inline.
-- [x] Phase 2 clarify support: unavailable by tool policy; the user did not request subagent delegation, so clarification analysis remained inline.
-- [x] Phase 3 plan support: unavailable by tool policy; the user did not request subagent delegation, so repository research and planning remained inline.
+- [x] Phase 1 specify support: `/root/phase1_spec_support` → identified existing playback-session/watch-state entities, required one-view-per-session and stale-session rules, idempotency risks, parallel tracking entry points, and regression boundaries without writing files.
+- [x] Phase 2 clarify support: `/root/phase2_clarify_support` → identified session-expiry and superseded-player UX decisions; both questions were answered in Arabic and encoded into `spec.md`; protocol and persistence details were deferred to planning.
+- [x] Phase 3 plan support: `/root/phase3_plan_support` → traced exact backend/frontend/session/tracking/test paths, confirmed the legacy endpoint bypass, recommended persisted sequence idempotency and session state, and supplied concurrency, migration, API, UI, and verification risks.
 
 ### Phase 2 Clarifications / توضيحات المرحلة الثانية
 
-- [x] No critical specification-level ambiguity remained after the approved Arabic Feature Brief was encoded into `spec.md`.
-- [x] No clarification question was repeated; scope, fallback trigger, cleanup policy, and bucket provisioning were already authoritative.
-- [x] Prerequisite script branch mismatch recorded: it resolved branch feature 136, while `.specify/feature.json` identifies active feature 139; downstream work uses the explicit active feature file.
+- [x] Active sessions extend automatically while valid actual-playback updates continue; extension does not create new view eligibility.
+- [x] A superseded player stops, explains that a newer tab or device opened the video, and offers reload.
+- [x] The prerequisite command resolved feature 139 from the current Git branch; active feature 140 remains authoritative through `.specify/feature.json` and explicit `SPECIFY_FEATURE=140-fix-video-session-counting` for downstream Spec Kit scripts.
 
 ### Phase 3 Speckit-Plan Evidence / إثبات التخطيط
 
-- [x] Production-completion handoff executed through standalone `speckit-plan` with `SPECIFY_FEATURE=139-vertex-ai-worker-migration`; setup resolved `specs/139-vertex-ai-worker-migration` despite the dirty worktree remaining on branch 136.
-- [x] Revalidated `plan.md`, `research.md`, `data-model.md`, `contracts/environment.md`, and `quickstart.md` for the production server path, read-only ADC mount, bucket-scoped IAM, lifecycle, deployment gates, and automatic infrastructure rollback.
-- [x] Repository evidence: Compose lacked a credential volume mount; production runs from `/var/www/nadergorge`; the worker currently has only the legacy Developer API key; the service account passes Vertex generation but lacks bucket metadata access.
-- [x] External research evidence: official Google Cloud role documentation confirms bucket-scoped object roles and separate `storage.buckets.get`; lifecycle deletion is asynchronous and remains a safety net rather than synchronous cleanup.
-
-- [x] Executed `.specify/scripts/bash/setup-plan.sh --json` with `SPECIFY_FEATURE=139-vertex-ai-worker-migration`; resolved the explicit feature directory without modifying feature 136.
-- [x] Generated `plan.md`, `research.md`, `data-model.md`, `contracts/ai-provider.md`, `contracts/environment.md`, and `quickstart.md` under `specs/139-vertex-ai-worker-migration/`.
-- [x] Inspected the worker SDK/client call sites, BullMQ processors, callback contracts, tests, compose environment, and constitution before selecting the design.
-- [x] Verified installed `@google/genai` Vertex initialization, GCS `fileUri` support, Vertex File API upload rejection, structured API status surface, and official Vertex 429 / Cloud Storage lifecycle behavior.
-- [x] Updated the AGENTS.md Spec Kit registry for feature 139. No unresolved planning blocker remains.
-
-### Phase 4 Task Evidence / إثبات مرحلة المهام
-
-- [x] `.specify/scripts/bash/setup-tasks.sh` is not present in this repository; used `.specify/templates/tasks-template.md` as the documented fallback.
-- [x] Generated `specs/139-vertex-ai-worker-migration/tasks.md` with atomic provider, storage, workflow, startup, review, and verification tasks for all four user stories.
-
-### Phase 5 Implementation Findings / نتائج التنفيذ
-
-- [x] Resolved strict `exactOptionalPropertyTypes` errors in the new configuration, classification, storage, and test fakes; foundational and full worker tests pass.
-- [x] Fixed developer-primary regression where eager GCS service construction rejected essay jobs without a bucket; full worker suite passes.
-- [x] Corrected the root-level verification command from `npm test` to `npm --prefix worker test`; tests and compose validation pass.
-- [x] Live Vertex/GCS stack validation cannot run locally because all six cloud settings/ADC inputs are absent; deterministic tests, compose validation, and the worker image build completed instead. No production secret was synthesized.
+- [x] Executed standalone `speckit-plan` setup with `SPECIFY_FEATURE=140-fix-video-session-counting` after reading its complete skill instructions.
+- [x] Inspected `VideoPlaybackSession`, both watch-progress handlers, controller contracts, `VideoWatchProgressCalculator`, EF mappings/migrations, `SecureVideoPlayer`, service calls, backend tests, Playwright setup, and constitution gates.
+- [x] Generated `plan.md`, `research.md`, `data-model.md`, `contracts/video-progress-api.md`, and `quickstart.md` under `specs/140-fix-video-session-counting/`.
+- [x] Selected server-enforced per-session view state, newest-session supersession, monotonic sequence idempotency, exact threshold capping, active renewal, and a non-mutating legacy endpoint.
+- [x] Updated `AGENTS.md` Spec Kit plan registry and refreshed the configured Antigravity agent context.
 
 ### Phase 5 Implementation Evidence / إثبات التنفيذ
 
-- [x] Production finding fixed: pre-feature `/ready` returned 503 because Compose supplied a .NET-style `Host=...` connection string to Node `pg`, producing `EAI_AGAIN`; changed the worker-only value to a PostgreSQL URI after verifying the production password is URI-safe without exposing it.
-- [x] `massar` metadata validation confirmed a one-day Delete lifecycle; an opaque live object upload/metadata/delete probe passed and confirmed absence after deletion.
-- [x] Rollback snapshot created at `/root/nadergorge-rollbacks/feature139-20260618-031952` with prior image `sha256:b15a3ca88740a58cba9e34a2561d99b975878d694c666a14d2e7e7331b5ec244`, Compose, environment, and baseline health evidence.
-- [x] Service-account JSON transferred outside Git to `/var/www/nadergorge/secrets/google-application-credentials.json`; directory mode `0700`, file mode `0600`, root-owned, and credential identity validated without reading key material.
-- [x] Production Vertex settings written atomically; the existing Developer API credential was copied internally to fallback without output. Hardened the pre-existing production `.env` from mode `0644` to `0600 root:root`.
-- [x] Published feature branch to GitHub and production remotes. Deployed commit `54ef464c` by rebuilding/recreating only `massar_worker`; Docker health, `/health`, and `/ready` all passed.
-- [x] Production-container live smoke passed: Vertex returned exact `OK`; GCS upload/metadata/delete confirmed cleanup; ADC mount is read-only; worker logs contain zero private-key, API-key-pattern, or `gs://massar` matches.
-
-- [x] Added Vertex/provider configuration, structured quota-only fallback, GCS temporary audio lifecycle, startup bucket validation, and provider-routed chapters, essay, and mind-map generation.
-- [x] Preserved existing BullMQ data, Arabic progress values, callbacks, SRT/chapter output, teacher-photo ordering, and mind-map URLs.
-- [x] `npm --prefix worker test`: 22/22 passed before the final added matrix cases; subsequent quality phases rerun the expanded suite.
-- [x] `docker compose config -q` passed and `docker compose build worker` completed successfully.
+- [x] Implementation prerequisites resolved feature 140 with all 16 specification checklist items complete; existing Git, Docker, ESLint, and secret/build ignore rules cover the affected stack.
+- [x] Backend tests were written first and failed on the missing session contract/state, then passed 9/9 after implementation. The Playwright test was added after the UI path because this repository has no component-test runner; it remains a full runtime gate.
+- [x] EF migration inspection caught and fixed an unintended removal of the existing `UserId` index; the regenerated migration is additive and preserves the old index.
+- [x] Frontend lint completed with zero errors and two pre-existing unused-variable warnings in untouched lesson page files; the production build passed with 63 pages generated.
+- [x] Docker migration gate: `make migrate` exposed a pre-existing populated schema with no EF migration history. The complete migration chain, including feature 140, passed on disposable `massar_feature140`; services were restored to `masar_platform`, the disposable database was removed, and the exact four additive columns/index were applied locally so the rebuilt backend remains usable without altering existing rows.
+- [x] Runtime feature tests on the migrated disposable database: `.venv/bin/python -m pytest tests/test_video.py -q` passed 2/2 and `npm --prefix frontend run test:e2e -- video-session-counting.spec.ts` passed 1/1.
+- [x] Full backend test gate passed 133 tests with one pre-existing skipped Redis rate-limit test; no failures.
 
 ### Phase 6 Deep Review Findings / نتائج المراجعة العميقة
 
-- [x] Production smoke exposed an SDK warning because Compose passed both the legacy `GEMINI_API_KEY` and explicit Vertex project/location. Removed the redundant legacy key mapping; Vertex now receives ADC and only the separately named fallback credential.
-- [x] Verified credential isolation, bucket lifecycle and object permissions, rollback snapshot, cross-project principal grants, worker-only recreation, database readiness URI, provider fallback boundary, startup validation ordering, and absence of backend/frontend/schema changes.
-- [x] Sanitized all non-quota primary/developer and GCS diagnostics so raw provider/storage messages cannot leak object references or response bodies.
-- [x] Delete a newly uploaded GCS object if post-upload metadata retrieval fails before the normal `finally` can receive its handle; regression test passes.
-- [x] Ran `npm --prefix worker audit fix`: reduced findings from six to five moderate transitive `uuid` paths. npm offers only a forced downgrade to `@google-cloud/storage@5.18.3`; rejected as a breaking, stale remediation. No high/critical finding remains.
-- [x] Rechecked architecture boundaries, callbacks, cancellation cleanup, prompt/output compatibility, startup order, compose inputs, and database/UI scope against the three Spec Kit artifacts.
+- [x] The initial Playwright case proved superseded UI but did not prove retry idempotency. It now forces one temporary failure, captures two progress payloads, and asserts the retry reuses the exact sequence and seconds before returning `SESSION_SUPERSEDED`.
+- [x] Removed the Python regression test's compatibility fallback to the obsolete `watchCount` field; the test now enforces the session-aware `currentCount` contract.
+- [x] Reviewed session ownership, newest-session rejection, expiry renewal, threshold excess discard, duplicate sequences, custom maximum lock, extra-watch reset, migration defaults/index preservation, and legacy endpoint bypass against spec/plan/tasks.
 
 ### Phase 7 Clean Code Guard / بوابة جودة الكود
 
-- [x] Production-completion guard removed the redundant legacy API-key container mapping, dead uncalled `processJob` implementation, and unused `messageId` binding. Provider/storage abstractions have active primary/fallback callers and external SDK calls were verified by build and live production probes.
-- [x] Split long AI orchestration into resource-lifecycle, audio-generation, prompt, and image-persistence functions; production functions remain below the guard's hard complexity/size ceiling.
-- [x] Replaced generic local identifiers, removed mixed abstraction levels, and verified external SDK calls against installed versions.
-- [x] Broad catches remain only where the documented contract recovers: cleanup logs while preserving truthful output, and per-chapter mind-map generation returns `null` as the pre-existing batch contract requires.
-- [x] `npm --prefix worker test` passed 25/25 and `git diff --check` passed after the guard fixes.
+- [x] Replaced parameter-heavy progress functions with `TrackProgressRequest` and `SessionProgressContext` typed objects.
+- [x] Extracted frontend progress-response application and terminal session-error transitions from the network flush routine.
+- [x] Extracted backend session validation, watch-event creation, progress application, session renewal, and response projection while preserving one serializable transaction boundary.
+- [x] Removed dead parameter-discard assignments and a step-style comment; verified no obsolete `RegisterView` or active `recordVideoEvent` caller remains.
+- [x] Focused backend tests passed 9/9 and frontend lint passed with only two pre-existing warnings in untouched files after guard fixes.
 
 ### Phase 8 Test Guard / بوابة جودة الاختبارات
 
-- [x] Production-completion test guard reconfirmed all Google AI/GCS/filesystem fakes are external-boundary seams, tests assert outputs/cleanup/provider behavior rather than prompt wording, and one-fallback call counts are justified by the explicit availability/billing contract. `npm --prefix worker test` passed 28/28.
-- [x] Split mixed configuration, fallback-diagnostic, and lifecycle tests so each test owns one scenario.
-- [x] Bound generated teacher-photo and mind-map files to `testContext.after()` cleanup so failed assertions cannot leave artifacts.
-- [x] Third-party AI/GCS clients remain mocked only at external boundaries; tests assert returned outputs, cleanup side effects, provider selection, and public payload contracts.
-- [x] Fallback call-count assertions are retained because “at most one fallback” is an explicit billing/availability requirement, not an internal retry detail.
+- [x] Split expired-session and mismatched-owner validation into separate backend tests so each test owns one failure scenario.
+- [x] Backend tests construct real entities/state; lightweight access/encryption fakes isolate unrelated boundaries in the session-creation test.
+- [x] Python tests exercise the real Docker API/PostgreSQL path, including sessionless bypass, exact locking, extra-view approval, and relock behavior.
+- [x] Playwright mocks only the HTTP response boundary and asserts user-visible pause/message/reload plus stable retry payload behavior.
+- [x] Re-ran test-guard after the final Playwright assertion adjustment; no violations found. The test still mocks only the HTTP boundary and now asserts the idempotent retry fields (`sessionId`, `progressSequence`, `secondsWatched`) without depending on mutable video metadata duration.
 
 ### Feature Test Evidence / إثبات اختبارات الفيتشر
 
-- [x] US1 chapter happy/failure paths: `npm --prefix worker test` → GCS URI reuse, SRT/chapter compatibility, quota fallback upload, non-quota rejection, and cleanup paths passed.
-- [x] US2 provider coverage: `npm --prefix worker test` → Vertex essay output/callback regression and mind-map teacher-photo/16:9/PNG URL behavior passed.
-- [x] US3 quota and permission behavior: `npm --prefix worker test` → structured 429/`RESOURCE_EXHAUSTED` falls back once; 400/401/403/404/500 and implementation errors do not.
-- [x] US4 configuration/access validation: `npm --prefix worker test` → missing/invalid provider settings, unsafe prefixes, bucket lifecycle validation, and sanitized storage failures passed.
-- [x] Persistence/state/cancellation regression: `npm --prefix worker test` → generation-aware GCS deletion, post-upload metadata orphan cleanup, Developer File API cleanup, BullMQ cancellation, and existing essay callback failure retry passed.
-- [x] Worker build: `npm --prefix worker run build` → strict TypeScript compilation passed.
-- [x] Docker packaging: `docker compose config -q` and `docker compose build worker` → compose valid and `massar_worker:local` image built successfully.
-- [x] Backend compile gate: `dotnet build backend/NaderGorge.sln --no-restore` → succeeded with three pre-existing warnings in untouched backend files and zero errors.
-- [x] Frontend compile gate: `npm run build` in `frontend/` → Next.js production build, TypeScript, and 63-page static generation passed.
-- [x] Existing Docker services: `docker compose ps --format json` → database, Redis, backend, five frontend surfaces, nginx, and the pre-feature worker container are healthy. The newly built worker image was not restarted because Vertex project/bucket/ADC settings are absent and doing so would intentionally stop the active worker at startup.
-- [x] External live validation blocker: local environment has no `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `AI_TEMP_GCS_BUCKET`, `GEMINI_FALLBACK_API_KEY`, or ADC credential; live Vertex/GCS calls and 24-hour lifecycle observation require operator-provided cloud resources.
-- [x] Known non-feature warnings: Telegram regression test emits the existing `--localstorage-file` warning; `npm audit fix` leaves five moderate transitive `uuid` advisories with only a forced breaking Storage downgrade offered. No high/critical advisory or feature-introduced compile warning remains.
-- [x] Fixed final validator mismatch by making the four preparation checklist labels begin with the exact phase names expected by `validate_run.py`.
+- [x] User story 1, validation, idempotency, persistence, lock/reset regressions: `dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --filter VideoWatchProgressTests` -> passed 10/10.
+- [x] Full backend regression/build gate: `dotnet test backend/NaderGorge.sln --no-restore` -> passed 134/135 with one pre-existing skipped Redis rate-limit test and no failures.
+- [x] Python API smoke for watch/session compatibility: `.venv/bin/python -m pytest tests/test_video.py -k watch -q` -> passed 1/1, one unrelated test deselected. `python3 -m pytest ...` was not usable because the system Python 3.14 environment does not have `pytest`.
+- [x] UI/E2E newest-session smoke and retry behavior: `npm --prefix frontend run test:e2e -- video-session-counting.spec.ts` -> first run exposed an over-strict assertion on mutable `totalDurationSeconds`; after test-guard review and assertion correction, passed 1/1.
+- [x] Frontend lint: `npm --prefix frontend run lint` -> passed with 0 errors and 2 pre-existing warnings in untouched lesson page files. A parallel lint/E2E attempt briefly hit an ESLint `frontend/test-results` ENOENT race while Playwright was cleaning output, then passed when rerun alone.
+- [x] Frontend production build: `npm --prefix frontend run build` -> passed, compiled successfully and generated 63 static pages.
+- [x] Docker Compose configuration: `docker compose config -q` -> passed.
+- [x] Docker service rebuild/start: `make up` -> passed; rebuilt backend, frontend, worker, and nginx images and started the platform surfaces.
+- [x] Docker service status: `make ps` -> backend, db, redis, landing, student, admin, teacher, assistant, and nginx healthy; worker was restarting because required AI environment variable `GOOGLE_CLOUD_PROJECT` is missing, unrelated to video session counting.
+- [x] Docker migration gate: `make migrate` -> blocked by the pre-existing local database state where schema tables such as `roles` already exist but `__EFMigrationsHistory` is absent. This was already investigated in Phase 5; the full migration chain including feature 140 passed on disposable `massar_feature140`, and the local feature columns/index were applied without altering existing rows.
+- [x] Health checks: `curl -f http://localhost:5245/api/health` -> healthy JSON response; `curl -f http://localhost:8738` -> landing HTML returned; `curl -f http://localhost:8739` -> student HTML returned; `curl -f http://localhost:8740` -> admin HTML returned; `curl -f http://localhost:3001/ui` -> blocked because the worker cannot start without `GOOGLE_CLOUD_PROJECT`.
+
+### Final Readiness / الجاهزية النهائية
+
+- [x] Feature 140 implementation satisfies one-view-per-session, cross-refresh partial accumulation, newest-session supersession, retry idempotency, legacy endpoint non-mutation, lock/reset/extra-watch regression coverage, and frontend recovery UX.
+- [x] Remaining blockers are environment configuration issues outside this feature: populated local Docker database without EF migration history and missing worker AI secret `GOOGLE_CLOUD_PROJECT`.
