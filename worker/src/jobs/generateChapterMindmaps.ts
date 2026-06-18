@@ -9,6 +9,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const workerRoot = path.resolve(__dirname, '../../');
 
+const BACKEND_BASE_URL = process.env.BACKEND_API_URL || 'http://localhost:5245';
+const API_KEY = process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRET || '';
+
+/** Push progress to backend → SignalR → admin frontend in real time */
+async function notifyProgress(jobId: string, percentage: number, stage: string, status = 'active') {
+    try {
+        await fetch(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
+            body: JSON.stringify({ jobId, progress: percentage, status, message: stage }),
+        });
+    } catch { /* best-effort */ }
+}
+
 
 export interface GenerateMindmapsJobData {
     lessonVideoId: string;
@@ -45,7 +59,9 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
     console.log(`[Job ${job.id}] Starting ${isSingleChapter ? 'Single-Chapter Regen' : 'Batch'} Mindmaps for VideoId: ${lessonVideoId}`);
 
     try {
-        await job.updateProgress({ percentage: 10, stage: 'تحضير شخصية المدرس...' });
+        const prepStage = 'تحضير شخصية المدرس...';
+        await job.updateProgress({ percentage: 10, stage: prepStage });
+        await notifyProgress(`${lessonVideoId}_mindmaps`, 10, prepStage);
         await throwIfCancellationRequested(job);
 
         // Prepare local path for teacherPhotoUrl if it exists
@@ -63,7 +79,9 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
 
         const totalChapters = chapters.length;
         if (totalChapters === 0) {
-            await job.updateProgress({ percentage: 100, stage: 'لا توجد فصول لتوليد الصور لها.' });
+            const noChStage = 'لا توجد فصول لتوليد الصور لها.';
+            await job.updateProgress({ percentage: 100, stage: noChStage });
+            await notifyProgress(`${lessonVideoId}_mindmaps`, 100, noChStage, 'completed');
             return { success: true, mindmapsGenerated: 0 };
         }
 
@@ -79,21 +97,21 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
                 }
                 completedCount++;
                 const progressPct = 10 + Math.floor((completedCount / totalChapters) * 80);
-                await job.updateProgress({
-                    percentage: progressPct,
-                    stage: `جاري توليد صورة الفصل ${completedCount} من ${totalChapters} (${chapter.title})...`
-                });
+                const chStage = `جاري توليد صورة الفصل ${completedCount} من ${totalChapters} (${chapter.title})...`;
+                await job.updateProgress({ percentage: progressPct, stage: chStage });
+                await notifyProgress(`${lessonVideoId}_mindmaps`, progressPct, chStage);
             } catch (e) {
                 console.error(`[Job ${job.id}] Failed to generate mind map for ${chapter.title}`, e);
                 // Don't abort the whole job if one chapter fails
             }
         }
 
-        await job.updateProgress({ percentage: 95, stage: 'جاري حفظ الخرائط في لوحة التحكم...' });
+        {
+            const saveStage = 'جاري حفظ الخرائط في لوحة التحكم...';
+            await job.updateProgress({ percentage: 95, stage: saveStage });
+            await notifyProgress(`${lessonVideoId}_mindmaps`, 95, saveStage);
+        }
         await throwIfCancellationRequested(job);
-
-        const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
-        const apiKey = process.env.API_CALLBACK_SECRET;
 
         if (isSingleChapter) {
             // ── Single-chapter regeneration: dedicated webhook ────────────────
@@ -101,10 +119,10 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
             if (singleResult) {
                 console.log(`[Job ${job.id}] Pushing single mindmap for chapterId: ${chapterId}...`);
                 const webhookResponse = await fetch(
-                    `${backendBaseUrl}/api/v1/internal/callbacks/single-mindmap-completed`,
+                    `${BACKEND_BASE_URL}/api/v1/internal/callbacks/single-mindmap-completed`,
                     {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Internal-Token': apiKey || '' },
+                        headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
                         body: JSON.stringify({ chapterId, imageUrl: singleResult.imageUrl })
                     }
                 );
@@ -119,10 +137,10 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
             // ── Batch (full video): existing webhook ──────────────────────────
             console.log(`[Job ${job.id}] Pushing ${results.length} batch mindmaps to backend...`);
             const webhookResponse = await fetch(
-                `${backendBaseUrl}/api/v1/internal/callbacks/mindmaps-completed`,
+                `${BACKEND_BASE_URL}/api/v1/internal/callbacks/mindmaps-completed`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Internal-Token': apiKey || '' },
+                    headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
                     body: JSON.stringify({ videoId: lessonVideoId, mindmaps: results })
                 }
             );
@@ -133,11 +151,14 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
         }
 
         console.log(`[Job ${job.id}] Successfully generated ${results.length} mindmaps.`);
-        await job.updateProgress({ percentage: 100, stage: 'اكتمل توليد الخرائط الذهنية بنجاح.' });
+        const doneStage = 'اكتمل توليد الخرائط الذهنية بنجاح.';
+        await job.updateProgress({ percentage: 100, stage: doneStage });
+        await notifyProgress(`${lessonVideoId}_mindmaps`, 100, doneStage, 'completed');
         return { success: true, mindmapsGenerated: results.length };
 
     } catch (error) {
         console.error(`[Job ${job.id}] Failed generating mindmaps:`, error);
+        await notifyProgress(`${lessonVideoId}_mindmaps`, 0, String(error), 'failed');
         throw error;
     }
 }

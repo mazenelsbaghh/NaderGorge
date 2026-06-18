@@ -12,6 +12,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const workerRoot = path.resolve(__dirname, '../../');
 
+const BACKEND_BASE_URL = process.env.BACKEND_API_URL || 'http://localhost:5245';
+const API_KEY = process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRET || '';
+
+/** Push progress to backend → SignalR → admin frontend in real time */
+async function notifyProgress(jobId: string, percentage: number, stage: string, status = 'active') {
+    try {
+        await fetch(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
+            body: JSON.stringify({ jobId, progress: percentage, status, message: stage }),
+        });
+    } catch { /* best-effort, don't block the pipeline */ }
+}
 
 export interface AnalyzeVideoJobData {
     lessonVideoId: string;
@@ -40,7 +53,9 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
 
         // Step 1: Extract Audio via FFmpeg (saves locally to .tmp directory)
         if (!audioPath || !fs.existsSync(audioPath)) {
-            await job.updateProgress({ percentage: 10, stage: 'جاري استخراج وتحضير الصوت من الفيديو...' });
+            const stage = 'جاري استخراج وتحضير الصوت من الفيديو...';
+            await job.updateProgress({ percentage: 10, stage });
+            await notifyProgress(lessonVideoId, 10, stage);
             await throwIfCancellationRequested(job);
             audioPath = await extractAudioFromVideo(sourceUrl, lessonVideoId);
             await job.updateData({ ...job.data, audioPath });
@@ -49,13 +64,21 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         }
         
         // Step 2: Upload to Gemini & Execute Flash 2.5 Prompt
-        await job.updateProgress({ percentage: 40, stage: 'الذكاء الاصطناعي يقوم بتحليل وتلخيص المحتوى (قد يستغرق دقائق)...' });
+        {
+            const stage = 'الذكاء الاصطناعي يقوم بتحليل وتلخيص المحتوى (قد يستغرق دقائق)...';
+            await job.updateProgress({ percentage: 40, stage });
+            await notifyProgress(lessonVideoId, 40, stage);
+        }
         await throwIfCancellationRequested(job);
         console.log(`[Job ${job.id}] Starting Gemini processing...`);
         result = await analyzeVideoChapters(audioPath);
 
         // Save SRT file to configured shared storage.
-        await job.updateProgress({ percentage: 85, stage: 'جاري بناء هيكل الفصول وإنشاء الترجمة...' });
+        {
+            const stage = 'جاري بناء هيكل الفصول وإنشاء الترجمة...';
+            await job.updateProgress({ percentage: 85, stage });
+            await notifyProgress(lessonVideoId, 85, stage);
+        }
         await throwIfCancellationRequested(job);
         const srtDir = process.env.SUBTITLE_STORAGE_PATH || path.join(workerRoot, '.tmp/subtitles');
         if (!fs.existsSync(srtDir)) {
@@ -70,18 +93,19 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         const subtitleUrl = `${subtitleBaseUrl}/${srtFileName}`;
         
         // Step 3: Webhook Callback to .NET API
-        await job.updateProgress({ percentage: 95, stage: 'جاري حفظ الفصول والخرائط في واجهة النظام...' });
+        {
+            const stage = 'جاري حفظ الفصول والخرائط في واجهة النظام...';
+            await job.updateProgress({ percentage: 95, stage });
+            await notifyProgress(lessonVideoId, 95, stage);
+        }
         await throwIfCancellationRequested(job);
         console.log(`[Job ${job.id}] Pushing results to backend via Webhook...`);
         
-        const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
-        const apiKey = process.env.API_CALLBACK_SECRET;
-        
-        const webhookResponse = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-analysis-completed`, {
+        const webhookResponse = await fetch(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-analysis-completed`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Internal-Token': apiKey || ''
+                'X-Internal-Token': API_KEY
             },
             body: JSON.stringify({
                 videoId: lessonVideoId,
@@ -97,13 +121,16 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         }
 
         console.log(`[Job ${job.id}] Successfully processed video ${lessonVideoId}`);
-        await job.updateProgress({ percentage: 100, stage: 'اكتملت المعالجة بنجاح مئة بالمئة.' });
+        const doneStage = 'اكتملت المعالجة بنجاح مئة بالمئة.';
+        await job.updateProgress({ percentage: 100, stage: doneStage });
+        await notifyProgress(lessonVideoId, 100, doneStage, 'completed');
         
         isSuccess = true;
         return { success: true, chaptersProcessed: result.chapters.length };
         
     } catch (error) {
         console.error(`[Job ${job.id}] Failed processing video:`, error);
+        await notifyProgress(lessonVideoId, 0, String(error), 'failed');
         throw error;
     } finally {
         // Cleanup temp audio file ONLY when the pipeline is completely successful.
