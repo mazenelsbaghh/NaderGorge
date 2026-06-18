@@ -34,3 +34,7 @@ export async function throwIfCancellationRequested(job: Job) {
     throw new Error('Job cancellation requested');
   }
 }
+
+export async function clearJobCancellation(jobId: string | number) {
+  await cancellationRedis.del(cancellationKey(jobId));
+}

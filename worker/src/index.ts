@@ -12,7 +12,7 @@ import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
 import { requireWorkerAdminToken, validateWorkerSecurityConfig } from './security.js';
 import { logQueueEvent } from './logging.js';
-import { markJobCancellation } from './cancellation.js';
+import { markJobCancellation, clearJobCancellation } from './cancellation.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
@@ -438,6 +438,23 @@ async function startWorker() {
       }
 
       logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
+
+      // Remove any existing job with the same ID to allow re-running/retrying the job cleanly
+      try {
+          const existingJob = await targetQueue.getJob(targetJobId);
+          if (existingJob) {
+              await existingJob.remove();
+          }
+      } catch (err: any) {
+          console.warn(`[Worker] Failed to remove existing job ${targetJobId}:`, err.message);
+      }
+
+      // Clear any cancellation marker in Redis
+      try {
+          await clearJobCancellation(targetJobId);
+      } catch (err: any) {
+          console.warn(`[Worker] Failed to clear cancellation for job ${targetJobId}:`, err.message);
+      }
 
       try {
           await targetQueue.add(bullmqJobName, parsedPayload, {
