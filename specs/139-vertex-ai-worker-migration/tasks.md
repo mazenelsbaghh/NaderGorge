@@ -124,7 +124,7 @@
 - [ ] T067 Run `test-guard` against every changed test file, or record the required no-test-surface statement if production completion changes no tests
 - [ ] T068 Run the complete feature test matrix after T065-T067: worker tests/build, Compose validation/build, live Vertex/GCS probes, production health/readiness, cleanup, permission-negative evidence, and rollback-snapshot verification
 - [ ] T069 Run final build verification and `python3 .agents/skills/speckit-all/scripts/validate_run.py --root . --spec-dir specs/139-vertex-ai-worker-migration`; resolve every failure before reporting readiness
-- [ ] T070 [US4] Resolve or explicitly diagnose the pre-deployment `/ready` baseline of HTTP 503 while Docker health and `/health` are healthy; production completion requires `/ready` HTTP 200 after the Vertex worker starts
+- [x] T070 [US4] Resolve the pre-deployment `/ready` HTTP 503 by replacing the worker's .NET-style `DB_CONNECTION_STRING` with the PostgreSQL URI required by Node `pg` in `docker-compose.yml`; production password was verified URI-safe without exposing it
 
 ## Dependencies and Execution Order
 

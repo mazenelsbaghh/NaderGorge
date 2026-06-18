@@ -65,7 +65,7 @@
 
 ### Phase 5 Implementation Evidence / إثبات التنفيذ
 
-- [ ] Production finding: before feature-139 deployment, `massar_worker` is Docker-healthy and `/health` returns 200, but `/ready` returns 503. Require `/ready` 200 after deployment or diagnose and fix the readiness dependency before completion.
+- [x] Production finding fixed: pre-feature `/ready` returned 503 because Compose supplied a .NET-style `Host=...` connection string to Node `pg`, producing `EAI_AGAIN`; changed the worker-only value to a PostgreSQL URI after verifying the production password is URI-safe without exposing it.
 - [x] `massar` metadata validation confirmed a one-day Delete lifecycle; an opaque live object upload/metadata/delete probe passed and confirmed absence after deletion.
 - [x] Rollback snapshot created at `/root/nadergorge-rollbacks/feature139-20260618-031952` with prior image `sha256:b15a3ca88740a58cba9e34a2561d99b975878d694c666a14d2e7e7331b5ec244`, Compose, environment, and baseline health evidence.
 - [x] Service-account JSON transferred outside Git to `/var/www/nadergorge/secrets/google-application-credentials.json`; directory mode `0700`, file mode `0600`, root-owned, and credential identity validated without reading key material.
