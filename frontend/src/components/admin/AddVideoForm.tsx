@@ -21,17 +21,15 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
   const [limit, setLimit] = useState(3);
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [bunnyMode, setBunnyMode] = useState<'manual' | 'file' | 'url'>('manual');
+  const [bunnyMode, setBunnyMode] = useState<'manual' | 'file'>('manual');
   const [bunnyFile, setBunnyFile] = useState<File | null>(null);
-  const [bunnySourceUrl, setBunnySourceUrl] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
     if (provider === 'bunny' && bunnyMode === 'file' && !bunnyFile) return;
-    if (provider === 'bunny' && bunnyMode === 'url' && !bunnySourceUrl.trim()) return;
-    if (!(provider === 'bunny' && bunnyMode !== 'manual') && !urlOrEmbedCode.trim()) return;
+    if (!(provider === 'bunny' && bunnyMode === 'file') && !urlOrEmbedCode.trim()) return;
 
     try {
       setSaving(true);
@@ -65,14 +63,6 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
           });
           upload.start();
         });
-      } else if (provider === 'bunny' && bunnyMode === 'url') {
-        await adminService.fetchBunnyVideo({
-          lessonId,
-          title,
-          order,
-          maxWatchCount: limit,
-          sourceUrl: bunnySourceUrl,
-        });
       } else {
         await adminService.createVideo({ lessonId, title, provider, urlOrEmbedCode, order, limit, isActive });
       }
@@ -80,7 +70,6 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
       setTitle('');
       setUrlOrEmbedCode('');
       setBunnyFile(null);
-      setBunnySourceUrl('');
       setUploadProgress(0);
       setOrder((prev) => prev + 1);
       onSuccess?.();
@@ -118,27 +107,29 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             ]}
           />
         </div>
-        <div className="flex-1 space-y-2 min-w-[200px]">
-          <label className="text-xs font-bold text-[var(--admin-muted)]">رابط الفيديو (أو المعرف)</label>
-          <input
-            type="text"
-            value={urlOrEmbedCode}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
-                setProvider('vk');
-              } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
-                setProvider('YouTube');
-              } else if (val.includes('mediadelivery.net')) {
-                setProvider('bunny');
-              }
-              setUrlOrEmbedCode(val);
-            }}
-            placeholder={provider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : provider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
-            className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
-            required={!(provider === 'bunny' && bunnyMode !== 'manual')}
-          />
-        </div>
+        {!(provider === 'bunny' && bunnyMode === 'file') && (
+          <div className="flex-1 space-y-2 min-w-[200px]">
+            <label className="text-xs font-bold text-[var(--admin-muted)]">رابط الفيديو (أو المعرف)</label>
+            <input
+              type="text"
+              value={urlOrEmbedCode}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.includes('vk.com/video') || val.includes('vk.com/video_ext')) {
+                  setProvider('vk');
+                } else if (val.includes('youtube.com') || val.includes('youtu.be')) {
+                  setProvider('YouTube');
+                } else if (val.includes('mediadelivery.net')) {
+                  setProvider('bunny');
+                }
+                setUrlOrEmbedCode(val);
+              }}
+              placeholder={provider === 'vk' ? 'مثال: oid=-22822305&id=456241864' : provider === 'bunny' ? 'Bunny video GUID أو رابط player.mediadelivery.net' : 'رابط الفيديو'}
+              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+              required={provider !== 'bunny' || bunnyMode === 'manual'}
+            />
+          </div>
+        )}
       </div>
       {provider === 'bunny' && (
         <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4">
@@ -146,7 +137,6 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
             {[
               { value: 'manual', label: 'ربط بمعرف Bunny' },
               { value: 'file', label: 'رفع ملف' },
-              { value: 'url', label: 'سحب من رابط' },
             ].map((option) => (
               <button
                 key={option.value}
@@ -172,15 +162,6 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
                 </div>
               )}
             </div>
-          )}
-          {bunnyMode === 'url' && (
-            <input
-              type="url"
-              value={bunnySourceUrl}
-              onChange={(e) => setBunnySourceUrl(e.target.value)}
-              placeholder="رابط فيديو مباشر يمكن لـ Bunny الوصول إليه"
-              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)]"
-            />
           )}
         </div>
       )}
@@ -219,7 +200,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
         </div>
         <NeumorphButton
           type="submit"
-          disabled={saving || !title.trim() || (provider === 'bunny' && bunnyMode === 'file' ? !bunnyFile : provider === 'bunny' && bunnyMode === 'url' ? !bunnySourceUrl.trim() : !urlOrEmbedCode.trim())}
+          disabled={saving || !title.trim() || (provider === 'bunny' && bunnyMode === 'file' ? !bunnyFile : !urlOrEmbedCode.trim())}
           loading={saving}
           intent="primary"
           size="lg"

@@ -5,7 +5,8 @@
         shell-frontend shell-landing shell-student shell-admin shell-backend shell-worker shell-db \
         verify-surfaces verify-surfaces-static \
         migrate migrate-add \
-        dev frontend backend stop
+        dev frontend backend stop \
+        logs-production logs-production-backend
 
 .DEFAULT_GOAL := help
 
@@ -321,3 +322,9 @@ deploy-production: deploy ## Push code to production server and rebuild containe
 migrate-production: ## Populate migration history and run pending migrations on the VPS production server without rebuild
 	@echo "Connecting and applying migrations to production database..."
 	ssh -o StrictHostKeyChecking=no root@72.62.27.189 "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py --skip-build"
+
+logs-production: ## Tail live logs from ALL services on the production server
+	sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 "cd /var/www/nadergorge && docker compose logs -f"
+
+logs-production-backend: ## Tail backend logs from the production server
+	sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 "cd /var/www/nadergorge && docker compose logs -f backend"

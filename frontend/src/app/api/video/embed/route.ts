@@ -305,6 +305,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         case 'setVolume': player.setVolume(msg.volume / 100); break;
         case 'mute': player.setVolume(0); break;
         case 'unmute': player.setVolume(1); break;
+        case 'setPlaybackRate': player.setPlaybackRate(msg.rate); break;
       }
     });
 

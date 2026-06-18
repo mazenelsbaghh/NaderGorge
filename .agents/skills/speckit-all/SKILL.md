@@ -1,6 +1,6 @@
 ---
 name: speckit-all
-description: Execute the complete Spec-Driven Development workflow from feature specification, mandatory Arabic speckit-clarify, mandatory standalone speckit-plan-driven deep technical planning, strict cheaper-LLM task breakdown, implementation, deep review, clean-code-guard, test-guard, feature test verification, and final reporting. Use when the user invokes $speckit-all or asks for an end-to-end Spec Kit feature workflow; Phase 3 planning must spend the deepest research effort and must be performed by reading and executing speckit-plan, never by inline planning inside speckit-all; always finish by running clean-code-guard before test-guard, then feature tests, before the final report.
+description: Execute the complete Spec-Driven Development workflow, beginning with mandatory Arabic feature-intent refinement and user confirmation, then feature specification, Arabic speckit-clarify, standalone speckit-plan-driven deep technical planning, strict cheaper-LLM task breakdown, implementation, deep review, clean-code-guard, test-guard, feature test verification, and final reporting. Use when the user invokes $speckit-all or asks for an end-to-end Spec Kit feature workflow; refine vague or rough feature requests through focused Arabic questions before creating the spec; Phase 3 planning must spend the deepest research effort and must be performed by reading and executing speckit-plan, never by inline planning inside speckit-all; always finish by running clean-code-guard before test-guard, then feature tests, before the final report.
 ---
 
 ## User Input
@@ -9,11 +9,54 @@ description: Execute the complete Spec-Driven Development workflow from feature 
 $ARGUMENTS
 ```
 
-You **MUST** process the user's input as the feature description to begin the end-to-end workflow.
+Treat the user's input as a **rough feature request**, not as a final feature description. Complete the mandatory Feature Intent Refinement below and use the user-approved Feature Brief as the input to Phase 1.
 
 ## SDD Automation Workflow
 
-When this skill is triggered, execute the following 9 phases sequentially. Do not skip any phase unless the user explicitly instructs you to stop.
+When this skill is triggered, execute the mandatory Feature Intent Refinement first, then the following 9 phases sequentially. Do not skip the refinement or any phase unless the user explicitly instructs you to stop.
+
+### Mandatory Feature Intent Refinement (Before Phase 1)
+
+Do not run `speckit-specify`, initialize `achievements.md`, create a feature branch, or modify product code until this refinement is complete.
+
+1. Classify the request as one or more of: new feature, behavior change, bug fix, UI/UX change, external integration, data/workflow change, or access/business-rule change. Use the classification only to choose relevant discovery questions.
+2. Read the raw request and inspect only enough repository context to understand existing terminology, current behavior, and likely affected workflows. Do not ask the user for facts that can be found in the repository, and do not design the technical solution yet.
+3. Present `فهمي المبدئي` in clear Arabic using three short parts: confirmed intent, inferred assumptions, and important unknowns. Improve the wording without adding requirements or changing the user's business intent.
+4. Maintain an internal decision ledger with `Confirmed`, `Assumed`, and `Open` items. After each answer, move the relevant item to `Confirmed` or retain it as an explicit assumption.
+5. Select questions according to the request type:
+   - New feature or workflow: actor, trigger, desired outcome, business rules, scope boundaries, and success evidence.
+   - Bug fix: reproducible scenario, actual versus expected result, affected users/data, severity, and regression behavior to preserve.
+   - UI/UX: user task, content hierarchy, interaction behavior, loading/empty/error states, responsive behavior, and accessibility expectations.
+   - Integration or data: source of truth, authentication/authorization, synchronization timing, failure/retry behavior, idempotency, migration, and audit needs.
+   - Access or business rules: eligible roles, ownership, state transitions, forbidden actions, exceptions, and observable denial behavior.
+6. Ask focused questions in Arabic, **one question per message**, with a maximum of 5 questions. Ask the highest-impact unresolved decision first. When choices are useful, provide 2-3 concrete options, recommend one with a short reason and tradeoff, and allow a free-form answer. Do not make the user choose implementation technologies unless that choice is genuinely a product constraint.
+7. Ask at least one question unless the user explicitly requests no preliminary questions. Stop early when the readiness gate below is satisfied. Never ask a cosmetic or low-impact question while a scope, permission, state, data-loss, payment, or acceptance ambiguity remains.
+8. Apply this readiness gate before Phase 1. Each relevant item MUST be confirmed, explicitly marked out of scope, or recorded as a low-risk assumption:
+   - problem and desired outcome
+   - affected actor or role
+   - trigger and primary user flow
+   - current versus expected behavior
+   - permissions and critical business rules
+   - in-scope and out-of-scope boundaries
+   - failure, empty, cancellation, and edge behavior
+   - observable acceptance outcomes
+9. If a high-impact ambiguity remains after 5 questions, do not guess and do not start Phase 1. Show the unresolved decision in Arabic and ask the user for the missing detail before continuing. Low-risk uncertainty may remain only when clearly listed as an assumption in the Feature Brief.
+10. Produce a concise Arabic **Feature Brief / ملخص الميزة** containing:
+   - المشكلة أو الفرصة
+   - الهدف والنتيجة المتوقعة
+   - المستخدمون أو الأدوار المتأثرة
+   - السلوك الحالي والسلوك المطلوب
+   - السيناريو الأساسي من نقطة البداية إلى النتيجة
+   - النطاق المشمول وغير المشمول
+   - قواعد العمل والصلاحيات والحالات الحدية المعروفة
+   - حالات التحميل/الفراغ/الفشل/الإلغاء ذات الصلة
+   - معايير قبول قابلة للملاحظة بصيغة `Given / When / Then` عندما تناسب الطلب
+   - القرارات المؤكدة من إجابات المستخدم
+   - الافتراضات المتبقية، إن وجدت
+11. Ask the user to confirm or correct the Feature Brief using a direct Arabic instruction such as: `اكتب موافق، أو اكتب التعديل المطلوب على أي نقطة.` Treat corrections as authoritative, update the brief, and request confirmation again.
+12. Only after explicit user confirmation, treat the approved Feature Brief as `$REFINED_FEATURE_DESCRIPTION` and start Phase 1. Preserve the original intent; do not silently broaden scope.
+
+This refinement is product discovery before specification. It does not replace Phase 2: `speckit-clarify` MUST still inspect the generated `spec.md` for specification-level ambiguities.
 
 ### Bundled Automation Scripts
 
@@ -31,6 +74,7 @@ Read `references/feature-test-matrix.md` during Phase 9 before building the fina
 
 ### Mandatory Order
 
+0. Arabic Feature Intent Refinement and user confirmation
 1. `speckit-specify`
 2. `speckit-clarify` immediately after specify and before plan
 3. `speckit-plan`
@@ -112,21 +156,23 @@ If a subagent facility is available, use it in Phases 1, 2, and 3 for context ga
 
 1. Create `achievements.md` by running `python .agents/skills/speckit-all/scripts/init_achievements.py --root .`.
 2. If subagents are available, run a Phase 1 specify-support subagent using `references/subagent-handoff-template.md`; otherwise record `Phase 1 specify support: unavailable`.
-3. Execute **`speckit-specify`** using `$ARGUMENTS` and the accepted subagent context packet as the feature description context.
-4. Ensure `spec.md` and `checklists/requirements.md` are created under one `specs/<feature>/` directory.
-5. Do not proceed if the feature description is empty or the spec directory cannot be identified.
-6. Mark Phase 1 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 1 --root .`.
+3. Record the approved Feature Brief in `achievements.md` under `### Approved Feature Brief / ملخص الميزة المعتمد`.
+4. Execute **`speckit-specify`** using `$REFINED_FEATURE_DESCRIPTION` and the accepted subagent context packet as the feature description context. Use the raw `$ARGUMENTS` only as traceability context; when they conflict, the user-approved Feature Brief wins.
+5. Ensure `spec.md` and `checklists/requirements.md` are created under one `specs/<feature>/` directory.
+6. Do not proceed if the approved Feature Brief is empty or the spec directory cannot be identified.
+7. Mark Phase 1 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 1 --root .`.
 
 ### Phase 2: Arabic Clarification (`speckit-clarify`)
 
 1. Execute **`speckit-clarify`** immediately after Phase 1 and before planning.
 2. All clarification questions shown to the user MUST be in Arabic. Option labels may be `A/B/C`, but question text, recommendation reasoning, option descriptions, and answer instructions must be Arabic.
 3. If subagents are available, run a Phase 2 clarify-support subagent using `references/subagent-handoff-template.md`; otherwise record `Phase 2 clarify support: unavailable`.
-4. Ask up to 5 targeted questions exactly as `speckit-clarify` allows, one question at a time. The main agent asks the user; the subagent only drafts candidates.
-5. If no critical ambiguities exist, record that result and continue.
-6. Save every accepted answer back into `spec.md` through the `speckit-clarify` workflow.
-7. Do not run `speckit-plan` while clarification questions are unanswered.
-8. Mark Phase 2 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 2 --root .`.
+4. Read the approved Feature Brief and all recorded decisions before drafting questions. Never repeat a question already answered during Feature Intent Refinement unless the generated spec contradicts that answer; in that case, show the contradiction explicitly and ask the user which behavior is authoritative.
+5. Ask up to 5 targeted **specification-level** questions exactly as `speckit-clarify` allows, one question at a time. Focus on ambiguity introduced or exposed by `spec.md`, not general product discovery. The main agent asks the user; the subagent only drafts candidates.
+6. If no critical ambiguities exist, record that result and continue.
+7. Save every accepted answer back into `spec.md` through the `speckit-clarify` workflow.
+8. Do not run `speckit-plan` while clarification questions are unanswered.
+9. Mark Phase 2 complete with `python .agents/skills/speckit-all/scripts/mark_phase.py 2 --root .`.
 
 ### Phase 3: Technical Planning (`speckit-plan`)
 
