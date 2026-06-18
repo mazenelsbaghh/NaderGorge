@@ -351,6 +351,7 @@ async function startWorker() {
           job = await mindmapsQueue.getJob(jobId);
       }
       if (job && await job.getState() === 'failed') {
+          await clearJobCancellation(jobId);
           await job.retry();
           return res.json({ success: true, message: 'Job retried' });
       }
