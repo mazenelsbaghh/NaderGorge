@@ -71,7 +71,7 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         }
         await throwIfCancellationRequested(job);
         console.log(`[Job ${job.id}] Starting Gemini processing...`);
-        result = await analyzeVideoChapters(audioPath);
+        result = await analyzeVideoChapters(audioPath, String(job.id || lessonVideoId));
 
         // Save SRT file to configured shared storage.
         {

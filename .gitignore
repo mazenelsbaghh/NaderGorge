@@ -24,6 +24,9 @@ coverage/
 .env.production.local
 frontend/.env.local
 worker/.env
+secrets/
+**/google-application-credentials.json
+**/*service-account*.json
 # .env.example is intentionally NOT ignored (safe to commit as documentation)
 
 # Docker

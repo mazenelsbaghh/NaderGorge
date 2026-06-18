@@ -13,9 +13,24 @@ import { processNotificationJob } from './jobs/notification-sender.js';
 import { requireWorkerAdminToken, validateWorkerSecurityConfig } from './security.js';
 import { logQueueEvent } from './logging.js';
 import { markJobCancellation, clearJobCancellation } from './cancellation.js';
+import { readAIConfig } from './services/aiConfig.js';
+import { TemporaryAudioStorage } from './services/temporaryAudioStorage.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
+let aiStartupReady = false;
+
+async function validateAIStartup() {
+  const config = readAIConfig();
+  if (config.primaryProvider === 'vertex') {
+    await new TemporaryAudioStorage(config).validateAccess();
+  }
+  aiStartupReady = true;
+  console.log('[AI startup] Provider and temporary-storage configuration validated.', {
+    provider: config.primaryProvider,
+    location: config.location,
+  });
+}
 
 const DEFAULT_REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
 const JOB_RETENTION_OPTIONS = {
@@ -280,11 +295,12 @@ async function startWorker() {
       console.error('[Worker Ready Check] Redis failure:', err.message);
     }
 
-    if (!dbOk || !redisOk) {
+    if (!dbOk || !redisOk || !aiStartupReady) {
       return res.status(503).json({
         status: 'unhealthy',
         database: dbOk ? 'healthy' : 'unhealthy',
-        redis: redisOk ? 'healthy' : 'unhealthy'
+        redis: redisOk ? 'healthy' : 'unhealthy',
+        ai: aiStartupReady ? 'healthy' : 'unhealthy',
       });
     }
 
@@ -292,6 +308,7 @@ async function startWorker() {
       status: 'healthy',
       database: 'healthy',
       redis: 'healthy',
+      ai: 'healthy',
       timestamp: new Date().toISOString()
     });
   });
@@ -532,4 +549,5 @@ async function startWorker() {
   })();
 }
 
-startWorker();
+await validateAIStartup();
+await startWorker();

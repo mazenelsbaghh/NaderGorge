@@ -130,7 +130,16 @@ services:
     environment:
       REDIS_URL: "redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
       DB_CONNECTION_STRING: "Host=${POSTGRES_HOST:-db};Database=${POSTGRES_DB:-massar_platform};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}"
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      AI_PRIMARY_PROVIDER: ${AI_PRIMARY_PROVIDER:-vertex}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
+      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
+      AI_TEMP_GCS_BUCKET: ${AI_TEMP_GCS_BUCKET:-}
+      AI_TEMP_GCS_PREFIX: ${AI_TEMP_GCS_PREFIX:-ai-analysis}
+      AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gemini-2.5-flash}
+      AI_IMAGE_MODEL: ${AI_IMAGE_MODEL:-gemini-3-pro-image-preview}
+      GEMINI_FALLBACK_API_KEY: ${GEMINI_FALLBACK_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-application-credentials.json
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}
@@ -147,6 +156,7 @@ services:
     volumes:
       - massar_assets:/backend/src/NaderGorge.API/wwwroot
       - ./worker:/app/host-worker
+      - ${GOOGLE_APPLICATION_CREDENTIALS_HOST_PATH:-./secrets/google-application-credentials.json}:/run/secrets/google-application-credentials.json:ro
     networks:
       - massar_net
     depends_on:

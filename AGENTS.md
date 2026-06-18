@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-06-09
+Auto-generated from all feature plans. Last updated: 2026-06-18
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -48,6 +48,8 @@ Auto-generated from all feature plans. Last updated: 2026-06-09
 - PostgreSQL (StudentProfile, Users, NotificationEvent, LessonVideo, StudentExamAttempt) (066-birthday-and-locked-videos)
 - TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand (112-surface-login-access-contract)
 - N/A (Stateless cookie/Zustand validation) (112-surface-login-access-contract)
+- TypeScript 5.9.3 strict mode on Node.js 20 + `@google/genai` 1.47.0, `@google-cloud/storage`, BullMQ 5.71.1, Express 5.2.1, undici 7.24.6 (139-vertex-ai-worker-migration)
+- GCS temporary object bucket; existing local `.tmp`, subtitle, and mind-map files; Redis job state; no database schema change (139-vertex-ai-worker-migration)
 
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + framer-motion ^12.38.0, lucide-react ^1.7.0, clsx + tailwind-merge (via `@/lib/utils`) (033-custom-video-player)
 
@@ -67,9 +69,9 @@ npm test && npm run lint
 TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 ## Recent Changes
+- 139-vertex-ai-worker-migration: Added TypeScript 5.9.3 strict mode on Node.js 20 + `@google/genai` 1.47.0, `@google-cloud/storage`, BullMQ 5.71.1, Express 5.2.1, undici 7.24.6
 - 112-surface-login-access-contract: Added TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand
 - 066-birthday-and-locked-videos: Added Student Birthday Greetings (daily script using Evolution API) and Video Exam Progression locks (backend logic and frontend secure player overlays)
-- 064-full-docker-setup: Added PostgreSQL (named volume `pgdata`) + Redis (named volume `redisdata`) + Telegram Bot API (named volume `tgdata`)
 
 
 <!-- MANUAL ADDITIONS START -->
@@ -82,5 +84,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 136-audio-upload-restrictions-and-reviews: specs/136-audio-upload-restrictions-and-reviews/plan.md
 - 137-assessment-controls-media: specs/137-assessment-controls-media/plan.md
 - 138-bunny-video-provider: specs/138-bunny-video-provider/plan.md
+- 139-vertex-ai-worker-migration: specs/139-vertex-ai-worker-migration/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

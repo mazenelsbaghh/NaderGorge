@@ -12,6 +12,7 @@ import { extractAudioFromVideo } from './utils/audioExtractor.js';
 
 // Setup basic E2e test environment variables
 process.env.GEMINI_API_KEY = 'mock_gemini_api_key_value_1234567890';
+process.env.AI_PRIMARY_PROVIDER = 'developer';
 process.env.BACKEND_API_URL = 'http://localhost:5245/api/v1';
 process.env.AI_CALLBACK_SECRET = 'E2eOnlyAiCallbackSecretValue1234567890';
 
