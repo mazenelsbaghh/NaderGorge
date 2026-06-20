@@ -432,7 +432,7 @@ setInterval(function() {
 }, 12000);
 
 var shadowOverlay = document.createElement('div');
-shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.32) 9%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 52%,rgba(0,0,0,0.92) 70%,rgba(0,0,0,1) 100%);';
+shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.32) 9%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.82) 88%,rgba(0,0,0,1) 100%);';
 
 wrap.appendChild(ytDiv);
 wrap.appendChild(shadowOverlay);
@@ -462,7 +462,7 @@ function triggerShadowOverlay(forceKeepVisible) {
     var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     shadowOverlay.style.transition = reduceMotion ? 'none' : 'opacity 0.6s ease-out';
     shadowOverlay.style.opacity = '0';
-  }, 10000);
+  }, 3000);
 }
 
 var origGetById = document.getElementById.bind(document);
