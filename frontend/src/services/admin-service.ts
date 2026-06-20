@@ -638,6 +638,11 @@ export const adminService = {
     return res.data;
   },
 
+  getActiveTeacherPhoto: async (teacherId: string) => {
+    const res = await apiClient.get<ApiResponse<{ url: string | null }>>(`/admin/teachers/${teacherId}/active-photo`);
+    return res;
+  },
+
   uploadTeacherProfileImage: async (teacherId: string, base64Image: string, fileName: string) => {
     const res = await apiClient.post<ApiResponse<string>>('/admin/teachers/upload-profile-image', {
       teacherId,

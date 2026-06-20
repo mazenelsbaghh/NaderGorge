@@ -567,6 +567,13 @@ export default function AdminTeachersPageClient() {
       setTelegramUrl(teacher.telegramUrl || '');
       setProfileImagePreview(teacher.profileImageUrl || null);
       setAiPhotoPreview(null);
+      adminService.getActiveTeacherPhoto(teacher.userId)
+        .then(res => {
+          if (res.data?.data?.url) {
+            setAiPhotoPreview(res.data.data.url);
+          }
+        })
+        .catch(err => console.error('Failed to fetch active AI photo:', err));
       setPendingProfileImage(null);
       setPendingAiPhoto(null);
     } else {

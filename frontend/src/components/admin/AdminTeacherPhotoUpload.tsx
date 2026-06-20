@@ -1,20 +1,49 @@
 'use client';
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Upload, Image as ImageIcon, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
 import { useAuthStore } from '@/stores/auth-store';
+import { resolveMediaUrl } from '@/utils/resolve-media-url';
 
-export function AdminTeacherPhotoUpload() {
+interface AdminTeacherPhotoUploadProps {
+  teacherId?: string;
+}
+
+export function AdminTeacherPhotoUpload({ teacherId }: AdminTeacherPhotoUploadProps) {
   const { user } = useAuthStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [loadingPhoto, setLoadingPhoto] = useState(false);
 
-  // We assume the logged in admin is the teacher, or at least we use their ID
-  const teacherId = user?.id;
+  const resolvedTeacherId = teacherId || user?.id;
+
+  useEffect(() => {
+    if (!resolvedTeacherId) {
+      setPreview(null);
+      return;
+    }
+
+    const fetchActivePhoto = async () => {
+      setLoadingPhoto(true);
+      try {
+        const res = await adminService.getActiveTeacherPhoto(resolvedTeacherId);
+        if (res.data?.data?.url) {
+          setPreview(resolveMediaUrl(res.data.data.url));
+        } else {
+          setPreview(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch active photo preview:', err);
+      } finally {
+        setLoadingPhoto(false);
+      }
+    };
+
+    fetchActivePhoto();
+  }, [resolvedTeacherId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,14 +66,13 @@ export function AdminTeacherPhotoUpload() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !preview || !teacherId) return;
+    if (!selectedFile || !preview || !resolvedTeacherId) return;
 
     setIsUploading(true);
     try {
-      await adminService.uploadTeacherPhoto(teacherId, preview, selectedFile.name);
+      await adminService.uploadTeacherPhoto(resolvedTeacherId, preview, selectedFile.name);
       toast.success('تم رفع الصورة بنجاح سيتم استخدامها في الخرائط الذهنية');
       setSelectedFile(null);
-      setPreview(null);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'فشل رفع الصورة');
     } finally {
@@ -79,7 +107,12 @@ export function AdminTeacherPhotoUpload() {
             onChange={handleFileChange} 
           />
           
-          {preview ? (
+          {loadingPhoto ? (
+            <div className="flex flex-col items-center gap-2 py-4">
+              <Loader2 className="w-6 h-6 text-[var(--admin-primary)] animate-spin" />
+              <span className="text-xs text-[var(--admin-muted)]">جاري تحميل المعاينة...</span>
+            </div>
+          ) : preview ? (
             <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-[var(--admin-border)] shadow-md">
               <Image src={preview} alt="Preview" fill unoptimized className="object-cover" />
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -105,7 +138,7 @@ export function AdminTeacherPhotoUpload() {
 
           <button
             onClick={handleUpload}
-            disabled={!preview || isUploading || !teacherId}
+            disabled={!preview || isUploading || !resolvedTeacherId}
             className="flex items-center justify-center gap-2 bg-[var(--admin-primary)] text-[var(--admin-text-inverse)] py-2.5 px-4 rounded-xl font-bold transition-transform hover:-translate-y-0.5 disabled:opacity-50 disabled:pointer-events-none"
           >
             {isUploading ? (

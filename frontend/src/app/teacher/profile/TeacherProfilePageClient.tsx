@@ -56,6 +56,16 @@ export default function TeacherProfilePageClient() {
         toast.error("فشل في تحميل بيانات الملف الشخصي");
       })
       .finally(() => setLoading(false));
+
+    teacherService.getActiveTeacherPhoto()
+      .then((res) => {
+        if (res.success && res.data?.url) {
+          setAiPhotoPreview(res.data.url);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching active AI photo:", err);
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -338,7 +348,7 @@ export default function TeacherProfilePageClient() {
                   {aiPhotoPreview ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={aiPhotoPreview}
+                      src={resolveMediaUrl(aiPhotoPreview)}
                       alt="AI Preview"
                       className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
                     />

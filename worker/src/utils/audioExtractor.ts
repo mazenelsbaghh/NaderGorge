@@ -1,4 +1,4 @@
-import { execFile } from 'child_process';
+import child_process from 'child_process';
 import util from 'util';
 import fs from 'fs';
 import path from 'path';
@@ -8,7 +8,17 @@ import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
 import { NewMessage } from 'telegram/events/index.js';
 
-const execFileAsync = util.promisify(execFile);
+const execFileAsync = (file: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
+    return new Promise((resolve, reject) => {
+        child_process.execFile(file, args, (err, stdout, stderr) => {
+            if (err) {
+                reject(Object.assign(err, { stdout, stderr }));
+            } else {
+                resolve({ stdout, stderr });
+            }
+        });
+    });
+};
 const ytDlpPath = (ytDlp as any).constants.YOUTUBE_DL_PATH;
 
 // Resolve the worker root directory reliably from the compiled file location.
@@ -205,69 +215,79 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
     console.log(`[Youtube-DL] Worker root: ${workerRoot}`);
     console.log(`[Youtube-DL] Temp dir:    ${tempDir}`);
 
-    // Normalise raw YouTube IDs → full URL
+    // Normalise raw YouTube IDs → full URL, or handle Bunny Stream GUIDs
+    const isBunny = /^[a-f0-9-]{32,36}$/i.test(sourceUrl.trim());
     let url = sourceUrl;
-    if (url.length === 11 && !url.includes('http')) {
+    if (isBunny) {
+        const libraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
+        if (!libraryId) {
+            throw new Error('Missing BUNNY_STREAM_LIBRARY_ID environment variable.');
+        }
+        url = `https://iframe.mediadelivery.net/embed/${libraryId}/${sourceUrl.trim()}`;
+        console.log(`[Youtube-DL] Detected Bunny Stream video. Constructed embed URL: ${url}`);
+    } else if (url.length === 11 && !url.includes('http')) {
         url = `https://www.youtube.com/watch?v=${url}`;
     }
 
-    // ── Try Telegram Downloader First (If fully configured) ──
-    const apiIdStr = process.env.TELEGRAM_API_ID;
-    const apiHash = process.env.TELEGRAM_API_HASH;
-    const stringSession = process.env.TELEGRAM_STRING_SESSION;
-    if (apiIdStr && apiHash && stringSession) {
-        try {
-            console.log(`[Youtube-DL] Attempting Telegram bot download for: ${url}`);
-            const tgSuccess = await extractAudioViaTelegram(url, tempDir, outputFileName, expectedMp3);
-            if (tgSuccess && fs.existsSync(expectedMp3)) {
-                console.log(`[Youtube-DL] ✅ Successfully extracted audio via Telegram bot!`);
-                return expectedMp3;
+    if (!isBunny) {
+        // ── Try Telegram Downloader First (If fully configured) ──
+        const apiIdStr = process.env.TELEGRAM_API_ID;
+        const apiHash = process.env.TELEGRAM_API_HASH;
+        const stringSession = process.env.TELEGRAM_STRING_SESSION;
+        if (apiIdStr && apiHash && stringSession) {
+            try {
+                console.log(`[Youtube-DL] Attempting Telegram bot download for: ${url}`);
+                const tgSuccess = await extractAudioViaTelegram(url, tempDir, outputFileName, expectedMp3);
+                if (tgSuccess && fs.existsSync(expectedMp3)) {
+                    console.log(`[Youtube-DL] ✅ Successfully extracted audio via Telegram bot!`);
+                    return expectedMp3;
+                }
+            } catch (tgErr: any) {
+                console.warn(`[Youtube-DL] Telegram bot download failed: ${tgErr.message || tgErr}. Proceeding to fallbacks...`);
             }
-        } catch (tgErr: any) {
-            console.warn(`[Youtube-DL] Telegram bot download failed: ${tgErr.message || tgErr}. Proceeding to fallbacks...`);
-        }
-    }
-
-    // ── Try Cobalt API First (Bypasses YouTube bot block without cookies/local binaries) ──
-    try {
-        console.log(`[Youtube-DL] Attempting extraction via Cobalt API for: ${url}`);
-        const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                url,
-                isAudioOnly: true,
-                aFormat: 'mp3',
-            }),
-        });
-
-        if (!cobaltRes.ok) {
-            throw new Error(`Cobalt returned status ${cobaltRes.status}`);
         }
 
-        const data = (await cobaltRes.json()) as { url?: string; status?: string; text?: string };
-        if (data.status === 'error' || !data.url) {
-            throw new Error(data.text || 'Cobalt API did not return a valid download URL.');
+        // ── Try Cobalt API First (Bypasses YouTube bot block without cookies/local binaries) ──
+        try {
+            console.log(`[Youtube-DL] Attempting extraction via Cobalt API for: ${url}`);
+            const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    url,
+                    isAudioOnly: true,
+                    aFormat: 'mp3',
+                }),
+            });
+
+            if (!cobaltRes.ok) {
+                throw new Error(`Cobalt returned status ${cobaltRes.status}`);
+            }
+
+            const data = (await cobaltRes.json()) as { url?: string; status?: string; text?: string };
+            if (data.status === 'error' || !data.url) {
+                throw new Error(data.text || 'Cobalt API did not return a valid download URL.');
+            }
+
+            console.log(`[Youtube-DL] Cobalt returned direct audio URL. Downloading...`);
+            const fileResponse = await fetch(data.url);
+            if (!fileResponse.ok) {
+                throw new Error(`Failed to download audio file: ${fileResponse.statusText}`);
+            }
+
+            const fileStream = fs.createWriteStream(expectedMp3);
+            const { Readable } = await import('stream');
+            const { finished } = await import('stream/promises');
+            await finished(Readable.fromWeb(fileResponse.body as any).pipe(fileStream));
+
+            console.log(`[Youtube-DL] ✅ Audio downloaded successfully via Cobalt: ${expectedMp3}`);
+            return expectedMp3;
+        } catch (cobaltErr: any) {
+            console.warn(`[Youtube-DL] Cobalt API failed (${cobaltErr.message || cobaltErr}). Falling back to local yt-dlp...`);
         }
-
-        console.log(`[Youtube-DL] Cobalt returned direct audio URL. Downloading...`);
-        const fileResponse = await fetch(data.url);
-        if (!fileResponse.ok) {
-            throw new Error(`Failed to download audio file: ${fileResponse.statusText}`);
-        }
-
-        const fileStream = fs.createWriteStream(expectedMp3);
-        const { Readable } = await import('stream');
-        const { finished } = await import('stream/promises');
-        await finished(Readable.fromWeb(fileResponse.body as any).pipe(fileStream));
-
-        console.log(`[Youtube-DL] ✅ Audio downloaded successfully via Cobalt: ${expectedMp3}`);
-        return expectedMp3;
-    } catch (cobaltErr: any) {
-        console.warn(`[Youtube-DL] Cobalt API failed (${cobaltErr.message || cobaltErr}). Falling back to local yt-dlp...`);
     }
 
     // ── Snapshot BEFORE ──────────────────────────────────────────────────────
@@ -299,6 +319,11 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
         // that causes all YouTube formats to be invisible.
         '--js-runtimes', `node:${process.execPath}`,
     ];
+
+    if (isBunny) {
+        args.push('--referer', 'https://admin.massar-academy.net/');
+        console.log(`[Youtube-DL] Appended referer header for Bunny Stream: https://admin.massar-academy.net/`);
+    }
 
     if (cookiesPath) {
         args.push('--cookies', cookiesPath);

@@ -86,5 +86,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 138-bunny-video-provider: specs/138-bunny-video-provider/plan.md
 - 139-vertex-ai-worker-migration: specs/139-vertex-ai-worker-migration/plan.md
 - 140-fix-video-session-counting: specs/140-fix-video-session-counting/plan.md
+- 141-teacher-photo-refinement-and-bunny-stream: specs/141-teacher-photo-refinement-and-bunny-stream/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

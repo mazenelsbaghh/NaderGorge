@@ -147,6 +147,29 @@ public class TeacherProfileTests
     }
 
     [Fact]
+    public async Task GetActiveTeacherPhoto_ReturnsActivePhoto()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher John", "01099999999");
+
+        var photo = new TeacherPhoto
+        {
+            TeacherId = user.Id,
+            FileUrl = "/uploads/content/teacher/photo-123.webp",
+            IsActive = true,
+            UploadedAt = DateTime.UtcNow
+        };
+        db.TeacherPhotos.Add(photo);
+        await db.SaveChangesAsync();
+
+        var handler = new NaderGorge.Application.Features.Admin.Queries.GetActiveTeacherPhotoQueryHandler(db);
+        var result = await handler.Handle(new NaderGorge.Application.Features.Admin.Queries.GetActiveTeacherPhotoQuery(user.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal("/uploads/content/teacher/photo-123.webp", result.Data!.Url);
+    }
+
+    [Fact]
     public async Task UploadTeacherProfileImage_SavesCompressedWebpAndUpdatesProfile()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();

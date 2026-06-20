@@ -11,9 +11,12 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
   Users, Package, BookOpen, PenLine, DollarSign, Wallet,
   GraduationCap, Activity, Phone, User, Clock3,
-  FileText, ArrowLeft, Download,
+  FileText, ArrowLeft, Download, X, Check, Sparkles,
+  Eye, EyeOff, Lock, Send, Image as ImageIcon, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { AnimatePresence } from 'framer-motion';
+import { compressImage, renameFileToMatchBase64 } from '@/utils/image-compressor';
 
 /* ─── Social Media Icons (reused from AdminTeachersPageClient) ─── */
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -47,6 +50,60 @@ const GRADE_NAMES: Record<string, string> = {
   AzhariSecondary1: 'الأول الثانوي الأزهري', AmericanGrade9: 'Grade 9',
   AmericanGrade10: 'Grade 10', AmericanGrade11: 'Grade 11', AmericanGrade12: 'Grade 12',
 };
+
+const GRADE_GROUPS = [
+  {
+    label: 'المرحلة الثانوية العامة',
+    grades: [
+      { value: 'FirstSecondary', label: 'الأول الثانوي' },
+      { value: 'SecondSecondary', label: 'الثاني الثانوي' },
+      { value: 'SecondaryGrade3', label: 'الثالث الثانوي' },
+    ]
+  },
+  {
+    label: 'بكالوريا',
+    grades: [
+      { value: 'FirstBaccalaureate', label: 'الأول بكالوريا' },
+      { value: 'SecondBaccalaureate', label: 'الثاني بكالوريا' },
+    ]
+  },
+  {
+    label: 'المرحلة الإعدادية',
+    grades: [
+      { value: 'PrepGrade1', label: 'الأول الإعدادي' },
+      { value: 'PrepGrade2', label: 'الثاني الإعدادي' },
+      { value: 'PrepGrade3', label: 'الثالث الإعدادي' },
+    ]
+  },
+  {
+    label: 'المرحلة الابتدائية',
+    grades: [
+      { value: 'PrimaryGrade1', label: 'الأول الابتدائي' },
+      { value: 'PrimaryGrade2', label: 'الثاني الابتدائي' },
+      { value: 'PrimaryGrade3', label: 'الثالث الابتدائي' },
+      { value: 'PrimaryGrade4', label: 'الرابع الابتدائي' },
+      { value: 'PrimaryGrade5', label: 'الخامس الابتدائي' },
+      { value: 'PrimaryGrade6', label: 'السادس الابتدائي' },
+    ]
+  },
+  {
+    label: 'التعليم الأزهري',
+    grades: [
+      { value: 'AzhariPrimary1', label: 'الأول الابتدائي الأزهري' },
+      { value: 'AzhariPrep1', label: 'الأول الإعدادي الأزهري' },
+      { value: 'AzhariSecondary1', label: 'الأول الثانوي الأزهري' },
+    ]
+  },
+  {
+    label: 'التعليم الأمريكي (American)',
+    grades: [
+      { value: 'AmericanGrade9', label: 'Grade 9' },
+      { value: 'AmericanGrade10', label: 'Grade 10' },
+      { value: 'AmericanGrade11', label: 'Grade 11' },
+      { value: 'AmericanGrade12', label: 'Grade 12' },
+    ]
+  }
+];
 
 /* ─── Helpers ─── */
 const translateAction = (action: string): string => {
@@ -140,6 +197,29 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const [auditLogs, setAuditLogs] = useState<UserAuditLogDto[]>([]);
   const [studentPackageFilter, setStudentPackageFilter] = useState<string>('all');
 
+  // ── Edit Modal states ──
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [isUploadingAi, setIsUploadingAi] = useState(false);
+
+  const [bio, setBio] = useState('');
+  const [contactInfo, setContactInfo] = useState('');
+  const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [assistantPhoneNumbers, setAssistantPhoneNumbers] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
+  const [youtubeUrl, setYouTubeUrl] = useState('');
+  const [telegramUrl, setTelegramUrl] = useState('');
+  const [commissionRate, setCommissionRate] = useState<number>(0);
+
+  const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [aiPhotoPreview, setAiPhotoPreview] = useState<string | null>(null);
+
+  const [subjects, setSubjects] = useState<any[]>([]);
+
 
 
   const TABS: AdminTab<TabKey>[] = [
@@ -162,7 +242,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
       // Fire all secondary requests in parallel — each wrapped in try/catch
       const [
         statsRes, studentsRes, essaysRes, activationsRes,
-        payoutsRes, codeGroupsRes, auditRes,
+        payoutsRes, codeGroupsRes, auditRes, subjectsRes,
       ] = await Promise.all([
         adminService.getTeacherStats(id).catch(() => null),
         adminService.getTeacherStudents(id).catch(() => []),
@@ -173,7 +253,10 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         (t as TeacherDto)?.userId
           ? adminService.getUserAuditLogs((t as TeacherDto).userId).catch(() => [])
           : Promise.resolve([]),
+        teacherService.getSubjects().catch(() => ({ data: [] })),
       ]);
+
+      setSubjects(toArray(subjectsRes));
 
       setStats(statsRes);
       setStudents(toArray(studentsRes));
@@ -195,6 +278,81 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   useEffect(() => {
     fetchTeacher();
   }, [fetchTeacher]);
+
+  const handleOpenModal = () => {
+    if (!teacher) return;
+    setBio(teacher.bio || '');
+    setContactInfo(teacher.contactInfo || '');
+    setProfileImageUrl(teacher.profileImageUrl || '');
+    setAssistantPhoneNumbers(teacher.assistantPhoneNumbers || '');
+    setFacebookUrl(teacher.facebookUrl || '');
+    setYouTubeUrl(teacher.youtubeUrl || '');
+    setTelegramUrl(teacher.telegramUrl || '');
+    setCommissionRate(teacher.commissionRate || 0);
+    setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
+    setSelectedSubjectIds(teacher.subjectIds || []);
+    setProfileImagePreview(teacher.profileImageUrl || null);
+    setAiPhotoPreview(null);
+    
+    // Fetch active AI photo preview
+    adminService.getActiveTeacherPhoto(teacher.userId)
+      .then(res => {
+        if (res.data?.data?.url) {
+          setAiPhotoPreview(res.data.data.url);
+        }
+      })
+      .catch(err => console.error('Failed to fetch active AI photo:', err));
+
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teacher) return;
+    
+    if (selectedSubjectIds.length === 0) {
+      toast.error('يرجى تحديد مادة دراسية واحدة على الأقل');
+      return;
+    }
+    if (selectedGrades.length === 0) {
+      toast.error('يرجى تحديد صف دراسي واحد على الأقل');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const gradesString = selectedGrades.join(',');
+      const res = await teacherService.updateTeacher(teacher.id, {
+        bio: bio.trim(),
+        specialization: gradesString,
+        commissionRate,
+        contactInfo: contactInfo.trim(),
+        profileImageUrl: profileImageUrl.trim() || undefined,
+        subjectIds: selectedSubjectIds,
+        assistantPhoneNumbers: assistantPhoneNumbers.trim() || undefined,
+        facebookUrl: facebookUrl.trim() || undefined,
+        youtubeUrl: youtubeUrl.trim() || undefined,
+        telegramUrl: telegramUrl.trim() || undefined,
+      });
+
+      if (res.success) {
+        toast.success('تم تحديث ملف المعلم بنجاح ✅');
+        setIsModalOpen(false);
+        fetchTeacher();
+      } else {
+        toast.error(res.message || 'فشل في تحديث ملف المعلم');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('حدث خطأ أثناء تحديث بيانات المعلم');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const gradeList = teacher?.specialization ? teacher.specialization.split(',') : [];
 
@@ -236,12 +394,19 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
       pageTitle="ملف المعلم الشامل"
       subtitle="تفاصيل شاملة للمحتوى، الطلاب، المالية، والموارد البشرية"
       action={
-        <div className="flex gap-4">
+        <div className="flex gap-3">
+          <button
+            onClick={handleOpenModal}
+            className="flex items-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-4 py-2 text-[var(--admin-primary-contrast)] transition-transform hover:-translate-y-0.5 font-bold text-sm shadow-sm cursor-pointer"
+          >
+            <PenLine size={16} />
+            تعديل بيانات المعلم والصور
+          </button>
           <button
             onClick={() => router.push('/admin/teachers')}
-            className="flex items-center gap-2 rounded-2xl bg-[var(--admin-surface-low)] px-4 py-2 text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-border)]"
+            className="flex items-center gap-2 rounded-2xl bg-[var(--admin-surface-low)] px-4 py-2 text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-border)] text-sm cursor-pointer"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={16} />
             العودة للقائمة
           </button>
         </div>
@@ -683,6 +848,406 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              onClick={handleCloseModal}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            {/* Modal Box */}
+            <div
+              className="relative w-full max-w-2xl overflow-y-auto max-h-[90vh] rounded-[2.5rem] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-8 shadow-2xl"
+              dir="rtl"
+            >
+              <button
+                onClick={handleCloseModal}
+                disabled={isSaving}
+                className="absolute left-6 top-6 rounded-xl border border-[var(--admin-border)] p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <h2 className="text-xl font-black text-[var(--admin-text)]">
+                تعديل ملف المعلم
+              </h2>
+              <p className="mt-1 text-sm text-[var(--admin-muted)]">
+                قم بتعديل تخصص المعلم ومعلومات التواصل والمواد الدراسية المرتبطة بملفه، بالإضافة لرفع الصور.
+              </p>
+
+              <form onSubmit={handleSave} className="mt-6 space-y-6">
+                
+                {/* Account Details (Readonly) */}
+                <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-[var(--admin-primary)]" />
+                    بيانات حساب الدخول للمنصة (للقراءة فقط)
+                  </h4>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">الاسم الكامل</label>
+                      <input
+                        type="text"
+                        disabled
+                        value={teacher?.fullName || ''}
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] opacity-60 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رقم الهاتف</label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          disabled
+                          value={teacher?.phoneNumber || ''}
+                          dir="ltr"
+                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] opacity-60 outline-none"
+                        />
+                        <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Photo Upload Section */}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {/* Main Profile Image Upload */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+                      الصورة الشخصية الأساسية
+                    </label>
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        disabled={isUploadingProfile}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploadingProfile(true);
+                          try {
+                            const base64 = await compressImage(file);
+                            const finalFileName = renameFileToMatchBase64(file.name, base64);
+                            setProfileImagePreview(base64);
+                            if (teacher) {
+                              const res = await adminService.uploadTeacherProfileImage(teacher.id, base64, finalFileName);
+                              if (res.success && res.data) {
+                                setProfileImageUrl(res.data);
+                                toast.success('تم رفع الصورة الشخصية بنجاح ✅');
+                              } else {
+                                toast.error(res.message || 'فشل رفع الصورة الشخصية');
+                              }
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            toast.error('حدث خطأ أثناء معالجة ورفع الصورة الشخصية');
+                          } finally {
+                            setIsUploadingProfile(false);
+                          }
+                        }}
+                      />
+                      {profileImagePreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={resolveMediaUrl(profileImagePreview)}
+                          alt="Profile Preview"
+                          className="h-24 w-24 rounded-full object-cover border border-[var(--admin-border)] shadow-sm"
+                        />
+                      ) : (
+                        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-bold text-xl">
+                          {getInitials(teacher?.fullName || 'معلم')}
+                        </div>
+                      )}
+                      <span className="text-xs text-[var(--admin-muted)] mt-2">
+                        {isUploadingProfile ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AI Photo Upload */}
+                  <div className="space-y-3">
+                    <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-[var(--admin-primary)]" />
+                      صورة التحليل للذكاء الاصطناعي (AI)
+                    </label>
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        disabled={isUploadingAi}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploadingAi(true);
+                          try {
+                            const base64 = await compressImage(file);
+                            const finalFileName = renameFileToMatchBase64(file.name, base64);
+                            setAiPhotoPreview(base64);
+                            if (teacher) {
+                              const res = await adminService.uploadTeacherPhoto(teacher.userId, base64, finalFileName);
+                              if (res.success) {
+                                toast.success('تم رفع صورة تحليل الـ AI بنجاح ✅');
+                              } else {
+                                toast.error(res.message || 'فشل رفع صورة تحليل الـ AI');
+                              }
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            toast.error('حدث خطأ أثناء معالجة ورفع صورة التحليل');
+                          } finally {
+                            setIsUploadingAi(false);
+                          }
+                        }}
+                      />
+                      {aiPhotoPreview ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={resolveMediaUrl(aiPhotoPreview)}
+                          alt="AI Preview"
+                          className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
+                        />
+                      ) : (
+                        <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[var(--admin-hover)] text-[var(--admin-muted)]">
+                          <Sparkles className="h-8 w-8" />
+                        </div>
+                      )}
+                      <span className="text-xs text-[var(--admin-muted)] mt-2">
+                        {isUploadingAi ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description Bio */}
+                <div>
+                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">الوصف</label>
+                  <textarea
+                    rows={3}
+                    disabled={isSaving}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="اكتب وصفاً ترويجياً قصيراً يظهر للطلاب في صفحة الباقات..."
+                    className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition resize-none"
+                  />
+                </div>
+
+                {/* Additional Details */}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">معلومات الاتصال</label>
+                    <input
+                      type="text"
+                      disabled={isSaving}
+                      value={contactInfo}
+                      onChange={(e) => setContactInfo(e.target.value)}
+                      placeholder="بريد أو عنوان..."
+                      className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">أرقام هواتف المساعدين</label>
+                    <input
+                      type="text"
+                      disabled={isSaving}
+                      value={assistantPhoneNumbers}
+                      onChange={(e) => setAssistantPhoneNumbers(e.target.value)}
+                      placeholder="أرقام هواتف مفصولة بفاصلة..."
+                      className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نسبة العمولة (%)</label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      max={100}
+                      disabled={isSaving}
+                      value={commissionRate}
+                      onChange={(e) => setCommissionRate(Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                    />
+                  </div>
+                </div>
+
+                {/* Social links */}
+                <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
+                    <Phone className="h-4 w-4 text-[var(--admin-primary)]" />
+                    روابط التواصل الاجتماعي
+                  </h4>
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط الفيسبوك</label>
+                      <input
+                        type="url"
+                        disabled={isSaving}
+                        value={facebookUrl}
+                        onChange={(e) => setFacebookUrl(e.target.value)}
+                        placeholder="https://facebook.com/..."
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط اليوتيوب</label>
+                      <input
+                        type="url"
+                        disabled={isSaving}
+                        value={youtubeUrl}
+                        onChange={(e) => setYouTubeUrl(e.target.value)}
+                        placeholder="https://youtube.com/..."
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط التيليجرام</label>
+                      <input
+                        type="url"
+                        disabled={isSaving}
+                        value={telegramUrl}
+                        onChange={(e) => setTelegramUrl(e.target.value)}
+                        placeholder="https://t.me/..."
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grade levels checkbox checklist */}
+                <div>
+                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-3">المراحل والصفوف الدراسية التي يدرّسها المعلم *</label>
+                  <div className="space-y-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 max-h-60 overflow-y-auto">
+                    {GRADE_GROUPS.map((group, gIdx) => (
+                      <div key={gIdx} className="space-y-2">
+                        <h5 className="text-xs font-black text-[var(--admin-text)] border-b border-[var(--admin-border)]/30 pb-1">{group.label}</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {group.grades.map((grade) => {
+                            const isChecked = selectedGrades.includes(grade.value);
+                            const toggleGrade = () => {
+                              setSelectedGrades(prev => 
+                                prev.includes(grade.value)
+                                  ? prev.filter(v => v !== grade.value)
+                                  : [...prev, grade.value]
+                              );
+                            };
+                            return (
+                              <div
+                                key={grade.value}
+                                onClick={() => !isSaving && toggleGrade()}
+                                className={`flex items-center gap-3 rounded-xl border p-2.5 cursor-pointer transition select-none ${
+                                  isChecked
+                                    ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 text-[var(--admin-text)]'
+                                    : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                                } ${isSaving ? 'pointer-events-none opacity-60' : ''}`}
+                              >
+                                <div
+                                  className={`flex h-4 w-4 items-center justify-center rounded border transition ${
+                                    isChecked
+                                      ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                                      : 'border-[var(--admin-border)] bg-[var(--admin-bg)]'
+                                  }`}
+                                >
+                                  {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                                </div>
+                                <span className="text-xs font-bold">{grade.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Subjects checkboxes */}
+                <div>
+                  <label className="block text-xs font-bold text-[var(--admin-text)] mb-3">المواد الدراسية التي يدرسها المعلم *</label>
+                  {subjects.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-[var(--admin-border)] p-4 text-center text-xs text-[var(--admin-muted)]">
+                      لم يتم إضافة أي مواد دراسية بعد. يرجى تهيئة المواد من قسم إدارة المواد أولاً.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 max-h-40 overflow-y-auto rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
+                      {subjects.map((sub) => {
+                        const isChecked = selectedSubjectIds.includes(sub.id);
+                        const toggleSubject = () => {
+                          setSelectedSubjectIds(prev => 
+                            prev.includes(sub.id)
+                              ? prev.filter(id => id !== sub.id)
+                              : [...prev, sub.id]
+                          );
+                        };
+                        return (
+                          <div
+                            key={sub.id}
+                            onClick={() => !isSaving && toggleSubject()}
+                            className={`flex items-center gap-3 rounded-xl border p-3 cursor-pointer transition select-none ${
+                              isChecked
+                                ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 text-[var(--admin-text)]'
+                                : 'border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
+                            } ${isSaving ? 'pointer-events-none opacity-60' : ''}`}
+                          >
+                            <div
+                              className={`flex h-4 w-4 items-center justify-center rounded border transition ${
+                                isChecked
+                                  ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+                                  : 'border-[var(--admin-border)] bg-[var(--admin-bg)]'
+                              }`}
+                            >
+                              {isChecked && <Check className="h-3 w-3 stroke-[3]" />}
+                            </div>
+                            <span className="text-xs font-bold">{sub.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--admin-border)]">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 rounded-2xl bg-[var(--admin-surface-low)] px-5 py-2.5 text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-border)] font-bold text-sm cursor-pointer disabled:opacity-50"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving || isUploadingProfile || isUploadingAi}
+                    className="flex items-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-2.5 text-[var(--admin-primary-contrast)] transition-transform hover:-translate-y-0.5 font-bold text-sm shadow-sm cursor-pointer disabled:opacity-50 disabled:translate-y-0"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        جاري الحفظ...
+                      </>
+                    ) : (
+                      'حفظ التغييرات'
+                    )}
+                  </button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </AdminShellChrome>
   );
 }

@@ -45,11 +45,20 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
         string sourceUrl = video.ProviderVideoId ?? "https://example.com/mock.mp4";
         // In real life context, if this is a vimeo ID, we'd resolve it to a CDN link.
 
-        var teacherPhotoUrl = await _db.TeacherPhotos
-            .Where(tp => tp.IsActive)
-            .OrderByDescending(tp => tp.UploadedAt)
-            .Select(tp => tp.FileUrl)
+        var teacherUserId = await _db.LessonVideos
+            .Where(v => v.Id == video.Id)
+            .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
             .FirstOrDefaultAsync(ct);
+
+        string? teacherPhotoUrl = null;
+        if (teacherUserId != null)
+        {
+            teacherPhotoUrl = await _db.TeacherPhotos
+                .Where(tp => tp.IsActive && tp.TeacherId == teacherUserId.Value)
+                .OrderByDescending(tp => tp.UploadedAt)
+                .Select(tp => tp.FileUrl)
+                .FirstOrDefaultAsync(ct);
+        }
 
         try
         {
@@ -72,17 +81,12 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
             };
             _db.OutboxEvents.Add(adminEvent);
 
-            var teacherUserId = await _db.LessonVideos
-                .Where(v => v.Id == video.Id)
-                .Select(v => (string?)v.Lesson.ContentSection.Term.Package.Teacher.UserId.ToString())
-                .FirstOrDefaultAsync(ct);
-
             if (teacherUserId != null)
             {
                 var teacherEvent = new OutboxEvent
                 {
                     Type = "AiJobQueued",
-                    TargetUserId = teacherUserId,
+                    TargetUserId = teacherUserId.Value.ToString(),
                     PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
                     {
                         lessonVideoId = video.Id,

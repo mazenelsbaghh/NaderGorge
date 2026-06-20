@@ -6,6 +6,32 @@ import { fileURLToPath } from 'url';
 import { Redis } from 'ioredis';
 import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
+import child_process from 'child_process';
+
+let bunnyExecCalled = false;
+let bunnyCapturedArgs: any[] = [];
+const originalExecFile = child_process.execFile;
+
+// Override child_process.execFile to mock Bunny Stream yt-dlp execution
+child_process.execFile = function(file: any, args: any, options: any, callback?: any) {
+  const cb = typeof options === 'function' ? options : callback;
+  if (typeof file === 'string' && (file.includes('yt-dlp') || file.includes('youtube-dl')) && args.includes('--referer')) {
+    bunnyExecCalled = true;
+    bunnyCapturedArgs = args;
+    
+    // Find output path in args
+    const oIndex = args.indexOf('-o');
+    if (oIndex !== -1 && args[oIndex + 1]) {
+      const outputPath = args[oIndex + 1] + '.mp3';
+      fs.writeFileSync(outputPath, 'mock bunny audio content');
+    }
+    
+    if (cb) cb(null, { stdout: 'mock bunny download', stderr: '' });
+    return {} as any;
+  }
+  return originalExecFile(file, args, options, callback);
+} as any;
+
 import { markJobCancellation, throwIfCancellationRequested } from './cancellation.js';
 import { processEvaluateEssayJob } from './jobs/evaluateEssay.js';
 import { extractAudioFromVideo } from './utils/audioExtractor.js';
@@ -229,4 +255,38 @@ test('extractAudioFromVideo calls Telegram client download flow when configured'
   try {
     fs.unlinkSync(result);
   } catch {}
+});
+
+test('extractAudioFromVideo detects Bunny Stream GUIDs, skips Telegram/Cobalt, constructs correct URL and referer', async () => {
+  const oldLibraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
+  process.env.BUNNY_STREAM_LIBRARY_ID = '99999';
+
+  const oldSession = process.env.TELEGRAM_STRING_SESSION;
+  delete process.env.TELEGRAM_STRING_SESSION;
+
+  bunnyExecCalled = false;
+  bunnyCapturedArgs = [];
+
+  try {
+    const bunnyGuid = '12345678-abcd-1234-abcd-123456789abc';
+    const result = await extractAudioFromVideo(bunnyGuid, 'mock_bunny_test');
+
+    assert.ok(bunnyExecCalled, 'execFile should have been intercepted');
+    assert.ok(result.endsWith('mock_bunny_test.mp3'), 'should return expected mp3 path');
+    assert.ok(fs.existsSync(result), 'output file should exist');
+
+    assert.strictEqual(bunnyCapturedArgs[0], `https://iframe.mediadelivery.net/embed/99999/${bunnyGuid}`);
+    const refererIndex = bunnyCapturedArgs.indexOf('--referer');
+    assert.ok(refererIndex !== -1, '--referer arg must be passed');
+    assert.strictEqual(bunnyCapturedArgs[refererIndex + 1], 'https://admin.massar-academy.net/');
+
+    try {
+      fs.unlinkSync(result);
+    } catch {}
+  } finally {
+    process.env.BUNNY_STREAM_LIBRARY_ID = oldLibraryId;
+    if (oldSession) {
+      process.env.TELEGRAM_STRING_SESSION = oldSession;
+    }
+  }
 });

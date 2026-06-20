@@ -100,3 +100,28 @@ public class GetTeacherByIdQueryHandler : IRequestHandler<GetTeacherByIdQuery, A
         return ApiResponse<TeacherDto>.Ok(teacher);
     }
 }
+
+public record GetActiveTeacherPhotoQuery(Guid TeacherId) : IRequest<ApiResponse<ActiveTeacherPhotoDto>>;
+public record ActiveTeacherPhotoDto(string? Url);
+
+public class GetActiveTeacherPhotoQueryHandler : IRequestHandler<GetActiveTeacherPhotoQuery, ApiResponse<ActiveTeacherPhotoDto>>
+{
+    private readonly IAppDbContext _db;
+
+    public GetActiveTeacherPhotoQueryHandler(IAppDbContext db)
+    {
+        _db = db;
+    }
+
+    public async Task<ApiResponse<ActiveTeacherPhotoDto>> Handle(GetActiveTeacherPhotoQuery request, CancellationToken ct)
+    {
+        var photoUrl = await _db.TeacherPhotos
+            .Where(tp => tp.TeacherId == request.TeacherId && tp.IsActive)
+            .OrderByDescending(tp => tp.UploadedAt)
+            .Select(tp => tp.FileUrl)
+            .FirstOrDefaultAsync(ct);
+
+        return ApiResponse<ActiveTeacherPhotoDto>.Ok(new ActiveTeacherPhotoDto(photoUrl));
+    }
+}
+

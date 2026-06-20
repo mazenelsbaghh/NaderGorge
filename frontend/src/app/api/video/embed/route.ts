@@ -409,11 +409,6 @@ var ytDiv = document.createElement('div');
 ytDiv.id = 'yt-' + Math.random().toString(36).substr(2, 9);
 ytDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
 
-var coverTop = document.createElement('div');
-coverTop.style.cssText = 'position:absolute;top:0;left:0;right:0;height:80px;background:linear-gradient(to bottom,rgba(0,0,0,1) 40%,rgba(0,0,0,0) 100%);pointer-events:none;z-index:5';
-var coverShadow = document.createElement('div');
-coverShadow.style.cssText = 'position:absolute;inset:0;box-shadow:inset 0 0 40px 10px #000;pointer-events:none;z-index:5';
-
 var watermark = document.createElement('div');
 watermark.id = 'video-watermark';
 watermark.style.cssText = 'position: absolute; top: 0; left: 0; z-index: 99; pointer-events: none; color: rgba(255, 255, 255, 0.18); font-size: 1.5rem; font-family: Tajawal, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); user-select: none; transition: transform 1.5s ease-in-out; transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3; white-space: pre-wrap;';
@@ -437,11 +432,9 @@ setInterval(function() {
 }, 12000);
 
 var shadowOverlay = document.createElement('div');
-shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,1) 100%);';
+shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.32) 9%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 52%,rgba(0,0,0,0.92) 70%,rgba(0,0,0,1) 100%);';
 
 wrap.appendChild(ytDiv);
-wrap.appendChild(coverTop);
-wrap.appendChild(coverShadow);
 wrap.appendChild(shadowOverlay);
 wrap.appendChild(watermark);
 shadow.appendChild(wrap);
@@ -466,7 +459,8 @@ function triggerShadowOverlay(forceKeepVisible) {
   }
   
   shadowOverlayTimer = setTimeout(function () {
-    shadowOverlay.style.transition = 'opacity 1.5s ease-in-out';
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    shadowOverlay.style.transition = reduceMotion ? 'none' : 'opacity 0.6s ease-out';
     shadowOverlay.style.opacity = '0';
   }, 10000);
 }
@@ -532,7 +526,7 @@ setInterval(function() {
     var newYtDiv = document.createElement('div');
     newYtDiv.id = ytDivId;
     newYtDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
-    wrap.insertBefore(newYtDiv, coverTop);
+    wrap.insertBefore(newYtDiv, shadowOverlay);
     
     document.getElementById = function (id) {
       if (id === ytDivId) return newYtDiv;

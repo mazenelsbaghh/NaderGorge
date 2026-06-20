@@ -1059,6 +1059,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetTeacherById(Guid id)
         => Ok(await _mediator.Send(new GetTeacherByIdQuery(id)));
 
+    [HttpGet("teachers/{id:guid}/active-photo")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetActiveTeacherPhoto(Guid id)
+        => Ok(await _mediator.Send(new GetActiveTeacherPhotoQuery(id)));
+
     [HttpPost("teachers")]
     [HasPermission("users.manage")]
     public async Task<IActionResult> CreateTeacher([FromBody] CreateTeacherProfileCommand command)

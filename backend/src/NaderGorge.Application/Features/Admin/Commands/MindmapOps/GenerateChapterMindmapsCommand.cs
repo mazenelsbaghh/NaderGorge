@@ -39,11 +39,20 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
         if (lockRows == 0)
             return ApiResponse.Fail("Video is already processing mind maps.");
 
-        var teacherPhotoUrl = await _db.TeacherPhotos
-            .Where(tp => tp.IsActive)
-            .OrderByDescending(tp => tp.UploadedAt)
-            .Select(tp => tp.FileUrl)
+        var teacherUserId = await _db.LessonVideos
+            .Where(v => v.Id == video.Id)
+            .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
             .FirstOrDefaultAsync(ct);
+
+        string? teacherPhotoUrl = null;
+        if (teacherUserId != null)
+        {
+            teacherPhotoUrl = await _db.TeacherPhotos
+                .Where(tp => tp.IsActive && tp.TeacherId == teacherUserId.Value)
+                .OrderByDescending(tp => tp.UploadedAt)
+                .Select(tp => tp.FileUrl)
+                .FirstOrDefaultAsync(ct);
+        }
 
         var chaptersData = video.VideoChapters.Select(c => new
         {

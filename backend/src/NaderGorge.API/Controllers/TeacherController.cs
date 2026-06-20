@@ -99,6 +99,10 @@ public class TeacherController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("profile/active-photo")]
+    public async Task<IActionResult> GetMyActiveTeacherPhoto()
+        => Ok(await _mediator.Send(new NaderGorge.Application.Features.Admin.Queries.GetActiveTeacherPhotoQuery(GetUserId())));
+
     [HttpGet("subjects")]
     public async Task<IActionResult> GetSubjects()
         => Ok(await _mediator.Send(new GetSubjectsQuery(GetUserId())));

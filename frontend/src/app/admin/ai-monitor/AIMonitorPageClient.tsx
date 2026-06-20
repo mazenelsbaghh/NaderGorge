@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '@/services/admin-service';
+import { teacherService, type TeacherDto } from '@/services/teacher-service';
 import { contentService, type VideoChapterDto, type VideoDto } from '@/services/content-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { AdminShellChrome, AdminTeacherPhotoUpload } from '@/components/admin';
@@ -674,7 +675,27 @@ export default function AIMonitorPageClient() {
   const [items, setItems] = useState<MonitoredVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [workerReachable, setWorkerReachable] = useState<boolean | null>(null);
+  const [teachers, setTeachers] = useState<TeacherDto[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const queryTeacherId = params.get('teacherId');
+
+    teacherService.getTeachers()
+      .then((res) => {
+        if (res.success && res.data) {
+          setTeachers(res.data);
+          if (queryTeacherId) {
+            setSelectedTeacherId(queryTeacherId);
+          } else if (res.data.length > 0) {
+            setSelectedTeacherId(res.data[0].userId);
+          }
+        }
+      })
+      .catch((err) => console.error('Failed to load teachers:', err));
+  }, []);
   // Tracks IDs of videos we're already monitoring — so we never drop them
   // even after isProcessingAI flips to false in the DB.
   const trackedIdsRef = useRef<Set<string>>(new Set());
@@ -1337,8 +1358,30 @@ export default function AIMonitorPageClient() {
           </div>
         )}
 
-        <div className="ai-settings-area">
-          <AdminTeacherPhotoUpload />
+        <div className="ai-settings-area flex flex-col gap-6 bg-[var(--admin-card-strong)] p-6 rounded-[2rem] border border-[var(--admin-border)] mb-6 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-[var(--admin-text)]">اختر المدرس</h3>
+              <p className="text-sm text-[var(--admin-muted)]">اختر المدرس لعرض وتعديل الصورة المخصصة للتحليل بالذكاء الاصطناعي</p>
+            </div>
+            <select
+              value={selectedTeacherId}
+              onChange={(e) => setSelectedTeacherId(e.target.value)}
+              className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm font-bold text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] min-w-[240px] transition-colors cursor-pointer"
+            >
+              <option value="">-- اختر المدرس --</option>
+              {teachers.map((t) => (
+                <option key={t.userId} value={t.userId}>
+                  {t.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedTeacherId && (
+            <div className="border-t border-[var(--admin-border)] pt-6">
+              <AdminTeacherPhotoUpload teacherId={selectedTeacherId} />
+            </div>
+          )}
         </div>
 
         {/* Summary counts */}

@@ -28,11 +28,20 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
         if (chapter == null)
             return ApiResponse.Fail("Chapter not found.");
 
-        var teacherPhotoUrl = await _db.TeacherPhotos
-            .Where(tp => tp.IsActive)
-            .OrderByDescending(tp => tp.UploadedAt)
-            .Select(tp => tp.FileUrl)
+        var teacherUserId = await _db.LessonVideos
+            .Where(v => v.Id == chapter.LessonVideoId)
+            .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
             .FirstOrDefaultAsync(ct);
+
+        string? teacherPhotoUrl = null;
+        if (teacherUserId != null)
+        {
+            teacherPhotoUrl = await _db.TeacherPhotos
+                .Where(tp => tp.IsActive && tp.TeacherId == teacherUserId.Value)
+                .OrderByDescending(tp => tp.UploadedAt)
+                .Select(tp => tp.FileUrl)
+                .FirstOrDefaultAsync(ct);
+        }
 
         // Enqueue a single-chapter mindmap job (worker handles chapterId payload)
         await _jobEnqueuer.EnqueueJobAsync("ai-mindmaps-queue", "regenerate-single-mindmap", new
