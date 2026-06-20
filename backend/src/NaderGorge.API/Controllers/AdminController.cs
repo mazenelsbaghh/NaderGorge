@@ -1064,6 +1064,27 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetActiveTeacherPhoto(Guid id)
         => Ok(await _mediator.Send(new GetActiveTeacherPhotoQuery(id)));
 
+    [HttpGet("teachers/{id:guid}/photos")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetTeacherPhotos(Guid id)
+        => Ok(await _mediator.Send(new GetTeacherPhotosQuery(id)));
+
+    [HttpPost("teachers/{id:guid}/photos/{photoId:guid}/active")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetTeacherPhotoActive(Guid id, Guid photoId)
+    {
+        var result = await _mediator.Send(new SetTeacherPhotoActiveCommand(id, photoId));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("teachers/{id:guid}/photos/{photoId:guid}")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> DeleteTeacherPhoto(Guid id, Guid photoId)
+    {
+        var result = await _mediator.Send(new DeleteTeacherPhotoCommand(id, photoId));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("teachers")]
     [HasPermission("users.manage")]
     public async Task<IActionResult> CreateTeacher([FromBody] CreateTeacherProfileCommand command)

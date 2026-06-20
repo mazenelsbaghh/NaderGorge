@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { Agent, setGlobalDispatcher } from 'undici';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { readAIConfig, type AIConfig } from './aiConfig.js';
 import { AIProviderExecutionError, AIProviderGateway } from './aiProvider.js';
 import { TemporaryAudioStorage, type TemporaryAnalysisObject } from './temporaryAudioStorage.js';
@@ -290,9 +291,56 @@ CRITICAL INSTRUCTIONS FOR 100% ACCURATE ARABIC TEXT:
 function saveMindmapImage(imageData: string, lessonVideoId: string, chapterOrder: number) {
   const mindmapsDir = path.resolve(process.cwd(), '../backend/src/NaderGorge.API/wwwroot/mindmaps');
   fs.mkdirSync(mindmapsDir, { recursive: true });
-  const fileName = `${lessonVideoId}_chapter_${chapterOrder}_${Date.now()}.png`;
-  fs.writeFileSync(path.join(mindmapsDir, fileName), Buffer.from(imageData, 'base64'));
-  return `/mindmaps/${fileName}`;
+
+  // 1. Delete old mindmap files for this specific chapter
+  try {
+    const files = fs.readdirSync(mindmapsDir);
+    const prefix = `${lessonVideoId}_chapter_${chapterOrder}_`;
+    for (const file of files) {
+      if (file.startsWith(prefix)) {
+        fs.unlinkSync(path.join(mindmapsDir, file));
+        console.log(`[AI mindmap] Deleted old mindmap file: ${file}`);
+      }
+    }
+  } catch (err) {
+    console.error('[AI mindmap] Failed to clean up old mindmap files:', err);
+  }
+
+  // 2. Transcode to compressed WebP using ffmpeg
+  const tempPngName = `${lessonVideoId}_chapter_${chapterOrder}_temp_${Date.now()}.png`;
+  const tempPngPath = path.join(mindmapsDir, tempPngName);
+  const webpName = `${lessonVideoId}_chapter_${chapterOrder}_${Date.now()}.webp`;
+  const webpPath = path.join(mindmapsDir, webpName);
+
+  try {
+    // Write temporary PNG file
+    fs.writeFileSync(tempPngPath, Buffer.from(imageData, 'base64'));
+
+    // Execute ffmpeg to compress and resize to WebP
+    // We scale down using scale filter (max 1200 px in either dimension)
+    const ffmpegCmd = `ffmpeg -y -i "${tempPngPath}" -vf "scale='min(1200,iw)':'min(1200,ih)':force_original_aspect_ratio=decrease" -q:v 75 "${webpPath}"`;
+    execSync(ffmpegCmd, { stdio: 'ignore' });
+
+    console.log(`[AI mindmap] Successfully compressed and saved mindmap as WebP: ${webpName}`);
+    return `/mindmaps/${webpName}`;
+  } catch (err) {
+    console.error('[AI mindmap] Failed to compress mindmap to WebP using ffmpeg, falling back to raw PNG:', err);
+    
+    // Fallback: if WebP transcode fails, save as original PNG
+    const pngName = `${lessonVideoId}_chapter_${chapterOrder}_${Date.now()}.png`;
+    const pngPath = path.join(mindmapsDir, pngName);
+    fs.writeFileSync(pngPath, Buffer.from(imageData, 'base64'));
+    return `/mindmaps/${pngName}`;
+  } finally {
+    // Clean up temporary PNG
+    if (fs.existsSync(tempPngPath)) {
+      try {
+        fs.unlinkSync(tempPngPath);
+      } catch (e) {
+        console.error('[AI mindmap] Failed to delete temp PNG file:', e);
+      }
+    }
+  }
 }
 
 export async function generateChapterMindmap(
