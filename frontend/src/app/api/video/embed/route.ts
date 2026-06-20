@@ -161,6 +161,9 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
@@ -168,13 +171,15 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     #bunny-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
     .click-overlay {
       position: absolute; inset: 0; z-index: 10;
-      background: transparent; cursor: pointer;
+      background: transparent; cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     #video-watermark {
       position: absolute; top: 0; left: 0; z-index: 20; pointer-events: none;
       color: rgba(255,255,255,.18); font-size: 1.4rem; font-family: Tajawal, Montserrat, system-ui, sans-serif;
       text-shadow: 1px 1px 2px rgba(0,0,0,.5); user-select: none; white-space: pre-wrap;
       transform: translate3d(15vw, 15vh, 0); text-align: center; line-height: 1.3;
+      transition: transform 1.5s ease-in-out;
     }
   </style>
 </head>
@@ -332,10 +337,10 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     var watermark = document.getElementById('video-watermark');
     setInterval(function () {
       if (!watermark) return;
-      var x = 5 + Math.random() * 70;
-      var y = 5 + Math.random() * 70;
+      var x = 10 + Math.random() * 70;
+      var y = 10 + Math.random() * 70;
       watermark.style.transform = 'translate3d(' + x + 'vw,' + y + 'vh,0)';
-    }, 7000);
+    }, 12000);
   </script>
 </body>
 </html>`;
@@ -366,13 +371,17 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
     #shell { position: relative; width: 100%; height: 100%; }
     .click-overlay {
       position: absolute; inset: 0; z-index: 10;
-      background: transparent; cursor: pointer;
+      background: transparent; cursor: pointer; touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
   </style>
 </head>
@@ -431,39 +440,13 @@ setInterval(function() {
   watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
 }, 12000);
 
-var shadowOverlay = document.createElement('div');
-shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.32) 9%,rgba(0,0,0,0) 20%,rgba(0,0,0,0) 70%,rgba(0,0,0,0.82) 88%,rgba(0,0,0,1) 100%);';
-
 wrap.appendChild(ytDiv);
-wrap.appendChild(shadowOverlay);
 wrap.appendChild(watermark);
 shadow.appendChild(wrap);
 
 var player = null;
 var progressInterval = null;
 var ytDivId = ytDiv.id;
-var shadowOverlayTimer = null;
-
-function triggerShadowOverlay(forceKeepVisible) {
-  if (!shadowOverlay) return;
-  shadowOverlay.style.transition = 'opacity 0.4s ease-out';
-  shadowOverlay.style.opacity = '1';
-  
-  if (shadowOverlayTimer) {
-    clearTimeout(shadowOverlayTimer);
-    shadowOverlayTimer = null;
-  }
-  
-  if (forceKeepVisible) {
-    return;
-  }
-  
-  shadowOverlayTimer = setTimeout(function () {
-    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    shadowOverlay.style.transition = reduceMotion ? 'none' : 'opacity 0.6s ease-out';
-    shadowOverlay.style.opacity = '0';
-  }, 3000);
-}
 
 var origGetById = document.getElementById.bind(document);
 document.getElementById = function (id) {
@@ -479,19 +462,19 @@ document.getElementById = function (id) {
 var _origQSA = document.querySelectorAll.bind(document);
 document.querySelectorAll = function(sel) {
   var result = _origQSA(sel);
-  if (sel && (sel.indexOf('iframe') !== -1 || sel === '*')) {
+  if (typeof sel === 'string' && (sel.indexOf('iframe') !== -1 || sel === '*')) {
     return _origQSA(sel + ':not([id])');
   }
   return result;
 };
 var _origQS = document.querySelector.bind(document);
 document.querySelector = function(sel) {
-  if (sel && sel.indexOf('iframe') !== -1) return null;
+  if (typeof sel === 'string' && sel.indexOf('iframe') !== -1) return null;
   return _origQS(sel);
 };
 var _origGEBTN = document.getElementsByTagName.bind(document);
 document.getElementsByTagName = function(tag) {
-  if (tag.toLowerCase() === 'iframe') return document.createDocumentFragment().childNodes;
+  if (tag && typeof tag === 'string' && tag.toLowerCase() === 'iframe') return document.createDocumentFragment().childNodes;
   return _origGEBTN(tag);
 };
 
@@ -502,10 +485,13 @@ var _devtoolsOpen = false;
 setInterval(function() {
   var isOpen = false;
   try {
-    var topW = window.top || window;
-    var widthThreshold = topW.outerWidth - topW.innerWidth > 160;
-    var heightThreshold = topW.outerHeight - topW.innerHeight > 160;
-    isOpen = widthThreshold || heightThreshold;
+    var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!isMobile) {
+      var topW = window.top || window;
+      var widthThreshold = topW.outerWidth - topW.innerWidth > 160;
+      var heightThreshold = topW.outerHeight - topW.innerHeight > 160;
+      isOpen = widthThreshold || heightThreshold;
+    }
   } catch(e) { }
   if (isOpen && !_devtoolsOpen) {
     _devtoolsOpen = true;
@@ -526,7 +512,7 @@ setInterval(function() {
     var newYtDiv = document.createElement('div');
     newYtDiv.id = ytDivId;
     newYtDiv.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
-    wrap.insertBefore(newYtDiv, shadowOverlay);
+    wrap.insertBefore(newYtDiv, watermark);
     
     document.getElementById = function (id) {
       if (id === ytDivId) return newYtDiv;
@@ -557,7 +543,6 @@ function onYouTubeIframeAPIReady() {
           duration: e.target.getDuration(), volume: e.target.getVolume(), isMuted: e.target.isMuted(), provider: 'youtube'
         });
         e.target.playVideo();
-        triggerShadowOverlay();
         startProgressUpdates();
         // Send available quality levels after a short delay (they're not available immediately)
         setTimeout(function() {
@@ -570,11 +555,9 @@ function onYouTubeIframeAPIReady() {
       onStateChange: function (e) {
         var isPlayingState = e.data === YT.PlayerState.PLAYING;
         postToParent('stateChange', { state: e.data, isPlaying: isPlayingState });
-        if (isPlayingState) {
-          triggerShadowOverlay(false);
-        } else if (e.data === YT.PlayerState.PAUSED) {
-          triggerShadowOverlay(true);
-        }
+      },
+      onAutoplayBlocked: function () {
+        postToParent('autoplayBlocked', { provider: 'youtube' });
       },
       onError: function (e) {
         postToParent('error', { code: e.data });
@@ -601,9 +584,11 @@ window.addEventListener('message', function (event) {
   var msg = event.data;
   if (!msg || !msg.type || msg.source === 'video-embed') return;
   switch (msg.type) {
-    case 'play': player.playVideo(); triggerShadowOverlay(false); break;
-    case 'pause': player.pauseVideo(); triggerShadowOverlay(true); break;
-    case 'seekTo': player.seekTo(msg.time, true); triggerShadowOverlay(player && player.getPlayerState ? player.getPlayerState() !== YT.PlayerState.PLAYING : false); break;
+    case 'play': player.playVideo(); break;
+    case 'pause': player.pauseVideo(); break;
+    case 'seekTo':
+      player.seekTo(msg.time, true);
+      break;
     case 'setVolume': player.setVolume(msg.volume); break;
     case 'mute': player.mute(); break;
     case 'unmute': player.unMute(); break;
@@ -654,6 +639,9 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://vk.com" crossorigin>
   <link rel="dns-prefetch" href="https://vk.com">
   <style>
@@ -734,19 +722,19 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
     var _origQSA = document.querySelectorAll.bind(document);
     document.querySelectorAll = function(sel) {
       var result = _origQSA(sel);
-      if (sel && (sel.indexOf('iframe') !== -1 || sel === '*')) {
+      if (typeof sel === 'string' && (sel.indexOf('iframe') !== -1 || sel === '*')) {
         return _origQSA(sel + ':not([id])');  
       }
       return result;
     };
     var _origQS = document.querySelector.bind(document);
     document.querySelector = function(sel) {
-      if (sel && sel.indexOf('iframe') !== -1) return null;
+      if (typeof sel === 'string' && sel.indexOf('iframe') !== -1) return null;
       return _origQS(sel);
     };
     var _origGEBTN = document.getElementsByTagName.bind(document);
     document.getElementsByTagName = function(tag) {
-      if (tag.toLowerCase() === 'iframe') return document.createDocumentFragment().childNodes;
+      if (tag && typeof tag === 'string' && tag.toLowerCase() === 'iframe') return document.createDocumentFragment().childNodes;
       return _origGEBTN(tag);
     };
 
@@ -757,10 +745,13 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
     setInterval(function() {
       var isOpen = false;
       try {
-        var topW = window.top || window;
-        var widthThreshold = topW.outerWidth - topW.innerWidth > 160;
-        var heightThreshold = topW.outerHeight - topW.innerHeight > 160;
-        isOpen = widthThreshold || heightThreshold;
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) {
+          var topW = window.top || window;
+          var widthThreshold = topW.outerWidth - topW.innerWidth > 160;
+          var heightThreshold = topW.outerHeight - topW.innerHeight > 160;
+          isOpen = widthThreshold || heightThreshold;
+        }
       } catch(e) { }
       if (isOpen && !_devtoolsOpen) {
         _devtoolsOpen = true;

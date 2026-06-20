@@ -26,14 +26,14 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
 
   return (
     <motion.div
-      className="w-full flex items-center justify-between gap-4 px-5 py-3 rounded-2xl bg-[var(--admin-card)]/90 backdrop-blur-xl border border-[var(--admin-border)] shadow-sm"
+      className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-4 py-3 rounded-2xl bg-[var(--admin-card)]/90 backdrop-blur-xl border border-[var(--admin-border)] shadow-sm"
       dir="rtl"
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
     >
       {/* Left — label + counter */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
         {/* Eye icon */}
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--admin-primary)]/10 text-[var(--admin-primary)]">
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -42,11 +42,11 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
           </svg>
         </div>
 
-        <div className="flex flex-col leading-tight">
-          <span className="text-sm font-bold text-[var(--admin-text)] tracking-tight">
+        <div className="flex flex-col leading-tight min-w-0">
+          <span className="text-sm font-bold text-[var(--admin-text)] tracking-tight truncate">
             {title ? title : "المشاهدات"}
           </span>
-          <span className="text-xs text-[var(--admin-muted)] font-medium mt-px">
+          <span className="text-xs text-[var(--admin-muted)] font-medium mt-px whitespace-nowrap">
             {status
               ? `${cappedCurrent} مشاهدة من أصل ${status.max}`
               : "جاري التجهيز..."}
@@ -80,7 +80,7 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
         {status?.isLocked ? (
           <motion.span
             key="locked"
-            className="inline-flex items-center gap-1.5 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-xs font-bold text-red-700 dark:text-red-300 self-start sm:self-auto shrink-0"
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
@@ -91,7 +91,7 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
         ) : status?.viewTracked ? (
           <motion.span
             key="tracked"
-            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 self-start sm:self-auto shrink-0"
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
@@ -105,13 +105,13 @@ export function WatchStatusBar({ status, title }: WatchStatusBarProps) {
         ) : (
           <motion.div
             key="counting"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary)]/20 bg-[var(--admin-primary)]/8 px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] shrink-0"
+            className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary)]/20 bg-[var(--admin-primary)]/8 px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] self-start sm:self-auto shrink-0 max-w-full"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <InlineLoader className="text-[var(--admin-primary)] !w-3 !h-3" />
-            <span>
+            <span className="text-[10px] xs:text-xs leading-normal whitespace-normal break-words sm:whitespace-nowrap">
               {status
                 ? `${watchedInThreshold}ث من ${status.thresholdSeconds}ث · تُحتسب المشاهدة عند اكتمال المدة`
                 : "جاري التجهيز..."}

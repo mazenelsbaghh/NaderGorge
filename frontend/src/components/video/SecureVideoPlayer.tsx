@@ -130,8 +130,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isBuffering, setIsBuffering] = useState(false);
   
   const [showControls, setShowControls] = useState(true);
+  const [showPlayerShadows, setShowPlayerShadows] = useState(true);
+  const [requiresDirectPlayback, setRequiresDirectPlayback] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const shadowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const embedReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isIOSDeviceRef = useRef(false);
   const watchThresholdPercentageRef = useRef<number>(30);
   const loadingSessionRef = useRef(false);
   const loadingExtraWatchStatusRef = useRef(false);
@@ -141,6 +145,29 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isHoveringControls, setIsHoveringControls] = useState(false);
   const [isChapterInfoOpen, setIsChapterInfoOpen] = useState(false);
   const [isMindmapOpen, setIsMindmapOpen] = useState(false);
+
+  useEffect(() => {
+    isIOSDeviceRef.current = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }, []);
+
+  const showPersistentPlayerShadows = useCallback(() => {
+    if (shadowTimeoutRef.current) clearTimeout(shadowTimeoutRef.current);
+    shadowTimeoutRef.current = null;
+    setShowPlayerShadows(true);
+  }, []);
+
+  const showTimedPlayerShadows = useCallback(() => {
+    showPersistentPlayerShadows();
+    shadowTimeoutRef.current = setTimeout(() => {
+      setShowPlayerShadows(false);
+      shadowTimeoutRef.current = null;
+    }, 5000);
+  }, [showPersistentPlayerShadows]);
+
+  useEffect(() => () => {
+    if (shadowTimeoutRef.current) clearTimeout(shadowTimeoutRef.current);
+  }, []);
 
   const handlePlayerInteraction = useCallback(() => {
     setShowControls(true);
@@ -256,7 +283,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           setDuration(msg.data.duration || 0);
           setVolume(msg.data.volume || 100);
           setIsMuted(msg.data.isMuted || false);
-          if (msg.data.provider) setProvider(msg.data.provider);
+          const embedProvider = (msg.data.provider || 'youtube').toLowerCase();
+          setProvider(embedProvider);
+          setRequiresDirectPlayback(isIOSDeviceRef.current && embedProvider === 'youtube');
+          showPersistentPlayerShadows();
 
           setIsBuffering(true);
           
@@ -276,8 +306,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           if (msg.data.isPlaying) {
             hasEndedRef.current = false;
             clearTimeout((window as any).__playFallbackTimeout);
+            setRequiresDirectPlayback(false);
             setShowControls(false);
             setIsBuffering(false);
+            showTimedPlayerShadows();
           } else {
             if ((msg.data.state === 0 || msg.data.state === 'ended') && !hasEndedRef.current) {
               hasEndedRef.current = true;
@@ -288,8 +320,17 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               setIsBuffering(true);
             } else {
               setIsBuffering(false);
+              showPersistentPlayerShadows();
             }
           }
+          break;
+        case 'autoplayBlocked':
+          clearTimeout((window as any).__playFallbackTimeout);
+          setRequiresDirectPlayback(isIOSDeviceRef.current && (msg.data?.provider || provider) === 'youtube');
+          setIsPlaying(false);
+          setIsBuffering(false);
+          setShowControls(true);
+          showPersistentPlayerShadows();
           break;
         case 'timeUpdate':
           // Prevent rubber-banding: ignore stale time updates for 1.2 seconds after seeking
@@ -526,8 +567,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     return chapters.map(ch => ({
       id: ch.id,
       title: ch.title,
-      summaryText: (ch as any).summaryText,
-      mindmapImageUrl: (ch as any).mindmapImageUrl,
+      summaryText: ch.summaryText,
+      mindmapImageUrl: ch.mindmapImageUrl,
+      startTime: ch.startTime,
+      endTime: ch.endTime,
       startPercent: (Math.max(0, ch.startTime) / duration) * 100,
       endPercent: (Math.min(duration, ch.endTime) / duration) * 100
     }));
@@ -598,8 +641,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         iframe.style.width = '100%';
         iframe.style.height = '100%';
         iframe.style.border = 'none';
-        iframe.setAttribute('allow', 'autoplay; encrypted-media');
+        iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
         iframe.setAttribute('allowfullscreen', '');
+        iframe.setAttribute('playsinline', '');
         
         iframeRef.current = iframe;
         containerRef.current.appendChild(iframe);
@@ -702,8 +746,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const activeChapterDesktop = React.useMemo(() => {
     if (!normalizedChapters || normalizedChapters.length === 0 || duration <= 0) return null;
-    const currentPercent = (currentTime / duration) * 100;
-    return normalizedChapters.find(ch => currentPercent >= ch.startPercent && Math.floor(currentPercent) < Math.ceil(ch.endPercent)) || normalizedChapters[normalizedChapters.length - 1];
+    const activeChapter = normalizedChapters.find((chapter, index) => (
+      currentTime >= chapter.startTime
+      && (currentTime < chapter.endTime || (index === normalizedChapters.length - 1 && currentTime <= chapter.endTime))
+    ));
+    if (activeChapter) return activeChapter;
+    return currentTime < normalizedChapters[0].startTime
+      ? normalizedChapters[0]
+      : normalizedChapters[normalizedChapters.length - 1];
   }, [normalizedChapters, currentTime, duration]);
 
   // ── Render States ──
@@ -883,7 +933,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       
       {/* Video Container */}
       <div 
-        className="relative w-full aspect-video bg-black cursor-pointer rounded-xl overflow-hidden"
+        className="relative min-h-[200px] w-full aspect-video cursor-pointer overflow-hidden rounded-xl bg-black sm:min-h-0"
         role="region"
         aria-label="مشغل الفيديو"
         tabIndex={0}
@@ -900,6 +950,19 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         onMouseLeave={() => { if(isPlaying) setShowControls(false) }}
       >
         <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+
+        {/* Shadow Gradient Overlay */}
+        <AnimatePresence>
+          {status === 'ready' && showPlayerShadows && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="pointer-events-none absolute inset-0 z-[80] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.82)_0%,rgba(0,0,0,0.32)_13%,rgba(0,0,0,0)_28%,rgba(0,0,0,0)_60%,rgba(0,0,0,0.82)_82%,rgba(0,0,0,1)_100%)]"
+            />
+          )}
+        </AnimatePresence>
         
         {/* Floating Chapter Info Overlay */}
         {activeChapterDesktop && activeChapterDesktop.summaryText && status === 'ready' && (showControls || isChapterInfoOpen) && (
@@ -965,9 +1028,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         )}
 
         {/* Floating Mindmap Overlay */}
-        {activeChapterDesktop && activeChapterDesktop.mindmapImageUrl && status === 'ready' && (showControls || isMindmapOpen) && (
+        {activeChapterDesktop && status === 'ready' && (showControls || isMindmapOpen) && (
           <div 
-            className="absolute top-4 left-4 bottom-16 z-[90] flex flex-col items-start pointer-events-none"
+            className="pointer-events-none absolute left-3 top-3 z-[90] flex flex-col items-start sm:left-4 sm:top-4"
             onMouseEnter={() => setIsHoveringControls(true)}
             onMouseLeave={() => setIsHoveringControls(false)}
             onClick={(e) => e.stopPropagation()}
@@ -982,11 +1045,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsMindmapOpen(true)} 
-                   className="pointer-events-auto flex min-h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 px-4 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-[var(--admin-primary)]"
-                   aria-label="فتح الخريطة الذهنية للفصل"
+                   disabled={!activeChapterDesktop.mindmapImageUrl}
+                   className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 px-3 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
+                   aria-label={activeChapterDesktop.mindmapImageUrl ? 'فتح الخريطة الذهنية للفصل' : 'الخريطة الذهنية غير متاحة لهذا الفصل'}
                  >
-                    <Map className="w-5 h-5 mr-2" />
-                    <span className="text-sm font-bold">الخريطة الذهنية</span>
+                    <Map className="h-5 w-5 sm:mr-2" />
+                    <span className="hidden text-sm font-bold sm:inline">الخريطة الذهنية</span>
                  </motion.button>
                ) : (
                  <motion.div 
@@ -1038,8 +1102,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         {status === 'ready' && !isPlaying && !isBuffering && (
           <button
             type="button"
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm z-10 flex items-center justify-center transition-all duration-300 pointer-events-auto rounded-xl"
+            className={`absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm transition-all duration-300 ${requiresDirectPlayback ? 'pointer-events-none' : 'pointer-events-auto'}`}
             aria-label="تشغيل الفيديو"
+            tabIndex={requiresDirectPlayback ? -1 : 0}
             onClick={(e) => {
               e.stopPropagation();
               togglePlay();
