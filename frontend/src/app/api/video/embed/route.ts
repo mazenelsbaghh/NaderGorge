@@ -208,6 +208,18 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 
     function initPlayer() {
       try {
+        if (typeof playerjs !== 'undefined' && playerjs.Player) {
+          if (!playerjs.Player.prototype.setPlaybackRate) {
+            playerjs.Player.prototype.setPlaybackRate = function (rate) {
+              this.send({ method: 'setPlaybackRate', value: rate });
+            };
+          }
+          if (!playerjs.Player.prototype.getPlaybackRate) {
+            playerjs.Player.prototype.getPlaybackRate = function (callback) {
+              this.send({ method: 'getPlaybackRate' }, callback);
+            };
+          }
+        }
         player = new playerjs.Player(iframe);
       } catch (e) {
         postToParent('error', { message: 'Failed to initialize Bunny player: ' + e.message });

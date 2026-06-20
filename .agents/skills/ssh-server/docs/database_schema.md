@@ -44,9 +44,13 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `EncryptionKey` | `string` | `text` | `NO` | ✅ Sync |
 | `ExpiresAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `HasRegisteredView` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `IpAddress` | `string` | `text` | `YES` | ✅ Sync |
 | `IsConsumed` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsSuperseded` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `LastProgressAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `LastProgressSequence` | `long` | `bigint` | `NO` | ✅ Sync |
 | `LessonVideoId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `SessionToken` | `string` | `text` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
