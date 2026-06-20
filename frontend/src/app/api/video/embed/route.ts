@@ -437,7 +437,7 @@ setInterval(function() {
 }, 12000);
 
 var shadowOverlay = document.createElement('div');
-shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0.95) 100%);';
+shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,1) 100%);';
 
 wrap.appendChild(ytDiv);
 wrap.appendChild(coverTop);
@@ -451,19 +451,24 @@ var progressInterval = null;
 var ytDivId = ytDiv.id;
 var shadowOverlayTimer = null;
 
-function triggerShadowOverlay() {
+function triggerShadowOverlay(forceKeepVisible) {
   if (!shadowOverlay) return;
   shadowOverlay.style.transition = 'opacity 0.4s ease-out';
   shadowOverlay.style.opacity = '1';
   
   if (shadowOverlayTimer) {
     clearTimeout(shadowOverlayTimer);
+    shadowOverlayTimer = null;
+  }
+  
+  if (forceKeepVisible) {
+    return;
   }
   
   shadowOverlayTimer = setTimeout(function () {
     shadowOverlay.style.transition = 'opacity 1.5s ease-in-out';
     shadowOverlay.style.opacity = '0';
-  }, 15000);
+  }, 10000);
 }
 
 var origGetById = document.getElementById.bind(document);
@@ -569,9 +574,12 @@ function onYouTubeIframeAPIReady() {
         }, 2000);
       },
       onStateChange: function (e) {
-        postToParent('stateChange', { state: e.data, isPlaying: e.data === YT.PlayerState.PLAYING });
-        if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.PAUSED) {
-          triggerShadowOverlay();
+        var isPlayingState = e.data === YT.PlayerState.PLAYING;
+        postToParent('stateChange', { state: e.data, isPlaying: isPlayingState });
+        if (isPlayingState) {
+          triggerShadowOverlay(false);
+        } else if (e.data === YT.PlayerState.PAUSED) {
+          triggerShadowOverlay(true);
         }
       },
       onError: function (e) {
@@ -599,9 +607,9 @@ window.addEventListener('message', function (event) {
   var msg = event.data;
   if (!msg || !msg.type || msg.source === 'video-embed') return;
   switch (msg.type) {
-    case 'play': player.playVideo(); triggerShadowOverlay(); break;
-    case 'pause': player.pauseVideo(); triggerShadowOverlay(); break;
-    case 'seekTo': player.seekTo(msg.time, true); triggerShadowOverlay(); break;
+    case 'play': player.playVideo(); triggerShadowOverlay(false); break;
+    case 'pause': player.pauseVideo(); triggerShadowOverlay(true); break;
+    case 'seekTo': player.seekTo(msg.time, true); triggerShadowOverlay(player && player.getPlayerState ? player.getPlayerState() !== YT.PlayerState.PLAYING : false); break;
     case 'setVolume': player.setVolume(msg.volume); break;
     case 'mute': player.mute(); break;
     case 'unmute': player.unMute(); break;
