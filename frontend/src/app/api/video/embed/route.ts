@@ -436,15 +436,35 @@ setInterval(function() {
   watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
 }, 12000);
 
+var shadowOverlay = document.createElement('div');
+shadowOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:8;transition:opacity 0.4s ease-out;opacity:0;background:linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 15%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0.95) 100%);';
+
 wrap.appendChild(ytDiv);
 wrap.appendChild(coverTop);
 wrap.appendChild(coverShadow);
+wrap.appendChild(shadowOverlay);
 wrap.appendChild(watermark);
 shadow.appendChild(wrap);
 
 var player = null;
 var progressInterval = null;
 var ytDivId = ytDiv.id;
+var shadowOverlayTimer = null;
+
+function triggerShadowOverlay() {
+  if (!shadowOverlay) return;
+  shadowOverlay.style.transition = 'opacity 0.4s ease-out';
+  shadowOverlay.style.opacity = '1';
+  
+  if (shadowOverlayTimer) {
+    clearTimeout(shadowOverlayTimer);
+  }
+  
+  shadowOverlayTimer = setTimeout(function () {
+    shadowOverlay.style.transition = 'opacity 1.5s ease-in-out';
+    shadowOverlay.style.opacity = '0';
+  }, 15000);
+}
 
 var origGetById = document.getElementById.bind(document);
 document.getElementById = function (id) {
@@ -538,6 +558,7 @@ function onYouTubeIframeAPIReady() {
           duration: e.target.getDuration(), volume: e.target.getVolume(), isMuted: e.target.isMuted(), provider: 'youtube'
         });
         e.target.playVideo();
+        triggerShadowOverlay();
         startProgressUpdates();
         // Send available quality levels after a short delay (they're not available immediately)
         setTimeout(function() {
@@ -549,6 +570,9 @@ function onYouTubeIframeAPIReady() {
       },
       onStateChange: function (e) {
         postToParent('stateChange', { state: e.data, isPlaying: e.data === YT.PlayerState.PLAYING });
+        if (e.data === YT.PlayerState.PLAYING || e.data === YT.PlayerState.PAUSED) {
+          triggerShadowOverlay();
+        }
       },
       onError: function (e) {
         postToParent('error', { code: e.data });
@@ -575,9 +599,9 @@ window.addEventListener('message', function (event) {
   var msg = event.data;
   if (!msg || !msg.type || msg.source === 'video-embed') return;
   switch (msg.type) {
-    case 'play': player.playVideo(); break;
-    case 'pause': player.pauseVideo(); break;
-    case 'seekTo': player.seekTo(msg.time, true); break;
+    case 'play': player.playVideo(); triggerShadowOverlay(); break;
+    case 'pause': player.pauseVideo(); triggerShadowOverlay(); break;
+    case 'seekTo': player.seekTo(msg.time, true); triggerShadowOverlay(); break;
     case 'setVolume': player.setVolume(msg.volume); break;
     case 'mute': player.mute(); break;
     case 'unmute': player.unMute(); break;
