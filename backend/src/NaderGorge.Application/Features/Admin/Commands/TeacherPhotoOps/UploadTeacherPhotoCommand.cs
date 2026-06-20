@@ -44,6 +44,14 @@ public class UploadTeacherPhotoCommandHandler : IRequestHandler<UploadTeacherPho
                 "teacher",
                 ct);
 
+            var activePhotos = await _db.TeacherPhotos
+                .Where(photo => photo.TeacherId == request.TeacherId && photo.IsActive)
+                .ToListAsync(ct);
+            foreach (var activePhoto in activePhotos)
+            {
+                activePhoto.IsActive = false;
+            }
+
             var photo = new TeacherPhoto
             {
                 TeacherId = request.TeacherId,

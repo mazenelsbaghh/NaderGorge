@@ -147,6 +147,26 @@ public class TeacherProfileTests
     }
 
     [Fact]
+    public async Task UploadTeacherPhoto_WhenUploadingSeveralPhotos_LeavesOnlyLatestPhotoActive()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher Gallery", "01099999998");
+        var storage = new StubContentImageStorage("/uploads/content/teacher/reference.webp");
+        var handler = new UploadTeacherPhotoCommandHandler(
+            db,
+            new Microsoft.Extensions.Logging.Abstractions.NullLogger<UploadTeacherPhotoCommandHandler>(),
+            storage);
+        const string image = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+        await handler.Handle(new UploadTeacherPhotoCommand(user.Id, image, "first.png"), CancellationToken.None);
+        await handler.Handle(new UploadTeacherPhotoCommand(user.Id, image, "second.png"), CancellationToken.None);
+
+        var photos = await db.TeacherPhotos.Where(photo => photo.TeacherId == user.Id).ToListAsync();
+        Assert.Equal(2, photos.Count);
+        Assert.Single(photos, photo => photo.IsActive);
+    }
+
+    [Fact]
     public async Task GetActiveTeacherPhoto_ReturnsActivePhoto()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();

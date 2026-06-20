@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId } from 'react';
 import Image from 'next/image';
 import { Upload, Image as ImageIcon, CheckCircle2, Loader2, AlertTriangle, Trash2, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -10,13 +10,15 @@ import { compressImage, renameFileToMatchBase64 } from '@/utils/image-compressor
 
 interface AdminTeacherPhotoUploadProps {
   teacherId?: string;
+  compact?: boolean;
 }
 
-export function AdminTeacherPhotoUpload({ teacherId }: AdminTeacherPhotoUploadProps) {
+export function AdminTeacherPhotoUpload({ teacherId, compact = false }: AdminTeacherPhotoUploadProps) {
   const { user } = useAuthStore();
   const [photos, setPhotos] = useState<{ id: string; url: string; isActive: boolean; uploadedAt: string }[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const inputId = `teacher-photos-${useId().replaceAll(':', '')}`;
 
   const resolvedTeacherId = teacherId || user?.id;
 
@@ -53,28 +55,33 @@ export function AdminTeacherPhotoUpload({ teacherId }: AdminTeacherPhotoUploadPr
     }
 
     setIsUploading(true);
-    try {
-      let successCount = 0;
-      for (const file of imageFiles) {
+    let successCount = 0;
+    let failureCount = 0;
+    for (const file of imageFiles) {
+      try {
         const base64 = await compressImage(file);
         const finalFileName = renameFileToMatchBase64(file.name, base64);
-        
         const res = await adminService.uploadTeacherPhoto(resolvedTeacherId, base64, finalFileName);
-        if (res.success) {
-          successCount++;
-        }
+        if (res.success) successCount++;
+        else failureCount++;
+      } catch {
+        failureCount++;
       }
+    }
+
+    try {
       if (successCount > 0) {
         toast.success(`تم رفع ${successCount} صور بنجاح وتحويلها لصيغة WebP 📸`);
-        fetchPhotos();
-      } else {
+        await fetchPhotos();
+      }
+      if (failureCount > 0) {
+        toast.error(`تعذر رفع ${failureCount} من الصور المحددة`);
+      } else if (successCount === 0) {
         toast.error('فشل رفع الصور');
       }
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'حدث خطأ أثناء رفع الصور');
     } finally {
       setIsUploading(false);
-      if (e.target) e.target.value = '';
+      e.target.value = '';
     }
   };
 
@@ -111,6 +118,75 @@ export function AdminTeacherPhotoUpload({ teacherId }: AdminTeacherPhotoUploadPr
     }
   };
 
+  if (compact) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="h-4 w-4 text-[var(--admin-primary)]" />
+            <span className="text-xs font-bold text-[var(--admin-text)]">صور التحليل للذكاء الاصطناعي</span>
+          </div>
+          <span className="text-xs text-[var(--admin-muted)]">{photos.length} صورة</span>
+        </div>
+
+        <label
+          htmlFor={inputId}
+          className="flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 text-center transition hover:border-[var(--admin-primary)]"
+        >
+          <input
+            id={inputId}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={handleFilesUpload}
+            disabled={isUploading}
+          />
+          {isUploading ? (
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--admin-primary)]" />
+          ) : (
+            <Upload className="h-6 w-6 text-[var(--admin-primary)]" />
+          )}
+          <span className="mt-2 text-xs font-bold text-[var(--admin-text)]">
+            {isUploading ? 'جاري ضغط ورفع الصور...' : 'اختر عدة صور للرفع'}
+          </span>
+          <span className="mt-1 text-[11px] text-[var(--admin-muted)]">يمكن تحديد أكثر من صورة في المرة الواحدة</span>
+        </label>
+
+        {loadingPhotos ? (
+          <div className="flex min-h-20 items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--admin-primary)]" />
+          </div>
+        ) : photos.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {photos.map((photo) => (
+              <div key={photo.id} className={`rounded-xl border p-2 ${photo.isActive ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-15)]' : 'border-[var(--admin-border)] bg-[var(--admin-bg)]'}`}>
+                <div className="relative aspect-square overflow-hidden rounded-lg">
+                  <Image src={resolveMediaUrl(photo.url)} alt="صورة مرجعية للمعلم" fill unoptimized className="object-cover" />
+                  {photo.isActive && (
+                    <span className="absolute right-1 top-1 rounded-md bg-[var(--admin-primary)] px-1.5 py-1 text-[10px] font-bold text-white">النشطة</span>
+                  )}
+                </div>
+                <div className="mt-2 flex justify-center gap-2">
+                  {!photo.isActive && (
+                    <button type="button" onClick={() => handleSetActive(photo.id)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-[var(--admin-primary)] text-white" aria-label="تحديد الصورة كمرجع نشط">
+                      <Star className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button type="button" onClick={() => handleDelete(photo.id)} className="flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-red-500 text-white" aria-label="حذف الصورة">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-xs text-[var(--admin-muted)]">لم يتم رفع صور مرجعية بعد.</p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="admin-photo-upload bg-[var(--admin-card)] rounded-2xl p-6 border border-[var(--admin-border)] shadow-sm">
       <div className="flex items-center gap-3 mb-4">
@@ -128,11 +204,11 @@ export function AdminTeacherPhotoUpload({ teacherId }: AdminTeacherPhotoUploadPr
         <div className="md:col-span-1 flex flex-col gap-4">
           <div 
             className="relative border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors cursor-pointer group border-[var(--admin-border)] hover:border-[var(--admin-primary)] hover:bg-[var(--admin-hover)]"
-            onClick={() => document.getElementById('teacher-photos-input')?.click()}
+            onClick={() => document.getElementById(inputId)?.click()}
           >
             <input 
               type="file" 
-              id="teacher-photos-input" 
+              id={inputId}
               accept="image/*" 
               multiple
               className="hidden" 

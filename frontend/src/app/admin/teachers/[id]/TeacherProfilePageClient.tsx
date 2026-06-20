@@ -3,7 +3,7 @@
 import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable } from '@/components/admin';
+import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
@@ -11,8 +11,8 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
   Users, Package, BookOpen, PenLine, DollarSign, Wallet,
   GraduationCap, Activity, Phone, User, Clock3,
-  FileText, ArrowLeft, Download, X, Check, Sparkles,
-  Eye, EyeOff, Lock, Send, Image as ImageIcon, Loader2
+  FileText, ArrowLeft, Download, X, Check,
+  Image as ImageIcon, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
@@ -201,7 +201,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
-  const [isUploadingAi, setIsUploadingAi] = useState(false);
 
   const [bio, setBio] = useState('');
   const [contactInfo, setContactInfo] = useState('');
@@ -216,7 +215,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
 
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
-  const [aiPhotoPreview, setAiPhotoPreview] = useState<string | null>(null);
 
   const [subjects, setSubjects] = useState<any[]>([]);
 
@@ -292,16 +290,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
     setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
     setSelectedSubjectIds(teacher.subjectIds || []);
     setProfileImagePreview(teacher.profileImageUrl || null);
-    setAiPhotoPreview(null);
-    
-    // Fetch active AI photo preview
-    adminService.getActiveTeacherPhoto(teacher.userId)
-      .then(res => {
-        if (res.data?.data?.url) {
-          setAiPhotoPreview(res.data.data.url);
-        }
-      })
-      .catch(err => console.error('Failed to fetch active AI photo:', err));
 
     setIsModalOpen(true);
   };
@@ -971,59 +959,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                     </div>
                   </div>
 
-                  {/* AI Photo Upload */}
-                  <div className="space-y-3">
-                    <label className="block text-xs font-bold text-[var(--admin-text)] flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-[var(--admin-primary)]" />
-                      صورة التحليل للذكاء الاصطناعي (AI)
-                    </label>
-                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-bg)] hover:border-[var(--admin-primary)] transition relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        disabled={isUploadingAi}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          setIsUploadingAi(true);
-                          try {
-                            const base64 = await compressImage(file);
-                            const finalFileName = renameFileToMatchBase64(file.name, base64);
-                            setAiPhotoPreview(base64);
-                            if (teacher) {
-                              const res = await adminService.uploadTeacherPhoto(teacher.userId, base64, finalFileName);
-                              if (res.success) {
-                                toast.success('تم رفع صورة تحليل الـ AI بنجاح ✅');
-                              } else {
-                                toast.error(res.message || 'فشل رفع صورة تحليل الـ AI');
-                              }
-                            }
-                          } catch (err) {
-                            console.error(err);
-                            toast.error('حدث خطأ أثناء معالجة ورفع صورة التحليل');
-                          } finally {
-                            setIsUploadingAi(false);
-                          }
-                        }}
-                      />
-                      {aiPhotoPreview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={resolveMediaUrl(aiPhotoPreview)}
-                          alt="AI Preview"
-                          className="h-24 w-24 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
-                        />
-                      ) : (
-                        <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-[var(--admin-hover)] text-[var(--admin-muted)]">
-                          <Sparkles className="h-8 w-8" />
-                        </div>
-                      )}
-                      <span className="text-xs text-[var(--admin-muted)] mt-2">
-                        {isUploadingAi ? 'جاري الرفع...' : 'اسحب صورة أو انقر للرفع'}
-                      </span>
-                    </div>
-                  </div>
+                  <AdminTeacherPhotoUpload teacherId={teacher?.userId} compact />
                 </div>
 
                 {/* Description Bio */}
@@ -1229,7 +1165,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   </button>
                   <button
                     type="submit"
-                    disabled={isSaving || isUploadingProfile || isUploadingAi}
+                    disabled={isSaving || isUploadingProfile}
                     className="flex items-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-2.5 text-[var(--admin-primary-contrast)] transition-transform hover:-translate-y-0.5 font-bold text-sm shadow-sm cursor-pointer disabled:opacity-50 disabled:translate-y-0"
                   >
                     {isSaving ? (
