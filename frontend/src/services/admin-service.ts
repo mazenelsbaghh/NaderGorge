@@ -643,6 +643,21 @@ export const adminService = {
     return res;
   },
 
+  getTeacherPhotos: async (teacherId: string) => {
+    const res = await apiClient.get<ApiResponse<{ id: string; url: string; isActive: boolean; uploadedAt: string }[]>>(`/admin/teachers/${teacherId}/photos`);
+    return res.data;
+  },
+
+  setTeacherPhotoActive: async (teacherId: string, photoId: string) => {
+    const res = await apiClient.post<ApiResponse>(`/admin/teachers/${teacherId}/photos/${photoId}/active`);
+    return res.data;
+  },
+
+  deleteTeacherPhoto: async (teacherId: string, photoId: string) => {
+    const res = await apiClient.delete<ApiResponse>(`/admin/teachers/${teacherId}/photos/${photoId}`);
+    return res.data;
+  },
+
   uploadTeacherProfileImage: async (teacherId: string, base64Image: string, fileName: string) => {
     const res = await apiClient.post<ApiResponse<string>>('/admin/teachers/upload-profile-image', {
       teacherId,
