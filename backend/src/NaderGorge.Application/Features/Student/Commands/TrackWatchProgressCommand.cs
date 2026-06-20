@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Commands;
@@ -96,7 +97,11 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             watchEvent.TimeWatchedInSeconds = watchEvent.WatchCount * thresholdSeconds;
 
         maxLimit = watchEvent.CustomMaxWatchCount ?? video.MaxWatchCount;
-        var isLocked = maxLimit > 0 && watchEvent.WatchCount >= maxLimit;
+        var isStaffOrTeacher = await _db.UserRoles
+            .Include(ur => ur.Role)
+            .AnyAsync(ur => ur.UserId == request.UserId && ur.Role.Type != RoleType.Student, ct);
+
+        var isLocked = !isStaffOrTeacher && maxLimit > 0 && watchEvent.WatchCount >= maxLimit;
         if (isLocked)
         {
             watchEvent.WatchCount = Math.Min(watchEvent.WatchCount, maxLimit);

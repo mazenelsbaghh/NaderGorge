@@ -3,6 +3,7 @@ using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Commands;
@@ -85,11 +86,11 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             : maxCount > 0 ? Math.Min(watchEvent.WatchCount, maxCount) : watchEvent.WatchCount;
         bool isLocked = maxCount > 0 && currentCount >= maxCount;
 
-        var isAdminOrTeacher = await _db.UserRoles
+        var isStaffOrTeacher = await _db.UserRoles
             .Include(ur => ur.Role)
-            .AnyAsync(ur => ur.UserId == request.UserId && (ur.Role.Name == "Admin" || ur.Role.Name == "Teacher"), ct);
+            .AnyAsync(ur => ur.UserId == request.UserId && ur.Role.Type != RoleType.Student, ct);
 
-        if (isLocked && !isAdminOrTeacher)
+        if (isLocked && !isStaffOrTeacher)
         {
             // Also ensure the flag is persisted so future checks are fast
             if (watchEvent != null && !watchEvent.IsLocked)
