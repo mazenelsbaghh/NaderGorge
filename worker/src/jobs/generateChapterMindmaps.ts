@@ -24,22 +24,25 @@ async function notifyProgress(jobId: string, percentage: number, stage: string, 
 }
 
 
+interface ChapterMindmapInput {
+    title: string;
+    summaryText: string;
+    order: number;
+}
+
 export interface GenerateMindmapsJobData {
     lessonVideoId: string;
+    LessonVideoId?: string;
     teacherPhotoUrl?: string;
+    TeacherPhotoUrl?: string;
     // Batch mode
-    chapters?: Array<{
-        title: string;
-        summaryText: string;
-        order: number;
-    }>;
+    chapters?: ChapterMindmapInput[];
+    Chapters?: ChapterMindmapInput[];
     // Single-chapter regeneration mode
     chapterId?: string;
-    chapter?: {
-        title: string;
-        summaryText: string;
-        order: number;
-    };
+    ChapterId?: string;
+    chapter?: ChapterMindmapInput;
+    Chapter?: ChapterMindmapInput;
 }
 
 /**
@@ -48,13 +51,17 @@ export interface GenerateMindmapsJobData {
  *   - Batch: { lessonVideoId, chapters[], teacherPhotoUrl? }
  *   - Single: { lessonVideoId, chapterId, chapter, teacherPhotoUrl? }
  */
-export default async function generateMindmapsProcessor(job: Job<any>) {
+export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData>) {
     const lessonVideoId = job.data.lessonVideoId || job.data.LessonVideoId;
     const teacherPhotoUrl = job.data.teacherPhotoUrl || job.data.TeacherPhotoUrl;
     const chapterId = job.data.chapterId || job.data.ChapterId;
     const singleChapter = job.data.chapter || job.data.Chapter;
     const isSingleChapter = !!chapterId && !!singleChapter;
     const chapters = isSingleChapter ? [singleChapter!] : (job.data.chapters || job.data.Chapters || []);
+
+    if (!lessonVideoId) {
+        throw new Error('Mindmap job is missing lessonVideoId.');
+    }
 
     console.log(`[Job ${job.id}] Starting ${isSingleChapter ? 'Single-Chapter Regen' : 'Batch'} Mindmaps for VideoId: ${lessonVideoId}`);
 
@@ -89,21 +96,14 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
         let completedCount = 0;
 
         for (const chapter of chapters) {
-            try {
-                await throwIfCancellationRequested(job);
-                const generatedUrl = await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPath);
-                if (generatedUrl) {
-                    results.push({ title: chapter.title, imageUrl: generatedUrl });
-                }
-                completedCount++;
-                const progressPct = 10 + Math.floor((completedCount / totalChapters) * 80);
-                const chStage = `جاري توليد صورة الفصل ${completedCount} من ${totalChapters} (${chapter.title})...`;
-                await job.updateProgress({ percentage: progressPct, stage: chStage });
-                await notifyProgress(`${lessonVideoId}_mindmaps`, progressPct, chStage);
-            } catch (e) {
-                console.error(`[Job ${job.id}] Failed to generate mind map for ${chapter.title}`, e);
-                // Don't abort the whole job if one chapter fails
-            }
+            await throwIfCancellationRequested(job);
+            const generatedUrl = await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPath);
+            results.push({ title: chapter.title, imageUrl: generatedUrl });
+            completedCount++;
+            const progressPct = 10 + Math.floor((completedCount / totalChapters) * 80);
+            const chStage = `تم توليد صورة الفصل ${completedCount} من ${totalChapters} (${chapter.title})`;
+            await job.updateProgress({ percentage: progressPct, stage: chStage });
+            await notifyProgress(`${lessonVideoId}_mindmaps`, progressPct, chStage);
         }
 
         {
@@ -158,7 +158,8 @@ export default async function generateMindmapsProcessor(job: Job<any>) {
 
     } catch (error) {
         console.error(`[Job ${job.id}] Failed generating mindmaps:`, error);
-        await notifyProgress(`${lessonVideoId}_mindmaps`, 0, String(error), 'failed');
         throw error;
     }
 }
+
+export default generateMindmapsProcessor;

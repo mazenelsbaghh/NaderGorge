@@ -347,7 +347,7 @@ export async function generateChapterMindmap(
   chapter: { title: string; summaryText: string; order: number },
   lessonVideoId: string,
   teacherPhotoPath?: string,
-): Promise<string | null> {
+): Promise<string> {
   try {
     const runtime = createRuntime();
     const request = {
@@ -361,7 +361,9 @@ export async function generateChapterMindmap(
       developer: () => runtime.developer.models.generateContent(request),
     });
     const imagePart = response.candidates?.[0]?.content?.parts?.find((responsePart) => responsePart.inlineData?.data);
-    if (!imagePart?.inlineData?.data) return null;
+    if (!imagePart?.inlineData?.data) {
+      throw new Error(`AI image provider returned no image for chapter ${chapter.order}.`);
+    }
     return saveMindmapImage(imagePart.inlineData.data, lessonVideoId, chapter.order);
   } catch (error) {
     const failure = classifyAIError(error);
@@ -370,6 +372,6 @@ export async function generateChapterMindmap(
       category: error instanceof AIProviderExecutionError ? error.primaryCategory : failure.category,
       status: failure.status,
     });
-    return null;
+    throw error;
   }
 }

@@ -129,3 +129,16 @@ test('mindmap keeps the teacher image first and writes a compatible PNG URL', as
     testContext.after(() => fs.rmSync(generatedImage, { force: true }));
   }
 });
+
+test('mindmap provider response without an image fails instead of returning partial success', async () => {
+  const client = { models: { generateContent: async () => ({ candidates: [{ content: { parts: [] } }] }) }, files: {} };
+  setAIServiceRuntimeFactoryForTests(() => ({
+    config: vertexConfig, gateway: new AIProviderGateway(vertexConfig), vertex: client as any, developer: client as any,
+    temporaryStorage: {} as any,
+  }));
+
+  await assert.rejects(
+    generateChapterMindmap({ title: 'فصل بلا صورة', summaryText: 'ملخص', order: 2 }, 'test-video'),
+    /returned no image/,
+  );
+});

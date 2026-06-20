@@ -28,7 +28,10 @@ public class AiProgressCommandHandler : IRequestHandler<AiProgressCommand, ApiRe
 
         string? teacherUserId = null;
         Guid? parsedVideoId = null;
-        if (Guid.TryParse(request.JobId, out var videoId))
+        var mindmapSuffixIndex = request.JobId.IndexOf("_mindmap", StringComparison.OrdinalIgnoreCase);
+        var isMindmapJob = mindmapSuffixIndex >= 0;
+        var videoIdPart = isMindmapJob ? request.JobId[..mindmapSuffixIndex] : request.JobId;
+        if (Guid.TryParse(videoIdPart, out var videoId))
         {
             parsedVideoId = videoId;
             teacherUserId = await _db.LessonVideos
@@ -63,7 +66,14 @@ public class AiProgressCommandHandler : IRequestHandler<AiProgressCommand, ApiRe
                 var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == parsedVideoId.Value, ct);
                 if (video != null)
                 {
-                    video.IsProcessingAI = false;
+                    if (isMindmapJob)
+                    {
+                        video.IsProcessingMindmaps = false;
+                    }
+                    else
+                    {
+                        video.IsProcessingAI = false;
+                    }
                     video.UpdatedAt = DateTime.UtcNow;
                     _db.LessonVideos.Update(video);
 
