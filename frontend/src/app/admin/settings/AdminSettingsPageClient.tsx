@@ -77,7 +77,10 @@ export default function AdminSettingsPageClient() {
     PlayerShadowTopOpacity: '0.70',
     PlayerShadowBottomOpacity: '0.98',
     YouTubePlayerShadowHideDelaySeconds: '5',
-    BunnyPlayerShadowHideDelaySeconds: '5'
+    BunnyPlayerShadowHideDelaySeconds: '5',
+    PlayerShadowTopCoverage: '40',
+    PlayerShadowBottomCoverage: '38',
+    EnabledPlayerShadowProviders: 'youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive'
   });
   const [previewProvider, setPreviewProvider] = useState<'youtube' | 'bunny'>('youtube');
   const [previewVideo, setPreviewVideo] = useState('');
@@ -581,8 +584,57 @@ export default function AdminSettingsPageClient() {
                     <div className="space-y-5 rounded-2xl bg-[var(--admin-card-soft)] p-5">
                       <RangeSetting label="شدة الظل العلوي" value={settings.PlayerShadowTopOpacity} onChange={(value) => handleSettingChange('PlayerShadowTopOpacity', value)} />
                       <RangeSetting label="شدة الظل السفلي" value={settings.PlayerShadowBottomOpacity} onChange={(value) => handleSettingChange('PlayerShadowBottomOpacity', value)} />
+                      <RangeSettingPercentage label="مدى انتشار الظل العلوي (التغطية)" value={settings.PlayerShadowTopCoverage} onChange={(value) => handleSettingChange('PlayerShadowTopCoverage', value)} />
+                      <RangeSettingPercentage label="مدى انتشار الظل السفلي (التغطية)" value={settings.PlayerShadowBottomCoverage} onChange={(value) => handleSettingChange('PlayerShadowBottomCoverage', value)} />
                       <NumberSetting label="اختفاء الظل في YouTube بعد" value={settings.YouTubePlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('YouTubePlayerShadowHideDelaySeconds', value)} />
                       <NumberSetting label="اختفاء الظل في Bunny بعد" value={settings.BunnyPlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('BunnyPlayerShadowHideDelaySeconds', value)} />
+                      
+                      <div className="space-y-3 pt-3 border-t border-[var(--admin-border)]">
+                        <span className="block text-sm font-bold text-[var(--admin-text)]">تفعيل الظل على المزودين:</span>
+                        <div className="grid grid-cols-2 gap-2 text-right">
+                          {(['youtube', 'bunny', 'vk', 'telegram', 'rutube', 'google-drive'] as const).map((prov) => {
+                            const enabledProviders = (settings.EnabledPlayerShadowProviders || '')
+                              .toLowerCase()
+                              .split(',')
+                              .map(p => p.trim())
+                              .filter(Boolean);
+                            const isChecked = enabledProviders.includes(prov);
+                            
+                            const labelMap: Record<string, string> = {
+                              'youtube': 'YouTube',
+                              'bunny': 'Bunny Stream',
+                              'vk': 'VK Video',
+                              'telegram': 'Telegram',
+                              'rutube': 'Rutube',
+                              'google-drive': 'Google Drive'
+                            };
+
+                            const handleToggle = () => {
+                              let updated: string[];
+                              if (isChecked) {
+                                updated = enabledProviders.filter(p => p !== prov);
+                                if (prov === 'telegram') updated = updated.filter(p => p !== 'telegram-direct');
+                              } else {
+                                updated = [...enabledProviders, prov];
+                                if (prov === 'telegram') updated.push('telegram-direct');
+                              }
+                              handleSettingChange('EnabledPlayerShadowProviders', updated.join(','));
+                            };
+
+                            return (
+                              <label key={prov} className="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold text-[var(--admin-text)]">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={handleToggle}
+                                  className="w-4 h-4 rounded border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-primary)] focus:ring-[var(--admin-primary)] cursor-pointer"
+                                />
+                                <span>{labelMap[prov] || prov}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -828,12 +880,50 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
   const src = `/api/video/preview?provider=${provider}&id=${encodeURIComponent(videoId)}`;
   const top = Math.min(1, Math.max(0, Number(settings.PlayerShadowTopOpacity || .7)));
   const bottom = Math.min(1, Math.max(0, Number(settings.PlayerShadowBottomOpacity || .98)));
+  const topCoverage = Math.min(100, Math.max(0, Number(settings.PlayerShadowTopCoverage || 40)));
+  const bottomCoverage = Math.min(100, Math.max(0, Number(settings.PlayerShadowBottomCoverage || 38)));
+
+  const enabledProviders = (settings.EnabledPlayerShadowProviders || '')
+    .toLowerCase()
+    .split(',')
+    .map(p => p.trim())
+    .filter(Boolean);
+  const isShadowEnabled = enabledProviders.includes(provider.toLowerCase());
+
+  const topMid = Math.round(topCoverage * 0.45);
+  const bottomStart = 100 - bottomCoverage;
+  const bottomMid = Math.round(100 - bottomCoverage * 0.58);
+
+  const backgroundGradient = isShadowEnabled
+    ? `linear-gradient(to bottom, rgba(0,0,0,${top}) 0%, rgba(0,0,0,${top * .6}) ${topMid}%, transparent ${topCoverage}%, transparent ${bottomStart}%, rgba(0,0,0,${bottom * .5}) ${bottomMid}%, rgba(0,0,0,${bottom}) 100%)`
+    : 'none';
 
   return <div className="relative aspect-video overflow-hidden rounded-xl bg-black" onMouseMove={() => setShadowVisible(true)}>
     {videoId ? <iframe key={src} src={src} title="معاينة مشغل الفيديو" className="absolute inset-0 size-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <div className="grid size-full place-items-center text-sm text-white/70">أدخل رابط الفيديو أو المعرّف للمعاينة</div>}
-    <AnimatePresence>{shadowVisible && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(0,0,0,${top}) 0%, transparent 40%, transparent 62%, rgba(0,0,0,${bottom}) 100%)` }} />}</AnimatePresence>
+    <AnimatePresence>{shadowVisible && isShadowEnabled && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0 z-[80]" style={{ background: backgroundGradient }} />}</AnimatePresence>
     <button type="button" onClick={() => setShadowVisible(true)} className="absolute bottom-3 right-3 z-10 rounded-lg bg-black/70 px-3 py-2 text-xs font-bold text-white">إظهار الظل مجددًا</button>
   </div>;
+}
+
+function RangeSettingPercentage({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const numericValue = Number(value || 0);
+  return (
+    <label className="block">
+      <span className="mb-2 flex justify-between text-sm font-bold text-[var(--admin-text)]">
+        <span>{label}</span>
+        <span dir="ltr" className="font-mono">{numericValue}%</span>
+      </span>
+      <input 
+        type="range" 
+        min="0" 
+        max="100" 
+        step="1" 
+        value={numericValue} 
+        onChange={(event) => onChange(event.target.value)} 
+        className="w-full accent-[var(--admin-primary)]" 
+      />
+    </label>
+  );
 }
 
 function extractYouTubeId(value: string) {

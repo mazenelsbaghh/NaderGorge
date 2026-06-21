@@ -668,6 +668,195 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `StudentUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
+## Table: `live_support_ai_conversation_states`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AutoCloseAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `HandedOffAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `HandoffReasonCode` | `string` | `character varying(100)` | `YES` | ❌ Missing Table |
+| `HandoffSafeSummary` | `string` | `character varying(2000)` | `YES` | ❌ Missing Table |
+| `InactivityWarningSentAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `LastParticipantActivityAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `Mode` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `PolicyVersionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `ResolutionCode` | `string` | `character varying(100)` | `YES` | ❌ Missing Table |
+| `ResolvedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `SafeSummaryJson` | `string` | `jsonb` | `YES` | ❌ Missing Table |
+| `VerifiedStudentUserId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `Version` | `long` | `bigint` | `NO` | ❌ Missing Table |
+
+## Table: `live_support_ai_knowledge_entries`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Title` | `string` | `character varying(200)` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `Version` | `long` | `bigint` | `NO` | ❌ Missing Table |
+
+## Table: `live_support_ai_knowledge_revisions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Content` | `string` | `character varying(50000)` | `NO` | ❌ Missing Table |
+| `ContentHash` | `string` | `character varying(64)` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `EntryId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `IsPublished` | `bool` | `boolean` | `NO` | ❌ Missing Table |
+| `PublishedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `PublishedByUserId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `RevisionNumber` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `SearchText` | `string` | `character varying(50000)` | `NO` | ❌ Missing Table |
+| `SourceLabel` | `string` | `character varying(300)` | `YES` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `ValidFrom` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `ValidUntil` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+
+## Table: `live_support_ai_pending_actions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActionExecutionId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `ActionKey` | `string` | `character varying(100)` | `NO` | ❌ Missing Table |
+| `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `ConfirmationNonceHash` | `string` | `character varying(64)` | `NO` | ❌ Missing Table |
+| `ConfirmedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `ConfirmedByGuestSessionId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `ConfirmedByUserId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `EncryptedPayload` | `byte[]` | `bytea` | `NO` | ❌ Missing Table |
+| `ExpiresAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `FailureCode` | `string` | `character varying(100)` | `YES` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `IdempotencyKey` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `PayloadHash` | `string` | `character varying(64)` | `NO` | ❌ Missing Table |
+| `PolicyVersionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `SafeProposalJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `StateFingerprint` | `string` | `character varying(64)` | `NO` | ❌ Missing Table |
+| `Status` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `StudentUserId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `TurnId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `Version` | `long` | `bigint` | `NO` | ❌ Missing Table |
+
+## Table: `live_support_ai_policy_knowledge_revisions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `KnowledgeRevisionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `PolicyVersionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+
+## Table: `live_support_ai_policy_versions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActionKeysJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `InactivityMinutes` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `InactivityWarningGraceSeconds` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `IsEnabled` | `bool` | `boolean` | `NO` | ❌ Missing Table |
+| `LookupKeysJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `PendingActionExpirySeconds` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `PublishedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `PublishedByUserId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `ReadableDataKeysJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `Status` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `SystemInstructions` | `string` | `character varying(20000)` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `VerificationMaxAttempts` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `VerificationQuestionKeysJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `VerificationRequiredCorrect` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `Version` | `long` | `bigint` | `NO` | ❌ Missing Table |
+| `VersionNumber` | `long` | `bigint` | `NO` | ❌ Missing Table |
+
+## Table: `live_support_ai_turns`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `ContextCategoryKeysJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `DecisionType` | `int?` | `integer` | `YES` | ❌ Missing Table |
+| `ExpectedConversationVersion` | `long` | `bigint` | `NO` | ❌ Missing Table |
+| `FailureCode` | `string` | `character varying(100)` | `YES` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `InputTokenCount` | `int?` | `integer` | `YES` | ❌ Missing Table |
+| `KnowledgeRevisionIdsJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `LatencyMs` | `int?` | `integer` | `YES` | ❌ Missing Table |
+| `Model` | `string` | `character varying(150)` | `YES` | ❌ Missing Table |
+| `OutputMessageId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `OutputTokenCount` | `int?` | `integer` | `YES` | ❌ Missing Table |
+| `PolicyVersionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Provider` | `string` | `character varying(100)` | `YES` | ❌ Missing Table |
+| `ProviderResponseId` | `string` | `character varying(200)` | `YES` | ❌ Missing Table |
+| `QueuedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `SafeFailureDetail` | `string` | `character varying(1000)` | `YES` | ❌ Missing Table |
+| `SourceMessageId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `StartedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `Status` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `Version` | `long` | `bigint` | `NO` | ❌ Missing Table |
+
+## Table: `live_support_ai_verification_attempts`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AttemptNumber` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `OutcomeCodesJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `QuestionKeysJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `SessionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `SubmittedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+
+## Table: `live_support_ai_verification_policy_questions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ComparisonMode` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `Order` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `PolicyVersionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `PromptText` | `string` | `character varying(300)` | `NO` | ❌ Missing Table |
+| `QuestionKey` | `string` | `character varying(100)` | `NO` | ❌ Missing Table |
+| `SourceFieldKey` | `string` | `character varying(100)` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+
+## Table: `live_support_ai_verification_sessions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AttemptCount` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `CandidateStudentUserId` | `Guid?` | `uuid` | `YES` | ❌ Missing Table |
+| `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `CorrectCount` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `ExpiresAt` | `DateTime` | `timestamp without time zone` | `NO` | ❌ Missing Table |
+| `Id` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `LookupKey` | `string` | `character varying(100)` | `NO` | ❌ Missing Table |
+| `LookupValueHash` | `string` | `character varying(128)` | `NO` | ❌ Missing Table |
+| `MaxAttempts` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `PolicyVersionId` | `Guid` | `uuid` | `NO` | ❌ Missing Table |
+| `RequiredCorrect` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `SelectedQuestionKeysJson` | `string` | `jsonb` | `NO` | ❌ Missing Table |
+| `Status` | `int` | `integer` | `NO` | ❌ Missing Table |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `VerifiedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Table |
+| `Version` | `long` | `bigint` | `NO` | ❌ Missing Table |
+
 ## Table: `live_support_assignments`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |

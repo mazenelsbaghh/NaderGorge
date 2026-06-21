@@ -142,6 +142,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const youtubeShadowDelayMsRef = useRef(5000);
   const bunnyShadowDelayMsRef = useRef(5000);
   const [shadowOpacity, setShadowOpacity] = useState({ top: 0.70, bottom: 0.98 });
+  const [shadowCoverage, setShadowCoverage] = useState({ top: 40, bottom: 38 });
+  const [enabledShadowProviders, setEnabledShadowProviders] = useState<string[]>(['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive']);
   const loadingSessionRef = useRef(false);
   const loadingExtraWatchStatusRef = useRef(false);
   const requestingExtraRef = useRef(false);
@@ -163,6 +165,16 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const top = Number(data?.playerShadowTopOpacity ?? data?.PlayerShadowTopOpacity ?? 0.70);
       const bottom = Number(data?.playerShadowBottomOpacity ?? data?.PlayerShadowBottomOpacity ?? 0.98);
       setShadowOpacity({ top: Math.min(1, Math.max(0, top)), bottom: Math.min(1, Math.max(0, bottom)) });
+      
+      const topCov = Number(data?.playerShadowTopCoverage ?? data?.PlayerShadowTopCoverage ?? 40);
+      const bottomCov = Number(data?.playerShadowBottomCoverage ?? data?.PlayerShadowBottomCoverage ?? 38);
+      setShadowCoverage({ top: Math.min(100, Math.max(0, topCov)), bottom: Math.min(100, Math.max(0, bottomCov)) });
+
+      const providers = data?.enabledPlayerShadowProviders ?? data?.EnabledPlayerShadowProviders;
+      if (typeof providers === 'string') {
+        setEnabledShadowProviders(providers.toLowerCase().split(',').map(s => s.trim()).filter(Boolean));
+      }
+
       youtubeShadowDelayMsRef.current = Math.min(60, Math.max(0, Number(data?.youTubePlayerShadowHideDelaySeconds ?? data?.YouTubePlayerShadowHideDelaySeconds ?? 5))) * 1000;
       bunnyShadowDelayMsRef.current = Math.min(60, Math.max(0, Number(data?.bunnyPlayerShadowHideDelaySeconds ?? data?.BunnyPlayerShadowHideDelaySeconds ?? 5))) * 1000;
     }).catch((error) => devConsole.error('Failed to load player appearance settings:', error));
@@ -983,14 +995,16 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
         {/* Shadow Gradient Overlay */}
         <AnimatePresence>
-          {status === 'ready' && showPlayerShadows && (
+          {status === 'ready' && showPlayerShadows && enabledShadowProviders.includes(provider.toLowerCase()) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               className="pointer-events-none absolute inset-0 z-[80]"
-              style={{ background: `linear-gradient(to bottom, rgba(0,0,0,${shadowOpacity.top}) 0%, rgba(0,0,0,${shadowOpacity.top * .6}) 18%, transparent 40%, transparent 62%, rgba(0,0,0,${shadowOpacity.bottom * .5}) 78%, rgba(0,0,0,${shadowOpacity.bottom}) 100%)` }}
+              style={{
+                background: `linear-gradient(to bottom, rgba(0,0,0,${shadowOpacity.top}) 0%, rgba(0,0,0,${shadowOpacity.top * .6}) ${Math.round(shadowCoverage.top * 0.45)}%, transparent ${shadowCoverage.top}%, transparent ${100 - shadowCoverage.bottom}%, rgba(0,0,0,${shadowOpacity.bottom * .5}) ${Math.round(100 - shadowCoverage.bottom * 0.58)}%, rgba(0,0,0,${shadowOpacity.bottom}) 100%)`
+              }}
             />
           )}
         </AnimatePresence>
