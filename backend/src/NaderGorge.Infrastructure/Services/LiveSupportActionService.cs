@@ -15,6 +15,7 @@ using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using NaderGorge.Application.Features.LiveSupport.Services;
 
 namespace NaderGorge.Infrastructure.Services;
 
@@ -85,6 +86,7 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
             AddOutbox(request.ConversationId, execution.Id, request.ActionKey, "Succeeded");
             await _db.SaveChangesAsync(ct);
             _logger?.LogInformation("LiveSupport action {ActionKey} execution {ExecutionId} succeeded for conversation {ConversationId} by {ActorUserId}", request.ActionKey, execution.Id, request.ConversationId, request.ActorUserId);
+            LiveSupportTelemetry.ActionsSucceeded.Add(1, new KeyValuePair<string, object?>("action_key", request.ActionKey));
             return new LiveSupportActionResultDto(execution.Id, request.ActionKey, false, metadata.Refresh, message);
         }
         catch (Exception ex)
@@ -94,6 +96,7 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
             AddOutbox(request.ConversationId, execution.Id, request.ActionKey, execution.FailureCode ?? "Failed");
             await _db.SaveChangesAsync(ct);
             _logger?.LogWarning("LiveSupport action {ActionKey} execution {ExecutionId} failed with {FailureCode} for conversation {ConversationId} by {ActorUserId}", request.ActionKey, execution.Id, execution.FailureCode, request.ConversationId, request.ActorUserId);
+            LiveSupportTelemetry.ActionsFailed.Add(1, new KeyValuePair<string, object?>("action_key", request.ActionKey), new KeyValuePair<string, object?>("failure_code", execution.FailureCode));
             throw;
         }
     }

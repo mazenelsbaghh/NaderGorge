@@ -11,6 +11,7 @@ using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
+using NaderGorge.Application.Features.LiveSupport.Services;
 
 namespace NaderGorge.Infrastructure.Services;
 
@@ -117,6 +118,7 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
         await AssignOldestWaitingAsync(ct);
         await tx.CommitAsync(ct);
         _logger?.LogInformation("LiveSupport conversation {ConversationId} routed status {Status} owner {OwnerUserId}", conversation.Id, conversation.Status, conversation.CurrentOwnerUserId);
+        LiveSupportTelemetry.ConversationsCreated.Add(1, new KeyValuePair<string, object?>("status", conversation.Status.ToString()));
         return await MapAsync(conversation, ct);
     }
 
@@ -164,6 +166,7 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
         _db.LiveSupportAttachments.Add(entity);
         await _db.SaveChangesAsync(ct);
         _logger?.LogInformation("LiveSupport attachment {AttachmentId} stored for conversation {ConversationId}; bytes {SizeBytes}; content type {ContentType}", entity.Id, conversationId, entity.SizeBytes, entity.ContentType);
+        LiveSupportTelemetry.AttachmentBytes.Record(entity.SizeBytes, new KeyValuePair<string, object?>("content_type", entity.ContentType));
         return new(entity.Id, entity.OriginalFileName, entity.ContentType, entity.SizeBytes, $"/api/live-support/participant/conversations/{conversationId}/attachments/{entity.Id}");
     }
 
@@ -241,7 +244,9 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
         var config = await _db.LiveSupportStaffConfigs.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == staffUserId && x.IsEnabled, ct);
         if (!isAdmin && config is null) throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "الموظف غير مفعّل للدعم.");
         var checkedIn = isAdmin || await IsCheckedInAsync(staffUserId, ct);
-        var conversations = await _db.LiveSupportConversations.Where(x => isAdmin ? !IsTerminalExpression(x.Status) : x.CurrentOwnerUserId == staffUserId && !IsTerminalExpression(x.Status)).OrderByDescending(x => x.LastMessageAt).ToListAsync(ct);
+        var conversations = await _db.LiveSupportConversations.Where(x =>
+            x.Status != LiveSupportConversationStatus.Closed && x.Status != LiveSupportConversationStatus.Abandoned &&
+            (isAdmin || x.CurrentOwnerUserId == staffUserId)).OrderByDescending(x => x.LastMessageAt).ToListAsync(ct);
         return new LiveSupportStaffBootstrapDto(config?.IsEnabled ?? isAdmin, checkedIn, conversations.Count, config?.MaxActiveConversations ?? 50,
             await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null, ct), await MapManyAsync(conversations, ct));
     }
@@ -379,6 +384,7 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
         await AssignOldestWaitingAsync(ct);
         await tx.CommitAsync(ct);
         _logger?.LogInformation("LiveSupport assignments released for staff {StaffUserId}; reason {Reason}; count {Count}", staffUserId, reason, assignments.Count);
+        LiveSupportTelemetry.AssignmentsReleased.Add(assignments.Count, new KeyValuePair<string, object?>("reason", reason.ToString()));
     }
 
     public async Task<IReadOnlyList<LiveSupportStudentSearchDto>> SearchStudentsAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string query, CancellationToken ct)
@@ -625,7 +631,6 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
     }
     private static LiveSupportMessageDto ToDto(LiveSupportMessage x) => new(x.Id, x.ConversationId, x.SenderType, x.ClientMessageId, x.Type, x.Content, x.SentAt);
     private static bool IsTerminal(LiveSupportConversationStatus s) => s is LiveSupportConversationStatus.Closed or LiveSupportConversationStatus.Abandoned;
-    private static bool IsTerminalExpression(LiveSupportConversationStatus s) => s == LiveSupportConversationStatus.Closed || s == LiveSupportConversationStatus.Abandoned;
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     private static string MaskPhone(string phone) => phone.Length <= 4 ? "****" : $"{phone[..2]}******{phone[^2..]}";
     private static string EncodeCursor(DateTime sentAt, Guid id) => Convert.ToBase64String(Encoding.UTF8.GetBytes($"{sentAt.Ticks}|{id:N}"));
