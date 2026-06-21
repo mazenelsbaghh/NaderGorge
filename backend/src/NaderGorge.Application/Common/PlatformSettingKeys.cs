@@ -27,4 +27,6 @@ public static class PlatformSettingKeys
     public const string PlayerShadowTopCoverage = "PlayerShadowTopCoverage";
     public const string PlayerShadowBottomCoverage = "PlayerShadowBottomCoverage";
     public const string EnabledPlayerShadowProviders = "EnabledPlayerShadowProviders";
+    public const string PlayerShadowTopSolid = "PlayerShadowTopSolid";
+    public const string PlayerShadowBottomSolid = "PlayerShadowBottomSolid";
 }

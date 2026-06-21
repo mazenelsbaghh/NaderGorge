@@ -27,7 +27,9 @@ public sealed record CachedPlatformSettings(
     int BunnyPlayerShadowHideDelaySeconds,
     int PlayerShadowTopCoverage,
     int PlayerShadowBottomCoverage,
-    string EnabledPlayerShadowProviders
+    string EnabledPlayerShadowProviders,
+    int PlayerShadowTopSolid,
+    int PlayerShadowBottomSolid
 )
 {
     public static CachedPlatformSettings Default { get; } = new(
@@ -53,7 +55,9 @@ public sealed record CachedPlatformSettings(
         5,
         40,
         38,
-        "youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive"
+        "youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive",
+        10,
+        12
     );
 }
 
@@ -109,7 +113,9 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
                 GetInt(settings, PlatformSettingKeys.BunnyPlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.BunnyPlayerShadowHideDelaySeconds, minValue: 0, maxValue: 60),
                 GetInt(settings, PlatformSettingKeys.PlayerShadowTopCoverage, CachedPlatformSettings.Default.PlayerShadowTopCoverage, minValue: 0, maxValue: 100),
                 GetInt(settings, PlatformSettingKeys.PlayerShadowBottomCoverage, CachedPlatformSettings.Default.PlayerShadowBottomCoverage, minValue: 0, maxValue: 100),
-                GetString(settings, PlatformSettingKeys.EnabledPlayerShadowProviders, CachedPlatformSettings.Default.EnabledPlayerShadowProviders)
+                GetString(settings, PlatformSettingKeys.EnabledPlayerShadowProviders, CachedPlatformSettings.Default.EnabledPlayerShadowProviders),
+                GetInt(settings, PlatformSettingKeys.PlayerShadowTopSolid, CachedPlatformSettings.Default.PlayerShadowTopSolid, minValue: 0, maxValue: 100),
+                GetInt(settings, PlatformSettingKeys.PlayerShadowBottomSolid, CachedPlatformSettings.Default.PlayerShadowBottomSolid, minValue: 0, maxValue: 100)
             );
         })!;
     }

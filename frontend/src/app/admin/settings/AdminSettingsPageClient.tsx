@@ -80,7 +80,9 @@ export default function AdminSettingsPageClient() {
     BunnyPlayerShadowHideDelaySeconds: '5',
     PlayerShadowTopCoverage: '40',
     PlayerShadowBottomCoverage: '38',
-    EnabledPlayerShadowProviders: 'youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive'
+    EnabledPlayerShadowProviders: 'youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive',
+    PlayerShadowTopSolid: '10',
+    PlayerShadowBottomSolid: '12'
   });
   const [previewProvider, setPreviewProvider] = useState<'youtube' | 'bunny'>('youtube');
   const [previewVideo, setPreviewVideo] = useState('');
@@ -585,7 +587,9 @@ export default function AdminSettingsPageClient() {
                       <RangeSetting label="شدة الظل العلوي" value={settings.PlayerShadowTopOpacity} onChange={(value) => handleSettingChange('PlayerShadowTopOpacity', value)} />
                       <RangeSetting label="شدة الظل السفلي" value={settings.PlayerShadowBottomOpacity} onChange={(value) => handleSettingChange('PlayerShadowBottomOpacity', value)} />
                       <RangeSettingPercentage label="مدى انتشار الظل العلوي (التغطية)" value={settings.PlayerShadowTopCoverage} onChange={(value) => handleSettingChange('PlayerShadowTopCoverage', value)} />
+                      <RangeSettingPercentage label="نقطة التعتيم الكامل للظل العلوي" value={settings.PlayerShadowTopSolid} onChange={(value) => handleSettingChange('PlayerShadowTopSolid', value)} />
                       <RangeSettingPercentage label="مدى انتشار الظل السفلي (التغطية)" value={settings.PlayerShadowBottomCoverage} onChange={(value) => handleSettingChange('PlayerShadowBottomCoverage', value)} />
+                      <RangeSettingPercentage label="نقطة التعتيم الكامل للظل السفلي" value={settings.PlayerShadowBottomSolid} onChange={(value) => handleSettingChange('PlayerShadowBottomSolid', value)} />
                       <NumberSetting label="اختفاء الظل في YouTube بعد" value={settings.YouTubePlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('YouTubePlayerShadowHideDelaySeconds', value)} />
                       <NumberSetting label="اختفاء الظل في Bunny بعد" value={settings.BunnyPlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('BunnyPlayerShadowHideDelaySeconds', value)} />
                       
@@ -882,6 +886,8 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
   const bottom = Math.min(1, Math.max(0, Number(settings.PlayerShadowBottomOpacity || .98)));
   const topCoverage = Math.min(100, Math.max(0, Number(settings.PlayerShadowTopCoverage || 40)));
   const bottomCoverage = Math.min(100, Math.max(0, Number(settings.PlayerShadowBottomCoverage || 38)));
+  const topSolid = Math.min(100, Math.max(0, Number(settings.PlayerShadowTopSolid || 10)));
+  const bottomSolid = Math.min(100, Math.max(0, Number(settings.PlayerShadowBottomSolid || 12)));
 
   const enabledProviders = (settings.EnabledPlayerShadowProviders || '')
     .toLowerCase()
@@ -890,12 +896,11 @@ function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'b
     .filter(Boolean);
   const isShadowEnabled = enabledProviders.includes(provider.toLowerCase());
 
-  const topMid = Math.round(topCoverage * 0.45);
-  const bottomStart = 100 - bottomCoverage;
-  const bottomMid = Math.round(100 - bottomCoverage * 0.58);
+  const effectiveTopSolid = Math.min(topSolid, topCoverage);
+  const effectiveBottomSolid = Math.min(bottomSolid, bottomCoverage);
 
   const backgroundGradient = isShadowEnabled
-    ? `linear-gradient(to bottom, rgba(0,0,0,${top}) 0%, rgba(0,0,0,${top * .6}) ${topMid}%, transparent ${topCoverage}%, transparent ${bottomStart}%, rgba(0,0,0,${bottom * .5}) ${bottomMid}%, rgba(0,0,0,${bottom}) 100%)`
+    ? `linear-gradient(to bottom, rgba(0,0,0,${top}) 0%, rgba(0,0,0,${top}) ${effectiveTopSolid}%, transparent ${topCoverage}%, transparent ${100 - bottomCoverage}%, rgba(0,0,0,${bottom}) ${100 - effectiveBottomSolid}%, rgba(0,0,0,${bottom}) 100%)`
     : 'none';
 
   return <div className="relative aspect-video overflow-hidden rounded-xl bg-black" onMouseMove={() => setShadowVisible(true)}>

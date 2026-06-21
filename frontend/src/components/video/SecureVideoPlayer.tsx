@@ -143,6 +143,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const bunnyShadowDelayMsRef = useRef(5000);
   const [shadowOpacity, setShadowOpacity] = useState({ top: 0.70, bottom: 0.98 });
   const [shadowCoverage, setShadowCoverage] = useState({ top: 40, bottom: 38 });
+  const [shadowSolid, setShadowSolid] = useState({ top: 10, bottom: 12 });
   const [enabledShadowProviders, setEnabledShadowProviders] = useState<string[]>(['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive']);
   const loadingSessionRef = useRef(false);
   const loadingExtraWatchStatusRef = useRef(false);
@@ -169,6 +170,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const topCov = Number(data?.playerShadowTopCoverage ?? data?.PlayerShadowTopCoverage ?? 40);
       const bottomCov = Number(data?.playerShadowBottomCoverage ?? data?.PlayerShadowBottomCoverage ?? 38);
       setShadowCoverage({ top: Math.min(100, Math.max(0, topCov)), bottom: Math.min(100, Math.max(0, bottomCov)) });
+
+      const topSol = Number(data?.playerShadowTopSolid ?? data?.PlayerShadowTopSolid ?? 10);
+      const bottomSol = Number(data?.playerShadowBottomSolid ?? data?.PlayerShadowBottomSolid ?? 12);
+      setShadowSolid({ top: Math.min(100, Math.max(0, topSol)), bottom: Math.min(100, Math.max(0, bottomSol)) });
 
       const providers = data?.enabledPlayerShadowProviders ?? data?.EnabledPlayerShadowProviders;
       if (typeof providers === 'string') {
@@ -1003,7 +1008,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               transition={{ duration: 0.3 }}
               className="pointer-events-none absolute inset-0 z-[80]"
               style={{
-                background: `linear-gradient(to bottom, rgba(0,0,0,${shadowOpacity.top}) 0%, rgba(0,0,0,${shadowOpacity.top * .6}) ${Math.round(shadowCoverage.top * 0.45)}%, transparent ${shadowCoverage.top}%, transparent ${100 - shadowCoverage.bottom}%, rgba(0,0,0,${shadowOpacity.bottom * .5}) ${Math.round(100 - shadowCoverage.bottom * 0.58)}%, rgba(0,0,0,${shadowOpacity.bottom}) 100%)`
+                background: `linear-gradient(to bottom, rgba(0,0,0,${shadowOpacity.top}) 0%, rgba(0,0,0,${shadowOpacity.top}) ${Math.min(shadowSolid.top, shadowCoverage.top)}%, transparent ${shadowCoverage.top}%, transparent ${100 - shadowCoverage.bottom}%, rgba(0,0,0,${shadowOpacity.bottom}) ${100 - Math.min(shadowSolid.bottom, shadowCoverage.bottom)}%, rgba(0,0,0,${shadowOpacity.bottom}) 100%)`
               }}
             />
           )}

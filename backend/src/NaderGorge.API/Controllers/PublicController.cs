@@ -64,7 +64,9 @@ public class PublicController : ControllerBase
             BunnyPlayerShadowHideDelaySeconds = settings.BunnyPlayerShadowHideDelaySeconds,
             PlayerShadowTopCoverage = settings.PlayerShadowTopCoverage,
             PlayerShadowBottomCoverage = settings.PlayerShadowBottomCoverage,
-            EnabledPlayerShadowProviders = settings.EnabledPlayerShadowProviders
+            EnabledPlayerShadowProviders = settings.EnabledPlayerShadowProviders,
+            PlayerShadowTopSolid = settings.PlayerShadowTopSolid,
+            PlayerShadowBottomSolid = settings.PlayerShadowBottomSolid
         });
     }
 
