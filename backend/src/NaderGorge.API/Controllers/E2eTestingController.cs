@@ -636,7 +636,6 @@ public class E2eTestingController : ControllerBase
     private bool UsesE2eDatabase()
     {
         var connectionString = _dbContext.Database.GetConnectionString() ?? string.Empty;
-        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
         return connectionString.Contains("e2e", StringComparison.OrdinalIgnoreCase) ||
                connectionString.Contains("test", StringComparison.OrdinalIgnoreCase);
     }

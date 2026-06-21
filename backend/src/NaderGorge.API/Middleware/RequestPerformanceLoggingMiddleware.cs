@@ -32,9 +32,10 @@ public class RequestPerformanceLoggingMiddleware
             {
                 var method = context.Request.Method;
                 var path = context.Request.Path;
-                var queryString = context.Request.QueryString.ToString();
-                _logger.LogWarning("Slow Request Detected: {Method} {Path}{Query} took {ElapsedMs}ms (Threshold: {Threshold}ms)",
-                    method, path, queryString, elapsedMs, ThresholdMs);
+                // Query strings can contain credentials (for example SignalR's
+                // access_token), so performance logs must only record the path.
+                _logger.LogWarning("Slow Request Detected: {Method} {Path} took {ElapsedMs}ms (Threshold: {Threshold}ms)",
+                    method, path, elapsedMs, ThresholdMs);
             }
         }
     }

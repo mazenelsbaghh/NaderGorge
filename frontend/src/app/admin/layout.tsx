@@ -24,6 +24,7 @@ const ROUTE_PERMISSIONS = [
   { pattern: /^\/admin\/questions(\/|$)/, permissions: ['exams.manage'] },
   { pattern: /^\/admin\/watch-requests(\/|$)/, permissions: ['watch_requests.manage'] },
   { pattern: /^\/admin\/settings(\/|$)/, permissions: ['settings.manage'] },
+  { pattern: /^\/admin\/live-support(\/|$)/, permissions: ['live_support.manage'] },
 ];
 
 function PermissionGuard({ children }: { children: React.ReactNode }) {

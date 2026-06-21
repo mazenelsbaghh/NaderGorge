@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
@@ -9,7 +10,7 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/live-support/admin")]
-[Authorize(Roles = "Admin")]
+[HasPermission("live_support.manage")]
 public sealed class LiveSupportAdminController(ILiveSupportService service) : ControllerBase
 {
     [HttpGet("config")]

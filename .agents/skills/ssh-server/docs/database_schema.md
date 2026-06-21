@@ -647,6 +647,200 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Title` | `string` | `character varying(200)` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
+## Table: `live_support_action_executions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActionKey` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `AuditLogId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `FailureCode` | `string` | `character varying(100)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IdempotencyKey` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `PayloadHash` | `string` | `character varying(64)` | `NO` | ✅ Sync |
+| `SafeRequestJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `SafeResultJson` | `string` | `jsonb` | `YES` | ✅ Sync |
+| `StaffUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StartedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `StudentUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `live_support_assignments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AssignedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `AssignmentSequence` | `int` | `integer` | `NO` | ✅ Sync |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EndReason` | `int?` | `integer` | `YES` | ✅ Sync |
+| `EndedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StaffUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StartedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `TransferReason` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `live_support_attachments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ContentType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsBlocked` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `OriginalFileName` | `string` | `character varying(255)` | `NO` | ✅ Sync |
+| `Sha256` | `string` | `character varying(64)` | `NO` | ✅ Sync |
+| `SizeBytes` | `long` | `bigint` | `NO` | ✅ Sync |
+| `StoragePath` | `string` | `character varying(2048)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UploadedByIdentity` | `string` | `character varying(150)` | `NO` | ✅ Sync |
+
+## Table: `live_support_conversations`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AssignedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CloseReason` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `ClosedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ClosedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CurrentOwnerUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `FirstStaffResponseAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `GuestSessionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LastMessageAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `LinkedStudentUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ParticipantType` | `int` | `integer` | `NO` | ✅ Sync |
+| `PreviousConversationId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `QueuedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `StudentUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Subject` | `string` | `character varying(200)` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `long` | `bigint` | `NO` | ✅ Sync |
+
+## Table: `live_support_events`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActorGuestSessionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ActorUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OccurredAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `RelatedEntityId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `RelatedEntityType` | `string` | `character varying(100)` | `YES` | ✅ Sync |
+| `SafeMetadataJson` | `string` | `jsonb` | `YES` | ✅ Sync |
+| `Sequence` | `long` | `bigint` | `NO` | ✅ Sync |
+| `Type` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `live_support_guest_sessions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedIpHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `DisplayName` | `string` | `character varying(120)` | `NO` | ✅ Sync |
+| `ExpiresAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LastSeenAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `PhoneNumber` | `string` | `character varying(20)` | `NO` | ✅ Sync |
+| `RevokedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `SecurityStampHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UserAgentSummary` | `string` | `character varying(300)` | `YES` | ✅ Sync |
+
+## Table: `live_support_messages`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AttachmentId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ClientMessageId` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `Content` | `string` | `character varying(4000)` | `NO` | ✅ Sync |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SenderGuestSessionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `SenderType` | `int` | `integer` | `NO` | ✅ Sync |
+| `SenderUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `SentAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Type` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `live_support_queue_entries`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DequeueReason` | `string` | `character varying(100)` | `YES` | ✅ Sync |
+| `DequeuedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `EnteredAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Sequence` | `long` | `bigint` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `live_support_ratings`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Comment` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Stars` | `int` | `integer` | `NO` | ✅ Sync |
+| `SubmittedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `SubmittedByGuestSessionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `SubmittedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `live_support_schedule_windows`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DayOfWeek` | `int` | `integer` | `NO` | ✅ Sync |
+| `EndLocalTime` | `TimeOnly` | `time without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `StaffConfigId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StartLocalTime` | `TimeOnly` | `time without time zone` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `live_support_staff_configs`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ConfiguredByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsEnabled` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `LastAssignedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `MaxActiveConversations` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Version` | `long` | `bigint` | `NO` | ✅ Sync |
+
+## Table: `live_support_student_link_history`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ChangedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `ChangedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `NewStudentUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `PreviousStudentUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Reason` | `string` | `character varying(500)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
 ## Table: `media_production_pipelines`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |

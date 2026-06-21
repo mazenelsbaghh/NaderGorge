@@ -190,6 +190,7 @@ const navItems: Array<{
     href: '/admin/live-support',
     label: 'الدعم المباشر',
     icon: Headphones,
+    permission: 'live_support.manage',
   },
   {
     href: '/admin/chat',

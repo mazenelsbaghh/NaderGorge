@@ -29,7 +29,7 @@ public static class Seeder
             { 
                 Name = "Supervisor", 
                 Type = RoleType.Supervisor,
-                PermissionsJson = "[\"users.manage\",\"content.manage\",\"exams.manage\",\"codes.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"hr.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"media.manage\",\"finance.manage\",\"reports.manage\"]"
+                PermissionsJson = "[\"users.manage\",\"content.manage\",\"exams.manage\",\"codes.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"hr.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"media.manage\",\"finance.manage\",\"reports.manage\",\"live_support.manage\"]"
             },
             new Role 
             { 
