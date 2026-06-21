@@ -21,6 +21,8 @@ using StackExchange.Redis;
 using NaderGorge.API.Hubs;
 using NaderGorge.API.BackgroundServices;
 using NaderGorge.API.Services;
+using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.API.Authorization;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
@@ -97,6 +99,14 @@ builder.Services.AddScoped<AcademicValidationService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
 builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
 builder.Services.AddScoped<IContentImageStorage, ContentImageStorage>();
+builder.Services.AddScoped<ILiveSupportService, LiveSupportService>();
+builder.Services.AddScoped<ILiveSupportActionService, LiveSupportActionService>();
+builder.Services.AddScoped<ILiveSupportActionExecutor>(sp => sp.GetRequiredService<ILiveSupportActionService>());
+builder.Services.AddScoped<ILiveSupportAssignmentCoordinator>(sp => (ILiveSupportAssignmentCoordinator)sp.GetRequiredService<ILiveSupportService>());
+builder.Services.AddScoped<ILiveSupportGuestSessionService, LiveSupportGuestSessionService>();
+builder.Services.AddScoped<ILiveSupportEventWriter, NaderGorge.Application.Features.LiveSupport.Services.LiveSupportEventWriter>();
+builder.Services.AddSingleton<ILiveSupportAttachmentStorage, LiveSupportAttachmentStorage>();
+builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddSignalR()
     .AddStackExchangeRedis(redisConnectionString ?? "localhost:6379,abortConnect=false", options =>
@@ -104,6 +114,7 @@ builder.Services.AddSignalR()
         options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("MassarSignalR");
     });
 builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
+builder.Services.AddHostedService<LiveSupportRecoveryBackgroundService>();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -140,6 +151,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization(options =>
 {
+    options.AddLiveSupportPolicies();
     options.AddPolicy("RequireAssistantReviewer", policy =>
         policy.RequireRole("Admin", "Assistant", "AssistantReviewer", "Staff"));
 
@@ -219,6 +231,7 @@ app.UseMiddleware<RedisRateLimitingMiddleware>();
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
 app.MapHub<PlatformHub>("/hubs/platform");
+app.MapHub<LiveSupportHub>("/hubs/live-support");
 
 if (app.Environment.EnvironmentName != "E2e")
 {

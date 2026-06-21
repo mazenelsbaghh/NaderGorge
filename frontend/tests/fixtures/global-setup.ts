@@ -16,6 +16,7 @@ async function globalSetup() {
           seedStudents: true,
           seedTeacher: true,
           seedAssistant: true,
+          seedLiveSupport: true,
         }),
       });
 

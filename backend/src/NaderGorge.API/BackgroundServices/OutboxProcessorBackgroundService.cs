@@ -10,15 +10,18 @@ public class OutboxProcessorBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHubContext<PlatformHub> _hubContext;
+    private readonly IHubContext<LiveSupportHub>? _liveSupportHub;
     private readonly ILogger<OutboxProcessorBackgroundService> _logger;
 
     public OutboxProcessorBackgroundService(
         IServiceScopeFactory scopeFactory,
         IHubContext<PlatformHub> hubContext,
-        ILogger<OutboxProcessorBackgroundService> logger)
+        ILogger<OutboxProcessorBackgroundService> logger,
+        IHubContext<LiveSupportHub>? liveSupportHub = null)
     {
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
+        _liveSupportHub = liveSupportHub;
         _logger = logger;
     }
 
@@ -88,7 +91,14 @@ public class OutboxProcessorBackgroundService : BackgroundService
             {
                 try
                 {
-                    if (!string.IsNullOrEmpty(@event.TargetUserId))
+                    if (IsLiveSupportEvent(@event))
+                    {
+                        if (!IsAllowedLiveSupportGroup(@event.TargetGroup))
+                            throw new InvalidOperationException("Rejected unsafe live-support outbox target.");
+                        if (_liveSupportHub is null) throw new InvalidOperationException("Live-support hub dispatcher is unavailable.");
+                        await _liveSupportHub.Clients.Group(@event.TargetGroup!).SendAsync(@event.Type, @event.PayloadJson, cancellationToken);
+                    }
+                    else if (!string.IsNullOrEmpty(@event.TargetUserId))
                     {
                         await _hubContext.Clients.Group($"User_{@event.TargetUserId}")
                             .SendAsync(@event.Type, @event.PayloadJson, cancellationToken);
@@ -139,4 +149,7 @@ public class OutboxProcessorBackgroundService : BackgroundService
             throw;
         }
     }
+
+    internal static bool IsLiveSupportEvent(OutboxEvent value) => value.Type.StartsWith("LiveSupport", StringComparison.Ordinal) || value.TargetGroup?.StartsWith("LiveSupport:", StringComparison.Ordinal) == true;
+    internal static bool IsAllowedLiveSupportGroup(string? group) => group == "LiveSupport:Admins" || group == "LiveSupport:Queue" || group?.StartsWith("LiveSupport:Conversation:", StringComparison.Ordinal) == true || group?.StartsWith("LiveSupport:Participant:", StringComparison.Ordinal) == true || group?.StartsWith("LiveSupport:Staff:", StringComparison.Ordinal) == true;
 }

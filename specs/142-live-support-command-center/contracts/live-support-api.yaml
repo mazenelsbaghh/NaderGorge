@@ -1,0 +1,537 @@
+openapi: 3.1.0
+info:
+  title: Massar Live Support API
+  version: 1.0.0
+  description: Contract for participant, staff, admin, and student-action live support workflows.
+servers:
+  - url: /api
+tags:
+  - name: Participant
+  - name: Staff
+  - name: Admin
+  - name: Actions
+security:
+  - bearerAuth: []
+paths:
+  /live-support/availability:
+    get:
+      tags: [Participant]
+      security: []
+      summary: Get whether a new conversation may start and the next scheduled availability.
+      responses:
+        '200':
+          description: Availability snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseAvailability'
+
+  /live-support/guest/session:
+    post:
+      tags: [Participant]
+      security: []
+      summary: Create or resume a limited guest support session and set the secure support cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGuestSessionRequest'
+      responses:
+        '201': { description: Guest support session created; no student match data returned. }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /live-support/participant/conversations:
+    get:
+      tags: [Participant]
+      summary: List the current participant's support history using Student JWT or guest support cookie.
+      responses:
+        '200':
+          description: Conversation summaries.
+    post:
+      tags: [Participant]
+      summary: Start one new conversation when support is available and no open conversation exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+      responses:
+        '201':
+          description: Conversation created and either assigned or queued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseConversation'
+        '409': { description: Open conversation already exists or support state changed. }
+        '423': { description: No checked-in support staff; includes next availability. }
+        '429': { $ref: '#/components/responses/RateLimited' }
+
+  /live-support/participant/conversations/{conversationId}:
+    get:
+      tags: [Participant]
+      summary: Get participant-authorized conversation state.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200':
+          description: Conversation snapshot.
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /live-support/participant/conversations/{conversationId}/messages:
+    get:
+      tags: [Participant]
+      summary: Cursor-page authorized messages.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200': { description: Message page ordered oldest-to-newest for display. }
+    post:
+      tags: [Participant]
+      summary: Persist one idempotent participant message; closed conversations reject sends.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Durable message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMessage'
+        '409': { description: Conversation closed/abandoned or client ID reused with different content. }
+
+  /live-support/participant/conversations/{conversationId}/attachments:
+    post:
+      tags: [Participant]
+      summary: Upload an allowlisted attachment before sending its message.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '201': { description: Attachment metadata and ID. }
+        '413': { description: File exceeds the type-specific limit. }
+        '415': { description: Unsupported media type. }
+
+  /live-support/participant/conversations/{conversationId}/abandon:
+    post:
+      tags: [Participant]
+      summary: Abandon a waiting/active conversation and release its queue/assignment state.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200': { description: Conversation is terminal Abandoned. }
+        '409': { description: Conversation already terminal. }
+
+  /live-support/participant/conversations/{conversationId}/rating:
+    post:
+      tags: [Participant]
+      summary: Submit the single immutable 1–5 rating for a closed conversation.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitRatingRequest'
+      responses:
+        '201': { description: Rating stored. }
+        '409': { description: Conversation not closed or already rated. }
+
+  /live-support/staff/bootstrap:
+    get:
+      tags: [Staff]
+      summary: Return attendance eligibility, config, active load, owned conversations, and queue summary.
+      responses:
+        '200': { description: Staff command-center bootstrap. }
+        '403': { description: Staff is not support-enabled or lacks employee profile. }
+
+  /live-support/staff/conversations:
+    get:
+      tags: [Staff]
+      summary: List owned/available historical conversations with filters and cursor pagination.
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string, maxLength: 120 } }
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200': { description: Staff-authorized conversation page. }
+
+  /live-support/staff/conversations/{conversationId}/snapshot:
+    get:
+      tags: [Staff]
+      summary: Return conversation, messages cursor, link, action catalog, and lazy student summary for current owner/admin.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200': { description: Command-center snapshot. }
+        '403': { description: Caller is neither current owner nor admin. }
+
+  /live-support/staff/conversations/{conversationId}/messages:
+    post:
+      tags: [Staff]
+      summary: Persist one idempotent message from current owner/admin.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201': { description: Durable staff message. }
+        '403': { description: Not owner/admin. }
+        '409': { description: Terminal conversation or conflicting client message ID. }
+
+  /live-support/staff/conversations/{conversationId}/transfer:
+    post:
+      tags: [Staff]
+      summary: Transfer to one eligible target staff member or return to automatic routing.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferConversationRequest'
+      responses:
+        '200': { description: New assignment or waiting state. }
+        '409': { description: Target unavailable/full or ownership changed. }
+
+  /live-support/staff/conversations/{conversationId}/close:
+    post:
+      tags: [Staff]
+      summary: Close current conversation, release capacity, and assign the oldest waiting conversation atomically.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseConversationRequest'
+      responses:
+        '200': { description: Closed conversation and optional newly assigned conversation summary. }
+        '409': { description: Ownership changed, terminal, or pending action blocks closure. }
+
+  /live-support/staff/conversations/{conversationId}/student-link:
+    post:
+      tags: [Staff]
+      summary: Link, replace, or unlink the conversation's student after confirmation.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeStudentLinkRequest'
+      responses:
+        '200': { description: Updated link and refreshed student summary. }
+        '409': { description: Ownership/link version changed. }
+
+  /live-support/staff/student-search:
+    get:
+      tags: [Staff]
+      summary: Search students after staff initiates manual verification; never called automatically from guest phone.
+      parameters:
+        - { name: query, in: query, required: true, schema: { type: string, minLength: 3, maxLength: 120 } }
+      responses:
+        '200': { description: Minimal candidates: ID, name, masked phone, code, grade. }
+
+  /live-support/staff/conversations/{conversationId}/student-context:
+    get:
+      tags: [Staff]
+      summary: Get complete linked-student read model lazily by sections.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - { name: sections, in: query, schema: { type: string, description: Comma-separated approved section keys. } }
+      responses:
+        '200': { description: Student context sections. }
+        '409': { description: No linked student. }
+
+  /live-support/staff/conversations/{conversationId}/actions/catalog:
+    get:
+      tags: [Actions]
+      summary: Return stable action metadata and current enabled/disabled reasons for the linked student.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200': { description: Action catalog. }
+
+  /live-support/staff/conversations/{conversationId}/actions/{actionKey}:
+    post:
+      tags: [Actions]
+      summary: Execute one typed, confirmed, idempotent student action.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - { name: actionKey, in: path, required: true, schema: { type: string, maxLength: 100 } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteActionRequest'
+      responses:
+        '200': { description: Idempotent action result with refreshed section keys. }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '403': { description: Not current owner/admin or staff no longer checked in. }
+        '409': { description: Link/assignment/confirmation version conflict or idempotency key payload mismatch. }
+
+  /live-support/admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Current staff, capacity, queue, active conversations, SLA warnings, and aggregate metrics.
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200': { description: Operations dashboard. }
+
+  /live-support/admin/conversations:
+    get:
+      tags: [Admin]
+      summary: Search/filter all current and historical conversations.
+      responses:
+        '200': { description: Cursor-paged admin conversation results. }
+
+  /live-support/admin/conversations/{conversationId}/timeline:
+    get:
+      tags: [Admin]
+      summary: Get immutable lifecycle timeline, messages, assignments, actions, links, metrics, and rating.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      responses:
+        '200': { description: Investigation timeline. }
+
+  /live-support/admin/staff-config:
+    get:
+      tags: [Admin]
+      summary: List support-enabled employees, capacities, schedules, attendance and current load.
+      responses:
+        '200': { description: Staff configuration list. }
+
+  /live-support/admin/staff-config/{userId}:
+    put:
+      tags: [Admin]
+      summary: Enable/disable support, set capacity, and replace weekly schedule atomically.
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStaffConfigRequest'
+      responses:
+        '200': { description: Updated config and effective eligibility. }
+        '409': { description: Version conflict or overlapping schedule. }
+
+  /live-support/admin/conversations/{conversationId}/intervene:
+    post:
+      tags: [Admin]
+      summary: Reassign, return to queue, or close with mandatory reason and distinct audit event.
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminInterventionRequest'
+      responses:
+        '200': { description: Updated conversation state. }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    guestSupportCookie:
+      type: apiKey
+      in: cookie
+      name: massar_support_guest
+  parameters:
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+  responses:
+    ValidationError:
+      description: Stable validation errors; no stack traces.
+    Forbidden:
+      description: Caller does not own/participate in the conversation.
+    NotFound:
+      description: Resource not found without cross-tenant disclosure.
+    RateLimited:
+      description: Retry-After included.
+  schemas:
+    CreateGuestSessionRequest:
+      type: object
+      additionalProperties: false
+      required: [displayName, phoneNumber]
+      properties:
+        displayName: { type: string, minLength: 2, maxLength: 120 }
+        phoneNumber: { type: string, minLength: 8, maxLength: 20 }
+    CreateConversationRequest:
+      type: object
+      additionalProperties: false
+      required: [clientRequestId, firstMessage]
+      properties:
+        clientRequestId: { type: string, format: uuid }
+        subject: { type: string, maxLength: 200 }
+        firstMessage: { type: string, minLength: 1, maxLength: 5000 }
+        previousConversationId: { type: string, format: uuid }
+    SendMessageRequest:
+      type: object
+      additionalProperties: false
+      required: [clientMessageId, type]
+      properties:
+        clientMessageId: { type: string, format: uuid }
+        type: { type: string, enum: [Text, Image, Pdf, Audio] }
+        content: { type: string, maxLength: 5000 }
+        attachmentId: { type: string, format: uuid }
+    SubmitRatingRequest:
+      type: object
+      additionalProperties: false
+      required: [stars]
+      properties:
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 1000 }
+    TransferConversationRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        targetStaffUserId: { type: string, format: uuid, description: Omit to return to automatic routing. }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+        expectedAssignmentId: { type: string, format: uuid }
+    CloseConversationRequest:
+      type: object
+      additionalProperties: false
+      required: [resolution, expectedAssignmentId]
+      properties:
+        resolution: { type: string, minLength: 3, maxLength: 500 }
+        expectedAssignmentId: { type: string, format: uuid }
+    ChangeStudentLinkRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, reason, expectedConversationVersion]
+      properties:
+        operation: { type: string, enum: [Link, Replace, Unlink] }
+        studentUserId: { type: string, format: uuid }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+        expectedConversationVersion: { type: integer, format: int64 }
+    ExecuteActionRequest:
+      type: object
+      additionalProperties: false
+      required: [confirmationVersion, payload]
+      properties:
+        confirmationVersion: { type: string, maxLength: 100 }
+        payload: { type: object }
+    UpdateStaffConfigRequest:
+      type: object
+      additionalProperties: false
+      required: [isEnabled, maxActiveConversations, schedule, expectedVersion]
+      properties:
+        isEnabled: { type: boolean }
+        maxActiveConversations: { type: integer, minimum: 1, maximum: 50 }
+        expectedVersion: { type: integer, format: int64 }
+        schedule:
+          type: array
+          items:
+            type: object
+            required: [dayOfWeek, startLocalTime, endLocalTime]
+            properties:
+              dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+              startLocalTime: { type: string, format: time }
+              endLocalTime: { type: string, format: time }
+    AdminInterventionRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, reason]
+      properties:
+        operation: { type: string, enum: [Reassign, ReturnToQueue, Close, Abandon] }
+        targetStaffUserId: { type: string, format: uuid }
+        reason: { type: string, minLength: 3, maxLength: 500 }
+    Availability:
+      type: object
+      required: [canStart, checkedInStaffCount]
+      properties:
+        canStart: { type: boolean }
+        checkedInStaffCount: { type: integer, minimum: 0 }
+        nextAvailableAt: { type: string, format: date-time }
+        message: { type: string }
+    Conversation:
+      type: object
+      required: [id, status, participantType, createdAt, version]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [Waiting, Assigned, Active, Closed, Abandoned] }
+        participantType: { type: string, enum: [Student, Guest] }
+        queuePosition: { type: integer, minimum: 1 }
+        currentOwnerName: { type: string }
+        createdAt: { type: string, format: date-time }
+        version: { type: integer, format: int64 }
+    Message:
+      type: object
+      required: [id, conversationId, senderType, type, sentAt]
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        senderType: { type: string }
+        senderName: { type: string }
+        type: { type: string }
+        content: { type: string }
+        attachmentId: { type: string, format: uuid }
+        sentAt: { type: string, format: date-time }
+    ApiResponseAvailability:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/Availability' }
+    ApiResponseConversation:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/Conversation' }
+    ApiResponseMessage:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean }
+        data: { $ref: '#/components/schemas/Message' }

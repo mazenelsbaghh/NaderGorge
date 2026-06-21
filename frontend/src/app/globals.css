@@ -299,6 +299,45 @@ html[data-student-theme-surface="student"] [data-slot="sheet-overlay"] {
   background: color-mix(in srgb, var(--admin-bg) 28%, black);
 }
 
+.secure-video-fullscreen-surface:fullscreen,
+.secure-video-fullscreen-surface:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+  background: #000;
+}
+
+.secure-video-pseudo-fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+}
+
+body:has(.secure-video-pseudo-fullscreen) {
+  overflow: hidden !important;
+}
+
+body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen) {
+  overflow: visible !important;
+  transform: none !important;
+  filter: none !important;
+  perspective: none !important;
+  contain: none !important;
+}
+
+.secure-video-pseudo-fullscreen .secure-video-fullscreen-surface {
+  height: 100vh !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  aspect-ratio: auto !important;
+  border-radius: 0 !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

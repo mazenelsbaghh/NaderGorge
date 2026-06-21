@@ -18,6 +18,7 @@ import {
   Shield,
   Star,
   BookOpen,
+  Headphones,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -31,6 +32,7 @@ type AssistantShellRoute =
   | '/assistant/tasks'
   | '/assistant/crm'
   | '/assistant/chat'
+  | '/assistant/live-support'
   | '/assistant/attendance'
   | '/assistant/vacations'
   | '/assistant/notifications'
@@ -95,6 +97,11 @@ const navItems: Array<{
     label: 'الكول سنتر (CRM)',
     icon: PhoneCall,
     permission: 'crm.manage',
+  },
+  {
+    href: '/assistant/live-support',
+    label: 'الدعم المباشر',
+    icon: Headphones,
   },
   {
     href: '/assistant/chat',

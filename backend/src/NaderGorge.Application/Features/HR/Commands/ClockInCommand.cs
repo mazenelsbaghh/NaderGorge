@@ -93,6 +93,15 @@ public class ClockInCommandHandler : IRequestHandler<ClockInCommand, ApiResponse
         };
 
         _db.AttendanceLogs.Add(attendanceLog);
+        if (await _db.LiveSupportStaffConfigs.AnyAsync(x => x.UserId == request.UserId && x.IsEnabled, ct))
+        {
+            _db.OutboxEvents.Add(new OutboxEvent
+            {
+                Type = "LiveSupportEvent",
+                TargetGroup = $"LiveSupport:Staff:{request.UserId:N}",
+                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { eventId = Guid.NewGuid(), occurredAt = nowUtc, type = "StaffEligibilityChanged", payload = new { userId = request.UserId, checkedIn = true } })
+            });
+        }
         await _db.SaveChangesAsync(ct);
 
         return ApiResponse<Guid>.Ok(attendanceLog.Id);

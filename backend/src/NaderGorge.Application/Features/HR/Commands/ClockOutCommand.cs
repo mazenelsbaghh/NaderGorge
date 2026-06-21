@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Features.LiveSupport.Interfaces;
 
 namespace NaderGorge.Application.Features.HR.Commands;
 
@@ -21,10 +22,12 @@ public class ClockOutCommandValidator : AbstractValidator<ClockOutCommand>
 public class ClockOutCommandHandler : IRequestHandler<ClockOutCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ILiveSupportService? _liveSupport;
 
-    public ClockOutCommandHandler(IAppDbContext db)
+    public ClockOutCommandHandler(IAppDbContext db, ILiveSupportService? liveSupport = null)
     {
         _db = db;
+        _liveSupport = liveSupport;
     }
 
     public async Task<ApiResponse<Guid>> Handle(ClockOutCommand request, CancellationToken ct)
@@ -48,6 +51,10 @@ public class ClockOutCommandHandler : IRequestHandler<ClockOutCommand, ApiRespon
         activeLog.ClockOut = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+        if (_liveSupport is not null)
+        {
+            await _liveSupport.ReleaseStaffAssignmentsAsync(request.UserId, NaderGorge.Domain.Enums.LiveSupportAssignmentEndReason.AttendanceCheckout, ct);
+        }
 
         return ApiResponse<Guid>.Ok(activeLog.Id);
     }

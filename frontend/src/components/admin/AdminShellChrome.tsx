@@ -28,6 +28,7 @@ import {
   Users,
   ChevronDown,
   ArrowRight,
+  Headphones,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -68,7 +69,8 @@ type AdminShellRoute =
   | '/admin/crm'
   | '/assistant/crm'
   | '/admin/reports'
-  | '/admin/media';
+  | '/admin/media'
+  | '/admin/live-support';
 
 type AdminShellChromeProps = {
   activePath: AdminShellRoute;
@@ -183,6 +185,11 @@ const navItems: Array<{
     label: 'المالية والرواتب',
     icon: Coins,
     permission: 'users.manage',
+  },
+  {
+    href: '/admin/live-support',
+    label: 'الدعم المباشر',
+    icon: Headphones,
   },
   {
     href: '/admin/chat',

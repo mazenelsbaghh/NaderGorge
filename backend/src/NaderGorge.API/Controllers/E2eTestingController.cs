@@ -4,6 +4,7 @@ using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Enums;
 using NaderGorge.API.Configuration;
+using NaderGorge.Domain.Entities.LiveSupport;
 
 namespace NaderGorge.API.Controllers;
 
@@ -243,6 +244,41 @@ public class E2eTestingController : ControllerBase
             }
 
             await _dbContext.SaveChangesAsync();
+
+            if (request.SeedLiveSupport)
+            {
+                var admin = await _dbContext.Set<User>().SingleAsync(x => x.PhoneNumber == "20000000000");
+                var student = await _dbContext.Set<User>().SingleAsync(x => x.PhoneNumber == "20000000001");
+                if (!await _dbContext.Set<StudentProfile>().AnyAsync(x => x.UserId == student.Id))
+                    _dbContext.Set<StudentProfile>().Add(new StudentProfile { UserId = student.Id, StudentCode = "E2E-LS-001" });
+                var supportUsers = new List<User>();
+                foreach (var (phone, name) in new[] { ("20000000003", "E2E Support A"), ("20000000006", "E2E Support B"), ("20000000007", "E2E Support C") })
+                {
+                    var user = await _dbContext.Set<User>().FirstOrDefaultAsync(x => x.PhoneNumber == phone);
+                    if (user is null)
+                    {
+                        user = new User { FullName = name, PhoneNumber = phone, PasswordHash = HashPassword("password"), IsActive = true, IsProfileComplete = true };
+                        _dbContext.Set<User>().Add(user);
+                        _dbContext.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = assistantRole.Id });
+                    }
+                    supportUsers.Add(user);
+                }
+                await _dbContext.SaveChangesAsync();
+                foreach (var user in supportUsers)
+                {
+                    var employee = await _dbContext.Set<EmployeeProfile>().FirstOrDefaultAsync(x => x.UserId == user.Id);
+                    if (employee is null) { employee = new EmployeeProfile { UserId = user.Id, BasicSalary = 1 }; _dbContext.Set<EmployeeProfile>().Add(employee); await _dbContext.SaveChangesAsync(); }
+                    var config = await _dbContext.Set<LiveSupportStaffConfig>().FirstOrDefaultAsync(x => x.UserId == user.Id);
+                    if (config is null) { config = new LiveSupportStaffConfig { UserId = user.Id, IsEnabled = true, MaxActiveConversations = user.PhoneNumber.EndsWith("03") ? 1 : 2, ConfiguredByUserId = admin.Id, Version = 1 }; _dbContext.Set<LiveSupportStaffConfig>().Add(config); }
+                    if (!await _dbContext.Set<AttendanceLog>().AnyAsync(x => x.EmployeeId == employee.Id && x.ClockOut == null))
+                        _dbContext.Set<AttendanceLog>().Add(new AttendanceLog { EmployeeId = employee.Id, Date = DateOnly.FromDateTime(DateTime.UtcNow), ClockIn = DateTime.UtcNow, Status = AttendanceStatus.Present, IpAddress = "e2e", UserAgent = "e2e" });
+                    if (!await _dbContext.Set<LiveSupportScheduleWindow>().AnyAsync(x => x.StaffConfigId == config.Id))
+                        _dbContext.Set<LiveSupportScheduleWindow>().Add(new LiveSupportScheduleWindow { StaffConfigId = config.Id, DayOfWeek = (int)DateTime.UtcNow.DayOfWeek, StartLocalTime = new TimeOnly(0, 1), EndLocalTime = new TimeOnly(23, 59) });
+                }
+                var enabled = await _dbContext.Set<PlatformSetting>().FirstOrDefaultAsync(x => x.Key == "LiveSupportEnabled");
+                if (enabled is null) _dbContext.Set<PlatformSetting>().Add(new PlatformSetting { Key = "LiveSupportEnabled", Value = "true" }); else enabled.Value = "true";
+                await _dbContext.SaveChangesAsync();
+            }
         }
 
         var users = await _dbContext.Set<User>()
@@ -608,6 +644,7 @@ public class SeedRequest
     public bool SeedStudents { get; set; }
     public bool SeedAssistant { get; set; }
     public bool SeedTeacher { get; set; }
+    public bool SeedLiveSupport { get; set; }
 }
 
 public class ClearDevicesRequest

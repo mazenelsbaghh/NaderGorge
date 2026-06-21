@@ -19,7 +19,8 @@ public sealed record CachedPlatformSettings(
     bool MaintenanceMode,
     string MaintenanceMessage,
     decimal BunnyStreamStorageRateUsdPerGb,
-    decimal BunnyStreamBandwidthRateUsdPerGb
+    decimal BunnyStreamBandwidthRateUsdPerGb,
+    bool LiveSupportEnabled
 )
 {
     public static CachedPlatformSettings Default { get; } = new(
@@ -37,7 +38,8 @@ public sealed record CachedPlatformSettings(
         false,
         "المنصة في أعمال الصيانة حالياً، سنعود قريباً.",
         0.01m,
-        0.005m
+        0.005m,
+        false
     );
 }
 
@@ -85,7 +87,8 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
                 GetBool(settings, PlatformSettingKeys.MaintenanceMode, CachedPlatformSettings.Default.MaintenanceMode),
                 GetString(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage),
                 GetDecimal(settings, PlatformSettingKeys.BunnyStreamStorageRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamStorageRateUsdPerGb, minValue: 0m),
-                GetDecimal(settings, PlatformSettingKeys.BunnyStreamBandwidthRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamBandwidthRateUsdPerGb, minValue: 0m)
+                GetDecimal(settings, PlatformSettingKeys.BunnyStreamBandwidthRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamBandwidthRateUsdPerGb, minValue: 0m),
+                GetBool(settings, PlatformSettingKeys.LiveSupportEnabled, CachedPlatformSettings.Default.LiveSupportEnabled)
             );
         })!;
     }

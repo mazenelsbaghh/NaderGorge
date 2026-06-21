@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NaderGorge.Application.Tests", "tests\NaderGorge.Application.Tests\NaderGorge.Application.Tests.csproj", "{DF1F83FB-97AA-47CF-A6F7-F7A86C6FBBA4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NaderGorge.Integration.Tests", "tests\NaderGorge.Integration.Tests\NaderGorge.Integration.Tests.csproj", "{14214214-2142-4214-8214-142142142142}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,10 @@ Global
 		{DF1F83FB-97AA-47CF-A6F7-F7A86C6FBBA4}.Release|x64.Build.0 = Release|Any CPU
 		{DF1F83FB-97AA-47CF-A6F7-F7A86C6FBBA4}.Release|x86.ActiveCfg = Release|Any CPU
 		{DF1F83FB-97AA-47CF-A6F7-F7A86C6FBBA4}.Release|x86.Build.0 = Release|Any CPU
+		{14214214-2142-4214-8214-142142142142}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14214214-2142-4214-8214-142142142142}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14214214-2142-4214-8214-142142142142}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14214214-2142-4214-8214-142142142142}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,5 +103,6 @@ Global
 		{976EBA77-BE88-401F-BF72-B7A4F1F9E90F} = {86FB8B84-E2BE-4ED7-B12A-2539E6D0FBC8}
 		{33F94C9B-57E2-4580-B48C-8A4C26C550D0} = {86FB8B84-E2BE-4ED7-B12A-2539E6D0FBC8}
 		{DF1F83FB-97AA-47CF-A6F7-F7A86C6FBBA4} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{14214214-2142-4214-8214-142142142142} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

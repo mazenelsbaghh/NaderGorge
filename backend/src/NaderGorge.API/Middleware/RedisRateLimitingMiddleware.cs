@@ -24,7 +24,9 @@ public class RedisRateLimitingMiddleware
         { "sign-download", (10, TimeSpan.FromMinutes(1), true) },
         { "public-whatsapp", (12, TimeSpan.FromMinutes(1), false) },
         { "public-forms", (20, TimeSpan.FromMinutes(1), false) },
-        { "parent-report", (30, TimeSpan.FromMinutes(1), false) }
+        { "parent-report", (30, TimeSpan.FromMinutes(1), false) },
+        { "live-support-public", (20, TimeSpan.FromMinutes(1), false) },
+        { "live-support-action", (30, TimeSpan.FromMinutes(1), true) }
     };
 
     public RedisRateLimitingMiddleware(RequestDelegate next, IConnectionMultiplexer redis)
@@ -103,8 +105,9 @@ public class RedisRateLimitingMiddleware
         {
             context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
             context.Response.ContentType = "application/json";
+            context.Response.Headers.RetryAfter = Math.Max(1, (int)window.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
             
-            var response = new { Message = "طلبات كثيرة في وقت قصير. انتظر لحظات ثم حاول مرة أخرى." };
+            var response = new { Code = "RATE_LIMITED", Message = "طلبات كثيرة في وقت قصير. انتظر لحظات ثم حاول مرة أخرى.", RetryAfterSeconds = (int)window.TotalSeconds };
             await context.Response.WriteAsync(JsonSerializer.Serialize(response));
             return;
         }

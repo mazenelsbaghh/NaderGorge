@@ -8,6 +8,7 @@ using NaderGorge.Domain.Entities.Gamification;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Entities.Student;
+using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Data;
@@ -108,6 +109,20 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<ChatParticipant> ChatParticipants => Set<ChatParticipant>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<ChatMessageReadState> ChatMessageReadStates => Set<ChatMessageReadState>();
+
+    // Live Support Command Center
+    public DbSet<LiveSupportConversation> LiveSupportConversations => Set<LiveSupportConversation>();
+    public DbSet<LiveSupportGuestSession> LiveSupportGuestSessions => Set<LiveSupportGuestSession>();
+    public DbSet<LiveSupportStaffConfig> LiveSupportStaffConfigs => Set<LiveSupportStaffConfig>();
+    public DbSet<LiveSupportScheduleWindow> LiveSupportScheduleWindows => Set<LiveSupportScheduleWindow>();
+    public DbSet<LiveSupportQueueEntry> LiveSupportQueueEntries => Set<LiveSupportQueueEntry>();
+    public DbSet<LiveSupportAssignment> LiveSupportAssignments => Set<LiveSupportAssignment>();
+    public DbSet<LiveSupportMessage> LiveSupportMessages => Set<LiveSupportMessage>();
+    public DbSet<LiveSupportAttachment> LiveSupportAttachments => Set<LiveSupportAttachment>();
+    public DbSet<LiveSupportStudentLinkHistory> LiveSupportStudentLinkHistories => Set<LiveSupportStudentLinkHistory>();
+    public DbSet<LiveSupportEvent> LiveSupportEvents => Set<LiveSupportEvent>();
+    public DbSet<LiveSupportActionExecution> LiveSupportActionExecutions => Set<LiveSupportActionExecution>();
+    public DbSet<LiveSupportRating> LiveSupportRatings => Set<LiveSupportRating>();
 
     // Phase 6: Call Center CRM
     public DbSet<CrmStudentStatus> CrmStudentStatuses => Set<CrmStudentStatus>();
@@ -1033,6 +1048,8 @@ public class AppDbContext : DbContext, IAppDbContext
              .OnDelete(DeleteBehavior.Cascade);
         });
 
+        ConfigureLiveSupport(modelBuilder);
+
         // CrmStudentStatus
         modelBuilder.Entity<CrmStudentStatus>(e =>
         {
@@ -1236,6 +1253,167 @@ public class AppDbContext : DbContext, IAppDbContext
 
             e.HasIndex(m => m.MetricName);
             e.HasIndex(m => m.CreatedAt);
+        });
+    }
+
+    private static void ConfigureLiveSupport(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<LiveSupportConversation>(e =>
+        {
+            e.ToTable("live_support_conversations", table =>
+                table.HasCheckConstraint("CK_live_support_conversation_identity", "(\"ParticipantType\" = 0 AND \"StudentUserId\" IS NOT NULL AND \"GuestSessionId\" IS NULL) OR (\"ParticipantType\" = 1 AND \"GuestSessionId\" IS NOT NULL AND \"StudentUserId\" IS NULL)"));
+            e.Property(x => x.ParticipantType).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.CloseReason).HasMaxLength(500);
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.StudentUserId).IsUnique().HasFilter("\"StudentUserId\" IS NOT NULL AND \"Status\" IN (0, 1, 2)");
+            e.HasIndex(x => x.GuestSessionId).IsUnique().HasFilter("\"GuestSessionId\" IS NOT NULL AND \"Status\" IN (0, 1, 2)");
+            e.HasIndex(x => new { x.Status, x.QueuedAt, x.Id });
+            e.HasIndex(x => new { x.CurrentOwnerUserId, x.Status });
+            e.HasIndex(x => new { x.LinkedStudentUserId, x.CreatedAt });
+            e.HasIndex(x => x.LastMessageAt);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StudentUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.GuestSessionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.LinkedStudentUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.PreviousConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CurrentOwnerUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ClosedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportGuestSession>(e =>
+        {
+            e.ToTable("live_support_guest_sessions");
+            e.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
+            e.Property(x => x.PhoneNumber).HasMaxLength(20).IsRequired();
+            e.Property(x => x.SecurityStampHash).HasMaxLength(128).IsRequired();
+            e.Property(x => x.CreatedIpHash).HasMaxLength(128).IsRequired();
+            e.Property(x => x.UserAgentSummary).HasMaxLength(300);
+            e.HasIndex(x => new { x.PhoneNumber, x.CreatedAt });
+            e.HasIndex(x => x.ExpiresAt);
+            e.HasIndex(x => x.RevokedAt);
+        });
+
+        modelBuilder.Entity<LiveSupportStaffConfig>(e =>
+        {
+            e.ToTable("live_support_staff_configs", table =>
+                table.HasCheckConstraint("CK_live_support_staff_capacity", "\"MaxActiveConversations\" BETWEEN 1 AND 50"));
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.UserId).IsUnique();
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ConfiguredByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportScheduleWindow>(e =>
+        {
+            e.ToTable("live_support_schedule_windows", table =>
+            {
+                table.HasCheckConstraint("CK_live_support_schedule_day", "\"DayOfWeek\" BETWEEN 0 AND 6");
+                table.HasCheckConstraint("CK_live_support_schedule_time", "\"StartLocalTime\" < \"EndLocalTime\"");
+            });
+            e.HasIndex(x => new { x.StaffConfigId, x.DayOfWeek, x.StartLocalTime, x.EndLocalTime }).IsUnique();
+            e.HasOne<LiveSupportStaffConfig>().WithMany().HasForeignKey(x => x.StaffConfigId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LiveSupportQueueEntry>(e =>
+        {
+            e.ToTable("live_support_queue_entries");
+            e.Property(x => x.DequeueReason).HasMaxLength(100);
+            e.HasIndex(x => x.ConversationId).IsUnique().HasFilter("\"DequeuedAt\" IS NULL");
+            e.HasIndex(x => new { x.DequeuedAt, x.EnteredAt, x.Sequence });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAssignment>(e =>
+        {
+            e.ToTable("live_support_assignments");
+            e.Property(x => x.EndReason).HasConversion<int>();
+            e.Property(x => x.TransferReason).HasMaxLength(500);
+            e.HasIndex(x => x.ConversationId).IsUnique().HasFilter("\"EndedAt\" IS NULL");
+            e.HasIndex(x => new { x.StaffUserId, x.EndedAt, x.StartedAt });
+            e.HasIndex(x => new { x.ConversationId, x.AssignmentSequence }).IsUnique();
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StaffUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.AssignedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportMessage>(e =>
+        {
+            e.ToTable("live_support_messages");
+            e.Property(x => x.SenderType).HasConversion<int>();
+            e.Property(x => x.Type).HasConversion<int>();
+            e.Property(x => x.ClientMessageId).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Content).HasMaxLength(4000);
+            e.HasIndex(x => new { x.ConversationId, x.ClientMessageId }).IsUnique();
+            e.HasIndex(x => new { x.ConversationId, x.SentAt, x.Id });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.SenderUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.SenderGuestSessionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportAttachment>().WithMany().HasForeignKey(x => x.AttachmentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAttachment>(e =>
+        {
+            e.ToTable("live_support_attachments");
+            e.Property(x => x.StoragePath).HasMaxLength(2048).IsRequired();
+            e.Property(x => x.OriginalFileName).HasMaxLength(255).IsRequired();
+            e.Property(x => x.ContentType).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+            e.Property(x => x.UploadedByIdentity).HasMaxLength(150).IsRequired();
+        });
+
+        modelBuilder.Entity<LiveSupportStudentLinkHistory>(e =>
+        {
+            e.ToTable("live_support_student_link_history");
+            e.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => new { x.ConversationId, x.ChangedAt });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.PreviousStudentUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.NewStudentUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ChangedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportEvent>(e =>
+        {
+            e.ToTable("live_support_events");
+            e.Property(x => x.Type).HasConversion<int>();
+            e.Property(x => x.RelatedEntityType).HasMaxLength(100);
+            e.Property(x => x.SafeMetadataJson).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.ConversationId, x.Sequence }).IsUnique();
+            e.HasIndex(x => new { x.Type, x.OccurredAt });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ActorUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.ActorGuestSessionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportActionExecution>(e =>
+        {
+            e.ToTable("live_support_action_executions");
+            e.Property(x => x.ActionKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.PayloadHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.SafeRequestJson).HasColumnType("jsonb");
+            e.Property(x => x.SafeResultJson).HasColumnType("jsonb");
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.FailureCode).HasMaxLength(100);
+            e.HasIndex(x => new { x.StaffUserId, x.IdempotencyKey }).IsUnique();
+            e.HasIndex(x => new { x.ConversationId, x.StartedAt });
+            e.HasIndex(x => new { x.StudentUserId, x.StartedAt });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StudentUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StaffUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<AuditLog>().WithMany().HasForeignKey(x => x.AuditLogId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportRating>(e =>
+        {
+            e.ToTable("live_support_ratings", table =>
+                table.HasCheckConstraint("CK_live_support_rating_stars", "\"Stars\" BETWEEN 1 AND 5"));
+            e.Property(x => x.Comment).HasMaxLength(1000);
+            e.HasIndex(x => x.ConversationId).IsUnique();
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.SubmittedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.SubmittedByGuestSessionId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

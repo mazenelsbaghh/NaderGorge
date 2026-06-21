@@ -718,23 +718,35 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const [isPseudoFullscreen, setIsPseudoFullscreen] = useState(false);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     const el = containerRef.current?.parentElement;
     if (!el) return;
-    
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      if (el.requestFullscreen) {
-        el.requestFullscreen().catch(() => setIsPseudoFullscreen(true));
-      } else if ((el as any).webkitRequestFullscreen) {
-        (el as any).webkitRequestFullscreen();
-      } else {
+
+    const webkitDocument = document as Document & {
+      webkitFullscreenElement?: Element;
+      webkitExitFullscreen?: () => Promise<void> | void;
+    };
+    const webkitElement = el as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void> | void;
+    };
+
+    if (!document.fullscreenElement && !webkitDocument.webkitFullscreenElement) {
+      try {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+        } else if (webkitElement.webkitRequestFullscreen) {
+          await webkitElement.webkitRequestFullscreen();
+        } else {
+          setIsPseudoFullscreen(true);
+        }
+      } catch {
         setIsPseudoFullscreen(true);
       }
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
+        await document.exitFullscreen();
+      } else if (webkitDocument.webkitExitFullscreen) {
+        await webkitDocument.webkitExitFullscreen();
       }
       setIsPseudoFullscreen(false);
     }
@@ -929,11 +941,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }
 
   return (
-    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-[var(--secondary)]/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? '!fixed !inset-0 !z-[100] !rounded-none' : ''}`}>
+    <div className={`flex flex-col w-full rounded-xl overflow-hidden border border-[var(--secondary)]/30 bg-black shadow-lg group ${className} ${isPseudoFullscreen ? 'secure-video-pseudo-fullscreen !fixed !inset-0 !z-[100] !rounded-none' : ''}`}>
       
       {/* Video Container */}
       <div 
-        className="relative min-h-[200px] w-full aspect-video cursor-pointer overflow-hidden rounded-xl bg-black sm:min-h-0"
+        className="secure-video-fullscreen-surface relative min-h-[200px] w-full aspect-video cursor-pointer overflow-hidden rounded-xl bg-black sm:min-h-0"
         role="region"
         aria-label="مشغل الفيديو"
         tabIndex={0}

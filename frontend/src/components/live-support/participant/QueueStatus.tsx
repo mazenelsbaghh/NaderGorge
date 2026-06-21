@@ -1,0 +1,1 @@
+export function QueueStatus({ position }: { position?: number }) { return <div role="status" aria-live="polite" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">أنت في الطابور{position ? ` — رقم ${position}` : ''}</div>; }

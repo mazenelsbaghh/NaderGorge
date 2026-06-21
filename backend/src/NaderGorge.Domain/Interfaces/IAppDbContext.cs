@@ -7,6 +7,7 @@ using NaderGorge.Domain.Entities.Gamification;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Entities.Student;
+using NaderGorge.Domain.Entities.LiveSupport;
 
 namespace NaderGorge.Domain.Interfaces;
 
@@ -106,6 +107,20 @@ public interface IAppDbContext
     DbSet<ChatParticipant> ChatParticipants { get; }
     DbSet<ChatMessage> ChatMessages { get; }
     DbSet<ChatMessageReadState> ChatMessageReadStates { get; }
+
+    // Live Support Command Center
+    DbSet<LiveSupportConversation> LiveSupportConversations { get; }
+    DbSet<LiveSupportGuestSession> LiveSupportGuestSessions { get; }
+    DbSet<LiveSupportStaffConfig> LiveSupportStaffConfigs { get; }
+    DbSet<LiveSupportScheduleWindow> LiveSupportScheduleWindows { get; }
+    DbSet<LiveSupportQueueEntry> LiveSupportQueueEntries { get; }
+    DbSet<LiveSupportAssignment> LiveSupportAssignments { get; }
+    DbSet<LiveSupportMessage> LiveSupportMessages { get; }
+    DbSet<LiveSupportAttachment> LiveSupportAttachments { get; }
+    DbSet<LiveSupportStudentLinkHistory> LiveSupportStudentLinkHistories { get; }
+    DbSet<LiveSupportEvent> LiveSupportEvents { get; }
+    DbSet<LiveSupportActionExecution> LiveSupportActionExecutions { get; }
+    DbSet<LiveSupportRating> LiveSupportRatings { get; }
 
     // Phase 6: Call Center CRM
     DbSet<CrmStudentStatus> CrmStudentStatuses { get; }

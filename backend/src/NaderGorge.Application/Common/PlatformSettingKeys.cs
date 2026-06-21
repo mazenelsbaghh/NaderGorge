@@ -19,4 +19,5 @@ public static class PlatformSettingKeys
     public const string MaintenanceMessage = "MaintenanceMessage";
     public const string BunnyStreamStorageRateUsdPerGb = "BunnyStreamStorageRateUsdPerGb";
     public const string BunnyStreamBandwidthRateUsdPerGb = "BunnyStreamBandwidthRateUsdPerGb";
+    public const string LiveSupportEnabled = "LiveSupportEnabled";
 }

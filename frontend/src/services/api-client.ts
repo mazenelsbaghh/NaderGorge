@@ -21,7 +21,7 @@ const apiClient = axios.create({
   },
 });
 
-const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/parent/reports'];
+const AUTH_BYPASS_PATHS = ['/auth/login', '/auth/register', '/auth/refresh', '/parent/reports', '/live-support'];
 const RATE_LIMIT_TOAST_COOLDOWN_MS = 4_000;
 let lastRateLimitToastAt = 0;
 
