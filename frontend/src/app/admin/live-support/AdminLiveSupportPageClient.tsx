@@ -8,6 +8,7 @@ import { LiveOperationsBoard } from '@/components/live-support/admin/LiveOperati
 import { StaffPerformancePanel } from '@/components/live-support/admin/StaffPerformancePanel';
 import { StaffConfigurationPanel } from '@/components/live-support/admin/StaffConfigurationPanel';
 import { ConversationInvestigation } from '@/components/live-support/admin/ConversationInvestigation';
+import { devConsole } from '@/utils/dev-console';
 
 const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
@@ -22,6 +23,12 @@ export default function AdminLiveSupportPageClient() {
     catch { setError('تعذر تحميل إعدادات الدعم المباشر.'); }
   }
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const refreshTimer = window.setInterval(() => {
+      void liveSupportService.getAdminDashboard().then(setDashboard).catch((cause) => devConsole.error('تعذر تحديث لوحة الدعم المباشر:', cause));
+    }, 10_000);
+    return () => window.clearInterval(refreshTimer);
+  }, []);
 
   async function toggleFeature() {
     if (!config) return;
@@ -44,13 +51,13 @@ export default function AdminLiveSupportPageClient() {
     {error && <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</div>}
     {!config || !dashboard ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin"/></div> : <div dir="rtl" className="space-y-5">
       <LiveOperationsBoard dashboard={dashboard}/>
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white"><div className="border-b border-slate-100 p-5"><h2 className="font-bold text-slate-900">كل المحادثات والنشاط</h2><p className="mt-1 text-sm text-slate-500">وقت الإنشاء والانتظار والاستلام والإغلاق محفوظ بالكامل.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-right text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">الشخص</th><th className="p-3">الحالة</th><th className="p-3">الموظف</th><th className="p-3">وقت البدء</th><th className="p-3">الانتظار</th><th className="p-3">مدة التعامل</th></tr></thead><tbody>{dashboard.conversations.map((item) => <tr key={item.id} onClick={() => void liveSupportService.getAdminTimeline(item.id).then(setTimeline)} className="cursor-pointer border-t border-slate-100 hover:bg-cyan-50"><td className="p-3 font-semibold text-slate-900">{item.participantName}<span className="mr-2 text-xs font-normal text-slate-500">{item.participantType === 'Guest' ? 'زائر' : 'طالب'}</span></td><td className="p-3">{item.status}</td><td className="p-3">{item.ownerName || 'الطابور'}</td><td className="p-3">{new Date(item.createdAt).toLocaleString('ar-EG')}</td><td className="p-3">{formatDuration(item.waitSeconds)}</td><td className="p-3">{formatDuration(item.handleSeconds)}</td></tr>)}</tbody></table></div></section>
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white"><div className="border-b border-slate-100 p-5"><h2 className="font-bold text-slate-900">كل المحادثات والنشاط</h2><p className="mt-1 text-sm text-slate-500">تتحدث القائمة تلقائيًا كل 10 ثوانٍ. افتح أي محادثة لقراءة الرسائل أو الرد باسم الإدارة.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[860px] text-right text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="p-3">الشخص</th><th className="p-3">الحالة</th><th className="p-3">الموظف</th><th className="p-3">وقت البدء</th><th className="p-3">الانتظار</th><th className="p-3">مدة التعامل</th><th className="p-3">المتابعة</th></tr></thead><tbody>{dashboard.conversations.map((item) => <tr key={item.id} className="border-t border-slate-100 hover:bg-cyan-50"><td className="p-3 font-semibold text-slate-900">{item.participantName}<span className="mr-2 text-xs font-normal text-slate-500">{item.participantType === 'Guest' ? 'زائر' : 'طالب'}</span></td><td className="p-3">{item.status}</td><td className="p-3">{item.ownerName || 'الطابور'}</td><td className="p-3">{new Date(item.createdAt).toLocaleString('ar-EG')}</td><td className="p-3">{formatDuration(item.waitSeconds)}</td><td className="p-3">{formatDuration(item.handleSeconds)}</td><td className="p-3"><button type="button" onClick={() => void liveSupportService.getAdminTimeline(item.id).then(setTimeline)} className="min-h-10 rounded-lg bg-slate-900 px-3 font-semibold text-white">فتح المحادثة</button></td></tr>)}</tbody></table></div></section>
       <StaffPerformancePanel staff={dashboard.staffPerformance}/>
       <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3"><span className="grid size-12 place-items-center rounded-2xl bg-cyan-50 text-cyan-700"><Headphones/></span><div><h2 className="font-bold text-slate-900">حالة الدعم المباشر</h2><p className="text-sm text-slate-500">عند إيقافه لن يستطيع أحد بدء محادثة.</p></div></div>
         <button type="button" role="switch" aria-checked={config.featureEnabled} onClick={() => void toggleFeature()} className={`h-11 rounded-xl px-5 font-semibold text-white ${config.featureEnabled ? 'bg-emerald-700' : 'bg-slate-500'}`}>{config.featureEnabled ? 'مفعّل' : 'متوقف'}</button>
       </section>
-      <StaffConfigurationPanel>{config.staff.map((staff) => <StaffCard key={staff.userId} staff={staff} update={(change) => updateStaff(staff.userId, change)} save={() => void saveStaff(staff)}/>)}</StaffConfigurationPanel>
+      <StaffConfigurationPanel><p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-950">صلاحية «إدارة الدعم المباشر» وحدها لا تجعل الموظف يستقبل محادثات. فعّل الموظف هنا وحدد سعته ثم احفظ.</p>{config.staff.map((staff) => <StaffCard key={staff.userId} staff={staff} update={(change) => updateStaff(staff.userId, change)} save={() => void saveStaff(staff)}/>)}</StaffConfigurationPanel>
     </div>}
     {timeline && <ConversationInvestigation timeline={timeline} close={() => setTimeline(undefined)}/>} 
   </AdminShellChrome>;

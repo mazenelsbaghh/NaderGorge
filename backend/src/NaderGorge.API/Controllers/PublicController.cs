@@ -57,7 +57,11 @@ public class PublicController : ControllerBase
             MaintenanceMode = settings.MaintenanceMode,
             MaintenanceMessage = settings.MaintenanceMessage,
             EnableWatermark = settings.EnableWatermark,
-            WatermarkOpacity = settings.WatermarkOpacity
+            WatermarkOpacity = settings.WatermarkOpacity,
+            PlayerShadowTopOpacity = settings.PlayerShadowTopOpacity,
+            PlayerShadowBottomOpacity = settings.PlayerShadowBottomOpacity,
+            YouTubePlayerShadowHideDelaySeconds = settings.YouTubePlayerShadowHideDelaySeconds,
+            BunnyPlayerShadowHideDelaySeconds = settings.BunnyPlayerShadowHideDelaySeconds
         });
     }
 

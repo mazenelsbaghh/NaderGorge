@@ -20,4 +20,8 @@ public static class PlatformSettingKeys
     public const string BunnyStreamStorageRateUsdPerGb = "BunnyStreamStorageRateUsdPerGb";
     public const string BunnyStreamBandwidthRateUsdPerGb = "BunnyStreamBandwidthRateUsdPerGb";
     public const string LiveSupportEnabled = "LiveSupportEnabled";
+    public const string PlayerShadowTopOpacity = "PlayerShadowTopOpacity";
+    public const string PlayerShadowBottomOpacity = "PlayerShadowBottomOpacity";
+    public const string YouTubePlayerShadowHideDelaySeconds = "YouTubePlayerShadowHideDelaySeconds";
+    public const string BunnyPlayerShadowHideDelaySeconds = "BunnyPlayerShadowHideDelaySeconds";
 }

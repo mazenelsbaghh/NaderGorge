@@ -82,6 +82,16 @@ A student can change the playback speed (0.5x, 1x, 1.5x, 2x) using chip buttons 
 - What happens when the user drags outside the slider bounds? Fill clamps to 0% or 100%.
 - What happens if the user starts dragging and moves outside the slider div? Drag should continue tracking until `mouseup` is fired on the document.
 
+### User Story 5 - Admin Player Appearance Preview (Priority: P2)
+
+An administrator can open a dedicated player-preview settings tab, paste an existing YouTube URL/video ID or Bunny video GUID, adjust top and bottom shadow intensity, and choose the shadow hide delay independently for YouTube and Bunny before saving.
+
+**Acceptance Scenarios**:
+
+1. **Given** a supported video identifier, **When** it is entered in the preview, **Then** the video renders without creating a student watch session or consuming a watch count.
+2. **Given** shadow intensity or provider-specific delay changes, **When** the admin watches the preview, **Then** the preview reflects the unsaved value immediately.
+3. **Given** the settings are saved, **When** a student opens the secure player, **Then** the production overlay uses the saved shadow intensity and the hide delay for the active provider.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -101,6 +111,10 @@ A student can change the playback speed (0.5x, 1x, 1.5x, 2x) using chip buttons 
 - **FR-013**: The pause overlay MUST cover `inset-0` (full `aspect-video` area), replacing the previous bottom-only `h-[40%]` anti-suggestions blur in `SecureVideoPlayer.tsx`.
 - **FR-014**: The pause overlay play button MUST dispatch `togglePlay` when clicked.
 - **FR-015**: The `PlayerControlsProps` interface MUST remain unchanged so `SecureVideoPlayer.tsx` requires zero prop-level changes.
+- **FR-016**: Admin settings MUST include a dedicated player-preview tab supporting YouTube URL/video ID and Bunny video GUID input.
+- **FR-017**: Top and bottom player shadow opacity MUST be independently configurable from 0 to 1.
+- **FR-018**: YouTube and Bunny shadow hide delays MUST be independently configurable from 0 to 60 seconds.
+- **FR-019**: Preview playback MUST NOT create or consume a student video session, while the secure student player MUST load the persisted appearance settings.
 
 ### Key Entities
 

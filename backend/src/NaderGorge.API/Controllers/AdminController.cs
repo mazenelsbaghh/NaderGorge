@@ -1001,7 +1001,7 @@ public class AdminController : ControllerBase
     [HasPermission("roles.manage")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleDto dto, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateRoleCommand(id, dto.Name, dto.Permissions), ct);
+        var result = await _mediator.Send(new UpdateRoleCommand(id, dto.Name, dto.Permissions, GetUserId()), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

@@ -16,6 +16,7 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { useRouter, useParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import apiClient from '@/services/api-client';
 
 export interface WatchStatus {
   current: number;
@@ -128,6 +129,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [provider, setProvider] = useState<string>('youtube');
   
   const [showControls, setShowControls] = useState(true);
   const [showPlayerShadows, setShowPlayerShadows] = useState(true);
@@ -137,6 +139,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const embedReadyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isIOSDeviceRef = useRef(false);
   const watchThresholdPercentageRef = useRef<number>(30);
+  const youtubeShadowDelayMsRef = useRef(5000);
+  const bunnyShadowDelayMsRef = useRef(5000);
+  const [shadowOpacity, setShadowOpacity] = useState({ top: 0.70, bottom: 0.98 });
   const loadingSessionRef = useRef(false);
   const loadingExtraWatchStatusRef = useRef(false);
   const requestingExtraRef = useRef(false);
@@ -151,6 +156,19 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    apiClient.get('/public/settings').then(({ data }) => {
+      if (!active) return;
+      const top = Number(data?.playerShadowTopOpacity ?? data?.PlayerShadowTopOpacity ?? 0.70);
+      const bottom = Number(data?.playerShadowBottomOpacity ?? data?.PlayerShadowBottomOpacity ?? 0.98);
+      setShadowOpacity({ top: Math.min(1, Math.max(0, top)), bottom: Math.min(1, Math.max(0, bottom)) });
+      youtubeShadowDelayMsRef.current = Math.min(60, Math.max(0, Number(data?.youTubePlayerShadowHideDelaySeconds ?? data?.YouTubePlayerShadowHideDelaySeconds ?? 5))) * 1000;
+      bunnyShadowDelayMsRef.current = Math.min(60, Math.max(0, Number(data?.bunnyPlayerShadowHideDelaySeconds ?? data?.BunnyPlayerShadowHideDelaySeconds ?? 5))) * 1000;
+    }).catch((error) => devConsole.error('Failed to load player appearance settings:', error));
+    return () => { active = false; };
+  }, []);
+
   const showPersistentPlayerShadows = useCallback(() => {
     if (shadowTimeoutRef.current) clearTimeout(shadowTimeoutRef.current);
     shadowTimeoutRef.current = null;
@@ -159,11 +177,12 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
   const showTimedPlayerShadows = useCallback(() => {
     showPersistentPlayerShadows();
+    const delay = provider === 'bunny' ? bunnyShadowDelayMsRef.current : youtubeShadowDelayMsRef.current;
     shadowTimeoutRef.current = setTimeout(() => {
       setShowPlayerShadows(false);
       shadowTimeoutRef.current = null;
-    }, 5000);
-  }, [showPersistentPlayerShadows]);
+    }, delay);
+  }, [provider, showPersistentPlayerShadows]);
 
   useEffect(() => () => {
     if (shadowTimeoutRef.current) clearTimeout(shadowTimeoutRef.current);
@@ -254,7 +273,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [provider, setProvider] = useState<string>('youtube');
   const onWatchProgressRef = useRef(onWatchProgress);
   useEffect(() => { onWatchProgressRef.current = onWatchProgress; }, [onWatchProgress]);
 
@@ -971,7 +989,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="pointer-events-none absolute inset-0 z-[80] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.70)_0%,rgba(0,0,0,0.42)_18%,rgba(0,0,0,0.12)_34%,rgba(0,0,0,0)_40%,rgba(0,0,0,0)_62%,rgba(0,0,0,0.48)_78%,rgba(0,0,0,0.84)_90%,rgba(0,0,0,0.98)_100%)]"
+              className="pointer-events-none absolute inset-0 z-[80]"
+              style={{ background: `linear-gradient(to bottom, rgba(0,0,0,${shadowOpacity.top}) 0%, rgba(0,0,0,${shadowOpacity.top * .6}) 18%, transparent 40%, transparent 62%, rgba(0,0,0,${shadowOpacity.bottom * .5}) 78%, rgba(0,0,0,${shadowOpacity.bottom}) 100%)` }}
             />
           )}
         </AnimatePresence>

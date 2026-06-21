@@ -16,7 +16,8 @@ import {
   MessageSquare,
   LockKeyhole,
   Check,
-  AlertCircle
+  AlertCircle,
+  SlidersHorizontal
 } from 'lucide-react';
 import { AdminShellChrome, ConfirmDialog } from '@/components/admin';
 import { adminService } from '@/services/admin-service';
@@ -47,11 +48,12 @@ const PERMISSION_DEFINITIONS = [
   { key: 'media.manage', label: 'إدارة خط إنتاج ونشر المحتوى', desc: 'متابعة مراحل تصوير ومونتاج ورفع المحاضرات وجدولة النشر على السوشيال ميديا' },
   { key: 'finance.manage', label: 'الحسابات المالية للمدرسين والموظفين', desc: 'حساب أرباح وعمولات المدرسين وأكواد التفعيل وصرف رواتب الموظفين' },
   { key: 'reports.manage', label: 'سجلات المراقبة والتقارير التشغيلية', desc: 'عرض الـ Audit logs، وإحصائيات أداء الموظفين، والمؤشرات العامة للمنصة' },
-  { key: 'live_support.manage', label: 'إدارة الدعم المباشر', desc: 'تفعيل خدمة الدعم المباشر، وضبط سعة الموظفين، وتعديل جداول مواعيد الحضور' }
+  { key: 'live_support.manage', label: 'إدارة الدعم المباشر', desc: 'تسمح بإدارة الخدمة والسعات والجداول ولا تُدخل صاحب الدور في التوزيع' },
+  { key: 'live_support.route', label: 'استقبال محادثات الدعم', desc: 'يضيف أصحاب هذا الدور إلى توزيع المحادثات تلقائياً بسعة افتراضية، ويمكن تعديل كل موظف لاحقاً' }
 ];
 
 export default function AdminSettingsPageClient() {
-  const [activeTab, setActiveTab] = useState<'settings' | 'roles'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'player' | 'roles'>('settings');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -71,8 +73,14 @@ export default function AdminSettingsPageClient() {
     MaintenanceMode: 'false',
     MaintenanceMessage: 'المنصة في أعمال صيانة مجدولة. سنعود قريباً!',
     BunnyStreamStorageRateUsdPerGb: '0.01',
-    BunnyStreamBandwidthRateUsdPerGb: '0.005'
+    BunnyStreamBandwidthRateUsdPerGb: '0.005',
+    PlayerShadowTopOpacity: '0.70',
+    PlayerShadowBottomOpacity: '0.98',
+    YouTubePlayerShadowHideDelaySeconds: '5',
+    BunnyPlayerShadowHideDelaySeconds: '5'
   });
+  const [previewProvider, setPreviewProvider] = useState<'youtube' | 'bunny'>('youtube');
+  const [previewVideo, setPreviewVideo] = useState('');
 
   // Roles States
   const [roles, setRoles] = useState<RoleDto[]>([]);
@@ -212,6 +220,15 @@ export default function AdminSettingsPageClient() {
             }`}
           >
             إعدادات المنصة
+          </button>
+          <button
+            onClick={() => setActiveTab('player')}
+            className={`rounded-full px-6 py-2.5 text-sm font-bold transition ${activeTab === 'player'
+              ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]'
+              : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+            }`}
+          >
+            معاينة المشغل
           </button>
           <button
             onClick={() => setActiveTab('roles')}
@@ -533,6 +550,44 @@ export default function AdminSettingsPageClient() {
                   </button>
                 </div>
               </motion.div>
+            ) : activeTab === 'player' ? (
+              <motion.div
+                key="player-tab"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-6"
+                dir="rtl"
+              >
+                <section className="rounded-2xl bg-[var(--admin-card)] p-5 sm:p-7">
+                  <div className="mb-5 flex items-start gap-3">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)]"><SlidersHorizontal size={20} /></span>
+                    <div><h2 className="text-lg font-black text-[var(--admin-text)]">شكل مشغل الفيديو</h2><p className="mt-1 text-sm text-[var(--admin-muted)]">عاين الظل ووقت اختفائه على فيديو YouTube أو Bunny قبل الحفظ.</p></div>
+                  </div>
+
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,.65fr)]">
+                    <div className="space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-[150px_1fr]">
+                        <select value={previewProvider} onChange={(event) => { setPreviewProvider(event.target.value as 'youtube' | 'bunny'); setPreviewVideo(''); }} className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-3 font-bold text-[var(--admin-text)]">
+                          <option value="youtube">YouTube</option><option value="bunny">Bunny</option>
+                        </select>
+                        <input value={previewVideo} onChange={(event) => setPreviewVideo(event.target.value)} placeholder={previewProvider === 'youtube' ? 'رابط YouTube أو Video ID' : 'Bunny Video GUID'} dir="ltr" className="h-12 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 text-left font-mono text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
+                      </div>
+                      <p className="text-xs text-[var(--admin-muted)]">انسخ رابط أو معرّف أي فيديو موجود. المعاينة لا تُحسب مشاهدة ولا تغيّر رصيد أي طالب.</p>
+                      <PlayerPreview provider={previewProvider} value={previewVideo} settings={settings} />
+                    </div>
+
+                    <div className="space-y-5 rounded-2xl bg-[var(--admin-card-soft)] p-5">
+                      <RangeSetting label="شدة الظل العلوي" value={settings.PlayerShadowTopOpacity} onChange={(value) => handleSettingChange('PlayerShadowTopOpacity', value)} />
+                      <RangeSetting label="شدة الظل السفلي" value={settings.PlayerShadowBottomOpacity} onChange={(value) => handleSettingChange('PlayerShadowBottomOpacity', value)} />
+                      <NumberSetting label="اختفاء الظل في YouTube بعد" value={settings.YouTubePlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('YouTubePlayerShadowHideDelaySeconds', value)} />
+                      <NumberSetting label="اختفاء الظل في Bunny بعد" value={settings.BunnyPlayerShadowHideDelaySeconds} onChange={(value) => handleSettingChange('BunnyPlayerShadowHideDelaySeconds', value)} />
+                    </div>
+                  </div>
+                </section>
+                <div className="flex justify-end"><button onClick={handleSaveSettings} disabled={isSaving} className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-7 font-bold text-white disabled:opacity-50"><Save size={18}/>{isSaving ? 'جاري الحفظ...' : 'حفظ إعدادات المشغل'}</button></div>
+              </motion.div>
             ) : (
               <motion.div
                 key="roles-tab"
@@ -747,4 +802,42 @@ export default function AdminSettingsPageClient() {
       />
     </AdminShellChrome>
   );
+}
+
+function RangeSetting({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const numericValue = Number(value || 0);
+  return <label className="block"><span className="mb-2 flex justify-between text-sm font-bold text-[var(--admin-text)]"><span>{label}</span><span dir="ltr" className="font-mono">{Math.round(numericValue * 100)}%</span></span><input type="range" min="0" max="1" step="0.05" value={value} onChange={(event) => onChange(event.target.value)} className="w-full accent-[var(--admin-primary)]" /></label>;
+}
+
+function NumberSetting({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="block text-sm font-bold text-[var(--admin-text)]">{label}<div className="relative mt-2"><input type="number" min="0" max="60" step="1" value={value} onChange={(event) => onChange(event.target.value)} dir="ltr" className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 pl-14 text-left font-mono outline-none focus:border-[var(--admin-primary)]"/><span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[var(--admin-muted)]">ثانية</span></div></label>;
+}
+
+function PlayerPreview({ provider, value, settings }: { provider: 'youtube' | 'bunny'; value: string; settings: Record<string, string> }) {
+  const [shadowVisible, setShadowVisible] = useState(true);
+  const shadowDelaySeconds = provider === 'youtube'
+    ? settings.YouTubePlayerShadowHideDelaySeconds
+    : settings.BunnyPlayerShadowHideDelaySeconds;
+  useEffect(() => {
+    setShadowVisible(true);
+    const timeout = window.setTimeout(() => setShadowVisible(false), Math.max(0, Number(shadowDelaySeconds || 5)) * 1000);
+    return () => window.clearTimeout(timeout);
+  }, [provider, value, shadowDelaySeconds]);
+
+  const videoId = provider === 'youtube' ? extractYouTubeId(value) : value.trim();
+  const src = `/api/video/preview?provider=${provider}&id=${encodeURIComponent(videoId)}`;
+  const top = Math.min(1, Math.max(0, Number(settings.PlayerShadowTopOpacity || .7)));
+  const bottom = Math.min(1, Math.max(0, Number(settings.PlayerShadowBottomOpacity || .98)));
+
+  return <div className="relative aspect-video overflow-hidden rounded-xl bg-black" onMouseMove={() => setShadowVisible(true)}>
+    {videoId ? <iframe key={src} src={src} title="معاينة مشغل الفيديو" className="absolute inset-0 size-full border-0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /> : <div className="grid size-full place-items-center text-sm text-white/70">أدخل رابط الفيديو أو المعرّف للمعاينة</div>}
+    <AnimatePresence>{shadowVisible && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-0" style={{ background: `linear-gradient(to bottom, rgba(0,0,0,${top}) 0%, transparent 40%, transparent 62%, rgba(0,0,0,${bottom}) 100%)` }} />}</AnimatePresence>
+    <button type="button" onClick={() => setShadowVisible(true)} className="absolute bottom-3 right-3 z-10 rounded-lg bg-black/70 px-3 py-2 text-xs font-bold text-white">إظهار الظل مجددًا</button>
+  </div>;
+}
+
+function extractYouTubeId(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  try { const url = new URL(trimmed); return url.searchParams.get('v') || url.pathname.split('/').filter(Boolean).pop() || trimmed; } catch { return trimmed; }
 }

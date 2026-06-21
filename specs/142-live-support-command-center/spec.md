@@ -108,6 +108,8 @@ An admin monitors online staff, capacity, active conversations, queue state, tra
 4. **Given** an admin transfers or closes a conversation, **When** the intervention succeeds, **Then** participants see the updated state and the intervention is auditable.
 5. **Given** a staff member performs a student write action, **When** the admin inspects the audit entry, **Then** it identifies the staff member, conversation, student, action, time, reason where required, result, and safe before-and-after values.
 6. **Given** participants have rated completed conversations, **When** the admin reviews staff performance, **Then** the admin sees rating counts and averages, with the same conversation rating attributed equally to every staff member who owned the conversation during its handling lifecycle.
+7. **Given** a live conversation is open, **When** the admin opens it from the operations dashboard, **Then** the admin sees the durable message transcript beside the operational timeline and can send an identified admin message without becoming the assigned owner.
+8. **Given** an admin sent a message during a previous shift, **When** a later support employee receives or opens the same conversation, **Then** that employee sees the admin message, sender role, and canonical send time in the preserved transcript.
 
 ---
 
@@ -211,6 +213,9 @@ Participants and staff retain a coherent conversation when connections fail, mes
 - **FR-052**: Admin performance reporting MUST attribute the same submitted conversation rating equally to every staff member who owned that conversation, include each staff member's rating count and average, and preserve the underlying conversation-level rating for investigation.
 - **FR-053**: When no live-support staff member is currently checked in for attendance, the system MUST prevent creation of new conversations and show the next configured support availability derived from staff work schedules.
 - **FR-054**: Conversations created before support becomes unavailable MUST remain durable and queued for the next eligible checked-in staff member rather than being deleted or automatically closed.
+- **FR-055**: Admin MUST be able to open the durable transcript for every live conversation directly from the operations dashboard and send a message identified as originating from administration without changing current ownership.
+- **FR-056**: Admin messages MUST remain in chronological conversation history so later-shift staff and reassigned owners see the same content, sender role, and canonical send time.
+- **FR-057**: A distinct role permission MUST allow administrators to add every employee holding that role to conversation routing with a default capacity of one; adding or removing that permission MUST synchronize current role members without overwriting unrelated manual routing configuration.
 
 ### Key Entities
 

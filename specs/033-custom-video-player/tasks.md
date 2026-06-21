@@ -75,6 +75,14 @@
 - [x] T025 [P] Manual smoke test checklist: hover ✅ | drag progress ✅ | drag volume ✅ | pause overlay ✅ | speed chips ✅ | quality popover ✅ | fullscreen ✅
 - [x] T026 Update `specs/033-custom-video-player/checklists/requirements.md` — all items passing ✅
 
+## Phase 8: Admin Player Appearance Preview
+
+- [x] T027 [US5] Add a dedicated player-preview tab and provider/video identifier controls to `frontend/src/app/admin/settings/AdminSettingsPageClient.tsx`.
+- [x] T028 [US5] Add live top/bottom shadow opacity and provider-specific hide-delay controls with persisted platform-setting keys.
+- [x] T029 [US5] Add the server-side preview redirect route in `frontend/src/app/api/video/preview/route.ts` so previewing does not consume student watch sessions.
+- [x] T030 [US5] Expose sanitized player appearance settings from the public settings endpoint and load them in `SecureVideoPlayer.tsx`.
+- [x] T031 [US5] Verify targeted ESLint, TypeScript strict compilation, and backend build.
+
 ---
 
 ## Dependencies & Execution Order

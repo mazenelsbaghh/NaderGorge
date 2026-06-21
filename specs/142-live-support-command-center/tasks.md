@@ -251,6 +251,13 @@
 - [x] T104 Run final builds and static gates: `dotnet build backend/NaderGorge.sln`, `npm --prefix frontend run lint`, `npm --prefix frontend exec tsc -- --noEmit`, `npm --prefix frontend run build`, and `docker compose config -q`; expected result: zero introduced errors/warnings and valid Compose.
 - [x] T105 Run migration/runtime Docker gate and manual QA from `quickstart.md`: `make migrate`, `make up`, `make ps`, health curls for backend/landing/student/admin/assistant, WebSocket smoke, and role-by-role checklist; record exact evidence and a go/no-go result in `achievements.md`.
 
+## Phase 11: Admin Transcript Intervention
+
+- [x] T106 [US5] Replace the read-only investigation overlay with a split transcript and operational-timeline workspace in `frontend/src/components/live-support/admin/ConversationInvestigation.tsx`.
+- [x] T107 [US5] Load canonical conversation messages through the existing admin-authorized staff message endpoint and preserve sender role and send time.
+- [x] T108 [US5] Add an admin message composer using durable idempotent message identifiers, while disabling writes for closed and abandoned conversations.
+- [x] T109 [US2] Add the distinct `live_support.route` role permission and synchronize role members with routing eligibility while preserving manual activation when routing permission did not change.
+
 ## Dependencies and Execution Order
 
 ### Phase dependencies

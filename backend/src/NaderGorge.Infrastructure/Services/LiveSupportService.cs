@@ -204,7 +204,9 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
     public async Task<LiveSupportStaffBootstrapDto> GetStaffBootstrapAsync(Guid staffUserId, bool isAdmin, CancellationToken ct)
     {
         var config = await _db.LiveSupportStaffConfigs.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == staffUserId && x.IsEnabled, ct);
-        if (!isAdmin && config is null) throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "الموظف غير مفعّل للدعم.");
+        if (!isAdmin && config is null) throw new LiveSupportException(
+            LiveSupportErrorCodes.Forbidden,
+            "صلاحية الدور لا تكفي لاستقبال المحادثات. يجب على الأدمن تفعيل «يستقبل محادثات» لهذا الموظف من إدارة الدعم المباشر وتحديد سعته.");
         var checkedIn = isAdmin || await IsCheckedInAsync(staffUserId, ct);
         var conversations = await _db.LiveSupportConversations.Where(x =>
             x.Status != LiveSupportConversationStatus.Closed && x.Status != LiveSupportConversationStatus.Abandoned &&

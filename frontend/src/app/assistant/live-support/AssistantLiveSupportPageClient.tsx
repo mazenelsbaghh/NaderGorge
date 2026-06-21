@@ -15,16 +15,23 @@ export default function AssistantLiveSupportPageClient() {
   const [messages, setMessages] = useState<LiveSupportMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
+  const [needsStaffActivation, setNeedsStaffActivation] = useState(false);
   const connected = useLiveSupportHub(selected?.id);
 
   const refresh = useCallback(async () => {
     try {
       const next = await liveSupportService.getStaffBootstrap();
       setBootstrap(next);
+      setError('');
+      setNeedsStaffActivation(false);
       const current = next.conversations.find((item) => item.id === selected?.id) ?? next.conversations[0];
       setSelected(current);
       if (current) setMessages(await liveSupportService.getStaffMessages(current.id));
-    } catch (cause) { setError((cause as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'تعذر تحميل مركز الدعم.'); }
+    } catch (cause) {
+      const message = (cause as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'تعذر تحميل مركز الدعم.';
+      setError(message);
+      setNeedsStaffActivation(message.includes('يستقبل محادثات') || message.includes('غير مفعّل للدعم'));
+    }
   }, [selected?.id]);
 
   useEffect(() => {
@@ -58,7 +65,10 @@ export default function AssistantLiveSupportPageClient() {
 
   return <AssistantShellChrome activePath="/assistant/live-support" sectionLabel="خدمة العملاء" pageTitle="مركز الدعم المباشر" subtitle="التوزيع يتم تلقائيًا حسب الحضور والحمل والحد الأقصى المحدد لكل موظف.">
     {!bootstrap && !error ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin"/></div> : null}
-    {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">{error}</div> : null}
+    {error ? <div role="alert" className={`rounded-2xl p-5 ${needsStaffActivation ? 'border border-amber-200 bg-amber-50 text-amber-950' : 'border border-red-200 bg-red-50 text-red-800'}`}>
+      <p className="font-bold">{needsStaffActivation ? 'الحساب لديه صلاحية، لكنه غير مضاف لتوزيع المحادثات' : error}</p>
+      {needsStaffActivation && <ol className="mt-3 list-decimal space-y-1 pr-5 text-sm"><li>افتح لوحة الأدمن ثم «إدارة الدعم المباشر».</li><li>ابحث عن الموظف وفعّل «يستقبل محادثات» وحدد السعة والجدول، ثم اضغط حفظ.</li><li>ارجع هنا بعد تسجيل حضور الموظف.</li></ol>}
+    </div> : null}
     {bootstrap && <div dir="rtl" className="space-y-4">
       <StaffStatusHeader state={bootstrap} connected={connected}/>
       {!bootstrap.isCheckedIn && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-900">سجّل الحضور أولًا حتى تستقبل محادثات جديدة.</div>}

@@ -20,7 +20,11 @@ public sealed record CachedPlatformSettings(
     string MaintenanceMessage,
     decimal BunnyStreamStorageRateUsdPerGb,
     decimal BunnyStreamBandwidthRateUsdPerGb,
-    bool LiveSupportEnabled
+    bool LiveSupportEnabled,
+    decimal PlayerShadowTopOpacity,
+    decimal PlayerShadowBottomOpacity,
+    int YouTubePlayerShadowHideDelaySeconds,
+    int BunnyPlayerShadowHideDelaySeconds
 )
 {
     public static CachedPlatformSettings Default { get; } = new(
@@ -39,7 +43,11 @@ public sealed record CachedPlatformSettings(
         "المنصة في أعمال الصيانة حالياً، سنعود قريباً.",
         0.01m,
         0.005m,
-        false
+        false,
+        0.70m,
+        0.98m,
+        5,
+        5
     );
 }
 
@@ -88,7 +96,11 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
                 GetString(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage),
                 GetDecimal(settings, PlatformSettingKeys.BunnyStreamStorageRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamStorageRateUsdPerGb, minValue: 0m),
                 GetDecimal(settings, PlatformSettingKeys.BunnyStreamBandwidthRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamBandwidthRateUsdPerGb, minValue: 0m),
-                GetBool(settings, PlatformSettingKeys.LiveSupportEnabled, CachedPlatformSettings.Default.LiveSupportEnabled)
+                GetBool(settings, PlatformSettingKeys.LiveSupportEnabled, CachedPlatformSettings.Default.LiveSupportEnabled),
+                GetDecimal(settings, PlatformSettingKeys.PlayerShadowTopOpacity, CachedPlatformSettings.Default.PlayerShadowTopOpacity, minValue: 0m, maxValue: 1m),
+                GetDecimal(settings, PlatformSettingKeys.PlayerShadowBottomOpacity, CachedPlatformSettings.Default.PlayerShadowBottomOpacity, minValue: 0m, maxValue: 1m),
+                GetInt(settings, PlatformSettingKeys.YouTubePlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.YouTubePlayerShadowHideDelaySeconds, minValue: 0, maxValue: 60),
+                GetInt(settings, PlatformSettingKeys.BunnyPlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.BunnyPlayerShadowHideDelaySeconds, minValue: 0, maxValue: 60)
             );
         })!;
     }
@@ -98,16 +110,16 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
         _memoryCache.Remove(CacheKey);
     }
 
-    private static int GetInt(IReadOnlyDictionary<string, string> settings, string key, int fallback, int minValue)
+    private static int GetInt(IReadOnlyDictionary<string, string> settings, string key, int fallback, int minValue, int maxValue = int.MaxValue)
     {
-        return settings.TryGetValue(key, out var rawValue) && int.TryParse(rawValue, out var parsed) && parsed >= minValue
+        return settings.TryGetValue(key, out var rawValue) && int.TryParse(rawValue, out var parsed) && parsed >= minValue && parsed <= maxValue
             ? parsed
             : fallback;
     }
 
-    private static decimal GetDecimal(IReadOnlyDictionary<string, string> settings, string key, decimal fallback, decimal minValue)
+    private static decimal GetDecimal(IReadOnlyDictionary<string, string> settings, string key, decimal fallback, decimal minValue, decimal maxValue = decimal.MaxValue)
     {
-        return settings.TryGetValue(key, out var rawValue) && decimal.TryParse(rawValue, out var parsed) && parsed >= minValue
+        return settings.TryGetValue(key, out var rawValue) && decimal.TryParse(rawValue, out var parsed) && parsed >= minValue && parsed <= maxValue
             ? parsed
             : fallback;
     }

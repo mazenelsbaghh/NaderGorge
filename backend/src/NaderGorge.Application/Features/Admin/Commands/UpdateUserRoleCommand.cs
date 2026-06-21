@@ -54,6 +54,7 @@ public class UpdateUserRoleCommandHandler : IRequestHandler<UpdateUserRoleComman
         }
 
         var oldRolesJson = JsonSerializer.Serialize(user.UserRoles.Select(r => r.Role.Name));
+        var previouslyReceivedConversations = user.UserRoles.Any(userRole => HasRoutingPermission(userRole.Role.PermissionsJson));
 
         // Clear existing
         _db.UserRoles.RemoveRange(user.UserRoles);
@@ -66,6 +67,15 @@ public class UpdateUserRoleCommandHandler : IRequestHandler<UpdateUserRoleComman
                 UserId = user.Id,
                 RoleId = role.Id
             });
+        }
+
+        var receivesConversations = rolesToAssign.Any(role => HasRoutingPermission(role.PermissionsJson));
+        if (previouslyReceivedConversations != receivesConversations)
+        {
+            await LiveSupportRoutingPermissionSync.SetEligibilityAsync(
+                _db,
+                new LiveSupportRoutingEligibilityChange(user.Id, receivesConversations, request.AdminId),
+                ct);
         }
 
         var newRolesJson = JsonSerializer.Serialize(rolesToAssign.Select(r => r.Name));
@@ -83,5 +93,13 @@ public class UpdateUserRoleCommandHandler : IRequestHandler<UpdateUserRoleComman
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok("User roles updated successfully.");
+    }
+
+    private static bool HasRoutingPermission(string? permissionsJson)
+    {
+        if (string.IsNullOrWhiteSpace(permissionsJson)) return false;
+        return (JsonSerializer.Deserialize<List<string>>(permissionsJson) ?? []).Contains(
+            LiveSupportRoutingPermissions.ReceiveConversations,
+            StringComparer.OrdinalIgnoreCase);
     }
 }
