@@ -959,7 +959,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="pointer-events-none absolute inset-0 z-[80] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.62)_0%,rgba(0,0,0,0.24)_15%,rgba(0,0,0,0)_32%,rgba(0,0,0,0)_68%,rgba(0,0,0,0.72)_88%,rgba(0,0,0,0.94)_100%)]"
+              className="pointer-events-none absolute inset-0 z-[80] bg-[linear-gradient(to_bottom,rgba(0,0,0,0.70)_0%,rgba(0,0,0,0.42)_18%,rgba(0,0,0,0.12)_34%,rgba(0,0,0,0)_40%,rgba(0,0,0,0)_62%,rgba(0,0,0,0.48)_78%,rgba(0,0,0,0.84)_90%,rgba(0,0,0,0.98)_100%)]"
             />
           )}
         </AnimatePresence>
