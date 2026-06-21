@@ -52,6 +52,8 @@ Auto-generated from all feature plans. Last updated: 2026-06-21
 - GCS temporary object bucket; existing local `.tmp`, subtitle, and mind-map files; Redis job state; no database schema change (139-vertex-ai-worker-migration)
 - C# 13 on .NET 9 backend; TypeScript 5.x strict mode on Next.js 16.2.7 and React 19.2.4 frontend + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, ASP.NET Core SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4, Next.js App Router, `@microsoft/signalr` 10.x, Axios, Zustand, Tailwind CSS, Lucide React (142-live-support-command-center)
 - PostgreSQL for durable support state and audit relations; Redis for ephemeral presence, distributed idempotency, and SignalR backplane; existing asset storage for approved chat attachments (142-live-support-command-center)
+- C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac (143-ai-live-support-agent)
+- PostgreSQL for authoritative AI policy/knowledge/turn/action/verification state; Redis for queue delivery, distributed locks, cancellation hints, and SignalR backplane; no vector database in this phase (143-ai-live-support-agent)
 
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + framer-motion ^12.38.0, lucide-react ^1.7.0, clsx + tailwind-merge (via `@/lib/utils`) (033-custom-video-player)
 
@@ -71,9 +73,9 @@ npm test && npm run lint
 TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 ## Recent Changes
+- 143-ai-live-support-agent: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac
 - 142-live-support-command-center: Added live support command-center planning for guest/student chat, attendance-gated routing, capacity queues, student actions, audit, and ratings.
 - 139-vertex-ai-worker-migration: Added TypeScript 5.9.3 strict mode on Node.js 20 + `@google/genai` 1.47.0, `@google-cloud/storage`, BullMQ 5.71.1, Express 5.2.1, undici 7.24.6
-- 112-surface-login-access-contract: Added TypeScript 5.x / Next.js 16.2.1 / React 19 + Next.js App Router, Axios, Zustand
 
 
 <!-- MANUAL ADDITIONS START -->
@@ -90,5 +92,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 140-fix-video-session-counting: specs/140-fix-video-session-counting/plan.md
 - 141-teacher-photo-refinement-and-bunny-stream: specs/141-teacher-photo-refinement-and-bunny-stream/plan.md
 - 142-live-support-command-center: specs/142-live-support-command-center/plan.md
+- 143-ai-live-support-agent: specs/143-ai-live-support-agent/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

@@ -61,7 +61,10 @@ public class PublicController : ControllerBase
             PlayerShadowTopOpacity = settings.PlayerShadowTopOpacity,
             PlayerShadowBottomOpacity = settings.PlayerShadowBottomOpacity,
             YouTubePlayerShadowHideDelaySeconds = settings.YouTubePlayerShadowHideDelaySeconds,
-            BunnyPlayerShadowHideDelaySeconds = settings.BunnyPlayerShadowHideDelaySeconds
+            BunnyPlayerShadowHideDelaySeconds = settings.BunnyPlayerShadowHideDelaySeconds,
+            PlayerShadowTopCoverage = settings.PlayerShadowTopCoverage,
+            PlayerShadowBottomCoverage = settings.PlayerShadowBottomCoverage,
+            EnabledPlayerShadowProviders = settings.EnabledPlayerShadowProviders
         });
     }
 

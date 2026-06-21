@@ -123,6 +123,16 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<LiveSupportEvent> LiveSupportEvents => Set<LiveSupportEvent>();
     public DbSet<LiveSupportActionExecution> LiveSupportActionExecutions => Set<LiveSupportActionExecution>();
     public DbSet<LiveSupportRating> LiveSupportRatings => Set<LiveSupportRating>();
+    public DbSet<LiveSupportAIPolicyVersion> LiveSupportAIPolicyVersions => Set<LiveSupportAIPolicyVersion>();
+    public DbSet<LiveSupportAIKnowledgeEntry> LiveSupportAIKnowledgeEntries => Set<LiveSupportAIKnowledgeEntry>();
+    public DbSet<LiveSupportAIKnowledgeRevision> LiveSupportAIKnowledgeRevisions => Set<LiveSupportAIKnowledgeRevision>();
+    public DbSet<LiveSupportAIPolicyKnowledgeRevision> LiveSupportAIPolicyKnowledgeRevisions => Set<LiveSupportAIPolicyKnowledgeRevision>();
+    public DbSet<LiveSupportAIConversationState> LiveSupportAIConversationStates => Set<LiveSupportAIConversationState>();
+    public DbSet<LiveSupportAITurn> LiveSupportAITurns => Set<LiveSupportAITurn>();
+    public DbSet<LiveSupportAIPendingAction> LiveSupportAIPendingActions => Set<LiveSupportAIPendingAction>();
+    public DbSet<LiveSupportAIVerificationPolicyQuestion> LiveSupportAIVerificationPolicyQuestions => Set<LiveSupportAIVerificationPolicyQuestion>();
+    public DbSet<LiveSupportAIVerificationSession> LiveSupportAIVerificationSessions => Set<LiveSupportAIVerificationSession>();
+    public DbSet<LiveSupportAIVerificationAttempt> LiveSupportAIVerificationAttempts => Set<LiveSupportAIVerificationAttempt>();
 
     // Phase 6: Call Center CRM
     public DbSet<CrmStudentStatus> CrmStudentStatuses => Set<CrmStudentStatus>();
@@ -1414,6 +1424,159 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.SubmittedByUserId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.SubmittedByGuestSessionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        ConfigureLiveSupportAI(modelBuilder);
+    }
+
+    private static void ConfigureLiveSupportAI(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<LiveSupportAIPolicyVersion>(e =>
+        {
+            e.ToTable("live_support_ai_policy_versions", table =>
+            {
+                table.HasCheckConstraint("CK_live_support_ai_policy_verification", "\"VerificationRequiredCorrect\" >= 1 AND \"VerificationMaxAttempts\" BETWEEN 1 AND 10");
+                table.HasCheckConstraint("CK_live_support_ai_policy_action_expiry", "\"PendingActionExpirySeconds\" BETWEEN 30 AND 900");
+                table.HasCheckConstraint("CK_live_support_ai_policy_inactivity", "\"InactivityMinutes\" BETWEEN 5 AND 1440 AND \"InactivityWarningGraceSeconds\" BETWEEN 30 AND 600");
+            });
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.SystemInstructions).HasMaxLength(20000).IsRequired();
+            e.Property(x => x.ReadableDataKeysJson).HasColumnType("jsonb");
+            e.Property(x => x.ActionKeysJson).HasColumnType("jsonb");
+            e.Property(x => x.LookupKeysJson).HasColumnType("jsonb");
+            e.Property(x => x.VerificationQuestionKeysJson).HasColumnType("jsonb");
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.VersionNumber).IsUnique();
+            e.HasIndex(x => x.IsEnabled).IsUnique().HasFilter("\"Status\" = 1 AND \"IsEnabled\" = TRUE");
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.PublishedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIKnowledgeEntry>(e =>
+        {
+            e.ToTable("live_support_ai_knowledge_entries");
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIKnowledgeRevision>(e =>
+        {
+            e.ToTable("live_support_ai_knowledge_revisions");
+            e.Property(x => x.Content).HasMaxLength(50000).IsRequired();
+            e.Property(x => x.SourceLabel).HasMaxLength(300);
+            e.Property(x => x.SearchText).HasMaxLength(50000).IsRequired();
+            e.Property(x => x.ContentHash).HasMaxLength(64).IsRequired();
+            e.HasIndex(x => new { x.EntryId, x.RevisionNumber }).IsUnique();
+            e.HasOne<LiveSupportAIKnowledgeEntry>().WithMany().HasForeignKey(x => x.EntryId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.PublishedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIPolicyKnowledgeRevision>(e =>
+        {
+            e.ToTable("live_support_ai_policy_knowledge_revisions");
+            e.HasKey(x => new { x.PolicyVersionId, x.KnowledgeRevisionId });
+            e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportAIKnowledgeRevision>().WithMany().HasForeignKey(x => x.KnowledgeRevisionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIConversationState>(e =>
+        {
+            e.ToTable("live_support_ai_conversation_states");
+            e.HasKey(x => x.ConversationId);
+            e.Property(x => x.Mode).HasConversion<int>();
+            e.Property(x => x.HandoffReasonCode).HasMaxLength(100);
+            e.Property(x => x.HandoffSafeSummary).HasMaxLength(2000);
+            e.Property(x => x.ResolutionCode).HasMaxLength(100);
+            e.Property(x => x.SafeSummaryJson).HasColumnType("jsonb");
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => new { x.Mode, x.AutoCloseAt });
+            e.HasIndex(x => new { x.Mode, x.LastParticipantActivityAt });
+            e.HasOne<LiveSupportConversation>().WithOne().HasForeignKey<LiveSupportAIConversationState>(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.VerifiedStudentUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAITurn>(e =>
+        {
+            e.ToTable("live_support_ai_turns");
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.DecisionType).HasConversion<int>();
+            e.Property(x => x.ContextCategoryKeysJson).HasColumnType("jsonb");
+            e.Property(x => x.KnowledgeRevisionIdsJson).HasColumnType("jsonb");
+            e.Property(x => x.Provider).HasMaxLength(100);
+            e.Property(x => x.Model).HasMaxLength(150);
+            e.Property(x => x.ProviderResponseId).HasMaxLength(200);
+            e.Property(x => x.FailureCode).HasMaxLength(100);
+            e.Property(x => x.SafeFailureDetail).HasMaxLength(1000);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.SourceMessageId).IsUnique();
+            e.HasIndex(x => x.OutputMessageId).IsUnique().HasFilter("\"OutputMessageId\" IS NOT NULL");
+            e.HasIndex(x => new { x.Status, x.QueuedAt });
+            e.HasIndex(x => new { x.ConversationId, x.QueuedAt });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportMessage>().WithMany().HasForeignKey(x => x.SourceMessageId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportMessage>().WithMany().HasForeignKey(x => x.OutputMessageId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIPendingAction>(e =>
+        {
+            e.ToTable("live_support_ai_pending_actions");
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.ActionKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.SafeProposalJson).HasColumnType("jsonb");
+            e.Property(x => x.PayloadHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.StateFingerprint).HasMaxLength(64).IsRequired();
+            e.Property(x => x.ConfirmationNonceHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.FailureCode).HasMaxLength(100);
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.IdempotencyKey).IsUnique();
+            e.HasIndex(x => x.ActionExecutionId).IsUnique().HasFilter("\"ActionExecutionId\" IS NOT NULL");
+            e.HasIndex(x => new { x.ConversationId, x.Status });
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportAITurn>().WithMany().HasForeignKey(x => x.TurnId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.StudentUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.ConfirmedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportGuestSession>().WithMany().HasForeignKey(x => x.ConfirmedByGuestSessionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportActionExecution>().WithMany().HasForeignKey(x => x.ActionExecutionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIVerificationPolicyQuestion>(e =>
+        {
+            e.ToTable("live_support_ai_verification_policy_questions");
+            e.Property(x => x.QuestionKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.PromptText).HasMaxLength(300).IsRequired();
+            e.Property(x => x.SourceFieldKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ComparisonMode).HasConversion<int>();
+            e.HasIndex(x => new { x.PolicyVersionId, x.Order }).IsUnique();
+            e.HasIndex(x => new { x.PolicyVersionId, x.QuestionKey }).IsUnique();
+            e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIVerificationSession>(e =>
+        {
+            e.ToTable("live_support_ai_verification_sessions");
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.LookupKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.LookupValueHash).HasMaxLength(128).IsRequired();
+            e.Property(x => x.SelectedQuestionKeysJson).HasColumnType("jsonb");
+            e.Property(x => x.Version).IsConcurrencyToken();
+            e.HasIndex(x => x.ConversationId).IsUnique();
+            e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.CandidateStudentUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LiveSupportAIVerificationAttempt>(e =>
+        {
+            e.ToTable("live_support_ai_verification_attempts");
+            e.Property(x => x.QuestionKeysJson).HasColumnType("jsonb");
+            e.Property(x => x.OutcomeCodesJson).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.SessionId, x.AttemptNumber }).IsUnique();
+            e.HasOne<LiveSupportAIVerificationSession>().WithMany().HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

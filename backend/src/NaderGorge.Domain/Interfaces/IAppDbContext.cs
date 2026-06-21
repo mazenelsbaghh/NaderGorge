@@ -121,6 +121,16 @@ public interface IAppDbContext
     DbSet<LiveSupportEvent> LiveSupportEvents { get; }
     DbSet<LiveSupportActionExecution> LiveSupportActionExecutions { get; }
     DbSet<LiveSupportRating> LiveSupportRatings { get; }
+    DbSet<LiveSupportAIPolicyVersion> LiveSupportAIPolicyVersions { get; }
+    DbSet<LiveSupportAIKnowledgeEntry> LiveSupportAIKnowledgeEntries { get; }
+    DbSet<LiveSupportAIKnowledgeRevision> LiveSupportAIKnowledgeRevisions { get; }
+    DbSet<LiveSupportAIPolicyKnowledgeRevision> LiveSupportAIPolicyKnowledgeRevisions { get; }
+    DbSet<LiveSupportAIConversationState> LiveSupportAIConversationStates { get; }
+    DbSet<LiveSupportAITurn> LiveSupportAITurns { get; }
+    DbSet<LiveSupportAIPendingAction> LiveSupportAIPendingActions { get; }
+    DbSet<LiveSupportAIVerificationPolicyQuestion> LiveSupportAIVerificationPolicyQuestions { get; }
+    DbSet<LiveSupportAIVerificationSession> LiveSupportAIVerificationSessions { get; }
+    DbSet<LiveSupportAIVerificationAttempt> LiveSupportAIVerificationAttempts { get; }
 
     // Phase 6: Call Center CRM
     DbSet<CrmStudentStatus> CrmStudentStatuses { get; }

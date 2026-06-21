@@ -70,7 +70,8 @@ type AdminShellRoute =
   | '/assistant/crm'
   | '/admin/reports'
   | '/admin/media'
-  | '/admin/live-support';
+  | '/admin/live-support'
+  | '/admin/live-support/ai';
 
 type AdminShellChromeProps = {
   activePath: AdminShellRoute;

@@ -1,0 +1,96 @@
+openapi: 3.1.0
+info:
+  title: Massar AI Live Support API
+  version: 1.0.0
+paths:
+  /api/live-support/admin/ai/config:
+    get:
+      summary: Get draft and published AI support configuration
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Configuration and catalogs }, '403': { description: Built-in Admin required } }
+    put:
+      summary: Save draft with optimistic version
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Draft saved }, '409': { description: Version conflict }, '422': { description: Invalid catalog or policy } }
+  /api/live-support/admin/ai/publish:
+    post:
+      summary: Validate and publish immutable policy version
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Published }, '409': { description: Version conflict }, '422': { description: Publication validation failed } }
+  /api/live-support/admin/ai/disable:
+    post:
+      summary: Disable AI and hand off active work
+      security: [{ builtInAdmin: [] }]
+      responses: { '202': { description: Disable accepted and active handoffs started } }
+  /api/live-support/admin/ai/catalogs:
+    get:
+      summary: Get stable readable/action/lookup/verification catalogs
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Catalogs } }
+  /api/live-support/admin/ai/knowledge:
+    get:
+      summary: List knowledge entries and revisions
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Knowledge list } }
+    post:
+      summary: Create a knowledge entry draft
+      security: [{ builtInAdmin: [] }]
+      responses: { '201': { description: Created }, '422': { description: Invalid content } }
+  /api/live-support/admin/ai/knowledge/{entryId}:
+    put:
+      summary: Save next knowledge draft revision
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Saved }, '409': { description: Version conflict } }
+  /api/live-support/admin/ai/preview:
+    post:
+      summary: Execute a zero-write dry run
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Decision and safe context evidence }, '422': { description: Invalid draft } }
+  /api/live-support/admin/ai/activity:
+    get:
+      summary: Query AI outcomes and metrics
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Paginated activity } }
+  /api/live-support/admin/ai/conversations/{conversationId}/evidence:
+    get:
+      summary: Get chronological safe AI evidence
+      security: [{ builtInAdmin: [] }]
+      responses: { '200': { description: Evidence }, '404': { description: Conversation not found } }
+  /api/live-support/participant/conversations/{conversationId}/human-handoff:
+    post:
+      summary: Request irreversible human handoff
+      responses: { '200': { description: Queued or assigned state }, '409': { description: Already terminal } }
+  /api/live-support/participant/conversations/{conversationId}/ai/actions/{proposalId}/confirm:
+    post:
+      summary: Explicitly confirm exact pending action
+      responses: { '200': { description: Action outcome }, '409': { description: Stale, cancelled, expired, or handed off } }
+  /api/live-support/participant/conversations/{conversationId}/ai/actions/{proposalId}/cancel:
+    post:
+      summary: Cancel pending action
+      responses: { '200': { description: Cancelled }, '409': { description: Not pending } }
+  /api/live-support/participant/conversations/{conversationId}/ai/verification/lookup:
+    post:
+      summary: Submit complete value for an allowed lookup key
+      responses: { '200': { description: Generic challenge state with no candidate disclosure }, '429': { description: Rate limited } }
+  /api/live-support/participant/conversations/{conversationId}/ai/verification/answer:
+    post:
+      summary: Submit challenge answers; raw answers are not retained
+      responses: { '200': { description: Generic verification state }, '409': { description: Stale or handed off }, '429': { description: Attempts exhausted } }
+  /api/live-support/participant/conversations/{conversationId}/ai/account-proposal/confirm:
+    post:
+      summary: Confirm validated account creation proposal with secure secret fields
+      responses: { '201': { description: Account created once and linked }, '409': { description: Duplicate/stale/handoff }, '422': { description: Validation failed } }
+  /api/live-support/participant/conversations/{conversationId}/ai/resolved:
+    post:
+      summary: Confirm issue resolved and close as AI-resolved
+      responses: { '200': { description: Closed }, '409': { description: Not AI-active } }
+  /api/live-support/participant/conversations/{conversationId}/ai/inactivity/cancel:
+    post:
+      summary: Cancel pending inactivity auto-close
+      responses: { '200': { description: Warning cleared }, '409': { description: No active warning } }
+components:
+  securitySchemes:
+    builtInAdmin:
+      type: http
+      scheme: bearer
+      description: JWT whose role contains the built-in Admin role; custom permissions do not qualify.

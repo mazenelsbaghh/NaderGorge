@@ -24,4 +24,7 @@ public static class PlatformSettingKeys
     public const string PlayerShadowBottomOpacity = "PlayerShadowBottomOpacity";
     public const string YouTubePlayerShadowHideDelaySeconds = "YouTubePlayerShadowHideDelaySeconds";
     public const string BunnyPlayerShadowHideDelaySeconds = "BunnyPlayerShadowHideDelaySeconds";
+    public const string PlayerShadowTopCoverage = "PlayerShadowTopCoverage";
+    public const string PlayerShadowBottomCoverage = "PlayerShadowBottomCoverage";
+    public const string EnabledPlayerShadowProviders = "EnabledPlayerShadowProviders";
 }

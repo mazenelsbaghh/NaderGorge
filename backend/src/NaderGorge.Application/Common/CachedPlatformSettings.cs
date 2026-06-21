@@ -24,7 +24,10 @@ public sealed record CachedPlatformSettings(
     decimal PlayerShadowTopOpacity,
     decimal PlayerShadowBottomOpacity,
     int YouTubePlayerShadowHideDelaySeconds,
-    int BunnyPlayerShadowHideDelaySeconds
+    int BunnyPlayerShadowHideDelaySeconds,
+    int PlayerShadowTopCoverage,
+    int PlayerShadowBottomCoverage,
+    string EnabledPlayerShadowProviders
 )
 {
     public static CachedPlatformSettings Default { get; } = new(
@@ -47,7 +50,10 @@ public sealed record CachedPlatformSettings(
         0.70m,
         0.98m,
         5,
-        5
+        5,
+        40,
+        38,
+        "youtube,bunny,vk,telegram,telegram-direct,rutube,google-drive"
     );
 }
 
@@ -100,7 +106,10 @@ public sealed class CachedPlatformSettingsReader : ICachedPlatformSettingsReader
                 GetDecimal(settings, PlatformSettingKeys.PlayerShadowTopOpacity, CachedPlatformSettings.Default.PlayerShadowTopOpacity, minValue: 0m, maxValue: 1m),
                 GetDecimal(settings, PlatformSettingKeys.PlayerShadowBottomOpacity, CachedPlatformSettings.Default.PlayerShadowBottomOpacity, minValue: 0m, maxValue: 1m),
                 GetInt(settings, PlatformSettingKeys.YouTubePlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.YouTubePlayerShadowHideDelaySeconds, minValue: 0, maxValue: 60),
-                GetInt(settings, PlatformSettingKeys.BunnyPlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.BunnyPlayerShadowHideDelaySeconds, minValue: 0, maxValue: 60)
+                GetInt(settings, PlatformSettingKeys.BunnyPlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.BunnyPlayerShadowHideDelaySeconds, minValue: 0, maxValue: 60),
+                GetInt(settings, PlatformSettingKeys.PlayerShadowTopCoverage, CachedPlatformSettings.Default.PlayerShadowTopCoverage, minValue: 0, maxValue: 100),
+                GetInt(settings, PlatformSettingKeys.PlayerShadowBottomCoverage, CachedPlatformSettings.Default.PlayerShadowBottomCoverage, minValue: 0, maxValue: 100),
+                GetString(settings, PlatformSettingKeys.EnabledPlayerShadowProviders, CachedPlatformSettings.Default.EnabledPlayerShadowProviders)
             );
         })!;
     }

@@ -7,5 +7,11 @@ public enum LiveSupportEventType
     AttendanceCheckedIn, AttendanceCheckedOut, StudentLinked, StudentUnlinked,
     StudentLinkReplaced, ActionRequested, ActionSucceeded, ActionFailed,
     ParticipantDisconnected, ParticipantReconnected, Closed, Abandoned, RatingSubmitted,
-    FollowUpCreated, AdminIntervened
+    FollowUpCreated, AdminIntervened,
+    AIPolicyPublished, AIPolicyDisabled, AITurnQueued, AITurnStarted,
+    AITurnCompleted, AITurnFailed, AIReplySent, AIActionProposed,
+    AIActionConfirmed, AIActionCancelled, AIActionSucceeded, AIActionFailed,
+    AIVerificationStarted, AIVerificationAttempted, AIVerificationSucceeded,
+    AIVerificationFailed, AIHandoffRequested, AIHandoffCompleted,
+    AIInactivityWarningSent, AIResolved, AIAutoClosed
 }

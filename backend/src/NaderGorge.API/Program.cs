@@ -100,6 +100,7 @@ builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationS
 builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
 builder.Services.AddScoped<IContentImageStorage, ContentImageStorage>();
 builder.Services.AddScoped<ILiveSupportService, LiveSupportService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIAdminService, LiveSupportAIAdminService>();
 builder.Services.AddScoped<ILiveSupportActionService, LiveSupportActionService>();
 builder.Services.AddScoped<ILiveSupportActionExecutor>(sp => sp.GetRequiredService<ILiveSupportActionService>());
 builder.Services.AddScoped<ILiveSupportAssignmentCoordinator>(sp => (ILiveSupportAssignmentCoordinator)sp.GetRequiredService<ILiveSupportService>());

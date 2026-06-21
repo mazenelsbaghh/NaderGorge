@@ -73,6 +73,7 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { hasPermission } = useHasPermission();
+  const user = useAuthStore((state) => state.user);
   const usesStandaloneShell =
     pathname === "/admin" || pathname.startsWith("/admin/");
 
@@ -85,6 +86,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   const filteredMenuItems = adminMenuItems.filter((item) => {
+    if ('adminOnly' in item && item.adminOnly) {
+      return user?.roles.includes('Admin') === true;
+    }
     if (item.href === '/admin/content') {
       return hasPermission('content.manage') || hasPermission('comments.manage');
     }

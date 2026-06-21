@@ -38,6 +38,13 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
         EnsureDefault(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage);
         EnsureDefault(settings, PlatformSettingKeys.BunnyStreamStorageRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamStorageRateUsdPerGb.ToString("0.######"));
         EnsureDefault(settings, PlatformSettingKeys.BunnyStreamBandwidthRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamBandwidthRateUsdPerGb.ToString("0.######"));
+        EnsureDefault(settings, PlatformSettingKeys.PlayerShadowTopOpacity, CachedPlatformSettings.Default.PlayerShadowTopOpacity.ToString("0.##"));
+        EnsureDefault(settings, PlatformSettingKeys.PlayerShadowBottomOpacity, CachedPlatformSettings.Default.PlayerShadowBottomOpacity.ToString("0.##"));
+        EnsureDefault(settings, PlatformSettingKeys.YouTubePlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.YouTubePlayerShadowHideDelaySeconds.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.BunnyPlayerShadowHideDelaySeconds, CachedPlatformSettings.Default.BunnyPlayerShadowHideDelaySeconds.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.PlayerShadowTopCoverage, CachedPlatformSettings.Default.PlayerShadowTopCoverage.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.PlayerShadowBottomCoverage, CachedPlatformSettings.Default.PlayerShadowBottomCoverage.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.EnabledPlayerShadowProviders, CachedPlatformSettings.Default.EnabledPlayerShadowProviders);
 
         settings = settings
             .OrderBy(setting => setting.Key)
