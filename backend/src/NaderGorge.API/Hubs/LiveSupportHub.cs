@@ -40,17 +40,19 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
     {
         try
         {
+            LiveSupportParticipantIdentity? participantIdentity = null;
             if (StaffUserId is { } staffId) await service.GetStaffMessagesAsync(staffId, Context.User!.IsInRole("Admin"), conversationId, 1, Context.ConnectionAborted);
             else if (await ParticipantAsync() is { } participant)
             {
                 if (await service.GetParticipantConversationAsync(participant, conversationId, Context.ConnectionAborted) is null) throw new HubException("NOT_PARTICIPANT");
+                participantIdentity = participant;
             }
             else throw new HubException("SESSION_EXPIRED");
             await Groups.AddToGroupAsync(Context.ConnectionId, $"LiveSupport:Conversation:{conversationId:N}");
-            var last = StaffUserId is { } owner
-                ? await service.GetStaffMessagesAsync(owner, Context.User!.IsInRole("Admin"), conversationId, 1, Context.ConnectionAborted)
-                : [];
-            return new { conversationId, lastEventSequence = last.Count };
+            var lastEventSequence = StaffUserId is { } owner
+                ? await service.GetStaffLastEventSequenceAsync(owner, Context.User!.IsInRole("Admin"), conversationId, Context.ConnectionAborted)
+                : (await service.GetParticipantMessagePageAsync(participantIdentity!, conversationId, 1, null, null, Context.ConnectionAborted)).LastEventSequence;
+            return new { conversationId, lastEventSequence };
         }
         catch (LiveSupportException ex) { throw new HubException(ex.Code == LiveSupportErrorCodes.Forbidden ? "NOT_OWNER" : ex.Code); }
     }

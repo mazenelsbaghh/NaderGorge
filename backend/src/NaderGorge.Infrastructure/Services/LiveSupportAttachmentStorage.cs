@@ -30,8 +30,9 @@ public sealed class LiveSupportAttachmentStorage : ILiveSupportAttachmentStorage
     public Task DeleteAsync(string storagePath, CancellationToken ct) { var path = Resolve(storagePath); if (File.Exists(path)) File.Delete(path); return Task.CompletedTask; }
     private string Resolve(string path)
     {
-        var resolved = Path.GetFullPath(Path.Combine(_root, path));
-        if (!resolved.StartsWith(Path.GetFullPath(_root), StringComparison.Ordinal)) throw new InvalidOperationException("Invalid attachment path.");
+        var root = Path.GetFullPath(_root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var resolved = Path.GetFullPath(Path.Combine(root, path));
+        if (!resolved.StartsWith(root, StringComparison.Ordinal)) throw new InvalidOperationException("Invalid attachment path.");
         return resolved;
     }
 }

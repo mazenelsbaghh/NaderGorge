@@ -14,7 +14,7 @@ The feature is disabled by default. Enable it from `/admin/live-support`, then c
 Current fixed safety limits are:
 
 ```text
-Guest cookie name: massar_live_support
+Guest cookie name: massar_support_guest
 Guest session lifetime: 30 days
 Disconnect grace: 120 seconds
 Presence heartbeat: 30 seconds

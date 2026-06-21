@@ -6,8 +6,6 @@ namespace NaderGorge.Application.Features.LiveSupport.Interfaces;
 public interface ILiveSupportService
 {
     Task<LiveSupportAvailabilityDto> GetAvailabilityAsync(CancellationToken ct);
-    Task<LiveSupportGuestSessionDto> CreateGuestSessionAsync(string displayName, string phoneNumber, string ipAddress, string? userAgent, CancellationToken ct);
-    Task<LiveSupportParticipantIdentity?> ValidateGuestTokenAsync(string? token, CancellationToken ct);
     Task<IReadOnlyList<LiveSupportConversationDto>> ListParticipantConversationsAsync(LiveSupportParticipantIdentity participant, CancellationToken ct);
     Task<LiveSupportConversationDto> CreateConversationAsync(LiveSupportParticipantIdentity participant, string? subject, Guid? previousConversationId, CancellationToken ct);
     Task<LiveSupportConversationDto?> GetParticipantConversationAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct);
@@ -18,6 +16,7 @@ public interface ILiveSupportService
     Task SubmitRatingAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int stars, string? comment, CancellationToken ct);
     Task<LiveSupportStaffBootstrapDto> GetStaffBootstrapAsync(Guid staffUserId, bool isAdmin, CancellationToken ct);
     Task<IReadOnlyList<LiveSupportMessageDto>> GetStaffMessagesAsync(Guid staffUserId, bool isAdmin, Guid conversationId, int pageSize, CancellationToken ct);
+    Task<long> GetStaffLastEventSequenceAsync(Guid staffUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
     Task<LiveSupportSendResultDto> SendStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string clientMessageId, string content, CancellationToken ct);
     Task<LiveSupportConversationDto> CloseAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string reason, CancellationToken ct);
     Task<LiveSupportConversationDto> TransferAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid? targetStaffUserId, string reason, CancellationToken ct);

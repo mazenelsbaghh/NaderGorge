@@ -31,8 +31,9 @@ public sealed class ParticipantSessionTests
         await TestAppDbContextFactory.SeedUserAsync(db, "Matching Student", "01012345678");
         await SeedEligibleStaffAsync(db);
         var service = CreateService(db);
-        var guest = await service.CreateGuestSessionAsync("زائر اختبار", "01012345678", "127.0.0.1", "tests", CancellationToken.None);
-        var participant = await service.ValidateGuestTokenAsync(guest.CookieToken, CancellationToken.None);
+        var guestSessions = new LiveSupportGuestSessionService(db);
+        var guest = await guestSessions.IssueAsync("زائر اختبار", "01012345678", "127.0.0.1", "tests", CancellationToken.None);
+        var participant = await guestSessions.ValidateAsync(guest.CookieToken, CancellationToken.None);
 
         var conversation = await service.CreateConversationAsync(participant!, "مشكلة", null, CancellationToken.None);
 

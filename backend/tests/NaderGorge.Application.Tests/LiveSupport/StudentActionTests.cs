@@ -67,6 +67,42 @@ public sealed class StudentActionTests
         Assert.True(await fixture.Db.Devices.AnyAsync(x => x.Id == device.Id));
     }
 
+    [Fact]
+    public async Task ActionRejectsMissingLinkWrongOwnerAndCheckedOutStaff()
+    {
+        await using var fixture = await ActionFixture.CreateAsync();
+        var definition = (await fixture.Actions.GetCatalogAsync(fixture.StaffId, false, fixture.ConversationId, CancellationToken.None)).Single(x => x.Key == "student.balance.adjust");
+        var conversation = await fixture.Db.LiveSupportConversations.SingleAsync(x => x.Id == fixture.ConversationId);
+        conversation.LinkedStudentUserId = null;
+        await fixture.Db.SaveChangesAsync();
+        var noLink = await Assert.ThrowsAsync<LiveSupportException>(() => fixture.Actions.ExecuteAsync(fixture.Request(definition, Guid.NewGuid().ToString(), "{\"amount\":1,\"reason\":\"test reason\"}"), CancellationToken.None));
+        Assert.Equal("STUDENT_NOT_LINKED", noLink.Code);
+
+        conversation.LinkedStudentUserId = fixture.StudentId;
+        conversation.CurrentOwnerUserId = Guid.NewGuid();
+        await fixture.Db.SaveChangesAsync();
+        var wrongOwner = await Assert.ThrowsAsync<LiveSupportException>(() => fixture.Actions.ExecuteAsync(fixture.Request(definition, Guid.NewGuid().ToString(), "{\"amount\":1,\"reason\":\"test reason\"}"), CancellationToken.None));
+        Assert.Equal(LiveSupportErrorCodes.Forbidden, wrongOwner.Code);
+
+        conversation.CurrentOwnerUserId = fixture.StaffId;
+        var attendance = await fixture.Db.AttendanceLogs.SingleAsync(x => x.ClockOut == null);
+        attendance.ClockOut = DateTime.UtcNow;
+        await fixture.Db.SaveChangesAsync();
+        var checkedOut = await Assert.ThrowsAsync<LiveSupportException>(() => fixture.Actions.ExecuteAsync(fixture.Request(definition, Guid.NewGuid().ToString(), "{\"amount\":1,\"reason\":\"test reason\"}"), CancellationToken.None));
+        Assert.Equal(LiveSupportErrorCodes.Forbidden, checkedOut.Code);
+    }
+
+    [Fact]
+    public async Task PasswordPayloadIsRedactedFromExecutionAudit()
+    {
+        await using var fixture = await ActionFixture.CreateAsync();
+        var definition = (await fixture.Actions.GetCatalogAsync(fixture.StaffId, false, fixture.ConversationId, CancellationToken.None)).Single(x => x.Key == "student.password.reset");
+        await fixture.Actions.ExecuteAsync(fixture.Request(definition, Guid.NewGuid().ToString(), "{\"newPassword\":\"NeverLogThis123!\"}"), CancellationToken.None);
+        var safe = await fixture.Db.LiveSupportActionExecutions.Select(x => x.SafeRequestJson).SingleAsync();
+        Assert.DoesNotContain("NeverLogThis", safe);
+        Assert.Contains("secretRedacted", safe);
+    }
+
     private sealed class ActionFixture : IAsyncDisposable
     {
         private ActionFixture(AppDbContext db, LiveSupportActionService actions, Guid staffId, Guid studentId, Guid conversationId) => (Db, Actions, StaffId, StudentId, ConversationId) = (db, actions, staffId, studentId, conversationId);

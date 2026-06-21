@@ -247,6 +247,18 @@ public class E2eTestingController : ControllerBase
 
             if (request.SeedLiveSupport)
             {
+                await _dbContext.Set<LiveSupportActionExecution>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportRating>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportEvent>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportStudentLinkHistory>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportMessage>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportAttachment>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportAssignment>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportQueueEntry>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportConversation>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportGuestSession>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportScheduleWindow>().ExecuteDeleteAsync();
+                await _dbContext.Set<LiveSupportStaffConfig>().ExecuteDeleteAsync();
                 var admin = await _dbContext.Set<User>().SingleAsync(x => x.PhoneNumber == "20000000000");
                 var student = await _dbContext.Set<User>().SingleAsync(x => x.PhoneNumber == "20000000001");
                 if (!await _dbContext.Set<StudentProfile>().AnyAsync(x => x.UserId == student.Id))
@@ -625,8 +637,7 @@ public class E2eTestingController : ControllerBase
     {
         var connectionString = _dbContext.Database.GetConnectionString() ?? string.Empty;
         var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? string.Empty;
-        return env.Equals("E2e", StringComparison.OrdinalIgnoreCase) ||
-               connectionString.Contains("e2e", StringComparison.OrdinalIgnoreCase) ||
+        return connectionString.Contains("e2e", StringComparison.OrdinalIgnoreCase) ||
                connectionString.Contains("test", StringComparison.OrdinalIgnoreCase);
     }
 }

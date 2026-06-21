@@ -1,5 +1,4 @@
 using System.Data;
-using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -17,7 +16,6 @@ namespace NaderGorge.Infrastructure.Services;
 
 public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettingsReader settings, ILiveSupportPresenceStore? presence = null, ILiveSupportAttachmentStorage? attachmentStorage = null, ILogger<LiveSupportService>? logger = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
 {
-    private const int GuestLifetimeDays = 30;
     private readonly IAppDbContext _db = db;
     private readonly ICachedPlatformSettingsReader _settings = settings;
     private readonly AppDbContext? _relationalDb = db as AppDbContext;
@@ -43,42 +41,6 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
                 : "الدعم غير متاح حاليًا، وسيظهر الموعد هنا عند تحديده من الإدارة.");
     }
 
-    public async Task<LiveSupportGuestSessionDto> CreateGuestSessionAsync(string displayName, string phoneNumber, string ipAddress, string? userAgent, CancellationToken ct)
-    {
-        displayName = displayName.Trim();
-        phoneNumber = phoneNumber.Trim();
-        if (displayName.Length is < 2 or > 100 || phoneNumber.Length is < 8 or > 20)
-            throw new LiveSupportException("VALIDATION_ERROR", "الاسم أو رقم الهاتف غير صحيح.");
-
-        var secret = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        var session = new LiveSupportGuestSession
-        {
-            DisplayName = displayName,
-            PhoneNumber = phoneNumber,
-            SecurityStampHash = Hash(secret),
-            ExpiresAt = DateTime.UtcNow.AddDays(GuestLifetimeDays),
-            LastSeenAt = DateTime.UtcNow,
-            CreatedIpHash = Hash(ipAddress),
-            UserAgentSummary = userAgent is null ? null : userAgent[..Math.Min(userAgent.Length, 240)]
-        };
-        _db.LiveSupportGuestSessions.Add(session);
-        await _db.SaveChangesAsync(ct);
-        return new LiveSupportGuestSessionDto(session.Id, session.DisplayName, session.ExpiresAt, $"{session.Id:N}.{secret}");
-    }
-
-    public async Task<LiveSupportParticipantIdentity?> ValidateGuestTokenAsync(string? token, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(token)) return null;
-        var parts = token.Split('.', 2);
-        if (parts.Length != 2 || !Guid.TryParseExact(parts[0], "N", out var id)) return null;
-        var session = await _db.LiveSupportGuestSessions.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (session is null || session.RevokedAt.HasValue || session.ExpiresAt <= DateTime.UtcNow ||
-            !CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(session.SecurityStampHash), Encoding.UTF8.GetBytes(Hash(parts[1]))))
-            return null;
-        session.LastSeenAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync(ct);
-        return new LiveSupportParticipantIdentity(LiveSupportParticipantType.Guest, null, id);
-    }
 
     public async Task<IReadOnlyList<LiveSupportConversationDto>> ListParticipantConversationsAsync(LiveSupportParticipantIdentity participant, CancellationToken ct)
     {
@@ -257,6 +219,12 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
         return await _db.LiveSupportMessages.Where(x => x.ConversationId == conversationId)
             .OrderByDescending(x => x.SentAt).Take(Math.Clamp(pageSize, 1, 100)).OrderBy(x => x.SentAt)
             .Select(x => ToDto(x)).ToListAsync(ct);
+    }
+
+    public async Task<long> GetStaffLastEventSequenceAsync(Guid staffUserId, bool isAdmin, Guid conversationId, CancellationToken ct)
+    {
+        await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
+        return await _db.LiveSupportEvents.Where(x => x.ConversationId == conversationId).MaxAsync(x => (long?)x.Sequence, ct) ?? 0;
     }
 
     public async Task<LiveSupportSendResultDto> SendStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string clientMessageId, string content, CancellationToken ct)
@@ -631,7 +599,6 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
     }
     private static LiveSupportMessageDto ToDto(LiveSupportMessage x) => new(x.Id, x.ConversationId, x.SenderType, x.ClientMessageId, x.Type, x.Content, x.SentAt);
     private static bool IsTerminal(LiveSupportConversationStatus s) => s is LiveSupportConversationStatus.Closed or LiveSupportConversationStatus.Abandoned;
-    private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
     private static string MaskPhone(string phone) => phone.Length <= 4 ? "****" : $"{phone[..2]}******{phone[^2..]}";
     private static string EncodeCursor(DateTime sentAt, Guid id) => Convert.ToBase64String(Encoding.UTF8.GetBytes($"{sentAt.Ticks}|{id:N}"));
     private static bool TryDecodeCursor(string? cursor, out DateTime sentAt, out Guid id)

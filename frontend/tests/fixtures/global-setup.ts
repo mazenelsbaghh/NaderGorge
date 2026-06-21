@@ -11,7 +11,7 @@ async function globalSetup() {
           'X-E2E-Token': process.env.E2E_TEST_TOKEN || 'E2eOnlyTestTokenValue123456789012345',
         },
         body: JSON.stringify({
-          clearDatabase: true,
+          clearDatabase: process.env.E2E_ALLOW_DESTRUCTIVE_RESET === 'true',
           seedAdmin: true,
           seedStudents: true,
           seedTeacher: true,

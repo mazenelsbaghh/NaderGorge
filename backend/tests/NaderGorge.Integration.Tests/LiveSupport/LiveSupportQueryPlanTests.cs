@@ -12,7 +12,7 @@ public sealed class LiveSupportQueryPlanTests
     {
         await using var fixture = new PostgresLiveSupportFixture();
         await fixture.ResetAsync();
-        var indexes = await fixture.Db.Database.SqlQueryRaw<string>($"SELECT indexname AS \"Value\" FROM pg_indexes WHERE tablename = '{table}'").ToListAsync();
+        var indexes = await fixture.Db.Database.SqlQuery<string>($"SELECT indexname AS \"Value\" FROM pg_indexes WHERE tablename = {table}").ToListAsync();
         Assert.Contains(indexes, x => x.Contains(expectedIndex, StringComparison.OrdinalIgnoreCase));
     }
 }
