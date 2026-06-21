@@ -14,6 +14,7 @@ import {
   Library,
   Coins,
   Briefcase,
+  Headphones,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -38,7 +39,8 @@ export const adminMenuItems = [
   { label: 'التعديلات', href: '/admin/overrides', icon: <Wrench className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'المالية والرواتب', href: '/admin/finance', icon: <Coins className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'التواصل الداخلي', href: '/admin/chat', icon: <MessageSquareText className="h-4 w-4" /> },
-  { label: 'مساعد الدعم الذكي', href: '/admin/live-support/ai', icon: <Sparkles className="h-4 w-4" />, adminOnly: true },
+  { label: 'الدعم المباشر', href: '/admin/live-support', icon: <Headphones className="h-4 w-4" />, permission: 'live_support.manage' },
+  { label: 'مساعد الدعم الذكي', href: '/admin/live-support/ai', icon: <Sparkles className="h-4 w-4" />, permission: 'live_support.manage' },
 ];
 
 export const adminRootLinks: AdminRootLink[] = [
@@ -101,6 +103,18 @@ export const adminRootLinks: AdminRootLink[] = [
     title: 'المالية والحسابات',
     body: 'إدارة رواتب الموظفين والزيادات والخصومات، ومراجعة أرباح المعلمين وتسوية سحوباتهم.',
     icon: Coins,
+  },
+  {
+    href: '/admin/live-support',
+    title: 'الدعم المباشر',
+    body: 'إدارة خدمة الدعم المباشر والمحادثات الجارية مع الطلاب.',
+    icon: Headphones,
+  },
+  {
+    href: '/admin/live-support/ai',
+    title: 'مساعد الدعم الذكي',
+    body: 'تخصيص سياسة وتدريب وإشراف وكيل الدعم الذكي (AI).',
+    icon: Sparkles,
   },
 ];
 

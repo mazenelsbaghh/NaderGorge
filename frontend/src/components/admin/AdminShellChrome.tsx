@@ -194,6 +194,12 @@ const navItems: Array<{
     permission: 'live_support.manage',
   },
   {
+    href: '/admin/live-support/ai',
+    label: 'الدعم الذكي AI',
+    icon: Sparkles,
+    permission: 'live_support.manage',
+  },
+  {
     href: '/admin/chat',
     label: 'التواصل الداخلي',
     icon: MessageSquareText,
@@ -247,7 +253,7 @@ const GROUP_CONFIG = [
     id: 'crm_chat',
     label: 'الاتصال والتواصل',
     icon: PhoneCall,
-    hrefs: ['/admin/crm', '/assistant/crm', '/admin/chat'],
+    hrefs: ['/admin/crm', '/assistant/crm', '/admin/chat', '/admin/live-support', '/admin/live-support/ai'],
   },
   {
     id: 'reports',
