@@ -1078,7 +1078,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         )}
 
         {/* Floating Mindmap Overlay */}
-        {activeChapterDesktop && status === 'ready' && (showControls || isMindmapOpen) && (
+        {activeChapterDesktop && chapters?.some(c => c.mindmapImageUrl) && status === 'ready' && (showControls || isMindmapOpen) && (
           <div 
             className="pointer-events-none absolute left-3 top-3 z-[90] flex flex-col items-start sm:left-4 sm:top-4"
             onMouseEnter={() => setIsHoveringControls(true)}
