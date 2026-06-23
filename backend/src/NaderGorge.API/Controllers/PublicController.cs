@@ -178,4 +178,23 @@ public class PublicController : ControllerBase
             return PhysicalFile(physicalPath, contentType, Path.GetFileName(relativePath), enableRangeProcessing: true);
         }
     }
+
+    [HttpGet("debug-live-support-ai")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DebugLiveSupportAI(CancellationToken ct)
+    {
+        var count = await _db.LiveSupportAIPolicyVersions.CountAsync(ct);
+        var anyActive = await _db.LiveSupportAIPolicyVersions.AnyAsync(x => x.Status == NaderGorge.Domain.Enums.LiveSupportAIPolicyStatus.Published && x.IsEnabled, ct);
+        var firstActive = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Status == NaderGorge.Domain.Enums.LiveSupportAIPolicyStatus.Published && x.IsEnabled, ct);
+        var all = await _db.LiveSupportAIPolicyVersions.Select(x => new { x.Id, x.VersionNumber, x.Status, x.IsEnabled }).ToListAsync(ct);
+        return Ok(new
+        {
+            Count = count,
+            AnyActive = anyActive,
+            FirstActiveIsNull = firstActive == null,
+            FirstActive = firstActive == null ? null : new { firstActive.Id, firstActive.VersionNumber, firstActive.Status, firstActive.IsEnabled, SystemInstructionsLength = firstActive.SystemInstructions.Length },
+            All = all
+        });
+    }
 }
+
