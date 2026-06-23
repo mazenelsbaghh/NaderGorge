@@ -37,7 +37,8 @@ public sealed record LiveSupportConversationDto(
     int? QueuePosition,
     long Version,
     bool CanSend,
-    bool CanRate);
+    bool CanRate,
+    bool IsAiActive);
 
 public sealed record LiveSupportGuestSessionDto(Guid Id, string DisplayName, DateTime ExpiresAt, string CookieToken);
 
@@ -94,3 +95,46 @@ public static class LiveSupportErrorCodes
     public const string MessageConflict = "LIVE_SUPPORT_MESSAGE_CONFLICT";
     public const string RatingConflict = "LIVE_SUPPORT_RATING_CONFLICT";
 }
+
+public sealed record LiveSupportAITurnContextDto(
+    Guid TurnId,
+    Guid ConversationId,
+    Guid PolicyVersionId,
+    long ExpectedConversationVersion,
+    string SystemInstructions,
+    List<string> KnowledgeDocuments,
+    List<LiveSupportMessageDto> Messages,
+    string ParticipantType
+);
+
+public sealed record LiveSupportAITurnCompleteRequest(
+    long ExpectedConversationVersion,
+    LiveSupportAIDecision Decision,
+    string Provider,
+    string Model,
+    string? ProviderResponseId,
+    int? InputTokenCount,
+    int? OutputTokenCount,
+    int? LatencyMs,
+    string CallbackIdempotencyKey
+);
+
+public sealed record LiveSupportAIDecision(
+    string Type,
+    string? MessageAr,
+    LiveSupportAIDecisionHandoff? Handoff
+);
+
+public sealed record LiveSupportAIDecisionHandoff(
+    string ReasonCode,
+    string SafeSummaryAr
+);
+
+public sealed record LiveSupportAITurnFailRequest(
+    string FailureCode,
+    string? SafeFailureDetail,
+    string Provider,
+    string Model,
+    int? LatencyMs,
+    string CallbackIdempotencyKey
+);

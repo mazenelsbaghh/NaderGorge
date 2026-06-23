@@ -28,12 +28,13 @@ export interface LiveSupportConversation {
   version: number;
   canSend: boolean;
   canRate: boolean;
+  isAiActive?: boolean;
 }
 
 export interface LiveSupportMessage {
   id: string;
   conversationId: string;
-  senderType: 'Student' | 'Guest' | 'Staff' | 'Admin' | 'System';
+  senderType: 'Student' | 'Guest' | 'Staff' | 'Admin' | 'System' | 'AI';
   clientMessageId: string;
   type: LiveSupportMessageType;
   content: string;

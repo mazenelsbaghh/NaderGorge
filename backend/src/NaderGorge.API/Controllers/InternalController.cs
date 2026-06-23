@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Configuration;
 using NaderGorge.Application.Features.Internal.Commands;
 using NaderGorge.Application.Features.Webhooks.Commands;
+using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Application.Features.LiveSupport.Dtos;
 
 namespace NaderGorge.API.Controllers;
 
@@ -11,10 +13,12 @@ namespace NaderGorge.API.Controllers;
 public class InternalController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly ILiveSupportService _liveSupportService;
 
-    public InternalController(IMediator mediator)
+    public InternalController(IMediator mediator, ILiveSupportService liveSupportService)
     {
         _mediator = mediator;
+        _liveSupportService = liveSupportService;
     }
 
     [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
@@ -65,6 +69,31 @@ public class InternalController : ControllerBase
         var result = await _mediator.Send(cmd);
 
         return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [HttpPost("live-support-ai/turns/{turnId:guid}/claim")]
+    public async Task<IActionResult> ClaimAITurn([FromRoute] Guid turnId, CancellationToken ct)
+    {
+        var context = await _liveSupportService.ClaimAITurnAsync(turnId, ct);
+        if (context is null) return NotFound(new { error = "Turn not found" });
+        return Ok(context);
+    }
+
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [HttpPost("live-support-ai/turns/{turnId:guid}/complete")]
+    public async Task<IActionResult> CompleteAITurn([FromRoute] Guid turnId, [FromBody] LiveSupportAITurnCompleteRequest request, CancellationToken ct)
+    {
+        await _liveSupportService.CompleteAITurnAsync(turnId, request, ct);
+        return Ok();
+    }
+
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [HttpPost("live-support-ai/turns/{turnId:guid}/fail")]
+    public async Task<IActionResult> FailAITurn([FromRoute] Guid turnId, [FromBody] LiveSupportAITurnFailRequest request, CancellationToken ct)
+    {
+        await _liveSupportService.FailAITurnAsync(turnId, request, ct);
+        return Ok();
     }
 }
 

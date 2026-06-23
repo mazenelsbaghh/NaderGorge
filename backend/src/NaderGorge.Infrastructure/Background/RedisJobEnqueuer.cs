@@ -28,6 +28,7 @@ public class RedisJobEnqueuer : IJobEnqueuer
             "ai-mindmaps-queue" => "mind maps",
             "bullmq-bridge-ingest" or "ai-essay-queue" => "essay",
             "notifications" => "notification",
+            "ai-live-support-turns" => "live support turn",
             _ => "notification"
         };
 
@@ -52,6 +53,10 @@ public class RedisJobEnqueuer : IJobEnqueuer
             else if (root.TryGetProperty("warningId", out var wProp) || root.TryGetProperty("WarningId", out wProp))
             {
                 jobId = wProp.GetString() ?? jobId;
+            }
+            else if (root.TryGetProperty("turnId", out var tProp) || root.TryGetProperty("TurnId", out tProp))
+            {
+                jobId = tProp.GetString() ?? jobId;
             }
         }
         catch { }

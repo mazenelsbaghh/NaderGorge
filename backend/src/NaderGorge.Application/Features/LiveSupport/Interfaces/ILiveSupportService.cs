@@ -33,6 +33,9 @@ public interface ILiveSupportService
     Task<LiveSupportAttachmentDto> SaveParticipantAttachmentAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct);
     Task<LiveSupportAttachmentDownloadDto> OpenParticipantAttachmentAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid attachmentId, CancellationToken ct);
     Task<LiveSupportConversationDto> AdminInterveneAsync(Guid adminUserId, Guid conversationId, string operation, Guid? targetStaffUserId, string reason, CancellationToken ct);
+    Task<LiveSupportAITurnContextDto?> ClaimAITurnAsync(Guid turnId, CancellationToken ct);
+    Task CompleteAITurnAsync(Guid turnId, LiveSupportAITurnCompleteRequest request, CancellationToken ct);
+    Task FailAITurnAsync(Guid turnId, LiveSupportAITurnFailRequest request, CancellationToken ct);
 }
 
 public interface ILiveSupportPresenceStore

@@ -7,6 +7,7 @@ using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
 using NaderGorge.Infrastructure.Services;
+using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.Application.Tests.LiveSupport;
 
@@ -120,6 +121,131 @@ public sealed class ParticipantSessionTests
         db.AttendanceLogs.Add(new AttendanceLog { EmployeeId = employee.Id, ClockIn = DateTime.UtcNow, Date = DateOnly.FromDateTime(DateTime.UtcNow), Status = AttendanceStatus.Present, IpAddress = "tests", UserAgent = "tests" });
         await db.SaveChangesAsync();
         return user.Id;
+    }
+
+    [Fact]
+    public async Task SendMessage_EnqueuesAITurn_WhenAISupportIsActive()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01011111111");
+        
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Test Instructions",
+            CreatedByUserId = adminUser.Id,
+            PublishedByUserId = adminUser.Id,
+            PublishedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
+        var fakeEnqueuer = new FakeJobEnqueuer();
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
+
+        var sendResult = await service.SendParticipantMessageAsync(participant, conversation.Id, Guid.NewGuid().ToString(), "أهلاً بك", LiveSupportMessageType.Text, CancellationToken.None);
+
+        // Verify that the AI state was initialized
+        var aiState = await db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id);
+        Assert.NotNull(aiState);
+        Assert.Equal(LiveSupportAIMode.AiActive, aiState.Mode);
+
+        // Verify that a turn was created and queued in DB
+        var turn = await db.LiveSupportAITurns.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id);
+        Assert.NotNull(turn);
+        Assert.Equal(LiveSupportAITurnStatus.Queued, turn.Status);
+
+        // Verify that the job was enqueued in Redis
+        Assert.Single(fakeEnqueuer.EnqueuedJobs);
+        var job = fakeEnqueuer.EnqueuedJobs[0];
+        Assert.Equal("ai-live-support-turns", job.queueName);
+        Assert.Equal("respond", job.jobName);
+    }
+
+    [Fact]
+    public async Task ClaimCompleteAndFailAITurns_BehavesCorrectly()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01011111111");
+        
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Test Instructions",
+            CreatedByUserId = adminUser.Id,
+            PublishedByUserId = adminUser.Id,
+            PublishedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
+        var fakeEnqueuer = new FakeJobEnqueuer();
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
+
+        await service.SendParticipantMessageAsync(participant, conversation.Id, Guid.NewGuid().ToString(), "أهلاً بك", LiveSupportMessageType.Text, CancellationToken.None);
+
+        var turn = await db.LiveSupportAITurns.FirstAsync(x => x.ConversationId == conversation.Id);
+        
+        // 1. Claim AI Turn
+        var context = await service.ClaimAITurnAsync(turn.Id, CancellationToken.None);
+        Assert.NotNull(context);
+        Assert.Equal("Test Instructions", context.SystemInstructions);
+        Assert.Single(context.Messages);
+        Assert.Equal("أهلاً بك", context.Messages[0].Content);
+
+        // Verify status changed to Processing
+        var claimedTurn = await db.LiveSupportAITurns.FirstAsync(x => x.Id == turn.Id);
+        Assert.Equal(LiveSupportAITurnStatus.Processing, claimedTurn.Status);
+
+        // 2. Complete AI Turn (Reply)
+        var replyRequest = new LiveSupportAITurnCompleteRequest(
+            ExpectedConversationVersion: context.ExpectedConversationVersion,
+            Decision: new LiveSupportAIDecision("reply", "رد المساعد", null),
+            Provider: "gemini",
+            Model: "gemini-2.5-flash",
+            ProviderResponseId: "resp-1",
+            InputTokenCount: 10,
+            OutputTokenCount: 5,
+            LatencyMs: 120,
+            CallbackIdempotencyKey: turn.Id.ToString()
+        );
+
+        await service.CompleteAITurnAsync(turn.Id, replyRequest, CancellationToken.None);
+
+        // Verify message was created
+        var messages = await db.LiveSupportMessages.Where(x => x.ConversationId == conversation.Id).ToListAsync();
+        Assert.Equal(2, messages.Count);
+        Assert.Contains(messages, m => m.Content == "رد المساعد" && m.SenderType == LiveSupportSenderType.AI);
+
+        // Verify turn is completed
+        var completedTurn = await db.LiveSupportAITurns.FirstAsync(x => x.Id == turn.Id);
+        Assert.Equal(LiveSupportAITurnStatus.Completed, completedTurn.Status);
+        Assert.Equal(LiveSupportAIDecisionType.Reply, completedTurn.DecisionType);
+    }
+
+    private sealed class FakeJobEnqueuer : IJobEnqueuer
+    {
+        public List<(string queueName, string jobName, object data)> EnqueuedJobs { get; } = new();
+
+        public Task EnqueueJobAsync<T>(string queueName, string jobName, T data)
+        {
+            EnqueuedJobs.Add((queueName, jobName, data!));
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class EnabledSettingsReader : ICachedPlatformSettingsReader

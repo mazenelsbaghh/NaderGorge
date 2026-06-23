@@ -383,3 +383,111 @@ export async function generateChapterMindmap(
     throw error;
   }
 }
+
+export interface LiveSupportAIDecisionHandoff {
+  reasonCode: string;
+  safeSummaryAr: string;
+}
+
+export interface LiveSupportAIDecision {
+  type: 'reply' | 'handoff';
+  messageAr?: string | undefined;
+  handoff?: LiveSupportAIDecisionHandoff | undefined;
+}
+
+export interface LiveSupportAITurnResult {
+  decision: LiveSupportAIDecision;
+  provider: string;
+  model: string;
+}
+
+const liveSupportDecisionSchema = {
+  type: Type.OBJECT,
+  properties: {
+    schemaVersion: { type: Type.STRING },
+    type: { type: Type.STRING },
+    messageAr: { type: Type.STRING },
+    handoff: {
+      type: Type.OBJECT,
+      properties: {
+        reasonCode: { type: Type.STRING },
+        safeSummaryAr: { type: Type.STRING }
+      },
+      required: ['reasonCode', 'safeSummaryAr']
+    }
+  },
+  required: ['schemaVersion', 'type']
+};
+
+export async function generateLiveSupportReply(
+  systemInstructions: string,
+  knowledgeDocuments: string[],
+  messages: Array<{ senderType: string; content: string; sentAt: string }>,
+): Promise<LiveSupportAITurnResult> {
+  const runtime = createRuntime();
+
+  const systemInstructionText = `${systemInstructions}
+
+Available Knowledge/Context Documents:
+${knowledgeDocuments.map((doc, idx) => `--- DOCUMENT ${idx + 1} ---\n${doc}`).join('\n\n')}
+
+CRITICAL DIRECTIVES:
+1. Always reply in warm, helpful, Egyptian colloquial Arabic (العامية المصرية).
+2. If the user explicitly asks to talk to a human, or if you cannot answer their question after searching the provided documents, or if they present a complex issue, decide to 'handoff'.
+3. Your response MUST strictly follow the JSON response schema.`;
+
+  const contents = messages.map(m => {
+    const role = (m.senderType === 'Student' || m.senderType === 'Guest') ? 'user' : 'model';
+    return {
+      role,
+      parts: [{ text: m.content }]
+    };
+  });
+
+  const request = {
+    model: runtime.config.textModel,
+    contents,
+    config: {
+      systemInstruction: systemInstructionText,
+      responseMimeType: 'application/json',
+      responseSchema: liveSupportDecisionSchema,
+    }
+  };
+
+  const response = await runtime.gateway.execute({
+    operation: 'live-support',
+    vertex: () => runtime.vertex.models.generateContent(request),
+    developer: () => runtime.developer.models.generateContent(request),
+  });
+
+  const rawText = response.text;
+  if (!rawText) {
+    throw new Error('AI live support turn returned an empty response.');
+  }
+
+  const parsed = JSON.parse(rawText) as {
+    type: string;
+    messageAr?: string;
+    handoff?: { reasonCode: string; safeSummaryAr: string };
+  };
+
+  if (parsed.type !== 'reply' && parsed.type !== 'handoff') {
+    throw new Error(`AI live support turn returned invalid decision type: ${parsed.type}`);
+  }
+
+  const decision: LiveSupportAIDecision = {
+    type: parsed.type as 'reply' | 'handoff'
+  };
+  if (parsed.messageAr !== undefined) {
+    decision.messageAr = parsed.messageAr;
+  }
+  if (parsed.handoff !== undefined) {
+    decision.handoff = parsed.handoff;
+  }
+
+  return {
+    decision,
+    provider: runtime.config.primaryProvider,
+    model: runtime.config.textModel,
+  };
+}

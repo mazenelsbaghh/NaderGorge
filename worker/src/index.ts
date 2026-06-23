@@ -196,6 +196,23 @@ async function startMindmapsWorker() {
   console.log('[Worker] Mindmaps BullMQ worker started on queue: generate-chapter-mindmaps');
 }
 
+async function startLiveSupportWorker() {
+  const worker = new Worker('ai-live-support-turns', async (job) => {
+    const processor = await import('./jobs/processLiveSupportTurn.js');
+    return await processor.default(job);
+  }, { connection });
+
+  worker.on('completed', job => {
+    console.log(`[Live Support Worker] Job ${job.id} has completed successfully!`);
+  });
+
+  worker.on('failed', (job, err) => {
+    console.error(`[Live Support Worker] Job ${job?.id} has failed with ${err.message}`);
+  });
+  
+  console.log('[Worker] Live Support BullMQ worker started on queue: ai-live-support-turns');
+}
+
 async function startCronJobs() {
     // Basic JS Interval as a mock Cron Job for MVP. 
     // Usually BullMQ repeated jobs can handle this, but an interval works fine.
@@ -214,12 +231,14 @@ async function startWorker() {
   startAIWorker();
   startMindmapsWorker();
   startEssayWorker();
+  startLiveSupportWorker();
   startCronJobs();
   
   const aiQueue = new Queue('ai-video-chapters', { connection });
   const mindmapsQueue = new Queue('generate-chapter-mindmaps', { connection });
   const notifQueue = new Queue('notifications', { connection });
   const essayQueue = new Queue('ai-essay-grading', { connection });
+  const liveSupportQueue = new Queue('ai-live-support-turns', { connection });
 
   const app = express();
   if (process.env.NODE_ENV !== 'production') {
@@ -338,7 +357,8 @@ async function startWorker() {
       new BullMQAdapter(aiQueue),
       new BullMQAdapter(mindmapsQueue),
       new BullMQAdapter(notifQueue),
-      new BullMQAdapter(essayQueue)
+      new BullMQAdapter(essayQueue),
+      new BullMQAdapter(liveSupportQueue)
     ],
     serverAdapter: serverAdapter,
   });
@@ -399,6 +419,10 @@ async function startWorker() {
       } else if (jobType === 'notification') {
           targetQueue = notifQueue;
           bullmqJobName = parsedPayload.WarningId ? 'send-warning' : 'chat-mention';
+          targetJobId = jobId;
+      } else if (jobType === 'live support turn') {
+          targetQueue = liveSupportQueue;
+          bullmqJobName = 'respond';
           targetJobId = jobId;
       } else {
           console.warn(`[Worker] Unknown jobType: ${jobType}`);

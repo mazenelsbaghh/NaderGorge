@@ -1,7 +1,7 @@
 import type { AIConfig } from './aiConfig.js';
 import { classifyAIError, isQuotaExhausted } from './aiErrors.js';
 
-export type AIOperation = 'transcription' | 'chapters' | 'essay' | 'mindmap';
+export type AIOperation = 'transcription' | 'chapters' | 'essay' | 'mindmap' | 'live-support';
 
 export class AIProviderExecutionError extends Error {
   constructor(

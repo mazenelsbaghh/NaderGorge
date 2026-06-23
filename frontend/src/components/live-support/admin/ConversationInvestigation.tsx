@@ -64,7 +64,7 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
           <div className="flex min-h-[420px] flex-col border-l border-slate-200">
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 p-4" aria-live="polite">
               {loading ? <div className="grid h-full place-items-center"><LoaderCircle className="animate-spin text-cyan-700" /></div> : messages.length === 0 ? <p className="grid h-full place-items-center text-sm text-slate-600">لا توجد رسائل بعد.</p> : messages.map((message) => {
-                const fromTeam = message.senderType === 'Staff' || message.senderType === 'Admin' || message.senderType === 'System';
+                const fromTeam = message.senderType === 'Staff' || message.senderType === 'Admin' || message.senderType === 'System' || message.senderType === 'AI';
                 return <article key={message.id} className={`max-w-[82%] rounded-2xl px-4 py-3 ${fromTeam ? 'mr-auto bg-[#0A1D3D] text-white' : 'ml-auto bg-white text-slate-900 shadow-sm'}`}>
                   <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
                   <div className={`mt-2 flex items-center justify-between gap-4 text-[11px] ${fromTeam ? 'text-slate-300' : 'text-slate-500'}`}>
@@ -95,5 +95,5 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
 }
 
 function senderLabel(senderType: LiveSupportMessage['senderType']) {
-  return ({ Student: 'الطالب', Guest: 'الزائر', Staff: 'موظف الدعم', Admin: 'الإدارة', System: 'النظام' } as const)[senderType];
+  return ({ Student: 'الطالب', Guest: 'الزائر', Staff: 'موظف الدعم', Admin: 'الإدارة', System: 'النظام', AI: 'المساعد الذكي' } as const)[senderType];
 }
