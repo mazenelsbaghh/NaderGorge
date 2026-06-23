@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
-import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff } from 'lucide-react';
+import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService, type VideoProvider } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
@@ -11,8 +11,9 @@ import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { Dropdown } from '@/components/ui/dropdown';
 import { NumberField } from '@/components/ui/number-field';
+import { ImageZoomModal } from './ImageZoomModal';
 
-function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
+export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -216,6 +217,8 @@ function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string
 
 // ── Chapters inline panel ───────────────────────────────────────────────────
 function ChaptersInline({ chapters }: { chapters: any[] }) {
+  const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null);
+
   if (!chapters || chapters.length === 0) {
     return (
       <div className="px-4 pb-3 text-xs text-[var(--admin-muted)]">لا توجد فصول مسجلة لهذا الفيديو</div>
@@ -230,19 +233,32 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
             <div className="text-xs font-bold text-[var(--admin-text)] truncate">{ch.title}</div>
             {ch.summaryText && <div className="text-xs text-[var(--admin-muted)] mt-0.5 line-clamp-2">{ch.summaryText}</div>}
             {ch.mindmapImageUrl && (
-              <div className="mt-2">
-                <a href={resolveMediaUrl(ch.mindmapImageUrl)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-teal-500 font-bold hover:underline mb-1">
-                  <ImageIcon className="w-3 h-3" />
-                  رؤية الخريطة الذهنية
-                </a>
-                <NextImage
-                  src={resolveMediaUrl(ch.mindmapImageUrl)}
-                  alt={ch.title}
-                  width={200}
-                  height={112}
-                  unoptimized
-                  className="h-auto w-full max-w-[200px] rounded border border-[var(--admin-border)]"
-                />
+              <div className="mt-2 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setZoomImage({ url: ch.mindmapImageUrl, title: ch.title })}
+                  className="inline-flex items-center gap-1 text-xs text-teal-500 font-bold hover:underline mb-1"
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  رؤية وتنزيل الخريطة الذهنية
+                </button>
+                <div 
+                  onClick={() => setZoomImage({ url: ch.mindmapImageUrl, title: ch.title })}
+                  className="cursor-zoom-in relative overflow-hidden rounded border border-[var(--admin-border)] hover:border-teal-500 transition-colors w-fit group max-w-[200px]"
+                >
+                  <NextImage
+                    src={resolveMediaUrl(ch.mindmapImageUrl)}
+                    alt={ch.title}
+                    width={200}
+                    height={112}
+                    unoptimized
+                    className="h-auto w-full max-w-[200px] transition-transform duration-200 group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] gap-1 font-bold">
+                    <ZoomIn className="w-3.5 h-3.5" />
+                    تكبير
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -251,6 +267,15 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
           </div>
         </div>
       ))}
+
+      {zoomImage && (
+        <ImageZoomModal
+          isOpen={true}
+          imageUrl={zoomImage.url}
+          title={zoomImage.title}
+          onClose={() => setZoomImage(null)}
+        />
+      )}
     </div>
   );
 }

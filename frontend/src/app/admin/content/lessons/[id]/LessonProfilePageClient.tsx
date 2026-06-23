@@ -2,17 +2,18 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video } from 'lucide-react';
-import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer } from '@/components/admin';
+import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video, Sparkles } from 'lucide-react';
+import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
-type ActiveTab = 'overview' | 'videos' | 'resources' | 'homework' | 'exam' | 'comments';
+type ActiveTab = 'overview' | 'videos' | 'ai-analysis' | 'resources' | 'homework' | 'exam' | 'comments';
 
 const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'videos', label: 'الفيديوهات', icon: PlaySquare },
+  { key: 'ai-analysis', label: 'تحليل AI', icon: Sparkles },
   { key: 'comments', label: 'التعليقات', icon: MessageSquareText },
   { key: 'resources', label: 'المذكرات والملفات', icon: FileText },
   { key: 'homework', label: 'الواجبات', icon: ClipboardList },
@@ -182,6 +183,10 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
             <LessonVideoList videos={lesson.videos || []} lessonId={lesson.lessonId} onRefresh={loadData} />
           </div>
         </div>
+      )}
+
+      {activeTab === 'ai-analysis' && (
+        <LessonAIAnalysisTab lessonId={lesson.lessonId} videos={lesson.videos || []} onRefresh={loadData} />
       )}
 
       {activeTab === 'comments' && (

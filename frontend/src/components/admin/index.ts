@@ -55,3 +55,5 @@ export * from './ClockInOutWidget';
 export * from './AttendanceLogTable';
 export * from './VacationRequestModal';
 export { default as ContentSubscribersTab } from './ContentSubscribersTab';
+export * from './ImageZoomModal';
+export * from './LessonAIAnalysisTab';
