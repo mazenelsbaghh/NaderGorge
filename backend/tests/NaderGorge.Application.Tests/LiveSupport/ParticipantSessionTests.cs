@@ -80,6 +80,35 @@ public sealed class ParticipantSessionTests
         Assert.Equal(1, await db.LiveSupportMessages.CountAsync());
     }
 
+    [Fact]
+    public async Task Availability_ReturnsTrue_WhenAISupportIsEnabledAndNoStaffIsCheckedIn()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01011111111");
+        
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Test Instructions",
+            CreatedByUserId = adminUser.Id,
+            PublishedByUserId = adminUser.Id,
+            PublishedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+
+        var result = await service.GetAvailabilityAsync(CancellationToken.None);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal("AVAILABLE", result.Code);
+        Assert.Equal("الدعم متاح الآن", result.Message);
+    }
+
     private static LiveSupportService CreateService(AppDbContext db) => new(db, new EnabledSettingsReader());
 
     private static async Task<Guid> SeedEligibleStaffAsync(AppDbContext db)

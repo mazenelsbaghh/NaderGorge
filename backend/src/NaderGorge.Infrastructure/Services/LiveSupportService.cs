@@ -30,13 +30,15 @@ public sealed class LiveSupportService(IAppDbContext db, ICachedPlatformSettings
         var staffIds = await EligibleStaffQuery().Select(x => x.UserId).ToListAsync(ct);
         var staff = 0;
         foreach (var id in staffIds) if (_presence is null || await _presence.IsConnectedAsync(id)) staff++;
-        var next = staff == 0 ? await GetNextScheduleAsync(ct) : null;
+        var aiActive = await _db.LiveSupportAIPolicyVersions.AnyAsync(x => x.Status == LiveSupportAIPolicyStatus.Published && x.IsEnabled, ct);
+        var isAvailable = staff > 0 || aiActive;
+        var next = isAvailable ? null : await GetNextScheduleAsync(ct);
         return new LiveSupportAvailabilityDto(
-            staff > 0,
+            isAvailable,
             staff,
             next,
-            staff > 0 ? "AVAILABLE" : LiveSupportErrorCodes.SupportUnavailable,
-            staff > 0 ? "الدعم متاح الآن" : next.HasValue
+            isAvailable ? "AVAILABLE" : LiveSupportErrorCodes.SupportUnavailable,
+            isAvailable ? "الدعم متاح الآن" : next.HasValue
                 ? $"الدعم غير متاح الآن. الموعد القادم {next.Value:yyyy-MM-dd HH:mm}"
                 : "الدعم غير متاح حاليًا، وسيظهر الموعد هنا عند تحديده من الإدارة.");
     }
