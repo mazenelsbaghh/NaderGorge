@@ -851,7 +851,7 @@ public sealed class LiveSupportService(
             : await _db.LiveSupportGuestSessions.Where(x => x.Id == c.GuestSessionId).Select(x => x.DisplayName).FirstOrDefaultAsync(ct);
         var ownerName = c.CurrentOwnerUserId.HasValue ? await _db.Users.Where(x => x.Id == c.CurrentOwnerUserId).Select(x => x.FullName).FirstOrDefaultAsync(ct) : null;
         return new LiveSupportAdminConversationDto(c.Id, participantName ?? "غير معروف", c.ParticipantType, c.Status, ownerName, c.CreatedAt, c.AssignedAt, c.FirstStaffResponseAt, c.ClosedAt,
-            c.AssignedAt.HasValue ? (c.AssignedAt.Value - c.CreatedAt).TotalSeconds : null, c.ClosedAt.HasValue && c.AssignedAt.HasValue ? (c.ClosedAt.Value - c.AssignedAt.Value).TotalSeconds : null, c.Subject);
+            c.AssignedAt.HasValue ? (c.AssignedAt.Value - c.CreatedAt).TotalSeconds : null, c.ClosedAt.HasValue && c.AssignedAt.HasValue ? (c.ClosedAt.Value - c.AssignedAt.Value).TotalSeconds : null, c.Subject, null, null);
     }
 
     private async Task<string?> ActorNameAsync(Guid? userId, Guid? guestId, CancellationToken ct)

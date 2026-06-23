@@ -162,6 +162,13 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
         var guestSessionIds = conversations.Values.Where(c => c.GuestSessionId.HasValue).Select(c => c.GuestSessionId!.Value).Distinct().ToList();
         var guestNames = await db.LiveSupportGuestSessions.AsNoTracking().Where(g => guestSessionIds.Contains(g.Id)).ToDictionaryAsync(g => g.Id, g => g.DisplayName, ct);
 
+        var latestTurns = await db.LiveSupportAITurns
+            .AsNoTracking()
+            .Where(t => conversationIds.Contains(t.ConversationId))
+            .GroupBy(t => t.ConversationId)
+            .Select(g => g.OrderByDescending(t => t.QueuedAt).FirstOrDefault())
+            .ToDictionaryAsync(t => t!.ConversationId, ct);
+
         var result = new List<LiveSupportAdminConversationDto>();
         foreach (var state in activeStates)
         {
@@ -169,6 +176,8 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
             var participantName = c.ParticipantType == LiveSupportParticipantType.Student
                 ? (c.StudentUserId.HasValue && userNames.TryGetValue(c.StudentUserId.Value, out var name) ? name : "غير معروف")
                 : (c.GuestSessionId.HasValue && guestNames.TryGetValue(c.GuestSessionId.Value, out var gname) ? gname : "زائر");
+
+            latestTurns.TryGetValue(state.ConversationId, out var turn);
 
             result.Add(new LiveSupportAdminConversationDto(
                 c.Id,
@@ -182,7 +191,9 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
                 c.ClosedAt,
                 c.AssignedAt.HasValue ? (c.AssignedAt.Value - c.CreatedAt).TotalSeconds : null,
                 c.ClosedAt.HasValue && c.AssignedAt.HasValue ? (c.ClosedAt.Value - c.AssignedAt.Value).TotalSeconds : null,
-                c.Subject
+                c.Subject,
+                turn?.Status.ToString(),
+                turn?.FailureCode
             ));
         }
 

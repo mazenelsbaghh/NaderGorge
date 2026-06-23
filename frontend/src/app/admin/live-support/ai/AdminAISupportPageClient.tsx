@@ -342,6 +342,7 @@ export default function AdminAISupportPageClient() {
                     <tr>
                       <th className="p-3">الشخص</th>
                       <th className="p-3">الموضوع</th>
+                      <th className="p-3">حالة الرد الآلي</th>
                       <th className="p-3">وقت البدء</th>
                       <th className="p-3">المتابعة</th>
                     </tr>
@@ -356,6 +357,7 @@ export default function AdminAISupportPageClient() {
                           </span>
                         </td>
                         <td className="p-3 text-slate-700 max-w-xs truncate">{item.subject || '—'}</td>
+                        <td className="p-3">{renderAiStatus(item.aiTurnStatus, item.aiTurnFailureCode)}</td>
                         <td className="p-3 text-slate-600">{new Date(item.createdAt).toLocaleString('ar-EG')}</td>
                         <td className="p-3">
                           <button
@@ -378,6 +380,43 @@ export default function AdminAISupportPageClient() {
     </div>}
     {timeline && <ConversationInvestigation timeline={timeline} close={() => setTimeline(undefined)}/>}
   </AdminShellChrome>;
+}
+
+function renderAiStatus(status?: string, failureCode?: string) {
+  if (!status) return <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600">نشط</span>;
+
+  switch (status) {
+    case 'Queued':
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 animate-pulse">
+          <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+          في الطابور
+        </span>
+      );
+    case 'Processing':
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700 animate-pulse">
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-600"></span>
+          يكتب الآن...
+        </span>
+      );
+    case 'Completed':
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
+          تم الرد بنجاح
+        </span>
+      );
+    case 'Failed':
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700" title={failureCode}>
+          <span className="h-1.5 w-1.5 rounded-full bg-red-600"></span>
+          فشل الرد {failureCode ? `(${failureCode})` : ''}
+        </span>
+      );
+    default:
+      return <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">{status}</span>;
+  }
 }
 
 function StatItem({

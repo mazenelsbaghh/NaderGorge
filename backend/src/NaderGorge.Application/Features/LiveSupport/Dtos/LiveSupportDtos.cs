@@ -81,7 +81,7 @@ public sealed record LiveSupportStudentContextDto(
     IReadOnlyList<LiveSupportDeviceDto> Devices, IReadOnlyList<LiveSupportGrantDto> Grants,
     IReadOnlyList<LiveSupportNoteDto> Notes, int WatchEvents, int ExamAttempts, int HomeworkSubmissions);
 
-public sealed record LiveSupportAdminConversationDto(Guid Id, string ParticipantName, LiveSupportParticipantType ParticipantType, LiveSupportConversationStatus Status, string? OwnerName, DateTime CreatedAt, DateTime? AssignedAt, DateTime? FirstResponseAt, DateTime? ClosedAt, double? WaitSeconds, double? HandleSeconds, string? Subject);
+public sealed record LiveSupportAdminConversationDto(Guid Id, string ParticipantName, LiveSupportParticipantType ParticipantType, LiveSupportConversationStatus Status, string? OwnerName, DateTime CreatedAt, DateTime? AssignedAt, DateTime? FirstResponseAt, DateTime? ClosedAt, double? WaitSeconds, double? HandleSeconds, string? Subject, string? AiTurnStatus, string? AiTurnFailureCode);
 public sealed record LiveSupportStaffPerformanceDto(Guid StaffUserId, string StaffName, int ParticipatedConversations, int ClosedConversations, int RatingCount, double? AverageRating);
 public sealed record LiveSupportAdminDashboardDto(int WaitingCount, int ActiveCount, int ClosedToday, IReadOnlyList<LiveSupportAdminConversationDto> Conversations, IReadOnlyList<LiveSupportStaffPerformanceDto> StaffPerformance);
 public sealed record LiveSupportTimelineItemDto(DateTime At, string Type, string? ActorName, string Summary, string? SafeDetails);
