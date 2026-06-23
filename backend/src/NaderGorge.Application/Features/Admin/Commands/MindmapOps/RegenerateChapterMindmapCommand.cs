@@ -33,14 +33,15 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
             .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
             .FirstOrDefaultAsync(ct);
 
-        string? teacherPhotoUrl = null;
+        var teacherPhotoUrls = new List<string>();
         if (teacherUserId != null)
         {
-            teacherPhotoUrl = await _db.TeacherPhotos
-                .Where(tp => tp.IsActive && tp.TeacherId == teacherUserId.Value)
-                .OrderByDescending(tp => tp.UploadedAt)
+            teacherPhotoUrls = await _db.TeacherPhotos
+                .Where(tp => tp.TeacherId == teacherUserId.Value)
+                .OrderByDescending(tp => tp.IsActive)
+                .ThenByDescending(tp => tp.UploadedAt)
                 .Select(tp => tp.FileUrl)
-                .FirstOrDefaultAsync(ct);
+                .ToListAsync(ct);
         }
 
         // Enqueue a single-chapter mindmap job (worker handles chapterId payload)
@@ -48,7 +49,7 @@ public class RegenerateChapterMindmapCommandHandler : IRequestHandler<Regenerate
         {
             chapterId = chapter.Id,
             lessonVideoId = chapter.LessonVideoId,
-            teacherPhotoUrl = teacherPhotoUrl,
+            teacherPhotoUrls = teacherPhotoUrls,
             chapter = new
             {
                 title = chapter.Title,

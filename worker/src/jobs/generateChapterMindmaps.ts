@@ -36,6 +36,8 @@ export interface GenerateMindmapsJobData {
     LessonVideoId?: string;
     teacherPhotoUrl?: string;
     TeacherPhotoUrl?: string;
+    teacherPhotoUrls?: string[];
+    TeacherPhotoUrls?: string[];
     // Batch mode
     chapters?: ChapterMindmapInput[];
     Chapters?: ChapterMindmapInput[];
@@ -55,6 +57,7 @@ export interface GenerateMindmapsJobData {
 export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData>) {
     const lessonVideoId = job.data.lessonVideoId || job.data.LessonVideoId;
     const teacherPhotoUrl = job.data.teacherPhotoUrl || job.data.TeacherPhotoUrl;
+    const teacherPhotoUrls = job.data.teacherPhotoUrls || job.data.TeacherPhotoUrls;
     const chapterId = job.data.chapterId || job.data.ChapterId;
     const singleChapter = job.data.chapter || job.data.Chapter;
     const isSingleChapter = !!chapterId && !!singleChapter;
@@ -72,17 +75,18 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
         await notifyProgress(`${lessonVideoId}_mindmaps`, 10, prepStage);
         await throwIfCancellationRequested(job);
 
-        // Prepare local path for teacherPhotoUrl if it exists
-        let activeTeacherPhotoLocalPath: string | undefined = undefined;
-        if (teacherPhotoUrl) {
-            const relativeToWwwroot = teacherPhotoUrl.startsWith('/')
-                ? teacherPhotoUrl.substring(1)
-                : teacherPhotoUrl;
-            activeTeacherPhotoLocalPath = path.join(
-                workerRoot,
-                '../backend/src/NaderGorge.API/wwwroot',
-                relativeToWwwroot
-            );
+        // Prepare local paths for teacherPhotoUrls
+        let activeTeacherPhotoLocalPaths: string[] = [];
+        if (teacherPhotoUrls && Array.isArray(teacherPhotoUrls)) {
+            activeTeacherPhotoLocalPaths = teacherPhotoUrls.map(url => {
+                const relativeToWwwroot = url.startsWith('/') ? url.substring(1) : url;
+                return path.join(workerRoot, '../backend/src/NaderGorge.API/wwwroot', relativeToWwwroot);
+            });
+        } else if (teacherPhotoUrl) {
+            const relativeToWwwroot = teacherPhotoUrl.startsWith('/') ? teacherPhotoUrl.substring(1) : teacherPhotoUrl;
+            activeTeacherPhotoLocalPaths = [
+                path.join(workerRoot, '../backend/src/NaderGorge.API/wwwroot', relativeToWwwroot)
+            ];
         }
 
         const mindmapsDir = path.resolve(process.cwd(), '../backend/src/NaderGorge.API/wwwroot/mindmaps');
@@ -145,7 +149,7 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
                 console.error(`[Job ${job.id}] Failed to check existing mindmaps:`, err);
             }
 
-            const generatedUrl = existingUrl || await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPath);
+            const generatedUrl = existingUrl || await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPaths);
             results.push({ title: chapter.title, imageUrl: generatedUrl });
             completedCount++;
             const progressPct = 10 + Math.floor((completedCount / totalChapters) * 80);

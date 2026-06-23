@@ -11,9 +11,20 @@ public sealed class LiveSupportAICatalogTests
         Assert.Contains("student.create-and-link", LiveSupportAICatalog.Actions.Keys);
         Assert.Contains("phone.full", LiveSupportAICatalog.LookupKeys.Keys);
         Assert.Contains("profile.birth_date", LiveSupportAICatalog.VerificationQuestions.Keys);
+        Assert.Equal("البيانات الأساسية", LiveSupportAICatalog.ReadableData["identity.basic"].Label);
+        Assert.Equal("إنشاء حساب وربطه", LiveSupportAICatalog.Actions["student.create-and-link"].Label);
+        Assert.All(LiveSupportAICatalog.Actions.Values, action => Assert.True(action.RequiresVerification));
 
-        var allKeys = LiveSupportAICatalog.Snapshot().ReadableData.Concat(LiveSupportAICatalog.Snapshot().Actions)
-            .Concat(LiveSupportAICatalog.Snapshot().LookupKeys).Concat(LiveSupportAICatalog.Snapshot().VerificationQuestions).Select(x => x.Key);
+        var snapshot = LiveSupportAICatalog.Snapshot();
+        var allCatalogItems = snapshot.ReadableData.Concat(snapshot.Actions)
+            .Concat(snapshot.LookupKeys).Concat(snapshot.VerificationQuestions).ToArray();
+        Assert.All(allCatalogItems, catalogItem =>
+        {
+            Assert.NotEqual(catalogItem.Key, catalogItem.Label);
+            Assert.NotEqual(catalogItem.Key, catalogItem.Description);
+        });
+
+        var allKeys = allCatalogItems.Select(catalogItem => catalogItem.Key);
         Assert.DoesNotContain(allKeys, key => LiveSupportAISafety.IsForbiddenKey(key) || key.Contains("hash", StringComparison.OrdinalIgnoreCase));
     }
 

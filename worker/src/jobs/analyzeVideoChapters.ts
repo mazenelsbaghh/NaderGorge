@@ -34,6 +34,7 @@ export interface AnalyzeVideoJobData {
     srtContent?: string;
     subtitleUrl?: string;
     teacherPhotoUrl?: string;
+    teacherPhotoUrls?: string[];
 }
 
 /**

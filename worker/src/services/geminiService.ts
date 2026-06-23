@@ -257,12 +257,17 @@ export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: s
   return { isCorrect: parsed.isCorrect, feedback: parsed.feedback };
 }
 
-function mindmapParts(chapter: { title: string; summaryText: string }, teacherPhotoPath?: string) {
+function mindmapParts(chapter: { title: string; summaryText: string }, teacherPhotoPaths?: string[]) {
   const parts: Array<Record<string, unknown>> = [];
-  const hasPhoto = Boolean(teacherPhotoPath && fs.existsSync(teacherPhotoPath));
-  if (hasPhoto && teacherPhotoPath) {
-    const mimeType = teacherPhotoPath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
-    parts.push({ inlineData: { mimeType, data: fs.readFileSync(teacherPhotoPath).toString('base64') } });
+  let hasPhoto = false;
+  if (teacherPhotoPaths && teacherPhotoPaths.length > 0) {
+    for (const photoPath of teacherPhotoPaths) {
+      if (photoPath && fs.existsSync(photoPath)) {
+        const mimeType = photoPath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+        parts.push({ inlineData: { mimeType, data: fs.readFileSync(photoPath).toString('base64') } });
+        hasPhoto = true;
+      }
+    }
   }
   parts.push({ text: mindmapPrompt(chapter, hasPhoto) });
   return parts;
@@ -277,7 +282,7 @@ Layout: Wide horizontal landscape 16:9 composition. Use the width to spread out 
 Background: A beautiful cinematic horizontal environment matching the subject and era of the chapter context.
 Center: A large elegant glowing central node with the Arabic text "${chapter.title}" written clearly in big, bold, legible text.
 Branches: Glowing curved light beams extending from the center, connecting to smaller colorful 3D nodes. Inside each small node, write exactly ONE very short Arabic keyword (max 2 words) extracted from the context.
-${hasPhoto ? 'Characters: A highly detailed, friendly 3D Pixar-style caricature of the teacher matching the provided first reference image extremely closely, dressed for the subject.' : 'Characters: A friendly 3D Pixar-style teacher dressed for the subject.'}
+${hasPhoto ? 'Characters: A highly detailed, friendly 3D Pixar-style caricature of the teacher matching the provided reference images extremely closely (incorporating facial details and style from all of them), dressed for the subject.' : 'Characters: A friendly 3D Pixar-style teacher dressed for the subject.'}
 Decorations: Floating thematic elements, subtle sparkles, 8k resolution, masterpiece.
 
 CRITICAL INSTRUCTIONS FOR 100% ACCURATE ARABIC TEXT:
@@ -346,13 +351,16 @@ function saveMindmapImage(imageData: string, lessonVideoId: string, chapterOrder
 export async function generateChapterMindmap(
   chapter: { title: string; summaryText: string; order: number },
   lessonVideoId: string,
-  teacherPhotoPath?: string,
+  teacherPhotoPathOrPaths?: string | string[],
 ): Promise<string> {
   try {
     const runtime = createRuntime();
+    const photoPaths = typeof teacherPhotoPathOrPaths === 'string'
+      ? [teacherPhotoPathOrPaths]
+      : (teacherPhotoPathOrPaths || []);
     const request = {
       model: runtime.config.imageModel,
-      contents: [{ role: 'user', parts: mindmapParts(chapter, teacherPhotoPath) }],
+      contents: [{ role: 'user', parts: mindmapParts(chapter, photoPaths) }],
       config: { aspectRatio: '16:9' },
     } as any;
     const response = await runtime.gateway.execute({

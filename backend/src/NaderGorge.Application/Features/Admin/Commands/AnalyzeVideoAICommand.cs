@@ -50,14 +50,15 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
             .Select(v => (Guid?)v.Lesson.ContentSection.Term.Package.Teacher.UserId)
             .FirstOrDefaultAsync(ct);
 
-        string? teacherPhotoUrl = null;
+        var teacherPhotoUrls = new List<string>();
         if (teacherUserId != null)
         {
-            teacherPhotoUrl = await _db.TeacherPhotos
-                .Where(tp => tp.IsActive && tp.TeacherId == teacherUserId.Value)
-                .OrderByDescending(tp => tp.UploadedAt)
+            teacherPhotoUrls = await _db.TeacherPhotos
+                .Where(tp => tp.TeacherId == teacherUserId.Value)
+                .OrderByDescending(tp => tp.IsActive)
+                .ThenByDescending(tp => tp.UploadedAt)
                 .Select(tp => tp.FileUrl)
-                .FirstOrDefaultAsync(ct);
+                .ToListAsync(ct);
         }
 
         try
@@ -66,7 +67,7 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
             {
                 lessonVideoId = video.Id,
                 sourceUrl = sourceUrl,
-                teacherPhotoUrl = teacherPhotoUrl
+                teacherPhotoUrls = teacherPhotoUrls
             });
 
             var adminEvent = new OutboxEvent
