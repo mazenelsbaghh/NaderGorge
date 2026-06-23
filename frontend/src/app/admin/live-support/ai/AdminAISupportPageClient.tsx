@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Bot, LoaderCircle, Save, ShieldAlert } from 'lucide-react';
+import { Bot, LoaderCircle, Save, ShieldAlert, CheckCircle, UserCheck, MessageSquare, Activity } from 'lucide-react';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
 import { useAuthStore } from '@/stores/auth-store';
 import {
@@ -11,6 +11,7 @@ import {
   type AIConfig,
   type AIPolicy,
   type SaveAIDraft,
+  type AIStats,
 } from '@/services/live-support-ai-service';
 
 export const DEFAULT_SYSTEM_INSTRUCTIONS = `أنت مساعد الدعم الذكي لمنصة مسار، وهي منصة تعليمية عربية تساعد الطلاب على مشاهدة الدروس، حل الامتحانات والواجبات، متابعة التقدم، وإدارة الباقات وطلبات المشاهدة.
@@ -46,6 +47,10 @@ export default function AdminAISupportPageClient() {
   const [draft, setDraft] = useState<SaveAIDraft>(emptyDraft);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [activeTab, setActiveTab] = useState<'settings' | 'stats'>('settings');
+  const [stats, setStats] = useState<AIStats>();
+  const [statsPeriod, setStatsPeriod] = useState<'last-24h' | 'last-7d' | 'last-30d' | 'lifetime'>('last-24h');
+  const [loadingStats, setLoadingStats] = useState(false);
   const isBuiltInAdmin = user?.roles.includes('Admin') === true;
 
   useEffect(() => {
@@ -56,6 +61,24 @@ export default function AdminAISupportPageClient() {
       setDraft(savedPolicy ? draftFromPolicy(savedPolicy, nextConfig.draft?.version) : defaultDraft(nextConfig));
     }).catch(error => setNotice(apiErrorMessage(error, 'تعذر تحميل إعدادات المساعد الذكي.')));
   }, [isBuiltInAdmin]);
+
+  async function loadStats(period: string) {
+    setLoadingStats(true);
+    try {
+      const nextStats = await liveSupportAIService.getStats(period);
+      setStats(nextStats);
+    } catch (error) {
+      setNotice(apiErrorMessage(error, 'تعذر تحميل الإحصائيات.'));
+    } finally {
+      setLoadingStats(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'stats' && isBuiltInAdmin) {
+      void loadStats(statsPeriod);
+    }
+  }, [activeTab, statsPeriod, isBuiltInAdmin]);
 
   if (!isBuiltInAdmin) {
     return <div dir="rtl" role="alert" className="m-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900">هذه الإعدادات متاحة لمدير النظام الأساسي فقط.</div>;
@@ -119,28 +142,193 @@ export default function AdminAISupportPageClient() {
     }
   }
 
+  async function enable() {
+    setBusy(true);
+    setNotice('');
+    try {
+      const updatedPolicy = await liveSupportAIService.enable();
+      setConfig(current => current ? { ...current, published: updatedPolicy } : current);
+      setNotice('تم تشغيل وتفعيل المساعد الذكي بنجاح.');
+    } catch (error) {
+      setNotice(apiErrorMessage(error, 'تعذر تفعيل المساعد.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return <AdminShellChrome activePath="/admin/live-support/ai" sectionLabel="خدمة العملاء" pageTitle="المساعد الذكي للدعم" subtitle="حدّد ما يستطيع المساعد قراءته واقتراحه. كل إجراء مؤثر يحتاج إلى تأكيد صاحب المحادثة.">
     {!config ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin" aria-label="جارٍ التحميل" /></div> : <div dir="rtl" className="space-y-5">
       {notice && <div role="status" aria-live="polite" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">{notice}</div>}
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-5">
-        <div className="flex items-center gap-3"><span className="grid size-12 place-items-center rounded-2xl bg-cyan-50 text-cyan-800"><Bot /></span><div><h2 className="font-bold text-slate-950">حالة المساعد</h2><p className="text-sm text-slate-600">{config.published?.isEnabled ? `مفعّل، الإصدار ${config.published.versionNumber}` : 'متوقف'}</p></div></div>
-        {config.published?.isEnabled && <button type="button" disabled={busy} onClick={() => void disable()} className="min-h-11 rounded-xl border border-red-200 px-4 font-bold text-red-700 disabled:opacity-50"><ShieldAlert className="ml-2 inline size-4"/>إيقاف وتحويل للدعم البشري</button>}
-      </section>
-      <section className="rounded-3xl border border-slate-200 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold text-slate-950">تعليمات المساعد وقاعدة القرار</h2><p className="mt-1 text-sm text-slate-600">أضفنا تعليمات افتراضية لمنصة مسار. يمكنك تعديلها، ولا تضع هنا كلمات مرور أو بيانات سرية.</p></div><button type="button" onClick={() => setDraft(current => ({ ...current, systemInstructions: DEFAULT_SYSTEM_INSTRUCTIONS }))} className="min-h-11 rounded-xl border border-cyan-700 px-4 text-sm font-bold text-cyan-800 hover:bg-cyan-50 focus:outline-none focus:ring-2 focus:ring-cyan-700/30">استعادة التعليمات الافتراضية</button></div><textarea value={draft.systemInstructions} maxLength={20000} onChange={event => setDraft({ ...draft, systemInstructions: event.target.value })} className="mt-4 min-h-80 w-full rounded-2xl border border-slate-200 p-4 leading-7 text-slate-900 outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20" placeholder="اكتب أسلوب الرد، حدود المساعدة، ومتى يجب التحويل إلى موظف..."/><p className="mt-2 text-left text-xs text-slate-600">{draft.systemInstructions.length.toLocaleString('ar-EG')} من ٢٠٬٠٠٠ حرف</p></section>
-      <CatalogSection title="البيانات التي يمكن قراءتها" items={config.catalogs.readableData} selected={draft.readableDataKeys} change={keys => setDraft({ ...draft, readableDataKeys: keys })}/>
-      <CatalogSection title="الإجراءات التي يمكن اقتراحها" note="لا يُنفّذ أي إجراء إلا بعد عرض أثره والحصول على تأكيد صريح من صاحب المحادثة." items={config.catalogs.actions} selected={draft.actionKeys} change={keys => setDraft({ ...draft, actionKeys: keys })}/>
-      <CatalogSection title="طرق البحث الآمنة" note="تُقبل القيمة الكاملة فقط، ولا تظهر نتائج جزئية أو تلميحات." items={config.catalogs.lookupKeys} selected={draft.lookupKeys} change={keys => setDraft({ ...draft, lookupKeys: keys })}/>
-      <CatalogSection title="أسئلة التحقق من الحساب" note="التحقق للمحادثة الحالية فقط، ولا تُحفظ الإجابات الخام." items={config.catalogs.verificationQuestions} selected={draft.verificationQuestionKeys} change={keys => setDraft({ ...draft, verificationQuestionKeys: keys })}/>
-      <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 sm:grid-cols-2 lg:grid-cols-5">
-        <NumberField label="الإجابات الصحيحة المطلوبة" value={draft.verificationRequiredCorrect} min={1} max={Math.max(1, draft.verificationQuestionKeys.length)} change={value => setDraft({ ...draft, verificationRequiredCorrect: value })}/>
-        <NumberField label="الحد الأقصى لمحاولات التحقق" value={draft.verificationMaxAttempts} min={1} max={10} change={value => setDraft({ ...draft, verificationMaxAttempts: value })}/>
-        <NumberField label="صلاحية تأكيد الإجراء بالثواني" value={draft.pendingActionExpirySeconds} min={30} max={900} change={value => setDraft({ ...draft, pendingActionExpirySeconds: value })}/>
-        <NumberField label="مدة الخمول بالدقائق" value={draft.inactivityMinutes} min={5} max={1440} change={value => setDraft({ ...draft, inactivityMinutes: value })}/>
-        <NumberField label="مهلة تنبيه الخمول بالثواني" value={draft.inactivityWarningGraceSeconds} min={30} max={600} change={value => setDraft({ ...draft, inactivityWarningGraceSeconds: value })}/>
-      </section>
-      <div className="sticky bottom-4 flex flex-wrap justify-end gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg"><button type="button" disabled={busy} onClick={() => void save()} className="min-h-11 rounded-xl border border-slate-300 px-5 font-bold text-slate-900 disabled:opacity-50"><Save className="ml-2 inline size-4"/>{busy ? 'جارٍ التنفيذ...' : 'حفظ كمسودة'}</button><button type="button" disabled={busy} onClick={() => void saveAndPublish()} className="min-h-11 rounded-xl bg-slate-900 px-5 font-bold text-white disabled:opacity-40">{busy ? 'جارٍ التنفيذ...' : 'حفظ ونشر وتفعيل'}</button></div>
+      
+      <div className="flex border-b border-slate-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('settings')}
+          className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 -mb-px ${
+            activeTab === 'settings'
+              ? 'border-cyan-700 text-cyan-800'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          الإعدادات وقاعدة القرار
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('stats')}
+          className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 -mb-px ${
+            activeTab === 'stats'
+              ? 'border-cyan-700 text-cyan-800'
+              : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          الإحصائيات والأداء
+        </button>
+      </div>
+
+      {activeTab === 'settings' ? (
+        <>
+          <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center gap-3">
+              <span className="grid size-12 place-items-center rounded-2xl bg-cyan-50 text-cyan-800"><Bot /></span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-slate-950">حالة المساعد</h2>
+                  {config.published?.isEnabled ? (
+                    <span className="flex h-3.5 w-3.5 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
+                    </span>
+                  ) : (
+                    <span className="h-3 w-3 rounded-full bg-slate-300"></span>
+                  )}
+                </div>
+                <p className="text-sm text-slate-600">{config.published?.isEnabled ? `مفعّل، الإصدار ${config.published.versionNumber}` : 'متوقف'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {config.published ? (
+                config.published.isEnabled ? (
+                  <button type="button" disabled={busy} onClick={() => void disable()} className="min-h-11 rounded-xl border border-red-200 px-4 font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"><ShieldAlert className="ml-2 inline size-4"/>إيقاف وتحويل للدعم البشري</button>
+                ) : (
+                  <button type="button" disabled={busy} onClick={() => void enable()} className="min-h-11 rounded-xl bg-cyan-700 px-5 font-bold text-white hover:bg-cyan-800 disabled:opacity-50"><Bot className="ml-2 inline size-4"/>تشغيل وتفعيل المساعد</button>
+                )
+              ) : (
+                <span className="text-sm text-slate-500">لا توجد سياسة منشورة بعد</span>
+              )}
+            </div>
+          </section>
+          <section className="rounded-3xl border border-slate-200 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold text-slate-950">تعليمات المساعد وقاعدة القرار</h2><p className="mt-1 text-sm text-slate-600">أضفنا تعليمات افتراضية لمنصة مسار. يمكنك تعديلها، ولا تضع هنا كلمات مرور أو بيانات سرية.</p></div><button type="button" onClick={() => setDraft(current => ({ ...current, systemInstructions: DEFAULT_SYSTEM_INSTRUCTIONS }))} className="min-h-11 rounded-xl border border-cyan-700 px-4 text-sm font-bold text-cyan-800 hover:bg-cyan-50 focus:outline-none focus:ring-2 focus:ring-cyan-700/30">استعادة التعليمات الافتراضية</button></div><textarea value={draft.systemInstructions} maxLength={20000} onChange={event => setDraft({ ...draft, systemInstructions: event.target.value })} className="mt-4 min-h-80 w-full rounded-2xl border border-slate-200 p-4 leading-7 text-slate-900 outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20" placeholder="اكتب أسلوب الرد، حدود المساعدة، ومتى يجب التحويل إلى موظف..."/><p className="mt-2 text-left text-xs text-slate-600">{draft.systemInstructions.length.toLocaleString('ar-EG')} من ٢٠٬٠٠٠ حرف</p></section>
+          <CatalogSection title="البيانات التي يمكن قراءتها" items={config.catalogs.readableData} selected={draft.readableDataKeys} change={keys => setDraft({ ...draft, readableDataKeys: keys })}/>
+          <CatalogSection title="الإجراءات التي يمكن اقتراحها" note="لا يُنفّذ أي إجراء إلا بعد عرض أثره والحصول على تأكيد صريح من صاحب المحادثة." items={config.catalogs.actions} selected={draft.actionKeys} change={keys => setDraft({ ...draft, actionKeys: keys })}/>
+          <CatalogSection title="طرق البحث الآمنة" note="تُقبل القيمة الكاملة فقط، ولا تظهر نتائج جزئية أو تلميحات." items={config.catalogs.lookupKeys} selected={draft.lookupKeys} change={keys => setDraft({ ...draft, lookupKeys: keys })}/>
+          <CatalogSection title="أسئلة التحقق من الحساب" note="التحقق للمحادثة الحالية فقط، ولا تُحفظ الإجابات الخام." items={config.catalogs.verificationQuestions} selected={draft.verificationQuestionKeys} change={keys => setDraft({ ...draft, verificationQuestionKeys: keys })}/>
+          <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 sm:grid-cols-2 lg:grid-cols-5">
+            <NumberField label="الإجابات الصحيحة المطلوبة" value={draft.verificationRequiredCorrect} min={1} max={Math.max(1, draft.verificationQuestionKeys.length)} change={value => setDraft({ ...draft, verificationRequiredCorrect: value })}/>
+            <NumberField label="الحد الأقصى لمحاولات التحقق" value={draft.verificationMaxAttempts} min={1} max={10} change={value => setDraft({ ...draft, verificationMaxAttempts: value })}/>
+            <NumberField label="صلاحية تأكيد الإجراء بالثواني" value={draft.pendingActionExpirySeconds} min={30} max={900} change={value => setDraft({ ...draft, pendingActionExpirySeconds: value })}/>
+            <NumberField label="مدة الخمول بالدقائق" value={draft.inactivityMinutes} min={5} max={1440} change={value => setDraft({ ...draft, inactivityMinutes: value })}/>
+            <NumberField label="مهلة تنبيه الخمول بالثواني" value={draft.inactivityWarningGraceSeconds} min={30} max={600} change={value => setDraft({ ...draft, inactivityWarningGraceSeconds: value })}/>
+          </section>
+          <div className="sticky bottom-4 flex flex-wrap justify-end gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg"><button type="button" disabled={busy} onClick={() => void save()} className="min-h-11 rounded-xl border border-slate-300 px-5 font-bold text-slate-900 disabled:opacity-50"><Save className="ml-2 inline size-4"/>{busy ? 'جارٍ التنفيذ...' : 'حفظ كمسودة'}</button><button type="button" disabled={busy} onClick={() => void saveAndPublish()} className="min-h-11 rounded-xl bg-slate-900 px-5 font-bold text-white disabled:opacity-40">{busy ? 'جارٍ التنفيذ...' : 'حفظ ونشر وتفعيل'}</button></div>
+        </>
+      ) : (
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">إحصائيات أداء المساعد الذكي</h2>
+              <p className="text-sm text-slate-600 mt-1">تتبع مدى فاعلية المساعد الذكي ونسب حل المشاكل أو تحويلها.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-slate-700">الفترة الزمنية:</span>
+              <select
+                value={statsPeriod}
+                onChange={e => setStatsPeriod(e.target.value as any)}
+                className="h-11 rounded-xl border border-slate-200 bg-white px-3 font-semibold text-slate-800 outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20"
+              >
+                <option value="last-24h">آخر 24 ساعة</option>
+                <option value="last-7d">آخر 7 أيام</option>
+                <option value="last-30d">آخر 30 يوم</option>
+                <option value="lifetime">كل الأوقات</option>
+              </select>
+            </div>
+          </div>
+
+          {loadingStats ? (
+            <div className="grid min-h-60 place-items-center">
+              <LoaderCircle className="animate-spin text-cyan-700" aria-label="جارٍ التحميل" />
+            </div>
+          ) : stats ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <StatItem
+                title="المحادثات النشطة حالياً"
+                value={stats.activeConversations}
+                description="محادثات قيد الرد الآلي اللحظي"
+                icon={<Bot className="text-cyan-600" />}
+                bgClass="bg-cyan-50/50"
+              />
+              <StatItem
+                title="المشاكل المحلولة"
+                value={stats.resolvedIssues}
+                description="محادثات حلها الـ AI بالكامل"
+                icon={<CheckCircle className="text-emerald-600" />}
+                bgClass="bg-emerald-50/50"
+              />
+              <StatItem
+                title="التحويلات للدعم البشري"
+                value={stats.handoffs}
+                description="محادثات تم تحويلها لموظف"
+                icon={<UserCheck className="text-amber-600" />}
+                bgClass="bg-amber-50/50"
+              />
+              <StatItem
+                title="الرسائل المرسلة من الـ AI"
+                value={stats.totalMessagesSent}
+                description="إجمالي ردود المساعد التلقائية"
+                icon={<MessageSquare className="text-blue-600" />}
+                bgClass="bg-blue-50/50"
+              />
+              <StatItem
+                title="الإجراءات التلقائية الناجحة"
+                value={stats.successfulActions}
+                description="عمليات منفذة بعد تأكيد الطالب"
+                icon={<Activity className="text-indigo-600" />}
+                bgClass="bg-indigo-50/50"
+              />
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-500">لا توجد إحصائيات متوفرة للفترة المحددة.</div>
+          )}
+        </div>
+      )}
     </div>}
   </AdminShellChrome>;
+}
+
+function StatItem({
+  title,
+  value,
+  description,
+  icon,
+  bgClass,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: React.ReactNode;
+  bgClass: string;
+}) {
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-3 transition-all hover:shadow-md">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-slate-600">{title}</span>
+        <span className={`grid size-10 place-items-center rounded-xl ${bgClass}`}>{icon}</span>
+      </div>
+      <div className="space-y-1">
+        <span className="block text-3xl font-bold text-slate-900">{value.toLocaleString('ar-EG')}</span>
+        <span className="block text-xs text-slate-500">{description}</span>
+      </div>
+    </div>
+  );
 }
 
 function defaultDraft(config: AIConfig): SaveAIDraft {

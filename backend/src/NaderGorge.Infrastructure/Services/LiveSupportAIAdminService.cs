@@ -59,6 +59,7 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
             current.Status = LiveSupportAIPolicyStatus.Superseded;
             current.IsEnabled = false;
             current.Version++;
+            await db.SaveChangesAsync(ct);
         }
 
         draft.Status = LiveSupportAIPolicyStatus.Published;
@@ -80,6 +81,65 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
         published.Version++;
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, CancellationToken ct)
+    {
+        _ = adminUserId;
+        var published = await db.LiveSupportAIPolicyVersions.SingleOrDefaultAsync(x => x.Status == LiveSupportAIPolicyStatus.Published, ct);
+        if (published is null)
+            throw new LiveSupportAIAdminException("PUBLISHED_POLICY_NOT_FOUND", "لا توجد سياسة منشورة لتفعيلها.");
+
+        published.IsEnabled = true;
+        published.Version++;
+        await db.SaveChangesAsync(ct);
+        return ToDto(published);
+    }
+
+    public async Task<LiveSupportAIStatsDto> GetStatsAsync(string period, CancellationToken ct)
+    {
+        DateTime? threshold = period switch
+        {
+            "last-24h" => DateTime.UtcNow.AddDays(-1),
+            "last-7d" => DateTime.UtcNow.AddDays(-7),
+            "last-30d" => DateTime.UtcNow.AddDays(-30),
+            _ => null
+        };
+
+        var activeQuery = db.LiveSupportAIConversationStates.AsNoTracking();
+        var resolvedQuery = db.LiveSupportAIConversationStates.AsNoTracking();
+        var handoffsQuery = db.LiveSupportAIConversationStates.AsNoTracking();
+        var messagesQuery = db.LiveSupportMessages.AsNoTracking();
+        var actionsQuery = db.LiveSupportAIPendingActions.AsNoTracking();
+
+        int activeConversations = await activeQuery.CountAsync(x => x.Mode == LiveSupportAIMode.AiActive, ct);
+
+        int resolvedIssues;
+        if (threshold.HasValue)
+            resolvedIssues = await resolvedQuery.CountAsync(x => x.Mode == LiveSupportAIMode.AiResolved && x.ResolvedAt >= threshold.Value, ct);
+        else
+            resolvedIssues = await resolvedQuery.CountAsync(x => x.Mode == LiveSupportAIMode.AiResolved, ct);
+
+        int handoffs;
+        if (threshold.HasValue)
+            handoffs = await handoffsQuery.CountAsync(x => x.HandedOffAt != null && x.HandedOffAt >= threshold.Value, ct);
+        else
+            handoffs = await handoffsQuery.CountAsync(x => x.HandedOffAt != null, ct);
+
+        int totalMessagesSent;
+        if (threshold.HasValue)
+            totalMessagesSent = await messagesQuery.CountAsync(x => x.SenderType == LiveSupportSenderType.AI && x.SentAt >= threshold.Value, ct);
+        else
+            totalMessagesSent = await messagesQuery.CountAsync(x => x.SenderType == LiveSupportSenderType.AI, ct);
+
+        int successfulActions;
+        if (threshold.HasValue)
+            successfulActions = await actionsQuery.CountAsync(x => x.Status == LiveSupportAIPendingActionStatus.Succeeded && x.CompletedAt >= threshold.Value, ct);
+        else
+            successfulActions = await actionsQuery.CountAsync(x => x.Status == LiveSupportAIPendingActionStatus.Succeeded, ct);
+
+        return new LiveSupportAIStatsDto(activeConversations, resolvedIssues, handoffs, totalMessagesSent, successfulActions);
+    }
+
 
     private static void Validate(SaveLiveSupportAIDraftRequest request)
     {

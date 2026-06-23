@@ -34,6 +34,14 @@ public sealed class LiveSupportAIAdminController(ILiveSupportAIAdminService serv
         return Accepted(ApiResponse.Ok("تم إيقاف الرد الآلي، وسيتم تحويل المحادثات النشطة للدعم."));
     }
 
+    [HttpPost("enable")]
+    public async Task<IActionResult> Enable(CancellationToken ct) =>
+        await Execute(() => service.EnableAsync(AdminId(), ct));
+
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(CancellationToken ct, [FromQuery] string period = "last-24h") =>
+        Ok(ApiResponse<LiveSupportAIStatsDto>.Ok(await service.GetStatsAsync(period, ct)));
+
     private Guid AdminId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private static async Task<IActionResult> Execute(Func<Task<LiveSupportAIPolicyDto>> action)

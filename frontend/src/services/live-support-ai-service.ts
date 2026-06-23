@@ -9,6 +9,13 @@ export interface AIPolicy {
   pendingActionExpirySeconds: number; inactivityMinutes: number; inactivityWarningGraceSeconds: number;
   version: number; publishedAt?: string;
 }
+export interface AIStats {
+  activeConversations: number;
+  resolvedIssues: number;
+  handoffs: number;
+  totalMessagesSent: number;
+  successfulActions: number;
+}
 export interface AIConfig { draft?: AIPolicy; published?: AIPolicy; catalogs: AICatalogs }
 export type SaveAIDraft = Omit<AIPolicy, 'id' | 'versionNumber' | 'status' | 'isEnabled' | 'version' | 'publishedAt'> & { expectedVersion?: number };
 interface ApiResponse<T> { data: T }
@@ -18,4 +25,6 @@ export const liveSupportAIService = {
   saveDraft: (payload: SaveAIDraft) => apiClient.put<ApiResponse<AIPolicy>>('/live-support/admin/ai/config', payload).then(response => response.data.data),
   publish: (expectedVersion: number) => apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/publish', { expectedVersion }).then(response => response.data.data),
   disable: () => apiClient.post('/live-support/admin/ai/disable'),
+  enable: () => apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/enable').then(response => response.data.data),
+  getStats: (period: string) => apiClient.get<ApiResponse<AIStats>>('/live-support/admin/ai/stats', { params: { period } }).then(response => response.data.data),
 };

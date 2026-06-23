@@ -39,3 +39,11 @@ public sealed record SaveLiveSupportAIDraftRequest(
     int InactivityMinutes,
     int InactivityWarningGraceSeconds,
     long? ExpectedVersion);
+
+public sealed record LiveSupportAIStatsDto(
+    int ActiveConversations,
+    int ResolvedIssues,
+    int Handoffs,
+    int TotalMessagesSent,
+    int SuccessfulActions);
+
