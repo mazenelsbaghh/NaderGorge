@@ -1,5 +1,6 @@
 import { Job } from 'bullmq';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { generateChapterMindmap } from '../services/geminiService.js';
 import { throwIfCancellationRequested } from '../cancellation.js';
@@ -84,6 +85,36 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
             );
         }
 
+        const mindmapsDir = path.resolve(process.cwd(), '../backend/src/NaderGorge.API/wwwroot/mindmaps');
+
+        // Clean up old mindmaps on the first attempt of this job.
+        // Retries (attemptsMade > 0) will reuse previously completed mindmaps.
+        const isFirstAttempt = !job.attemptsMade || job.attemptsMade === 0;
+        if (isFirstAttempt && fs.existsSync(mindmapsDir)) {
+            try {
+                const files = fs.readdirSync(mindmapsDir);
+                if (isSingleChapter) {
+                    const prefix = `${lessonVideoId}_chapter_${singleChapter.order}_`;
+                    for (const file of files) {
+                        if (file.startsWith(prefix)) {
+                            fs.unlinkSync(path.join(mindmapsDir, file));
+                            console.log(`[Job ${job.id}] Cleaned up old single mindmap: ${file}`);
+                        }
+                    }
+                } else {
+                    const prefix = `${lessonVideoId}_chapter_`;
+                    for (const file of files) {
+                        if (file.startsWith(prefix)) {
+                            fs.unlinkSync(path.join(mindmapsDir, file));
+                            console.log(`[Job ${job.id}] Cleaned up old batch mindmap: ${file}`);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(`[Job ${job.id}] Failed to clean up old mindmaps on first attempt:`, err);
+            }
+        }
+
         const totalChapters = chapters.length;
         if (totalChapters === 0) {
             const noChStage = 'لا توجد فصول لتوليد الصور لها.';
@@ -97,7 +128,24 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
 
         for (const chapter of chapters) {
             await throwIfCancellationRequested(job);
-            const generatedUrl = await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPath);
+
+            // Check if there is already a generated mindmap for this chapter to avoid redundant API calls on retries
+            let existingUrl: string | undefined = undefined;
+            try {
+                if (fs.existsSync(mindmapsDir)) {
+                    const files = fs.readdirSync(mindmapsDir);
+                    const prefix = `${lessonVideoId}_chapter_${chapter.order}_`;
+                    const match = files.find(f => f.startsWith(prefix) && (f.endsWith('.webp') || f.endsWith('.png')));
+                    if (match) {
+                        existingUrl = `/mindmaps/${match}`;
+                        console.log(`[Job ${job.id}] Reusing existing mindmap for chapter ${chapter.order}: ${existingUrl}`);
+                    }
+                }
+            } catch (err) {
+                console.error(`[Job ${job.id}] Failed to check existing mindmaps:`, err);
+            }
+
+            const generatedUrl = existingUrl || await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPath);
             results.push({ title: chapter.title, imageUrl: generatedUrl });
             completedCount++;
             const progressPct = 10 + Math.floor((completedCount / totalChapters) * 80);
