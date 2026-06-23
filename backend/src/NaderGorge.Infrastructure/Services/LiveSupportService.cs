@@ -111,14 +111,14 @@ public sealed class LiveSupportService(
             await AssignOldestWaitingAsync(ct);
         }
 
+        await tx.CommitAsync(ct);
+
         if (!string.IsNullOrWhiteSpace(subject))
         {
             var senderType = participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest;
             var clientMessageId = $"init-{Guid.NewGuid():N}";
             await SendMessageAsync(conversation, senderType, participant.StudentUserId, participant.GuestSessionId, clientMessageId, subject, LiveSupportMessageType.Text, ct);
         }
-
-        await tx.CommitAsync(ct);
         _logger?.LogInformation("LiveSupport conversation {ConversationId} routed status {Status} owner {OwnerUserId}", conversation.Id, conversation.Status, conversation.CurrentOwnerUserId);
         LiveSupportTelemetry.ConversationsCreated.Add(1, new KeyValuePair<string, object?>("status", conversation.Status.ToString()));
         return await MapAsync(conversation, ct);
