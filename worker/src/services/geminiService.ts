@@ -389,9 +389,26 @@ export interface LiveSupportAIDecisionHandoff {
   safeSummaryAr: string;
 }
 
+export interface LiveSupportAIDecisionAction {
+  key: string;
+  arguments?: Record<string, any> | undefined;
+  safeEffectSummaryAr: string;
+}
+
+export interface LiveSupportAIDecisionVerification {
+  intent: string;
+}
+
+export interface LiveSupportAIDecisionAccountCreation {
+  requestedFields: string[];
+}
+
 export interface LiveSupportAIDecision {
-  type: 'reply' | 'handoff';
+  type: 'reply' | 'propose_action' | 'request_verification' | 'propose_account_creation' | 'handoff';
   messageAr?: string | undefined;
+  action?: LiveSupportAIDecisionAction | undefined;
+  verification?: LiveSupportAIDecisionVerification | undefined;
+  accountCreation?: LiveSupportAIDecisionAccountCreation | undefined;
   handoff?: LiveSupportAIDecisionHandoff | undefined;
 }
 
@@ -405,8 +422,31 @@ const liveSupportDecisionSchema = {
   type: Type.OBJECT,
   properties: {
     schemaVersion: { type: Type.STRING },
-    type: { type: Type.STRING, enum: ['reply', 'handoff'] },
+    type: { type: Type.STRING, enum: ['reply', 'propose_action', 'request_verification', 'propose_account_creation', 'handoff'] },
     messageAr: { type: Type.STRING },
+    action: {
+      type: Type.OBJECT,
+      properties: {
+        key: { type: Type.STRING },
+        arguments: { type: Type.OBJECT },
+        safeEffectSummaryAr: { type: Type.STRING }
+      },
+      required: ['key', 'safeEffectSummaryAr']
+    },
+    verification: {
+      type: Type.OBJECT,
+      properties: {
+        intent: { type: Type.STRING }
+      },
+      required: ['intent']
+    },
+    accountCreation: {
+      type: Type.OBJECT,
+      properties: {
+        requestedFields: { type: Type.ARRAY, items: { type: Type.STRING } }
+      },
+      required: ['requestedFields']
+    },
     handoff: {
       type: Type.OBJECT,
       properties: {
@@ -469,6 +509,9 @@ CRITICAL DIRECTIVES:
   const parsed = JSON.parse(rawText) as {
     type: string;
     messageAr?: string;
+    action?: any;
+    verification?: any;
+    accountCreation?: any;
     handoff?: { reasonCode: string; safeSummaryAr: string };
   };
 
@@ -477,15 +520,25 @@ CRITICAL DIRECTIVES:
     decisionType = 'reply';
   }
 
-  if (decisionType !== 'reply' && decisionType !== 'handoff') {
+  const allowedTypes = ['reply', 'propose_action', 'request_verification', 'propose_account_creation', 'handoff'];
+  if (!allowedTypes.includes(decisionType)) {
     throw new Error(`AI live support turn returned invalid decision type: ${parsed.type}`);
   }
 
   const decision: LiveSupportAIDecision = {
-    type: decisionType as 'reply' | 'handoff'
+    type: decisionType as any
   };
   if (parsed.messageAr !== undefined) {
     decision.messageAr = parsed.messageAr;
+  }
+  if (parsed.action !== undefined) {
+    decision.action = parsed.action;
+  }
+  if (parsed.verification !== undefined) {
+    decision.verification = parsed.verification;
+  }
+  if (parsed.accountCreation !== undefined) {
+    decision.accountCreation = parsed.accountCreation;
   }
   if (parsed.handoff !== undefined) {
     decision.handoff = parsed.handoff;

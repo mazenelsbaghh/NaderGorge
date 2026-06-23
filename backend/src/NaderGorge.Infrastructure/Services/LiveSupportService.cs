@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
@@ -11,6 +12,8 @@ using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
 using NaderGorge.Application.Features.LiveSupport.Services;
+using NaderGorge.Application.Features.Exams.Commands;
+using NaderGorge.Application.Features.Admin.Commands;
 
 using NaderGorge.Application.Interfaces;
 
@@ -22,7 +25,8 @@ public sealed class LiveSupportService(
     ILiveSupportPresenceStore? presence = null,
     ILiveSupportAttachmentStorage? attachmentStorage = null,
     ILogger<LiveSupportService>? logger = null,
-    IJobEnqueuer? jobEnqueuer = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
+    IJobEnqueuer? jobEnqueuer = null,
+    IMediator? mediator = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
 {
     private readonly IAppDbContext _db = db;
     private readonly ICachedPlatformSettingsReader _settings = settings;
@@ -31,6 +35,8 @@ public sealed class LiveSupportService(
     private readonly ILiveSupportAttachmentStorage? _attachmentStorage = attachmentStorage;
     private readonly ILogger<LiveSupportService>? _logger = logger;
     private readonly IJobEnqueuer? _jobEnqueuer = jobEnqueuer;
+    private readonly IMediator? _mediator = mediator;
+
 
     public async Task<LiveSupportAvailabilityDto> GetAvailabilityAsync(CancellationToken ct)
     {
@@ -632,6 +638,38 @@ public sealed class LiveSupportService(
             .Select(x => x.Content)
             .ToListAsync(ct);
 
+        // Inject dynamic student profile context if linked
+        if (conversation.LinkedStudentUserId.HasValue)
+        {
+            var readableKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.ReadableDataKeysJson) ?? new List<string>();
+            var studentContext = await BuildStudentContextAsync(conversation.LinkedStudentUserId.Value, readableKeys, ct);
+            if (!string.IsNullOrEmpty(studentContext))
+            {
+                knowledgeDocs.Add(studentContext);
+            }
+        }
+
+        // Dynamically build system instructions by appending action instructions and schemas
+        var systemInstructions = policy.SystemInstructions;
+        var actionKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.ActionKeysJson) ?? new List<string>();
+        if (actionKeys.Any())
+        {
+            var instructionsBuilder = new System.Text.StringBuilder(systemInstructions);
+            instructionsBuilder.AppendLine("\n\n--- ALLOWED ACTIONS ---");
+            instructionsBuilder.AppendLine("You are permitted to propose the following administrative actions. When a student requests one, use the `propose_action` type, passing the exact action key, arguments, and an Arabic description of the effect.");
+            foreach (var key in actionKeys)
+            {
+                if (NaderGorge.Application.Features.LiveSupportAI.Services.LiveSupportAICatalog.Actions.TryGetValue(key, out var actionDto))
+                {
+                    instructionsBuilder.AppendLine($"- Action Key: \"{key}\"");
+                    instructionsBuilder.AppendLine($"  Description: {actionDto.Description}");
+                    var argsSchema = GetActionArgumentsSchema(key);
+                    instructionsBuilder.AppendLine($"  Arguments Schema: {argsSchema}");
+                }
+            }
+            systemInstructions = instructionsBuilder.ToString();
+        }
+
         var messages = await _db.LiveSupportMessages
             .Where(x => x.ConversationId == turn.ConversationId)
             .OrderBy(x => x.SentAt)
@@ -643,7 +681,7 @@ public sealed class LiveSupportService(
             turn.ConversationId,
             turn.PolicyVersionId,
             turn.ExpectedConversationVersion,
-            policy.SystemInstructions,
+            systemInstructions,
             knowledgeDocs,
             messages,
             conversation.ParticipantType.ToString()
@@ -682,7 +720,11 @@ public sealed class LiveSupportService(
             return;
         }
 
+        var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == turn.PolicyVersionId, ct);
+        if (policy is null) throw new LiveSupportException("NOT_FOUND", "AI Policy version not found.");
+
         await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
 
         if (request.Decision.Type == "reply")
         {
@@ -741,18 +783,28 @@ public sealed class LiveSupportService(
                 AddEvent(conversation.Id, LiveSupportEventType.AIReplySent, null, null, message.Id);
             }
 
-            aiState.Mode = LiveSupportAIMode.HumanQueued;
             aiState.HandoffReasonCode = request.Decision.Handoff?.ReasonCode ?? "USER_REQUEST";
             aiState.HandoffSafeSummary = request.Decision.Handoff?.SafeSummaryAr ?? "طلب التحويل لموظف بشري";
-            aiState.HandedOffAt = DateTime.UtcNow;
             aiState.Version++;
 
-            var now = DateTime.UtcNow;
-            _db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversation.Id, EnteredAt = now, Sequence = now.Ticks });
-
-            conversation.Status = LiveSupportConversationStatus.Waiting;
-            conversation.QueuedAt = now;
-            conversation.Version++;
+            var expirySeconds = policy.PendingActionExpirySeconds > 0 ? policy.PendingActionExpirySeconds : 300;
+            var pendingAction = new LiveSupportAIPendingAction
+            {
+                ConversationId = turn.ConversationId,
+                TurnId = turn.Id,
+                StudentUserId = conversation.LinkedStudentUserId ?? Guid.Empty,
+                PolicyVersionId = turn.PolicyVersionId,
+                ActionKey = "system.handoff",
+                SafeProposalJson = System.Text.Json.JsonSerializer.Serialize(new {
+                    reasonCode = aiState.HandoffReasonCode,
+                    safeSummaryAr = aiState.HandoffSafeSummary
+                }),
+                Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(expirySeconds),
+                IdempotencyKey = Guid.NewGuid(),
+                Version = 1
+            };
+            _db.LiveSupportAIPendingActions.Add(pendingAction);
 
             turn.Status = LiveSupportAITurnStatus.Completed;
             turn.DecisionType = LiveSupportAIDecisionType.Handoff;
@@ -765,14 +817,184 @@ public sealed class LiveSupportService(
             turn.CompletedAt = DateTime.UtcNow;
             turn.Version++;
 
-            AddEvent(conversation.Id, LiveSupportEventType.AIHandoffCompleted, null, null, turn.Id);
-            AddEvent(conversation.Id, LiveSupportEventType.QueueEntered, null, null);
+            AddEvent(conversation.Id, LiveSupportEventType.AIHandoffRequested, null, null, turn.Id);
             AddEvent(conversation.Id, LiveSupportEventType.AITurnCompleted, null, null, turn.Id);
 
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
+        }
+        else if (request.Decision.Type == "propose_action")
+        {
+            if (request.Decision.Action == null) throw new LiveSupportException("VALIDATION_ERROR", "Action payload is required.");
 
-            await AssignOldestWaitingAsync(ct);
+            var actionKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.ActionKeysJson) ?? new List<string>();
+            if (!actionKeys.Contains(request.Decision.Action.Key))
+                throw new LiveSupportException("VALIDATION_ERROR", $"Action key '{request.Decision.Action.Key}' is not allowed by active policy.");
+
+            if (!string.IsNullOrWhiteSpace(request.Decision.MessageAr))
+            {
+                var message = new LiveSupportMessage
+                {
+                    ConversationId = conversation.Id,
+                    SenderType = LiveSupportSenderType.AI,
+                    ClientMessageId = $"ai-{turn.Id:N}-propose",
+                    Type = LiveSupportMessageType.Text,
+                    Content = request.Decision.MessageAr.Trim(),
+                    SentAt = DateTime.UtcNow
+                };
+                _db.LiveSupportMessages.Add(message);
+                conversation.LastMessageAt = message.SentAt;
+                conversation.Version++;
+                turn.OutputMessageId = message.Id;
+
+                AddEvent(conversation.Id, LiveSupportEventType.MessageSent, null, null, message.Id);
+                AddEvent(conversation.Id, LiveSupportEventType.AIReplySent, null, null, message.Id);
+            }
+
+            var expirySeconds = policy.PendingActionExpirySeconds > 0 ? policy.PendingActionExpirySeconds : 300;
+            var argsJson = request.Decision.Action.Arguments != null ? request.Decision.Action.Arguments.ToString() : "{}";
+            var pendingAction = new LiveSupportAIPendingAction
+            {
+                ConversationId = turn.ConversationId,
+                TurnId = turn.Id,
+                StudentUserId = conversation.LinkedStudentUserId ?? Guid.Empty,
+                PolicyVersionId = turn.PolicyVersionId,
+                ActionKey = request.Decision.Action.Key,
+                SafeProposalJson = System.Text.Json.JsonSerializer.Serialize(request.Decision.Action),
+                EncryptedPayload = System.Text.Encoding.UTF8.GetBytes(argsJson),
+                Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(expirySeconds),
+                IdempotencyKey = Guid.NewGuid(),
+                Version = 1
+            };
+            _db.LiveSupportAIPendingActions.Add(pendingAction);
+
+            turn.Status = LiveSupportAITurnStatus.Completed;
+            turn.DecisionType = LiveSupportAIDecisionType.ProposeAction;
+            turn.Provider = request.Provider;
+            turn.Model = request.Model;
+            turn.ProviderResponseId = request.ProviderResponseId;
+            turn.InputTokenCount = request.InputTokenCount;
+            turn.OutputTokenCount = request.OutputTokenCount;
+            turn.LatencyMs = request.LatencyMs;
+            turn.CompletedAt = DateTime.UtcNow;
+            turn.Version++;
+
+            AddEvent(conversation.Id, LiveSupportEventType.AIActionProposed, null, null, pendingAction.Id);
+            AddEvent(conversation.Id, LiveSupportEventType.AITurnCompleted, null, null, turn.Id);
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        else if (request.Decision.Type == "request_verification")
+        {
+            if (!string.IsNullOrWhiteSpace(request.Decision.MessageAr))
+            {
+                var message = new LiveSupportMessage
+                {
+                    ConversationId = conversation.Id,
+                    SenderType = LiveSupportSenderType.AI,
+                    ClientMessageId = $"ai-{turn.Id:N}-verify",
+                    Type = LiveSupportMessageType.Text,
+                    Content = request.Decision.MessageAr.Trim(),
+                    SentAt = DateTime.UtcNow
+                };
+                _db.LiveSupportMessages.Add(message);
+                conversation.LastMessageAt = message.SentAt;
+                conversation.Version++;
+                turn.OutputMessageId = message.Id;
+
+                AddEvent(conversation.Id, LiveSupportEventType.MessageSent, null, null, message.Id);
+                AddEvent(conversation.Id, LiveSupportEventType.AIReplySent, null, null, message.Id);
+            }
+
+            var expirySeconds = policy.PendingActionExpirySeconds > 0 ? policy.PendingActionExpirySeconds : 300;
+            var pendingAction = new LiveSupportAIPendingAction
+            {
+                ConversationId = turn.ConversationId,
+                TurnId = turn.Id,
+                StudentUserId = conversation.LinkedStudentUserId ?? Guid.Empty,
+                PolicyVersionId = turn.PolicyVersionId,
+                ActionKey = "system.verification",
+                SafeProposalJson = "{}",
+                Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(expirySeconds),
+                IdempotencyKey = Guid.NewGuid(),
+                Version = 1
+            };
+            _db.LiveSupportAIPendingActions.Add(pendingAction);
+
+            turn.Status = LiveSupportAITurnStatus.Completed;
+            turn.DecisionType = LiveSupportAIDecisionType.RequestVerification;
+            turn.Provider = request.Provider;
+            turn.Model = request.Model;
+            turn.ProviderResponseId = request.ProviderResponseId;
+            turn.InputTokenCount = request.InputTokenCount;
+            turn.OutputTokenCount = request.OutputTokenCount;
+            turn.LatencyMs = request.LatencyMs;
+            turn.CompletedAt = DateTime.UtcNow;
+            turn.Version++;
+
+            AddEvent(conversation.Id, LiveSupportEventType.AIActionProposed, null, null, pendingAction.Id);
+            AddEvent(conversation.Id, LiveSupportEventType.AITurnCompleted, null, null, turn.Id);
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        else if (request.Decision.Type == "propose_account_creation")
+        {
+            if (!string.IsNullOrWhiteSpace(request.Decision.MessageAr))
+            {
+                var message = new LiveSupportMessage
+                {
+                    ConversationId = conversation.Id,
+                    SenderType = LiveSupportSenderType.AI,
+                    ClientMessageId = $"ai-{turn.Id:N}-register",
+                    Type = LiveSupportMessageType.Text,
+                    Content = request.Decision.MessageAr.Trim(),
+                    SentAt = DateTime.UtcNow
+                };
+                _db.LiveSupportMessages.Add(message);
+                conversation.LastMessageAt = message.SentAt;
+                conversation.Version++;
+                turn.OutputMessageId = message.Id;
+
+                AddEvent(conversation.Id, LiveSupportEventType.MessageSent, null, null, message.Id);
+                AddEvent(conversation.Id, LiveSupportEventType.AIReplySent, null, null, message.Id);
+            }
+
+            var expirySeconds = policy.PendingActionExpirySeconds > 0 ? policy.PendingActionExpirySeconds : 300;
+            var pendingAction = new LiveSupportAIPendingAction
+            {
+                ConversationId = turn.ConversationId,
+                TurnId = turn.Id,
+                StudentUserId = conversation.LinkedStudentUserId ?? Guid.Empty,
+                PolicyVersionId = turn.PolicyVersionId,
+                ActionKey = "system.registration",
+                SafeProposalJson = "{}",
+                Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(expirySeconds),
+                IdempotencyKey = Guid.NewGuid(),
+                Version = 1
+            };
+            _db.LiveSupportAIPendingActions.Add(pendingAction);
+
+            turn.Status = LiveSupportAITurnStatus.Completed;
+            turn.DecisionType = LiveSupportAIDecisionType.ProposeAccountCreation;
+            turn.Provider = request.Provider;
+            turn.Model = request.Model;
+            turn.ProviderResponseId = request.ProviderResponseId;
+            turn.InputTokenCount = request.InputTokenCount;
+            turn.OutputTokenCount = request.OutputTokenCount;
+            turn.LatencyMs = request.LatencyMs;
+            turn.CompletedAt = DateTime.UtcNow;
+            turn.Version++;
+
+            AddEvent(conversation.Id, LiveSupportEventType.AIActionProposed, null, null, pendingAction.Id);
+            AddEvent(conversation.Id, LiveSupportEventType.AITurnCompleted, null, null, turn.Id);
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
         }
         else
         {
@@ -920,4 +1142,1035 @@ public sealed class LiveSupportService(
         if (_relationalDb?.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
             await _relationalDb.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(14220260621)", ct);
     }
+
+    public async Task ConfirmPendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid proposalId, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+
+        var action = await _db.LiveSupportAIPendingActions.FirstOrDefaultAsync(x => x.Id == proposalId && x.ConversationId == conversationId, ct);
+        if (action == null) throw new LiveSupportException("NOT_FOUND", "Pending action proposal not found.");
+
+        if (action.Status != LiveSupportAIPendingActionStatus.PendingConfirmation)
+            throw new LiveSupportException("CONFLICT", "Action is not in a confirmable state.");
+
+        if (action.ExpiresAt < DateTime.UtcNow)
+        {
+            action.Status = LiveSupportAIPendingActionStatus.Expired;
+            action.CompletedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            throw new LiveSupportException("CONFLICT", "Action has expired.");
+        }
+
+        var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == action.PolicyVersionId, ct);
+        if (policy == null || !policy.IsEnabled)
+            throw new LiveSupportException("CONFLICT", "Active policy has been changed or disabled.");
+
+        var actionKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.ActionKeysJson) ?? new List<string>();
+        if (!actionKeys.Contains(action.ActionKey))
+            throw new LiveSupportException("CONFLICT", "Action key is no longer enabled.");
+
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+        action.Status = LiveSupportAIPendingActionStatus.Executing;
+        await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            var resultMessage = await ExecuteActionPayloadAsync(
+                conversationId, 
+                action.ActionKey, 
+                System.Text.Encoding.UTF8.GetString(action.EncryptedPayload ?? Array.Empty<byte>()), 
+                conversation.LinkedStudentUserId ?? Guid.Empty, 
+                conversation.LinkedStudentUserId ?? Guid.Empty, 
+                ct
+            );
+
+            action.Status = LiveSupportAIPendingActionStatus.Succeeded;
+            action.ConfirmedAt = DateTime.UtcNow;
+            action.CompletedAt = DateTime.UtcNow;
+            action.ConfirmedByUserId = conversation.LinkedStudentUserId;
+            action.Version++;
+
+            var feedbackMessage = new LiveSupportMessage
+            {
+                ConversationId = conversationId,
+                SenderType = LiveSupportSenderType.System,
+                ClientMessageId = $"sys-action-{action.Id:N}",
+                Type = LiveSupportMessageType.Text,
+                Content = $"[System] تم تنفيذ الإجراء بنجاح: {action.ActionKey}. النتيجة: {resultMessage}",
+                SentAt = DateTime.UtcNow
+            };
+            _db.LiveSupportMessages.Add(feedbackMessage);
+            conversation.LastMessageAt = feedbackMessage.SentAt;
+            conversation.Version++;
+
+            AddEvent(conversationId, LiveSupportEventType.AIActionConfirmed, conversation.LinkedStudentUserId, null, action.Id);
+            AddEvent(conversationId, LiveSupportEventType.AIActionSucceeded, conversation.LinkedStudentUserId, null, action.Id);
+            AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, feedbackMessage.Id);
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            action.Status = LiveSupportAIPendingActionStatus.Failed;
+            action.FailureCode = ex is LiveSupportException le ? le.Code : "EXECUTION_FAILED";
+            action.CompletedAt = DateTime.UtcNow;
+            action.Version++;
+
+            AddEvent(conversationId, LiveSupportEventType.AIActionFailed, conversation.LinkedStudentUserId, null, action.Id);
+
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+            throw;
+        }
+    }
+
+    public async Task CancelPendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid proposalId, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+
+        var action = await _db.LiveSupportAIPendingActions.FirstOrDefaultAsync(x => x.Id == proposalId && x.ConversationId == conversationId, ct);
+        if (action == null) throw new LiveSupportException("NOT_FOUND", "Pending action proposal not found.");
+
+        if (action.Status != LiveSupportAIPendingActionStatus.PendingConfirmation)
+            throw new LiveSupportException("CONFLICT", "Action is not in a cancellable state.");
+
+        action.Status = LiveSupportAIPendingActionStatus.Cancelled;
+        action.CompletedAt = DateTime.UtcNow;
+        action.Version++;
+        if (conversation != null)
+        {
+            var message = new LiveSupportMessage
+            {
+                ConversationId = conversationId,
+                SenderType = LiveSupportSenderType.System,
+                ClientMessageId = $"sys-cancel-action-{action.Id:N}",
+                Type = LiveSupportMessageType.Text,
+                Content = $"[System] رفض الطالب تنفيذ الإجراء: {action.ActionKey}.",
+                SentAt = DateTime.UtcNow
+            };
+            _db.LiveSupportMessages.Add(message);
+            conversation.LastMessageAt = message.SentAt;
+            conversation.Version++;
+
+            AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, message.Id);
+        }
+
+        AddEvent(conversationId, LiveSupportEventType.AIActionCancelled, conversation?.LinkedStudentUserId, null, action.Id);
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task ConfirmHandoffAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+
+        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
+        if (aiState == null || aiState.Mode != LiveSupportAIMode.AiActive)
+            throw new LiveSupportException("CONFLICT", "Conversation is not in an active AI support state.");
+
+        var action = await _db.LiveSupportAIPendingActions
+            .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.ActionKey == "system.handoff" && x.Status == LiveSupportAIPendingActionStatus.PendingConfirmation, ct);
+        if (action == null) throw new LiveSupportException("NOT_FOUND", "No pending handoff proposal found.");
+
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+        aiState.Mode = LiveSupportAIMode.HumanQueued;
+        aiState.HandedOffAt = DateTime.UtcNow;
+        aiState.Version++;
+
+        var now = DateTime.UtcNow;
+        _db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversationId, EnteredAt = now, Sequence = now.Ticks });
+
+        conversation.Status = LiveSupportConversationStatus.Waiting;
+        conversation.QueuedAt = now;
+        conversation.Version++;
+
+        action.Status = LiveSupportAIPendingActionStatus.Succeeded;
+        action.ConfirmedAt = now;
+        action.CompletedAt = now;
+        action.Version++;
+
+        var msg = new LiveSupportMessage
+        {
+            ConversationId = conversationId,
+            SenderType = LiveSupportSenderType.System,
+            ClientMessageId = $"sys-handoff-ok-{Guid.NewGuid():N}",
+            Type = LiveSupportMessageType.Text,
+            Content = $"[System] تم تحويل المحادثة إلى طابور الدعم البشري.",
+            SentAt = DateTime.UtcNow
+        };
+        _db.LiveSupportMessages.Add(msg);
+
+        AddEvent(conversationId, LiveSupportEventType.AIHandoffCompleted, null, null);
+        AddEvent(conversationId, LiveSupportEventType.QueueEntered, null, null);
+        AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, msg.Id);
+
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        await AssignOldestWaitingAsync(ct);
+    }
+
+    public async Task CancelHandoffAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+
+        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
+        if (aiState == null || aiState.Mode != LiveSupportAIMode.AiActive)
+            throw new LiveSupportException("CONFLICT", "Conversation is not in an active AI support state.");
+
+        var action = await _db.LiveSupportAIPendingActions
+            .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.ActionKey == "system.handoff" && x.Status == LiveSupportAIPendingActionStatus.PendingConfirmation, ct);
+        if (action == null) throw new LiveSupportException("NOT_FOUND", "No pending handoff proposal found.");
+
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+        action.Status = LiveSupportAIPendingActionStatus.Cancelled;
+        action.CompletedAt = DateTime.UtcNow;
+        action.Version++;
+
+        var message = new LiveSupportMessage
+        {
+            ConversationId = conversationId,
+            SenderType = LiveSupportSenderType.System,
+            ClientMessageId = $"sys-handoff-cancel-{Guid.NewGuid():N}",
+            Type = LiveSupportMessageType.Text,
+            Content = "[System] رفض الطالب التحويل للدعم البشري ويريد الاستمرار في التحدث معك.",
+            SentAt = DateTime.UtcNow
+        };
+        _db.LiveSupportMessages.Add(message);
+        conversation.LastMessageAt = message.SentAt;
+        conversation.Version++;
+
+        AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, message.Id);
+
+        var turn = new LiveSupportAITurn
+        {
+            ConversationId = conversationId,
+            SourceMessageId = message.Id,
+            PolicyVersionId = aiState.PolicyVersionId,
+            ExpectedConversationVersion = conversation.Version,
+            Status = LiveSupportAITurnStatus.Queued,
+            QueuedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        _db.LiveSupportAITurns.Add(turn);
+        await _db.SaveChangesAsync(ct);
+
+        if (_jobEnqueuer is not null)
+        {
+            await _jobEnqueuer.EnqueueJobAsync("ai-live-support-turns", "respond", new { turnId = turn.Id, conversationId = conversationId });
+        }
+
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task<LiveSupportAIVerificationSessionDto> StartVerificationLookupAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportLookupRequestDto request, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+
+        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
+        if (aiState == null) throw new LiveSupportException("CONFLICT", "AI state not found.");
+
+        var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == aiState.PolicyVersionId, ct);
+        if (policy == null || !policy.IsEnabled)
+            throw new LiveSupportException("CONFLICT", "AI policy is disabled.");
+
+        var existingSessions = await _db.LiveSupportAIVerificationSessions
+            .Where(x => x.ConversationId == conversationId)
+            .ToListAsync(ct);
+        foreach (var sess in existingSessions)
+        {
+            sess.Status = LiveSupportAIVerificationStatus.Cancelled;
+            sess.CompletedAt = DateTime.UtcNow;
+        }
+
+        User? candidate = null;
+        if (request.LookupKey == "phone.full")
+        {
+            candidate = await _db.Users
+                .Include(x => x.StudentProfile)
+                .FirstOrDefaultAsync(x => x.PhoneNumber == request.Value && x.IsActive, ct);
+        }
+        else if (request.LookupKey == "student_code.full")
+        {
+            candidate = await _db.Users
+                .Include(x => x.StudentProfile)
+                .FirstOrDefaultAsync(x => x.StudentProfile != null && x.StudentProfile.StudentCode == request.Value && x.IsActive, ct);
+        }
+
+        if (candidate == null)
+        {
+            var dummySession = new LiveSupportAIVerificationSession
+            {
+                Id = Guid.NewGuid(),
+                ConversationId = conversationId,
+                PolicyVersionId = policy.Id,
+                CandidateStudentUserId = null,
+                LookupKey = request.LookupKey,
+                LookupValueHash = Hash(request.Value),
+                SelectedQuestionKeysJson = System.Text.Json.JsonSerializer.Serialize(new[] { "profile.governorate" }),
+                RequiredCorrect = 1,
+                CorrectCount = 0,
+                AttemptCount = 0,
+                MaxAttempts = policy.VerificationMaxAttempts > 0 ? policy.VerificationMaxAttempts : 3,
+                Status = LiveSupportAIVerificationStatus.Challenging,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+                Version = 1
+            };
+            _db.LiveSupportAIVerificationSessions.Add(dummySession);
+            await _db.SaveChangesAsync(ct);
+
+            AddEvent(conversationId, LiveSupportEventType.AIVerificationStarted, null, null, dummySession.Id);
+
+            return new LiveSupportAIVerificationSessionDto(
+                dummySession.Id,
+                "Challenging",
+                "profile.governorate",
+                "ما هي المحافظة المسجلة بحسابك؟",
+                dummySession.AttemptCount,
+                dummySession.MaxAttempts
+            );
+        }
+
+        var enabledQuestions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.VerificationQuestionKeysJson) ?? new List<string>();
+        if (!enabledQuestions.Any())
+        {
+            enabledQuestions = new List<string> { "profile.governorate" };
+        }
+
+        var candidateQuestions = new List<string>();
+        foreach (var qk in enabledQuestions)
+        {
+            if (qk == "profile.full_name" && !string.IsNullOrEmpty(candidate.FullName)) candidateQuestions.Add(qk);
+            else if (qk == "profile.birth_date" && candidate.StudentProfile != null) candidateQuestions.Add(qk);
+            else if (qk == "profile.governorate" && candidate.StudentProfile != null && !string.IsNullOrEmpty(candidate.StudentProfile.Governorate)) candidateQuestions.Add(qk);
+            else if (qk == "profile.school_name" && candidate.StudentProfile != null && !string.IsNullOrEmpty(candidate.StudentProfile.SchoolName)) candidateQuestions.Add(qk);
+            else if (qk == "contact.parent_phone_last4" && candidate.StudentProfile != null && !string.IsNullOrEmpty(candidate.StudentProfile.ParentPhone)) candidateQuestions.Add(qk);
+        }
+
+        if (!candidateQuestions.Any())
+        {
+            candidateQuestions.Add("profile.governorate");
+        }
+
+        var requiredCorrect = Math.Min(policy.VerificationRequiredCorrect > 0 ? policy.VerificationRequiredCorrect : 1, candidateQuestions.Count);
+
+        var session = new LiveSupportAIVerificationSession
+        {
+            ConversationId = conversationId,
+            PolicyVersionId = policy.Id,
+            CandidateStudentUserId = candidate.Id,
+            LookupKey = request.LookupKey,
+            LookupValueHash = Hash(request.Value),
+            SelectedQuestionKeysJson = System.Text.Json.JsonSerializer.Serialize(candidateQuestions),
+            RequiredCorrect = requiredCorrect,
+            CorrectCount = 0,
+            AttemptCount = 0,
+            MaxAttempts = policy.VerificationMaxAttempts > 0 ? policy.VerificationMaxAttempts : 3,
+            Status = LiveSupportAIVerificationStatus.Challenging,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            Version = 1
+        };
+        _db.LiveSupportAIVerificationSessions.Add(session);
+        await _db.SaveChangesAsync(ct);
+
+        AddEvent(conversationId, LiveSupportEventType.AIVerificationStarted, null, null, session.Id);
+
+        var firstQuestionKey = candidateQuestions.First();
+        var promptText = GetVerificationQuestionPrompt(firstQuestionKey);
+
+        return new LiveSupportAIVerificationSessionDto(
+            session.Id,
+            "Challenging",
+            firstQuestionKey,
+            promptText,
+            session.AttemptCount,
+            session.MaxAttempts
+        );
+    }
+
+    public async Task<LiveSupportAIVerificationSessionDto> SubmitVerificationChallengeAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportAnswerChallengeDto request, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+
+        var session = await _db.LiveSupportAIVerificationSessions
+            .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.Status == LiveSupportAIVerificationStatus.Challenging, ct);
+        if (session == null) throw new LiveSupportException("NOT_FOUND", "Active verification session not found.");
+
+        if (session.ExpiresAt < DateTime.UtcNow)
+        {
+            session.Status = LiveSupportAIVerificationStatus.Failed;
+            session.CompletedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(ct);
+            throw new LiveSupportException("CONFLICT", "Verification session has expired.");
+        }
+
+        var selectedKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(session.SelectedQuestionKeysJson) ?? new List<string>();
+        var currentQuestionIndex = session.CorrectCount;
+        if (currentQuestionIndex >= selectedKeys.Count)
+        {
+            throw new LiveSupportException("CONFLICT", "Verification already completed.");
+        }
+
+        var currentQuestionKey = selectedKeys[currentQuestionIndex];
+        bool isCorrect = false;
+
+        if (session.CandidateStudentUserId.HasValue)
+        {
+            var student = await _db.Users
+                .Include(x => x.StudentProfile)
+                .FirstOrDefaultAsync(x => x.Id == session.CandidateStudentUserId.Value, ct);
+
+            if (student != null)
+            {
+                isCorrect = ValidateVerificationAnswer(student, currentQuestionKey, request.Answer);
+            }
+        }
+
+        session.AttemptCount++;
+
+        var attempt = new LiveSupportAIVerificationAttempt
+        {
+            SessionId = session.Id,
+            QuestionKeysJson = System.Text.Json.JsonSerializer.Serialize(new[] { currentQuestionKey }),
+            OutcomeCodesJson = System.Text.Json.JsonSerializer.Serialize(new[] { isCorrect ? "Correct" : "Incorrect" }),
+            SubmittedAt = DateTime.UtcNow,
+            AttemptNumber = session.AttemptCount
+        };
+        _db.LiveSupportAIVerificationAttempts.Add(attempt);
+
+        AddEvent(conversationId, LiveSupportEventType.AIVerificationAttempted, null, null, attempt.Id);
+
+        if (isCorrect)
+        {
+            session.CorrectCount++;
+            if (session.CorrectCount >= session.RequiredCorrect)
+            {
+                session.Status = LiveSupportAIVerificationStatus.Verified;
+                session.VerifiedAt = DateTime.UtcNow;
+                session.CompletedAt = DateTime.UtcNow;
+
+                if (conversation != null && session.CandidateStudentUserId.HasValue)
+                {
+                    await ChangeStudentLinkAsync(
+                        Guid.Empty, 
+                        true, 
+                        conversationId,
+                        session.CandidateStudentUserId.Value,
+                        "AI Verification Success",
+                        conversation.Version,
+                        ct
+                    );
+
+                    var successMessage = new LiveSupportMessage
+                    {
+                        ConversationId = conversationId,
+                        SenderType = LiveSupportSenderType.System,
+                        ClientMessageId = $"sys-verify-success-{Guid.NewGuid():N}",
+                        Type = LiveSupportMessageType.Text,
+                        Content = $"[System] تم التحقق من الهوية بنجاح وتم ربط الحساب.",
+                        SentAt = DateTime.UtcNow
+                    };
+                    _db.LiveSupportMessages.Add(successMessage);
+                    conversation.LastMessageAt = successMessage.SentAt;
+                    conversation.Version++;
+
+                    AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, successMessage.Id);
+                }
+
+                AddEvent(conversationId, LiveSupportEventType.AIVerificationSucceeded, null, null, session.Id);
+                await _db.SaveChangesAsync(ct);
+
+                return new LiveSupportAIVerificationSessionDto(
+                    session.Id,
+                    "Verified",
+                    null,
+                    "تم التحقق من الهوية بنجاح.",
+                    session.AttemptCount,
+                    session.MaxAttempts
+                );
+            }
+            else
+            {
+                var nextQuestionKey = selectedKeys[session.CorrectCount];
+                var promptText = GetVerificationQuestionPrompt(nextQuestionKey);
+                await _db.SaveChangesAsync(ct);
+
+                return new LiveSupportAIVerificationSessionDto(
+                    session.Id,
+                    "Challenging",
+                    nextQuestionKey,
+                    promptText,
+                    session.AttemptCount,
+                    session.MaxAttempts
+                );
+            }
+        }
+        else
+        {
+            if (session.AttemptCount >= session.MaxAttempts)
+            {
+                session.Status = LiveSupportAIVerificationStatus.Exhausted;
+                session.CompletedAt = DateTime.UtcNow;
+
+                var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
+                if (conversation != null && aiState != null)
+                {
+                    aiState.Mode = LiveSupportAIMode.HumanQueued;
+                    aiState.HandoffReasonCode = "VERIFICATION_FAILED";
+                    aiState.HandoffSafeSummary = "فشل في مطابقة بيانات التحقق بعد تجاوز الحد الأقصى للمحاولات.";
+                    aiState.HandedOffAt = DateTime.UtcNow;
+                    aiState.Version++;
+
+                    var now = DateTime.UtcNow;
+                    _db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversationId, EnteredAt = now, Sequence = now.Ticks });
+
+                    conversation.Status = LiveSupportConversationStatus.Waiting;
+                    conversation.QueuedAt = now;
+                    conversation.Version++;
+
+                    var failMsg = new LiveSupportMessage
+                    {
+                        ConversationId = conversationId,
+                        SenderType = LiveSupportSenderType.System,
+                        ClientMessageId = $"sys-verify-fail-{Guid.NewGuid():N}",
+                        Type = LiveSupportMessageType.Text,
+                        Content = $"[System] تم إيقاف المساعد وتوجيهك للدعم البشري بسبب استنفاذ محاولات التحقق.",
+                        SentAt = DateTime.UtcNow
+                    };
+                    _db.LiveSupportMessages.Add(failMsg);
+
+                    AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, failMsg.Id);
+                    AddEvent(conversationId, LiveSupportEventType.AIHandoffCompleted, null, null);
+                    AddEvent(conversationId, LiveSupportEventType.QueueEntered, null, null);
+                }
+
+                AddEvent(conversationId, LiveSupportEventType.AIVerificationFailed, null, null, session.Id);
+                await _db.SaveChangesAsync(ct);
+
+                if (conversation != null)
+                {
+                    await AssignOldestWaitingAsync(ct);
+                }
+
+                return new LiveSupportAIVerificationSessionDto(
+                    session.Id,
+                    "Exhausted",
+                    null,
+                    "تم تجاوز الحد الأقصى للمحاولات. جاري تحويلك للدعم البشري.",
+                    session.AttemptCount,
+                    session.MaxAttempts
+                );
+            }
+            else
+            {
+                var promptText = GetVerificationQuestionPrompt(currentQuestionKey);
+                await _db.SaveChangesAsync(ct);
+
+                return new LiveSupportAIVerificationSessionDto(
+                    session.Id,
+                    "Challenging",
+                    currentQuestionKey,
+                    promptText + " (المحاولة خاطئة، يرجى المحاولة مرة أخرى)",
+                    session.AttemptCount,
+                    session.MaxAttempts
+                );
+            }
+        }
+    }
+
+    public async Task ConfirmRegistrationProposalAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportRegisterGuestDto request, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+
+        if (conversation.LinkedStudentUserId.HasValue)
+            throw new LiveSupportException("CONFLICT", "Conversation is already linked to a student account.");
+
+        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
+        if (aiState == null) throw new LiveSupportException("CONFLICT", "AI conversation state not found.");
+
+        var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == aiState.PolicyVersionId, ct);
+        if (policy == null || !policy.IsEnabled)
+            throw new LiveSupportException("CONFLICT", "Active policy is disabled.");
+
+        var actionKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.ActionKeysJson) ?? new List<string>();
+        if (!actionKeys.Contains("student.create-and-link"))
+            throw new LiveSupportException("CONFLICT", "Account creation is not enabled in active policy.");
+
+        if (_mediator == null) throw new LiveSupportException("INTERNAL_ERROR", "Mediator is not available.");
+
+        var packageIds = new List<Guid>();
+        var command = new AdminCreateUserCommand(
+            request.FullName,
+            request.PhoneNumber,
+            request.Password,
+            "Student",
+            packageIds
+        );
+        var created = await _mediator.Send(command, ct);
+        if (!created.Success || created.Data == null)
+            throw new LiveSupportException("VALIDATION_ERROR", created.Message ?? "Failed to create student account.");
+
+        var profile = await _db.StudentProfiles.FirstOrDefaultAsync(x => x.UserId == created.Data.Id, ct);
+        if (profile != null)
+        {
+            profile.Governorate = request.Governorate;
+            profile.SchoolName = request.SchoolName;
+            profile.ParentPhone = request.ParentPhoneNumber;
+            if (Enum.TryParse<EducationStage>(request.EducationStage, true, out var stage))
+                profile.EducationStage = stage;
+            if (Enum.TryParse<GradeLevel>(request.GradeLevel, true, out var level))
+                profile.GradeLevel = level;
+            profile.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await ChangeStudentLinkAsync(
+            Guid.Empty, 
+            true, 
+            conversationId,
+            created.Data.Id,
+            "AI Guest Registration",
+            conversation.Version,
+            ct
+        );
+
+        var message = new LiveSupportMessage
+        {
+            ConversationId = conversationId,
+            SenderType = LiveSupportSenderType.System,
+            ClientMessageId = $"sys-register-{Guid.NewGuid():N}",
+            Type = LiveSupportMessageType.Text,
+            Content = $"[System] تم إنشاء الحساب بنجاح وتوثيقه للطالب: {request.FullName}.",
+            SentAt = DateTime.UtcNow
+        };
+        _db.LiveSupportMessages.Add(message);
+        conversation.LastMessageAt = message.SentAt;
+        conversation.Version++;
+
+        AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, message.Id);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<LiveSupportAIPendingActionDto?> GetActivePendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
+    {
+        await RequireParticipantConversationAsync(participant, conversationId, ct);
+        var action = await _db.LiveSupportAIPendingActions
+            .AsNoTracking()
+            .Where(x => x.ConversationId == conversationId && x.Status == LiveSupportAIPendingActionStatus.PendingConfirmation && x.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (action == null) return null;
+
+        return new LiveSupportAIPendingActionDto(
+            action.Id,
+            action.ActionKey,
+            action.SafeProposalJson,
+            action.Status.ToString(),
+            action.ExpiresAt
+        );
+    }
+
+    public async Task<LiveSupportAIVerificationSessionDto?> GetActiveVerificationSessionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
+    {
+        await RequireParticipantConversationAsync(participant, conversationId, ct);
+        var session = await _db.LiveSupportAIVerificationSessions
+            .AsNoTracking()
+            .Where(x => x.ConversationId == conversationId && x.Status == LiveSupportAIVerificationStatus.Challenging && x.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (session == null) return null;
+
+        var selectedKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(session.SelectedQuestionKeysJson) ?? new List<string>();
+        var currentQuestionIndex = session.CorrectCount;
+        
+        string? nextQuestionKey = null;
+        string? promptText = null;
+        
+        if (currentQuestionIndex < selectedKeys.Count)
+        {
+            nextQuestionKey = selectedKeys[currentQuestionIndex];
+            promptText = GetVerificationQuestionPrompt(nextQuestionKey);
+        }
+
+        return new LiveSupportAIVerificationSessionDto(
+            session.Id,
+            session.Status.ToString(),
+            nextQuestionKey,
+            promptText,
+            session.AttemptCount,
+            session.MaxAttempts
+        );
+    }
+
+    private async Task<string> BuildStudentContextAsync(Guid studentUserId, List<string> readableKeys, CancellationToken ct)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("--- STUDENT PROFILE CONTEXT ---");
+
+        var user = await _db.Users
+            .Include(x => x.StudentProfile)
+            .FirstOrDefaultAsync(x => x.Id == studentUserId, ct);
+
+        if (user == null)
+        {
+            sb.AppendLine("No linked student profile found.");
+            return sb.ToString();
+        }
+
+        foreach (var key in readableKeys)
+        {
+            switch (key)
+            {
+                case "identity.basic":
+                    sb.AppendLine("[identity.basic]");
+                    sb.AppendLine($"- Student ID: {user.Id}");
+                    sb.AppendLine($"- Full Name: {user.FullName}");
+                    if (user.StudentProfile != null)
+                    {
+                        sb.AppendLine($"- Student Code: {user.StudentProfile.StudentCode}");
+                    }
+                    break;
+
+                case "identity.contact":
+                    sb.AppendLine("[identity.contact]");
+                    sb.AppendLine($"- Phone Number: {user.PhoneNumber}");
+                    if (user.StudentProfile != null)
+                    {
+                        sb.AppendLine($"- Parent Phone: {user.StudentProfile.ParentPhone}");
+                        sb.AppendLine($"- Secondary Phone: {user.StudentProfile.SecondaryPhone}");
+                    }
+                    break;
+
+                case "account.status":
+                    sb.AppendLine("[account.status]");
+                    sb.AppendLine($"- Is Active: {user.IsActive}");
+                    sb.AppendLine($"- Is Profile Complete: {user.IsProfileComplete}");
+                    if (!string.IsNullOrWhiteSpace(user.SuspensionReason))
+                    {
+                        sb.AppendLine($"- Suspension Reason: {user.SuspensionReason}");
+                    }
+                    break;
+
+                case "education.profile":
+                    if (user.StudentProfile != null)
+                    {
+                        sb.AppendLine("[education.profile]");
+                        sb.AppendLine($"- Education Stage: {user.StudentProfile.EducationStage}");
+                        sb.AppendLine($"- Grade Level: {user.StudentProfile.GradeLevel}");
+                        sb.AppendLine($"- Governorate: {user.StudentProfile.Governorate}");
+                        sb.AppendLine($"- School Name: {user.StudentProfile.SchoolName}");
+                    }
+                    break;
+
+                case "packages.active":
+                    sb.AppendLine("[packages.active]");
+                    var activePackageGrants = await _db.StudentAccessGrants
+                        .Where(x => x.UserId == studentUserId && x.PackageId != null && x.IsActive && (x.ExpiresAt == null || x.ExpiresAt > DateTime.UtcNow))
+                        .ToListAsync(ct);
+                    if (activePackageGrants.Any())
+                    {
+                        var packageIds = activePackageGrants.Select(x => x.PackageId!.Value).ToList();
+                        var packages = await _db.Packages.Where(x => packageIds.Contains(x.Id)).ToListAsync(ct);
+                        foreach (var grant in activePackageGrants)
+                        {
+                            var pkg = packages.FirstOrDefault(x => x.Id == grant.PackageId);
+                            sb.AppendLine($"- Package: {(pkg != null ? pkg.Name : grant.PackageId.ToString())} (Granted: {grant.GrantedAt:yyyy-MM-dd}, Expires: {(grant.ExpiresAt.HasValue ? grant.ExpiresAt.Value.ToString("yyyy-MM-dd") : "Never")})");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine("- No active packages.");
+                    }
+                    break;
+
+                case "access.grants":
+                    sb.AppendLine("[access.grants]");
+                    var activeGrants = await _db.StudentAccessGrants
+                        .Where(x => x.UserId == studentUserId && x.IsActive && (x.ExpiresAt == null || x.ExpiresAt > DateTime.UtcNow))
+                        .ToListAsync(ct);
+                    if (activeGrants.Any())
+                    {
+                        foreach (var grant in activeGrants)
+                        {
+                            sb.AppendLine($"- Grant Type: {grant.GrantType}, Target ID: {grant.PackageId ?? grant.LessonId ?? grant.LessonVideoId ?? grant.ExamId} (Granted: {grant.GrantedAt:yyyy-MM-dd})");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine("- No active access grants.");
+                    }
+                    break;
+
+                case "devices.summary":
+                    sb.AppendLine("[devices.summary]");
+                    var devices = await _db.Devices
+                        .Where(x => x.UserId == studentUserId && x.IsActive)
+                        .ToListAsync(ct);
+                    if (devices.Any())
+                    {
+                        foreach (var dev in devices)
+                        {
+                            sb.AppendLine($"- Device: {dev.DeviceType} - {dev.OsName} {dev.BrowserName} (IP: {dev.IpAddress}, Fingerprint: {dev.DeviceFingerprint}, Last Used: {dev.LastUsedAt:yyyy-MM-dd HH:mm:ss})");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine("- No registered active devices.");
+                    }
+                    break;
+
+                case "balance.summary":
+                    sb.AppendLine("[balance.summary]");
+                    var balanceObj = await _db.StudentBalances
+                        .FirstOrDefaultAsync(x => x.UserId == studentUserId, ct);
+                    sb.AppendLine($"- Balance Amount: {(balanceObj != null ? balanceObj.CurrentBalance : 0)} EGP");
+                    break;
+
+                case "watch.summary":
+                    sb.AppendLine("[watch.summary]");
+                    var watchEvents = await _db.VideoWatchEvents
+                        .Include(x => x.LessonVideo)
+                        .Where(x => x.UserId == studentUserId)
+                        .ToListAsync(ct);
+                    if (watchEvents.Any())
+                    {
+                        foreach (var we in watchEvents)
+                        {
+                            sb.AppendLine($"- Video: {(we.LessonVideo != null ? we.LessonVideo.Title : we.LessonVideoId.ToString())} (Watch Count: {we.WatchCount}, Locked: {we.IsLocked}, Custom Max: {we.CustomMaxWatchCount})");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine("- No video watch events recorded.");
+                    }
+                    break;
+
+                case "exams.summary":
+                    sb.AppendLine("[exams.summary]");
+                    var examAttempts = await _db.StudentExamAttempts
+                        .Include(x => x.Exam)
+                        .Where(x => x.UserId == studentUserId)
+                        .OrderByDescending(x => x.StartedAt)
+                        .Take(10)
+                        .ToListAsync(ct);
+                    if (examAttempts.Any())
+                    {
+                        foreach (var attempt in examAttempts)
+                        {
+                            sb.AppendLine($"- Exam: {attempt.Exam.Title} (Score: {attempt.ScoreAchieved}, Passed: {attempt.IsPassed}, Evaluation: {attempt.Evaluation}, Started: {attempt.StartedAt})");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine("- No exam attempts recorded.");
+                    }
+                    break;
+
+                case "requests.summary":
+                    sb.AppendLine("[requests.summary]");
+                    var watchRequests = await _db.ExtraWatchRequests
+                        .Include(x => x.LessonVideo)
+                        .Where(x => x.UserId == studentUserId)
+                        .OrderByDescending(x => x.CreatedAt)
+                        .Take(10)
+                        .ToListAsync(ct);
+                    if (watchRequests.Any())
+                    {
+                        foreach (var req in watchRequests)
+                        {
+                            sb.AppendLine($"- Extra Watch Request for Video: {req.LessonVideo.Title} (Status: {req.Status}, Resolved At: {req.ResolvedAt})");
+                        }
+                    }
+                    else
+                    {
+                        sb.AppendLine("- No extra watch requests found.");
+                    }
+                    break;
+
+                case "homework.summary":
+                    sb.AppendLine("[homework.summary]");
+                    var homeworks = await _db.Homeworks.ToListAsync(ct);
+                    sb.AppendLine($"- Total Homeworks on Platform: {homeworks.Count}");
+                    break;
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private string GetActionArgumentsSchema(string key) => key switch
+    {
+        "student.lesson.unlock" => "{\"lessonId\": \"Guid\"}",
+        "student.devices.disconnect-all" => "{}",
+        "student.device.disconnect" => "{\"deviceId\": \"Guid\"}",
+        "student.watch.reset" => "{\"lessonVideoId\": \"Guid\"}",
+        "student.watch-request.approve" => "{\"requestId\": \"Guid\"}",
+        "student.create-and-link" => "{\"fullName\": \"string\", \"phoneNumber\": \"string\", \"password\": \"string\", \"governorate\": \"string\", \"educationStage\": \"string\", \"gradeLevel\": \"string\", \"schoolName\": \"string\", \"parentPhoneNumber\": \"string\"}",
+        _ => "{}"
+    };
+
+    private string GetVerificationQuestionPrompt(string key) => key switch
+    {
+        "profile.full_name" => "ما هو اسمك بالكامل المسجل في المنصة؟",
+        "profile.birth_date" => "ما هو تاريخ ميلادك؟ (مثال: 2008-05-15)",
+        "profile.governorate" => "ما هي المحافظة المسجلة بحسابك؟",
+        "profile.school_name" => "ما هو اسم المدرسة المسجل بحسابك؟",
+        "contact.parent_phone_last4" => "اكتب آخر 4 أرقام من هاتف ولي الأمر المسجل.",
+        _ => "أجب على سؤال التحقق التالي لتأكيد هويتك."
+    };
+
+    private bool ValidateVerificationAnswer(User student, string key, string answer)
+    {
+        if (string.IsNullOrWhiteSpace(answer)) return false;
+
+        var cleanAnswer = NormalizeText(answer);
+
+        switch (key)
+        {
+            case "profile.full_name":
+                return NormalizeText(student.FullName) == cleanAnswer;
+
+            case "profile.birth_date":
+                if (student.StudentProfile == null) return false;
+                var birthDateStr = student.StudentProfile.DateOfBirth.ToString("yyyy-MM-dd");
+                return birthDateStr == cleanAnswer;
+
+            case "profile.governorate":
+                if (student.StudentProfile == null) return false;
+                return NormalizeText(student.StudentProfile.Governorate) == cleanAnswer;
+
+            case "profile.school_name":
+                if (student.StudentProfile == null) return false;
+                return NormalizeText(student.StudentProfile.SchoolName ?? string.Empty) == cleanAnswer;
+
+            case "contact.parent_phone_last4":
+                if (student.StudentProfile == null || string.IsNullOrEmpty(student.StudentProfile.ParentPhone)) return false;
+                var parentPhone = student.StudentProfile.ParentPhone.Trim();
+                if (parentPhone.Length < 4) return false;
+                var last4 = parentPhone[^4..];
+                return last4 == cleanAnswer;
+
+            default:
+                return false;
+        }
+    }
+
+    private string NormalizeText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        var sb = new StringBuilder();
+        foreach (var c in text.Trim().ToLowerInvariant())
+        {
+            if (c == 'أ' || c == 'إ' || c == 'آ') sb.Append('ا');
+            else if (c == 'ة') sb.Append('ه');
+            else if (c == 'ى') sb.Append('ي');
+            else if (char.IsLetterOrDigit(c)) sb.Append(c);
+        }
+        return sb.ToString();
+    }
+
+    private async Task<string> ExecuteActionPayloadAsync(Guid conversationId, string actionKey, string argumentsJson, Guid studentUserId, Guid actorUserId, CancellationToken ct)
+    {
+        if (_mediator == null) throw new LiveSupportException("INTERNAL_ERROR", "Mediator is not available.");
+
+        using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
+        var root = document.RootElement;
+
+        switch (actionKey)
+        {
+            case "student.lesson.unlock":
+                {
+                    if (!root.TryGetProperty("lessonId", out var prop) || !Guid.TryParse(prop.GetString(), out var lessonId))
+                        throw new LiveSupportException("VALIDATION_ERROR", "Invalid or missing lessonId.");
+                    var res = await _mediator.Send(new ManualUnlockCommand(lessonId, studentUserId, actorUserId), ct);
+                    if (!res.Success) throw new LiveSupportException("ACTION_FAILED", res.Message ?? "Failed to unlock lesson.");
+                    return res.Message ?? "Lesson unlocked successfully.";
+                }
+
+            case "student.devices.disconnect-all":
+                {
+                    var devices = await _db.Devices.Where(x => x.UserId == studentUserId && x.IsActive).ToListAsync(ct);
+                    foreach (var dev in devices)
+                    {
+                        var res = await _mediator.Send(new RemoveDeviceCommand(dev.Id, actorUserId), ct);
+                        if (!res.Success) throw new LiveSupportException("ACTION_FAILED", res.Message ?? "Failed to disconnect device.");
+                    }
+                    return "All devices disconnected successfully.";
+                }
+
+            case "student.device.disconnect":
+                {
+                    Guid deviceId = Guid.Empty;
+                    if (root.TryGetProperty("deviceId", out var prop) && Guid.TryParse(prop.GetString(), out var id))
+                    {
+                        deviceId = id;
+                    }
+                    else if (root.TryGetProperty("deviceFingerprint", out var fpProp))
+                    {
+                        var fp = fpProp.GetString();
+                        var dev = await _db.Devices.FirstOrDefaultAsync(x => x.UserId == studentUserId && x.DeviceFingerprint == fp && x.IsActive, ct);
+                        if (dev == null) throw new LiveSupportException("NOT_FOUND", "Active device not found for fingerprint.");
+                        deviceId = dev.Id;
+                    }
+                    else
+                    {
+                        throw new LiveSupportException("VALIDATION_ERROR", "Invalid or missing deviceId / deviceFingerprint.");
+                    }
+                    var res = await _mediator.Send(new RemoveDeviceCommand(deviceId, actorUserId), ct);
+                    if (!res.Success) throw new LiveSupportException("ACTION_FAILED", res.Message ?? "Failed to disconnect device.");
+                    return res.Message ?? "Device disconnected successfully.";
+                }
+
+            case "student.watch.reset":
+                {
+                    if (!root.TryGetProperty("lessonVideoId", out var prop) || !Guid.TryParse(prop.GetString(), out var videoId))
+                        throw new LiveSupportException("VALIDATION_ERROR", "Invalid or missing lessonVideoId.");
+                    var res = await _mediator.Send(new ResetWatchLimitCommand(videoId, studentUserId, actorUserId), ct);
+                    if (!res.Success) throw new LiveSupportException("ACTION_FAILED", res.Message ?? "Failed to reset watch limit.");
+                    return res.Message ?? "Watch limit reset successfully.";
+                }
+
+            case "student.watch-request.approve":
+                {
+                    Guid requestId;
+                    if (root.TryGetProperty("requestId", out var prop) && Guid.TryParse(prop.GetString(), out var reqId))
+                    {
+                        requestId = reqId;
+                    }
+                    else if (root.TryGetProperty("lessonVideoId", out var videoProp) && Guid.TryParse(videoProp.GetString(), out var videoId))
+                    {
+                        var req = await _db.ExtraWatchRequests.FirstOrDefaultAsync(x => x.UserId == studentUserId && x.LessonVideoId == videoId && x.Status == RequestStatus.Pending, ct);
+                        if (req == null) throw new LiveSupportException("NOT_FOUND", "No pending watch request found for this video.");
+                        requestId = req.Id;
+                    }
+                    else
+                    {
+                        throw new LiveSupportException("VALIDATION_ERROR", "Invalid or missing requestId / lessonVideoId.");
+                    }
+
+                    var reason = root.TryGetProperty("reason", out var reasonProp) ? reasonProp.GetString() : "Approved by AI";
+                    var addedViews = root.TryGetProperty("addedViews", out var viewsProp) && viewsProp.TryGetInt32(out var val) ? val : 1;
+                    
+                    var res = await _mediator.Send(new ApproveWatchRequestCommand(requestId, actorUserId, reason, addedViews), ct);
+                    if (!res.Success) throw new LiveSupportException("ACTION_FAILED", res.Message ?? "Failed to approve request.");
+                    return res.Message ?? "Watch request approved successfully.";
+                }
+
+            default:
+                throw new LiveSupportException("VALIDATION_ERROR", $"Unsupported action: {actionKey}");
+        }
+    }
+
+    private static string Hash(string value)
+    {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(value));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
 }
+

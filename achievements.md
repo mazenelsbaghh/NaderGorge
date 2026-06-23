@@ -12,18 +12,22 @@
 
 ### Approved Feature Brief / ملخص الميزة المعتمد
 
-- **المشكلة:** خطأ 500 عند النشر بسبب تداخل القيد الفريد `IsEnabled` للسياسات، وعدم توفر زر تفعيل/تعطيل للمساعد الحالي، ونقص الإحصائيات مع الفلترة الزمنية.
-- **الهدف:** حل المشكلة البرمجية، وإضافة زر التشغيل/الإيقاف المباشر بمؤشر نشاط متوهج، ولوحة إحصائيات مع خيارات فلترة زمنية محددة مسبقًا (آخر 24 ساعة، آخر 7 أيام، آخر 30 يوم، والكل/Lifetime).
-- **القرارات المؤكدة:** اختيار الفترات المحددة مسبقًا بدلاً من الـ Date Picker.
-
-### Subagent Evidence / إثبات استخدام الوكلاء الفرعيين
-
-- Phase 1 specify support: inline
-- Phase 2 clarify support: inline
-- Phase 3 plan support: inline
+- **المشكلة:** المساعد الذكي يقتصر على الردود النصية والتحويل فقط دون تفعيل الإجراءات التي يحددها الأدمن من لوحة التحكم أو القدرة على توثيق وإنشاء الحسابات للزوار بشكل كامل.
+- **الهدف:** تمكين المساعد الذكي من استخدام الإجراءات الأكاديمية والطلابية (مثل فك الحصص، فصل الأجهزة، إلخ) المفعلة من لوحة التحكم، مع تفعيل بطاقات تأكيد تفاعلية في الشات، وتأكيد تحويل الدعم، ونموذج تسجيل الزوار آمن بالكامل.
+- **القرارات المؤكدة:** 
+  1. تفعيل جميع الإجراءات الأكاديمية والطلابية المحددة من لوحة التحكم.
+  2. تأكيد تحويل الدعم للبشر، وتفعيل التحويل الفوري الإجباري فقط في حالات الفشل الفني ورسوب التحقق.
+  3. استخدام نموذج تسجيل آمن وشامل لكافة البيانات عند إنشاء حسابات الزوار.
 
 ### Feature Test Evidence / إثبات اختبارات الفيتشر
 
-- [x] **Backend tests**: `dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --filter "FullyQualifiedName~LiveSupportAI"` passed 8/8 tests.
-- [x] **Frontend build check**: `npx tsc --noEmit` compiled successfully with 0 errors.
+- [x] Backend Unit Tests: Run `dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj` and `dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --filter "FullyQualifiedName~LiveSupport"`. All 174 application tests (including the 36 LiveSupport tests) passed.
+- [x] Node.js Worker Unit Tests: Run `npm test` inside `worker`. All 31 worker tests passed.
+- [x] Frontend Build & Compile: Run `npm run lint` & `npx tsc --noEmit` inside `frontend`. Clean typecheck and linting (0 errors, 4 warnings).
 
+### Subagent Evidence / إثبات استخدام الوكلاء الفرعيين
+
+- **Phase 1 specify support**: Not used.
+- **Phase 2 clarify support**: Not used.
+- **Phase 3 plan support**: Not used.
+- **Subagents Usage**: Subagents were not used during this run. All tasks were performed directly by the main agent.

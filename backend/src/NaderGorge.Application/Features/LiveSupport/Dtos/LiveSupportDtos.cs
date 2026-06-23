@@ -123,7 +123,24 @@ public sealed record LiveSupportAITurnCompleteRequest(
 public sealed record LiveSupportAIDecision(
     string Type,
     string? MessageAr,
+    LiveSupportAIDecisionAction? Action,
+    LiveSupportAIDecisionVerification? Verification,
+    LiveSupportAIDecisionAccountCreation? AccountCreation,
     LiveSupportAIDecisionHandoff? Handoff
+);
+
+public sealed record LiveSupportAIDecisionAction(
+    string Key,
+    System.Text.Json.Nodes.JsonObject? Arguments,
+    string SafeEffectSummaryAr
+);
+
+public sealed record LiveSupportAIDecisionVerification(
+    string Intent
+);
+
+public sealed record LiveSupportAIDecisionAccountCreation(
+    IReadOnlyList<string> RequestedFields
 );
 
 public sealed record LiveSupportAIDecisionHandoff(
@@ -139,3 +156,41 @@ public sealed record LiveSupportAITurnFailRequest(
     int? LatencyMs,
     string CallbackIdempotencyKey
 );
+
+public sealed record LiveSupportLookupRequestDto(
+    string LookupKey,
+    string Value
+);
+
+public sealed record LiveSupportAnswerChallengeDto(
+    string Answer
+);
+
+public sealed record LiveSupportAIVerificationSessionDto(
+    Guid SessionId,
+    string Status,
+    string? NextQuestionKey,
+    string? PromptText,
+    int AttemptCount,
+    int MaxAttempts
+);
+
+public sealed record LiveSupportAIPendingActionDto(
+    Guid Id,
+    string ActionKey,
+    string SafeProposalJson,
+    string Status,
+    DateTime ExpiresAt
+);
+
+public sealed record LiveSupportRegisterGuestDto(
+    string FullName,
+    string PhoneNumber,
+    string Password,
+    string Governorate,
+    string EducationStage,
+    string GradeLevel,
+    string SchoolName,
+    string ParentPhoneNumber
+);
+

@@ -149,6 +149,132 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/actions/{proposalId:guid}/confirm")]
+    public async Task<IActionResult> ConfirmAction(Guid conversationId, Guid proposalId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            await _service.ConfirmPendingActionAsync(participant, conversationId, proposalId, ct);
+            return Ok(ApiResponse<object>.Ok(new { success = true, message = "Action executed successfully." }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/actions/{proposalId:guid}/cancel")]
+    public async Task<IActionResult> CancelAction(Guid conversationId, Guid proposalId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            await _service.CancelPendingActionAsync(participant, conversationId, proposalId, ct);
+            return Ok(ApiResponse<object>.Ok(new { success = true, message = "Action proposal cancelled." }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/handoff/confirm")]
+    public async Task<IActionResult> ConfirmHandoff(Guid conversationId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            await _service.ConfirmHandoffAsync(participant, conversationId, ct);
+            return Ok(ApiResponse<object>.Ok(new { success = true, message = "Conversation transferred to human support." }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/handoff/cancel")]
+    public async Task<IActionResult> CancelHandoff(Guid conversationId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            await _service.CancelHandoffAsync(participant, conversationId, ct);
+            return Ok(ApiResponse<object>.Ok(new { success = true, message = "Handoff cancelled. Returning to AI assistant." }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/verification/lookup")]
+    public async Task<IActionResult> VerificationLookup(Guid conversationId, LiveSupportLookupRequestDto request, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            var sessionDto = await _service.StartVerificationLookupAsync(participant, conversationId, request, ct);
+            return Ok(ApiResponse<LiveSupportAIVerificationSessionDto>.Ok(sessionDto));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/verification/answer")]
+    public async Task<IActionResult> VerificationAnswer(Guid conversationId, LiveSupportAnswerChallengeDto request, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            var sessionDto = await _service.SubmitVerificationChallengeAsync(participant, conversationId, request, ct);
+            return Ok(ApiResponse<LiveSupportAIVerificationSessionDto>.Ok(sessionDto));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/account-proposal/confirm")]
+    public async Task<IActionResult> ConfirmRegistration(Guid conversationId, LiveSupportRegisterGuestDto request, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            await _service.ConfirmRegistrationProposalAsync(participant, conversationId, request, ct);
+            return StatusCode(StatusCodes.Status201Created, ApiResponse<object>.Ok(new { success = true, message = "Account created and linked successfully." }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpGet("participant/conversations/{conversationId:guid}/ai/pending-action")]
+    public async Task<IActionResult> GetActivePendingAction(Guid conversationId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            var action = await _service.GetActivePendingActionAsync(participant, conversationId, ct);
+            return Ok(ApiResponse<LiveSupportAIPendingActionDto?>.Ok(action));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpGet("participant/conversations/{conversationId:guid}/ai/verification/session")]
+    public async Task<IActionResult> GetActiveVerificationSession(Guid conversationId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            var session = await _service.GetActiveVerificationSessionAsync(participant, conversationId, ct);
+            return Ok(ApiResponse<LiveSupportAIVerificationSessionDto?>.Ok(session));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     private async Task<LiveSupportParticipantIdentity?> ResolveParticipantAsync(CancellationToken ct)
     {
         var idValue = User.FindFirstValue(ClaimTypes.NameIdentifier);

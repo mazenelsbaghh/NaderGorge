@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
@@ -8,6 +9,7 @@ using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
 using NaderGorge.Infrastructure.Services;
 using NaderGorge.Application.Interfaces;
+using NaderGorge.Application.Features.Admin.Commands;
 
 namespace NaderGorge.Application.Tests.LiveSupport;
 
@@ -214,7 +216,7 @@ public sealed class ParticipantSessionTests
         // 2. Complete AI Turn (Reply)
         var replyRequest = new LiveSupportAITurnCompleteRequest(
             ExpectedConversationVersion: context.ExpectedConversationVersion,
-            Decision: new LiveSupportAIDecision("reply", "رد المساعد", null),
+            Decision: new LiveSupportAIDecision("reply", "رد المساعد", null, null, null, null),
             Provider: "gemini",
             Model: "gemini-2.5-flash",
             ProviderResponseId: "resp-1",
@@ -235,6 +237,240 @@ public sealed class ParticipantSessionTests
         var completedTurn = await db.LiveSupportAITurns.FirstAsync(x => x.Id == turn.Id);
         Assert.Equal(LiveSupportAITurnStatus.Completed, completedTurn.Status);
         Assert.Equal(LiveSupportAIDecisionType.Reply, completedTurn.DecisionType);
+    }
+
+    [Fact]
+    public async Task PendingAction_ConfirmedAndCancelled_UpdatesStatusCorrectly()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01011111111");
+        
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Test Instructions",
+            CreatedByUserId = adminUser.Id,
+            PublishedByUserId = adminUser.Id,
+            PublishedAt = DateTime.UtcNow,
+            Version = 1,
+            ActionKeysJson = "[\"student.watch.reset\"]"
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
+        var fakeEnqueuer = new FakeJobEnqueuer();
+        var mediator = new FakeMediator();
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, mediator: mediator);
+
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
+
+        var action = new LiveSupportAIPendingAction
+        {
+            ConversationId = conversation.Id,
+            TurnId = Guid.NewGuid(),
+            StudentUserId = student.Id,
+            PolicyVersionId = policy.Id,
+            ActionKey = "student.watch.reset",
+            SafeProposalJson = "{\"lessonVideoId\": \"" + Guid.NewGuid() + "\"}",
+            EncryptedPayload = System.Text.Encoding.UTF8.GetBytes("{\"lessonVideoId\": \"" + Guid.NewGuid() + "\"}"),
+            Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            IdempotencyKey = Guid.NewGuid(),
+            Version = 1
+        };
+        db.LiveSupportAIPendingActions.Add(action);
+        await db.SaveChangesAsync();
+
+        // Verify active action can be retrieved
+        var activeAction = await service.GetActivePendingActionAsync(participant, conversation.Id, CancellationToken.None);
+        Assert.NotNull(activeAction);
+        Assert.Equal(action.Id, activeAction.Id);
+        Assert.Equal("PendingConfirmation", activeAction.Status);
+
+        // Confirm Action
+        await service.ConfirmPendingActionAsync(participant, conversation.Id, action.Id, CancellationToken.None);
+        var confirmed = await db.LiveSupportAIPendingActions.FirstAsync(x => x.Id == action.Id);
+        Assert.Equal(LiveSupportAIPendingActionStatus.Succeeded, confirmed.Status);
+
+        // Try Cancel (should conflict since already completed)
+        var err = await Assert.ThrowsAsync<LiveSupportException>(() => service.CancelPendingActionAsync(participant, conversation.Id, action.Id, CancellationToken.None));
+        Assert.Equal("CONFLICT", err.Code);
+    }
+
+    [Fact]
+    public async Task HandoffProposal_ConfirmedAndCancelled_BehavesCorrectly()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01011111111");
+        
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Test Instructions",
+            CreatedByUserId = adminUser.Id,
+            PublishedByUserId = adminUser.Id,
+            PublishedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
+        var service = CreateService(db);
+
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
+
+        var aiState = await db.LiveSupportAIConversationStates.FirstAsync(x => x.ConversationId == conversation.Id);
+        aiState.Mode = LiveSupportAIMode.AiActive;
+        aiState.PolicyVersionId = policy.Id;
+
+        var action = new LiveSupportAIPendingAction
+        {
+            ConversationId = conversation.Id,
+            TurnId = Guid.NewGuid(),
+            StudentUserId = student.Id,
+            PolicyVersionId = policy.Id,
+            ActionKey = "system.handoff",
+            SafeProposalJson = "{}",
+            Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            IdempotencyKey = Guid.NewGuid(),
+            Version = 1
+        };
+        db.LiveSupportAIPendingActions.Add(action);
+        await db.SaveChangesAsync();
+
+        // Confirm handoff
+        await service.ConfirmHandoffAsync(participant, conversation.Id, CancellationToken.None);
+        var updatedAction = await db.LiveSupportAIPendingActions.FirstAsync(x => x.Id == action.Id);
+        Assert.Equal(LiveSupportAIPendingActionStatus.Succeeded, updatedAction.Status);
+        
+        var updatedAiState = await db.LiveSupportAIConversationStates.FirstAsync(x => x.ConversationId == conversation.Id);
+        Assert.Equal(LiveSupportAIMode.HumanQueued, updatedAiState.Mode);
+    }
+
+    [Fact]
+    public async Task GuestVerification_IncorrectChallengeAnswers_ExhaustsSessionAndLocksOut()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var adminUser = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01011111111");
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
+        
+        // Seed Student Profile
+        var profile = new StudentProfile
+        {
+            UserId = student.Id,
+            Governorate = "الجيزة",
+            SchoolName = "مدرسة النيل",
+            ParentPhone = "01098765432",
+            StudentCode = "ST12345",
+            DateOfBirth = new DateTime(2005, 5, 5)
+        };
+        db.StudentProfiles.Add(profile);
+
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Test Instructions",
+            VerificationQuestionKeysJson = "[\"profile.governorate\"]",
+            VerificationRequiredCorrect = 1,
+            VerificationMaxAttempts = 2,
+            CreatedByUserId = adminUser.Id,
+            PublishedByUserId = adminUser.Id,
+            PublishedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var guestSessions = new LiveSupportGuestSessionService(db);
+        var guest = await guestSessions.IssueAsync("زائر اختبار", "01088888888", "127.0.0.1", "tests", CancellationToken.None);
+        var participant = await guestSessions.ValidateAsync(guest.CookieToken, CancellationToken.None);
+        
+        var service = CreateService(db);
+        var conversation = await service.CreateConversationAsync(participant!, "مشكلة", null, CancellationToken.None);
+
+        var aiState = await db.LiveSupportAIConversationStates.FirstAsync(x => x.ConversationId == conversation.Id);
+        aiState.Mode = LiveSupportAIMode.AiActive;
+        aiState.PolicyVersionId = policy.Id;
+        await db.SaveChangesAsync();
+
+        // 1. Lookup
+        var lookupDto = new LiveSupportLookupRequestDto("phone.full", "01088888888");
+        var session = await service.StartVerificationLookupAsync(participant!, conversation.Id, lookupDto, CancellationToken.None);
+        Assert.Equal("Challenging", session.Status);
+        Assert.Equal("profile.governorate", session.NextQuestionKey);
+
+        // 2. Submit wrong answer 1
+        var answerDto1 = new LiveSupportAnswerChallengeDto("القاهرة");
+        var result1 = await service.SubmitVerificationChallengeAsync(participant!, conversation.Id, answerDto1, CancellationToken.None);
+        Assert.Equal("Challenging", result1.Status);
+        Assert.Equal(1, result1.AttemptCount);
+
+        // 3. Submit wrong answer 2 (Should lock out and transition to Exhausted/HumanQueued)
+        var answerDto2 = new LiveSupportAnswerChallengeDto("الإسكندرية");
+        var result2 = await service.SubmitVerificationChallengeAsync(participant!, conversation.Id, answerDto2, CancellationToken.None);
+        Assert.Equal("Exhausted", result2.Status);
+
+        var updatedAiState = await db.LiveSupportAIConversationStates.FirstAsync(x => x.ConversationId == conversation.Id);
+        Assert.Equal(LiveSupportAIMode.HumanQueued, updatedAiState.Mode);
+    }
+
+    private sealed class FakeMediator : IMediator
+    {
+        public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        {
+            if (typeof(TResponse) == typeof(ApiResponse))
+            {
+                var result = ApiResponse.Ok("Success");
+                return Task.FromResult((TResponse)(object)result);
+            }
+            if (typeof(TResponse) == typeof(ApiResponse<AdminCreateUserResult>))
+            {
+                var result = ApiResponse<AdminCreateUserResult>.Ok(new AdminCreateUserResult(Guid.NewGuid(), "Name", "Phone", "Student"));
+                return Task.FromResult((TResponse)(object)result);
+            }
+            return Task.FromResult(default(TResponse)!);
+        }
+
+        public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task<object?> Send(object request, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<object?>(null);
+        }
+
+        public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task Publish(object notification, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default) where TNotification : INotification
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeJobEnqueuer : IJobEnqueuer

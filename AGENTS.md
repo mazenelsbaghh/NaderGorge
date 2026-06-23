@@ -94,5 +94,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 142-live-support-command-center: specs/142-live-support-command-center/plan.md
 - 143-ai-live-support-agent: specs/143-ai-live-support-agent/plan.md
 - 144-ai-live-support-refinements: specs/144-ai-live-support-refinements/plan.md
+- 145-ai-live-support-actions: specs/145-ai-live-support-actions/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

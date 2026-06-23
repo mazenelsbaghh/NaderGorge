@@ -27,6 +27,9 @@ export function LiveSupportLauncher() {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const startingNew = useRef(false);
 
+  const [activeAction, setActiveAction] = useState<any>(null);
+  const [activeVerification, setActiveVerification] = useState<any>(null);
+
   async function refresh() {
     const availabilityResult = await liveSupportService.getAvailability();
     setAvailability(availabilityResult);
@@ -36,8 +39,61 @@ export function LiveSupportLauncher() {
       const current = history.find((item) => !['Closed', 'Abandoned'].includes(item.status)) ?? (startingNew.current ? undefined : history[0]);
       setConversation(current);
       setNeedsGuest(false);
-      if (current) setMessages(await liveSupportService.getMessages(current.id));
+      if (current) {
+        setMessages(await liveSupportService.getMessages(current.id));
+        if (current.isAiActive) {
+          try {
+            const [act, ver] = await Promise.all([
+              liveSupportService.getActivePendingAction(current.id),
+              liveSupportService.getActiveVerificationSession(current.id)
+            ]);
+            setActiveAction(act);
+            setActiveVerification(ver);
+          } catch {
+            setActiveAction(null);
+            setActiveVerification(null);
+          }
+        } else {
+          setActiveAction(null);
+          setActiveVerification(null);
+        }
+      } else {
+        setActiveAction(null);
+        setActiveVerification(null);
+      }
     } catch { setNeedsGuest(true); }
+  }
+
+  async function handleConfirmAction(proposalId: string) {
+    if (!conversation) return;
+    await liveSupportService.confirmAIAction(conversation.id, proposalId);
+    await refresh();
+  }
+
+  async function handleCancelAction(proposalId: string) {
+    if (!conversation) return;
+    await liveSupportService.cancelAIAction(conversation.id, proposalId);
+    await refresh();
+  }
+
+  async function handleConfirmHandoff() {
+    if (!conversation) return;
+    await liveSupportService.confirmAIHandoff(conversation.id);
+    await refresh();
+  }
+
+  async function handleCancelHandoff() {
+    if (!conversation) return;
+    await liveSupportService.cancelAIHandoff(conversation.id);
+    await refresh();
+  }
+
+  function handleVerificationSuccess() {
+    void refresh();
+  }
+
+  function handleRegistrationSuccess() {
+    void refresh();
   }
 
   useEffect(() => {
@@ -151,7 +207,19 @@ export function LiveSupportLauncher() {
           <div aria-live="polite" className="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
             {conversation.status === 'Closed' ? 'تم إغلاق المحادثة' : conversation.status === 'Abandoned' ? 'تم إنهاء المحادثة' : 'متصل بموظف الدعم'}
           </div>
-        )}<ParticipantConversation messages={messages} isAiTyping={conversation.isAiTyping}/>{conversation.canSend ? <div className="flex gap-2 border-t border-slate-100 pt-3"><label aria-label="إرفاق ملف" className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-600 focus-within:outline-2"><Paperclip size={18}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg" disabled={uploading} onChange={(event) => void upload(event.target.files?.[0])} className="sr-only"/></label><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }} placeholder="اكتب رسالتك" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 outline-none focus:border-cyan-600"/><button type="button" onClick={() => void send()} aria-label="إرسال" className="grid size-11 place-items-center rounded-xl bg-cyan-700 text-white"><Send size={18}/></button></div> : <ClosedActions conversation={conversation} onNew={() => { startingNew.current = true; setConversation(undefined); setMessages([]); }}/>}</>}
+        )}<ParticipantConversation
+            conversationId={conversation.id}
+            messages={messages}
+            isAiTyping={conversation.isAiTyping}
+            activeAction={activeAction}
+            activeVerification={activeVerification}
+            onConfirmAction={handleConfirmAction}
+            onCancelAction={handleCancelAction}
+            onConfirmHandoff={handleConfirmHandoff}
+            onCancelHandoff={handleCancelHandoff}
+            onVerificationSuccess={handleVerificationSuccess}
+            onRegistrationSuccess={handleRegistrationSuccess}
+          />{conversation.canSend ? <div className="flex gap-2 border-t border-slate-100 pt-3"><label aria-label="إرفاق ملف" className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-600 focus-within:outline-2"><Paperclip size={18}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg" disabled={uploading} onChange={(event) => void upload(event.target.files?.[0])} className="sr-only"/></label><input value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }} placeholder="اكتب رسالتك" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 outline-none focus:border-cyan-600"/><button type="button" onClick={() => void send()} aria-label="إرسال" className="grid size-11 place-items-center rounded-xl bg-cyan-700 text-white"><Send size={18}/></button></div> : <ClosedActions conversation={conversation} onNew={() => { startingNew.current = true; setConversation(undefined); setMessages([]); }}/>}</>}
         {error && <p role="alert" className="mt-3 text-center text-sm text-red-600">{error}</p>}
       </LiveSupportWidget></div>
     </section>}
