@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Services;
@@ -138,6 +139,54 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
             successfulActions = await actionsQuery.CountAsync(x => x.Status == LiveSupportAIPendingActionStatus.Succeeded, ct);
 
         return new LiveSupportAIStatsDto(activeConversations, resolvedIssues, handoffs, totalMessagesSent, successfulActions);
+    }
+
+    public async Task<IReadOnlyList<LiveSupportAdminConversationDto>> GetActiveConversationsAsync(CancellationToken ct)
+    {
+        var activeStates = await db.LiveSupportAIConversationStates
+            .AsNoTracking()
+            .Where(x => x.Mode == LiveSupportAIMode.AiActive)
+            .OrderByDescending(x => x.LastParticipantActivityAt)
+            .ToListAsync(ct);
+
+        var conversationIds = activeStates.Select(x => x.ConversationId).ToList();
+
+        var conversations = await db.LiveSupportConversations
+            .AsNoTracking()
+            .Where(c => conversationIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, ct);
+
+        var userIds = conversations.Values.Where(c => c.StudentUserId.HasValue).Select(c => c.StudentUserId!.Value).Distinct().ToList();
+        var userNames = await db.Users.AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.FullName, ct);
+
+        var guestSessionIds = conversations.Values.Where(c => c.GuestSessionId.HasValue).Select(c => c.GuestSessionId!.Value).Distinct().ToList();
+        var guestNames = await db.LiveSupportGuestSessions.AsNoTracking().Where(g => guestSessionIds.Contains(g.Id)).ToDictionaryAsync(g => g.Id, g => g.DisplayName, ct);
+
+        var result = new List<LiveSupportAdminConversationDto>();
+        foreach (var state in activeStates)
+        {
+            if (!conversations.TryGetValue(state.ConversationId, out var c)) continue;
+            var participantName = c.ParticipantType == LiveSupportParticipantType.Student
+                ? (c.StudentUserId.HasValue && userNames.TryGetValue(c.StudentUserId.Value, out var name) ? name : "غير معروف")
+                : (c.GuestSessionId.HasValue && guestNames.TryGetValue(c.GuestSessionId.Value, out var gname) ? gname : "زائر");
+
+            result.Add(new LiveSupportAdminConversationDto(
+                c.Id,
+                participantName,
+                c.ParticipantType,
+                c.Status,
+                null,
+                c.CreatedAt,
+                c.AssignedAt,
+                c.FirstStaffResponseAt,
+                c.ClosedAt,
+                c.AssignedAt.HasValue ? (c.AssignedAt.Value - c.CreatedAt).TotalSeconds : null,
+                c.ClosedAt.HasValue && c.AssignedAt.HasValue ? (c.ClosedAt.Value - c.AssignedAt.Value).TotalSeconds : null,
+                c.Subject
+            ));
+        }
+
+        return result;
     }
 
 

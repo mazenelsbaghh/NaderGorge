@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 
@@ -41,6 +42,10 @@ public sealed class LiveSupportAIAdminController(ILiveSupportAIAdminService serv
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats(CancellationToken ct, [FromQuery] string period = "last-24h") =>
         Ok(ApiResponse<LiveSupportAIStatsDto>.Ok(await service.GetStatsAsync(period, ct)));
+
+    [HttpGet("active-conversations")]
+    public async Task<IActionResult> GetActiveConversations(CancellationToken ct) =>
+        Ok(ApiResponse<IReadOnlyList<LiveSupportAdminConversationDto>>.Ok(await service.GetActiveConversationsAsync(ct)));
 
     private Guid AdminId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 

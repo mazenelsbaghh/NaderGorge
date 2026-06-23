@@ -111,6 +111,13 @@ public sealed class LiveSupportService(
             await AssignOldestWaitingAsync(ct);
         }
 
+        if (!string.IsNullOrWhiteSpace(subject))
+        {
+            var senderType = participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest;
+            var clientMessageId = $"init-{Guid.NewGuid():N}";
+            await SendMessageAsync(conversation, senderType, participant.StudentUserId, participant.GuestSessionId, clientMessageId, subject, LiveSupportMessageType.Text, ct);
+        }
+
         await tx.CommitAsync(ct);
         _logger?.LogInformation("LiveSupport conversation {ConversationId} routed status {Status} owner {OwnerUserId}", conversation.Id, conversation.Status, conversation.CurrentOwnerUserId);
         LiveSupportTelemetry.ConversationsCreated.Add(1, new KeyValuePair<string, object?>("status", conversation.Status.ToString()));
@@ -595,7 +602,8 @@ public sealed class LiveSupportService(
         if (c.Status == LiveSupportConversationStatus.Waiting && c.QueuedAt.HasValue)
             position = await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null && x.EnteredAt <= c.QueuedAt, ct);
         var isAiActive = await _db.LiveSupportAIConversationStates.AnyAsync(x => x.ConversationId == c.Id && x.Mode == LiveSupportAIMode.AiActive, ct);
-        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), c.Status == LiveSupportConversationStatus.Closed && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive);
+        var isAiTyping = isAiActive && await _db.LiveSupportAITurns.AnyAsync(x => x.ConversationId == c.Id && (x.Status == LiveSupportAITurnStatus.Queued || x.Status == LiveSupportAITurnStatus.Processing), ct);
+        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), c.Status == LiveSupportConversationStatus.Closed && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping);
     }
 
     public async Task<LiveSupportAITurnContextDto?> ClaimAITurnAsync(Guid turnId, CancellationToken ct)
@@ -843,7 +851,7 @@ public sealed class LiveSupportService(
             : await _db.LiveSupportGuestSessions.Where(x => x.Id == c.GuestSessionId).Select(x => x.DisplayName).FirstOrDefaultAsync(ct);
         var ownerName = c.CurrentOwnerUserId.HasValue ? await _db.Users.Where(x => x.Id == c.CurrentOwnerUserId).Select(x => x.FullName).FirstOrDefaultAsync(ct) : null;
         return new LiveSupportAdminConversationDto(c.Id, participantName ?? "غير معروف", c.ParticipantType, c.Status, ownerName, c.CreatedAt, c.AssignedAt, c.FirstStaffResponseAt, c.ClosedAt,
-            c.AssignedAt.HasValue ? (c.AssignedAt.Value - c.CreatedAt).TotalSeconds : null, c.ClosedAt.HasValue && c.AssignedAt.HasValue ? (c.ClosedAt.Value - c.AssignedAt.Value).TotalSeconds : null);
+            c.AssignedAt.HasValue ? (c.AssignedAt.Value - c.CreatedAt).TotalSeconds : null, c.ClosedAt.HasValue && c.AssignedAt.HasValue ? (c.ClosedAt.Value - c.AssignedAt.Value).TotalSeconds : null, c.Subject);
     }
 
     private async Task<string?> ActorNameAsync(Guid? userId, Guid? guestId, CancellationToken ct)

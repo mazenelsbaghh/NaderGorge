@@ -1,4 +1,5 @@
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
+using NaderGorge.Application.Features.LiveSupport.Dtos;
 
 namespace NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 
@@ -11,6 +12,7 @@ public interface ILiveSupportAIAdminService
     Task DisableAsync(Guid adminUserId, CancellationToken cancellationToken);
     Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, CancellationToken cancellationToken);
     Task<LiveSupportAIStatsDto> GetStatsAsync(string period, CancellationToken cancellationToken);
+    Task<IReadOnlyList<LiveSupportAdminConversationDto>> GetActiveConversationsAsync(CancellationToken cancellationToken);
 }
 
 public sealed class LiveSupportAIAdminException(string code, string message) : Exception(message)

@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import type { LiveSupportAdminConversation } from './live-support-service';
 
 export interface AICatalogItem { key: string; label: string; description: string; requiresVerification: boolean }
 export interface AICatalogs { readableData: AICatalogItem[]; actions: AICatalogItem[]; lookupKeys: AICatalogItem[]; verificationQuestions: AICatalogItem[] }
@@ -27,4 +28,5 @@ export const liveSupportAIService = {
   disable: () => apiClient.post('/live-support/admin/ai/disable'),
   enable: () => apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/enable').then(response => response.data.data),
   getStats: (period: string) => apiClient.get<ApiResponse<AIStats>>('/live-support/admin/ai/stats', { params: { period } }).then(response => response.data.data),
+  getActiveConversations: () => apiClient.get<ApiResponse<LiveSupportAdminConversation[]>>('/live-support/admin/ai/active-conversations').then(response => response.data.data),
 };

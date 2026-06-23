@@ -29,6 +29,7 @@ export interface LiveSupportConversation {
   canSend: boolean;
   canRate: boolean;
   isAiActive?: boolean;
+  isAiTyping?: boolean;
 }
 
 export interface LiveSupportMessage {
@@ -100,7 +101,7 @@ export interface LiveSupportStudentContext {
   notes: Array<{ id: string; content: string; isPinned: boolean; createdAt: string }>;
   watchEvents: number; examAttempts: number; homeworkSubmissions: number;
 }
-export interface LiveSupportAdminConversation { id: string; participantName: string; participantType: LiveSupportParticipantType; status: LiveSupportConversationStatus; ownerName?: string; createdAt: string; assignedAt?: string; firstResponseAt?: string; closedAt?: string; waitSeconds?: number; handleSeconds?: number; }
+export interface LiveSupportAdminConversation { id: string; participantName: string; participantType: LiveSupportParticipantType; status: LiveSupportConversationStatus; ownerName?: string; createdAt: string; assignedAt?: string; firstResponseAt?: string; closedAt?: string; waitSeconds?: number; handleSeconds?: number; subject?: string; }
 export interface LiveSupportStaffPerformance { staffUserId: string; staffName: string; participatedConversations: number; closedConversations: number; ratingCount: number; averageRating?: number; }
 export interface LiveSupportAdminDashboard { waitingCount: number; activeCount: number; closedToday: number; conversations: LiveSupportAdminConversation[]; staffPerformance: LiveSupportStaffPerformance[]; }
 export interface LiveSupportConversationTimeline { conversation: LiveSupportAdminConversation; items: Array<{ at: string; type: string; actorName?: string; summary: string; safeDetails?: string }>; ratingStars?: number; ratingComment?: string; }

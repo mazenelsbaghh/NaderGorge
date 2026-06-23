@@ -13,6 +13,8 @@ import {
   type SaveAIDraft,
   type AIStats,
 } from '@/services/live-support-ai-service';
+import { ConversationInvestigation } from '@/components/live-support/admin/ConversationInvestigation';
+import { liveSupportService, type LiveSupportConversationTimeline, type LiveSupportAdminConversation } from '@/services/live-support-service';
 
 export const DEFAULT_SYSTEM_INSTRUCTIONS = `أنت مساعد الدعم الذكي لمنصة مسار، وهي منصة تعليمية عربية تساعد الطلاب على مشاهدة الدروس، حل الامتحانات والواجبات، متابعة التقدم، وإدارة الباقات وطلبات المشاهدة.
 
@@ -51,6 +53,9 @@ export default function AdminAISupportPageClient() {
   const [stats, setStats] = useState<AIStats>();
   const [statsPeriod, setStatsPeriod] = useState<'last-24h' | 'last-7d' | 'last-30d' | 'lifetime'>('last-24h');
   const [loadingStats, setLoadingStats] = useState(false);
+  const [activeConversations, setActiveConversations] = useState<LiveSupportAdminConversation[]>([]);
+  const [loadingActiveConversations, setLoadingActiveConversations] = useState(false);
+  const [timeline, setTimeline] = useState<LiveSupportConversationTimeline>();
   const isBuiltInAdmin = user?.roles.includes('Admin') === true;
 
   useEffect(() => {
@@ -74,11 +79,33 @@ export default function AdminAISupportPageClient() {
     }
   }
 
+  async function loadActiveConversations() {
+    setLoadingActiveConversations(true);
+    try {
+      const list = await liveSupportAIService.getActiveConversations();
+      setActiveConversations(list);
+    } catch (error) {
+      setNotice(apiErrorMessage(error, 'تعذر تحميل المحادثات النشطة.'));
+    } finally {
+      setLoadingActiveConversations(false);
+    }
+  }
+
   useEffect(() => {
     if (activeTab === 'stats' && isBuiltInAdmin) {
       void loadStats(statsPeriod);
     }
   }, [activeTab, statsPeriod, isBuiltInAdmin]);
+
+  useEffect(() => {
+    if (activeTab === 'stats' && isBuiltInAdmin) {
+      void loadActiveConversations();
+      const interval = window.setInterval(() => {
+        void liveSupportAIService.getActiveConversations().then(setActiveConversations).catch(() => undefined);
+      }, 10_000);
+      return () => window.clearInterval(interval);
+    }
+  }, [activeTab, isBuiltInAdmin]);
 
   if (!isBuiltInAdmin) {
     return <div dir="rtl" role="alert" className="m-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900">هذه الإعدادات متاحة لمدير النظام الأساسي فقط.</div>;
@@ -298,9 +325,58 @@ export default function AdminAISupportPageClient() {
           ) : (
             <div className="text-center py-12 text-slate-500">لا توجد إحصائيات متوفرة للفترة المحددة.</div>
           )}
+
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white mt-5">
+            <div className="border-b border-slate-100 p-5">
+              <h3 className="font-bold text-slate-900">المحادثات النشطة مع المساعد الذكي حالياً</h3>
+              <p className="mt-1 text-sm text-slate-500">تتحدث هذه القائمة تلقائياً كل 10 ثوانٍ. افتح أي محادثة لمتابعة الردود.</p>
+            </div>
+            {loadingActiveConversations ? (
+              <div className="grid min-h-40 place-items-center"><LoaderCircle className="animate-spin text-cyan-750" /></div>
+            ) : activeConversations.length === 0 ? (
+              <div className="p-8 text-center text-sm text-slate-500">لا توجد محادثات نشطة مع المساعد الذكي حالياً.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px] text-right text-sm">
+                  <thead className="bg-slate-50 text-xs text-slate-500">
+                    <tr>
+                      <th className="p-3">الشخص</th>
+                      <th className="p-3">الموضوع</th>
+                      <th className="p-3">وقت البدء</th>
+                      <th className="p-3">المتابعة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeConversations.map((item) => (
+                      <tr key={item.id} className="border-t border-slate-100 hover:bg-cyan-50">
+                        <td className="p-3 font-semibold text-slate-900">
+                          {item.participantName}
+                          <span className="mr-2 text-xs font-normal text-slate-500">
+                            {item.participantType === 'Guest' ? 'زائر' : 'طالب'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-700 max-w-xs truncate">{item.subject || '—'}</td>
+                        <td className="p-3 text-slate-600">{new Date(item.createdAt).toLocaleString('ar-EG')}</td>
+                        <td className="p-3">
+                          <button
+                            type="button"
+                            onClick={() => void liveSupportService.getAdminTimeline(item.id).then(setTimeline)}
+                            className="min-h-10 rounded-lg bg-slate-900 px-3 font-semibold text-white hover:bg-slate-800 transition-colors"
+                          >
+                            فتح المحادثة
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
         </div>
       )}
     </div>}
+    {timeline && <ConversationInvestigation timeline={timeline} close={() => setTimeline(undefined)}/>}
   </AdminShellChrome>;
 }
 
