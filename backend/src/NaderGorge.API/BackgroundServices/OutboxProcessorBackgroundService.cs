@@ -14,19 +14,16 @@ public class OutboxProcessorBackgroundService : BackgroundService
     private readonly IHubContext<PlatformHub> _hubContext;
     private readonly IHubContext<LiveSupportHub>? _liveSupportHub;
     private readonly ILogger<OutboxProcessorBackgroundService> _logger;
-    private readonly IJobEnqueuer? _jobEnqueuer;
 
     public OutboxProcessorBackgroundService(
         IServiceScopeFactory scopeFactory,
         IHubContext<PlatformHub> hubContext,
         ILogger<OutboxProcessorBackgroundService> logger,
-        IHubContext<LiveSupportHub>? liveSupportHub = null,
-        IJobEnqueuer? jobEnqueuer = null)
+        IHubContext<LiveSupportHub>? liveSupportHub = null)
     {
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
         _liveSupportHub = liveSupportHub;
-        _jobEnqueuer = jobEnqueuer;
         _logger = logger;
     }
 
@@ -98,9 +95,10 @@ public class OutboxProcessorBackgroundService : BackgroundService
                 {
                     if (LiveSupportAIOutboxQueueDispatcher.IsTurnQueueEvent(@event))
                     {
-                        if (_jobEnqueuer is null)
+                        var jobEnqueuer = scope.ServiceProvider.GetService<IJobEnqueuer>();
+                        if (jobEnqueuer is null)
                             throw new InvalidOperationException("Live-support AI queue dispatcher is unavailable.");
-                        await LiveSupportAIOutboxQueueDispatcher.DispatchAsync(@event, _jobEnqueuer);
+                        await LiveSupportAIOutboxQueueDispatcher.DispatchAsync(@event, jobEnqueuer);
                     }
                     else if (IsLiveSupportEvent(@event))
                     {
