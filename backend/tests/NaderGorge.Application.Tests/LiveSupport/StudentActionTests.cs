@@ -93,6 +93,37 @@ public sealed class StudentActionTests
     }
 
     [Fact]
+    public async Task ActionSucceeds_UnderAIHandoffOwnership()
+    {
+        await using var fixture = await ActionFixture.CreateAsync();
+        
+        var state = new LiveSupportAIConversationState
+        {
+            ConversationId = fixture.ConversationId,
+            Mode = LiveSupportAIMode.HumanAssigned,
+            LastParticipantActivityAt = DateTime.UtcNow,
+            HandedOffAt = DateTime.UtcNow,
+            Version = 1
+        };
+        fixture.Db.LiveSupportAIConversationStates.Add(state);
+        
+        var conversation = await fixture.Db.LiveSupportConversations.SingleAsync(x => x.Id == fixture.ConversationId);
+        conversation.CurrentOwnerUserId = fixture.StaffId;
+        conversation.Status = LiveSupportConversationStatus.Assigned;
+        await fixture.Db.SaveChangesAsync();
+
+        var definition = (await fixture.Actions.GetCatalogAsync(fixture.StaffId, false, fixture.ConversationId, CancellationToken.None)).Single(x => x.Key == "student.balance.adjust");
+        var request = fixture.Request(definition, Guid.NewGuid().ToString(), "{\"amount\":100,\"reason\":\"تحويل ناجح\"}");
+
+        var result = await fixture.Actions.ExecuteAsync(request, CancellationToken.None);
+        Assert.NotNull(result);
+        Assert.False(result.Replayed);
+        
+        var balance = await fixture.Db.StudentBalances.Where(x => x.UserId == fixture.StudentId).Select(x => x.CurrentBalance).SingleAsync();
+        Assert.Equal(100, balance);
+    }
+
+    [Fact]
     public async Task PasswordPayloadIsRedactedFromExecutionAudit()
     {
         await using var fixture = await ActionFixture.CreateAsync();
