@@ -8,6 +8,7 @@ using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
 using NaderGorge.Infrastructure.Services;
+using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Commands;
 
@@ -147,7 +148,8 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, null!);
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: orchestrator);
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
@@ -164,11 +166,10 @@ public sealed class ParticipantSessionTests
         Assert.NotNull(turn);
         Assert.Equal(LiveSupportAITurnStatus.Queued, turn.Status);
 
-        // Verify that the job was enqueued in Redis
-        Assert.Single(fakeEnqueuer.EnqueuedJobs);
-        var job = fakeEnqueuer.EnqueuedJobs[0];
-        Assert.Equal("ai-live-support-turns", job.queueName);
-        Assert.Equal("respond", job.jobName);
+        // Verify that the outbox event was created
+        var outboxEvent = await db.OutboxEvents.FirstOrDefaultAsync(x => x.Type == "LiveSupportAITurnQueued");
+        Assert.NotNull(outboxEvent);
+        Assert.Contains(turn.Id.ToString(), outboxEvent.PayloadJson);
     }
 
     [Fact]
@@ -193,7 +194,8 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, null!);
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: orchestrator);
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);

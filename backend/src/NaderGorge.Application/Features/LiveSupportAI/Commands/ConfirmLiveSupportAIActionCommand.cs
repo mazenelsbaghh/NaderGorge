@@ -30,6 +30,9 @@ public sealed class ConfirmLiveSupportAIActionCommandHandler(
         Authorize(request.Participant, conversation.StudentUserId, conversation.GuestSessionId);
         var decision = await db.LiveSupportAIPendingActions.SingleOrDefaultAsync(item => item.Id == request.DecisionId && item.ConversationId == request.ConversationId, cancellationToken)
             ?? throw new LiveSupportException("NOT_FOUND", "قرار التأكيد غير موجود.");
+        var idempotencyDigest = protector.ComputeKeyedDigest("participant-confirmation", Encoding.UTF8.GetBytes(request.IdempotencyKey));
+        if (!string.IsNullOrEmpty(decision.ConfirmationNonceHash) && decision.ConfirmationNonceHash != idempotencyDigest)
+            throw new LiveSupportException("IDEMPOTENCY_PAYLOAD_CONFLICT", "مفتاح التأكيد مستخدم لطلب مختلف.");
         if (decision.Status == LiveSupportAIPendingActionStatus.Succeeded && decision.ActionExecutionId.HasValue)
             return decision.ActionExecutionId.Value;
         if (decision.Status != LiveSupportAIPendingActionStatus.PendingConfirmation)
@@ -48,9 +51,6 @@ public sealed class ConfirmLiveSupportAIActionCommandHandler(
         var allowed = policy is null ? [] : JsonSerializer.Deserialize<string[]>(policy.ActionKeysJson) ?? [];
         if (policy is null || !policy.IsEnabled || !allowed.Contains(decision.ActionKey, StringComparer.Ordinal))
             throw new LiveSupportException("ACTION_REVOKED", "الإجراء لم يعد مسموحًا.");
-        var idempotencyDigest = protector.ComputeKeyedDigest("participant-confirmation", Encoding.UTF8.GetBytes(request.IdempotencyKey));
-        if (!string.IsNullOrEmpty(decision.ConfirmationNonceHash) && decision.ConfirmationNonceHash != idempotencyDigest)
-            throw new LiveSupportException("IDEMPOTENCY_PAYLOAD_CONFLICT", "مفتاح التأكيد مستخدم لطلب مختلف.");
         decision.ConfirmationNonceHash = idempotencyDigest;
         var plaintext = protector.Unprotect(decision.EncryptedPayload ?? throw new LiveSupportException("ACTION_PAYLOAD_MISSING", "بيانات الإجراء غير متاحة."));
         if (protector.ComputeKeyedDigest("pending-decision", plaintext) != decision.PayloadHash)

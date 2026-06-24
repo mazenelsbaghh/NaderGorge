@@ -30,7 +30,7 @@ public sealed class LiveSupportAIAdminServiceTests
         db.LiveSupportAIPolicyVersions.Add(policy);
         await db.SaveChangesAsync();
 
-        var service = new LiveSupportAIAdminService(db);
+        var service = new LiveSupportAIAdminService(db, null!);
         var result = await service.EnableAsync(admin.Id, CancellationToken.None);
 
         Assert.True(result.IsEnabled);
@@ -97,7 +97,7 @@ public sealed class LiveSupportAIAdminServiceTests
 
         await db.SaveChangesAsync();
 
-        var service = new LiveSupportAIAdminService(db);
+        var service = new LiveSupportAIAdminService(db, null!);
         
         // 1. Last 24 Hours
         var stats24h = await service.GetStatsAsync("last-24h", CancellationToken.None);
