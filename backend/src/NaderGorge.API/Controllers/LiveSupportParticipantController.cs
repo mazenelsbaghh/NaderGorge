@@ -6,12 +6,16 @@ using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Domain.Enums;
+using MediatR;
+using NaderGorge.Application.Features.LiveSupportAI.Commands;
+using NaderGorge.Application.Features.LiveSupportAI.Dtos;
+using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 
 namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/live-support")]
-public sealed class LiveSupportParticipantController(ILiveSupportService service, ILiveSupportGuestSessionService guestSessions) : ControllerBase
+public sealed class LiveSupportParticipantController(ILiveSupportService service, ILiveSupportGuestSessionService guestSessions, IMediator mediator, ILiveSupportAIVerificationService verificationService, ILiveSupportAIRegistrationService registrationService, ILiveSupportAIHandoffService handoffService) : ControllerBase
 {
     private const string GuestCookie = "massar_support_guest";
     private readonly ILiveSupportService _service = service;
@@ -114,7 +118,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
 
     [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/messages")]
-    [EnableRateLimiting("live-support-public")]
+    [EnableRateLimiting("live-support-ai-message")]
     public async Task<IActionResult> Send(Guid conversationId, SendMessageRequest request, CancellationToken ct)
     {
         var participant = await ResolveParticipantAsync(ct);
@@ -157,7 +161,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         if (participant is null) return Unauthorized();
         try
         {
-            await _service.ConfirmPendingActionAsync(participant, conversationId, proposalId, ct);
+            await mediator.Send(new ConfirmLiveSupportAIActionCommand(participant, conversationId, proposalId, proposalId.ToString("N")), ct);
             return Ok(ApiResponse<object>.Ok(new { success = true, message = "Action executed successfully." }));
         }
         catch (LiveSupportException ex) { return Error(ex); }
@@ -171,8 +175,40 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         if (participant is null) return Unauthorized();
         try
         {
-            await _service.CancelPendingActionAsync(participant, conversationId, proposalId, ct);
+            await mediator.Send(new CancelLiveSupportAIDecisionCommand(participant, conversationId, proposalId, proposalId.ToString("N")), ct);
             return Ok(ApiResponse<object>.Ok(new { success = true, message = "Action proposal cancelled." }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/decisions/{decisionId:guid}/confirm")]
+    [EnableRateLimiting("live-support-ai-confirmation")]
+    [RequestSizeLimit(16 * 1_024)]
+    public async Task<IActionResult> ConfirmDecision(Guid conversationId, Guid decisionId, ParticipantDecisionRequest request, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            var executionId = await mediator.Send(new ConfirmLiveSupportAIActionCommand(participant, conversationId, decisionId, request.IdempotencyKey), ct);
+            return Ok(ApiResponse<object>.Ok(new { decisionId, executionId, status = "Succeeded" }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/decisions/{decisionId:guid}/cancel")]
+    [EnableRateLimiting("live-support-ai-confirmation")]
+    [RequestSizeLimit(16 * 1_024)]
+    public async Task<IActionResult> CancelDecision(Guid conversationId, Guid decisionId, ParticipantDecisionRequest request, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            await mediator.Send(new CancelLiveSupportAIDecisionCommand(participant, conversationId, decisionId, request.IdempotencyKey), ct);
+            return Ok(ApiResponse<object>.Ok(new { decisionId, status = "Cancelled" }));
         }
         catch (LiveSupportException ex) { return Error(ex); }
     }
@@ -185,7 +221,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         if (participant is null) return Unauthorized();
         try
         {
-            await _service.ConfirmHandoffAsync(participant, conversationId, ct);
+            await handoffService.HandoffAsync(conversationId, participant, participant.StudentUserId, "PARTICIPANT_CONFIRMED", "طلب المستخدم التحويل لموظف دعم.", false, conversationId.ToString("N"), ct);
             return Ok(ApiResponse<object>.Ok(new { success = true, message = "Conversation transferred to human support." }));
         }
         catch (LiveSupportException ex) { return Error(ex); }
@@ -199,7 +235,9 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         if (participant is null) return Unauthorized();
         try
         {
-            await _service.CancelHandoffAsync(participant, conversationId, ct);
+            var proposal = await _service.GetActivePendingActionAsync(participant, conversationId, ct);
+            if (proposal is null || proposal.ActionKey != "system.handoff") return NotFound(ApiResponse<object>.Fail("لا يوجد طلب تحويل نشط.", ["HANDOFF_NOT_FOUND"]));
+            await mediator.Send(new CancelLiveSupportAIDecisionCommand(participant, conversationId, proposal.Id, proposal.Id.ToString("N")), ct);
             return Ok(ApiResponse<object>.Ok(new { success = true, message = "Handoff cancelled. Returning to AI assistant." }));
         }
         catch (LiveSupportException ex) { return Error(ex); }
@@ -207,14 +245,32 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
 
     [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/ai/verification/lookup")]
-    public async Task<IActionResult> VerificationLookup(Guid conversationId, LiveSupportLookupRequestDto request, CancellationToken ct)
+    [EnableRateLimiting("live-support-ai-verification")]
+    [RequestSizeLimit(16 * 1_024)]
+    public async Task<IActionResult> VerificationLookup(Guid conversationId, LiveSupportAIVerificationLookupCommandDto request, CancellationToken ct)
     {
         var participant = await ResolveParticipantAsync(ct);
         if (participant is null) return Unauthorized();
         try
         {
-            var sessionDto = await _service.StartVerificationLookupAsync(participant, conversationId, request, ct);
-            return Ok(ApiResponse<LiveSupportAIVerificationSessionDto>.Ok(sessionDto));
+            var sessionDto = await verificationService.StartLookupAsync(participant, conversationId, request, ct);
+            return Ok(ApiResponse<LiveSupportAIVerificationStateDto>.Ok(sessionDto));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/verification/{sessionId:guid}/answer")]
+    [EnableRateLimiting("live-support-ai-verification")]
+    [RequestSizeLimit(16 * 1_024)]
+    public async Task<IActionResult> VerificationSessionAnswer(Guid conversationId, Guid sessionId, LiveSupportAIVerificationAnswerRequest request, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            var state = await verificationService.SubmitAnswerAsync(participant, conversationId, new LiveSupportAIVerificationAnswerCommandDto(sessionId, request.Answer, request.IdempotencyKey), ct);
+            return Ok(ApiResponse<LiveSupportAIVerificationStateDto>.Ok(state));
         }
         catch (LiveSupportException ex) { return Error(ex); }
     }
@@ -227,22 +283,39 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         if (participant is null) return Unauthorized();
         try
         {
-            var sessionDto = await _service.SubmitVerificationChallengeAsync(participant, conversationId, request, ct);
-            return Ok(ApiResponse<LiveSupportAIVerificationSessionDto>.Ok(sessionDto));
+            var active = await _service.GetActiveVerificationSessionAsync(participant, conversationId, ct);
+            if (active is null) return NotFound(ApiResponse<object>.Fail("جلسة التحقق غير متاحة.", ["VERIFICATION_NOT_FOUND"]));
+            var state = await verificationService.SubmitAnswerAsync(participant, conversationId,
+                new LiveSupportAIVerificationAnswerCommandDto(active.SessionId, request.Answer, active.SessionId.ToString("N")), ct);
+            return Ok(ApiResponse<LiveSupportAIVerificationStateDto>.Ok(state));
         }
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
     [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/ai/account-proposal/confirm")]
-    public async Task<IActionResult> ConfirmRegistration(Guid conversationId, LiveSupportRegisterGuestDto request, CancellationToken ct)
+    public IActionResult ConfirmRegistration(Guid conversationId, LiveSupportRegisterGuestDto request)
+    {
+        _ = conversationId;
+        _ = request;
+        return StatusCode(StatusCodes.Status410Gone, ApiResponse<object>.Fail("حدّث الصفحة واستخدم نموذج التسجيل الآمن الكامل.", ["SECURE_REGISTRATION_REQUIRED"]));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/decisions/{decisionId:guid}/register")]
+    [EnableRateLimiting("live-support-ai-registration")]
+    [RequestSizeLimit(32 * 1_024)]
+    public async Task<IActionResult> RegisterFromDecision(Guid conversationId, Guid decisionId, LiveSupportAISecureRegistrationRequest request, CancellationToken ct)
     {
         var participant = await ResolveParticipantAsync(ct);
         if (participant is null) return Unauthorized();
         try
         {
-            await _service.ConfirmRegistrationProposalAsync(participant, conversationId, request, ct);
-            return StatusCode(StatusCodes.Status201Created, ApiResponse<object>.Ok(new { success = true, message = "Account created and linked successfully." }));
+            var userId = await registrationService.RegisterAndLinkAsync(participant, conversationId,
+                new LiveSupportAISecureRegistrationDto(decisionId, request.IdempotencyKey, request.FullName, request.PhoneNumber, request.Password,
+                    request.DateOfBirth, request.Gender, request.Governorate, request.Address, request.EducationStage, request.GradeLevel,
+                    request.SchoolName, request.ParentPhoneNumber), ct);
+            return StatusCode(StatusCodes.Status201Created, ApiResponse<object>.Ok(new { userId, status = "CreatedAndLinked" }));
         }
         catch (LiveSupportException ex) { return Error(ex); }
     }
@@ -275,6 +348,16 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [AllowAnonymous]
+    [HttpGet("participant/conversations/{conversationId:guid}/ai/snapshot")]
+    public async Task<IActionResult> GetAISnapshot(Guid conversationId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try { return Ok(ApiResponse<object>.Ok(await _service.GetParticipantAISnapshotAsync(participant, conversationId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     private async Task<LiveSupportParticipantIdentity?> ResolveParticipantAsync(CancellationToken ct)
     {
         var idValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -301,3 +384,8 @@ public sealed record CreateGuestSessionRequest(string DisplayName, string PhoneN
 public sealed record CreateConversationRequest(string? Subject, Guid? PreviousConversationId);
 public sealed record SendMessageRequest(string ClientMessageId, string? Content, LiveSupportMessageType Type = LiveSupportMessageType.Text, Guid? AttachmentId = null);
 public sealed record SubmitRatingRequest(int Stars, string? Comment);
+public sealed record ParticipantDecisionRequest(string IdempotencyKey);
+public sealed record LiveSupportAIVerificationAnswerRequest(string Answer, string IdempotencyKey);
+public sealed record LiveSupportAISecureRegistrationRequest(
+    string IdempotencyKey, string FullName, string PhoneNumber, string Password, DateTime DateOfBirth, string Gender,
+    string Governorate, string Address, string EducationStage, string GradeLevel, string SchoolName, string ParentPhoneNumber);

@@ -7,6 +7,8 @@ import { readAIConfig, type AIConfig } from './aiConfig.js';
 import { AIProviderExecutionError, AIProviderGateway } from './aiProvider.js';
 import { TemporaryAudioStorage, type TemporaryAnalysisObject } from './temporaryAudioStorage.js';
 import { classifyAIError } from './aiErrors.js';
+import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
+import { parseLiveSupportDecision, type LiveSupportDecision } from './liveSupportDecisionSchema.js';
 
 setGlobalDispatcher(new Agent({
   connectTimeout: 60 * 60 * 1000,
@@ -384,36 +386,8 @@ export async function generateChapterMindmap(
   }
 }
 
-export interface LiveSupportAIDecisionHandoff {
-  reasonCode: string;
-  safeSummaryAr: string;
-}
-
-export interface LiveSupportAIDecisionAction {
-  key: string;
-  arguments?: Record<string, any> | undefined;
-  safeEffectSummaryAr: string;
-}
-
-export interface LiveSupportAIDecisionVerification {
-  intent: string;
-}
-
-export interface LiveSupportAIDecisionAccountCreation {
-  requestedFields: string[];
-}
-
-export interface LiveSupportAIDecision {
-  type: 'reply' | 'propose_action' | 'request_verification' | 'propose_account_creation' | 'handoff';
-  messageAr?: string | undefined;
-  action?: LiveSupportAIDecisionAction | undefined;
-  verification?: LiveSupportAIDecisionVerification | undefined;
-  accountCreation?: LiveSupportAIDecisionAccountCreation | undefined;
-  handoff?: LiveSupportAIDecisionHandoff | undefined;
-}
-
 export interface LiveSupportAITurnResult {
-  decision: LiveSupportAIDecision;
+  decision: LiveSupportDecision;
   provider: string;
   model: string;
 }
@@ -422,14 +396,15 @@ const liveSupportDecisionSchema = {
   type: Type.OBJECT,
   properties: {
     schemaVersion: { type: Type.STRING },
-    type: { type: Type.STRING, enum: ['reply', 'propose_action', 'request_verification', 'propose_account_creation', 'handoff'] },
+    type: { type: Type.STRING, enum: ['reply', 'propose_action', 'request_verification', 'propose_account_creation', 'request_resolution', 'handoff'] },
     messageAr: { type: Type.STRING },
     action: {
       type: Type.OBJECT,
       properties: {
         key: { type: Type.STRING },
         arguments: { type: Type.OBJECT },
-        safeEffectSummaryAr: { type: Type.STRING }
+        safeEffectSummaryAr: { type: Type.STRING },
+        safeConsequenceAr: { type: Type.STRING }
       },
       required: ['key', 'safeEffectSummaryAr']
     },
@@ -447,102 +422,79 @@ const liveSupportDecisionSchema = {
       },
       required: ['requestedFields']
     },
-    handoff: {
+    resolution: {
       type: Type.OBJECT,
       properties: {
         reasonCode: { type: Type.STRING },
         safeSummaryAr: { type: Type.STRING }
       },
       required: ['reasonCode', 'safeSummaryAr']
+    },
+    handoff: {
+      type: Type.OBJECT,
+      properties: {
+        reasonCode: { type: Type.STRING },
+        safeSummaryAr: { type: Type.STRING },
+        forced: { type: Type.BOOLEAN }
+      },
+      required: ['reasonCode', 'safeSummaryAr', 'forced']
     }
   },
   required: ['schemaVersion', 'type']
 };
 
-export async function generateLiveSupportReply(
-  systemInstructions: string,
-  knowledgeDocuments: string[],
-  messages: Array<{ senderType: string; content: string; sentAt: string }>,
-): Promise<LiveSupportAITurnResult> {
+export async function generateLiveSupportReply(prompt: LiveSupportAgentPrompt): Promise<LiveSupportAITurnResult> {
   const runtime = createRuntime();
-
-  const systemInstructionText = `${systemInstructions}
-
-Available Knowledge/Context Documents:
-${knowledgeDocuments.map((doc, idx) => `--- DOCUMENT ${idx + 1} ---\n${doc}`).join('\n\n')}
-
-CRITICAL DIRECTIVES:
-1. Always reply in warm, helpful, Egyptian colloquial Arabic (العامية المصرية).
-2. For normal responses to the user, you MUST set the JSON 'type' property to "reply" and put your Arabic response message in 'messageAr'.
-3. If the user explicitly asks to talk to a human, or if you cannot answer their question after searching the provided documents, or if they present a complex issue, set the JSON 'type' property to "handoff" and populate the 'handoff' object with 'reasonCode' and 'safeSummaryAr'.
-4. Your response MUST strictly follow the JSON response schema.`;
-
-  const contents = messages.map(m => {
-    const role = (m.senderType === 'Student' || m.senderType === 'Guest') ? 'user' : 'model';
-    return {
-      role,
-      parts: [{ text: m.content }]
-    };
-  });
-
   const request = {
     model: runtime.config.textModel,
-    contents,
+    contents: prompt.contents,
     config: {
-      systemInstruction: systemInstructionText,
+      systemInstruction: prompt.systemInstruction,
       responseMimeType: 'application/json',
       responseSchema: liveSupportDecisionSchema,
     }
   };
-
-  const response = await runtime.gateway.execute({
-    operation: 'live-support',
-    vertex: () => runtime.vertex.models.generateContent(request),
-    developer: () => runtime.developer.models.generateContent(request),
-  });
+  const remainingMs = Date.parse(prompt.deadlineAt) - Date.now();
+  if (remainingMs <= 0) throw new Error('AI_PROVIDER_DEADLINE_EXCEEDED');
+  const execute = () => runtime.gateway.execute({
+      operation: 'live-support' as const,
+      vertex: () => runtime.vertex.models.generateContent(request),
+      developer: () => runtime.developer.models.generateContent(request),
+    });
+  const withDeadline = async () => {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        execute(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('AI_PROVIDER_DEADLINE_EXCEEDED')), remainingMs);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+  let response: GeneratedContent;
+  try {
+    response = await withDeadline();
+  } catch (error) {
+    const category = error instanceof AIProviderExecutionError ? error.primaryCategory : classifyAIError(error).category;
+    if (category !== 'provider' && category !== 'quota-exhausted') throw error;
+    response = await withDeadline();
+  }
 
   const rawText = response.text;
   if (!rawText) {
     throw new Error('AI live support turn returned an empty response.');
   }
 
-  const parsed = JSON.parse(rawText) as {
-    type: string;
-    messageAr?: string;
-    action?: any;
-    verification?: any;
-    accountCreation?: any;
-    handoff?: { reasonCode: string; safeSummaryAr: string };
-  };
-
-  let decisionType = parsed.type;
-  if (decisionType === 'message' || decisionType === 'messageAr') {
-    decisionType = 'reply';
+  let providerOutput: unknown;
+  try {
+    providerOutput = JSON.parse(rawText);
+  } catch {
+    throw new Error('AI_DECISION_NOT_JSON');
   }
-
-  const allowedTypes = ['reply', 'propose_action', 'request_verification', 'propose_account_creation', 'handoff'];
-  if (!allowedTypes.includes(decisionType)) {
-    throw new Error(`AI live support turn returned invalid decision type: ${parsed.type}`);
-  }
-
-  const decision: LiveSupportAIDecision = {
-    type: decisionType as any
-  };
-  if (parsed.messageAr !== undefined) {
-    decision.messageAr = parsed.messageAr;
-  }
-  if (parsed.action !== undefined) {
-    decision.action = parsed.action;
-  }
-  if (parsed.verification !== undefined) {
-    decision.verification = parsed.verification;
-  }
-  if (parsed.accountCreation !== undefined) {
-    decision.accountCreation = parsed.accountCreation;
-  }
-  if (parsed.handoff !== undefined) {
-    decision.handoff = parsed.handoff;
-  }
+  const decision = parseLiveSupportDecision(providerOutput);
 
   return {
     decision,

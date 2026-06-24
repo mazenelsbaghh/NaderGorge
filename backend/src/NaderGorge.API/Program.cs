@@ -101,6 +101,15 @@ builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
 builder.Services.AddScoped<IContentImageStorage, ContentImageStorage>();
 builder.Services.AddScoped<ILiveSupportService, LiveSupportService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIAdminService, LiveSupportAIAdminService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIKnowledgeService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIKnowledgeService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIContextBuilder, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIContextBuilder>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAITurnOrchestrator, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAITurnOrchestrator>();
+builder.Services.AddSingleton<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIDataProtector, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIDataProtector>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIActionExecutor, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIActionExecutor>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIVerificationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIRegistrationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIHandoffService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIHandoffService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRecoveryService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIRecoveryService>();
 builder.Services.AddScoped<ILiveSupportActionService, LiveSupportActionService>();
 builder.Services.AddScoped<ILiveSupportActionExecutor>(sp => sp.GetRequiredService<ILiveSupportActionService>());
 builder.Services.AddScoped<ILiveSupportAssignmentCoordinator>(sp => (ILiveSupportAssignmentCoordinator)sp.GetRequiredService<ILiveSupportService>());
@@ -116,6 +125,7 @@ builder.Services.AddSignalR()
     });
 builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
 builder.Services.AddHostedService<LiveSupportRecoveryBackgroundService>();
+builder.Services.AddHostedService<LiveSupportAIRecoveryBackgroundService>();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

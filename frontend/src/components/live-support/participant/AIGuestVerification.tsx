@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { liveSupportService, type LiveSupportAIVerificationSession } from '@/services/live-support-service';
+import { getLiveSupportApiError, liveSupportService, type LiveSupportAIVerificationSession } from '@/services/live-support-service';
 import { ShieldCheck, ArrowLeft, LoaderCircle, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface AIGuestVerificationProps {
@@ -11,7 +11,7 @@ interface AIGuestVerificationProps {
 }
 
 export function AIGuestVerification({ conversationId, initialSession, onVerified }: AIGuestVerificationProps) {
-  const [session, setSession] = useState<LiveSupportAIVerificationSession | null>(initialSession || null);
+  const [session, setSession] = useState<LiveSupportAIVerificationSession | null>(initialSession?.status === 'AwaitingLookup' ? null : initialSession || null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [lookupKey, setLookupKey] = useState<'phone.full' | 'student_code.full'>('phone.full');
@@ -29,8 +29,8 @@ export function AIGuestVerification({ conversationId, initialSession, onVerified
         value: lookupValue.trim()
       });
       setSession(res);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'فشلت عملية البحث عن الحساب. تأكد من إدخال بيانات صحيحة.');
+    } catch (error) {
+      setError(getLiveSupportApiError(error, 'تعذر إكمال التحقق بهذه البيانات. حاول مرة أخرى.'));
     } finally {
       setBusy(false);
     }
@@ -38,19 +38,20 @@ export function AIGuestVerification({ conversationId, initialSession, onVerified
 
   const handleAnswerChallenge = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!challengeAnswer.trim()) return;
+    if (!challengeAnswer.trim() || !session) return;
     setBusy(true);
     setError('');
     try {
       const res = await liveSupportService.aiVerificationAnswer(conversationId, {
+        sessionId: session.sessionId,
         answer: challengeAnswer.trim()
       });
       setSession(res);
       if (res.status === 'Verified') {
         onVerified();
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'إجابة خاطئة أو فشلت العملية.');
+    } catch (error) {
+      setError(getLiveSupportApiError(error, 'تعذر مطابقة الإجابة. حاول مرة أخرى.'));
     } finally {
       setBusy(false);
     }
@@ -115,6 +116,7 @@ export function AIGuestVerification({ conversationId, initialSession, onVerified
             <input
               required
               disabled={busy}
+              inputMode={lookupKey === 'phone.full' ? 'tel' : 'text'}
               value={lookupValue}
               onChange={(e) => setLookupValue(e.target.value)}
               placeholder={lookupKey === 'phone.full' ? 'مثال: 01xxxxxxxxx' : 'كود الطالب'}
@@ -212,6 +214,7 @@ export function AIGuestVerification({ conversationId, initialSession, onVerified
           <input
             required
             disabled={busy}
+            autoComplete="off"
             value={challengeAnswer}
             onChange={(e) => setChallengeAnswer(e.target.value)}
             placeholder="اكتب الإجابة هنا..."

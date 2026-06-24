@@ -1,5 +1,6 @@
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 
 namespace NaderGorge.Application.Features.LiveSupport.Interfaces;
 
@@ -45,6 +46,7 @@ public interface ILiveSupportService
     Task ConfirmRegistrationProposalAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportRegisterGuestDto request, CancellationToken ct);
     Task<LiveSupportAIPendingActionDto?> GetActivePendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct);
     Task<LiveSupportAIVerificationSessionDto?> GetActiveVerificationSessionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct);
+    Task<LiveSupportAIParticipantSnapshotDto> GetParticipantAISnapshotAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct);
 }
 
 public interface ILiveSupportPresenceStore

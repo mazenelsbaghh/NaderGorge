@@ -993,7 +993,7 @@ public class AdminController : ControllerBase
     [HasPermission("roles.manage")]
     public async Task<IActionResult> CreateRole([FromBody] CreateRoleDto dto, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CreateRoleCommand(dto.Name, dto.Permissions), ct);
+        var result = await _mediator.Send(new CreateRoleCommand(dto.Name, dto.Permissions, dto.AllowedDomain, dto.AllowedNavbarItems), ct);
         return result.Success ? StatusCode(201, result) : BadRequest(result);
     }
 
@@ -1001,7 +1001,7 @@ public class AdminController : ControllerBase
     [HasPermission("roles.manage")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] UpdateRoleDto dto, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateRoleCommand(id, dto.Name, dto.Permissions, GetUserId()), ct);
+        var result = await _mediator.Send(new UpdateRoleCommand(id, dto.Name, dto.Permissions, dto.AllowedDomain, dto.AllowedNavbarItems, GetUserId()), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -1138,8 +1138,8 @@ public record UpdateTeacherProfileRequestDto(
     string? YouTubeUrl = null,
     string? TelegramUrl = null);
 
-public record CreateRoleDto(string Name, List<string> Permissions);
-public record UpdateRoleDto(string Name, List<string> Permissions);
+public record CreateRoleDto(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
+public record UpdateRoleDto(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
 
 public record UpdateUserStatusRequest(string Status);
 public record UpdateUserRolesRequest(string[] Roles);

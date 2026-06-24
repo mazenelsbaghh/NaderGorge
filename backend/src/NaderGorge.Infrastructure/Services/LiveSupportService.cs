@@ -16,6 +16,8 @@ using NaderGorge.Application.Features.Exams.Commands;
 using NaderGorge.Application.Features.Admin.Commands;
 
 using NaderGorge.Application.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 
 namespace NaderGorge.Infrastructure.Services;
 
@@ -26,16 +28,19 @@ public sealed class LiveSupportService(
     ILiveSupportAttachmentStorage? attachmentStorage = null,
     ILogger<LiveSupportService>? logger = null,
     IJobEnqueuer? jobEnqueuer = null,
-    IMediator? mediator = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
+    IMediator? mediator = null,
+    ILiveSupportAITurnOrchestrator? aiTurnOrchestrator = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
 {
     private readonly IAppDbContext _db = db;
     private readonly ICachedPlatformSettingsReader _settings = settings;
     private readonly AppDbContext? _relationalDb = db as AppDbContext;
+    public Task AssignWaitingAsync(CancellationToken ct) => AssignOldestWaitingAsync(ct);
     private readonly ILiveSupportPresenceStore? _presence = presence;
     private readonly ILiveSupportAttachmentStorage? _attachmentStorage = attachmentStorage;
     private readonly ILogger<LiveSupportService>? _logger = logger;
     private readonly IJobEnqueuer? _jobEnqueuer = jobEnqueuer;
     private readonly IMediator? _mediator = mediator;
+    private readonly ILiveSupportAITurnOrchestrator? _aiTurnOrchestrator = aiTurnOrchestrator;
 
 
     public async Task<LiveSupportAvailabilityDto> GetAvailabilityAsync(CancellationToken ct)
@@ -542,33 +547,14 @@ public sealed class LiveSupportService(
         }
         var message = new LiveSupportMessage { ConversationId = conversation.Id, SenderType = senderType, SenderUserId = userId, SenderGuestSessionId = guestId, ClientMessageId = clientMessageId, Type = type, Content = content, SentAt = DateTime.UtcNow };
         conversation.LastMessageAt = message.SentAt; conversation.Version++;
-        _db.LiveSupportMessages.Add(message); AddEvent(conversation.Id, LiveSupportEventType.MessageSent, userId, guestId, message.Id);
-        await _db.SaveChangesAsync(ct);
-
-        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id, ct);
-        if (aiState is not null && aiState.Mode == LiveSupportAIMode.AiActive && (senderType == LiveSupportSenderType.Student || senderType == LiveSupportSenderType.Guest))
+        _db.LiveSupportMessages.Add(message);
+        AddEvent(conversation.Id, LiveSupportEventType.MessageSent, userId, guestId, message.Id);
+        if (_aiTurnOrchestrator is not null &&
+            (senderType == LiveSupportSenderType.Student || senderType == LiveSupportSenderType.Guest))
         {
-            aiState.LastParticipantActivityAt = message.SentAt;
-            aiState.Version++;
-
-            var turn = new LiveSupportAITurn
-            {
-                ConversationId = conversation.Id,
-                SourceMessageId = message.Id,
-                PolicyVersionId = aiState.PolicyVersionId,
-                ExpectedConversationVersion = conversation.Version,
-                Status = LiveSupportAITurnStatus.Queued,
-                QueuedAt = DateTime.UtcNow,
-                Version = 1
-            };
-            _db.LiveSupportAITurns.Add(turn);
-            await _db.SaveChangesAsync(ct);
-
-            if (_jobEnqueuer is not null)
-            {
-                await _jobEnqueuer.EnqueueJobAsync("ai-live-support-turns", "respond", new { turnId = turn.Id, conversationId = conversation.Id });
-            }
+            await _aiTurnOrchestrator.QueueForParticipantMessageAsync(conversation.Id, message.Id, ct);
         }
+        await _db.SaveChangesAsync(ct);
 
         return new LiveSupportSendResultDto(ToDto(message), false);
     }
@@ -1807,6 +1793,42 @@ public sealed class LiveSupportService(
         );
     }
 
+    public async Task<LiveSupportAIParticipantSnapshotDto> GetParticipantAISnapshotAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
+    {
+        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+        var state = await _db.LiveSupportAIConversationStates.AsNoTracking().SingleOrDefaultAsync(x => x.ConversationId == conversationId, ct);
+        var turn = await _db.LiveSupportAITurns.AsNoTracking().Where(x => x.ConversationId == conversationId)
+            .OrderByDescending(x => x.QueuedAt).ThenByDescending(x => x.Id).FirstOrDefaultAsync(ct);
+        var pending = await _db.LiveSupportAIPendingActions.AsNoTracking()
+            .Where(x => x.ConversationId == conversationId && x.Status == LiveSupportAIPendingActionStatus.PendingConfirmation && x.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).FirstOrDefaultAsync(ct);
+        var verification = await _db.LiveSupportAIVerificationSessions.AsNoTracking()
+            .Where(x => x.ConversationId == conversationId &&
+                (x.Status == LiveSupportAIVerificationStatus.AwaitingLookup || x.Status == LiveSupportAIVerificationStatus.Challenging) &&
+                x.ExpiresAt > DateTime.UtcNow)
+            .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).FirstOrDefaultAsync(ct);
+        var messages = await _db.LiveSupportMessages.AsNoTracking().Where(x => x.ConversationId == conversationId)
+            .OrderByDescending(x => x.SentAt).ThenByDescending(x => x.Id).Take(50).Select(x => ToDto(x)).ToListAsync(ct);
+        messages.Reverse();
+        var lastSequence = await _db.LiveSupportEvents.AsNoTracking().Where(x => x.ConversationId == conversationId)
+            .Select(x => (long?)x.Sequence).MaxAsync(ct) ?? 0;
+        int? queuePosition = null;
+        if (conversation.Status == LiveSupportConversationStatus.Waiting && conversation.QueuedAt.HasValue)
+            queuePosition = await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null && x.EnteredAt <= conversation.QueuedAt, ct);
+
+        return new LiveSupportAIParticipantSnapshotDto(
+            conversation.Id,
+            conversation.Status.ToString(),
+            state?.Mode,
+            lastSequence,
+            !IsTerminal(conversation.Status) && (state is null || state.Mode is LiveSupportAIMode.AiActive or LiveSupportAIMode.HumanAssigned),
+            turn?.Status.ToString(),
+            pending is null ? null : new LiveSupportAIPendingDecisionDto(pending.Id, pending.DecisionKind, pending.ActionKey, pending.SafeProposalJson, pending.Status, pending.ExpiresAt, pending.FailureCode),
+            verification is null ? null : new LiveSupportAIVerificationStateDto(verification.Id, verification.Status, null, verification.AttemptCount, verification.MaxAttempts),
+            queuePosition,
+            messages.Cast<object>().ToList());
+    }
+
     private async Task<string> BuildStudentContextAsync(Guid studentUserId, List<string> readableKeys, CancellationToken ct)
     {
         var sb = new System.Text.StringBuilder();
@@ -2173,4 +2195,3 @@ public sealed class LiveSupportService(
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }
-

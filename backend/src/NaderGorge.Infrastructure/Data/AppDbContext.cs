@@ -223,6 +223,8 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(r => r.Name).IsUnique();
             e.Property(r => r.Name).HasMaxLength(50).IsRequired();
             e.Property(r => r.PermissionsJson).HasMaxLength(4000).HasDefaultValue("[]");
+            e.Property(r => r.AllowedDomain).HasMaxLength(50).HasDefaultValue("all");
+            e.Property(r => r.AllowedNavbarItemsJson).HasMaxLength(4000).HasDefaultValue("[]");
         });
 
         // UserRole (many-to-many)
@@ -1503,6 +1505,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("live_support_ai_turns");
             e.Property(x => x.Status).HasConversion<int>();
             e.Property(x => x.DecisionType).HasConversion<int>();
+            e.Property(x => x.CallbackStatus).HasConversion<int>();
             e.Property(x => x.ContextCategoryKeysJson).HasColumnType("jsonb");
             e.Property(x => x.KnowledgeRevisionIdsJson).HasColumnType("jsonb");
             e.Property(x => x.Provider).HasMaxLength(100);
@@ -1510,10 +1513,13 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.ProviderResponseId).HasMaxLength(200);
             e.Property(x => x.FailureCode).HasMaxLength(100);
             e.Property(x => x.SafeFailureDetail).HasMaxLength(1000);
+            e.Property(x => x.DecisionHash).HasMaxLength(64);
+            e.Property(x => x.LastSafeCallbackErrorCode).HasMaxLength(100);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => x.SourceMessageId).IsUnique();
             e.HasIndex(x => x.OutputMessageId).IsUnique().HasFilter("\"OutputMessageId\" IS NOT NULL");
             e.HasIndex(x => new { x.Status, x.QueuedAt });
+            e.HasIndex(x => new { x.CallbackStatus, x.NextCallbackAttemptAt });
             e.HasIndex(x => new { x.ConversationId, x.QueuedAt });
             e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<LiveSupportMessage>().WithMany().HasForeignKey(x => x.SourceMessageId).OnDelete(DeleteBehavior.Restrict);
@@ -1523,18 +1529,29 @@ public class AppDbContext : DbContext, IAppDbContext
 
         modelBuilder.Entity<LiveSupportAIPendingAction>(e =>
         {
-            e.ToTable("live_support_ai_pending_actions");
+            e.ToTable("live_support_ai_pending_actions", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_live_support_ai_pending_action_target",
+                    "\"DecisionKind\" <> 0 OR (\"StudentUserId\" IS NOT NULL AND length(\"ActionKey\") > 0 AND length(\"PayloadHash\") > 0 AND length(\"StateFingerprint\") > 0 AND \"EncryptedPayload\" IS NOT NULL)");
+            });
             e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.DecisionKind).HasConversion<int>();
             e.Property(x => x.ActionKey).HasMaxLength(100).IsRequired();
             e.Property(x => x.SafeProposalJson).HasColumnType("jsonb");
             e.Property(x => x.PayloadHash).HasMaxLength(64).IsRequired();
             e.Property(x => x.StateFingerprint).HasMaxLength(64).IsRequired();
             e.Property(x => x.ConfirmationNonceHash).HasMaxLength(64).IsRequired();
+            e.Property(x => x.CallbackDecisionHash).HasMaxLength(64);
             e.Property(x => x.FailureCode).HasMaxLength(100);
             e.Property(x => x.Version).IsConcurrencyToken();
             e.HasIndex(x => x.IdempotencyKey).IsUnique();
             e.HasIndex(x => x.ActionExecutionId).IsUnique().HasFilter("\"ActionExecutionId\" IS NOT NULL");
             e.HasIndex(x => new { x.ConversationId, x.Status });
+            e.HasIndex(x => new { x.Status, x.ExpiresAt });
+            e.HasIndex(x => new { x.ConversationId, x.DecisionKind })
+                .IsUnique()
+                .HasFilter("\"Status\" = 0");
             e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<LiveSupportAITurn>().WithMany().HasForeignKey(x => x.TurnId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
@@ -1558,13 +1575,19 @@ public class AppDbContext : DbContext, IAppDbContext
 
         modelBuilder.Entity<LiveSupportAIVerificationSession>(e =>
         {
-            e.ToTable("live_support_ai_verification_sessions");
+            e.ToTable("live_support_ai_verification_sessions", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_live_support_ai_verification_counts",
+                    "\"CorrectCount\" >= 0 AND \"CorrectCount\" <= \"AttemptCount\" AND \"AttemptCount\" <= \"MaxAttempts\" AND \"CurrentQuestionIndex\" >= 0");
+            });
             e.Property(x => x.Status).HasConversion<int>();
             e.Property(x => x.LookupKey).HasMaxLength(100).IsRequired();
             e.Property(x => x.LookupValueHash).HasMaxLength(128).IsRequired();
             e.Property(x => x.SelectedQuestionKeysJson).HasColumnType("jsonb");
             e.Property(x => x.Version).IsConcurrencyToken();
-            e.HasIndex(x => x.ConversationId).IsUnique();
+            e.HasIndex(x => x.ConversationId).IsUnique().HasFilter("\"Status\" IN (0, 1)");
+            e.HasIndex(x => new { x.Status, x.ExpiresAt });
             e.HasOne<LiveSupportConversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<LiveSupportAIPolicyVersion>().WithMany().HasForeignKey(x => x.PolicyVersionId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.CandidateStudentUserId).OnDelete(DeleteBehavior.Restrict);

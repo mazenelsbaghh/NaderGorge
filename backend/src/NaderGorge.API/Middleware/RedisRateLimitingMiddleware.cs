@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace NaderGorge.API.Middleware;
 
@@ -26,7 +28,13 @@ public class RedisRateLimitingMiddleware
         { "public-forms", (20, TimeSpan.FromMinutes(1), false) },
         { "parent-report", (30, TimeSpan.FromMinutes(1), false) },
         { "live-support-public", (20, TimeSpan.FromMinutes(1), false) },
-        { "live-support-action", (30, TimeSpan.FromMinutes(1), true) }
+        { "live-support-action", (30, TimeSpan.FromMinutes(1), true) },
+        { "live-support-ai-message", (10, TimeSpan.FromMinutes(1), true) },
+        { "live-support-ai-confirmation", (20, TimeSpan.FromMinutes(1), true) },
+        { "live-support-ai-verification", (10, TimeSpan.FromMinutes(1), true) },
+        { "live-support-ai-registration", (5, TimeSpan.FromMinutes(1), true) },
+        { "live-support-ai-admin-preview", (10, TimeSpan.FromMinutes(1), true) },
+        { "live-support-ai-callback", (120, TimeSpan.FromMinutes(1), false) }
     };
 
     public RedisRateLimitingMiddleware(RequestDelegate next, IConnectionMultiplexer redis)
@@ -76,9 +84,7 @@ public class RedisRateLimitingMiddleware
         string partitionKey;
         if (limitByUser)
         {
-            partitionKey = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                ?? context.Connection.RemoteIpAddress?.ToString() 
-                ?? "unknown";
+            partitionKey = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? GuestOrIp(context);
         }
         else
         {
@@ -113,5 +119,12 @@ public class RedisRateLimitingMiddleware
         }
 
         await _next(context);
+    }
+
+    private static string GuestOrIp(HttpContext context)
+    {
+        if (context.Request.Cookies.TryGetValue("massar_support_guest", out var token) && !string.IsNullOrEmpty(token))
+            return $"guest:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)))[..24]}";
+        return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 }

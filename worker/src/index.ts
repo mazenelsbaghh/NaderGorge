@@ -19,6 +19,7 @@ import { TemporaryAudioStorage } from './services/temporaryAudioStorage.js';
 dotenv.config();
 validateWorkerSecurityConfig();
 let aiStartupReady = false;
+let liveSupportWorkerReady = false;
 
 async function validateAIStartup() {
   const config = readAIConfig();
@@ -200,7 +201,13 @@ async function startLiveSupportWorker() {
   const worker = new Worker('ai-live-support-turns', async (job) => {
     const processor = await import('./jobs/processLiveSupportTurn.js');
     return await processor.default(job);
-  }, { connection });
+  }, {
+    connection,
+    concurrency: Math.max(1, Number.parseInt(process.env.AI_LIVE_SUPPORT_CONCURRENCY || '4', 10) || 4),
+    lockDuration: 60_000,
+    stalledInterval: 30_000,
+    maxStalledCount: 1,
+  });
 
   worker.on('completed', job => {
     console.log(`[Live Support Worker] Job ${job.id} has completed successfully!`);
@@ -209,6 +216,9 @@ async function startLiveSupportWorker() {
   worker.on('failed', (job, err) => {
     console.error(`[Live Support Worker] Job ${job?.id} has failed with ${err.message}`);
   });
+  liveSupportWorkerReady = true;
+  await redis.set('live-support-worker:ready', new Date().toISOString(), 'EX', 60);
+  setInterval(() => void redis.set('live-support-worker:ready', new Date().toISOString(), 'EX', 60).catch(() => undefined), 30_000);
   
   console.log('[Worker] Live Support BullMQ worker started on queue: ai-live-support-turns');
 }
@@ -250,6 +260,7 @@ async function startWorker() {
   app.get('/ready', async (_req, res) => {
     let dbOk = false;
     let redisOk = false;
+    let callbackOk = false;
     try {
       await pool.query('SELECT 1');
       dbOk = true;
@@ -266,12 +277,26 @@ async function startWorker() {
       console.error('[Worker Ready Check] Redis failure:', err.message);
     }
 
-    if (!dbOk || !redisOk || !aiStartupReady) {
+    try {
+      const base = (process.env.BACKEND_API_URL || 'http://localhost:5245').replace(/\/$/, '').replace(/\/api\/v1$/, '');
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 2_000);
+      try {
+        const response = await fetch(`${base}/api/v1/internal/callbacks/live-support-ai/readiness`, { headers: { 'X-Internal-Token': process.env.AI_CALLBACK_SECRET! }, signal: controller.signal });
+        callbackOk = response.ok;
+      } finally { clearTimeout(timer); }
+    } catch {
+      callbackOk = false;
+    }
+
+    if (!dbOk || !redisOk || !aiStartupReady || !liveSupportWorkerReady || !callbackOk) {
       return res.status(503).json({
         status: 'unhealthy',
         database: dbOk ? 'healthy' : 'unhealthy',
         redis: redisOk ? 'healthy' : 'unhealthy',
         ai: aiStartupReady ? 'healthy' : 'unhealthy',
+        liveSupport: liveSupportWorkerReady ? 'healthy' : 'unhealthy',
+        callback: callbackOk ? 'healthy' : 'unhealthy',
       });
     }
 
@@ -280,6 +305,8 @@ async function startWorker() {
       database: 'healthy',
       redis: 'healthy',
       ai: 'healthy',
+      liveSupport: 'healthy',
+      callback: 'healthy',
       timestamp: new Date().toISOString()
     });
   });
@@ -451,13 +478,14 @@ async function startWorker() {
       }
 
       try {
+          const isLiveSupportTurn = jobType === 'live support turn';
           await targetQueue.add(bullmqJobName, parsedPayload, {
               jobId: targetJobId,
               ...JOB_RETENTION_OPTIONS,
-              attempts: 5,
+              attempts: isLiveSupportTurn ? 4 : 5,
               backoff: {
                   type: 'exponential',
-                  delay: 5000
+                  delay: isLiveSupportTurn ? 2000 : 5000
               }
           });
 

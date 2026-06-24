@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CreateRoleCommand(string Name, List<string> Permissions) : IRequest<ApiResponse<Guid>>;
+public record CreateRoleCommand(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems) : IRequest<ApiResponse<Guid>>;
 
 public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand, ApiResponse<Guid>>
 {
@@ -44,7 +44,9 @@ public class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand, ApiRe
             Id = Guid.NewGuid(),
             Name = normalizedName,
             Type = RoleType.Assistant, // Custom roles created are Assistants
-            PermissionsJson = JsonSerializer.Serialize(request.Permissions ?? new List<string>())
+            PermissionsJson = JsonSerializer.Serialize(request.Permissions ?? new List<string>()),
+            AllowedDomain = request.AllowedDomain ?? "all",
+            AllowedNavbarItemsJson = JsonSerializer.Serialize(request.AllowedNavbarItems ?? new List<string>())
         };
 
         _db.Roles.Add(role);

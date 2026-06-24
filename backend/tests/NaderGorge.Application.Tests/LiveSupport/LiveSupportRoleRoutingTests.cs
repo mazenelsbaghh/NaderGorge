@@ -18,7 +18,7 @@ public sealed class LiveSupportRoleRoutingTests
         var handler = new UpdateRoleCommandHandler(db);
 
         var response = await handler.Handle(
-            new UpdateRoleCommand(role.Id, role.Name, [LiveSupportRoutingPermissions.ReceiveConversations], actorId),
+            new UpdateRoleCommand(role.Id, role.Name, [LiveSupportRoutingPermissions.ReceiveConversations], "all", [], actorId),
             CancellationToken.None);
 
         Assert.True(response.Success);
@@ -46,7 +46,7 @@ public sealed class LiveSupportRoleRoutingTests
         var handler = new UpdateRoleCommandHandler(db);
 
         await handler.Handle(
-            new UpdateRoleCommand(role.Id, role.Name, ["comments.manage", "tasks.manage"], actorId),
+            new UpdateRoleCommand(role.Id, role.Name, ["comments.manage", "tasks.manage"], "all", [], actorId),
             CancellationToken.None);
 
         var config = await db.LiveSupportStaffConfigs.SingleAsync(candidate => candidate.UserId == employee.UserId);

@@ -1,129 +1,113 @@
-import { Job } from 'bullmq';
+import type { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
 import { generateLiveSupportReply } from '../services/geminiService.js';
-
-const API_URL = (() => {
-  const base = process.env.BACKEND_API_URL || 'http://localhost:5245';
-  return base.endsWith('/api/v1') ? base : `${base}/api/v1`;
-})();
-const API_CALLBACK_SECRET = process.env.AI_CALLBACK_SECRET || process.env.API_CALLBACK_SECRET;
+import { runLiveSupportAgent } from '../services/liveSupportAgent.js';
+import {
+  createLiveSupportCallbackClient,
+  LiveSupportCallbackError,
+  type LiveSupportCallbackClient,
+  type LiveSupportCompletionPayload,
+} from '../services/liveSupportCallbackClient.js';
+import { recordLiveSupportMetric } from '../services/liveSupportTelemetry.js';
 
 export interface LiveSupportTurnJobData {
+  schemaVersion: '1';
   turnId: string;
   conversationId: string;
+  queuedAt: string;
+  completion?: LiveSupportCompletionPayload;
 }
 
-export default async function processLiveSupportTurn(job: Job<LiveSupportTurnJobData>) {
-  const { turnId, conversationId } = job.data;
-  console.log(`[LiveSupportTurn] Processing turn ${turnId} for conversation ${conversationId}`);
+interface ProcessorDependencies {
+  callbacks: LiveSupportCallbackClient;
+  infer: typeof generateLiveSupportReply;
+  now: () => number;
+}
 
-  let expectedConversationVersion = 0;
-  const startTime = Date.now();
+function safeInferenceFailureCode(error: unknown) {
+  if (error instanceof Error && error.message === 'AI_PROVIDER_DEADLINE_EXCEEDED') return 'AI_PROVIDER_TIMEOUT';
+  if (error instanceof Error && (error.name === 'LiveSupportDecisionValidationError' || error.message === 'AI_DECISION_NOT_JSON')) return 'AI_INVALID_DECISION';
+  return 'AI_PROVIDER_FAILURE';
+}
 
-  try {
+export function createLiveSupportTurnProcessor(overrides: Partial<ProcessorDependencies> = {}) {
+  const dependencies: ProcessorDependencies = {
+    callbacks: overrides.callbacks ?? createLiveSupportCallbackClient(),
+    infer: overrides.infer ?? generateLiveSupportReply,
+    now: overrides.now ?? Date.now,
+  };
+
+  return async function processLiveSupportTurn(job: Job<LiveSupportTurnJobData>) {
+    const startedAt = dependencies.now();
+    const { turnId } = job.data;
+    const parsedQueuedAt = Date.parse(job.data.queuedAt);
+    if (Number.isFinite(parsedQueuedAt)) recordLiveSupportMetric('queue_age', Math.max(0, startedAt - parsedQueuedAt), { queue: 'ai-live-support-turns' });
     await throwIfCancellationRequested(job);
 
-    // 1. Claim the turn
-    const claimRes = await fetch(`${API_URL}/internal/callbacks/live-support-ai/turns/${turnId}/claim`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Token': API_CALLBACK_SECRET || ''
-      }
-    });
-
-    if (!claimRes.ok) {
-      if (claimRes.status === 404) {
-        console.warn(`[LiveSupportTurn] Turn ${turnId} not found or already processed. Skipping.`);
-        return { success: false, reason: 'NOT_FOUND' };
-      }
-      const errText = await claimRes.text();
-      throw new Error(`Failed to claim turn ${turnId}: Status ${claimRes.status} - ${errText}`);
+    if (job.data.completion) {
+      await dependencies.callbacks.complete(turnId, job.data.completion);
+      recordLiveSupportMetric('callback_outcome', 1, { outcome: 'replayed', decisionType: (job.data.completion.decision as { type?: string }).type ?? 'unknown' });
+      return { success: true, decision: (job.data.completion.decision as { type?: string }).type, callbackReplay: true };
     }
 
-    const context = await claimRes.json() as {
-      turnId: string;
-      conversationId: string;
-      expectedConversationVersion: number;
-      systemInstructions: string;
-      knowledgeDocuments: string[];
-      messages: Array<{ senderType: string; content: string; sentAt: string }>;
-    };
-
-    expectedConversationVersion = context.expectedConversationVersion;
-
+    const context = await dependencies.callbacks.claim(turnId);
+    if (!context) return { success: false, reason: 'TURN_NOT_FOUND' };
     await throwIfCancellationRequested(job);
 
-    // 2. Generate response via Gemini
-    console.log(`[LiveSupportTurn] Requesting Gemini decision for turn ${turnId}`);
-    const result = await generateLiveSupportReply(
-      context.systemInstructions,
-      context.knowledgeDocuments,
-      context.messages
-    );
+    const queuedAt = Date.parse(job.data.queuedAt);
+    const maximumQueueAgeMs = Math.max(30_000, Number.parseInt(process.env.AI_LIVE_SUPPORT_MAX_QUEUE_AGE_MS || '300000', 10) || 300_000);
+    if (!Number.isFinite(queuedAt) || dependencies.now() - queuedAt > maximumQueueAgeMs) {
+      await dependencies.callbacks.fail(turnId, {
+        failureCode: 'AI_QUEUE_STALE',
+        callbackIdempotencyKey: context.callbackIdempotencyKey,
+        provider: null,
+        model: null,
+        latencyMs: 0,
+      });
+      return { success: false, reason: 'AI_QUEUE_STALE' };
+    }
 
-    const latencyMs = Date.now() - startTime;
-    console.log(`[LiveSupportTurn] Gemini response generated for turn ${turnId} in ${latencyMs}ms. Decision: ${result.decision.type}`);
-
-    await throwIfCancellationRequested(job);
-
-    // 3. Complete the turn
-    const completeRes = await fetch(`${API_URL}/internal/callbacks/live-support-ai/turns/${turnId}/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Token': API_CALLBACK_SECRET || ''
-      },
-      body: JSON.stringify({
-        expectedConversationVersion,
-        decision: result.decision,
-        provider: result.provider,
-        model: result.model,
+    try {
+      let metadata: Awaited<ReturnType<typeof generateLiveSupportReply>> | undefined;
+      const validated = await runLiveSupportAgent(context, async prompt => {
+        metadata = await dependencies.infer(prompt);
+        return metadata.decision;
+      });
+      const completion: LiveSupportCompletionPayload = {
+        schemaVersion: '1',
+        expectedConversationVersion: context.expectedConversationVersion,
+        expectedPolicyVersionId: context.policyVersionId,
+        decision: validated.decision,
+        decisionHash: validated.decisionHash,
+        callbackIdempotencyKey: context.callbackIdempotencyKey,
+        provider: metadata!.provider,
+        model: metadata!.model,
         providerResponseId: null,
         inputTokenCount: null,
         outputTokenCount: null,
-        latencyMs,
-        callbackIdempotencyKey: turnId
-      })
-    });
-
-    if (!completeRes.ok) {
-      const errText = await completeRes.text();
-      throw new Error(`Failed to complete turn ${turnId}: Status ${completeRes.status} - ${errText}`);
-    }
-
-    console.log(`[LiveSupportTurn] Successfully completed turn ${turnId}`);
-    return { success: true, decision: result.decision.type };
-
-  } catch (error: any) {
-    const latencyMs = Date.now() - startTime;
-    console.error(`[LiveSupportTurn] Error processing turn ${turnId}:`, error.message);
-
-    // Try to report failure to backend
-    try {
-      const failRes = await fetch(`${API_URL}/internal/callbacks/live-support-ai/turns/${turnId}/fail`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Token': API_CALLBACK_SECRET || ''
-        },
-        body: JSON.stringify({
-          failureCode: 'AI_EXECUTION_ERROR',
-          safeFailureDetail: error.message,
-          provider: 'gemini',
-          model: 'unknown',
-          latencyMs,
-          callbackIdempotencyKey: turnId
-        })
+        latencyMs: Math.max(0, dependencies.now() - startedAt),
+      };
+      await job.updateData({ ...job.data, completion });
+      await throwIfCancellationRequested(job);
+      await dependencies.callbacks.complete(turnId, completion);
+      recordLiveSupportMetric('inference_latency', completion.latencyMs, { provider: completion.provider, model: completion.model, decisionType: validated.decision.type });
+      recordLiveSupportMetric('callback_outcome', 1, { outcome: 'delivered', decisionType: validated.decision.type });
+      return { success: true, decision: validated.decision.type, callbackReplay: false };
+    } catch (error) {
+      if (error instanceof LiveSupportCallbackError) throw error;
+      const failureCode = safeInferenceFailureCode(error);
+      await dependencies.callbacks.fail(turnId, {
+        failureCode,
+        callbackIdempotencyKey: context.callbackIdempotencyKey,
+        provider: null,
+        model: null,
+        latencyMs: Math.max(0, dependencies.now() - startedAt),
       });
-
-      if (!failRes.ok) {
-        console.error(`[LiveSupportTurn] Failed to report failure for turn ${turnId}: Status ${failRes.status}`);
-      }
-    } catch (reportErr: any) {
-      console.error(`[LiveSupportTurn] Network error reporting failure for turn ${turnId}:`, reportErr.message);
+      throw new Error(failureCode);
     }
+  };
+}
 
-    throw error;
-  }
+export default async function processLiveSupportTurn(job: Job<LiveSupportTurnJobData>) {
+  return createLiveSupportTurnProcessor()(job);
 }

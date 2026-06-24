@@ -12,6 +12,7 @@ import {
   type AIPolicy,
   type SaveAIDraft,
   type AIStats,
+  type AIStatsPeriod,
 } from '@/services/live-support-ai-service';
 import { ConversationInvestigation } from '@/components/live-support/admin/ConversationInvestigation';
 import { liveSupportService, type LiveSupportConversationTimeline, type LiveSupportAdminConversation } from '@/services/live-support-service';
@@ -51,7 +52,7 @@ export default function AdminAISupportPageClient() {
   const [notice, setNotice] = useState('');
   const [activeTab, setActiveTab] = useState<'settings' | 'stats'>('settings');
   const [stats, setStats] = useState<AIStats>();
-  const [statsPeriod, setStatsPeriod] = useState<'last-24h' | 'last-7d' | 'last-30d' | 'lifetime'>('last-24h');
+  const [statsPeriod, setStatsPeriod] = useState<AIStatsPeriod>('last-24h');
   const [loadingStats, setLoadingStats] = useState(false);
   const [activeConversations, setActiveConversations] = useState<LiveSupportAdminConversation[]>([]);
   const [loadingActiveConversations, setLoadingActiveConversations] = useState(false);
@@ -67,7 +68,7 @@ export default function AdminAISupportPageClient() {
     }).catch(error => setNotice(apiErrorMessage(error, 'تعذر تحميل إعدادات المساعد الذكي.')));
   }, [isBuiltInAdmin]);
 
-  async function loadStats(period: string) {
+  async function loadStats(period: AIStatsPeriod) {
     setLoadingStats(true);
     try {
       const nextStats = await liveSupportAIService.getStats(period);
@@ -269,13 +270,13 @@ export default function AdminAISupportPageClient() {
               <span className="text-sm font-semibold text-slate-700">الفترة الزمنية:</span>
               <select
                 value={statsPeriod}
-                onChange={e => setStatsPeriod(e.target.value as any)}
+                onChange={e => setStatsPeriod(e.target.value as AIStatsPeriod)}
                 className="h-11 rounded-xl border border-slate-200 bg-white px-3 font-semibold text-slate-800 outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20"
               >
                 <option value="last-24h">آخر 24 ساعة</option>
                 <option value="last-7d">آخر 7 أيام</option>
                 <option value="last-30d">آخر 30 يوم</option>
-                <option value="lifetime">كل الأوقات</option>
+                <option value="all">كل الأوقات</option>
               </select>
             </div>
           </div>

@@ -1195,12 +1195,12 @@ export const adminService = {
     return res.data?.data;
   },
 
-  createRole: async (payload: { name: string; permissions: string[] }) => {
+  createRole: async (payload: { name: string; permissions: string[]; allowedDomain: string; allowedNavbarItems: string[] }) => {
     const res = await apiClient.post<ApiResponse<any>>('/admin/roles', payload);
     return res.data;
   },
 
-  updateRole: async (id: string, payload: { name: string; permissions: string[] }) => {
+  updateRole: async (id: string, payload: { name: string; permissions: string[]; allowedDomain: string; allowedNavbarItems: string[] }) => {
     const res = await apiClient.put<ApiResponse<any>>(`/admin/roles/${id}`, payload);
     return res.data;
   },

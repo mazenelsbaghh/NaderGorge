@@ -5,6 +5,8 @@ using NaderGorge.Application.Features.Internal.Commands;
 using NaderGorge.Application.Features.Webhooks.Commands;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
+using NaderGorge.Application.Features.LiveSupportAI.Dtos;
+using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 
 namespace NaderGorge.API.Controllers;
 
@@ -14,12 +16,19 @@ public class InternalController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ILiveSupportService _liveSupportService;
+    private readonly ILiveSupportAITurnOrchestrator _liveSupportAITurnOrchestrator;
 
-    public InternalController(IMediator mediator, ILiveSupportService liveSupportService)
+    public InternalController(IMediator mediator, ILiveSupportService liveSupportService, ILiveSupportAITurnOrchestrator liveSupportAITurnOrchestrator)
     {
         _mediator = mediator;
         _liveSupportService = liveSupportService;
+        _liveSupportAITurnOrchestrator = liveSupportAITurnOrchestrator;
     }
+
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET")]
+    [HttpGet("live-support-ai/readiness")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("live-support-ai-callback")]
+    public IActionResult LiveSupportAIReadiness() => Ok(new { status = "ready" });
 
     [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
     [HttpPost("ai-analysis-completed")]
@@ -71,29 +80,52 @@ public class InternalController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET")]
     [HttpPost("live-support-ai/turns/{turnId:guid}/claim")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("live-support-ai-callback")]
+    [RequestSizeLimit(1_024)]
     public async Task<IActionResult> ClaimAITurn([FromRoute] Guid turnId, CancellationToken ct)
     {
-        var context = await _liveSupportService.ClaimAITurnAsync(turnId, ct);
-        if (context is null) return NotFound(new { error = "Turn not found" });
+        var context = await _liveSupportAITurnOrchestrator.ClaimAsync(turnId, ct);
+        if (context is null) return NotFound(new { code = "TURN_NOT_FOUND" });
         return Ok(context);
     }
 
-    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET")]
     [HttpPost("live-support-ai/turns/{turnId:guid}/complete")]
-    public async Task<IActionResult> CompleteAITurn([FromRoute] Guid turnId, [FromBody] LiveSupportAITurnCompleteRequest request, CancellationToken ct)
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("live-support-ai-callback")]
+    [RequestSizeLimit(256 * 1_024)]
+    public async Task<IActionResult> CompleteAITurn([FromRoute] Guid turnId, [FromBody] LiveSupportAIWorkerCompletionDto request, CancellationToken ct)
     {
-        await _liveSupportService.CompleteAITurnAsync(turnId, request, ct);
-        return Ok();
+        try
+        {
+            var outcome = await _liveSupportAITurnOrchestrator.CompleteAsync(turnId, request, ct);
+            return outcome switch
+            {
+                "TURN_NOT_FOUND" => NotFound(new { code = outcome }),
+                "IDEMPOTENCY_CONFLICT" => Conflict(new { code = outcome }),
+                _ => Ok(new { outcome })
+            };
+        }
+        catch (InvalidOperationException exception) when (exception.Message is "DECISION_SCHEMA_INVALID" or "DECISION_HASH_INVALID" or "ACTION_REQUIRES_LINKED_STUDENT" or "ACTION_NOT_ALLOWED" or "AI_DATA_PROTECTOR_UNAVAILABLE")
+        {
+            return UnprocessableEntity(new { code = exception.Message });
+        }
     }
 
-    [InternalTokenAuthorize("AI_CALLBACK_SECRET", "API_CALLBACK_SECRET")]
+    [InternalTokenAuthorize("AI_CALLBACK_SECRET")]
     [HttpPost("live-support-ai/turns/{turnId:guid}/fail")]
-    public async Task<IActionResult> FailAITurn([FromRoute] Guid turnId, [FromBody] LiveSupportAITurnFailRequest request, CancellationToken ct)
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("live-support-ai-callback")]
+    [RequestSizeLimit(16 * 1_024)]
+    public async Task<IActionResult> FailAITurn([FromRoute] Guid turnId, [FromBody] LiveSupportAIWorkerFailureDto request, CancellationToken ct)
     {
-        await _liveSupportService.FailAITurnAsync(turnId, request, ct);
-        return Ok();
+        var outcome = await _liveSupportAITurnOrchestrator.FailAsync(turnId, request, ct);
+        return outcome switch
+        {
+            "TURN_NOT_FOUND" => NotFound(new { code = outcome }),
+            "INVALID_FAILURE" => UnprocessableEntity(new { code = outcome }),
+            _ => Ok(new { outcome })
+        };
     }
 }
 

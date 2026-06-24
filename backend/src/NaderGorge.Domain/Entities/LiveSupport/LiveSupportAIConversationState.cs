@@ -17,5 +17,8 @@ public sealed class LiveSupportAIConversationState
     public DateTime? ResolvedAt { get; set; }
     public string? ResolutionCode { get; set; }
     public string? SafeSummaryJson { get; set; }
+    public long LastEventSequence { get; set; }
+    public DateTime? DisableRequestedAt { get; set; }
+    public DateTime? LastRecoveryAt { get; set; }
     public long Version { get; set; }
 }

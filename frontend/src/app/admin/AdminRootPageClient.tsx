@@ -9,9 +9,11 @@ import {
 } from '@/components/admin';
 import { adminRootLinks } from '@/packages/admin';
 import { useHasPermission } from '@/hooks/useHasPermission';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function AdminRootPageClient() {
   const { hasPermission } = useHasPermission();
+  const user = useAuthStore((state) => state.user);
 
   const getPermissionForHref = (href: string) => {
     if (href.startsWith('/admin/subjects')) return 'content.manage';
@@ -27,11 +29,18 @@ export default function AdminRootPageClient() {
     return null;
   };
 
-  const filteredLinks = adminRootLinks.filter((item) => {
+  let filteredLinks = adminRootLinks.filter((item) => {
     const perm = getPermissionForHref(item.href);
     if (typeof perm === 'boolean') return perm;
     return !perm || hasPermission(perm);
   });
+
+  const allowedNavbarItems = user?.allowedNavbarItems;
+  if (allowedNavbarItems && allowedNavbarItems.length > 0) {
+    filteredLinks = filteredLinks.filter((item) =>
+      allowedNavbarItems.includes(item.href)
+    );
+  }
 
   return (
     <AdminShellChrome

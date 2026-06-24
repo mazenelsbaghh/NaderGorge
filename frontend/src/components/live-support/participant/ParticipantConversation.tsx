@@ -1,6 +1,6 @@
 'use client';
 
-import type { LiveSupportMessage } from '@/services/live-support-service';
+import type { LiveSupportAIPendingDecision, LiveSupportAIVerificationSession, LiveSupportMessage } from '@/services/live-support-service';
 import { AIPendingActionCard } from './AIPendingActionCard';
 import { AIHandoffConfirmation } from './AIHandoffConfirmation';
 import { AIGuestVerification } from './AIGuestVerification';
@@ -10,14 +10,8 @@ export interface ParticipantConversationProps {
   conversationId: string;
   messages: LiveSupportMessage[];
   isAiTyping?: boolean;
-  activeAction?: {
-    id: string;
-    actionKey: string;
-    safeProposalJson: string;
-    status: string;
-    expiresAt: string;
-  } | null;
-  activeVerification?: any | null;
+  activeAction?: LiveSupportAIPendingDecision | null;
+  activeVerification?: LiveSupportAIVerificationSession | null;
   onConfirmAction: (proposalId: string) => Promise<void>;
   onCancelAction: (proposalId: string) => Promise<void>;
   onConfirmHandoff: () => Promise<void>;
@@ -43,9 +37,10 @@ export function ParticipantConversation({
     <div role="log" aria-live="polite" aria-relevant="additions" className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
       {messages.map((message) => (
         <article
+          dir="auto"
           key={message.id}
           aria-label={`${message.senderType}، ${new Date(message.sentAt).toLocaleTimeString('ar-EG')}`}
-          className={`max-w-[85%] break-words rounded-2xl px-3 py-2 text-sm ${
+          className={`max-w-[85%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 text-sm ${
             ['Student', 'Guest'].includes(message.senderType)
               ? 'mr-auto bg-cyan-700 text-white'
               : 'ml-auto bg-slate-100 text-slate-800'
@@ -74,6 +69,7 @@ export function ParticipantConversation({
           {activeAction.actionKey === 'system.registration' && (
             <AISecureRegistrationForm
               conversationId={conversationId}
+              decisionId={activeAction.id}
               onSuccess={onRegistrationSuccess}
             />
           )}
@@ -84,6 +80,12 @@ export function ParticipantConversation({
               onCancel={onCancelAction}
             />
           )}
+        </div>
+      )}
+
+      {!activeAction && activeVerification && ['AwaitingLookup', 'Challenging'].includes(activeVerification.status) && (
+        <div className="ml-auto w-[90%]">
+          <AIGuestVerification conversationId={conversationId} initialSession={activeVerification} onVerified={onVerificationSuccess}/>
         </div>
       )}
 

@@ -18,6 +18,13 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
+  const isAuthorized = hasAdminAccess(user?.roles) && (
+    !user?.allowedDomains ||
+    user.allowedDomains.length === 0 ||
+    user.allowedDomains.includes("all") ||
+    user.allowedDomains.includes("admin")
+  );
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -26,12 +33,12 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!hasAdminAccess(user?.roles)) {
+    if (!isAuthorized) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isLoading, router, user?.roles]);
+  }, [isAuthenticated, isLoading, router, isAuthorized]);
 
-  if (isLoading || !isAuthenticated || !hasAdminAccess(user?.roles)) {
+  if (isLoading || !isAuthenticated || !isAuthorized) {
     return (
       <div
         dir="rtl"

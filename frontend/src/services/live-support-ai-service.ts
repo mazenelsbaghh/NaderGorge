@@ -19,6 +19,18 @@ export interface AIStats {
 }
 export interface AIConfig { draft?: AIPolicy; published?: AIPolicy; catalogs: AICatalogs }
 export type SaveAIDraft = Omit<AIPolicy, 'id' | 'versionNumber' | 'status' | 'isEnabled' | 'version' | 'publishedAt'> & { expectedVersion?: number };
+export type AIStatsPeriod = 'last-24h' | 'last-7d' | 'last-30d' | 'all';
+export interface AIKnowledgeRevision {
+  entryId: string; revisionId: string; title: string; revisionNumber: number; content: string; sourceLabel?: string;
+  isPublished: boolean; validFrom?: string; validUntil?: string; publishedAt?: string;
+}
+export interface SaveAIKnowledgeRevision {
+  entryId?: string; title: string; content: string; sourceLabel?: string; publish: boolean; validFrom?: string; validUntil?: string;
+}
+export interface AIPreviewResult { policyVersionId: string; dryRun: true; knowledgeDocuments: number; allowedDecisionTypes: string[]; safeOutcome: string }
+export interface AIEvidenceItem { turnId: string; conversationId: string; at: string; status: string; decisionType?: string; failureCode?: string; provider?: string; model?: string; callbackAttempts: number }
+export interface AIEvidencePage { items: AIEvidenceItem[]; nextCursor?: string }
+export interface AIReadiness { status: 'healthy' | 'unhealthy'; callbackAuthentication: string; redis: string; worker: string; policy: string }
 interface ApiResponse<T> { data: T }
 
 export const liveSupportAIService = {
@@ -27,6 +39,12 @@ export const liveSupportAIService = {
   publish: (expectedVersion: number) => apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/publish', { expectedVersion }).then(response => response.data.data),
   disable: () => apiClient.post('/live-support/admin/ai/disable'),
   enable: () => apiClient.post<ApiResponse<AIPolicy>>('/live-support/admin/ai/enable').then(response => response.data.data),
-  getStats: (period: string) => apiClient.get<ApiResponse<AIStats>>('/live-support/admin/ai/stats', { params: { period } }).then(response => response.data.data),
+  getStats: (period: AIStatsPeriod) => apiClient.get<ApiResponse<AIStats>>('/live-support/admin/ai/stats', { params: { period } }).then(response => response.data.data),
   getActiveConversations: () => apiClient.get<ApiResponse<LiveSupportAdminConversation[]>>('/live-support/admin/ai/active-conversations').then(response => response.data.data),
+  getKnowledge: () => apiClient.get<ApiResponse<AIKnowledgeRevision[]>>('/live-support/admin/ai/knowledge').then(response => response.data.data),
+  saveKnowledgeRevision: (payload: SaveAIKnowledgeRevision) => apiClient.post<ApiResponse<AIKnowledgeRevision>>('/live-support/admin/ai/knowledge/revisions', payload).then(response => response.data.data),
+  linkKnowledge: (policyVersionId: string, revisionIds: string[]) => apiClient.put('/live-support/admin/ai/knowledge/links', { policyVersionId, revisionIds }),
+  preview: (message: string, policyVersionId?: string) => apiClient.post<ApiResponse<AIPreviewResult>>('/live-support/admin/ai/preview', { message, policyVersionId }).then(response => response.data.data),
+  getEvidence: (period: AIStatsPeriod, cursor?: string, pageSize = 50) => apiClient.get<ApiResponse<AIEvidencePage>>('/live-support/admin/ai/evidence', { params: { period, cursor, pageSize } }).then(response => response.data.data),
+  getReadiness: () => apiClient.get<AIReadiness>('/health/ready/ai-live-support').then(response => response.data),
 };

@@ -85,7 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  const filteredMenuItems = adminMenuItems.filter((item) => {
+  let filteredMenuItems = adminMenuItems.filter((item) => {
     if ('adminOnly' in item && item.adminOnly) {
       return user?.roles.includes('Admin') === true;
     }
@@ -94,6 +94,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     return hasPermission(item.permission);
   });
+
+  const allowedNavbarItems = user?.allowedNavbarItems;
+  if (allowedNavbarItems && allowedNavbarItems.length > 0) {
+    filteredMenuItems = filteredMenuItems.filter((item) =>
+      allowedNavbarItems.includes(item.href)
+    );
+  }
 
   return (
     <AdminGuard>

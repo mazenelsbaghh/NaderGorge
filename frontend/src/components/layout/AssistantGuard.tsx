@@ -12,6 +12,13 @@ export function AssistantGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
+  const isAuthorized = hasAssistantAccess(user?.roles) && (
+    !user?.allowedDomains ||
+    user.allowedDomains.length === 0 ||
+    user.allowedDomains.includes("all") ||
+    user.allowedDomains.includes("assistant")
+  );
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -20,12 +27,12 @@ export function AssistantGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!hasAssistantAccess(user?.roles)) {
+    if (!isAuthorized) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isLoading, router, user?.roles]);
+  }, [isAuthenticated, isLoading, router, isAuthorized]);
 
-  if (isLoading || !isAuthenticated || !hasAssistantAccess(user?.roles)) {
+  if (isLoading || !isAuthenticated || !isAuthorized) {
     return (
       <div
         dir="rtl"

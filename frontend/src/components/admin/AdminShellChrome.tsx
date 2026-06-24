@@ -313,9 +313,16 @@ export function AdminShellChrome({
     return item;
   });
 
-  const filteredNavItems = resolvedNavItems.filter((item) =>
+  let filteredNavItems = resolvedNavItems.filter((item) =>
     hasPermission(item.permission)
   );
+
+  const allowedNavbarItems = user?.allowedNavbarItems;
+  if (allowedNavbarItems && allowedNavbarItems.length > 0) {
+    filteredNavItems = filteredNavItems.filter((item) =>
+      allowedNavbarItems.includes(item.href)
+    );
+  }
 
   const navGroups = GROUP_CONFIG.map((group) => {
     const items = filteredNavItems.filter((item) => group.hrefs.includes(item.href));

@@ -29,6 +29,8 @@ interface RoleDto {
   name: string;
   type: string;
   permissions: string[];
+  allowedDomain: string;
+  allowedNavbarItems: string[];
 }
 
 const PERMISSION_DEFINITIONS = [
@@ -50,6 +52,46 @@ const PERMISSION_DEFINITIONS = [
   { key: 'reports.manage', label: 'سجلات المراقبة والتقارير التشغيلية', desc: 'عرض الـ Audit logs، وإحصائيات أداء الموظفين، والمؤشرات العامة للمنصة' },
   { key: 'live_support.manage', label: 'إدارة الدعم المباشر', desc: 'تسمح بإدارة الخدمة والسعات والجداول ولا تُدخل صاحب الدور في التوزيع' },
   { key: 'live_support.route', label: 'استقبال محادثات الدعم', desc: 'يضيف أصحاب هذا الدور إلى توزيع المحادثات تلقائياً بسعة افتراضية، ويمكن تعديل كل موظف لاحقاً' }
+];
+
+const ADMIN_NAV_OPTIONS = [
+  { key: '/admin/students', label: 'الطلاب' },
+  { key: '/admin/assistants', label: 'المساعدين' },
+  { key: '/admin/admins', label: 'المديرين' },
+  { key: '/admin/teachers', label: 'المعلمين' },
+  { key: '/admin/content', label: 'المحتوى' },
+  { key: '/admin/subjects', label: 'المواد الدراسية' },
+  { key: '/admin/community', label: 'المجتمع' },
+  { key: '/admin/ai-monitor', label: 'تحليل AI' },
+  { key: '/admin/codes', label: 'الأكواد' },
+  { key: '/admin/questions', label: 'الأسئلة' },
+  { key: '/admin/overrides', label: 'التعديلات' },
+  { key: '/admin/watch-requests', label: 'طلبات المشاهدة' },
+  { key: '/admin/forms', label: 'النماذج' },
+  { key: '/admin/operations', label: 'العمليات' },
+  { key: '/admin/hr', label: 'الموارد البشرية' },
+  { key: '/admin/finance', label: 'المالية والرواتب' },
+  { key: '/admin/live-support', label: 'الدعم المباشر' },
+  { key: '/admin/live-support/ai', label: 'الدعم الذكي AI' },
+  { key: '/admin/chat', label: 'التواصل الداخلي' },
+  { key: '/admin/crm', label: 'الكول سنتر' },
+  { key: '/admin/media', label: 'الإنتاج والنشر' },
+  { key: '/admin/reports', label: 'سجل الأمان والتقارير' }
+];
+
+const ASSISTANT_NAV_OPTIONS = [
+  { key: '/assistant/dashboard', label: 'الرئيسية' },
+  { key: '/assistant/tasks', label: 'المهام والعمليات' },
+  { key: '/admin/content', label: 'إدارة تعليقات الدروس' },
+  { key: '/admin/community', label: 'إدارة مجتمع الطلاب' },
+  { key: '/admin/questions', label: 'إدارة الامتحانات والأسئلة' },
+  { key: '/admin/watch-requests', label: 'طلبات إعادة المشاهدة' },
+  { key: '/assistant/crm', label: 'الكول سنتر (CRM)' },
+  { key: '/assistant/live-support', label: 'الدعم المباشر' },
+  { key: '/assistant/chat', label: 'التواصل الداخلي' },
+  { key: '/assistant/attendance', label: 'سجل الحضور' },
+  { key: '/assistant/vacations', label: 'طلبات الإجازة' },
+  { key: '/assistant/notifications', label: 'الإشعارات' }
 ];
 
 export default function AdminSettingsPageClient() {
@@ -93,7 +135,20 @@ export default function AdminSettingsPageClient() {
   const [currentRole, setCurrentRole] = useState<RoleDto | null>(null);
   const [roleName, setRoleName] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [allowedDomain, setAllowedDomain] = useState<string>('all');
+  const [allowedNavbarItems, setAllowedNavbarItems] = useState<string[]>([]);
   const [roleToDelete, setRoleToDelete] = useState<RoleDto | null>(null);
+
+  const toggleNavbarItem = (itemKey: string) => {
+    setAllowedNavbarItems(prev =>
+      prev.includes(itemKey) ? prev.filter(k => k !== itemKey) : [...prev, itemKey]
+    );
+  };
+
+  const handleDomainChange = (domain: string) => {
+    setAllowedDomain(domain);
+    setAllowedNavbarItems([]);
+  };
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -147,10 +202,14 @@ export default function AdminSettingsPageClient() {
       setCurrentRole(role);
       setRoleName(role.name);
       setSelectedPermissions(role.permissions);
+      setAllowedDomain(role.allowedDomain || 'all');
+      setAllowedNavbarItems(role.allowedNavbarItems || []);
     } else {
       setCurrentRole(null);
       setRoleName('');
       setSelectedPermissions([]);
+      setAllowedDomain('all');
+      setAllowedNavbarItems([]);
     }
     setIsRoleModalOpen(true);
   };
@@ -167,14 +226,18 @@ export default function AdminSettingsPageClient() {
         // Edit Role
         await adminService.updateRole(currentRole.id, {
           name: roleName.trim(),
-          permissions: selectedPermissions
+          permissions: selectedPermissions,
+          allowedDomain,
+          allowedNavbarItems
         });
         toast.success(`تم تحديث دور "${roleName}" بنجاح ✅`);
       } else {
         // Create Role
         await adminService.createRole({
           name: roleName.trim(),
-          permissions: selectedPermissions
+          permissions: selectedPermissions,
+          allowedDomain,
+          allowedNavbarItems
         });
         toast.success(`تم إنشاء دور "${roleName}" بنجاح ✅`);
       }
@@ -793,6 +856,52 @@ export default function AdminSettingsPageClient() {
                     className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 px-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] text-right"
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-[var(--admin-text)]">النطاق المسموح (Allowed Domain)</label>
+                  <select
+                    value={allowedDomain}
+                    onChange={(e) => handleDomainChange(e.target.value)}
+                    className="w-full bg-[var(--admin-card-strong)] border border-[var(--admin-border)] rounded-xl py-3 px-4 text-[var(--admin-text)] focus:outline-none focus:border-[var(--admin-primary)] text-right"
+                  >
+                    <option value="all">كل الواجهات (All surfaces)</option>
+                    <option value="admin">بوابة المدير (Admin portal)</option>
+                    <option value="assistant">بوابة المساعد (Assistant portal)</option>
+                    <option value="teacher">بوابة المعلم (Teacher portal)</option>
+                    <option value="student">بوابة الطالب (Student portal)</option>
+                  </select>
+                </div>
+
+                {(allowedDomain === 'admin' || allowedDomain === 'assistant') && (
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-[var(--admin-text)]">
+                      تخصيص عناصر القائمة الجانبية (Navigation Items)
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[30vh] overflow-y-auto pr-1">
+                      {(allowedDomain === 'admin' ? ADMIN_NAV_OPTIONS : ASSISTANT_NAV_OPTIONS).map((item) => {
+                        const isChecked = allowedNavbarItems.includes(item.key);
+                        return (
+                          <div
+                            key={item.key}
+                            onClick={() => toggleNavbarItem(item.key)}
+                            className={`flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none text-right ${
+                              isChecked
+                                ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)] text-[var(--admin-primary)]'
+                                : 'bg-[var(--admin-card-soft)] border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                            }`}
+                          >
+                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                              isChecked ? 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-white' : 'border-[var(--admin-border)] bg-[var(--admin-card)]'
+                            }`}>
+                              {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                            </div>
+                            <span className="text-sm font-bold">{item.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <label className="block text-sm font-bold text-[var(--admin-text)]">تحديد الصلاحيات الممنوحة</label>

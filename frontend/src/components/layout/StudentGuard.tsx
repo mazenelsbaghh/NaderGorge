@@ -13,6 +13,13 @@ export function StudentGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
+  const isAuthorized = hasStudentAccess(user?.roles) && (
+    !user?.allowedDomains ||
+    user.allowedDomains.length === 0 ||
+    user.allowedDomains.includes("all") ||
+    user.allowedDomains.includes("student")
+  );
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -21,12 +28,12 @@ export function StudentGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!hasStudentAccess(user?.roles)) {
+    if (!isAuthorized) {
       router.replace("/login");
     }
-  }, [isAuthenticated, isLoading, router, user?.roles]);
+  }, [isAuthenticated, isLoading, router, isAuthorized]);
 
-  if (isLoading || !isAuthenticated || !hasStudentAccess(user?.roles)) {
+  if (isLoading || !isAuthenticated || !isAuthorized) {
     return (
       <div
         dir="rtl"

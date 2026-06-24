@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-06-21
+Auto-generated from all feature plans. Last updated: 2026-06-24
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -54,6 +54,8 @@ Auto-generated from all feature plans. Last updated: 2026-06-21
 - PostgreSQL for durable support state and audit relations; Redis for ephemeral presence, distributed idempotency, and SignalR backplane; existing asset storage for approved chat attachments (142-live-support-command-center)
 - C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac (143-ai-live-support-agent)
 - PostgreSQL for authoritative AI policy/knowledge/turn/action/verification state; Redis for queue delivery, distributed locks, cancellation hints, and SignalR backplane; no vector database in this phase (143-ai-live-support-agent)
+- C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac (146-ai-live-support-completion)
+- PostgreSQL authoritative state and append-only evidence; Redis queue delivery, recovery hints, routing locks, and SignalR backplane; no vector database (146-ai-live-support-completion)
 
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + framer-motion ^12.38.0, lucide-react ^1.7.0, clsx + tailwind-merge (via `@/lib/utils`) (033-custom-video-player)
 
@@ -73,6 +75,7 @@ npm test && npm run lint
 TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 ## Recent Changes
+- 146-ai-live-support-completion: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac
 - 143-ai-live-support-agent: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac
 - 142-live-support-command-center: Added live support command-center planning for guest/student chat, attendance-gated routing, capacity queues, student actions, audit, and ratings.
 - 139-vertex-ai-worker-migration: Added TypeScript 5.9.3 strict mode on Node.js 20 + `@google/genai` 1.47.0, `@google-cloud/storage`, BullMQ 5.71.1, Express 5.2.1, undici 7.24.6
@@ -95,5 +98,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 143-ai-live-support-agent: specs/143-ai-live-support-agent/plan.md
 - 144-ai-live-support-refinements: specs/144-ai-live-support-refinements/plan.md
 - 145-ai-live-support-actions: specs/145-ai-live-support-actions/plan.md
+- 146-ai-live-support-completion: specs/146-ai-live-support-completion/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

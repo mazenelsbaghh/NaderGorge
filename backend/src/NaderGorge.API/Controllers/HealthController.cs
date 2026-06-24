@@ -13,11 +13,37 @@ public class HealthController : ControllerBase
 {
     private readonly IAppDbContext _db;
     private readonly IConnectionMultiplexer _redis;
+    private readonly IConfiguration _configuration;
 
-    public HealthController(IAppDbContext db, IConnectionMultiplexer redis)
+    public HealthController(IAppDbContext db, IConnectionMultiplexer redis, IConfiguration configuration)
     {
         _db = db;
         _redis = redis;
+        _configuration = configuration;
+    }
+
+    [HttpGet("ready/ai-live-support")]
+    public async Task<IActionResult> GetAILiveSupportReady(CancellationToken cancellationToken)
+    {
+        var callbackSecret = _configuration["AI_CALLBACK_SECRET"];
+        var secretReady = !string.IsNullOrWhiteSpace(callbackSecret) && callbackSecret.Length >= 32;
+        var redisReady = _redis.IsConnected;
+        var workerReady = false;
+        if (redisReady)
+        {
+            try { workerReady = await _redis.GetDatabase().KeyExistsAsync("live-support-worker:ready"); }
+            catch { workerReady = false; }
+        }
+        var policyReady = await _db.LiveSupportAIPolicyVersions.AnyAsync(item => item.Status == NaderGorge.Domain.Enums.LiveSupportAIPolicyStatus.Published && item.IsEnabled, cancellationToken);
+        var ready = secretReady && redisReady && workerReady && policyReady;
+        return StatusCode(ready ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable, new
+        {
+            status = ready ? "healthy" : "unhealthy",
+            callbackAuthentication = secretReady ? "healthy" : "unhealthy",
+            redis = redisReady ? "healthy" : "unhealthy",
+            worker = workerReady ? "healthy" : "unhealthy",
+            policy = policyReady ? "healthy" : "unhealthy"
+        });
     }
 
     [HttpGet]

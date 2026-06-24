@@ -22,6 +22,12 @@ public sealed class LiveSupportAITurn : BaseEntity
     public int? LatencyMs { get; set; }
     public string? FailureCode { get; set; }
     public string? SafeFailureDetail { get; set; }
+    public string? DecisionHash { get; set; }
+    public LiveSupportAICallbackStatus CallbackStatus { get; set; }
+    public int CallbackAttemptCount { get; set; }
+    public DateTime? NextCallbackAttemptAt { get; set; }
+    public DateTime? ProviderCompletedAt { get; set; }
+    public string? LastSafeCallbackErrorCode { get; set; }
     public DateTime QueuedAt { get; set; }
     public DateTime? StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }

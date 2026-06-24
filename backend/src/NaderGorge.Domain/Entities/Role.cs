@@ -8,6 +8,8 @@ public class Role : BaseEntity
     public string Name { get; set; } = string.Empty;
     public RoleType Type { get; set; }
     public string? PermissionsJson { get; set; } = "[]";
+    public string AllowedDomain { get; set; } = "all";
+    public string? AllowedNavbarItemsJson { get; set; } = "[]";
 
     // Navigation properties
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();

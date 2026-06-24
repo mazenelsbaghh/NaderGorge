@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.API.Hubs;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Application.Interfaces;
+using System.Text.Json;
 
 namespace NaderGorge.API.BackgroundServices;
 
@@ -12,16 +14,19 @@ public class OutboxProcessorBackgroundService : BackgroundService
     private readonly IHubContext<PlatformHub> _hubContext;
     private readonly IHubContext<LiveSupportHub>? _liveSupportHub;
     private readonly ILogger<OutboxProcessorBackgroundService> _logger;
+    private readonly IJobEnqueuer? _jobEnqueuer;
 
     public OutboxProcessorBackgroundService(
         IServiceScopeFactory scopeFactory,
         IHubContext<PlatformHub> hubContext,
         ILogger<OutboxProcessorBackgroundService> logger,
-        IHubContext<LiveSupportHub>? liveSupportHub = null)
+        IHubContext<LiveSupportHub>? liveSupportHub = null,
+        IJobEnqueuer? jobEnqueuer = null)
     {
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
         _liveSupportHub = liveSupportHub;
+        _jobEnqueuer = jobEnqueuer;
         _logger = logger;
     }
 
@@ -91,7 +96,13 @@ public class OutboxProcessorBackgroundService : BackgroundService
             {
                 try
                 {
-                    if (IsLiveSupportEvent(@event))
+                    if (LiveSupportAIOutboxQueueDispatcher.IsTurnQueueEvent(@event))
+                    {
+                        if (_jobEnqueuer is null)
+                            throw new InvalidOperationException("Live-support AI queue dispatcher is unavailable.");
+                        await LiveSupportAIOutboxQueueDispatcher.DispatchAsync(@event, _jobEnqueuer);
+                    }
+                    else if (IsLiveSupportEvent(@event))
                     {
                         if (!IsAllowedLiveSupportGroup(@event.TargetGroup))
                             throw new InvalidOperationException("Rejected unsafe live-support outbox target.");
@@ -127,13 +138,10 @@ public class OutboxProcessorBackgroundService : BackgroundService
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to dispatch outbox event {Id} of type {Type}.", @event.Id, @event.Type);
-                    @event.RetryCount++;
-                    @event.UpdatedAt = DateTime.UtcNow;
-                    @event.LastError = ex.Message + "\n" + ex.StackTrace;
+                    RecordDispatchFailure(@event, ex, DateTime.UtcNow);
 
-                    if (@event.RetryCount >= 5)
+                    if (@event.IsDeadLetter)
                     {
-                        @event.IsDeadLetter = true;
                         _logger.LogCritical("Outbox event {Id} of type {Type} has failed 5 times and is now marked as Dead Letter.", @event.Id, @event.Type);
                     }
                 }
@@ -150,6 +158,52 @@ public class OutboxProcessorBackgroundService : BackgroundService
         }
     }
 
-    internal static bool IsLiveSupportEvent(OutboxEvent value) => value.Type.StartsWith("LiveSupport", StringComparison.Ordinal) || value.TargetGroup?.StartsWith("LiveSupport:", StringComparison.Ordinal) == true;
+    internal static bool IsLiveSupportEvent(OutboxEvent value) => !LiveSupportAIOutboxQueueDispatcher.IsTurnQueueEvent(value) && (value.Type.StartsWith("LiveSupport", StringComparison.Ordinal) || value.TargetGroup?.StartsWith("LiveSupport:", StringComparison.Ordinal) == true);
     internal static bool IsAllowedLiveSupportGroup(string? group) => group == "LiveSupport:Admins" || group == "LiveSupport:Queue" || group?.StartsWith("LiveSupport:Conversation:", StringComparison.Ordinal) == true || group?.StartsWith("LiveSupport:Participant:", StringComparison.Ordinal) == true || group?.StartsWith("LiveSupport:Staff:", StringComparison.Ordinal) == true;
+
+    public static void RecordDispatchFailure(OutboxEvent value, Exception exception, DateTime utcNow)
+    {
+        value.RetryCount++;
+        value.UpdatedAt = utcNow;
+        value.LastError = $"{exception.GetType().Name}: OUTBOX_DISPATCH_FAILED";
+        value.IsDeadLetter = value.RetryCount >= 5;
+    }
+}
+
+public static class LiveSupportAIOutboxQueueDispatcher
+{
+    public const string EventType = "LiveSupportAITurnQueued";
+    private static readonly JsonSerializerOptions PayloadJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    public static bool IsTurnQueueEvent(OutboxEvent value) =>
+        string.Equals(value.Type, EventType, StringComparison.Ordinal);
+
+    public static async Task DispatchAsync(OutboxEvent value, IJobEnqueuer jobEnqueuer)
+    {
+        var payload = JsonSerializer.Deserialize<LiveSupportAITurnQueuePayload>(value.PayloadJson, PayloadJsonOptions)
+            ?? throw new InvalidOperationException("Live-support turn outbox payload is empty.");
+
+        if (payload.SchemaVersion != "1" || payload.TurnId == Guid.Empty || payload.ConversationId == Guid.Empty)
+            throw new InvalidOperationException("Live-support turn outbox payload is invalid.");
+
+        await jobEnqueuer.EnqueueJobAsync(
+            "ai-live-support-turns",
+            "respond",
+            new
+            {
+                schemaVersion = payload.SchemaVersion,
+                turnId = payload.TurnId,
+                conversationId = payload.ConversationId,
+                queuedAt = payload.QueuedAt
+            });
+    }
+
+    public sealed record LiveSupportAITurnQueuePayload(
+        string SchemaVersion,
+        Guid TurnId,
+        Guid ConversationId,
+        DateTime QueuedAt);
 }

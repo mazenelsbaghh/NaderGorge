@@ -1904,6 +1904,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime?>("AutoCloseAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<DateTime?>("DisableRequestedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<DateTime?>("HandedOffAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -1918,7 +1921,13 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime?>("InactivityWarningSentAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<long>("LastEventSequence")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("LastParticipantActivityAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("LastRecoveryAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("Mode")
@@ -2069,6 +2078,13 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("CallbackDecisionHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -2091,6 +2107,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("DecisionKind")
+                        .HasColumnType("integer");
 
                     b.Property<byte[]>("EncryptedPayload")
                         .HasColumnType("bytea");
@@ -2125,7 +2144,7 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("StudentUserId")
+                    b.Property<Guid?>("StudentUserId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TurnId")
@@ -2157,9 +2176,18 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasIndex("TurnId");
 
+                    b.HasIndex("ConversationId", "DecisionKind")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 0");
+
                     b.HasIndex("ConversationId", "Status");
 
-                    b.ToTable("live_support_ai_pending_actions", (string)null);
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.ToTable("live_support_ai_pending_actions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_live_support_ai_pending_action_target", "\"DecisionKind\" <> 0 OR (\"StudentUserId\" IS NOT NULL AND length(\"ActionKey\") > 0 AND length(\"PayloadHash\") > 0 AND length(\"StateFingerprint\") > 0 AND \"EncryptedPayload\" IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportAIPolicyKnowledgeRevision", b =>
@@ -2276,6 +2304,12 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CallbackAttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CallbackStatus")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -2288,6 +2322,10 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DecisionHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<int?>("DecisionType")
                         .HasColumnType("integer");
@@ -2306,12 +2344,19 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("LastSafeCallbackErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<int?>("LatencyMs")
                         .HasColumnType("integer");
 
                     b.Property<string>("Model")
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime?>("NextCallbackAttemptAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("OutputMessageId")
                         .HasColumnType("uuid");
@@ -2325,6 +2370,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("Provider")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("ProviderCompletedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("ProviderResponseId")
                         .HasMaxLength(200)
@@ -2363,6 +2411,8 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasIndex("SourceMessageId")
                         .IsUnique();
+
+                    b.HasIndex("CallbackStatus", "NextCallbackAttemptAt");
 
                     b.HasIndex("ConversationId", "QueuedAt");
 
@@ -2480,7 +2530,16 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int>("CurrentQuestionIndex")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("LockedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("LookupKey")
@@ -2524,11 +2583,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("CandidateStudentUserId");
 
                     b.HasIndex("ConversationId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"Status\" IN (0, 1)");
 
                     b.HasIndex("PolicyVersionId");
 
-                    b.ToTable("live_support_ai_verification_sessions", (string)null);
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.ToTable("live_support_ai_verification_sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_live_support_ai_verification_counts", "\"CorrectCount\" >= 0 AND \"CorrectCount\" <= \"AttemptCount\" AND \"AttemptCount\" <= \"MaxAttempts\" AND \"CurrentQuestionIndex\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportActionExecution", b =>
@@ -3671,6 +3736,19 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AllowedDomain")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("all");
+
+                    b.Property<string>("AllowedNavbarItemsJson")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasDefaultValue("[]");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -5642,8 +5720,7 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("StudentUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NaderGorge.Domain.Entities.LiveSupport.LiveSupportAITurn", null)
                         .WithMany()

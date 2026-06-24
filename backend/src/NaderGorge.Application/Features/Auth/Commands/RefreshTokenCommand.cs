@@ -68,24 +68,49 @@ public class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCommand, A
         await _db.SaveChangesAsync(ct);
 
         var permissionsList = new List<string>();
+        var allowedDomainsList = new List<string>();
+        var allowedNavbarItemsList = new List<string>();
         foreach (var ur in user.UserRoles)
         {
-            if (ur.Role != null && !string.IsNullOrEmpty(ur.Role.PermissionsJson))
+            if (ur.Role != null)
             {
-                try
+                if (!string.IsNullOrEmpty(ur.Role.PermissionsJson))
                 {
-                    var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
-                    if (perms != null)
+                    try
                     {
-                        permissionsList.AddRange(perms);
+                        var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
+                        if (perms != null)
+                        {
+                            permissionsList.AddRange(perms);
+                        }
                     }
+                    catch { /* ignore invalid JSON */ }
                 }
-                catch { /* ignore invalid JSON */ }
+
+                if (!string.IsNullOrEmpty(ur.Role.AllowedDomain))
+                {
+                    allowedDomainsList.Add(ur.Role.AllowedDomain);
+                }
+
+                if (!string.IsNullOrEmpty(ur.Role.AllowedNavbarItemsJson))
+                {
+                    try
+                    {
+                        var items = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.AllowedNavbarItemsJson);
+                        if (items != null)
+                        {
+                            allowedNavbarItemsList.AddRange(items);
+                        }
+                    }
+                    catch { /* ignore invalid JSON */ }
+                }
             }
         }
         var permissions = permissionsList.Distinct().ToArray();
+        var allowedDomains = allowedDomainsList.Distinct().ToArray();
+        var allowedNavbarItems = allowedNavbarItemsList.Distinct().ToArray();
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug, allowedDomains, allowedNavbarItems);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(newAccessToken, newRefreshToken, userDto));
     }
 }

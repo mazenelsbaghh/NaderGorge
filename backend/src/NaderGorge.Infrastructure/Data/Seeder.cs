@@ -11,41 +11,53 @@ public static class Seeder
         var rolesByName = await db.Roles.ToDictionaryAsync(r => r.Name);
         var defaultRoles = new[]
         {
-            new Role { Name = "Admin", Type = RoleType.Admin },
+            new Role { Name = "Admin", Type = RoleType.Admin, AllowedDomain = "admin" },
             new Role 
             { 
                 Name = "Teacher", 
                 Type = RoleType.Teacher,
-                PermissionsJson = "[\"content.manage\",\"exams.manage\",\"comments.manage\"]"
+                PermissionsJson = "[\"content.manage\",\"exams.manage\",\"comments.manage\"]",
+                AllowedDomain = "teacher"
             },
             new Role 
             { 
                 Name = "Assistant", 
                 Type = RoleType.Assistant,
-                PermissionsJson = "[\"comments.manage\",\"community.manage\",\"exams.manage\",\"watch_requests.manage\",\"tasks.manage\",\"chat.manage\"]"
+                PermissionsJson = "[\"comments.manage\",\"community.manage\",\"exams.manage\",\"watch_requests.manage\",\"tasks.manage\",\"chat.manage\"]",
+                AllowedDomain = "assistant"
             },
-            new Role { Name = "Student", Type = RoleType.Student },
+            new Role { Name = "Student", Type = RoleType.Student, AllowedDomain = "student" },
             new Role 
             { 
                 Name = "Supervisor", 
                 Type = RoleType.Supervisor,
-                PermissionsJson = "[\"users.manage\",\"content.manage\",\"exams.manage\",\"codes.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"hr.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"media.manage\",\"finance.manage\",\"reports.manage\",\"live_support.manage\"]"
+                PermissionsJson = "[\"users.manage\",\"content.manage\",\"exams.manage\",\"codes.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"hr.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\",\"media.manage\",\"finance.manage\",\"reports.manage\",\"live_support.manage\"]",
+                AllowedDomain = "admin"
             },
             new Role 
             { 
                 Name = "Staff", 
                 Type = RoleType.Staff,
-                PermissionsJson = "[\"users.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\"]"
+                PermissionsJson = "[\"users.manage\",\"watch_requests.manage\",\"community.manage\",\"comments.manage\",\"tasks.manage\",\"chat.manage\",\"crm.manage\",\"payments.manage\"]",
+                AllowedDomain = "assistant"
             }
         };
 
         var addedAny = false;
         foreach (var defaultRole in defaultRoles)
         {
-            if (!rolesByName.ContainsKey(defaultRole.Name))
+            if (!rolesByName.TryGetValue(defaultRole.Name, out var existingRole))
             {
                 db.Roles.Add(defaultRole);
                 addedAny = true;
+            }
+            else
+            {
+                if (existingRole.AllowedDomain != defaultRole.AllowedDomain)
+                {
+                    existingRole.AllowedDomain = defaultRole.AllowedDomain;
+                    addedAny = true;
+                }
             }
         }
 

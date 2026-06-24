@@ -13,6 +13,8 @@ public interface ILiveSupportAIAdminService
     Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, CancellationToken cancellationToken);
     Task<LiveSupportAIStatsDto> GetStatsAsync(string period, CancellationToken cancellationToken);
     Task<IReadOnlyList<LiveSupportAdminConversationDto>> GetActiveConversationsAsync(CancellationToken cancellationToken);
+    Task<LiveSupportAIPreviewResultDto> PreviewAsync(LiveSupportAIPreviewRequestDto request, CancellationToken cancellationToken);
+    Task<LiveSupportAIEvidencePageDto> GetEvidenceAsync(string period, string? cursor, int pageSize, CancellationToken cancellationToken);
 }
 
 public sealed class LiveSupportAIAdminException(string code, string message) : Exception(message)

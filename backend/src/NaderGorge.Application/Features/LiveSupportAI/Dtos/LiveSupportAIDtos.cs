@@ -47,3 +47,12 @@ public sealed record LiveSupportAIStatsDto(
     int TotalMessagesSent,
     int SuccessfulActions);
 
+public sealed record LiveSupportAIKnowledgeRevisionDto(
+    Guid EntryId, Guid RevisionId, string Title, int RevisionNumber, string Content, string? SourceLabel,
+    bool IsPublished, DateTime? ValidFrom, DateTime? ValidUntil, DateTime? PublishedAt);
+public sealed record SaveLiveSupportAIKnowledgeRequest(
+    Guid? EntryId, string Title, string Content, string? SourceLabel, bool Publish, DateTime? ValidFrom, DateTime? ValidUntil);
+public sealed record LinkLiveSupportAIKnowledgeRequest(Guid PolicyVersionId, IReadOnlyList<Guid> RevisionIds);
+public sealed record LiveSupportAIPreviewResultDto(Guid PolicyVersionId, bool DryRun, int KnowledgeDocuments, IReadOnlyList<string> AllowedDecisionTypes, string SafeOutcome);
+public sealed record LiveSupportAIEvidenceItemDto(Guid TurnId, Guid ConversationId, DateTime At, string Status, string? DecisionType, string? FailureCode, string? Provider, string? Model, int CallbackAttempts);
+public sealed record LiveSupportAIEvidencePageDto(IReadOnlyList<LiveSupportAIEvidenceItemDto> Items, string? NextCursor);

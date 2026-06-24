@@ -15,6 +15,8 @@ interface User {
   permissions: string[];
   profileComplete: boolean;
   avatarSlug?: string | null;
+  allowedDomains?: string[];
+  allowedNavbarItems?: string[];
 }
 
 interface AuthState {

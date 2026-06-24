@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record UpdateRoleCommand(Guid Id, string Name, List<string> Permissions, Guid ActorUserId) : IRequest<ApiResponse>;
+public record UpdateRoleCommand(Guid Id, string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems, Guid ActorUserId) : IRequest<ApiResponse>;
 
 public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, ApiResponse>
 {
@@ -55,6 +55,8 @@ public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, ApiRe
         var routesConversations = permissions.Contains(LiveSupportRoutingPermissions.ReceiveConversations, StringComparer.OrdinalIgnoreCase);
         role.Name = normalizedName;
         role.PermissionsJson = JsonSerializer.Serialize(permissions);
+        role.AllowedDomain = request.AllowedDomain ?? "all";
+        role.AllowedNavbarItemsJson = JsonSerializer.Serialize(request.AllowedNavbarItems ?? new List<string>());
 
         if (previouslyRoutesConversations != routesConversations)
         {

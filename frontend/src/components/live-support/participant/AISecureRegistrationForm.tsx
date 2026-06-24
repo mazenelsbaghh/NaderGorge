@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { liveSupportService } from '@/services/live-support-service';
+import { useEffect, useState } from 'react';
+import { getLiveSupportApiError, liveSupportService } from '@/services/live-support-service';
 import { UserPlus, LoaderCircle, CheckCircle } from 'lucide-react';
 
 interface AISecureRegistrationFormProps {
   conversationId: string;
+  decisionId: string;
   onSuccess: () => void;
 }
 
-export function AISecureRegistrationForm({ conversationId, onSuccess }: AISecureRegistrationFormProps) {
+export function AISecureRegistrationForm({ conversationId, decisionId, onSuccess }: AISecureRegistrationFormProps) {
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -18,11 +19,15 @@ export function AISecureRegistrationForm({ conversationId, onSuccess }: AISecure
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState<'Male' | 'Female'>('Male');
   const [governorate, setGovernorate] = useState('');
+  const [address, setAddress] = useState('');
   const [educationStage, setEducationStage] = useState('Secondary');
   const [gradeLevel, setGradeLevel] = useState('ThirdSecondary');
   const [schoolName, setSchoolName] = useState('');
   const [parentPhoneNumber, setParentPhoneNumber] = useState('');
+  useEffect(() => () => setPassword(''), []);
 
   const stages = [
     { value: 'Primary', label: 'الابتدائية' },
@@ -65,8 +70,8 @@ export function AISecureRegistrationForm({ conversationId, onSuccess }: AISecure
     setError('');
 
     // Validations
-    if (!fullName.trim() || fullName.trim().split(' ').length < 2) {
-      setError('يرجى إدخال الاسم الثنائي على الأقل.');
+    if (!fullName.trim() || fullName.trim().split(/\s+/).length < 4) {
+      setError('يرجى إدخال الاسم الرباعي.');
       setBusy(false);
       return;
     }
@@ -75,8 +80,8 @@ export function AISecureRegistrationForm({ conversationId, onSuccess }: AISecure
       setBusy(false);
       return;
     }
-    if (password.length < 6) {
-      setError('كلمة المرور يجب أن لا تقل عن 6 أحرف.');
+    if (password.length < 8) {
+      setError('كلمة المرور يجب أن لا تقل عن 8 أحرف.');
       setBusy(false);
       return;
     }
@@ -88,21 +93,26 @@ export function AISecureRegistrationForm({ conversationId, onSuccess }: AISecure
 
     try {
       await liveSupportService.confirmAIRegistration(conversationId, {
+        decisionId,
         fullName: fullName.trim(),
         phoneNumber: phoneNumber.trim(),
         password,
+        dateOfBirth,
+        gender,
         governorate: governorate.trim(),
+        address: address.trim(),
         educationStage,
         gradeLevel,
         schoolName: schoolName.trim(),
         parentPhoneNumber: parentPhoneNumber.trim()
       });
+      setPassword('');
       setSuccess(true);
       setTimeout(() => {
         onSuccess();
       }, 2000);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'فشل إنشاء الحساب. قد يكون الرقم مسجلاً بالفعل.');
+    } catch (error) {
+      setError(getLiveSupportApiError(error, 'فشل إنشاء الحساب. راجع البيانات وحاول مرة أخرى.'));
     } finally {
       setBusy(false);
     }
@@ -168,11 +178,25 @@ export function AISecureRegistrationForm({ conversationId, onSuccess }: AISecure
               required
               disabled={busy}
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="كلمة مرور قوية"
               className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs outline-none focus:border-cyan-600 disabled:opacity-50"
             />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <label className="block">
+            <span className="text-xs font-medium text-slate-700">تاريخ الميلاد</span>
+            <input required disabled={busy} type="date" value={dateOfBirth} onChange={(event) => setDateOfBirth(event.target.value)} autoComplete="bday" className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-2 text-xs outline-none focus:border-cyan-600" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium text-slate-700">النوع</span>
+            <select disabled={busy} value={gender} onChange={(event) => setGender(event.target.value as 'Male' | 'Female')} className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-2 text-xs outline-none focus:border-cyan-600">
+              <option value="Male">ذكر</option><option value="Female">أنثى</option>
+            </select>
           </label>
         </div>
 
@@ -233,6 +257,11 @@ export function AISecureRegistrationForm({ conversationId, onSuccess }: AISecure
             />
           </label>
         </div>
+
+        <label className="block">
+          <span className="text-xs font-medium text-slate-700">العنوان</span>
+          <input required disabled={busy} value={address} onChange={(event) => setAddress(event.target.value)} autoComplete="street-address" className="mt-1 h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs outline-none focus:border-cyan-600" />
+        </label>
 
         <label className="block">
           <span className="text-xs font-medium text-slate-700">رقم هاتف ولي الأمر</span>

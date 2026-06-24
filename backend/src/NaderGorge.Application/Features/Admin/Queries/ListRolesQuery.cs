@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
 
-public record RoleDto(Guid Id, string Name, string Type, List<string> Permissions);
+public record RoleDto(Guid Id, string Name, string Type, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
 
 public record ListRolesQuery() : IRequest<ApiResponse<List<RoleDto>>>;
 
@@ -46,7 +46,21 @@ public class ListRolesQueryHandler : IRequestHandler<ListRolesQuery, ApiResponse
                 catch { /* Ignore invalid JSON */ }
             }
 
-            dtos.Add(new RoleDto(role.Id, role.Name, role.Type.ToString(), permissions));
+            var allowedNavbarItems = new List<string>();
+            if (!string.IsNullOrEmpty(role.AllowedNavbarItemsJson))
+            {
+                try
+                {
+                    var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(role.AllowedNavbarItemsJson);
+                    if (parsed != null)
+                    {
+                        allowedNavbarItems = parsed;
+                    }
+                }
+                catch { /* Ignore invalid JSON */ }
+            }
+
+            dtos.Add(new RoleDto(role.Id, role.Name, role.Type.ToString(), permissions, role.AllowedDomain, allowedNavbarItems));
         }
 
         return ApiResponse<List<RoleDto>>.Ok(dtos);

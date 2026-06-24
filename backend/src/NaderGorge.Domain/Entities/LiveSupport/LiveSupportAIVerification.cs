@@ -23,11 +23,14 @@ public sealed class LiveSupportAIVerificationSession : BaseEntity
     public string SelectedQuestionKeysJson { get; set; } = "[]";
     public int RequiredCorrect { get; set; }
     public int CorrectCount { get; set; }
+    public int CurrentQuestionIndex { get; set; }
     public int AttemptCount { get; set; }
     public int MaxAttempts { get; set; }
     public LiveSupportAIVerificationStatus Status { get; set; }
     public DateTime ExpiresAt { get; set; }
     public DateTime? VerifiedAt { get; set; }
+    public DateTime? LastAttemptAt { get; set; }
+    public DateTime? LockedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public long Version { get; set; }
 }

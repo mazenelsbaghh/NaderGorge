@@ -11,7 +11,7 @@ namespace NaderGorge.Application.Features.Auth.Commands;
 // ---- Login Command ----
 public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName, string? IpAddress, string? AppSurface = null) : IRequest<ApiResponse<LoginResponse>>;
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
-public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, string[] Permissions, bool ProfileComplete, string? AvatarSlug);
+public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, string[] Permissions, bool ProfileComplete, string? AvatarSlug, string[] AllowedDomains, string[] AllowedNavbarItems);
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
@@ -69,6 +69,22 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             if (!isStudent)
             {
                 throw new UnauthorizedAccessException("Invalid phone number or password");
+            }
+        }
+
+        // Validate subdomain boundary
+        if (!string.IsNullOrEmpty(request.AppSurface))
+        {
+            var userRoles = user.UserRoles.Select(ur => ur.Role).ToList();
+            var isAllowedOnSurface = userRoles.Any(r => 
+                string.Equals(r.AllowedDomain, "all", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(r.AllowedDomain, request.AppSurface, StringComparison.OrdinalIgnoreCase) ||
+                (string.Equals(r.AllowedDomain, "assistant", StringComparison.OrdinalIgnoreCase) && 
+                 string.Equals(request.AppSurface, "staff", StringComparison.OrdinalIgnoreCase))
+            );
+            if (!isAllowedOnSurface)
+            {
+                throw new UnauthorizedAccessException("غير مسموح بالدخول من هذا النطاق");
             }
         }
 
@@ -142,24 +158,49 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         await _db.SaveChangesAsync(ct);
 
         var permissionsList = new List<string>();
+        var allowedDomainsList = new List<string>();
+        var allowedNavbarItemsList = new List<string>();
         foreach (var ur in user.UserRoles)
         {
-            if (ur.Role != null && !string.IsNullOrEmpty(ur.Role.PermissionsJson))
+            if (ur.Role != null)
             {
-                try
+                if (!string.IsNullOrEmpty(ur.Role.PermissionsJson))
                 {
-                    var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
-                    if (perms != null)
+                    try
                     {
-                        permissionsList.AddRange(perms);
+                        var perms = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.PermissionsJson);
+                        if (perms != null)
+                        {
+                            permissionsList.AddRange(perms);
+                        }
                     }
+                    catch { /* ignore invalid JSON */ }
                 }
-                catch { /* ignore invalid JSON */ }
+
+                if (!string.IsNullOrEmpty(ur.Role.AllowedDomain))
+                {
+                    allowedDomainsList.Add(ur.Role.AllowedDomain);
+                }
+
+                if (!string.IsNullOrEmpty(ur.Role.AllowedNavbarItemsJson))
+                {
+                    try
+                    {
+                        var items = System.Text.Json.JsonSerializer.Deserialize<List<string>>(ur.Role.AllowedNavbarItemsJson);
+                        if (items != null)
+                        {
+                            allowedNavbarItemsList.AddRange(items);
+                        }
+                    }
+                    catch { /* ignore invalid JSON */ }
+                }
             }
         }
         var permissions = permissionsList.Distinct().ToArray();
+        var allowedDomains = allowedDomainsList.Distinct().ToArray();
+        var allowedNavbarItems = allowedNavbarItemsList.Distinct().ToArray();
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug);
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug, allowedDomains, allowedNavbarItems);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(accessToken, refreshToken, userDto));
     }
 }

@@ -144,9 +144,16 @@ export function AssistantShellChrome({
 
   useRootOverscrollBackground();
 
-  const filteredNavItems = navItems.filter((item) =>
+  let filteredNavItems = navItems.filter((item) =>
     !item.permission || hasPermission(item.permission)
   );
+
+  const allowedNavbarItems = user?.allowedNavbarItems;
+  if (allowedNavbarItems && allowedNavbarItems.length > 0) {
+    filteredNavItems = filteredNavItems.filter((item) =>
+      allowedNavbarItems.includes(item.href)
+    );
+  }
 
   const getWorkspaceLabel = () => {
     const roles = user?.roles || [];

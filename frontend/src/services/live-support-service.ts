@@ -3,6 +3,9 @@ import apiClient from './api-client';
 export type LiveSupportConversationStatus = 'Waiting' | 'Assigned' | 'Active' | 'Closed' | 'Abandoned';
 export type LiveSupportParticipantType = 'Student' | 'Guest';
 export type LiveSupportMessageType = 'Text' | 'Image' | 'Pdf' | 'Audio' | 'System';
+export type LiveSupportAIMode = 'AiActive' | 'HumanQueued' | 'HumanAssigned' | 'AiResolved' | 'Failed' | 'Closed';
+export type LiveSupportAITurnState = 'Queued' | 'Processing' | 'ProviderCompleted' | 'Completed' | 'Failed' | 'DiscardedAfterHandoff' | 'DiscardedAfterDisable' | 'Cancelled';
+export type LiveSupportPendingDecisionKind = 'Action' | 'Handoff' | 'AccountCreation' | 'Resolution';
 
 export interface LiveSupportAvailability {
   isAvailable: boolean;
@@ -115,11 +118,39 @@ export interface LiveSupportAIVerificationSession {
   maxAttempts: number;
 }
 
+export interface LiveSupportAIPendingDecision {
+  id: string;
+  kind: LiveSupportPendingDecisionKind;
+  actionKey: string;
+  safeProposalJson: string;
+  status: 'PendingConfirmation' | 'Confirmed' | 'Cancelled' | 'Expired' | 'Invalidated' | 'Executing' | 'Succeeded' | 'Failed';
+  expiresAt: string;
+  failureCode?: string | null;
+}
+
+export interface LiveSupportAIParticipantSnapshot {
+  conversationId: string;
+  status: LiveSupportConversationStatus;
+  aiMode?: LiveSupportAIMode | null;
+  lastSequence: number;
+  canSend: boolean;
+  aiTurnState?: LiveSupportAITurnState | null;
+  pendingDecision?: LiveSupportAIPendingDecision | null;
+  verification?: LiveSupportAIVerificationSession | null;
+  queuePosition?: number | null;
+  messages: LiveSupportMessage[];
+}
+
 export interface LiveSupportRegisterGuestPayload {
+  decisionId: string;
+  idempotencyKey?: string;
   fullName: string;
   phoneNumber: string;
-  password?: string;
+  password: string;
+  dateOfBirth: string;
+  gender: 'Male' | 'Female';
   governorate: string;
+  address: string;
   educationStage: string;
   gradeLevel: string;
   schoolName: string;
@@ -130,6 +161,11 @@ interface ApiResponse<T> {
   success: boolean;
   message?: string;
   data: T;
+}
+
+export function getLiveSupportApiError(error: unknown, fallback: string) {
+  const response = (error as { response?: { data?: { message?: unknown } } } | null)?.response;
+  return typeof response?.data?.message === 'string' ? response.data.message : fallback;
 }
 
 export const liveSupportService = {
@@ -153,6 +189,9 @@ export const liveSupportService = {
 
   getMessages: (conversationId: string) =>
     liveSupportService.getMessagePage(conversationId).then((page) => page.items),
+
+  getParticipantAISnapshot: (conversationId: string) =>
+    apiClient.get<ApiResponse<LiveSupportAIParticipantSnapshot>>(`/live-support/participant/conversations/${conversationId}/ai/snapshot`).then((response) => response.data.data),
 
   uploadAttachment: (conversationId: string, file: File) => {
     const body = new FormData(); body.append('file', file);
@@ -216,11 +255,11 @@ export const liveSupportService = {
   executeStudentAction: <TPayload extends Record<string, unknown>, TResult>(conversationId: string, actionKey: string, idempotencyKey: string, confirmationVersion: string, payload: TPayload) =>
     apiClient.post<ApiResponse<TResult>>(`/live-support/staff/conversations/${conversationId}/actions/${actionKey}`, { confirmationVersion, payload }, { headers: { 'Idempotency-Key': idempotencyKey } }).then((response) => response.data.data),
 
-  confirmAIAction: (conversationId: string, proposalId: string) =>
-    apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/live-support/participant/conversations/${conversationId}/ai/actions/${proposalId}/confirm`).then((response) => response.data.data),
+  confirmAIAction: (conversationId: string, proposalId: string, idempotencyKey = crypto.randomUUID()) =>
+    apiClient.post<ApiResponse<{ decisionId: string; executionId: string; status: string }>>(`/live-support/participant/conversations/${conversationId}/ai/decisions/${proposalId}/confirm`, { idempotencyKey }).then((response) => response.data.data),
 
-  cancelAIAction: (conversationId: string, proposalId: string) =>
-    apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/live-support/participant/conversations/${conversationId}/ai/actions/${proposalId}/cancel`).then((response) => response.data.data),
+  cancelAIAction: (conversationId: string, proposalId: string, idempotencyKey = crypto.randomUUID()) =>
+    apiClient.post<ApiResponse<{ decisionId: string; status: string }>>(`/live-support/participant/conversations/${conversationId}/ai/decisions/${proposalId}/cancel`, { idempotencyKey }).then((response) => response.data.data),
 
   confirmAIHandoff: (conversationId: string) =>
     apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/live-support/participant/conversations/${conversationId}/ai/handoff/confirm`).then((response) => response.data.data),
@@ -228,18 +267,18 @@ export const liveSupportService = {
   cancelAIHandoff: (conversationId: string) =>
     apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/live-support/participant/conversations/${conversationId}/ai/handoff/cancel`).then((response) => response.data.data),
 
-  aiVerificationLookup: (conversationId: string, payload: { lookupKey: string; value: string }) =>
-    apiClient.post<ApiResponse<LiveSupportAIVerificationSession>>(`/live-support/participant/conversations/${conversationId}/ai/verification/lookup`, payload).then((response) => response.data.data),
+  aiVerificationLookup: (conversationId: string, payload: { lookupKey: string; value: string; idempotencyKey?: string }) =>
+    apiClient.post<ApiResponse<LiveSupportAIVerificationSession>>(`/live-support/participant/conversations/${conversationId}/ai/verification/lookup`, { ...payload, idempotencyKey: payload.idempotencyKey ?? crypto.randomUUID() }).then((response) => response.data.data),
 
-  aiVerificationAnswer: (conversationId: string, payload: { answer: string }) =>
-    apiClient.post<ApiResponse<LiveSupportAIVerificationSession>>(`/live-support/participant/conversations/${conversationId}/ai/verification/answer`, payload).then((response) => response.data.data),
+  aiVerificationAnswer: (conversationId: string, payload: { sessionId: string; answer: string; idempotencyKey?: string }) =>
+    apiClient.post<ApiResponse<LiveSupportAIVerificationSession>>(`/live-support/participant/conversations/${conversationId}/ai/verification/${payload.sessionId}/answer`, { answer: payload.answer, idempotencyKey: payload.idempotencyKey ?? crypto.randomUUID() }).then((response) => response.data.data),
 
   confirmAIRegistration: (conversationId: string, payload: LiveSupportRegisterGuestPayload) =>
-    apiClient.post<ApiResponse<{ success: boolean; message: string }>>(`/live-support/participant/conversations/${conversationId}/ai/account-proposal/confirm`, payload).then((response) => response.data.data),
+    apiClient.post<ApiResponse<{ userId: string; status: string }>>(`/live-support/participant/conversations/${conversationId}/ai/decisions/${payload.decisionId}/register`, { ...payload, idempotencyKey: payload.idempotencyKey ?? crypto.randomUUID() }).then((response) => response.data.data),
 
   getActivePendingAction: (conversationId: string) =>
-    apiClient.get<ApiResponse<any>>(`/live-support/participant/conversations/${conversationId}/ai/pending-action`).then((response) => response.data.data),
+    apiClient.get<ApiResponse<LiveSupportAIPendingDecision | null>>(`/live-support/participant/conversations/${conversationId}/ai/pending-action`).then((response) => response.data.data),
 
   getActiveVerificationSession: (conversationId: string) =>
-    apiClient.get<ApiResponse<LiveSupportAIVerificationSession>>(`/live-support/participant/conversations/${conversationId}/ai/verification/session`).then((response) => response.data.data),
+    apiClient.get<ApiResponse<LiveSupportAIVerificationSession | null>>(`/live-support/participant/conversations/${conversationId}/ai/verification/session`).then((response) => response.data.data),
 };

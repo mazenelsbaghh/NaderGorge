@@ -1,0 +1,345 @@
+openapi: 3.1.0
+info:
+  title: AI Live Support Production Completion
+  version: 146.1.0
+  description: Compatibility-preserving participant, admin, and worker completion contract. Existing Feature 142 endpoints remain valid unless refined here.
+servers:
+  - url: /api/v1
+paths:
+  /live-support/participant/conversations/{conversationId}/snapshot:
+    get:
+      summary: Return authoritative participant reconnect state
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - in: query
+          name: afterSequence
+          schema: { type: integer, format: int64, minimum: 0 }
+      responses:
+        '200':
+          description: Participant-owned snapshot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiParticipantSnapshot'
+              }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /live-support/participant/conversations/{conversationId}/messages:
+    post:
+      summary: Persist one participant message and atomically schedule an AI turn when eligible
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, minLength: 8, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [clientMessageId, content]
+              properties:
+                clientMessageId: { type: string, minLength: 8, maxLength: 100 }
+                content: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        '200': { description: Compatible replay, returns existing logical result }
+        '201': { description: Message persisted and eligible AI turn scheduled }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /live-support/participant/conversations/{conversationId}/ai/actions/{decisionId}/confirm:
+    post:
+      summary: Confirm one participant-owned AI action
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/DecisionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Executed or compatible replay }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '410': { description: Decision expired or invalidated }
+        '422': { $ref: '#/components/responses/Validation' }
+  /live-support/participant/conversations/{conversationId}/ai/actions/{decisionId}/cancel:
+    post:
+      summary: Cancel one pending AI action
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/DecisionId'
+      responses:
+        '200': { description: Cancelled or compatible replay }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /live-support/participant/conversations/{conversationId}/ai/handoff/{decisionId}/confirm:
+    post:
+      summary: Confirm normal human handoff
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/DecisionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Human queued/assigned or compatible replay }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '410': { description: Handoff proposal expired or invalidated }
+  /live-support/participant/conversations/{conversationId}/ai/handoff/{decisionId}/cancel:
+    post:
+      summary: Reject normal handoff and continue AI when still eligible
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/DecisionId'
+      responses:
+        '200': { description: Cancelled and AI remains active }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /live-support/participant/conversations/{conversationId}/ai/verification/lookup:
+    post:
+      summary: Start exact-value non-disclosing lookup
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [lookupKey, value]
+              properties:
+                lookupKey: { type: string, minLength: 1, maxLength: 100 }
+                value: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200':
+          description: Generic state shape regardless of account match count
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiVerificationState' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /live-support/participant/conversations/{conversationId}/ai/verification/{sessionId}/answer:
+    post:
+      summary: Submit one transient verification answer
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [answer]
+              properties:
+                answer: { type: string, minLength: 1, maxLength: 300, writeOnly: true }
+      responses:
+        '200':
+          description: Generic next challenge, verified result, or handed-off result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiVerificationState' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /live-support/participant/conversations/{conversationId}/ai/registration/{decisionId}/confirm:
+    post:
+      summary: Submit secure registration directly to backend
+      parameters:
+        - $ref: '#/components/parameters/ConversationId'
+        - $ref: '#/components/parameters/DecisionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SecureRegistrationRequest' }
+      responses:
+        '200': { description: Compatible replay of prior success }
+        '201': { description: Account/profile created and conversation linked }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /live-support/admin/ai/config:
+    get:
+      summary: Return published/draft policy, catalogs, knowledge summary, and readiness
+      responses:
+        '200': { description: Built-in Admin configuration }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      summary: Save a version-checked draft after catalog/privacy validation
+      responses:
+        '200': { description: Draft saved }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /live-support/admin/ai/publish:
+    post:
+      summary: Atomically publish one immutable active policy
+      responses:
+        '200': { description: Published policy }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+  /live-support/admin/ai/preview:
+    post:
+      summary: Evaluate policy behavior with zero business writes
+      responses:
+        '200': { description: Validated proposed decision and evidence }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/Validation' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+  /live-support/admin/ai/disable:
+    post:
+      summary: Block new AI admission and begin bounded reconciliation
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202': { description: Disable gate committed and reconciliation scheduled }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /live-support/admin/ai/enable:
+    post:
+      summary: Enable the valid published policy for eligible AI conversations
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200': { description: Enabled or compatible replay }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /internal/callbacks/live-support-ai/turns/{turnId}/claim:
+    post:
+      summary: Claim a durable turn and receive bounded backend-built context
+      security: [{ internalToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TurnId'
+      responses:
+        '200': { description: Versioned worker context }
+        '404': { description: Unknown turn }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { description: Context cannot be safely bounded }
+  /internal/callbacks/live-support-ai/turns/{turnId}/complete:
+    post:
+      summary: Persist or safely discard one validated worker decision
+      security: [{ internalToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TurnId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkerCompletionRequest' }
+      responses:
+        '200': { description: Completed, replayed, or discarded with safe outcome }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '413': { description: Body too large }
+        '422': { $ref: '#/components/responses/Validation' }
+  /internal/callbacks/live-support-ai/turns/{turnId}/fail:
+    post:
+      summary: Record a safe provider/worker failure and trigger recovery policy
+      security: [{ internalToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TurnId'
+      responses:
+        '200': { description: Failure recorded or replayed }
+        '409': { $ref: '#/components/responses/Conflict' }
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+  parameters:
+    ConversationId:
+      in: path
+      name: conversationId
+      required: true
+      schema: { type: string, format: uuid }
+    DecisionId:
+      in: path
+      name: decisionId
+      required: true
+      schema: { type: string, format: uuid }
+    TurnId:
+      in: path
+      name: turnId
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 100 }
+  schemas:
+    ApiParticipantSnapshot:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: '#/components/schemas/ParticipantSnapshot' }
+    ParticipantSnapshot:
+      type: object
+      additionalProperties: false
+      required: [conversationId, status, aiMode, lastSequence, canSend, messages]
+      properties:
+        conversationId: { type: string, format: uuid }
+        status: { type: string }
+        aiMode: { type: [string, 'null'], enum: [AiActive, AiResolved, HumanQueued, HumanAssigned, null] }
+        lastSequence: { type: integer, format: int64 }
+        canSend: { type: boolean }
+        aiTurnState: { type: [string, 'null'] }
+        pendingDecision: { type: [object, 'null'] }
+        verification: { anyOf: [{ $ref: '#/components/schemas/VerificationState' }, { type: 'null' }] }
+        queuePosition: { type: [integer, 'null'], minimum: 1 }
+        messages: { type: array, items: { type: object } }
+    ApiVerificationState:
+      type: object
+      required: [data]
+      properties:
+        data: { $ref: '#/components/schemas/VerificationState' }
+    VerificationState:
+      type: object
+      additionalProperties: false
+      required: [sessionId, status, attemptCount, maxAttempts]
+      properties:
+        sessionId: { type: string, format: uuid }
+        status: { type: string, enum: [AwaitingLookup, Challenging, Verified, Failed, Exhausted, Ambiguous, Cancelled, HandedOff] }
+        promptText: { type: [string, 'null'], maxLength: 300 }
+        attemptCount: { type: integer, minimum: 0 }
+        maxAttempts: { type: integer, minimum: 1, maximum: 10 }
+    SecureRegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [fullName, phoneNumber, password, governorate, educationStage, gradeLevel, schoolName, parentPhoneNumber]
+      properties:
+        fullName: { type: string, minLength: 4, maxLength: 200 }
+        phoneNumber: { type: string, minLength: 10, maxLength: 20 }
+        password: { type: string, minLength: 8, maxLength: 128, writeOnly: true }
+        governorate: { type: string, minLength: 1, maxLength: 100 }
+        educationStage: { type: string, minLength: 1, maxLength: 100 }
+        gradeLevel: { type: string, minLength: 1, maxLength: 100 }
+        schoolName: { type: string, minLength: 1, maxLength: 200 }
+        parentPhoneNumber: { type: string, minLength: 10, maxLength: 20 }
+    WorkerCompletionRequest:
+      type: object
+      additionalProperties: false
+      required: [schemaVersion, expectedConversationVersion, expectedPolicyVersionId, decision, decisionHash, callbackIdempotencyKey, provider, model, latencyMs]
+      properties:
+        schemaVersion: { const: '1' }
+        expectedConversationVersion: { type: integer, format: int64 }
+        expectedPolicyVersionId: { type: string, format: uuid }
+        decision: { type: object }
+        decisionHash: { type: string, minLength: 64, maxLength: 64 }
+        callbackIdempotencyKey: { type: string, minLength: 16, maxLength: 100 }
+        provider: { type: string, minLength: 1, maxLength: 100 }
+        model: { type: string, minLength: 1, maxLength: 150 }
+        providerResponseId: { type: [string, 'null'], maxLength: 200 }
+        inputTokenCount: { type: [integer, 'null'], minimum: 0 }
+        outputTokenCount: { type: [integer, 'null'], minimum: 0 }
+        latencyMs: { type: integer, minimum: 0 }
+  responses:
+    Unauthorized:
+      description: Authentication required
+    Forbidden:
+      description: Authenticated actor lacks participant ownership, staff ownership, or Admin role
+    Conflict:
+      description: Stable safe conflict code; no partial write
+    Validation:
+      description: Field-level or decision validation failed; no partial write
+    RateLimited:
+      description: Rate limit exceeded with retry guidance

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { UserCheck, X, Headphones } from 'lucide-react';
+import { getLiveSupportApiError } from '@/services/live-support-service';
 
 interface AIHandoffConfirmationProps {
   action: {
@@ -18,6 +19,8 @@ interface AIHandoffConfirmationProps {
 export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoffConfirmationProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const primaryButton = useRef<HTMLButtonElement>(null);
+  const expired = new Date(action.expiresAt) <= new Date();
 
   let safeSummary = '';
   try {
@@ -25,7 +28,7 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
     if (parsed.safeSummaryAr) {
       safeSummary = parsed.safeSummaryAr;
     }
-  } catch (e) {
+    } catch {
     // Ignore JSON parse errors
   }
 
@@ -34,10 +37,11 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
     setError('');
     try {
       await onConfirm();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'فشلت عملية التحويل للموظف البشري.');
+    } catch (error) {
+      setError(getLiveSupportApiError(error, 'فشلت عملية التحويل للموظف البشري.'));
     } finally {
       setBusy(false);
+      primaryButton.current?.focus();
     }
   };
 
@@ -46,10 +50,11 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
     setError('');
     try {
       await onCancel();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'فشل إلغاء طلب التحويل.');
+    } catch (error) {
+      setError(getLiveSupportApiError(error, 'فشل إلغاء طلب التحويل.'));
     } finally {
       setBusy(false);
+      primaryButton.current?.focus();
     }
   };
 
@@ -67,6 +72,7 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
             <br />
             هل توافق على التحويل؟
           </p>
+          <p className="mt-2 text-xs text-slate-500">ينتهي الطلب: <time dateTime={action.expiresAt}>{new Date(action.expiresAt).toLocaleTimeString('ar-EG')}</time></p>
         </div>
       </div>
 
@@ -79,18 +85,19 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
       <div className="mt-4 flex gap-2">
         <button
           type="button"
-          disabled={busy}
+          ref={primaryButton}
+          disabled={busy || expired}
           onClick={handleConfirm}
-          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-700 text-xs font-bold text-white hover:bg-amber-800 disabled:opacity-50 transition-colors"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-amber-700 text-xs font-bold text-white hover:bg-amber-800 disabled:opacity-50 transition-colors"
         >
           <UserCheck size={14} />
           <span>نعم، حوّلني</span>
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || expired}
           onClick={handleCancel}
-          className="flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          className="flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
         >
           <X size={14} />
           <span>لا، استمر مع المساعد</span>

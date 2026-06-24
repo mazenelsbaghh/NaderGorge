@@ -11,7 +11,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
 
-public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAIAdminService
+public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKnowledgeService knowledge) : ILiveSupportAIAdminService
 {
     public LiveSupportAICatalogsDto GetCatalogs() => LiveSupportAICatalog.Snapshot();
 
@@ -75,12 +75,28 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
 
     public async Task DisableAsync(Guid adminUserId, CancellationToken ct)
     {
-        _ = adminUserId;
+        await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var published = await db.LiveSupportAIPolicyVersions.SingleOrDefaultAsync(x => x.Status == LiveSupportAIPolicyStatus.Published && x.IsEnabled, ct);
-        if (published is null) return;
+        if (published is null) { await transaction.CommitAsync(ct); return; }
         published.IsEnabled = false;
         published.Version++;
+        var now = DateTime.UtcNow;
+        foreach (var state in await db.LiveSupportAIConversationStates.Where(item => item.Mode == LiveSupportAIMode.AiActive).ToListAsync(ct))
+        {
+            state.DisableRequestedAt = now;
+            state.Version++;
+        }
+        db.AuditLogs.Add(new NaderGorge.Domain.Entities.AuditLog
+        {
+            Action = "DisableAILiveSupport",
+            EntityType = "LiveSupportAIPolicyVersion",
+            EntityId = published.Id,
+            PerformedByUserId = adminUserId,
+            NewValues = JsonSerializer.Serialize(new { status = "RecoveryScheduled" }),
+            IpAddress = "AdminAI"
+        });
         await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
     }
 
     public async Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, CancellationToken ct)
@@ -103,7 +119,8 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
             "last-24h" => DateTime.UtcNow.AddDays(-1),
             "last-7d" => DateTime.UtcNow.AddDays(-7),
             "last-30d" => DateTime.UtcNow.AddDays(-30),
-            _ => null
+            "all" => null,
+            _ => throw new LiveSupportAIAdminException("INVALID_PERIOD", "الفترة المطلوبة غير مدعومة.")
         };
 
         var activeQuery = db.LiveSupportAIConversationStates.AsNoTracking();
@@ -198,6 +215,45 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db) : ILiveSupportAI
         }
 
         return result;
+    }
+
+    public async Task<LiveSupportAIPreviewResultDto> PreviewAsync(LiveSupportAIPreviewRequestDto request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(request.Message) || request.Message.Length > LiveSupportAIContractLimits.MaxMessageLength)
+            throw new LiveSupportAIAdminException("PREVIEW_MESSAGE_INVALID", "رسالة المعاينة غير صالحة.");
+        var policy = request.PolicyVersionId.HasValue
+            ? await db.LiveSupportAIPolicyVersions.AsNoTracking().SingleOrDefaultAsync(item => item.Id == request.PolicyVersionId, ct)
+            : await db.LiveSupportAIPolicyVersions.AsNoTracking().Where(item => item.Status == LiveSupportAIPolicyStatus.Published).OrderByDescending(item => item.VersionNumber).FirstOrDefaultAsync(ct);
+        if (policy is null) throw new LiveSupportAIAdminException("POLICY_NOT_FOUND", "لا توجد سياسة للمعاينة.");
+        var documents = await knowledge.SearchPublishedAsync(policy.Id, request.Message, LiveSupportAIContractLimits.MaxKnowledgeDocuments, LiveSupportAIContractLimits.MaxContextCharacters, ct);
+        return new LiveSupportAIPreviewResultDto(policy.Id, true, documents.Count,
+            ["reply", "propose_action", "request_verification", "propose_account_creation", "request_resolution", "handoff"],
+            "DRY_RUN_CONTEXT_VALIDATED");
+    }
+
+    public async Task<LiveSupportAIEvidencePageDto> GetEvidenceAsync(string period, string? cursor, int pageSize, CancellationToken ct)
+    {
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var threshold = period switch
+        {
+            "last-24h" => DateTime.UtcNow.AddDays(-1), "last-7d" => DateTime.UtcNow.AddDays(-7),
+            "last-30d" => DateTime.UtcNow.AddDays(-30), "all" => DateTime.MinValue,
+            _ => throw new LiveSupportAIAdminException("INVALID_PERIOD", "الفترة المطلوبة غير مدعومة.")
+        };
+        DateTime? before = null;
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            try { before = new DateTime(long.Parse(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(cursor))), DateTimeKind.Utc); }
+            catch { throw new LiveSupportAIAdminException("INVALID_CURSOR", "مؤشر الصفحة غير صالح."); }
+        }
+        var query = db.LiveSupportAITurns.AsNoTracking().Where(item => item.QueuedAt >= threshold);
+        if (before.HasValue) query = query.Where(item => item.QueuedAt < before.Value);
+        var turns = await query.OrderByDescending(item => item.QueuedAt).ThenByDescending(item => item.Id).Take(pageSize + 1).ToListAsync(ct);
+        var hasMore = turns.Count > pageSize;
+        if (hasMore) turns.RemoveAt(turns.Count - 1);
+        var items = turns.Select(item => new LiveSupportAIEvidenceItemDto(item.Id, item.ConversationId, item.QueuedAt, item.Status.ToString(), item.DecisionType?.ToString(), item.FailureCode, item.Provider, item.Model, item.CallbackAttemptCount)).ToList();
+        var next = hasMore && turns.Count > 0 ? Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(turns[^1].QueuedAt.Ticks.ToString())) : null;
+        return new LiveSupportAIEvidencePageDto(items, next);
     }
 
 
