@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Bot, LoaderCircle, Save } from 'lucide-react';
+import { LoaderCircle, Save } from 'lucide-react';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
 import { useAuthStore } from '@/stores/auth-store';
 import {

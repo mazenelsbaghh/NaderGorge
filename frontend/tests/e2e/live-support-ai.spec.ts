@@ -393,7 +393,7 @@ test.describe("AI live support staff and administration", () => {
     await page.waitForTimeout(500);
     
     // Focus settings tab
-    const settingsTab = page.getByRole("button", { name: "الإعدادات وقاعدة القرار" });
+    const settingsTab = page.getByRole("tab", { name: "الإعدادات وقاعدة القرار" });
     await expect(settingsTab).toBeVisible();
     await settingsTab.focus();
     
@@ -432,6 +432,7 @@ test.describe("AI live support staff and administration", () => {
   });
 
   test("staff workspace: linked student context lazy-loading and action execution", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
     const conversation = {
       id: conversationId,
       status: "Assigned",
@@ -510,8 +511,9 @@ test.describe("AI live support staff and administration", () => {
 
     await page.goto("http://staff.localhost:3000/assistant/live-support");
     
-    // Select the conversation
-    await page.getByText("مشكلة بالرصيد").first().click();
+    // The single assigned conversation opens automatically on tablet.
+    await expect(page.getByRole("heading", { name: "مشكلة بالرصيد" })).toBeVisible();
+    await page.getByRole("button", { name: "ملف الطالب" }).click();
     
     // Toggle Profile Context lazy loading
     await page.getByRole("button", { name: "الملف الشخصي" }).click();
@@ -530,13 +532,60 @@ test.describe("AI live support staff and administration", () => {
     // Confirm execution
     await page.getByRole("button", { name: "تأكيد تعديل الرصيد" }).click();
     await expect(page.getByRole("status")).toContainText("تم تعديل الرصيد بنجاح");
-    await page.getByRole("button", { name: "إغلاق" }).click();
+    await page.getByLabel("إغلاق").click();
     await page.getByRole("button", { name: "تعديل الرصيد" }).click();
     await page.getByLabel("السبب").fill("إعادة محاولة");
     await page.getByLabel("المبلغ (+ أو -)").fill("10");
     await page.getByRole("button", { name: "مراجعة وتأكيد" }).click();
     await page.getByRole("button", { name: "تأكيد تعديل الرصيد" }).click();
-    await expect(page.getByRole("status")).toContainText("تغيرت حالة الطالب");
+    await expect(page.getByRole("dialog").getByRole("status")).toContainText("تغيرت حالة الطالب");
+  });
+
+  test("staff workspace: ownership loss immediately disables replies and actions", async ({ page }) => {
+    const conversation = {
+      id: conversationId,
+      status: "Assigned",
+      participantType: "Student",
+      subject: "محادثة ستُنقل",
+      createdAt: new Date().toISOString(),
+      version: 1,
+      canSend: true,
+      canRate: false,
+      currentOwnerUserId: "20000000-0000-0000-0000-000000000000",
+      linkedStudentUserId: "student-id-1"
+    };
+    let bootstrapCalls = 0;
+    await page.route("**/api/live-support/staff/bootstrap", route => {
+      bootstrapCalls += 1;
+      const stillOwned = bootstrapCalls <= 3;
+      return route.fulfill({
+        contentType: "application/json",
+        headers: getHeaders(route),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            isCheckedIn: true,
+            isEnabled: true,
+            activeLoad: stillOwned ? 1 : 0,
+            capacity: 5,
+            waitingCount: 0,
+            conversations: stillOwned ? [conversation] : []
+          }
+        })
+      });
+    });
+    await page.route("**/api/live-support/staff/conversations/" + conversationId + "/messages*", route => route.fulfill({
+      contentType: "application/json",
+      headers: getHeaders(route),
+      body: JSON.stringify({ success: true, data: [] })
+    }));
+
+    await page.goto("http://staff.localhost:3000/assistant/live-support");
+    await expect(page.getByRole("heading", { name: "محادثة ستُنقل" })).toBeVisible();
+    await expect(page.getByText("تم نقل ملكية المحادثة. تم إيقاف الرد والإجراءات فورًا")).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByLabel("رد موظف الدعم")).toBeDisabled();
+    await expect(page.getByRole("button", { name: "تحويل" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "إغلاق" })).toBeDisabled();
   });
 
   test("admin settings: policy publishing, conflict verification, and emergency disable", async ({ page }) => {
@@ -590,12 +639,14 @@ test.describe("AI live support staff and administration", () => {
       totalMessagesSent: 154,
       successfulActions: 19
     };
+    const savedDraft = { ...aiConfig.draft, version: 6 };
+    const publishedPolicy = { ...savedDraft, id: "published-id-2", status: "Published", isEnabled: true, version: 7 };
 
     // Mock config endpoints
     await page.route("**/api/live-support/admin/ai/config", route => route.fulfill({
       contentType: "application/json",
       headers: getHeaders(route),
-      body: JSON.stringify({ success: true, data: aiConfig })
+      body: JSON.stringify({ success: true, data: route.request().method() === "PUT" ? savedDraft : aiConfig })
     }));
 
     await page.route("**/api/live-support/admin/ai/stats*", route => route.fulfill({
@@ -617,28 +668,33 @@ test.describe("AI live support staff and administration", () => {
       body: JSON.stringify({ success: true, message: "Reconciliation started" })
     }));
 
+    let publishAttempts = 0;
     await page.route("**/api/live-support/admin/ai/publish", route => {
-      // Simulate conflict if wrong version
+      publishAttempts += 1;
       return route.fulfill({
-        status: 409,
+        status: publishAttempts === 1 ? 200 : 409,
         contentType: "application/json",
         headers: getHeaders(route),
-        body: JSON.stringify({ success: false, message: "VERSION_CONFLICT" })
+        body: JSON.stringify(publishAttempts === 1
+          ? { success: true, data: publishedPolicy }
+          : { success: false, message: "VERSION_CONFLICT" })
       });
     });
 
     await page.goto("http://admin.localhost:3000/admin/live-support/ai");
 
     // Verify stats tab
-    await page.getByRole("button", { name: "الإحصائيات والأدلة" }).click();
+    await page.getByRole("tab", { name: "الإحصائيات والأدلة" }).click();
     await expect(page.getByText("١٢", { exact: true })).toBeVisible(); // active conversations
     await expect(page.getByText("٤٥", { exact: true })).toBeVisible(); // resolved
     await expect(page.getByText("١٩", { exact: true })).toBeVisible(); // successful actions
 
     // Return to settings
-    await page.getByRole("button", { name: "الإعدادات وقاعدة القرار" }).click();
+    await page.getByRole("tab", { name: "الإعدادات وقاعدة القرار" }).click();
 
-    // Verify publish version conflict handling
+    // Verify a successful draft save and publish before the conflict path.
+    await page.getByRole("button", { name: "حفظ ونشر وتفعيل" }).click();
+    await expect(page.getByRole("main").getByRole("status")).toContainText("تم حفظ الإعدادات ونشرها");
     await page.getByRole("button", { name: "حفظ ونشر وتفعيل" }).click();
     await expect(page.getByRole("main").getByRole("status").filter({ hasText: "VERSION_CONFLICT" })).toBeVisible();
 
@@ -674,6 +730,8 @@ test.describe("AI live support staff and administration", () => {
   test("admin AI: knowledge, zero-write preview, evidence, and non-admin denial", async ({ page }) => {
     await mockAdminConfiguration(page);
     await page.route("**/api/live-support/admin/ai/knowledge", route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: [{ entryId: "entry-1", revisionId: "revision-1", title: "سياسة الاسترجاع", revisionNumber: 1, content: "المحتوى", isPublished: true }] }) }));
+    await page.route("**/api/live-support/admin/ai/knowledge/revisions", route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { entryId: "entry-2", revisionId: "revision-2", title: "سياسة الحضور", revisionNumber: 1, content: "تفاصيل الحضور", isPublished: true } }) }));
+    await page.route("**/api/live-support/admin/ai/knowledge/links", route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true }) }));
     await page.route("**/api/live-support/admin/ai/preview", route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { policyVersionId: "pub-policy-1", dryRun: true, knowledgeDocuments: 1, allowedDecisionTypes: ["reply"], safeOutcome: "DRY_RUN_DECISION_VALIDATED", decision: { schemaVersion: "1", type: "reply", messageAr: "هذه معاينة آمنة." }, decisionHash: "a".repeat(64), provider: "vertex", model: "gemini", latencyMs: 25 } }) }));
     await page.route("**/api/live-support/admin/ai/evidence*", route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { items: [{ turnId: "turn-1", conversationId, at: new Date().toISOString(), status: "Completed", decisionType: "Reply", provider: "vertex", model: "gemini", callbackAttempts: 1 }] } }) }));
     await page.route("**/api/live-support/admin/ai/stats*", route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { activeConversations: 0, resolvedIssues: 1, handoffs: 0, totalMessagesSent: 1, successfulActions: 0 } }) }));
@@ -681,6 +739,13 @@ test.describe("AI live support staff and administration", () => {
     await page.goto("http://admin.localhost:3000/admin/live-support/ai");
     await page.getByRole("tab", { name: "المعرفة والمعاينة" }).click();
     await expect(page.getByText("سياسة الاسترجاع")).toBeVisible();
+    await page.getByLabel("العنوان").fill("سياسة الحضور");
+    await page.getByLabel("المحتوى").fill("تفاصيل الحضور");
+    await page.getByRole("button", { name: "نشر المراجعة" }).click();
+    await expect(page.getByText("تم نشر مراجعة معرفة جديدة")).toBeVisible();
+    await page.getByLabel("سياسة الحضور").check();
+    await page.getByRole("button", { name: "ربط المحدد بالسياسة" }).click();
+    await expect(page.getByText("تم ربط المصادر بالسياسة المنشورة")).toBeVisible();
     await page.getByLabel("رسالة الاختبار").fill("ما هي سياسة الاسترجاع؟");
     await page.getByRole("button", { name: "تشغيل المعاينة" }).click();
     await expect(page.getByText("لا توجد تغييرات إنتاجية")).toBeVisible();
@@ -689,7 +754,7 @@ test.describe("AI live support staff and administration", () => {
 
     await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ id: 'staff-1', fullName: 'موظف', phone: '01000000000', roles: ['Staff'], permissions: [], profileComplete: true, allowedDomains: ['admin'] })));
     await page.reload();
-    await expect(page.getByRole('alert').filter({ hasText: 'متاحة لمدير النظام الأساسي فقط' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'غير مصرح بالدخول' })).toBeVisible();
   });
 
   test("admin intervention is explicit and audited through the server operation", async ({ page }) => {
@@ -698,16 +763,13 @@ test.describe("AI live support staff and administration", () => {
     await page.route("**/api/live-support/admin/dashboard", route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { waitingCount: 0, activeCount: 1, closedToday: 0, conversations: [conversation], staffPerformance: [] } }) }));
     await page.route(`**/api/live-support/admin/conversations/${conversationId}/timeline`, route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { conversation, items: [{ at: new Date().toISOString(), type: "AITurnFailed", actorName: null, summary: "فشل رد المساعد", safeDetails: "AI_PROVIDER_TIMEOUT" }] } }) }));
     await page.route(`**/api/live-support/staff/conversations/${conversationId}/messages*`, route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: [] }) }));
-    let interventionBody: Record<string, unknown> | undefined;
-    await page.route(`**/api/live-support/admin/conversations/${conversationId}/intervene`, async route => {
-      interventionBody = route.request().postDataJSON();
-      return route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { ...conversation, status: "Waiting" } }) });
-    });
+    await page.route(`**/api/live-support/admin/conversations/${conversationId}/intervene`, route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { ...conversation, status: "Waiting" } }) }));
     await page.goto("http://admin.localhost:3000/admin/live-support");
     await page.getByRole("button", { name: "فتح المحادثة" }).click();
-    await expect(page.getByText("AI_PROVIDER_TIMEOUT")).toBeVisible();
+    await expect(page.getByLabel("متابعة المحادثة").getByText("AI_PROVIDER_TIMEOUT")).toBeVisible();
     page.once('dialog', dialog => dialog.accept("إعادة توزيع بعد فشل المزود"));
+    const interventionRequest = page.waitForRequest(`**/api/live-support/admin/conversations/${conversationId}/intervene`);
     await page.getByRole("button", { name: "إعادة للطابور" }).click();
-    expect(interventionBody).toMatchObject({ operation: "queue", reason: "إعادة توزيع بعد فشل المزود" });
+    expect((await interventionRequest).postDataJSON()).toMatchObject({ operation: "queue", reason: "إعادة توزيع بعد فشل المزود" });
   });
 });

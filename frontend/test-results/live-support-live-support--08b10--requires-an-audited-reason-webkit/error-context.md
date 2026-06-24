@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - main [ref=e5]:
+        - generic [ref=e7]:
+          - generic [ref=e8]:
+            - button "التحويل إلى الوضع الداكن" [ref=e9]:
+              - img [ref=e10]
+              - generic [ref=e12]: Toggle theme
+            - link "الإعدادات" [ref=e13]:
+              - /url: /admin/settings
+              - img [ref=e14]
+            - button "تسجيل الخروج" [ref=e17]:
+              - img [ref=e18]
+          - generic [ref=e22]:
+            - paragraph [ref=e23]: خدمة العملاء
+            - heading "إدارة الدعم المباشر" [level=1] [ref=e24]
+            - paragraph [ref=e25]: تفعيل الخدمة، تحديد السعة لكل موظف، وجدول المواعيد الذي يظهر للزوار خارج أوقات الدعم.
+        - img [ref=e27]
+        - paragraph [ref=e31]: منصة مسار
+      - navigation "القائمة السفلية" [ref=e32]:
+        - generic [ref=e33]:
+          - link "الرئيسية" [ref=e34]:
+            - /url: /admin
+            - img [ref=e35]
+            - generic [ref=e38]: الرئيسية
+          - link "الطلاب" [ref=e39]:
+            - /url: /admin/students
+            - img [ref=e40]
+            - generic [ref=e45]: الطلاب
+          - link "المساعدين" [ref=e46]:
+            - /url: /admin/assistants
+            - img [ref=e47]
+            - generic [ref=e50]: المساعدين
+          - link "المديرين" [ref=e51]:
+            - /url: /admin/admins
+            - img [ref=e52]
+            - generic [ref=e64]: المديرين
+          - button "المزيد من صفحات الإدارة" [ref=e65]:
+            - img [ref=e66]
+            - generic [ref=e67]: المزيد
+  - alert [ref=e68]
+```

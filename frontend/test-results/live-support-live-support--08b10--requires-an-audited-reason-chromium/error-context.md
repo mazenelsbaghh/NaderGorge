@@ -1,0 +1,57 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - main [ref=e3]:
+    - generic [ref=e4]:
+      - navigation "القائمة الرئيسية" [ref=e5]:
+        - generic [ref=e6]:
+          - img [ref=e9]
+          - navigation [ref=e11]:
+            - link "الرئيسية" [ref=e12] [cursor=pointer]:
+              - /url: /admin
+              - img [ref=e13]
+            - button "شؤون الأعضاء" [ref=e17]:
+              - img [ref=e19]
+            - button "التعليم والمحتوى" [ref=e25]:
+              - img [ref=e27]
+            - button "العمليات والتحكم" [ref=e30]:
+              - img [ref=e32]
+            - button "الإدارة والمالية" [ref=e35]:
+              - img [ref=e37]
+            - generic [ref=e40]:
+              - button "الاتصال والتواصل" [ref=e41]:
+                - img [ref=e43]
+              - generic [ref=e47]:
+                - link "الدعم المباشر" [ref=e48] [cursor=pointer]:
+                  - /url: /admin/live-support
+                  - img [ref=e49]
+                - link "الدعم الذكي AI" [ref=e51] [cursor=pointer]:
+                  - /url: /admin/live-support/ai
+                  - img [ref=e52]
+                - link "التواصل الداخلي" [ref=e55] [cursor=pointer]:
+                  - /url: /admin/chat
+                  - img [ref=e56]
+                - link "الكول سنتر" [ref=e58] [cursor=pointer]:
+                  - /url: /admin/crm
+                  - img [ref=e59]
+            - button "التقارير والمراقبة" [ref=e64]:
+              - img [ref=e66]
+        - generic [ref=e68]:
+          - button "التحويل إلى الوضع الداكن" [ref=e70]:
+            - img [ref=e71]
+            - generic [ref=e73]: Toggle theme
+          - link "الإعدادات" [ref=e74] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e75]
+          - button "تسجيل الخروج" [ref=e78]:
+            - img [ref=e79]
+      - main [ref=e82]:
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: خدمة العملاء
+          - heading "إدارة الدعم المباشر" [level=1] [ref=e88]
+          - paragraph [ref=e89]: تفعيل الخدمة، تحديد السعة لكل موظف، وجدول المواعيد الذي يظهر للزوار خارج أوقات الدعم.
+        - img [ref=e91]
+        - paragraph [ref=e95]: منصة مسار
+  - alert [ref=e96]
+```

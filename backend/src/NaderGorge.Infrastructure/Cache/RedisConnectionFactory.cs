@@ -15,7 +15,9 @@ public class RedisConnectionFactory : IRedisConnectionFactory, IDisposable
 
     public RedisConnectionFactory(IConfiguration config)
     {
-        var connectionString = config["Redis:ConnectionString"] ?? "localhost:6379";
+        var connectionString = config["Redis:ConnectionString"]
+            ?? config.GetConnectionString("Redis")
+            ?? "localhost:6379,abortConnect=false";
         _connection = new Lazy<IConnectionMultiplexer>(() =>
             ConnectionMultiplexer.Connect(connectionString));
     }

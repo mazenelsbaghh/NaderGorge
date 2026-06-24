@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - navigation "قائمة المساعد" [ref=e4]:
+      - generic [ref=e5]:
+        - img [ref=e8]
+        - navigation [ref=e10]:
+          - link [ref=e11] [cursor=pointer]:
+            - /url: /assistant/dashboard
+            - img [ref=e12]
+          - link [ref=e15] [cursor=pointer]:
+            - /url: /assistant/live-support
+            - img [ref=e16]
+          - link [ref=e18] [cursor=pointer]:
+            - /url: /assistant/attendance
+            - img [ref=e19]
+          - link [ref=e21] [cursor=pointer]:
+            - /url: /assistant/vacations
+            - img [ref=e22]
+          - link [ref=e25] [cursor=pointer]:
+            - /url: /assistant/notifications
+            - img [ref=e26]
+      - generic [ref=e29]:
+        - generic [ref=e31]: E
+        - generic [ref=e32]:
+          - button "Toggle theme" [ref=e33]:
+            - img [ref=e34]
+            - generic [ref=e36]: Toggle theme
+          - button "تسجيل الخروج" [ref=e37]:
+            - img [ref=e38]
+    - generic [ref=e41]:
+      - banner [ref=e42]:
+        - generic [ref=e44]:
+          - text: خدمة العملاء
+          - heading "مركز الدعم المباشر" [level=1] [ref=e45]
+      - main [ref=e46]:
+        - paragraph [ref=e48]: التوزيع يتم تلقائيًا حسب الحضور والحمل والحد الأقصى المحدد لكل موظف.
+        - img [ref=e50]
+        - paragraph [ref=e54]: منصة مسار
+  - alert [ref=e55]
+```

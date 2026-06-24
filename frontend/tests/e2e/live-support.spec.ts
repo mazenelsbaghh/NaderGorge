@@ -95,7 +95,7 @@ test.describe('live support routing and admin', () => {
     expect(staffLogin.ok()).toBeTruthy();
     const staffAuth = (await staffLogin.json()).data;
     await page.addInitScript(({ token, user }) => { localStorage.setItem('accessToken', token); localStorage.setItem('user', JSON.stringify({ id: user.id, fullName: user.fullName, phone: user.phone, roles: user.roles, permissions: user.permissions || [], profileComplete: user.profileComplete })); }, { token: staffAuth.accessToken, user: staffAuth.user });
-    await page.goto('http://127.0.0.1:8742/assistant/live-support');
+    await page.goto('http://localhost:8742/assistant/live-support');
     await expect(page.getByText('حالة الاتصال').locator('..')).toContainText('متصل', { timeout: 15_000 });
     await expect.poll(async () => (await (await request.get('http://127.0.0.1:5245/api/live-support/availability')).json()).data.isAvailable, { timeout: 15_000 }).toBe(true);
 
@@ -122,7 +122,7 @@ test.describe('live support routing and admin', () => {
     expect(adminLogin.ok()).toBeTruthy();
     const adminAuth = (await adminLogin.json()).data;
     await page.addInitScript(({ token, user }) => { localStorage.setItem('accessToken', token); localStorage.setItem('user', JSON.stringify({ id: user.id, fullName: user.fullName, phone: user.phone, roles: user.roles, permissions: user.permissions || [], profileComplete: user.profileComplete })); }, { token: adminAuth.accessToken, user: adminAuth.user });
-    await page.goto('http://127.0.0.1:8740/admin/live-support');
+    await page.goto('http://localhost:8740/admin/live-support');
     await expect(page.getByRole('heading', { name: 'أداء الموظفين والتقييمات' })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole('heading', { name: /الموظفون والسعة/ })).toBeVisible();
     const rejected = await request.post(`http://127.0.0.1:5245/api/live-support/admin/conversations/${crypto.randomUUID()}/intervene`, { headers: { Authorization: `Bearer ${adminAuth.accessToken}` }, data: { operation: 'close', reason: '' } });

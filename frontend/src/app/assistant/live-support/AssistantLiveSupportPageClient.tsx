@@ -20,7 +20,9 @@ export default function AssistantLiveSupportPageClient() {
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [needsStaffActivation, setNeedsStaffActivation] = useState(false);
-  const ownershipLost = useLiveSupportStore(state => selected ? state.ownershipLost[selected.id] ?? false : false);
+  const selectedId = selected?.id;
+  const selectedOwnerUserId = selected?.currentOwnerUserId;
+  const ownershipLost = useLiveSupportStore(state => selectedId ? state.ownershipLost[selectedId] ?? false : false);
   const setOwnershipLost = useLiveSupportStore(state => state.setOwnershipLost);
 
   const refresh = useCallback(async () => {
@@ -29,7 +31,12 @@ export default function AssistantLiveSupportPageClient() {
       setBootstrap(next);
       setError('');
       setNeedsStaffActivation(false);
-      const current = next.conversations.find((item) => item.id === selected?.id) ?? next.conversations[0];
+      const refreshedSelection = next.conversations.find((item) => item.id === selectedId);
+      if (selectedId && (!refreshedSelection || refreshedSelection.currentOwnerUserId !== selectedOwnerUserId)) {
+        setOwnershipLost(selectedId, true);
+        return;
+      }
+      const current = refreshedSelection ?? next.conversations[0];
       setSelected(current);
       if (current) { setOwnershipLost(current.id, false); setMessages(await liveSupportService.getStaffMessages(current.id)); }
     } catch (cause) {
@@ -37,7 +44,7 @@ export default function AssistantLiveSupportPageClient() {
       setError(message);
       setNeedsStaffActivation(message.includes('يستقبل محادثات') || message.includes('غير مفعّل للدعم'));
     }
-  }, [selected?.id, setOwnershipLost]);
+  }, [selectedId, selectedOwnerUserId, setOwnershipLost]);
   const connected = useLiveSupportHub(selected?.id, () => void refresh());
 
   useEffect(() => {
