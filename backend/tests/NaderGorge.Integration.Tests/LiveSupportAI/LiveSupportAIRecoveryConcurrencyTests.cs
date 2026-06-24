@@ -146,7 +146,7 @@ public sealed class LiveSupportAIRecoveryConcurrencyTests
             try
             {
                 await using var db = new NaderGorge.Infrastructure.Data.AppDbContext(new DbContextOptionsBuilder<NaderGorge.Infrastructure.Data.AppDbContext>().UseNpgsql(fixture.ConnectionString).Options);
-                var service = new LiveSupportService(db, null!, handoffService: new LiveSupportAIHandoffService(db, new FakeAssignmentCoordinator()));
+                var service = new LiveSupportService(db, null!);
                 await service.CloseAsync(adminUser.Id, true, conversation.Id, "إغلاق إداري", CancellationToken.None);
             }
             catch {}

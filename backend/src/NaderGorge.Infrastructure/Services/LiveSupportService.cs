@@ -32,7 +32,6 @@ public sealed class LiveSupportService(
     IJobEnqueuer? jobEnqueuer = null,
     IMediator? mediator = null,
     ILiveSupportAITurnOrchestrator? aiTurnOrchestrator = null,
-    ILiveSupportAIHandoffService? handoffService = null,
     NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService? aiVerificationService = null,
     NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? aiRegistrationService = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
 {
@@ -46,11 +45,10 @@ public sealed class LiveSupportService(
     private readonly IJobEnqueuer? _jobEnqueuer = jobEnqueuer;
     private readonly IMediator? _mediator = mediator;
     private readonly ILiveSupportAITurnOrchestrator? _aiTurnOrchestrator = aiTurnOrchestrator;
-    private readonly ILiveSupportAIHandoffService? _handoffServiceInput = handoffService;
     private readonly NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService? _aiVerificationService = aiVerificationService;
     private readonly NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? _aiRegistrationService = aiRegistrationService;
     private ILiveSupportAIHandoffService? _handoffServiceBacking;
-    private ILiveSupportAIHandoffService _handoffService => _handoffServiceBacking ??= (_handoffServiceInput ?? new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIHandoffService(_db, this));
+    private ILiveSupportAIHandoffService _handoffService => _handoffServiceBacking ??= new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIHandoffService(_db, this);
 
 
     public async Task<LiveSupportAvailabilityDto> GetAvailabilityAsync(CancellationToken ct)
