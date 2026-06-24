@@ -14,6 +14,8 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [eventFilter, setEventFilter] = useState('all');
+  const [intervening, setIntervening] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const canSend = timeline.conversation.status !== 'Closed' && timeline.conversation.status !== 'Abandoned';
 
@@ -49,6 +51,15 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
     }
   }
 
+  async function intervene(operation: 'close' | 'queue') {
+    const reason = window.prompt(operation === 'close' ? 'اكتب سبب إغلاق المحادثة' : 'اكتب سبب إعادتها للطابور');
+    if (!reason?.trim()) return;
+    setIntervening(true); setError('');
+    try { await liveSupportService.intervene(timeline.conversation.id, operation, reason.trim()); close(); }
+    catch { setError('تعذر تنفيذ تدخل الإدارة. حدّث المحادثة ثم حاول مرة أخرى.'); }
+    finally { setIntervening(false); }
+  }
+
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-slate-950/60 p-4" onClick={close}>
       <section role="dialog" aria-modal="true" aria-label="متابعة المحادثة" onClick={(event) => event.stopPropagation()} className="flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white" dir="rtl">
@@ -59,6 +70,7 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
           </div>
           <button type="button" onClick={close} aria-label="إغلاق" className="grid size-11 place-items-center rounded-xl text-slate-700 hover:bg-slate-100"><X /></button>
         </header>
+        {canSend && <div className="flex flex-wrap gap-2 border-b border-slate-200 bg-amber-50 px-5 py-3"><span className="ml-auto text-sm font-semibold text-amber-950">تدخل إداري مسجل بالكامل</span><button type="button" disabled={intervening} onClick={() => void intervene('queue')} className="min-h-10 rounded-lg border border-amber-300 px-3 text-sm font-bold text-amber-900 disabled:opacity-50">إعادة للطابور</button><button type="button" disabled={intervening} onClick={() => void intervene('close')} className="min-h-10 rounded-lg bg-red-700 px-3 text-sm font-bold text-white disabled:opacity-50">إغلاق إداري</button></div>}
 
         <div className="grid min-h-0 flex-1 lg:grid-cols-[1.35fr_.65fr]">
           <div className="flex min-h-[420px] flex-col border-l border-slate-200">
@@ -85,8 +97,8 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
           </div>
 
           <aside className="min-h-0 overflow-y-auto p-4">
-            <h3 className="mb-3 font-bold text-slate-900">السجل التشغيلي</h3>
-            <ol className="space-y-3">{timeline.items.map((item, index) => <li key={`${item.at}-${index}`} className="rounded-xl bg-slate-50 p-3 text-sm"><strong className="text-slate-900">{item.summary}</strong><time className="mt-1 block text-xs text-slate-500">{new Date(item.at).toLocaleString('ar-EG')}</time><p className="mt-1 text-xs text-slate-600">بواسطة: {item.actorName || 'النظام'}</p>{item.safeDetails && <pre className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-white p-2 text-xs">{item.safeDetails}</pre>}</li>)}</ol>
+            <div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-bold text-slate-900">السجل التشغيلي</h3><label className="text-xs text-slate-600">النوع<select value={eventFilter} onChange={event => setEventFilter(event.target.value)} className="mr-2 h-9 rounded-lg border border-slate-200 px-2"><option value="all">الكل</option><option value="AI">AI / Worker</option><option value="Assignment">الإسناد</option><option value="StudentAction">الإجراءات</option><option value="Message">الرسائل</option></select></label></div>
+            <ol className="space-y-3">{timeline.items.filter(item => eventFilter === 'all' || (eventFilter === 'AI' ? item.type.startsWith('AI') : item.type === eventFilter)).map((item, index) => <li key={`${item.at}-${index}`} className="rounded-xl bg-slate-50 p-3 text-sm"><strong className="text-slate-900">{item.summary}</strong><time className="mt-1 block text-xs text-slate-500">{new Date(item.at).toLocaleString('ar-EG')}</time><p className="mt-1 text-xs text-slate-600">الفاعل: {item.actorName || 'النظام الآلي'}</p>{item.safeDetails && <pre className="mt-2 whitespace-pre-wrap break-all rounded-lg bg-white p-2 text-xs" dir="auto">{item.safeDetails}</pre>}</li>)}</ol>
           </aside>
         </div>
       </section>

@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
-import { Bot, LoaderCircle, Save, ShieldAlert, CheckCircle, UserCheck, MessageSquare, Activity } from 'lucide-react';
+import { Bot, LoaderCircle, Save } from 'lucide-react';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   liveSupportAIService,
-  type AICatalogItem,
   type AIConfig,
   type AIPolicy,
   type SaveAIDraft,
@@ -16,6 +15,14 @@ import {
 } from '@/services/live-support-ai-service';
 import { ConversationInvestigation } from '@/components/live-support/admin/ConversationInvestigation';
 import { liveSupportService, type LiveSupportConversationTimeline, type LiveSupportAdminConversation } from '@/services/live-support-service';
+import { AIOverview } from '@/components/live-support/ai-admin/AIOverview';
+import { AIDisableControl } from '@/components/live-support/ai-admin/AIDisableControl';
+import { AIPolicyEditor } from '@/components/live-support/ai-admin/AIPolicyEditor';
+import { AIKnowledgeManager } from '@/components/live-support/ai-admin/AIKnowledgeManager';
+import { AIDataActionSelector } from '@/components/live-support/ai-admin/AIDataActionSelector';
+import { AIVerificationPolicyEditor } from '@/components/live-support/ai-admin/AIVerificationPolicyEditor';
+import { AIPreview } from '@/components/live-support/ai-admin/AIPreview';
+import { AIActivityEvidence } from '@/components/live-support/ai-admin/AIActivityEvidence';
 
 export const DEFAULT_SYSTEM_INSTRUCTIONS = `أنت مساعد الدعم الذكي لمنصة مسار، وهي منصة تعليمية عربية تساعد الطلاب على مشاهدة الدروس، حل الامتحانات والواجبات، متابعة التقدم، وإدارة الباقات وطلبات المشاهدة.
 
@@ -50,7 +57,7 @@ export default function AdminAISupportPageClient() {
   const [draft, setDraft] = useState<SaveAIDraft>(emptyDraft);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
-  const [activeTab, setActiveTab] = useState<'settings' | 'stats'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'knowledge' | 'activity'>('settings');
   const [stats, setStats] = useState<AIStats>();
   const [statsPeriod, setStatsPeriod] = useState<AIStatsPeriod>('last-24h');
   const [loadingStats, setLoadingStats] = useState(false);
@@ -93,13 +100,13 @@ export default function AdminAISupportPageClient() {
   }
 
   useEffect(() => {
-    if (activeTab === 'stats' && isBuiltInAdmin) {
+    if (activeTab === 'activity' && isBuiltInAdmin) {
       void loadStats(statsPeriod);
     }
   }, [activeTab, statsPeriod, isBuiltInAdmin]);
 
   useEffect(() => {
-    if (activeTab === 'stats' && isBuiltInAdmin) {
+    if (activeTab === 'activity' && isBuiltInAdmin) {
       void loadActiveConversations();
       const interval = window.setInterval(() => {
         void liveSupportAIService.getActiveConversations().then(setActiveConversations).catch(() => undefined);
@@ -160,7 +167,8 @@ export default function AdminAISupportPageClient() {
     if (!window.confirm('هل تريد إيقاف المساعد وتحويل المحادثات النشطة إلى الدعم البشري؟')) return;
     setBusy(true);
     try {
-      await liveSupportAIService.disable();
+      if (!config?.published) return;
+      await liveSupportAIService.disable(config.published.version);
       setConfig(current => current?.published ? { ...current, published: { ...current.published, isEnabled: false } } : current);
       setNotice('تم إيقاف المساعد وبدء تحويل المحادثات إلى الدعم البشري.');
     } catch (error) {
@@ -174,7 +182,8 @@ export default function AdminAISupportPageClient() {
     setBusy(true);
     setNotice('');
     try {
-      const updatedPolicy = await liveSupportAIService.enable();
+      if (!config?.published) return;
+      const updatedPolicy = await liveSupportAIService.enable(config.published.version);
       setConfig(current => current ? { ...current, published: updatedPolicy } : current);
       setNotice('تم تشغيل وتفعيل المساعد الذكي بنجاح.');
     } catch (error) {
@@ -188,9 +197,11 @@ export default function AdminAISupportPageClient() {
     {!config ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin" aria-label="جارٍ التحميل" /></div> : <div dir="rtl" className="space-y-5">
       {notice && <div role="status" aria-live="polite" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">{notice}</div>}
       
-      <div className="flex border-b border-slate-200">
+      <div className="flex overflow-x-auto border-b border-slate-200" role="tablist" aria-label="إدارة المساعد الذكي">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'settings'}
           onClick={() => setActiveTab('settings')}
           className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 -mb-px ${
             activeTab === 'settings'
@@ -202,54 +213,35 @@ export default function AdminAISupportPageClient() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab('stats')}
+          role="tab"
+          aria-selected={activeTab === 'knowledge'}
+          onClick={() => setActiveTab('knowledge')}
           className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 -mb-px ${
-            activeTab === 'stats'
+            activeTab === 'knowledge'
               ? 'border-cyan-700 text-cyan-800'
               : 'border-transparent text-slate-500 hover:text-slate-900'
           }`}
         >
-          الإحصائيات والأداء
+          المعرفة والمعاينة
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'activity'}
+          onClick={() => setActiveTab('activity')}
+          className={`px-6 py-3 font-semibold text-sm transition-colors border-b-2 -mb-px ${activeTab === 'activity' ? 'border-cyan-700 text-cyan-800' : 'border-transparent text-slate-500 hover:text-slate-900'}`}
+        >
+          الإحصائيات والأدلة
         </button>
       </div>
 
       {activeTab === 'settings' ? (
         <>
-          <section className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-5">
-            <div className="flex items-center gap-3">
-              <span className="grid size-12 place-items-center rounded-2xl bg-cyan-50 text-cyan-800"><Bot /></span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="font-bold text-slate-950">حالة المساعد</h2>
-                  {config.published?.isEnabled ? (
-                    <span className="flex h-3.5 w-3.5 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
-                    </span>
-                  ) : (
-                    <span className="h-3 w-3 rounded-full bg-slate-300"></span>
-                  )}
-                </div>
-                <p className="text-sm text-slate-600">{config.published?.isEnabled ? `مفعّل، الإصدار ${config.published.versionNumber}` : 'متوقف'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {config.published ? (
-                config.published.isEnabled ? (
-                  <button type="button" disabled={busy} onClick={() => void disable()} className="min-h-11 rounded-xl border border-red-200 px-4 font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"><ShieldAlert className="ml-2 inline size-4"/>إيقاف وتحويل للدعم البشري</button>
-                ) : (
-                  <button type="button" disabled={busy} onClick={() => void enable()} className="min-h-11 rounded-xl bg-cyan-700 px-5 font-bold text-white hover:bg-cyan-800 disabled:opacity-50"><Bot className="ml-2 inline size-4"/>تشغيل وتفعيل المساعد</button>
-                )
-              ) : (
-                <span className="text-sm text-slate-500">لا توجد سياسة منشورة بعد</span>
-              )}
-            </div>
-          </section>
-          <section className="rounded-3xl border border-slate-200 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold text-slate-950">تعليمات المساعد وقاعدة القرار</h2><p className="mt-1 text-sm text-slate-600">أضفنا تعليمات افتراضية لمنصة مسار. يمكنك تعديلها، ولا تضع هنا كلمات مرور أو بيانات سرية.</p></div><button type="button" onClick={() => setDraft(current => ({ ...current, systemInstructions: DEFAULT_SYSTEM_INSTRUCTIONS }))} className="min-h-11 rounded-xl border border-cyan-700 px-4 text-sm font-bold text-cyan-800 hover:bg-cyan-50 focus:outline-none focus:ring-2 focus:ring-cyan-700/30">استعادة التعليمات الافتراضية</button></div><textarea value={draft.systemInstructions} maxLength={20000} onChange={event => setDraft({ ...draft, systemInstructions: event.target.value })} className="mt-4 min-h-80 w-full rounded-2xl border border-slate-200 p-4 leading-7 text-slate-900 outline-none focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20" placeholder="اكتب أسلوب الرد، حدود المساعدة، ومتى يجب التحويل إلى موظف..."/><p className="mt-2 text-left text-xs text-slate-600">{draft.systemInstructions.length.toLocaleString('ar-EG')} من ٢٠٬٠٠٠ حرف</p></section>
-          <CatalogSection title="البيانات التي يمكن قراءتها" items={config.catalogs.readableData} selected={draft.readableDataKeys} change={keys => setDraft({ ...draft, readableDataKeys: keys })}/>
-          <CatalogSection title="الإجراءات التي يمكن اقتراحها" note="لا يُنفّذ أي إجراء إلا بعد عرض أثره والحصول على تأكيد صريح من صاحب المحادثة." items={config.catalogs.actions} selected={draft.actionKeys} change={keys => setDraft({ ...draft, actionKeys: keys })}/>
-          <CatalogSection title="طرق البحث الآمنة" note="تُقبل القيمة الكاملة فقط، ولا تظهر نتائج جزئية أو تلميحات." items={config.catalogs.lookupKeys} selected={draft.lookupKeys} change={keys => setDraft({ ...draft, lookupKeys: keys })}/>
-          <CatalogSection title="أسئلة التحقق من الحساب" note="التحقق للمحادثة الحالية فقط، ولا تُحفظ الإجابات الخام." items={config.catalogs.verificationQuestions} selected={draft.verificationQuestionKeys} change={keys => setDraft({ ...draft, verificationQuestionKeys: keys })}/>
+          <AIDisableControl policy={config.published} busy={busy} onDisable={() => void disable()} onEnable={() => void enable()} />
+          <AIPolicyEditor draft={draft} onChange={setDraft} onRestore={() => setDraft(current => ({ ...current, systemInstructions: DEFAULT_SYSTEM_INSTRUCTIONS }))} />
+          <AIDataActionSelector title="البيانات التي يمكن قراءتها" items={config.catalogs.readableData} selected={draft.readableDataKeys} onChange={keys => setDraft({ ...draft, readableDataKeys: keys })}/>
+          <AIDataActionSelector title="الإجراءات التي يمكن اقتراحها" note="لا يُنفّذ أي إجراء إلا بعد تأكيد صريح." items={config.catalogs.actions} selected={draft.actionKeys} onChange={keys => setDraft({ ...draft, actionKeys: keys })}/>
+          <AIVerificationPolicyEditor draft={draft} questions={config.catalogs.verificationQuestions} lookupKeys={config.catalogs.lookupKeys} onChange={setDraft}/>
           <section className="grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 sm:grid-cols-2 lg:grid-cols-5">
             <NumberField label="الإجابات الصحيحة المطلوبة" value={draft.verificationRequiredCorrect} min={1} max={Math.max(1, draft.verificationQuestionKeys.length)} change={value => setDraft({ ...draft, verificationRequiredCorrect: value })}/>
             <NumberField label="الحد الأقصى لمحاولات التحقق" value={draft.verificationMaxAttempts} min={1} max={10} change={value => setDraft({ ...draft, verificationMaxAttempts: value })}/>
@@ -259,6 +251,11 @@ export default function AdminAISupportPageClient() {
           </section>
           <div className="sticky bottom-4 flex flex-wrap justify-end gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg"><button type="button" disabled={busy} onClick={() => void save()} className="min-h-11 rounded-xl border border-slate-300 px-5 font-bold text-slate-900 disabled:opacity-50"><Save className="ml-2 inline size-4"/>{busy ? 'جارٍ التنفيذ...' : 'حفظ كمسودة'}</button><button type="button" disabled={busy} onClick={() => void saveAndPublish()} className="min-h-11 rounded-xl bg-slate-900 px-5 font-bold text-white disabled:opacity-40">{busy ? 'جارٍ التنفيذ...' : 'حفظ ونشر وتفعيل'}</button></div>
         </>
+      ) : activeTab === 'knowledge' ? (
+        <div className="space-y-5" role="tabpanel">
+          <AIKnowledgeManager policyVersionId={config.published?.id}/>
+          <AIPreview policyVersionId={config.published?.id}/>
+        </div>
       ) : (
         <div className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -281,51 +278,8 @@ export default function AdminAISupportPageClient() {
             </div>
           </div>
 
-          {loadingStats ? (
-            <div className="grid min-h-60 place-items-center">
-              <LoaderCircle className="animate-spin text-cyan-700" aria-label="جارٍ التحميل" />
-            </div>
-          ) : stats ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              <StatItem
-                title="المحادثات النشطة حالياً"
-                value={stats.activeConversations}
-                description="محادثات قيد الرد الآلي اللحظي"
-                icon={<Bot className="text-cyan-600" />}
-                bgClass="bg-cyan-50/50"
-              />
-              <StatItem
-                title="المشاكل المحلولة"
-                value={stats.resolvedIssues}
-                description="محادثات حلها الـ AI بالكامل"
-                icon={<CheckCircle className="text-emerald-600" />}
-                bgClass="bg-emerald-50/50"
-              />
-              <StatItem
-                title="التحويلات للدعم البشري"
-                value={stats.handoffs}
-                description="محادثات تم تحويلها لموظف"
-                icon={<UserCheck className="text-amber-600" />}
-                bgClass="bg-amber-50/50"
-              />
-              <StatItem
-                title="الرسائل المرسلة من الـ AI"
-                value={stats.totalMessagesSent}
-                description="إجمالي ردود المساعد التلقائية"
-                icon={<MessageSquare className="text-blue-600" />}
-                bgClass="bg-blue-50/50"
-              />
-              <StatItem
-                title="الإجراءات التلقائية الناجحة"
-                value={stats.successfulActions}
-                description="عمليات منفذة بعد تأكيد الطالب"
-                icon={<Activity className="text-indigo-600" />}
-                bgClass="bg-indigo-50/50"
-              />
-            </div>
-          ) : (
-            <div className="text-center py-12 text-slate-500">لا توجد إحصائيات متوفرة للفترة المحددة.</div>
-          )}
+          <AIOverview policy={config.published} stats={stats} loading={loadingStats}/>
+          <AIActivityEvidence period={statsPeriod}/>
 
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white mt-5">
             <div className="border-b border-slate-100 p-5">
@@ -420,33 +374,6 @@ function renderAiStatus(status?: string, failureCode?: string) {
   }
 }
 
-function StatItem({
-  title,
-  value,
-  description,
-  icon,
-  bgClass,
-}: {
-  title: string;
-  value: number;
-  description: string;
-  icon: React.ReactNode;
-  bgClass: string;
-}) {
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 space-y-3 transition-all hover:shadow-md">
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-600">{title}</span>
-        <span className={`grid size-10 place-items-center rounded-xl ${bgClass}`}>{icon}</span>
-      </div>
-      <div className="space-y-1">
-        <span className="block text-3xl font-bold text-slate-900">{value.toLocaleString('ar-EG')}</span>
-        <span className="block text-xs text-slate-500">{description}</span>
-      </div>
-    </div>
-  );
-}
-
 function defaultDraft(config: AIConfig): SaveAIDraft {
   return {
     ...emptyDraft,
@@ -475,10 +402,6 @@ function draftFromPolicy(policy: AIPolicy, expectedVersion?: number): SaveAIDraf
 
 function apiErrorMessage(error: unknown, fallback: string) {
   return isAxiosError<{ message?: string }>(error) ? error.response?.data?.message ?? fallback : fallback;
-}
-
-function CatalogSection({ title, note, items, selected, change }: { title: string; note?: string; items: AICatalogItem[]; selected: string[]; change: (keys: string[]) => void }) {
-  return <section className="rounded-3xl border border-slate-200 bg-white p-5"><h2 className="font-bold text-slate-950">{title}</h2>{note && <p className="mt-1 text-sm text-slate-600">{note}</p>}<div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">{items.map(catalogItem => <label key={catalogItem.key} className="flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 px-3 py-3 text-sm transition-colors hover:bg-slate-50 focus-within:border-cyan-700 focus-within:ring-2 focus-within:ring-cyan-700/20"><input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-cyan-700" checked={selected.includes(catalogItem.key)} onChange={event => change(event.target.checked ? [...selected, catalogItem.key] : selected.filter(selectedKey => selectedKey !== catalogItem.key))}/><span><span className="block font-semibold text-slate-900">{catalogItem.label}</span><span className="mt-1 block text-xs leading-5 text-slate-600">{catalogItem.description}</span></span></label>)}</div></section>;
 }
 
 function NumberField({ label, value, min, max, change }: { label: string; value: number; min: number; max: number; change: (value: number) => void }) {

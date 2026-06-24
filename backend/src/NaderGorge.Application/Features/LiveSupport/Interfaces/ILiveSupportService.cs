@@ -28,6 +28,7 @@ public interface ILiveSupportService
     Task<IReadOnlyList<LiveSupportStudentSearchDto>> SearchStudentsAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string query, CancellationToken ct);
     Task<LiveSupportConversationDto> ChangeStudentLinkAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid? studentUserId, string reason, long expectedVersion, CancellationToken ct);
     Task<LiveSupportStudentContextDto> GetStudentContextAsync(Guid staffUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
+    Task<LiveSupportStudentContextSectionDto> GetStudentContextSectionAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string section, CancellationToken ct);
     Task<LiveSupportAdminDashboardDto> GetAdminDashboardAsync(CancellationToken ct);
     Task<LiveSupportConversationTimelineDto> GetAdminTimelineAsync(Guid conversationId, CancellationToken ct);
     Task<LiveSupportMessagePageDto> GetParticipantMessagePageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int pageSize, string? cursor, long? afterSequence, CancellationToken ct);

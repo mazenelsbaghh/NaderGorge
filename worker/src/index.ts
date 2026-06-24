@@ -15,6 +15,8 @@ import { logQueueEvent } from './logging.js';
 import { markJobCancellation, clearJobCancellation } from './cancellation.js';
 import { readAIConfig } from './services/aiConfig.js';
 import { TemporaryAudioStorage } from './services/temporaryAudioStorage.js';
+import { generateLiveSupportReply } from './services/geminiService.js';
+import { runLiveSupportAgent, type LiveSupportClaimContext } from './services/liveSupportAgent.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
@@ -256,6 +258,34 @@ async function startWorker() {
   }
   app.use(express.json());
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  app.post('/internal/live-support/preview', requireWorkerAdminToken, async (req, res) => {
+    const startedAt = Date.now();
+    try {
+      const context = req.body as LiveSupportClaimContext;
+      let provider = '';
+      let model = '';
+      const validated = await runLiveSupportAgent(context, async prompt => {
+        const inference = await generateLiveSupportReply(prompt);
+        provider = inference.provider;
+        model = inference.model;
+        return inference.decision;
+      });
+      return res.json({
+        decision: validated.decision,
+        decisionHash: validated.decisionHash,
+        provider,
+        model,
+        latencyMs: Math.max(0, Date.now() - startedAt),
+      });
+    } catch (error) {
+      const invalidDecision = error instanceof Error &&
+        (error.name === 'LiveSupportDecisionValidationError' || error.message === 'AI_DECISION_NOT_JSON');
+      return res.status(invalidDecision ? 422 : 503).json({
+        error: invalidDecision ? 'AI_PREVIEW_DECISION_INVALID' : 'AI_PREVIEW_UNAVAILABLE',
+      });
+    }
+  });
 
   app.get('/ready', async (_req, res) => {
     let dbOk = false;

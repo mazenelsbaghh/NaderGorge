@@ -114,6 +114,15 @@ export interface LiveSupportStudentContext {
   notes: Array<{ id: string; content: string; isPinned: boolean; createdAt: string }>;
   watchEvents: number; examAttempts: number; homeworkSubmissions: number;
 }
+export type LiveSupportStudentContextSectionKey = 'basic' | 'metrics' | 'study' | 'devices' | 'notes' | 'crm';
+export interface LiveSupportStudentContextSections {
+  basic: Pick<LiveSupportStudentContext, 'fullName' | 'phoneNumber' | 'isActive' | 'studentCode' | 'governorate' | 'schoolName' | 'educationStage' | 'gradeLevel'>;
+  metrics: { balance: number; points: number; examAttempts: number; devicesCount: number };
+  study: { activeGrants: number; watchEvents: number; homeworkSubmissions: number };
+  devices: Pick<LiveSupportStudentContext, 'devices'>;
+  notes: Pick<LiveSupportStudentContext, 'notes'>;
+  crm: { status?: string; priority?: string };
+}
 export interface LiveSupportAdminConversation { id: string; participantName: string; participantType: LiveSupportParticipantType; status: LiveSupportConversationStatus; ownerName?: string; createdAt: string; assignedAt?: string; firstResponseAt?: string; closedAt?: string; waitSeconds?: number; handleSeconds?: number; subject?: string; aiTurnStatus?: string; aiTurnFailureCode?: string; }
 export interface LiveSupportStaffPerformance { staffUserId: string; staffName: string; participatedConversations: number; closedConversations: number; ratingCount: number; averageRating?: number; }
 export interface LiveSupportAdminDashboard { waitingCount: number; activeCount: number; closedToday: number; conversations: LiveSupportAdminConversation[]; staffPerformance: LiveSupportStaffPerformance[]; }
@@ -258,6 +267,9 @@ export const liveSupportService = {
 
   getStudentContext: (conversationId: string) =>
     apiClient.get<ApiResponse<LiveSupportStudentContext>>(`/live-support/staff/conversations/${conversationId}/student-context`).then((response) => response.data.data),
+
+  getStudentContextSection: <K extends LiveSupportStudentContextSectionKey>(conversationId: string, section: K) =>
+    apiClient.get<ApiResponse<{ section: K; data: LiveSupportStudentContextSections[K] }>>(`/live-support/staff/conversations/${conversationId}/student-context/${section}`).then((response) => response.data.data.data),
 
   getActionCatalog: (conversationId: string) =>
     apiClient.get<ApiResponse<LiveSupportActionDefinition[]>>(`/live-support/staff/conversations/${conversationId}/actions`).then((response) => response.data.data),

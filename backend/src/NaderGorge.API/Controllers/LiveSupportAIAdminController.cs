@@ -29,15 +29,22 @@ public sealed class LiveSupportAIAdminController(ILiveSupportAIAdminService serv
         await Execute(() => service.PublishAsync(AdminId(), request.ExpectedVersion, ct));
 
     [HttpPost("disable")]
-    public async Task<IActionResult> Disable(CancellationToken ct)
+    public async Task<IActionResult> Disable(ChangeAIStateRequest request, CancellationToken ct)
     {
-        await service.DisableAsync(AdminId(), ct);
-        return Accepted(ApiResponse.Ok("تم إيقاف الرد الآلي، وسيتم تحويل المحادثات النشطة للدعم."));
+        try
+        {
+            await service.DisableAsync(AdminId(), request.ExpectedVersion, ct);
+            return Accepted(ApiResponse.Ok("تم إيقاف الرد الآلي، وسيتم تحويل المحادثات النشطة للدعم."));
+        }
+        catch (LiveSupportAIAdminException exception)
+        {
+            return Conflict(ApiResponse<object>.Fail(exception.Message, [exception.Code]));
+        }
     }
 
     [HttpPost("enable")]
-    public async Task<IActionResult> Enable(CancellationToken ct) =>
-        await Execute(() => service.EnableAsync(AdminId(), ct));
+    public async Task<IActionResult> Enable(ChangeAIStateRequest request, CancellationToken ct) =>
+        await Execute(() => service.EnableAsync(AdminId(), request.ExpectedVersion, ct));
 
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats(CancellationToken ct, [FromQuery] string period = "last-24h") =>
@@ -94,3 +101,4 @@ public sealed class LiveSupportAIAdminController(ILiveSupportAIAdminService serv
 }
 
 public sealed record PublishAIRequest(long ExpectedVersion);
+public sealed record ChangeAIStateRequest(long ExpectedVersion);

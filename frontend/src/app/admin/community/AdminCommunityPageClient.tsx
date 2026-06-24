@@ -5,13 +5,17 @@ import Link from 'next/link';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
 import { AdminShellChrome } from '@/components/admin';
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { CommunityCommentsModerationTable } from '@/components/admin/CommunityCommentsModerationTable';
 import { CommunityPostsModerationTable } from '@/components/admin/CommunityPostsModerationTable';
 
-export default function AdminCommunityPageClient() {
+export default function AdminCommunityPageClient({ mode }: { mode?: 'admin' | 'assistant' }) {
+  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
+  const activePath = mode === 'assistant' ? '/assistant/community' : '/admin/community';
+
   return (
-    <AdminShellChrome
-      activePath="/admin/community"
+    <Shell
+      activePath={activePath as any}
       sectionLabel="إدارة المجتمع"
       pageTitle="مجتمع الطلاب"
       subtitle="مراجعة البوستات المرسلة واعتماد المناسب منها قبل ظهوره للطلاب."
@@ -34,6 +38,7 @@ export default function AdminCommunityPageClient() {
         <CommunityCommentsModerationTable />
         <CommunityPostsModerationTable />
       </div>
-    </AdminShellChrome>
+    </Shell>
   );
 }
+

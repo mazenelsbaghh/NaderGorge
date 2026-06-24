@@ -31,13 +31,35 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { hasPermission } = useHasPermission();
-  const { isLoading, isAuthenticated } = useAuthStore();
+  const { isLoading, isAuthenticated, user } = useAuthStore();
+
+  const allowedNavbarItems = user?.allowedNavbarItems;
+  const roles = user?.roles || [];
+  const isAdmin = roles.some(
+    (r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'supervisor'
+  );
+
+  // Check if the current path is allowed by allowedNavbarItems
+  const isNavAllowed =
+    isAdmin ||
+    !allowedNavbarItems ||
+    allowedNavbarItems.length === 0 ||
+    allowedNavbarItems.some(
+      (allowed: string) =>
+        pathname === allowed || pathname.startsWith(allowed + '/')
+    );
 
   useEffect(() => {
     if (isLoading || !isAuthenticated) return;
 
     const isBypassed = pathname === "/admin" || pathname === "/admin/unauthorized";
     if (isBypassed) return;
+
+    // Check allowedNavbarItems first
+    if (!isNavAllowed) {
+      router.replace("/admin/unauthorized");
+      return;
+    }
 
     const matchedRoute = ROUTE_PERMISSIONS.find((route) =>
       route.pattern.test(pathname)
@@ -49,13 +71,18 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
         router.replace("/admin/unauthorized");
       }
     }
-  }, [pathname, isLoading, isAuthenticated, hasPermission, router]);
+  }, [pathname, isLoading, isAuthenticated, hasPermission, router, isNavAllowed]);
 
   if (isLoading || !isAuthenticated) {
     return null;
   }
 
   const isBypassed = pathname === "/admin" || pathname === "/admin/unauthorized";
+
+  if (!isBypassed && !isNavAllowed) {
+    return null;
+  }
+
   const matchedRoute = !isBypassed
     ? ROUTE_PERMISSIONS.find((route) => route.pattern.test(pathname))
     : null;

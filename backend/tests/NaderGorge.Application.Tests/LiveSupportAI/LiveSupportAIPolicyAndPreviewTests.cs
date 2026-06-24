@@ -5,6 +5,7 @@ using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Services;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using Xunit;
 
 namespace NaderGorge.Application.Tests.LiveSupportAI;
@@ -164,7 +165,7 @@ public sealed class LiveSupportAIPolicyAndPreviewTests
         var messageCountBefore = await db.LiveSupportMessages.CountAsync();
         var turnCountBefore = await db.LiveSupportAITurns.CountAsync();
         
-        await service.DisableAsync(admin.Id, CancellationToken.None);
+        await service.DisableAsync(admin.Id, published.Version, CancellationToken.None);
 
         var updatedPolicy = await db.LiveSupportAIPolicyVersions.FindAsync(published.Id);
         Assert.False(updatedPolicy!.IsEnabled);
@@ -204,7 +205,7 @@ public sealed class LiveSupportAIPolicyAndPreviewTests
         await db.SaveChangesAsync();
 
         var mockKnowledge = new MockKnowledgeService();
-        var service = new LiveSupportAIAdminService(db, mockKnowledge);
+        var service = new LiveSupportAIAdminService(db, mockKnowledge, previewClient: new MockPreviewClient());
 
         var turnCountBefore = await db.LiveSupportAITurns.CountAsync();
         var messageCountBefore = await db.LiveSupportMessages.CountAsync();
@@ -215,11 +216,61 @@ public sealed class LiveSupportAIPolicyAndPreviewTests
 
         Assert.NotNull(result);
         Assert.Equal(published.Id, result.PolicyVersionId);
+        Assert.Equal("reply", result.Decision.Type);
+        Assert.Equal("DRY_RUN_DECISION_VALIDATED", result.SafeOutcome);
 
         // Ensure zero writes
         Assert.Equal(turnCountBefore, await db.LiveSupportAITurns.CountAsync());
         Assert.Equal(messageCountBefore, await db.LiveSupportMessages.CountAsync());
         Assert.Equal(auditCountBefore, await db.AuditLogs.CountAsync());
+    }
+
+    [Fact]
+    public async Task DisableAsync_WithStaleVersion_LeavesPolicyAndConversationsUnchanged()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01211111115");
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1, Version = 7, Status = LiveSupportAIPolicyStatus.Published, IsEnabled = true,
+            SystemInstructions = "Instructions", ReadableDataKeysJson = "[]", ActionKeysJson = "[]",
+            LookupKeysJson = "[]", VerificationQuestionKeysJson = "[]", CreatedByUserId = admin.Id
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+
+        var service = new LiveSupportAIAdminService(db, null!);
+        var exception = await Assert.ThrowsAsync<LiveSupportAIAdminException>(
+            () => service.DisableAsync(admin.Id, 6, CancellationToken.None));
+
+        Assert.Equal("VERSION_CONFLICT", exception.Code);
+        Assert.True((await db.LiveSupportAIPolicyVersions.FindAsync(policy.Id))!.IsEnabled);
+        Assert.Empty(db.LiveSupportAIConversationStates.Where(state => state.DisableRequestedAt != null));
+    }
+
+    [Fact]
+    public async Task PreviewAsync_RejectsActionOutsidePublishedPolicy()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "01211111116");
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 1, Status = LiveSupportAIPolicyStatus.Published, IsEnabled = true,
+            SystemInstructions = "Instructions", ReadableDataKeysJson = "[]", ActionKeysJson = "[]",
+            LookupKeysJson = "[]", VerificationQuestionKeysJson = "[]", CreatedByUserId = admin.Id
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+        await db.SaveChangesAsync();
+        var action = JsonSerializer.SerializeToElement(new { key = "student.balance.adjust", arguments = new { amount = 10 } });
+        var decision = new LiveSupportAIWorkerDecisionDto("1", "propose_action", null, action, null, null, null, null);
+        var service = new LiveSupportAIAdminService(db, new MockKnowledgeService(), previewClient: new MockPreviewClient(decision));
+
+        var exception = await Assert.ThrowsAsync<LiveSupportAIAdminException>(
+            () => service.PreviewAsync(new LiveSupportAIPreviewRequestDto(policy.Id, "عدّل الرصيد"), CancellationToken.None));
+
+        Assert.Equal("AI_PREVIEW_ACTION_NOT_ALLOWED", exception.Code);
+        Assert.Empty(db.LiveSupportAITurns);
+        Assert.Empty(db.LiveSupportAIPendingActions);
     }
 
     private class MockKnowledgeService : ILiveSupportAIKnowledgeService
@@ -235,5 +286,21 @@ public sealed class LiveSupportAIPolicyAndPreviewTests
 
         public Task<IReadOnlyList<LiveSupportAIKnowledgeDocumentDto>> SearchPublishedAsync(Guid policyVersionId, string query, int maxDocuments, int maxCharacters, CancellationToken cancellationToken)
             => Task.FromResult<IReadOnlyList<LiveSupportAIKnowledgeDocumentDto>>([]);
+    }
+
+    private sealed class MockPreviewClient(LiveSupportAIWorkerDecisionDto? configuredDecision = null) : ILiveSupportAIWorkerPreviewClient
+    {
+        public Task<LiveSupportAIWorkerPreviewResultDto> PreviewAsync(
+            LiveSupportAIWorkerClaimDto context,
+            CancellationToken cancellationToken)
+        {
+            var decision = configuredDecision ?? new LiveSupportAIWorkerDecisionDto("1", "reply", "يمكنني مساعدتك.", null, null, null, null, null);
+            return Task.FromResult(new LiveSupportAIWorkerPreviewResultDto(
+                decision,
+                LiveSupportAITurnOrchestrator.ComputeDecisionHash(decision),
+                "test-provider",
+                "test-model",
+                12));
+        }
     }
 }

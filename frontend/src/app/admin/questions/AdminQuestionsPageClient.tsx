@@ -12,6 +12,7 @@ import {
   AdminModal,
   AdminSearchToolbar,
 } from '@/components/admin';
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { FindTheMistakeBuilder } from '@/components/admin/FindTheMistakeBuilder';
 import { adminService, QuestionBankItemDto, QuestionOptionDto } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
@@ -19,7 +20,7 @@ import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { questionTextToPlainText } from '@/lib/question-text';
 
-export default function AdminQuestionsPageClient() {
+export default function AdminQuestionsPageClient({ mode }: { mode?: 'admin' | 'assistant' }) {
   const [questions, setQuestions] = useState<QuestionBankItemDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
@@ -228,9 +229,12 @@ export default function AdminQuestionsPageClient() {
     },
   ];
 
+  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
+  const shellActivePath = mode === 'assistant' ? '/assistant/questions' : '/admin/questions';
+
   return (
-    <AdminShellChrome
-      activePath="/admin/questions"
+    <Shell
+      activePath={shellActivePath as any}
       sectionLabel="بنك الأسئلة"
       pageTitle="إدارة الأسئلة"
       subtitle="إنشاء الأسئلة ومراجعة التصنيفات والإجابات الصحيحة."
@@ -467,6 +471,6 @@ export default function AdminQuestionsPageClient() {
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+    </Shell>
   );
 }

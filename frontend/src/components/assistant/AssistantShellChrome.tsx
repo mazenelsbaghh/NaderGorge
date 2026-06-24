@@ -36,10 +36,10 @@ type AssistantShellRoute =
   | '/assistant/attendance'
   | '/assistant/vacations'
   | '/assistant/notifications'
-  | '/admin/content'
-  | '/admin/community'
-  | '/admin/questions'
-  | '/admin/watch-requests';
+  | '/assistant/content'
+  | '/assistant/community'
+  | '/assistant/questions'
+  | '/assistant/watch-requests';
 
 type AssistantShellChromeProps = {
   activePath: AssistantShellRoute;
@@ -69,25 +69,25 @@ const navItems: Array<{
     permission: 'tasks.manage',
   },
   {
-    href: '/admin/content',
+    href: '/assistant/content',
     label: 'إدارة تعليقات الدروس',
     icon: BookOpen,
     permission: 'comments.manage',
   },
   {
-    href: '/admin/community',
+    href: '/assistant/community',
     label: 'إدارة مجتمع الطلاب',
     icon: MessageSquareText,
     permission: 'community.manage',
   },
   {
-    href: '/admin/questions',
+    href: '/assistant/questions',
     label: 'إدارة الامتحانات والأسئلة',
     icon: Shield,
     permission: 'exams.manage',
   },
   {
-    href: '/admin/watch-requests',
+    href: '/assistant/watch-requests',
     label: 'طلبات إعادة المشاهدة',
     icon: Star,
     permission: 'watch_requests.manage',

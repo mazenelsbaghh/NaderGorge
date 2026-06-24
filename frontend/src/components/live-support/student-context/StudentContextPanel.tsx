@@ -2,37 +2,45 @@
 
 import { useEffect, useState } from 'react';
 import { Search, UserRound, Wallet, MonitorSmartphone, BookOpenCheck, Trophy, StickyNote, ChevronDown, ChevronUp, AlertCircle, RefreshCw } from 'lucide-react';
-import { liveSupportService, type LiveSupportConversation, type LiveSupportStudentContext, type LiveSupportStudentSearchResult } from '@/services/live-support-service';
+import { liveSupportService, type LiveSupportConversation, type LiveSupportStudentContextSectionKey, type LiveSupportStudentContextSections, type LiveSupportStudentSearchResult } from '@/services/live-support-service';
 import { StudentActionsPanel } from './StudentActionsPanel';
 
 export function StudentContextPanel({ conversation, onConversationChange }: { conversation: LiveSupportConversation; onConversationChange: (value: LiveSupportConversation) => void }) {
-  const [context, setContext] = useState<LiveSupportStudentContext>();
+  const [sections, setSections] = useState<Partial<LiveSupportStudentContextSections>>({});
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<LiveSupportStudentSearchResult[]>([]);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loadingSection, setLoadingSection] = useState<LiveSupportStudentContextSectionKey>();
+  const [sectionErrors, setSectionErrors] = useState<Partial<Record<LiveSupportStudentContextSectionKey, string>>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    setContext(undefined);
+    setSections({});
     setResults([]);
     setError('');
-    setLoading(false);
+    setLoadingSection(undefined);
+    setSectionErrors({});
     setExpandedSections({});
   }, [conversation.id, conversation.linkedStudentUserId]);
 
-  async function loadContext() {
+  async function loadSection<K extends LiveSupportStudentContextSectionKey>(section: K) {
     if (!conversation.linkedStudentUserId) return;
-    setLoading(true);
-    setError('');
+    setLoadingSection(section);
+    setSectionErrors(current => ({ ...current, [section]: undefined }));
     try {
-      const data = await liveSupportService.getStudentContext(conversation.id);
-      setContext(data);
+      const sectionData = await liveSupportService.getStudentContextSection(conversation.id, section);
+      setSections(current => ({ ...current, [section]: sectionData }));
     } catch {
-      setError('تعذر تحميل بيانات الطالب. حاول مرة أخرى.');
+      setSectionErrors(current => ({ ...current, [section]: 'تعذر تحميل هذا القسم. حاول مرة أخرى.' }));
     } finally {
-      setLoading(false);
+      setLoadingSection(undefined);
     }
+  }
+
+  function refreshExpandedSections() {
+    (Object.keys(expandedSections) as LiveSupportStudentContextSectionKey[])
+      .filter(section => expandedSections[section])
+      .forEach(section => void loadSection(section));
   }
 
   async function search() {
@@ -52,21 +60,21 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
       const updated = await liveSupportService.changeStudentLink(conversation.id, studentUserId, reason, conversation.version);
       onConversationChange(updated);
       setResults([]);
-      if (!studentUserId) setContext(undefined);
+      if (!studentUserId) setSections({});
     } catch (cause) {
       alert((cause as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'تعذر تغيير الربط.');
     }
   }
 
-  const toggleSection = (key: string) => {
+  const toggleSection = (key: LiveSupportStudentContextSectionKey) => {
     const nextExpanded = !expandedSections[key];
     setExpandedSections({ ...expandedSections, [key]: nextExpanded });
-    if (nextExpanded && !context && !loading) {
-      void loadContext();
+    if (nextExpanded && !sections[key] && loadingSection !== key) {
+      void loadSection(key);
     }
   };
 
-  const renderSectionHeader = (key: string, title: string, Icon: typeof UserRound) => {
+  const renderSectionHeader = (key: LiveSupportStudentContextSectionKey, title: string, Icon: typeof UserRound) => {
     const expanded = expandedSections[key];
     return (
       <button
@@ -131,23 +139,13 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
         <h2 className="font-bold text-slate-900">بيانات الطالب</h2>
         <div className="flex gap-2">
           {conversation.linkedStudentUserId && (
-            <button onClick={loadContext} disabled={loading} title="تحديث" className="p-1 text-slate-500 hover:text-slate-800">
-              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <button onClick={refreshExpandedSections} disabled={Boolean(loadingSection)} title="تحديث" className="p-1 text-slate-500 hover:text-slate-800">
+              <RefreshCw size={15} className={loadingSection ? 'animate-spin' : ''} />
             </button>
           )}
           <button onClick={() => void changeLink(null)} className="text-xs font-semibold text-red-600">إلغاء الربط</button>
         </div>
       </div>
-
-      {error && (
-        <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-red-700">
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <AlertCircle size={14} />
-            {error}
-          </div>
-          <button onClick={loadContext} className="mt-2 text-xs font-bold underline">إعادة المحاولة</button>
-        </div>
-      )}
 
       <div className="space-y-2">
         {/* Basic Info Section */}
@@ -155,17 +153,17 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
           {renderSectionHeader('basic', 'الملف الشخصي', UserRound)}
           {expandedSections['basic'] && (
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
-              {loading && renderSkeleton()}
-              {!loading && !context && <p className="text-slate-400">انقر لتوسيع وتحميل البيانات</p>}
-              {!loading && context && (
+              {loadingSection === 'basic' && renderSkeleton()}
+              {sectionErrors.basic && <SectionError message={sectionErrors.basic} onRetry={() => void loadSection('basic')} />}
+              {sections.basic && (
                 <>
-                  <p className="font-bold text-slate-900 text-sm mb-1">{context.fullName}</p>
-                  <p>الهاتف: {context.phoneNumber}</p>
-                  <p>كود الطالب: {context.studentCode || 'بدون كود'}</p>
-                  <p>الحالة: {context.isActive ? 'نشط' : 'موقوف'}</p>
-                  <p>المرحلة: {context.educationStage || 'غير محددة'} · {context.gradeLevel || 'غير محددة'}</p>
-                  <p>المحافظة: {context.governorate || 'غير محددة'}</p>
-                  <p>المدرسة: {context.schoolName || 'غير محددة'}</p>
+                  <p className="font-bold text-slate-900 text-sm mb-1">{sections.basic.fullName}</p>
+                  <p>الهاتف: {sections.basic.phoneNumber}</p>
+                  <p>كود الطالب: {sections.basic.studentCode || 'بدون كود'}</p>
+                  <p>الحالة: {sections.basic.isActive ? 'نشط' : 'موقوف'}</p>
+                  <p>المرحلة: {sections.basic.educationStage || 'غير محددة'} · {sections.basic.gradeLevel || 'غير محددة'}</p>
+                  <p>المحافظة: {sections.basic.governorate || 'غير محددة'}</p>
+                  <p>المدرسة: {sections.basic.schoolName || 'غير محددة'}</p>
                 </>
               )}
             </div>
@@ -177,14 +175,14 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
           {renderSectionHeader('metrics', 'المؤشرات المالية والتعليمية', Wallet)}
           {expandedSections['metrics'] && (
             <div className="rounded-xl border border-slate-200 bg-white p-3">
-              {loading && renderSkeleton()}
-              {!loading && !context && <p className="text-xs text-slate-400">انقر لتوسيع وتحميل البيانات</p>}
-              {!loading && context && (
+              {loadingSection === 'metrics' && renderSkeleton()}
+              {sectionErrors.metrics && <SectionError message={sectionErrors.metrics} onRetry={() => void loadSection('metrics')} />}
+              {sections.metrics && (
                 <div className="grid grid-cols-2 gap-2">
-                  <Metric icon={Wallet} label="الرصيد الحالي" value={`${context.balance} ج.م`} />
-                  <Metric icon={Trophy} label="نقاط الطالب" value={String(context.points)} />
-                  <Metric icon={BookOpenCheck} label="محاولات الامتحانات" value={String(context.examAttempts)} />
-                  <Metric icon={MonitorSmartphone} label="الأجهزة المسجلة" value={String(context.devices.length)} />
+                  <Metric icon={Wallet} label="الرصيد الحالي" value={`${sections.metrics.balance} ج.م`} />
+                  <Metric icon={Trophy} label="نقاط الطالب" value={String(sections.metrics.points)} />
+                  <Metric icon={BookOpenCheck} label="محاولات الامتحانات" value={String(sections.metrics.examAttempts)} />
+                  <Metric icon={MonitorSmartphone} label="الأجهزة المسجلة" value={String(sections.metrics.devicesCount)} />
                 </div>
               )}
             </div>
@@ -196,13 +194,13 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
           {renderSectionHeader('study', 'الدراسة والمتابعة', BookOpenCheck)}
           {expandedSections['study'] && (
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
-              {loading && renderSkeleton()}
-              {!loading && !context && <p className="text-slate-400">انقر لتوسيع وتحميل البيانات</p>}
-              {!loading && context && (
+              {loadingSection === 'study' && renderSkeleton()}
+              {sectionErrors.study && <SectionError message={sectionErrors.study} onRetry={() => void loadSection('study')} />}
+              {sections.study && (
                 <>
-                  <p>الباقات والاشتراكات النشطة: {context.grants.length}</p>
-                  <p>سجلات مشاهدة الفيديوهات: {context.watchEvents}</p>
-                  <p>تسليمات الواجبات: {context.homeworkSubmissions}</p>
+                  <p>الباقات والاشتراكات النشطة: {sections.study.activeGrants}</p>
+                  <p>سجلات مشاهدة الفيديوهات: {sections.study.watchEvents}</p>
+                  <p>تسليمات الواجبات: {sections.study.homeworkSubmissions}</p>
                 </>
               )}
             </div>
@@ -214,12 +212,12 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
           {renderSectionHeader('devices', 'الأجهزة المتصلة', MonitorSmartphone)}
           {expandedSections['devices'] && (
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
-              {loading && renderSkeleton()}
-              {!loading && !context && <p className="text-slate-400">انقر لتوسيع وتحميل البيانات</p>}
-              {!loading && context && (
-                context.devices.length ? (
+              {loadingSection === 'devices' && renderSkeleton()}
+              {sectionErrors.devices && <SectionError message={sectionErrors.devices} onRetry={() => void loadSection('devices')} />}
+              {sections.devices && (
+                sections.devices.devices.length ? (
                   <div className="space-y-2">
-                    {context.devices.map((device) => (
+                    {sections.devices.devices.map((device) => (
                       <div key={device.id} className="border-b border-slate-100 pb-1 last:border-0 last:pb-0">
                         <p className="font-semibold text-slate-800">{device.name || 'جهاز'}</p>
                         <p className="text-[10px] text-slate-500">
@@ -241,12 +239,12 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
           {renderSectionHeader('notes', 'ملاحظات الموظفين', StickyNote)}
           {expandedSections['notes'] && (
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
-              {loading && renderSkeleton()}
-              {!loading && !context && <p className="text-slate-400">انقر لتوسيع وتحميل البيانات</p>}
-              {!loading && context && (
-                context.notes.length ? (
+              {loadingSection === 'notes' && renderSkeleton()}
+              {sectionErrors.notes && <SectionError message={sectionErrors.notes} onRetry={() => void loadSection('notes')} />}
+              {sections.notes && (
+                sections.notes.notes.length ? (
                   <div className="space-y-2">
-                    {context.notes.map((note) => (
+                    {sections.notes.notes.map((note) => (
                       <div key={note.id} className="border-b border-slate-100 pb-1 last:border-0 last:pb-0">
                         <p className="text-slate-800">
                           {note.isPinned ? '📌 ' : ''}
@@ -271,12 +269,12 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
           {renderSectionHeader('crm', 'إدارة العلاقات CRM', UserRound)}
           {expandedSections['crm'] && (
             <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs leading-5 text-slate-600">
-              {loading && renderSkeleton()}
-              {!loading && !context && <p className="text-slate-400">انقر لتوسيع وتحميل البيانات</p>}
-              {!loading && context && (
+              {loadingSection === 'crm' && renderSkeleton()}
+              {sectionErrors.crm && <SectionError message={sectionErrors.crm} onRetry={() => void loadSection('crm')} />}
+              {sections.crm && (
                 <>
-                  <p>حالة العميل: {context.crmStatus || 'غير مسند'}</p>
-                  <p>الأولوية الحالية: {context.crmPriority || 'بدون أولوية'}</p>
+                  <p>حالة العميل: {sections.crm.status || 'غير مسند'}</p>
+                  <p>الأولوية الحالية: {sections.crm.priority || 'بدون أولوية'}</p>
                 </>
               )}
             </div>
@@ -287,10 +285,14 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
       <StudentActionsPanel
         conversationId={conversation.id}
         hasStudent
-        onCompleted={() => void liveSupportService.getStudentContext(conversation.id).then(setContext)}
+        onCompleted={refreshExpandedSections}
       />
     </aside>
   );
+}
+
+function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return <div role="alert" className="rounded-xl bg-red-50 p-3 text-xs text-red-700"><span className="flex items-center gap-2"><AlertCircle size={14} />{message}</span><button onClick={onRetry} className="mt-2 font-bold underline">إعادة المحاولة</button></div>;
 }
 
 function Metric({ icon: Icon, label, value }: { icon: typeof UserRound; label: string; value: string }) {

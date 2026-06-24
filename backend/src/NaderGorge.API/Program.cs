@@ -110,6 +110,7 @@ builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfa
 builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIRegistrationService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIHandoffService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIHandoffService>();
 builder.Services.AddScoped<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRecoveryService, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIRecoveryService>();
+builder.Services.AddHttpClient<NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIWorkerPreviewClient, NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIWorkerPreviewClient>();
 builder.Services.AddScoped<ILiveSupportActionService, LiveSupportActionService>();
 builder.Services.AddScoped<ILiveSupportActionExecutor>(sp => sp.GetRequiredService<ILiveSupportActionService>());
 builder.Services.AddScoped<ILiveSupportAssignmentCoordinator>(sp => (ILiveSupportAssignmentCoordinator)sp.GetRequiredService<ILiveSupportService>());

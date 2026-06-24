@@ -31,7 +31,7 @@ public sealed class LiveSupportAIAdminServiceTests
         await db.SaveChangesAsync();
 
         var service = new LiveSupportAIAdminService(db, null!);
-        var result = await service.EnableAsync(admin.Id, CancellationToken.None);
+        var result = await service.EnableAsync(admin.Id, policy.Version, CancellationToken.None);
 
         Assert.True(result.IsEnabled);
         var updatedPolicy = await db.LiveSupportAIPolicyVersions.FindAsync(policy.Id);

@@ -72,6 +72,13 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpGet("conversations/{conversationId:guid}/student-context/{section}")]
+    public async Task<IActionResult> StudentContextSection(Guid conversationId, string section, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<LiveSupportStudentContextSectionDto>.Ok(await _service.GetStudentContextSectionAsync(UserId(), User.IsInRole("Admin"), conversationId, section, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     [HttpGet("conversations/{conversationId:guid}/actions")]
     public async Task<IActionResult> ActionCatalog(Guid conversationId, CancellationToken ct)
     {

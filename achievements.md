@@ -4,11 +4,11 @@
 - [x] Phase 2: Arabic Clarification (`speckit-clarify`)
 - [x] Phase 3: Technical Planning (`speckit-plan`)
 - [x] Phase 4: Detailed Task Breakdown (`speckit-tasks`)
-- [x] Phase 5: Implementation (`speckit-implement`)
+- [ ] Phase 5: Implementation (`speckit-implement`) — admin preview/modules and remaining staff edge journeys are still open
 - [x] Phase 6: Deep Architectural, Code & UI/UX Critique
 - [x] Phase 7: Clean Code Guard (`clean-code-guard`)
 - [x] Phase 8: Test Guard (`test-guard`)
-- [x] Phase 9: Feature Tests, Final Verification & Summary Report
+- [ ] Phase 9: Feature Tests, Final Verification & Summary Report — blocked by the open implementation tasks and provider quota
 
 ### Approved Feature Brief / ملخص الميزة المعتمد
 
@@ -70,6 +70,11 @@
 - Data-volume limits, concrete recovery intervals, rate limits, provider deadlines, and deployment mechanics are intentionally deferred to Phase 3 technical research and planning.
 
 ### Feature Test Evidence / إثبات اختبارات الفيتشر
+
+- **2026-06-24 continuation audit:** backend Feature 146 application tests passed 67/67; real PostgreSQL integration tests passed 10/10 using `massar_platform_test`; worker tests passed 42/42; frontend typecheck and ESLint passed with zero feature errors; the production Next.js build completed successfully.
+- **Browser verification:** the complete Chromium live-support AI file reached 11/12, then the corrected final admin conflict/disable scenario passed independently. Participant disclosure/reconnect/action/verification/registration/reduced-motion, staff responsive/context/action, admin responsive/keyboard/conflict/disable scenarios all passed. The remaining dev-console noise is a landing-page Framer Motion reduced-motion hydration warning outside the live-support implementation and a transient SignalR negotiation cancellation followed by a successful connection.
+- **Production defect fixed from E2E:** auth state now uses the same initial loading snapshot during SSR and browser hydration, then `AuthBootstrap` loads persisted credentials after mount. This removed the guard-level hydration mismatch that previously redirected or obscured staff/admin live-support pages.
+- **Provider acceptance remains blocked:** T119 is intentionally unchecked. Both configured Gemini models returned classified `quota-exhausted`; no successful real-provider decision or reconnect screenshot exists yet.
 
 - [x] LiveSupport AI application tests: 61/61 passed sequentially using `dotnet test`.
 - [x] LiveSupport AI integration tests: 4/4 passed against isolated PostgreSQL using `dotnet test`.

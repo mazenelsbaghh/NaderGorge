@@ -9,8 +9,8 @@ public interface ILiveSupportAIAdminService
     Task<LiveSupportAIConfigDto> GetConfigAsync(CancellationToken cancellationToken);
     Task<LiveSupportAIPolicyDto> SaveDraftAsync(Guid adminUserId, SaveLiveSupportAIDraftRequest request, CancellationToken cancellationToken);
     Task<LiveSupportAIPolicyDto> PublishAsync(Guid adminUserId, long expectedVersion, CancellationToken cancellationToken);
-    Task DisableAsync(Guid adminUserId, CancellationToken cancellationToken);
-    Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, CancellationToken cancellationToken);
+    Task DisableAsync(Guid adminUserId, long expectedVersion, CancellationToken cancellationToken);
+    Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, long expectedVersion, CancellationToken cancellationToken);
     Task<LiveSupportAIStatsDto> GetStatsAsync(string period, CancellationToken cancellationToken);
     Task<IReadOnlyList<LiveSupportAdminConversationDto>> GetActiveConversationsAsync(CancellationToken cancellationToken);
     Task<LiveSupportAIPreviewResultDto> PreviewAsync(LiveSupportAIPreviewRequestDto request, CancellationToken cancellationToken);

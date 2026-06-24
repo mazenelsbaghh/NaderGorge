@@ -13,10 +13,11 @@ import {
   AdminStatCard,
   AdminModal
 } from '@/components/admin';
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
-export default function WatchRequestsPageClient() {
+export default function WatchRequestsPageClient({ mode }: { mode?: 'admin' | 'assistant' }) {
   const [requests, setRequests] = useState<AdminWatchRequestDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -296,9 +297,12 @@ export default function WatchRequestsPageClient() {
     }
   ];
 
+  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
+  const shellActivePath = mode === 'assistant' ? '/assistant/watch-requests' : '/admin/watch-requests';
+
   return (
-    <AdminShellChrome
-      activePath="/admin/watch-requests"
+    <Shell
+      activePath={shellActivePath as any}
       sectionLabel="المحتوى الأكاديمي"
       pageTitle="طلبات المشاهدة الإضافية"
       subtitle="مراجعة ومعالجة طلبات الطلاب لزيادة مرات مشاهدة الفيديوهات المقفلة."
@@ -536,6 +540,6 @@ export default function WatchRequestsPageClient() {
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+    </Shell>
   );
 }

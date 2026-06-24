@@ -99,7 +99,7 @@
 - [x] T060 [P] [US2] Refactor `AIGuestVerification.tsx` with generic copy, labeled exact-value lookup/challenge fields, field errors, correct input modes, attempt state, exhaustion handoff, and no candidate hints.
 - [x] T061 [P] [US2] Refactor `AISecureRegistrationForm.tsx` to reuse authoritative field rules/types, use secure autocomplete, clear password on completion/unmount, prevent form data from entering logs/store/transcript, and show field-level errors.
 - [x] T062 [US2] Integrate one typed pending-decision region into `ParticipantConversation.tsx`; block or allow composer exactly per state contract and never render action, verification, registration, or handoff controls simultaneously.
-- [ ] T063 [US2] Run US2 application/integration filters, worker schema tests, frontend typecheck/lint, static secret scan, and Playwright grep `AI action|verification|registration`; expected result: exactly-once effects and zero protected-value traces.
+- [x] T063 [US2] Run US2 application/integration filters, worker schema tests, frontend typecheck/lint, static secret scan, and Playwright grep `AI action|verification|registration`; expected result: exactly-once effects and zero protected-value traces.
 
 ## Phase 5: User Story 3, Reliable Human Handoff and Support (P1)
 
@@ -146,7 +146,7 @@
 - [x] T086 [US4] Refactor `StudentActionsPanel.tsx` to render server catalog metadata, target/effect confirmation, executing lock, field-level validation, idempotency key, result refresh keys, and safe terminal failure.
 - [x] T087 [US4] Add `StaffConversationLayout.tsx` with desktop queue/transcript/context regions and tablet list→conversation→context drill-in; preserve selection, transcript scroll, draft, and unread state without horizontal page overflow.
 - [x] T088 [US4] Replace inline three-pane markup in `AssistantLiveSupportPageClient.tsx` with `StaffConversationLayout`, `StaffConversationWorkspace`, existing queue/status modules, and lazy student context; page client owns data orchestration only.
-- [ ] T089 [US4] Run backend filters `StudentContext|StudentAction|StudentLink`, frontend typecheck/lint, and Playwright grep `staff context|student action|student link`; expected result: ownership/privacy/action workflows pass.
+- [x] T089 [US4] Run backend filters `StudentContext|StudentAction|StudentLink`, frontend typecheck/lint, and Playwright grep `staff context|student action|student link`; expected result: ownership/privacy/action workflows pass.
 
 ## Phase 8: User Story 5, Administration and Supervision (P2)
 
@@ -205,7 +205,7 @@
 - [ ] T119 Execute the mandatory real configured-provider acceptance from `quickstart.md`; record safe provider/model/correlation/latency/decision/final-state evidence and one reconnect screenshot, and keep this task unchecked if credentials, quota, model, network, or callback path fails.
 - [x] T120 Complete the manual student, guest, staff, admin, privacy-negative, responsive, keyboard, zoom, reduced-motion, and rollback checklists in `quickstart.md`; record pass/fail or explicit external blocker for each item.
 - [x] T121 Run final sequential builds `dotnet build backend/NaderGorge.sln`, `npm --prefix worker run build`, and `npm --prefix frontend run build`; fix every feature-introduced error/warning and separate unrelated pre-existing warnings in evidence.
-- [x] T122 Mark Phase 9 only after T117–T121 pass, run `python3 .agents/skills/speckit-all/scripts/validate_run.py --root . --spec-dir specs/146-ai-live-support-completion`, resolve every failure, and write the final summary with implementation files, review fixes, guard results, test matrix, commands, real-provider evidence, Docker status, data preservation, and release readiness.
+- [ ] T122 Mark Phase 9 only after T117–T121 pass, run `python3 .agents/skills/speckit-all/scripts/validate_run.py --root . --spec-dir specs/146-ai-live-support-completion`, resolve every failure, and write the final summary with implementation files, review fixes, guard results, test matrix, commands, real-provider evidence, Docker status, data preservation, and release readiness.
 
 ## Dependencies and Execution Order
 

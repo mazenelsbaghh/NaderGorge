@@ -39,19 +39,9 @@ interface AuthState {
 }
 
 function loadInitialAuth(): Pick<AuthState, 'user' | 'accessToken' | 'isAuthenticated' | 'isLoading'> {
-  if (typeof window === 'undefined') {
-    return { user: null, accessToken: null, isAuthenticated: false, isLoading: true };
-  }
-  const storedAuth = readStoredAuth();
-  if (storedAuth) {
-    return {
-      user: storedAuth.user as User,
-      accessToken: storedAuth.accessToken,
-      isAuthenticated: true,
-      isLoading: false,
-    };
-  }
-  return { user: null, accessToken: null, isAuthenticated: false, isLoading: false };
+  // Server and browser must share the same first snapshot; AuthBootstrap reads
+  // browser storage after hydration and resolves this loading state.
+  return { user: null, accessToken: null, isAuthenticated: false, isLoading: true };
 }
 
 const initialAuth = loadInitialAuth();

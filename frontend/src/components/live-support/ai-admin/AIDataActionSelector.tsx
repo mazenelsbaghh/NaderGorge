@@ -1,0 +1,5 @@
+import type { AICatalogItem } from '@/services/live-support-ai-service';
+
+export function AIDataActionSelector({ title, note, items, selected, onChange, disabled = false }: { title: string; note?: string; items: AICatalogItem[]; selected: string[]; onChange: (keys: string[]) => void; disabled?: boolean }) {
+  return <fieldset disabled={disabled} className="rounded-2xl border border-slate-200 bg-white p-5"><legend className="px-2 font-bold text-slate-950">{title}</legend>{note && <p className="mb-3 text-sm text-slate-600">{note}</p>}<div className="grid gap-2 md:grid-cols-2">{items.map(entry => <label key={entry.key} className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3"><input type="checkbox" className="mt-1 size-4" checked={selected.includes(entry.key)} onChange={event => onChange(event.target.checked ? [...selected, entry.key] : selected.filter(key => key !== entry.key))}/><span><span className="block text-sm font-semibold text-slate-900">{entry.label}</span><span className="block text-xs leading-5 text-slate-500">{entry.description}</span></span></label>)}</div></fieldset>;
+}

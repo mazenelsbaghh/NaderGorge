@@ -6,6 +6,7 @@ import {
   BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload,
 } from 'lucide-react';
 import { AdminShellChrome, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
@@ -541,7 +542,7 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function AdminContentPageClient() {
+export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'assistant' }) {
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
@@ -588,9 +589,12 @@ export default function AdminContentPageClient() {
 
   const activeTeacher = teachers.find(t => t.id === activeTeacherId);
 
+  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
+  const shellActivePath = mode === 'assistant' ? '/assistant/content' : '/admin/content';
+
   return (
-    <AdminShellChrome
-      activePath="/admin/content"
+    <Shell
+      activePath={shellActivePath as any}
       sectionLabel="إدارة المحتوى"
       pageTitle="المناهج التعليمية"
       subtitle={activeTeacher ? `إدارة باقات ومحتوى المعلم: ${activeTeacher.fullName}` : "اختر المعلم أولاً لتصفح وإدارة المحتوى الدراسي الخاص به"}
@@ -829,6 +833,6 @@ export default function AdminContentPageClient() {
 
         </div>
       )}
-    </AdminShellChrome>
+    </Shell>
   );
 }

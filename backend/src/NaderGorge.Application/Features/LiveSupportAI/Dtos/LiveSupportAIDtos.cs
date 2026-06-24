@@ -53,6 +53,23 @@ public sealed record LiveSupportAIKnowledgeRevisionDto(
 public sealed record SaveLiveSupportAIKnowledgeRequest(
     Guid? EntryId, string Title, string Content, string? SourceLabel, bool Publish, DateTime? ValidFrom, DateTime? ValidUntil);
 public sealed record LinkLiveSupportAIKnowledgeRequest(Guid PolicyVersionId, IReadOnlyList<Guid> RevisionIds);
-public sealed record LiveSupportAIPreviewResultDto(Guid PolicyVersionId, bool DryRun, int KnowledgeDocuments, IReadOnlyList<string> AllowedDecisionTypes, string SafeOutcome);
+public sealed record LiveSupportAIWorkerPreviewResultDto(
+    LiveSupportAIWorkerDecisionDto Decision,
+    string DecisionHash,
+    string Provider,
+    string Model,
+    int LatencyMs);
+
+public sealed record LiveSupportAIPreviewResultDto(
+    Guid PolicyVersionId,
+    bool DryRun,
+    int KnowledgeDocuments,
+    IReadOnlyList<string> AllowedDecisionTypes,
+    string SafeOutcome,
+    LiveSupportAIWorkerDecisionDto Decision,
+    string DecisionHash,
+    string Provider,
+    string Model,
+    int LatencyMs);
 public sealed record LiveSupportAIEvidenceItemDto(Guid TurnId, Guid ConversationId, DateTime At, string Status, string? DecisionType, string? FailureCode, string? Provider, string? Model, int CallbackAttempts);
 public sealed record LiveSupportAIEvidencePageDto(IReadOnlyList<LiveSupportAIEvidenceItemDto> Items, string? NextCursor);

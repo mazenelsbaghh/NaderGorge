@@ -234,31 +234,31 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     ]
   },
   {
-    key: '/admin/content',
+    key: '/assistant/content',
     label: 'إدارة تعليقات الطلاب',
     subItems: [
-      { key: '/admin/content', label: 'الرد على تعليقات ومناقشات الدروس' }
+      { key: '/assistant/content', label: 'الرد على تعليقات ومناقشات الدروس' }
     ]
   },
   {
-    key: '/admin/community',
+    key: '/assistant/community',
     label: 'إدارة مجتمع الطلاب',
     subItems: [
-      { key: '/admin/community', label: 'مراقبة وإدارة منشورات مجتمع الطلاب' }
+      { key: '/assistant/community', label: 'مراقبة وإدارة منشورات مجتمع الطلاب' }
     ]
   },
   {
-    key: '/admin/questions',
+    key: '/assistant/questions',
     label: 'الامتحانات والأسئلة',
     subItems: [
-      { key: '/admin/questions', label: 'تصحيح الامتحانات المقالية وبنوك الأسئلة' }
+      { key: '/assistant/questions', label: 'تصحيح الامتحانات المقالية وبنوك الأسئلة' }
     ]
   },
   {
-    key: '/admin/watch-requests',
+    key: '/assistant/watch-requests',
     label: 'طلبات إعادة المشاهدة',
     subItems: [
-      { key: '/admin/watch-requests', label: 'اعتماد طلبات إعادة المشاهدة للطلاب' }
+      { key: '/assistant/watch-requests', label: 'اعتماد طلبات إعادة المشاهدة للطلاب' }
     ]
   },
   {

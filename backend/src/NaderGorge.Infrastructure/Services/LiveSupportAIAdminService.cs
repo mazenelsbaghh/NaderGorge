@@ -8,10 +8,14 @@ using NaderGorge.Application.Features.LiveSupportAI.Services;
 using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Infrastructure.Services.LiveSupportAI;
 
 namespace NaderGorge.Infrastructure.Services;
 
-public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKnowledgeService knowledge, ILiveSupportAIHandoffService? handoff = null) : ILiveSupportAIAdminService
+public sealed class LiveSupportAIAdminService(
+    IAppDbContext db,
+    ILiveSupportAIKnowledgeService knowledge,
+    ILiveSupportAIWorkerPreviewClient? previewClient = null) : ILiveSupportAIAdminService
 {
     public LiveSupportAICatalogsDto GetCatalogs() => LiveSupportAICatalog.Snapshot();
 
@@ -73,11 +77,15 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKn
         return ToDto(draft);
     }
 
-    public async Task DisableAsync(Guid adminUserId, CancellationToken ct)
+    public async Task DisableAsync(Guid adminUserId, long expectedVersion, CancellationToken ct)
     {
         await using var transaction = await db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-        var published = await db.LiveSupportAIPolicyVersions.SingleOrDefaultAsync(x => x.Status == LiveSupportAIPolicyStatus.Published && x.IsEnabled, ct);
-        if (published is null) { await transaction.CommitAsync(ct); return; }
+        var published = await db.LiveSupportAIPolicyVersions.SingleOrDefaultAsync(x => x.Status == LiveSupportAIPolicyStatus.Published, ct)
+            ?? throw new LiveSupportAIAdminException("PUBLISHED_POLICY_NOT_FOUND", "لا توجد سياسة منشورة لإيقافها.");
+        if (published.Version != expectedVersion)
+            throw new LiveSupportAIAdminException("VERSION_CONFLICT", "تغيرت السياسة المنشورة، أعد تحميل الصفحة.");
+        if (!published.IsEnabled)
+            throw new LiveSupportAIAdminException("POLICY_ALREADY_DISABLED", "المساعد متوقف بالفعل.");
         published.IsEnabled = false;
         published.Version++;
         var now = DateTime.UtcNow;
@@ -98,37 +106,18 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKn
         });
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
-
-        if (handoff is not null)
-        {
-            foreach (var state in activeStates)
-            {
-                try
-                {
-                    await handoff.HandoffAsync(
-                        state.ConversationId,
-                        participant: null,
-                        actorUserId: adminUserId,
-                        reasonCode: "EMERGENCY_DISABLE",
-                        safeSummary: "تم إيقاف المساعد الذكي اضطراريًا من قبل الإدارة.",
-                        forced: true,
-                        idempotencyKey: $"disable-{state.ConversationId}-{now.Ticks}",
-                        cancellationToken: ct);
-                }
-                catch (Exception)
-                {
-                    // Ignore handoff errors here; background recovery will pick it up
-                }
-            }
-        }
     }
 
-    public async Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, CancellationToken ct)
+    public async Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, long expectedVersion, CancellationToken ct)
     {
         _ = adminUserId;
         var published = await db.LiveSupportAIPolicyVersions.SingleOrDefaultAsync(x => x.Status == LiveSupportAIPolicyStatus.Published, ct);
         if (published is null)
             throw new LiveSupportAIAdminException("PUBLISHED_POLICY_NOT_FOUND", "لا توجد سياسة منشورة لتفعيلها.");
+        if (published.Version != expectedVersion)
+            throw new LiveSupportAIAdminException("VERSION_CONFLICT", "تغيرت السياسة المنشورة، أعد تحميل الصفحة.");
+        if (published.IsEnabled)
+            return ToDto(published);
 
         published.IsEnabled = true;
         published.Version++;
@@ -249,10 +238,30 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKn
             ? await db.LiveSupportAIPolicyVersions.AsNoTracking().SingleOrDefaultAsync(item => item.Id == request.PolicyVersionId, ct)
             : await db.LiveSupportAIPolicyVersions.AsNoTracking().Where(item => item.Status == LiveSupportAIPolicyStatus.Published).OrderByDescending(item => item.VersionNumber).FirstOrDefaultAsync(ct);
         if (policy is null) throw new LiveSupportAIAdminException("POLICY_NOT_FOUND", "لا توجد سياسة للمعاينة.");
+        if (previewClient is null)
+            throw new LiveSupportAIAdminException("AI_PREVIEW_UNAVAILABLE", "خدمة معاينة المساعد غير متاحة.");
         var documents = await knowledge.SearchPublishedAsync(policy.Id, request.Message, LiveSupportAIContractLimits.MaxKnowledgeDocuments, LiveSupportAIContractLimits.MaxContextCharacters, ct);
-        return new LiveSupportAIPreviewResultDto(policy.Id, true, documents.Count,
-            ["reply", "propose_action", "request_verification", "propose_account_creation", "request_resolution", "handoff"],
-            "DRY_RUN_CONTEXT_VALIDATED");
+        var allowedDecisionTypes = new[] { "reply", "propose_action", "request_verification", "propose_account_creation", "request_resolution", "handoff" };
+        var allowedActionKeys = Parse(policy.ActionKeysJson);
+        using var emptySchema = JsonDocument.Parse("{}");
+        var actions = allowedActionKeys.Where(LiveSupportAICatalog.Actions.ContainsKey).Select(key =>
+            new LiveSupportAIAllowedActionDto(key, LiveSupportAICatalog.Actions[key].Description, emptySchema.RootElement.Clone())).ToArray();
+        var context = new LiveSupportAIWorkerClaimDto(
+            "1", Guid.NewGuid(), Guid.NewGuid(), policy.Id, 0, $"preview:{Guid.NewGuid():N}", DateTime.UtcNow.AddSeconds(30),
+            policy.SystemInstructions, documents, new Dictionary<string, object?> { ["previewMode"] = true },
+            [new LiveSupportAIContextMessageDto("Guest", request.Message.Trim(), DateTime.UtcNow)], actions, allowedDecisionTypes);
+        LiveSupportAIWorkerPreviewResultDto preview;
+        try { preview = await previewClient.PreviewAsync(context, ct); }
+        catch (InvalidOperationException exception) { throw new LiveSupportAIAdminException(exception.Message, "تعذر إكمال معاينة المساعد."); }
+        LiveSupportAITurnOrchestrator.ValidateDecision(preview.Decision, preview.DecisionHash);
+        if (preview.Decision.Type == "propose_action")
+        {
+            var actionKey = preview.Decision.Action!.Value.GetProperty("key").GetString();
+            if (actionKey is null || !allowedActionKeys.Contains(actionKey, StringComparer.Ordinal))
+                throw new LiveSupportAIAdminException("AI_PREVIEW_ACTION_NOT_ALLOWED", "اقترحت المعاينة إجراءً غير مسموح به.");
+        }
+        return new LiveSupportAIPreviewResultDto(policy.Id, true, documents.Count, allowedDecisionTypes,
+            "DRY_RUN_DECISION_VALIDATED", preview.Decision, preview.DecisionHash, preview.Provider, preview.Model, preview.LatencyMs);
     }
 
     public async Task<LiveSupportAIEvidencePageDto> GetEvidenceAsync(string period, string? cursor, int pageSize, CancellationToken ct)

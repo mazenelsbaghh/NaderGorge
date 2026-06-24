@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
 using NaderGorge.Application.Common;
@@ -472,6 +473,77 @@ public sealed class LiveSupportService(
         var notes = await _db.StudentNotes.AsNoTracking().Where(x => x.StudentId == studentId).OrderByDescending(x => x.IsPinned).ThenByDescending(x => x.CreatedAt).Take(100).Select(x => new LiveSupportNoteDto(x.Id, x.Content, x.IsPinned, x.CreatedAt)).ToListAsync(ct);
         return new LiveSupportStudentContextDto(studentId, user.FullName, user.PhoneNumber, user.IsActive, profile?.StudentCode, profile?.Governorate, profile?.SchoolName, profile?.EducationStage.ToString(), profile?.GradeLevel.ToString(), balance, game?.TotalPoints ?? 0, game?.LevelName, crm?.Status.ToString(), crm?.Priority.ToString(), devices, grants, notes,
             await _db.VideoWatchEvents.CountAsync(x => x.UserId == studentId, ct), await _db.StudentExamAttempts.CountAsync(x => x.UserId == studentId, ct), await _db.HomeworkSubmissions.CountAsync(x => x.StudentId == studentId, ct));
+    }
+
+    public async Task<LiveSupportStudentContextSectionDto> GetStudentContextSectionAsync(
+        Guid staffUserId, bool isAdmin, Guid conversationId, string section, CancellationToken ct)
+    {
+        var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
+        var studentId = conversation.LinkedStudentUserId
+            ?? throw new LiveSupportException("STUDENT_NOT_LINKED", "اربط المحادثة بطالب أولًا.");
+        var sectionData = section switch
+        {
+            "basic" => await GetBasicStudentSectionAsync(studentId, ct),
+            "metrics" => await GetStudentMetricsSectionAsync(studentId, ct),
+            "study" => await GetStudentStudySectionAsync(studentId, ct),
+            "devices" => await GetStudentDevicesSectionAsync(studentId, ct),
+            "notes" => await GetStudentNotesSectionAsync(studentId, ct),
+            "crm" => await GetStudentCrmSectionAsync(studentId, ct),
+            _ => throw new LiveSupportException("VALIDATION_ERROR", "قسم بيانات الطالب غير مدعوم.")
+        };
+        return new LiveSupportStudentContextSectionDto(section, sectionData);
+    }
+
+    private async Task<JsonElement> GetBasicStudentSectionAsync(Guid studentId, CancellationToken ct)
+    {
+        var student = await _db.Users.AsNoTracking().Where(user => user.Id == studentId).Select(user => new
+        {
+            user.FullName, user.PhoneNumber, user.IsActive,
+            StudentCode = user.StudentProfile == null ? null : user.StudentProfile.StudentCode,
+            Governorate = user.StudentProfile == null ? null : user.StudentProfile.Governorate,
+            SchoolName = user.StudentProfile == null ? null : user.StudentProfile.SchoolName,
+            EducationStage = user.StudentProfile == null ? null : user.StudentProfile.EducationStage.ToString(),
+            GradeLevel = user.StudentProfile == null ? null : user.StudentProfile.GradeLevel.ToString()
+        }).SingleOrDefaultAsync(ct) ?? throw new LiveSupportException("NOT_FOUND", "الطالب غير موجود.");
+        return JsonSerializer.SerializeToElement(student);
+    }
+
+    private async Task<JsonElement> GetStudentMetricsSectionAsync(Guid studentId, CancellationToken ct)
+    {
+        var balance = await _db.StudentBalances.AsNoTracking().Where(row => row.UserId == studentId).Select(row => (decimal?)row.CurrentBalance).SingleOrDefaultAsync(ct) ?? 0;
+        var points = await _db.StudentGamifications.AsNoTracking().Where(row => row.StudentId == studentId).Select(row => (int?)row.TotalPoints).SingleOrDefaultAsync(ct) ?? 0;
+        var exams = await _db.StudentExamAttempts.CountAsync(row => row.UserId == studentId, ct);
+        var devices = await _db.Devices.CountAsync(row => row.UserId == studentId, ct);
+        return JsonSerializer.SerializeToElement(new { Balance = balance, Points = points, ExamAttempts = exams, DevicesCount = devices });
+    }
+
+    private async Task<JsonElement> GetStudentStudySectionAsync(Guid studentId, CancellationToken ct)
+    {
+        var grants = await _db.StudentAccessGrants.CountAsync(row => row.UserId == studentId && row.IsActive, ct);
+        var watches = await _db.VideoWatchEvents.CountAsync(row => row.UserId == studentId, ct);
+        var homework = await _db.HomeworkSubmissions.CountAsync(row => row.StudentId == studentId, ct);
+        return JsonSerializer.SerializeToElement(new { ActiveGrants = grants, WatchEvents = watches, HomeworkSubmissions = homework });
+    }
+
+    private async Task<JsonElement> GetStudentDevicesSectionAsync(Guid studentId, CancellationToken ct)
+    {
+        var devices = await _db.Devices.AsNoTracking().Where(row => row.UserId == studentId).OrderByDescending(row => row.LastUsedAt)
+            .Take(100).Select(row => new LiveSupportDeviceDto(row.Id, row.DeviceName, row.DeviceType, row.OsName, row.BrowserName, row.LastUsedAt, row.IsActive)).ToListAsync(ct);
+        return JsonSerializer.SerializeToElement(new { Devices = devices });
+    }
+
+    private async Task<JsonElement> GetStudentNotesSectionAsync(Guid studentId, CancellationToken ct)
+    {
+        var notes = await _db.StudentNotes.AsNoTracking().Where(row => row.StudentId == studentId).OrderByDescending(row => row.IsPinned).ThenByDescending(row => row.CreatedAt)
+            .Take(100).Select(row => new LiveSupportNoteDto(row.Id, row.Content, row.IsPinned, row.CreatedAt)).ToListAsync(ct);
+        return JsonSerializer.SerializeToElement(new { Notes = notes });
+    }
+
+    private async Task<JsonElement> GetStudentCrmSectionAsync(Guid studentId, CancellationToken ct)
+    {
+        var crm = await _db.CrmStudentStatuses.AsNoTracking().Where(row => row.StudentId == studentId)
+            .Select(row => new { Status = row.Status.ToString(), Priority = row.Priority.ToString() }).SingleOrDefaultAsync(ct);
+        return JsonSerializer.SerializeToElement(new { Status = crm?.Status, Priority = crm?.Priority });
     }
 
     public async Task<LiveSupportAdminDashboardDto> GetAdminDashboardAsync(CancellationToken ct)

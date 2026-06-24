@@ -231,26 +231,33 @@ public sealed class LiveSupportAITurnOrchestrator(
             request.CallbackIdempotencyKey.Length is < 1 or > 100 || request.LatencyMs < 0 ||
             request.Decision.MessageAr?.Length > LiveSupportAIContractLimits.MaxMessageLength)
             throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
-        var computedHash = ComputeDecisionHash(request.Decision);
-        if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(computedHash), Encoding.ASCII.GetBytes(request.DecisionHash.ToLowerInvariant())))
-            throw new InvalidOperationException("DECISION_HASH_INVALID");
-        _ = ParseDecisionType(request.Decision.Type);
-        var branches = new[] { request.Decision.Action, request.Decision.Verification, request.Decision.AccountCreation, request.Decision.Resolution, request.Decision.Handoff }.Count(item => item.HasValue);
-        if ((request.Decision.Type == "reply" && (branches != 0 || string.IsNullOrWhiteSpace(request.Decision.MessageAr))) ||
-            (request.Decision.Type != "reply" && branches != 1))
+        ValidateDecision(request.Decision, request.DecisionHash);
+    }
+
+    public static void ValidateDecision(LiveSupportAIWorkerDecisionDto decision, string decisionHash)
+    {
+        if (decisionHash.Length != 64 || !decisionHash.All(Uri.IsHexDigit) || decision.MessageAr?.Length > LiveSupportAIContractLimits.MaxMessageLength)
             throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
-        var correctBranch = request.Decision.Type switch
+        var computedHash = ComputeDecisionHash(decision);
+        if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(computedHash), Encoding.ASCII.GetBytes(decisionHash.ToLowerInvariant())))
+            throw new InvalidOperationException("DECISION_HASH_INVALID");
+        _ = ParseDecisionType(decision.Type);
+        var branches = new[] { decision.Action, decision.Verification, decision.AccountCreation, decision.Resolution, decision.Handoff }.Count(item => item.HasValue);
+        if ((decision.Type == "reply" && (branches != 0 || string.IsNullOrWhiteSpace(decision.MessageAr))) ||
+            (decision.Type != "reply" && branches != 1))
+            throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
+        var correctBranch = decision.Type switch
         {
             "reply" => true,
-            "propose_action" => request.Decision.Action.HasValue,
-            "request_verification" => request.Decision.Verification.HasValue,
-            "propose_account_creation" => request.Decision.AccountCreation.HasValue,
-            "request_resolution" => request.Decision.Resolution.HasValue,
-            "handoff" => request.Decision.Handoff.HasValue,
+            "propose_action" => decision.Action.HasValue,
+            "request_verification" => decision.Verification.HasValue,
+            "propose_account_creation" => decision.AccountCreation.HasValue,
+            "request_resolution" => decision.Resolution.HasValue,
+            "handoff" => decision.Handoff.HasValue,
             _ => false
         };
         if (!correctBranch) throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
-        if (request.Decision.Type == "handoff" && request.Decision.Handoff!.Value.TryGetProperty("forced", out var forced) && forced.ValueKind == JsonValueKind.True)
+        if (decision.Type == "handoff" && decision.Handoff!.Value.TryGetProperty("forced", out var forced) && forced.ValueKind == JsonValueKind.True)
             throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
     }
 

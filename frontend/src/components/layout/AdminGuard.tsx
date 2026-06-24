@@ -18,11 +18,16 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
+  const hasAdminNavItems = user?.allowedNavbarItems?.some(
+    (item: string) => item.startsWith('/admin/')
+  ) ?? false;
+
   const isAuthorized = hasAdminAccess(user?.roles) && (
     !user?.allowedDomains ||
     user.allowedDomains.length === 0 ||
     user.allowedDomains.includes("all") ||
-    user.allowedDomains.includes("admin")
+    user.allowedDomains.includes("admin") ||
+    hasAdminNavItems
   );
 
   useEffect(() => {
