@@ -11,7 +11,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
 
-public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKnowledgeService knowledge) : ILiveSupportAIAdminService
+public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKnowledgeService knowledge, ILiveSupportAIHandoffService? handoff = null) : ILiveSupportAIAdminService
 {
     public LiveSupportAICatalogsDto GetCatalogs() => LiveSupportAICatalog.Snapshot();
 
@@ -81,7 +81,8 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKn
         published.IsEnabled = false;
         published.Version++;
         var now = DateTime.UtcNow;
-        foreach (var state in await db.LiveSupportAIConversationStates.Where(item => item.Mode == LiveSupportAIMode.AiActive).ToListAsync(ct))
+        var activeStates = await db.LiveSupportAIConversationStates.Where(item => item.Mode == LiveSupportAIMode.AiActive).ToListAsync(ct);
+        foreach (var state in activeStates)
         {
             state.DisableRequestedAt = now;
             state.Version++;
@@ -97,6 +98,29 @@ public sealed class LiveSupportAIAdminService(IAppDbContext db, ILiveSupportAIKn
         });
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
+
+        if (handoff is not null)
+        {
+            foreach (var state in activeStates)
+            {
+                try
+                {
+                    await handoff.HandoffAsync(
+                        state.ConversationId,
+                        participant: null,
+                        actorUserId: adminUserId,
+                        reasonCode: "EMERGENCY_DISABLE",
+                        safeSummary: "تم إيقاف المساعد الذكي اضطراريًا من قبل الإدارة.",
+                        forced: true,
+                        idempotencyKey: $"disable-{state.ConversationId}-{now.Ticks}",
+                        cancellationToken: ct);
+                }
+                catch (Exception)
+                {
+                    // Ignore handoff errors here; background recovery will pick it up
+                }
+            }
+        }
     }
 
     public async Task<LiveSupportAIPolicyDto> EnableAsync(Guid adminUserId, CancellationToken ct)

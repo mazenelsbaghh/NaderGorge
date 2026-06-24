@@ -15,6 +15,15 @@ export interface LiveSupportAvailability {
   message: string;
 }
 
+export interface LiveSupportAISummary {
+  handoffSafeSummary?: string | null;
+  handoffReasonCode?: string | null;
+  policyVersion?: number | null;
+  verificationStatus?: string | null;
+  attemptedActionKeys: string[];
+  failedTurnErrors: string[];
+}
+
 export interface LiveSupportConversation {
   id: string;
   status: LiveSupportConversationStatus;
@@ -33,6 +42,7 @@ export interface LiveSupportConversation {
   canRate: boolean;
   isAiActive?: boolean;
   isAiTyping?: boolean;
+  aiSummary?: LiveSupportAISummary | null;
 }
 
 export interface LiveSupportMessage {

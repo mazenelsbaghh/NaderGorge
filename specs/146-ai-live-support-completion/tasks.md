@@ -107,17 +107,17 @@
 
 **Independent Test**: Confirm/reject normal handoff, force failure handoff, queue with no staff, assign within capacity, transfer, disconnect/recover, and close while preserving transcript.
 
-- [ ] T064 [P] [US3] Add failing explicit/rejected/forced/no-staff/duplicate handoff tests in `backend/tests/NaderGorge.Application.Tests/LiveSupportAI/LiveSupportAIHandoffTests.cs`.
-- [ ] T065 [P] [US3] Add callback-versus-handoff, disable-versus-handoff, duplicate queue, assignment capacity, and close race tests in `backend/tests/NaderGorge.Integration.Tests/LiveSupportAI/LiveSupportAIHandoffConcurrencyTests.cs`.
-- [ ] T066 [P] [US3] Add Playwright handoff confirmation/rejection/forced queue/post-handoff AI-stop/staff safe-summary/ownership-denial scenarios to `frontend/tests/e2e/live-support-ai.spec.ts`.
+- [x] T064 [P] [US3] Add failing explicit/rejected/forced/no-staff/duplicate handoff tests in `backend/tests/NaderGorge.Application.Tests/LiveSupportAI/LiveSupportAIHandoffTests.cs`.
+- [x] T065 [P] [US3] Add callback-versus-handoff, disable-versus-handoff, duplicate queue, assignment capacity, and close race tests in `backend/tests/NaderGorge.Integration.Tests/LiveSupportAI/LiveSupportAIHandoffConcurrencyTests.cs`.
+- [x] T066 [P] [US3] Add Playwright handoff confirmation/rejection/forced queue/post-handoff AI-stop/staff safe-summary/ownership-denial scenarios to `frontend/tests/e2e/live-support-ai.spec.ts`.
 - [x] T067 [US3] Implement serializable routing-lock handoff in `backend/src/NaderGorge.Infrastructure/Services/LiveSupportAI/LiveSupportAIHandoffService.cs`; re-read state, invalidate AI work, create one queue entry, preserve transcript, assign oldest eligible, and write reason/event/audit/outbox atomically.
-- [ ] T068 [US3] Route participant confirmation, verification exhaustion, provider/schema failure, missing capability, emergency disable, and admin intervention through `ILiveSupportAIHandoffService`; remove duplicate status/queue mutation blocks from `LiveSupportService.cs` and `LiveSupportAIAdminService.cs`.
+- [x] T068 [US3] Route participant confirmation, verification exhaustion, provider/schema failure, missing capability, emergency disable, and admin intervention through `ILiveSupportAIHandoffService`; remove duplicate status/queue mutation blocks from `LiveSupportService.cs` and `LiveSupportAIAdminService.cs`.
 - [x] T069 [US3] Update normal handoff callback handling in `LiveSupportAITurnOrchestrator.cs` to create a `Handoff` pending decision without `Guid.Empty`; update late callbacks after committed handoff to safe idempotent discard.
 - [x] T070 [US3] Update `AIHandoffConfirmation.tsx` with decision ID, explicit reason/effect/expiry, confirm/reject loading, duplicate-click lock, focus restoration, reduced motion, and no unused catch variable.
-- [ ] T071 [US3] Add safe AI handoff summary, policy version, verification/link state, attempted actions, and failures to staff bootstrap DTOs in `LiveSupportDtos.cs` and TypeScript types in `live-support-service.ts`; exclude system instructions, raw answers, lookup values, and secrets.
+- [x] T071 [US3] Add safe AI handoff summary, policy version, verification/link state, attempted actions, and failures to staff bootstrap DTOs in `LiveSupportDtos.cs` and TypeScript types in `live-support-service.ts`; exclude system instructions, raw answers, lookup values, and secrets.
 - [x] T072 [US3] Extract `StaffConversationWorkspace.tsx` and `AIHandoffSummary.tsx` under `frontend/src/components/live-support/staff/`; move transcript/composer and safe AI context out of `AssistantLiveSupportPageClient.tsx` while preserving selection and drafts.
 - [x] T073 [US3] Harden `useLiveSupportHub.ts` and staff store handling for ownership gained/lost, transfer, disconnect grace, and post-handoff mode; composer and actions must disable immediately when ownership is lost.
-- [ ] T074 [US3] Run US3 application/integration routing filters and Playwright grep `handoff|queue|ownership`; expected result: no AI reply after handoff, no duplicate queue/owner, and human workflow passes independently.
+- [x] T074 [US3] Run US3 application/integration routing filters and Playwright grep `handoff|queue|ownership`; expected result: no AI reply after handoff, no duplicate queue/owner, and human workflow passes independently.
 
 ## Phase 6: User Story 7, Data Preservation and Recovery (P1)
 
@@ -125,14 +125,14 @@
 
 **Independent Test**: Apply migration to seeded old data, restart worker/backend during active turns, replay callbacks and confirmations, and verify stable history plus one outcome.
 
-- [ ] T075 [P] [US7] Add failing stale queued/processing/provider-completed turn, expired decision, expired verification, inactivity, and disable reconciliation tests in `backend/tests/NaderGorge.Application.Tests/LiveSupportAI/LiveSupportAIRecoveryTests.cs`.
-- [ ] T076 [P] [US7] Extend PostgreSQL recovery races in `backend/tests/NaderGorge.Integration.Tests/LiveSupportAI/LiveSupportAIRecoveryConcurrencyTests.cs`; repeat randomized callback/close/handoff/disable/confirm operations and assert state-machine precedence.
+- [x] T075 [P] [US7] Add failing stale queued/processing/provider-completed turn, expired decision, expired verification, inactivity, and disable reconciliation tests in `backend/tests/NaderGorge.Application.Tests/LiveSupportAI/LiveSupportAIRecoveryTests.cs`.
+- [x] T076 [P] [US7] Extend PostgreSQL recovery races in `backend/tests/NaderGorge.Integration.Tests/LiveSupportAI/LiveSupportAIRecoveryConcurrencyTests.cs`; repeat randomized callback/close/handoff/disable/confirm operations and assert state-machine precedence.
 - [x] T077 [US7] Implement bounded indexed recovery batches in `backend/src/NaderGorge.Infrastructure/Services/LiveSupportAI/LiveSupportAIRecoveryService.cs`; each item uses compare-and-set/idempotent transitions and emits safe result codes.
 - [x] T078 [US7] Add `backend/src/NaderGorge.API/BackgroundServices/LiveSupportAIRecoveryBackgroundService.cs` with configurable scan interval, batch size, cancellation, distributed single-run lock, and safe metrics; register it in `Program.cs` after required services.
 - [x] T079 [US7] Persist provider-completed decision/hash and independent callback attempt schedule in `processLiveSupportTurn.ts`; make worker restart resume callback delivery without provider inference.
 - [x] T080 [US7] Add safe queue age, inference latency, callback outcome, handoff reason, recovery outcome, and dead-letter metrics in `backend/src/NaderGorge.Application/Features/LiveSupportAI/Services/LiveSupportAITelemetry.cs` and `worker/src/services/liveSupportTelemetry.ts`; prohibit prompt/PII/secret dimensions.
 - [x] T081 [US7] Add health/readiness checks for AI callback secret, provider config, Redis, callback reachability, and live-support worker registration in `worker/src/index.ts` and backend health registration; readiness must fail safely without exposing configuration values.
-- [ ] T082 [US7] Run migration-preservation and recovery test filters repeatedly, restart smoke from `quickstart.md`, and record stable row/checksum and one-outcome evidence in `achievements.md`.
+- [x] T082 [US7] Run migration-preservation and recovery test filters repeatedly, restart smoke from `quickstart.md`, and record stable row/checksum and one-outcome evidence in `achievements.md`.
 
 ## Phase 7: User Story 4, Staff Student Resolution Workspace (P2)
 

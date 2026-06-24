@@ -32,6 +32,81 @@ public sealed class LiveSupportAIRecoveryTests
         Assert.Equal(LiveSupportAITurnStatus.Failed, (await db.LiveSupportAITurns.SingleAsync()).Status);
     }
 
+
+    [Fact]
+    public async Task Recovery_handles_stale_queued_turn()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var now = DateTime.UtcNow;
+        var conversation = new LiveSupportConversation { ParticipantType = LiveSupportParticipantType.Guest, Status = LiveSupportConversationStatus.Waiting, Version = 1 };
+        var turn = new LiveSupportAITurn { ConversationId = conversation.Id, SourceMessageId = Guid.NewGuid(), PolicyVersionId = Guid.NewGuid(), Status = LiveSupportAITurnStatus.Queued, QueuedAt = now.AddMinutes(-6), Version = 1 };
+        db.AddRange(conversation,
+            new LiveSupportAIConversationState { ConversationId = conversation.Id, Mode = LiveSupportAIMode.AiActive, LastParticipantActivityAt = now, Version = 1 },
+            turn);
+        await db.SaveChangesAsync();
+        var handoff = new FakeHandoff();
+
+        var result = await new LiveSupportAIRecoveryService(db, handoff).RecoverBatchAsync(now, 10, default);
+
+        Assert.Equal(1, result.StaleTurns);
+        Assert.Equal(LiveSupportAITurnStatus.Failed, (await db.LiveSupportAITurns.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task Recovery_handles_inactivity_warning()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var now = DateTime.UtcNow;
+        var conversation = new LiveSupportConversation { ParticipantType = LiveSupportParticipantType.Guest, Status = LiveSupportConversationStatus.Waiting, Version = 1 };
+        var state = new LiveSupportAIConversationState { ConversationId = conversation.Id, Mode = LiveSupportAIMode.AiActive, LastParticipantActivityAt = now.AddMinutes(-31), Version = 1 };
+        db.AddRange(conversation, state);
+        await db.SaveChangesAsync();
+        var handoff = new FakeHandoff();
+
+        var result = await new LiveSupportAIRecoveryService(db, handoff).RecoverBatchAsync(now, 10, default);
+
+        Assert.Equal(1, result.InactivityWarnings);
+        var updatedState = await db.LiveSupportAIConversationStates.SingleAsync();
+        Assert.NotNull(updatedState.InactivityWarningSentAt);
+        Assert.NotNull(updatedState.AutoCloseAt);
+    }
+
+    [Fact]
+    public async Task Recovery_reconciles_disable_requested()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var now = DateTime.UtcNow;
+        var conversation = new LiveSupportConversation { ParticipantType = LiveSupportParticipantType.Guest, Status = LiveSupportConversationStatus.Waiting, Version = 1 };
+        var state = new LiveSupportAIConversationState { ConversationId = conversation.Id, Mode = LiveSupportAIMode.AiActive, DisableRequestedAt = now.AddMinutes(-1), LastParticipantActivityAt = now, Version = 1 };
+        db.AddRange(conversation, state);
+        await db.SaveChangesAsync();
+        var handoff = new FakeHandoff();
+
+        var result = await new LiveSupportAIRecoveryService(db, handoff).RecoverBatchAsync(now, 10, default);
+
+        Assert.Equal(1, result.ReconciledConversations);
+        Assert.Equal(1, handoff.Calls);
+    }
+
+    [Fact]
+    public async Task Recovery_handles_stale_provider_completed_turn()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var now = DateTime.UtcNow;
+        var conversation = new LiveSupportConversation { ParticipantType = LiveSupportParticipantType.Guest, Status = LiveSupportConversationStatus.Waiting, Version = 1 };
+        var turn = new LiveSupportAITurn { ConversationId = conversation.Id, SourceMessageId = Guid.NewGuid(), PolicyVersionId = Guid.NewGuid(), Status = LiveSupportAITurnStatus.ProviderCompleted, StartedAt = now.AddMinutes(-11), QueuedAt = now.AddMinutes(-21), Version = 1 };
+        db.AddRange(conversation,
+            new LiveSupportAIConversationState { ConversationId = conversation.Id, Mode = LiveSupportAIMode.AiActive, LastParticipantActivityAt = now, Version = 1 },
+            turn);
+        await db.SaveChangesAsync();
+        var handoff = new FakeHandoff();
+
+        var result = await new LiveSupportAIRecoveryService(db, handoff).RecoverBatchAsync(now, 10, default);
+
+        Assert.Equal(1, result.StaleTurns);
+        Assert.Equal(LiveSupportAITurnStatus.Failed, (await db.LiveSupportAITurns.SingleAsync()).Status);
+    }
+
     private sealed class FakeHandoff : ILiveSupportAIHandoffService
     {
         public int Calls { get; private set; }

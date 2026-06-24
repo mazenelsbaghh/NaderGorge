@@ -1140,7 +1140,6 @@ export default function AdminSettingsPageClient() {
                     <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-1 border border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card-soft)]/50">
                       {(allowedDomain === 'admin' ? ADMIN_NAV_OPTIONS : ASSISTANT_NAV_OPTIONS).map((item) => {
                         const isParentChecked = allowedNavbarItems.includes(item.key) || (item.subItems && item.subItems.some(sub => allowedNavbarItems.includes(sub.key)));
-                        const hasSubItems = !!item.subItems;
 
                         return (
                           <div key={item.key} className="space-y-2 border-b border-[var(--admin-border)]/50 pb-3 last:border-0 last:pb-0">

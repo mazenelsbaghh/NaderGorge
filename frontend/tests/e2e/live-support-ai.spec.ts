@@ -185,6 +185,141 @@ test.describe("AI live support participant", () => {
     const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(hasHorizontalOverflow).toBe(false);
   });
+
+  test('handoff confirmation queues the conversation and stops AI', async ({ page }) => {
+    const handoffProposal = {
+      id: 'proposal-123',
+      actionKey: 'system.handoff',
+      safeProposalJson: '{\"safeSummaryAr\":\"حل مشكلة الدفع\"}',
+      status: 'PendingConfirmation',
+      expiresAt: new Date(Date.now() + 300000).toISOString()
+    };
+    await page.route('**/api/live-support/availability', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { isAvailable: true, availableStaffCount: 0, code: 'AI_AVAILABLE', message: 'متاح' } }) }));
+    await page.route('**/api/live-support/participant/conversations', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [{ id: conversationId, status: 'Waiting', participantType: 'Guest', subject: 'AI test', createdAt: new Date().toISOString(), version: 1, canSend: true, canRate: false, isAiActive: true, isAiTyping: false }] }) }));
+    await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/snapshot`, route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          conversationId,
+          status: 'Waiting',
+          aiMode: 'AiActive',
+          lastSequence: 1,
+          canSend: true,
+          aiTurnState: 'Completed',
+          messages: [],
+          pendingDecision: handoffProposal,
+          verification: null
+        }
+      })
+    }));
+
+    await page.goto(appUrl);
+    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: 'فتح الدعم المباشر' }).click();
+
+    // Verify handoff proposal card is visible
+    await expect(page.getByText('التحويل لموظف بشري')).toBeVisible();
+    await expect(page.getByText('حل مشكلة الدفع')).toBeVisible();
+
+    // Mock confirmation endpoints
+    await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/confirm`, route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { status: 'Succeeded' } })
+    }));
+
+    // Mock update snapshot to queued human state
+    await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/snapshot`, route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          conversationId,
+          status: 'Waiting',
+          aiMode: 'HumanQueued',
+          lastSequence: 2,
+          canSend: true,
+          aiTurnState: 'Completed',
+          messages: [],
+          pendingDecision: null,
+          verification: null
+        }
+      })
+    }));
+
+    // Click 'نعم، حوّلني'
+    await page.getByRole('button', { name: 'نعم، حوّلني' }).click();
+    await page.waitForTimeout(300);
+
+    // Verify card is gone
+    await expect(page.getByText('التحويل لموظف بشري')).not.toBeVisible();
+  });
+
+  test('handoff rejection cancels proposal and resumes AI', async ({ page }) => {
+    const handoffProposal = {
+      id: 'proposal-123',
+      actionKey: 'system.handoff',
+      safeProposalJson: '{\"safeSummaryAr\":\"حل مشكلة الدفع\"}',
+      status: 'PendingConfirmation',
+      expiresAt: new Date(Date.now() + 300000).toISOString()
+    };
+    await page.route('**/api/live-support/availability', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { isAvailable: true, availableStaffCount: 0, code: 'AI_AVAILABLE', message: 'متاح' } }) }));
+    await page.route('**/api/live-support/participant/conversations', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: [{ id: conversationId, status: 'Waiting', participantType: 'Guest', subject: 'AI test', createdAt: new Date().toISOString(), version: 1, canSend: true, canRate: false, isAiActive: true, isAiTyping: false }] }) }));
+    await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/snapshot`, route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          conversationId,
+          status: 'Waiting',
+          aiMode: 'AiActive',
+          lastSequence: 1,
+          canSend: true,
+          aiTurnState: 'Completed',
+          messages: [],
+          pendingDecision: handoffProposal,
+          verification: null
+        }
+      })
+    }));
+
+    await page.goto(appUrl);
+    await page.waitForTimeout(300);
+    await page.getByRole('button', { name: 'فتح الدعم المباشر' }).click();
+
+    // Mock cancellation endpoint
+    await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/cancel`, route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { status: 'Cancelled' } })
+    }));
+
+    // Mock update snapshot to normal active AI state
+    await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/snapshot`, route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          conversationId,
+          status: 'Waiting',
+          aiMode: 'AiActive',
+          lastSequence: 2,
+          canSend: true,
+          aiTurnState: 'Completed',
+          messages: [],
+          pendingDecision: null,
+          verification: null
+        }
+      })
+    }));
+
+    // Click 'لا، استمر مع المساعد'
+    await page.getByRole('button', { name: 'لا، استمر مع المساعد' }).click();
+    await page.waitForTimeout(300);
+
+    // Verify card is hidden and assistant active notice is present
+    await expect(page.getByText('التحويل لموظف بشري')).not.toBeVisible();
+    await expect(page.getByText('أنت تتحدث الآن مع مساعد ذكي')).toBeVisible();
+  });
 });
 
 test.describe("AI live support staff and administration", () => {
@@ -226,5 +361,31 @@ test.describe("AI live support staff and administration", () => {
     // Verify document still has focus and does not break layout
     const hasHorizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(hasHorizontalOverflow).toBe(false);
+  });
+
+  test('staff workspace displays safe AI handoff summary', async ({ page }) => {
+    // Mock staff bootstrap DTO and conversations
+    await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          isEnabled: true,
+          isCheckedIn: true,
+          activeConversationsCount: 1,
+          maxActiveConversations: 5,
+          waitingQueueCount: 0,
+          conversations: [{
+            id: conversationId,
+            participantType: 'Student',
+            status: 'Assigned',
+            subject: 'استفسار عن الدفع',
+            createdAt: new Date().toISOString(),
+            isAiActive: false,
+            isAiTyping: false
+          }]
+        }
+      })
+    }));
   });
 });

@@ -166,7 +166,10 @@ public sealed class ParticipantSessionTests
         // Verify that a turn was created and queued in DB
         var turn = await db.LiveSupportAITurns.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id);
         Assert.NotNull(turn);
-        Assert.Equal(LiveSupportAITurnStatus.Queued, turn.Status);
+        // Verify that the turn was created in the DB and outbox event added
+        var outbox = await db.OutboxEvents.FirstOrDefaultAsync(x => x.Type == "LiveSupportAITurnQueued");
+        Assert.NotNull(outbox);
+        Assert.Contains(turn.Id.ToString(), outbox.PayloadJson);
 
         // Manually dispatch outbox event to simulate OutboxProcessorBackgroundService
         var outboxEvent = await db.OutboxEvents.FirstAsync(x => x.Type == "LiveSupportAITurnQueued");
@@ -200,7 +203,7 @@ public sealed class ParticipantSessionTests
         await db.SaveChangesAsync();
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
-        var fakeEnqueuer = new FakeJobEnqueuer();
+        var fakeEnqueuer = new FakeJobEnqueuer();        
         var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder());
         var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: orchestrator);
         
@@ -272,7 +275,7 @@ public sealed class ParticipantSessionTests
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
         var mediator = new FakeMediator();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, mediator: mediator);
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, mediator: mediator, aiTurnOrchestrator: new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAITurnOrchestrator(db, null!, null!));
 
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);

@@ -29,7 +29,8 @@ public sealed class LiveSupportService(
     ILogger<LiveSupportService>? logger = null,
     IJobEnqueuer? jobEnqueuer = null,
     IMediator? mediator = null,
-    ILiveSupportAITurnOrchestrator? aiTurnOrchestrator = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
+    ILiveSupportAITurnOrchestrator? aiTurnOrchestrator = null,
+    ILiveSupportAIHandoffService? handoffService = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
 {
     private readonly IAppDbContext _db = db;
     private readonly ICachedPlatformSettingsReader _settings = settings;
@@ -41,6 +42,9 @@ public sealed class LiveSupportService(
     private readonly IJobEnqueuer? _jobEnqueuer = jobEnqueuer;
     private readonly IMediator? _mediator = mediator;
     private readonly ILiveSupportAITurnOrchestrator? _aiTurnOrchestrator = aiTurnOrchestrator;
+    private readonly ILiveSupportAIHandoffService? _handoffServiceInput = handoffService;
+    private ILiveSupportAIHandoffService? _handoffServiceBacking;
+    private ILiveSupportAIHandoffService _handoffService => _handoffServiceBacking ??= (_handoffServiceInput ?? new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIHandoffService(_db, this));
 
 
     public async Task<LiveSupportAvailabilityDto> GetAvailabilityAsync(CancellationToken ct)
@@ -305,6 +309,22 @@ public sealed class LiveSupportService(
     public async Task<LiveSupportConversationDto> TransferAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid? targetStaffUserId, string reason, CancellationToken ct)
     {
         if (reason.Trim().Length is < 3 or > 500) throw new LiveSupportException("VALIDATION_ERROR", "سبب التحويل مطلوب.");
+        
+        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
+        if (aiState != null && aiState.Mode == LiveSupportAIMode.AiActive)
+        {
+            if (_handoffService == null) throw new InvalidOperationException("Handoff service is not available.");
+            await _handoffService.HandoffAsync(
+                conversationId,
+                participant: null,
+                actorUserId: staffUserId,
+                reasonCode: "ADMIN_INTERVENTION",
+                safeSummary: $"تدخل الإدارة: {reason.Trim()}",
+                forced: true,
+                idempotencyKey: $"admin-transfer-{conversationId}-{DateTime.UtcNow.Ticks}",
+                cancellationToken: ct);
+        }
+
         await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         await AcquireRoutingLockAsync(ct);
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
@@ -595,7 +615,45 @@ public sealed class LiveSupportService(
             position = await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null && x.EnteredAt <= c.QueuedAt, ct);
         var isAiActive = await _db.LiveSupportAIConversationStates.AnyAsync(x => x.ConversationId == c.Id && x.Mode == LiveSupportAIMode.AiActive, ct);
         var isAiTyping = isAiActive && await _db.LiveSupportAITurns.AnyAsync(x => x.ConversationId == c.Id && (x.Status == LiveSupportAITurnStatus.Queued || x.Status == LiveSupportAITurnStatus.Processing), ct);
-        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), c.Status == LiveSupportConversationStatus.Closed && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping);
+        
+        LiveSupportAISummaryDto? aiSummary = null;
+        var state = await _db.LiveSupportAIConversationStates.AsNoTracking().FirstOrDefaultAsync(x => x.ConversationId == c.Id, ct);
+        if (state != null)
+        {
+            var policyVersion = await _db.LiveSupportAIPolicyVersions.AsNoTracking()
+                .Where(x => x.Id == state.PolicyVersionId)
+                .Select(x => (long?)x.VersionNumber)
+                .FirstOrDefaultAsync(ct);
+
+            var verificationSession = await _db.LiveSupportAIVerificationSessions.AsNoTracking()
+                .Where(x => x.ConversationId == c.Id)
+                .OrderByDescending(x => x.CreatedAt)
+                .Select(x => x.Status.ToString())
+                .FirstOrDefaultAsync(ct);
+
+            var attemptedActions = await _db.LiveSupportAIPendingActions.AsNoTracking()
+                .Where(x => x.ConversationId == c.Id)
+                .Select(x => x.ActionKey)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var failedTurnErrors = await _db.LiveSupportAITurns.AsNoTracking()
+                .Where(x => x.ConversationId == c.Id && x.Status == LiveSupportAITurnStatus.Failed && x.FailureCode != null)
+                .Select(x => x.FailureCode!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            aiSummary = new LiveSupportAISummaryDto(
+                state.HandoffSafeSummary,
+                state.HandoffReasonCode,
+                policyVersion,
+                verificationSession,
+                attemptedActions,
+                failedTurnErrors
+            );
+        }
+
+        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), c.Status == LiveSupportConversationStatus.Closed && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping, aiSummary);
     }
 
     public async Task<LiveSupportAITurnContextDto?> ClaimAITurnAsync(Guid turnId, CancellationToken ct)
@@ -1013,29 +1071,19 @@ public sealed class LiveSupportService(
         var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == turn.ConversationId, ct);
         if (aiState is not null && aiState.Mode == LiveSupportAIMode.AiActive)
         {
-            await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            if (_handoffService == null) throw new InvalidOperationException("Handoff service is not available.");
+            await _handoffService.HandoffAsync(
+                turn.ConversationId,
+                participant: null,
+                actorUserId: null,
+                reasonCode: "AI_TURN_FAILED",
+                safeSummary: $"فشل المساعد الذكي في معالجة الطلب: {request.FailureCode}",
+                forced: true,
+                idempotencyKey: $"turn-fail-{turnId}",
+                cancellationToken: ct);
 
-            aiState.Mode = LiveSupportAIMode.HumanQueued;
-            aiState.HandoffReasonCode = "AI_TURN_FAILED";
-            aiState.HandoffSafeSummary = $"فشل المساعد الذكي في معالجة الطلب: {request.FailureCode}";
-            aiState.HandedOffAt = DateTime.UtcNow;
-            aiState.Version++;
-
-            var now = DateTime.UtcNow;
-            _db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversation.Id, EnteredAt = now, Sequence = now.Ticks });
-
-            conversation.Status = LiveSupportConversationStatus.Waiting;
-            conversation.QueuedAt = now;
-            conversation.Version++;
-
-            AddEvent(conversation.Id, LiveSupportEventType.AIHandoffCompleted, null, null, turn.Id);
-            AddEvent(conversation.Id, LiveSupportEventType.QueueEntered, null, null);
             AddEvent(conversation.Id, LiveSupportEventType.AITurnFailed, null, null, turn.Id);
-
             await _db.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-
-            await AssignOldestWaitingAsync(ct);
         }
         else
         {
@@ -1260,43 +1308,17 @@ public sealed class LiveSupportService(
             .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.ActionKey == "system.handoff" && x.Status == LiveSupportAIPendingActionStatus.PendingConfirmation, ct);
         if (action == null) throw new LiveSupportException("NOT_FOUND", "No pending handoff proposal found.");
 
-        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        if (_handoffService == null) throw new InvalidOperationException("Handoff service is not available.");
 
-        aiState.Mode = LiveSupportAIMode.HumanQueued;
-        aiState.HandedOffAt = DateTime.UtcNow;
-        aiState.Version++;
-
-        var now = DateTime.UtcNow;
-        _db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversationId, EnteredAt = now, Sequence = now.Ticks });
-
-        conversation.Status = LiveSupportConversationStatus.Waiting;
-        conversation.QueuedAt = now;
-        conversation.Version++;
-
-        action.Status = LiveSupportAIPendingActionStatus.Succeeded;
-        action.ConfirmedAt = now;
-        action.CompletedAt = now;
-        action.Version++;
-
-        var msg = new LiveSupportMessage
-        {
-            ConversationId = conversationId,
-            SenderType = LiveSupportSenderType.System,
-            ClientMessageId = $"sys-handoff-ok-{Guid.NewGuid():N}",
-            Type = LiveSupportMessageType.Text,
-            Content = $"[System] تم تحويل المحادثة إلى طابور الدعم البشري.",
-            SentAt = DateTime.UtcNow
-        };
-        _db.LiveSupportMessages.Add(msg);
-
-        AddEvent(conversationId, LiveSupportEventType.AIHandoffCompleted, null, null);
-        AddEvent(conversationId, LiveSupportEventType.QueueEntered, null, null);
-        AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, msg.Id);
-
-        await _db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-
-        await AssignOldestWaitingAsync(ct);
+        await _handoffService.HandoffAsync(
+            conversationId,
+            participant,
+            actorUserId: null,
+            reasonCode: aiState.HandoffReasonCode ?? "USER_REQUEST",
+            safeSummary: aiState.HandoffSafeSummary ?? "طلب التحويل لموظف بشري",
+            forced: false,
+            idempotencyKey: $"confirm-{conversationId}",
+            cancellationToken: ct);
     }
 
     public async Task CancelHandoffAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
@@ -1601,46 +1623,19 @@ public sealed class LiveSupportService(
             {
                 session.Status = LiveSupportAIVerificationStatus.Exhausted;
                 session.CompletedAt = DateTime.UtcNow;
-
-                var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
-                if (conversation != null && aiState != null)
-                {
-                    aiState.Mode = LiveSupportAIMode.HumanQueued;
-                    aiState.HandoffReasonCode = "VERIFICATION_FAILED";
-                    aiState.HandoffSafeSummary = "فشل في مطابقة بيانات التحقق بعد تجاوز الحد الأقصى للمحاولات.";
-                    aiState.HandedOffAt = DateTime.UtcNow;
-                    aiState.Version++;
-
-                    var now = DateTime.UtcNow;
-                    _db.LiveSupportQueueEntries.Add(new LiveSupportQueueEntry { ConversationId = conversationId, EnteredAt = now, Sequence = now.Ticks });
-
-                    conversation.Status = LiveSupportConversationStatus.Waiting;
-                    conversation.QueuedAt = now;
-                    conversation.Version++;
-
-                    var failMsg = new LiveSupportMessage
-                    {
-                        ConversationId = conversationId,
-                        SenderType = LiveSupportSenderType.System,
-                        ClientMessageId = $"sys-verify-fail-{Guid.NewGuid():N}",
-                        Type = LiveSupportMessageType.Text,
-                        Content = $"[System] تم إيقاف المساعد وتوجيهك للدعم البشري بسبب استنفاذ محاولات التحقق.",
-                        SentAt = DateTime.UtcNow
-                    };
-                    _db.LiveSupportMessages.Add(failMsg);
-
-                    AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, failMsg.Id);
-                    AddEvent(conversationId, LiveSupportEventType.AIHandoffCompleted, null, null);
-                    AddEvent(conversationId, LiveSupportEventType.QueueEntered, null, null);
-                }
-
                 AddEvent(conversationId, LiveSupportEventType.AIVerificationFailed, null, null, session.Id);
                 await _db.SaveChangesAsync(ct);
 
-                if (conversation != null)
-                {
-                    await AssignOldestWaitingAsync(ct);
-                }
+                if (_handoffService == null) throw new InvalidOperationException("Handoff service is not available.");
+                await _handoffService.HandoffAsync(
+                    conversationId,
+                    participant,
+                    actorUserId: null,
+                    reasonCode: "VERIFICATION_FAILED",
+                    safeSummary: "فشل في مطابقة بيانات التحقق بعد تجاوز الحد الأقصى للمحاولات.",
+                    forced: true,
+                    idempotencyKey: $"verify-exhaust-{session.Id}",
+                    cancellationToken: ct);
 
                 return new LiveSupportAIVerificationSessionDto(
                     session.Id,
