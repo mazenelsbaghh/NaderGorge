@@ -2,10 +2,13 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Domain.Interfaces;
 using MediatR;
 using NaderGorge.Application.Features.LiveSupportAI.Commands;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
@@ -33,8 +36,8 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         try
         {
             var sp = HttpContext.RequestServices;
-            var db = (IAppDbContext)sp.GetService(typeof(IAppDbContext))!;
-            var settingsReader = (ICachedPlatformSettingsReader)sp.GetService(typeof(ICachedPlatformSettingsReader))!;
+            var db = sp.GetRequiredService<IAppDbContext>();
+            var settingsReader = sp.GetRequiredService<ICachedPlatformSettingsReader>();
 
             Console.WriteLine("[DEBUG] Step 1: Settings");
             var settings = await settingsReader.GetAsync(ct);
