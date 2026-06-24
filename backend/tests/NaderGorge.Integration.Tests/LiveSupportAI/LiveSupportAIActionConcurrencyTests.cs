@@ -135,7 +135,7 @@ public sealed class LiveSupportAIActionConcurrencyTests
             IdempotencyKey = Guid.NewGuid(),
             EncryptedPayload = encrypted,
             PayloadHash = payloadHash,
-            StateFingerprint = "fingerprint"
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}"
         };
         fixture.Db.LiveSupportAIPendingActions.Add(decision);
         await fixture.Db.SaveChangesAsync();

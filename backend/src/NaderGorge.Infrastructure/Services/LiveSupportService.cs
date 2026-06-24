@@ -31,7 +31,9 @@ public sealed class LiveSupportService(
     IJobEnqueuer? jobEnqueuer = null,
     IMediator? mediator = null,
     ILiveSupportAITurnOrchestrator? aiTurnOrchestrator = null,
-    ILiveSupportAIHandoffService? handoffService = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
+    ILiveSupportAIHandoffService? handoffService = null,
+    NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService? aiVerificationService = null,
+    NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? aiRegistrationService = null) : ILiveSupportService, ILiveSupportAssignmentCoordinator
 {
     private readonly IAppDbContext _db = db;
     private readonly ICachedPlatformSettingsReader _settings = settings;
@@ -44,6 +46,8 @@ public sealed class LiveSupportService(
     private readonly IMediator? _mediator = mediator;
     private readonly ILiveSupportAITurnOrchestrator? _aiTurnOrchestrator = aiTurnOrchestrator;
     private readonly ILiveSupportAIHandoffService? _handoffServiceInput = handoffService;
+    private readonly NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIVerificationService? _aiVerificationService = aiVerificationService;
+    private readonly NaderGorge.Application.Features.LiveSupportAI.Interfaces.ILiveSupportAIRegistrationService? _aiRegistrationService = aiRegistrationService;
     private ILiveSupportAIHandoffService? _handoffServiceBacking;
     private ILiveSupportAIHandoffService _handoffService => _handoffServiceBacking ??= (_handoffServiceInput ?? new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAIHandoffService(_db, this));
 
@@ -1289,362 +1293,64 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportAIVerificationSessionDto> StartVerificationLookupAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportLookupRequestDto request, CancellationToken ct)
     {
-        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
-
-        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
-        if (aiState == null) throw new LiveSupportException("CONFLICT", "AI state not found.");
-
-        var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == aiState.PolicyVersionId, ct);
-        if (policy == null || !policy.IsEnabled)
-            throw new LiveSupportException("CONFLICT", "AI policy is disabled.");
-
-        var existingSessions = await _db.LiveSupportAIVerificationSessions
-            .Where(x => x.ConversationId == conversationId)
-            .ToListAsync(ct);
-        foreach (var sess in existingSessions)
-        {
-            sess.Status = LiveSupportAIVerificationStatus.Cancelled;
-            sess.CompletedAt = DateTime.UtcNow;
-        }
-
-        User? candidate = null;
-        if (request.LookupKey == "phone.full")
-        {
-            candidate = await _db.Users
-                .Include(x => x.StudentProfile)
-                .FirstOrDefaultAsync(x => x.PhoneNumber == request.Value && x.IsActive, ct);
-        }
-        else if (request.LookupKey == "student_code.full")
-        {
-            candidate = await _db.Users
-                .Include(x => x.StudentProfile)
-                .FirstOrDefaultAsync(x => x.StudentProfile != null && x.StudentProfile.StudentCode == request.Value && x.IsActive, ct);
-        }
-
-        if (candidate == null)
-        {
-            var dummySession = new LiveSupportAIVerificationSession
-            {
-                Id = Guid.NewGuid(),
-                ConversationId = conversationId,
-                PolicyVersionId = policy.Id,
-                CandidateStudentUserId = null,
-                LookupKey = request.LookupKey,
-                LookupValueHash = Hash(request.Value),
-                SelectedQuestionKeysJson = System.Text.Json.JsonSerializer.Serialize(new[] { "profile.governorate" }),
-                RequiredCorrect = 1,
-                CorrectCount = 0,
-                AttemptCount = 0,
-                MaxAttempts = policy.VerificationMaxAttempts > 0 ? policy.VerificationMaxAttempts : 3,
-                Status = LiveSupportAIVerificationStatus.Challenging,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(5),
-                Version = 1
-            };
-            _db.LiveSupportAIVerificationSessions.Add(dummySession);
-            await _db.SaveChangesAsync(ct);
-
-            AddEvent(conversationId, LiveSupportEventType.AIVerificationStarted, null, null, dummySession.Id);
-
-            return new LiveSupportAIVerificationSessionDto(
-                dummySession.Id,
-                "Challenging",
-                "profile.governorate",
-                "ما هي المحافظة المسجلة بحسابك؟",
-                dummySession.AttemptCount,
-                dummySession.MaxAttempts
-            );
-        }
-
-        var enabledQuestions = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.VerificationQuestionKeysJson) ?? new List<string>();
-        if (!enabledQuestions.Any())
-        {
-            enabledQuestions = new List<string> { "profile.governorate" };
-        }
-
-        var candidateQuestions = new List<string>();
-        foreach (var qk in enabledQuestions)
-        {
-            if (qk == "profile.full_name" && !string.IsNullOrEmpty(candidate.FullName)) candidateQuestions.Add(qk);
-            else if (qk == "profile.birth_date" && candidate.StudentProfile != null) candidateQuestions.Add(qk);
-            else if (qk == "profile.governorate" && candidate.StudentProfile != null && !string.IsNullOrEmpty(candidate.StudentProfile.Governorate)) candidateQuestions.Add(qk);
-            else if (qk == "profile.school_name" && candidate.StudentProfile != null && !string.IsNullOrEmpty(candidate.StudentProfile.SchoolName)) candidateQuestions.Add(qk);
-            else if (qk == "contact.parent_phone_last4" && candidate.StudentProfile != null && !string.IsNullOrEmpty(candidate.StudentProfile.ParentPhone)) candidateQuestions.Add(qk);
-        }
-
-        if (!candidateQuestions.Any())
-        {
-            candidateQuestions.Add("profile.governorate");
-        }
-
-        var requiredCorrect = Math.Min(policy.VerificationRequiredCorrect > 0 ? policy.VerificationRequiredCorrect : 1, candidateQuestions.Count);
-
-        var session = new LiveSupportAIVerificationSession
-        {
-            ConversationId = conversationId,
-            PolicyVersionId = policy.Id,
-            CandidateStudentUserId = candidate.Id,
-            LookupKey = request.LookupKey,
-            LookupValueHash = Hash(request.Value),
-            SelectedQuestionKeysJson = System.Text.Json.JsonSerializer.Serialize(candidateQuestions),
-            RequiredCorrect = requiredCorrect,
-            CorrectCount = 0,
-            AttemptCount = 0,
-            MaxAttempts = policy.VerificationMaxAttempts > 0 ? policy.VerificationMaxAttempts : 3,
-            Status = LiveSupportAIVerificationStatus.Challenging,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
-            Version = 1
-        };
-        _db.LiveSupportAIVerificationSessions.Add(session);
-        await _db.SaveChangesAsync(ct);
-
-        AddEvent(conversationId, LiveSupportEventType.AIVerificationStarted, null, null, session.Id);
-
-        var firstQuestionKey = candidateQuestions.First();
-        var promptText = GetVerificationQuestionPrompt(firstQuestionKey);
-
+        if (_aiVerificationService is null) throw new InvalidOperationException("Verification service is not available.");
+        var lookupDto = new NaderGorge.Application.Features.LiveSupportAI.Dtos.LiveSupportAIVerificationLookupCommandDto(request.LookupKey, request.Value, Guid.NewGuid().ToString("N"));
+        var result = await _aiVerificationService.StartLookupAsync(participant, conversationId, lookupDto, ct);
         return new LiveSupportAIVerificationSessionDto(
-            session.Id,
-            "Challenging",
-            firstQuestionKey,
-            promptText,
-            session.AttemptCount,
-            session.MaxAttempts
+            result.SessionId,
+            result.Status.ToString(),
+            result.PromptText != null ? "profile.governorate" : null,
+            result.PromptText,
+            result.AttemptCount,
+            result.MaxAttempts
         );
     }
 
     public async Task<LiveSupportAIVerificationSessionDto> SubmitVerificationChallengeAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportAnswerChallengeDto request, CancellationToken ct)
     {
-        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
-
-        var session = await _db.LiveSupportAIVerificationSessions
-            .FirstOrDefaultAsync(x => x.ConversationId == conversationId && x.Status == LiveSupportAIVerificationStatus.Challenging, ct);
-        if (session == null) throw new LiveSupportException("NOT_FOUND", "Active verification session not found.");
-
-        if (session.ExpiresAt < DateTime.UtcNow)
-        {
-            session.Status = LiveSupportAIVerificationStatus.Failed;
-            session.CompletedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-            throw new LiveSupportException("CONFLICT", "Verification session has expired.");
-        }
-
-        var selectedKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(session.SelectedQuestionKeysJson) ?? new List<string>();
-        var currentQuestionIndex = session.CorrectCount;
-        if (currentQuestionIndex >= selectedKeys.Count)
-        {
-            throw new LiveSupportException("CONFLICT", "Verification already completed.");
-        }
-
-        var currentQuestionKey = selectedKeys[currentQuestionIndex];
-        bool isCorrect = false;
-
-        if (session.CandidateStudentUserId.HasValue)
-        {
-            var student = await _db.Users
-                .Include(x => x.StudentProfile)
-                .FirstOrDefaultAsync(x => x.Id == session.CandidateStudentUserId.Value, ct);
-
-            if (student != null)
-            {
-                isCorrect = ValidateVerificationAnswer(student, currentQuestionKey, request.Answer);
-            }
-        }
-
-        session.AttemptCount++;
-
-        var attempt = new LiveSupportAIVerificationAttempt
-        {
-            SessionId = session.Id,
-            QuestionKeysJson = System.Text.Json.JsonSerializer.Serialize(new[] { currentQuestionKey }),
-            OutcomeCodesJson = System.Text.Json.JsonSerializer.Serialize(new[] { isCorrect ? "Correct" : "Incorrect" }),
-            SubmittedAt = DateTime.UtcNow,
-            AttemptNumber = session.AttemptCount
-        };
-        _db.LiveSupportAIVerificationAttempts.Add(attempt);
-
-        AddEvent(conversationId, LiveSupportEventType.AIVerificationAttempted, null, null, attempt.Id);
-
-        if (isCorrect)
-        {
-            session.CorrectCount++;
-            if (session.CorrectCount >= session.RequiredCorrect)
-            {
-                session.Status = LiveSupportAIVerificationStatus.Verified;
-                session.VerifiedAt = DateTime.UtcNow;
-                session.CompletedAt = DateTime.UtcNow;
-
-                if (conversation != null && session.CandidateStudentUserId.HasValue)
-                {
-                    await ChangeStudentLinkAsync(
-                        Guid.Empty, 
-                        true, 
-                        conversationId,
-                        session.CandidateStudentUserId.Value,
-                        "AI Verification Success",
-                        conversation.Version,
-                        ct
-                    );
-
-                    var successMessage = new LiveSupportMessage
-                    {
-                        ConversationId = conversationId,
-                        SenderType = LiveSupportSenderType.System,
-                        ClientMessageId = $"sys-verify-success-{Guid.NewGuid():N}",
-                        Type = LiveSupportMessageType.Text,
-                        Content = $"[System] تم التحقق من الهوية بنجاح وتم ربط الحساب.",
-                        SentAt = DateTime.UtcNow
-                    };
-                    _db.LiveSupportMessages.Add(successMessage);
-                    conversation.LastMessageAt = successMessage.SentAt;
-                    conversation.Version++;
-
-                    AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, successMessage.Id);
-                }
-
-                AddEvent(conversationId, LiveSupportEventType.AIVerificationSucceeded, null, null, session.Id);
-                await _db.SaveChangesAsync(ct);
-
-                return new LiveSupportAIVerificationSessionDto(
-                    session.Id,
-                    "Verified",
-                    null,
-                    "تم التحقق من الهوية بنجاح.",
-                    session.AttemptCount,
-                    session.MaxAttempts
-                );
-            }
-            else
-            {
-                var nextQuestionKey = selectedKeys[session.CorrectCount];
-                var promptText = GetVerificationQuestionPrompt(nextQuestionKey);
-                await _db.SaveChangesAsync(ct);
-
-                return new LiveSupportAIVerificationSessionDto(
-                    session.Id,
-                    "Challenging",
-                    nextQuestionKey,
-                    promptText,
-                    session.AttemptCount,
-                    session.MaxAttempts
-                );
-            }
-        }
-        else
-        {
-            if (session.AttemptCount >= session.MaxAttempts)
-            {
-                session.Status = LiveSupportAIVerificationStatus.Exhausted;
-                session.CompletedAt = DateTime.UtcNow;
-                AddEvent(conversationId, LiveSupportEventType.AIVerificationFailed, null, null, session.Id);
-                await _db.SaveChangesAsync(ct);
-
-                if (_handoffService == null) throw new InvalidOperationException("Handoff service is not available.");
-                await _handoffService.HandoffAsync(
-                    conversationId,
-                    participant,
-                    actorUserId: null,
-                    reasonCode: "VERIFICATION_FAILED",
-                    safeSummary: "فشل في مطابقة بيانات التحقق بعد تجاوز الحد الأقصى للمحاولات.",
-                    forced: true,
-                    idempotencyKey: $"verify-exhaust-{session.Id}",
-                    cancellationToken: ct);
-
-                return new LiveSupportAIVerificationSessionDto(
-                    session.Id,
-                    "Exhausted",
-                    null,
-                    "تم تجاوز الحد الأقصى للمحاولات. جاري تحويلك للدعم البشري.",
-                    session.AttemptCount,
-                    session.MaxAttempts
-                );
-            }
-            else
-            {
-                var promptText = GetVerificationQuestionPrompt(currentQuestionKey);
-                await _db.SaveChangesAsync(ct);
-
-                return new LiveSupportAIVerificationSessionDto(
-                    session.Id,
-                    "Challenging",
-                    currentQuestionKey,
-                    promptText + " (المحاولة خاطئة، يرجى المحاولة مرة أخرى)",
-                    session.AttemptCount,
-                    session.MaxAttempts
-                );
-            }
-        }
+        if (_aiVerificationService is null) throw new InvalidOperationException("Verification service is not available.");
+        var active = await GetActiveVerificationSessionAsync(participant, conversationId, ct);
+        if (active is null) throw new LiveSupportException("NOT_FOUND", "Active verification session not found.");
+        
+        var answerDto = new NaderGorge.Application.Features.LiveSupportAI.Dtos.LiveSupportAIVerificationAnswerCommandDto(active.SessionId, request.Answer, active.SessionId.ToString("N"));
+        var result = await _aiVerificationService.SubmitAnswerAsync(participant, conversationId, answerDto, ct);
+        return new LiveSupportAIVerificationSessionDto(
+            result.SessionId,
+            result.Status.ToString(),
+            result.PromptText != null ? "profile.governorate" : null,
+            result.PromptText,
+            result.AttemptCount,
+            result.MaxAttempts
+        );
     }
 
     public async Task ConfirmRegistrationProposalAsync(LiveSupportParticipantIdentity participant, Guid conversationId, LiveSupportRegisterGuestDto request, CancellationToken ct)
     {
-        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
+        if (_aiRegistrationService is null) throw new InvalidOperationException("Registration service is not available.");
+        
+        var decision = await _db.LiveSupportAIPendingActions
+            .Where(x => x.ConversationId == conversationId && x.DecisionKind == LiveSupportAIPendingDecisionKind.AccountCreation && x.Status == LiveSupportAIPendingActionStatus.PendingConfirmation)
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+        if (decision is null) throw new LiveSupportException("NOT_FOUND", "Account creation proposal not found.");
 
-        if (conversation.LinkedStudentUserId.HasValue)
-            throw new LiveSupportException("CONFLICT", "Conversation is already linked to a student account.");
-
-        var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversationId, ct);
-        if (aiState == null) throw new LiveSupportException("CONFLICT", "AI conversation state not found.");
-
-        var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == aiState.PolicyVersionId, ct);
-        if (policy == null || !policy.IsEnabled)
-            throw new LiveSupportException("CONFLICT", "Active policy is disabled.");
-
-        var actionKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.ActionKeysJson) ?? new List<string>();
-        if (!actionKeys.Contains("student.create-and-link"))
-            throw new LiveSupportException("CONFLICT", "Account creation is not enabled in active policy.");
-
-        if (_mediator == null) throw new LiveSupportException("INTERNAL_ERROR", "Mediator is not available.");
-
-        var packageIds = new List<Guid>();
-        var command = new AdminCreateUserCommand(
+        var dto = new NaderGorge.Application.Features.LiveSupportAI.Dtos.LiveSupportAISecureRegistrationDto(
+            decision.Id,
+            decision.Id.ToString("N"),
             request.FullName,
             request.PhoneNumber,
             request.Password,
-            "Student",
-            packageIds
-        );
-        var created = await _mediator.Send(command, ct);
-        if (!created.Success || created.Data == null)
-            throw new LiveSupportException("VALIDATION_ERROR", created.Message ?? "Failed to create student account.");
-
-        var profile = await _db.StudentProfiles.FirstOrDefaultAsync(x => x.UserId == created.Data.Id, ct);
-        if (profile != null)
-        {
-            profile.Governorate = request.Governorate;
-            profile.SchoolName = request.SchoolName;
-            profile.ParentPhone = request.ParentPhoneNumber;
-            if (Enum.TryParse<EducationStage>(request.EducationStage, true, out var stage))
-                profile.EducationStage = stage;
-            if (Enum.TryParse<GradeLevel>(request.GradeLevel, true, out var level))
-                profile.GradeLevel = level;
-            profile.UpdatedAt = DateTime.UtcNow;
-        }
-
-        await ChangeStudentLinkAsync(
-            Guid.Empty, 
-            true, 
-            conversationId,
-            created.Data.Id,
-            "AI Guest Registration",
-            conversation.Version,
-            ct
+            DateTime.UtcNow.Date.AddYears(-15),
+            "Male",
+            request.Governorate,
+            "Address",
+            request.EducationStage,
+            request.GradeLevel,
+            request.SchoolName,
+            request.ParentPhoneNumber
         );
 
-        var message = new LiveSupportMessage
-        {
-            ConversationId = conversationId,
-            SenderType = LiveSupportSenderType.System,
-            ClientMessageId = $"sys-register-{Guid.NewGuid():N}",
-            Type = LiveSupportMessageType.Text,
-            Content = $"[System] تم إنشاء الحساب بنجاح وتوثيقه للطالب: {request.FullName}.",
-            SentAt = DateTime.UtcNow
-        };
-        _db.LiveSupportMessages.Add(message);
-        conversation.LastMessageAt = message.SentAt;
-        conversation.Version++;
-
-        AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, message.Id);
-        await _db.SaveChangesAsync(ct);
+        await _aiRegistrationService.RegisterAndLinkAsync(participant, conversationId, dto, ct);
     }
 
     public async Task<LiveSupportAIPendingActionDto?> GetActivePendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)

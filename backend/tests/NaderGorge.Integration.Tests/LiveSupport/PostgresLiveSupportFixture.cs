@@ -54,7 +54,8 @@ public sealed class PostgresLiveSupportFixture : IAsyncDisposable
             "live_support_ai_policy_versions",
             "live_support_ai_knowledge_entries",
             "live_support_ai_knowledge_revisions",
-            "live_support_ai_policy_knowledge_revisions"
+            "live_support_ai_policy_knowledge_revisions",
+            "outbox_events"
         };
 
         var query = "TRUNCATE TABLE " + string.Join(", ", tables.Select(t => "\"" + t + "\"")) + " CASCADE;";
