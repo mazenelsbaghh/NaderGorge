@@ -59,7 +59,7 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
   };
 
   return (
-    <div dir="rtl" className="my-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+    <div dir="rtl" role="region" aria-label="التحويل لموظف بشري" className="my-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-4 shadow-sm transition-all hover:shadow-md">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-800">
           <Headphones size={20} />

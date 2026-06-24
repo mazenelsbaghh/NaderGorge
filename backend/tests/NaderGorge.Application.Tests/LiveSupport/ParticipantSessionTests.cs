@@ -1,3 +1,6 @@
+using NaderGorge.Infrastructure.Services.LiveSupportAI;
+using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using Microsoft.EntityFrameworkCore;
 using MediatR;
 using NaderGorge.Application.Common;
@@ -147,7 +150,8 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder());
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: orchestrator);
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
@@ -163,6 +167,10 @@ public sealed class ParticipantSessionTests
         var turn = await db.LiveSupportAITurns.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id);
         Assert.NotNull(turn);
         Assert.Equal(LiveSupportAITurnStatus.Queued, turn.Status);
+
+        // Manually dispatch outbox event to simulate OutboxProcessorBackgroundService
+        var outboxEvent = await db.OutboxEvents.FirstAsync(x => x.Type == "LiveSupportAITurnQueued");
+        await NaderGorge.API.BackgroundServices.LiveSupportAIOutboxQueueDispatcher.DispatchAsync(outboxEvent, fakeEnqueuer);
 
         // Verify that the job was enqueued in Redis
         Assert.Single(fakeEnqueuer.EnqueuedJobs);
@@ -193,7 +201,8 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder());
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: orchestrator);
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
@@ -488,5 +497,11 @@ public sealed class ParticipantSessionTests
     {
         public Task<CachedPlatformSettings> GetAsync(CancellationToken cancellationToken) => Task.FromResult(CachedPlatformSettings.Default with { LiveSupportEnabled = true });
         public void Invalidate() { }
+    }
+
+    private sealed class FakeContextBuilder : ILiveSupportAIContextBuilder
+    {
+        public Task<LiveSupportAIWorkerClaimDto> BuildAsync(Guid turnId, CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
     }
 }
