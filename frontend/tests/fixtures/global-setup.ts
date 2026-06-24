@@ -30,10 +30,10 @@ async function globalSetup() {
       return;
     } catch (e) {
       if (i === 2) {
-        console.error(
-          '❌ FATAL: Could not reach the API E2E seeding endpoint. Is ASPNETCORE_ENVIRONMENT=E2e running?'
+        console.warn(
+          '⚠️ WARNING: Could not reach the API E2E seeding endpoint. Tests requiring live backend will fail, but fully mocked tests will proceed.'
         );
-        throw e;
+        return;
       }
       console.warn('Backend not ready yet, retrying...');
       await new Promise((r) => setTimeout(r, 2000));
