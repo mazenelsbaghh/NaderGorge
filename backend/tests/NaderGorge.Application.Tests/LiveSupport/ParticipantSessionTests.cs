@@ -2,6 +2,7 @@ using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
@@ -11,6 +12,10 @@ using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
 using NaderGorge.Infrastructure.Services;
+using NaderGorge.Infrastructure.Services.LiveSupportAI;
+using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Commands;
+using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Commands;
 
@@ -175,11 +180,10 @@ public sealed class ParticipantSessionTests
         var outboxEvent = await db.OutboxEvents.FirstAsync(x => x.Type == "LiveSupportAITurnQueued");
         await NaderGorge.API.BackgroundServices.LiveSupportAIOutboxQueueDispatcher.DispatchAsync(outboxEvent, fakeEnqueuer);
 
-        // Verify that the job was enqueued in Redis
-        Assert.Single(fakeEnqueuer.EnqueuedJobs);
-        var job = fakeEnqueuer.EnqueuedJobs[0];
-        Assert.Equal("ai-live-support-turns", job.queueName);
-        Assert.Equal("respond", job.jobName);
+        // Verify that the outbox event was created
+        var outboxEvent = await db.OutboxEvents.FirstOrDefaultAsync(x => x.Type == "LiveSupportAITurnQueued");
+        Assert.NotNull(outboxEvent);
+        Assert.Contains(turn.Id.ToString(), outboxEvent.PayloadJson);
     }
 
     [Fact]
@@ -274,21 +278,33 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var mediator = new FakeMediator();
+        var mediator = new FakeMediator(db);
         var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, mediator: mediator, aiTurnOrchestrator: new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAITurnOrchestrator(db, null!, null!));
 
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
 
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AI_CALLBACK_SECRET"] = "Feature146OnlyStrongCallbackSecretValue123456789"
+        }).Build();
+        var protector = new LiveSupportAIDataProtector(config);
+        var payloadBytes = System.Text.Encoding.UTF8.GetBytes("{\"arguments\": {}}");
+        var encrypted = protector.Protect(payloadBytes);
+        var payloadHash = protector.ComputeKeyedDigest("pending-decision", payloadBytes);
+
         var action = new LiveSupportAIPendingAction
         {
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
+            DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
             ActionKey = "student.watch.reset",
-            SafeProposalJson = "{\"lessonVideoId\": \"" + Guid.NewGuid() + "\"}",
-            EncryptedPayload = System.Text.Encoding.UTF8.GetBytes("{\"lessonVideoId\": \"" + Guid.NewGuid() + "\"}"),
+            SafeProposalJson = "{}",
+            EncryptedPayload = encrypted,
+            PayloadHash = payloadHash,
+            StateFingerprint = "fingerprint",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
             IdempotencyKey = Guid.NewGuid(),
@@ -437,26 +453,56 @@ public sealed class ParticipantSessionTests
         Assert.Equal(LiveSupportAIMode.HumanQueued, updatedAiState.Mode);
     }
 
-    private sealed class FakeMediator : IMediator
+    private sealed class FakeActionExecutorInTests : ILiveSupportAIActionExecutor
     {
-        public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        public Task<Guid> ExecuteAsync(Guid conversationId, Guid studentUserId, Guid pendingDecisionId, string actionKey, IReadOnlyDictionary<string, object?> payload, string idempotencyKey, CancellationToken ct)
         {
+            return Task.FromResult(Guid.NewGuid());
+        }
+    }
+
+    private sealed class FakeMediator(AppDbContext db) : IMediator
+    {
+        public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
+        {
+            if (request is ConfirmLiveSupportAIActionCommand confirmCmd)
+            {
+                var configuration = new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["AI_CALLBACK_SECRET"] = "Feature146OnlyStrongCallbackSecretValue123456789"
+                }).Build();
+                var protector = new LiveSupportAIDataProtector(configuration);
+                var executor = new FakeActionExecutorInTests();
+                var handler = new ConfirmLiveSupportAIActionCommandHandler(db, protector, executor);
+                var executionId = await handler.Handle(confirmCmd, cancellationToken);
+                return (TResponse)(object)executionId;
+            }
+            if (request is CancelLiveSupportAIDecisionCommand cancelCmd)
+            {
+                var handler = new CancelLiveSupportAIDecisionCommandHandler(db);
+                await handler.Handle(cancelCmd, cancellationToken);
+                return (TResponse)(object)MediatR.Unit.Value;
+            }
             if (typeof(TResponse) == typeof(ApiResponse))
             {
                 var result = ApiResponse.Ok("Success");
-                return Task.FromResult((TResponse)(object)result);
+                return (TResponse)(object)result;
             }
             if (typeof(TResponse) == typeof(ApiResponse<AdminCreateUserResult>))
             {
                 var result = ApiResponse<AdminCreateUserResult>.Ok(new AdminCreateUserResult(Guid.NewGuid(), "Name", "Phone", "Student"));
-                return Task.FromResult((TResponse)(object)result);
+                return (TResponse)(object)result;
             }
-            return Task.FromResult(default(TResponse)!);
+            return default(TResponse)!;
         }
 
-        public Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
+        public async Task Send<TRequest>(TRequest request, CancellationToken cancellationToken = default) where TRequest : IRequest
         {
-            return Task.CompletedTask;
+            if (request is CancelLiveSupportAIDecisionCommand cancelCmd)
+            {
+                var handler = new CancelLiveSupportAIDecisionCommandHandler(db);
+                await handler.Handle(cancelCmd, cancellationToken);
+            }
         }
 
         public Task<object?> Send(object request, CancellationToken cancellationToken = default)

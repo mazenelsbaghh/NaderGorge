@@ -1,0 +1,306 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - link "Massar PlatformMassar Platform MASSAR PLATFORM منصة مسار" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]:
+          - img "Massar Platform" [ref=e8]
+          - img "Massar Platform" [ref=e9]
+        - generic [ref=e10]:
+          - paragraph [ref=e11]: MASSAR PLATFORM
+          - paragraph [ref=e12]: منصة مسار
+      - generic [ref=e13]:
+        - link "الرئيسية" [ref=e14] [cursor=pointer]:
+          - /url: /
+        - link "الدورات" [ref=e15] [cursor=pointer]:
+          - /url: "#courses"
+        - link "المعلمون" [ref=e16] [cursor=pointer]:
+          - /url: "#teachers"
+        - link "عن المنصة" [ref=e17] [cursor=pointer]:
+          - /url: "#about-platform"
+        - link "آراء الطلبة" [ref=e18] [cursor=pointer]:
+          - /url: "#testimonials"
+      - generic [ref=e19]:
+        - link "شعار منصة مسارشعار منصة مسارتسجيل الدخول" [ref=e20] [cursor=pointer]:
+          - /url: /login
+          - generic [ref=e23]:
+            - generic [ref=e24]:
+              - img "شعار منصة مسار" [ref=e25]
+              - img "شعار منصة مسار" [ref=e26]
+            - text: تسجيل الدخول
+        - link "احجز مكانك احجز مكانك" [ref=e27] [cursor=pointer]:
+          - /url: /register
+          - generic [ref=e28]: احجز مكانك
+          - generic [ref=e29]:
+            - text: احجز مكانك
+            - img [ref=e30]
+        - button "التحول إلى الوضع الداكن" [ref=e33]:
+          - img [ref=e34]
+          - text: Toggle theme
+    - generic [ref=e37]:
+      - link "Massar PlatformMassar Platform MASSAR PLATFORM منصة مسار" [ref=e38] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e39]:
+          - img "Massar Platform" [ref=e40]
+          - img "Massar Platform" [ref=e41]
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: MASSAR PLATFORM
+          - paragraph [ref=e44]: منصة مسار
+      - generic [ref=e45]:
+        - link "تسجيل الدخول" [ref=e46] [cursor=pointer]:
+          - /url: /login
+          - text: دخول
+        - button "التحول إلى الوضع الداكن" [ref=e48]:
+          - img [ref=e49]
+          - text: Toggle theme
+        - button "فتح القائمة" [ref=e51]:
+          - img [ref=e52]
+  - generic [ref=e53]:
+    - main [ref=e54]:
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - img "خلفية الصفحة الرئيسية" [ref=e57]
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - heading "ابدأ رحلتك التعليميةخطوتك الأولى نحو التفوق" [level=1] [ref=e60]
+              - paragraph [ref=e61]: منصة تعليمية متكاملة تساعدك على تعلم كل مهارة، في أي وقت ومن أي مكان.
+              - generic [ref=e62]:
+                - link "ابدأ التعلم الآن" [ref=e63] [cursor=pointer]:
+                  - /url: /register
+                  - img [ref=e64]
+                  - text: ابدأ التعلم الآن
+                - generic [ref=e67]: +٥٬٠٠٢ طالب داخل الرحلة
+              - generic [ref=e68]:
+                - generic [ref=e69]:
+                  - img [ref=e71]
+                  - text: دروس تفاعلية
+                - generic [ref=e74]:
+                  - img [ref=e76]
+                  - text: خطة يومية
+                - generic [ref=e79]:
+                  - img [ref=e81]
+                  - text: متابعة مستمرة
+                - generic [ref=e84]:
+                  - img [ref=e86]
+                  - text: مراجعات منظمة
+            - link "استعرض الدورات" [ref=e89] [cursor=pointer]:
+              - /url: "#courses"
+              - img [ref=e90]
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - heading "الأوائل مع مسار" [level=2] [ref=e96]
+            - paragraph [ref=e97]: نفتخر بنجاح طلابنا المتفوقين
+          - region "الأوائل مع مسار" [ref=e98]:
+            - 'group "1 من 5: أحمد خالد" [ref=e100]':
+              - text: "1"
+              - img "أحمد خالد" [ref=e101]
+              - heading "أحمد خالد" [level=3] [ref=e102]
+              - paragraph [ref=e103]: القسم العلمي
+              - strong [ref=e104]: 98.7%
+              - text: النسبة النهائية
+            - generic [ref=e105]:
+              - button "عرض الطالب السابق" [ref=e106]:
+                - img [ref=e107]
+              - generic "اختيار طالب من الأوائل" [ref=e109]:
+                - button "عرض أحمد خالد" [ref=e110]
+                - button "عرض سارة محمد" [ref=e111]
+                - button "عرض محمد إياد" [ref=e112]
+                - button "عرض نور الهدى" [ref=e113]
+                - button "عرض علي حسن" [ref=e114]
+              - button "عرض الطالب التالي" [ref=e115]:
+                - img [ref=e116]
+          - link "عرض المزيد من الأوائل" [ref=e118] [cursor=pointer]:
+            - /url: /register
+            - text: عرض المزيد من الأوائل
+            - img [ref=e119]
+        - generic [ref=e122]:
+          - generic [ref=e123]:
+            - heading "تعلم على يد نخبة من أفضل المعلمين" [level=2] [ref=e124]
+            - paragraph [ref=e125]: خبرة عالية، شغف بالتعليم، دعم مستمر، وخطة واضحة تناسب مستوى كل طالب.
+            - link "استكشف جميع المعلمين" [ref=e126] [cursor=pointer]:
+              - /url: /register
+          - generic "معلمو منصة مسار" [ref=e127]:
+            - article [ref=e128]:
+              - img "أ. خالد النجار" [ref=e129]
+              - generic [ref=e130]:
+                - heading "أ. خالد النجار" [level=3] [ref=e131]
+                - paragraph [ref=e132]: معلم الرياضيات
+                - generic [ref=e133]:
+                  - text: "4.9"
+                  - img [ref=e134]
+            - article [ref=e136]:
+              - img "أ. إيمان سعيد" [ref=e137]
+              - generic [ref=e138]:
+                - heading "أ. إيمان سعيد" [level=3] [ref=e139]
+                - paragraph [ref=e140]: معلمة الفيزياء
+                - generic [ref=e141]:
+                  - text: "4.9"
+                  - img [ref=e142]
+            - article [ref=e144]:
+              - img "أ. محمد عصام" [ref=e145]
+              - generic [ref=e146]:
+                - heading "أ. محمد عصام" [level=3] [ref=e147]
+                - paragraph [ref=e148]: معلم الكيمياء
+                - generic [ref=e149]:
+                  - text: "4.8"
+                  - img [ref=e150]
+            - article [ref=e152]:
+              - img "أ. عمر حمدي" [ref=e153]
+              - generic [ref=e154]:
+                - heading "أ. عمر حمدي" [level=3] [ref=e155]
+                - paragraph [ref=e156]: معلم اللغة العربية
+                - generic [ref=e157]:
+                  - text: "4.9"
+                  - img [ref=e158]
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - img [ref=e162]
+              - strong [ref=e165]: "+150"
+              - text: معلم مميز
+            - generic [ref=e166]:
+              - img [ref=e167]
+              - strong [ref=e170]: "+50"
+              - text: مادة تعليمية
+            - generic [ref=e171]:
+              - img [ref=e172]
+              - strong [ref=e176]: +10K
+              - text: طالب مستفيد
+            - generic [ref=e177]:
+              - img [ref=e178]
+              - strong [ref=e181]: +95%
+              - text: نسبة رضا الطلاب
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - heading "آراء طلابنا" [level=2] [ref=e185]
+            - paragraph [ref=e186]: تجارب حقيقية من طلاب حققوا أهدافهم
+          - generic [ref=e187]:
+            - button "الرأي السابق" [ref=e188]:
+              - img [ref=e189]
+            - generic [ref=e191]:
+              - figure [ref=e192]:
+                - generic [ref=e193]:
+                  - img "يوسف م." [ref=e194]
+                  - generic [ref=e195]:
+                    - generic [ref=e196]: يوسف م.
+                    - generic "تقييم خمسة نجوم" [ref=e197]:
+                      - img [ref=e198]
+                      - img [ref=e200]
+                      - img [ref=e202]
+                      - img [ref=e204]
+                      - img [ref=e206]
+                - blockquote [ref=e208]: منصة التعلم الشرح مبسط والدروس بتنتهي بسرعة، أرفع مستواي بشكل كبير.
+              - figure [ref=e209]:
+                - generic [ref=e210]:
+                  - img "لينا ع." [ref=e211]
+                  - generic [ref=e212]:
+                    - generic [ref=e213]: لينا ع.
+                    - generic "تقييم خمسة نجوم" [ref=e214]:
+                      - img [ref=e215]
+                      - img [ref=e217]
+                      - img [ref=e219]
+                      - img [ref=e221]
+                      - img [ref=e223]
+                - blockquote [ref=e225]: أفضل منصة تعليمية استخدمتها، التقدم سريع والمحتوى ممتاز جدًا.
+              - figure [ref=e226]:
+                - generic [ref=e227]:
+                  - img "أحمد ر." [ref=e228]
+                  - generic [ref=e229]:
+                    - generic [ref=e230]: أحمد ر.
+                    - generic "تقييم خمسة نجوم" [ref=e231]:
+                      - img [ref=e232]
+                      - img [ref=e234]
+                      - img [ref=e236]
+                      - img [ref=e238]
+                      - img [ref=e240]
+                - blockquote [ref=e242]: جزاكم الله خير، بفضل الله ثم بفضلكم حققت حلمي في الثانوية العامة.
+            - button "الرأي التالي" [ref=e243]:
+              - img [ref=e244]
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - heading "مساراتنا التعليمية" [level=2] [ref=e249]
+            - paragraph [ref=e250]: اختر المسار المناسب لك وابدأ رحلتك نحو النجاح
+          - generic [ref=e251]:
+            - article [ref=e252]:
+              - img [ref=e254]
+              - generic [ref=e257]:
+                - heading "البكالوريا" [level=3] [ref=e258]
+                - paragraph [ref=e259]: مناهج شاملة ومبسطة لجميع مواد البكالوريا، مع اختبارات وتمارين على نمط الامتحان.
+                - link "استكشف مسار البكالوريا" [ref=e260] [cursor=pointer]:
+                  - /url: /register
+                  - text: استكشف مسار البكالوريا
+                  - img [ref=e261]
+            - article [ref=e263]:
+              - img [ref=e265]
+              - generic [ref=e268]:
+                - heading "الثانوية العامة" [level=3] [ref=e269]
+                - paragraph [ref=e270]: "جميع مواد الثانوية العامة: شرح، ملخصات، اختبارات دورية، ومراجعة منظمة قبل الامتحان."
+                - link "استكشف مسار الثانوية العامة" [ref=e271] [cursor=pointer]:
+                  - /url: /register
+                  - text: استكشف مسار الثانوية العامة
+                  - img [ref=e272]
+        - generic [ref=e274]:
+          - generic [ref=e276]:
+            - generic [ref=e277]:
+              - heading "مستقبلك يبدأ من هنا" [level=2] [ref=e278]
+              - paragraph [ref=e279]: انضم لآلاف الطلاب وابدأ رحلتك نحو التفوق
+              - generic [ref=e280]:
+                - generic [ref=e281]:
+                  - img [ref=e282]
+                  - strong [ref=e285]: محتوى شامل
+                  - text: شرح مبسط ومحدث
+                - generic [ref=e286]:
+                  - img [ref=e287]
+                  - strong [ref=e289]: دعم فني وتعليمي
+                  - text: على مدار الساعة
+                - generic [ref=e290]:
+                  - img [ref=e291]
+                  - strong [ref=e297]: متابعة وتقييم
+                  - text: لتطوير مستواك
+                - generic [ref=e298]:
+                  - img [ref=e299]
+                  - strong [ref=e302]: تعلم في وقتك
+                  - text: ومن أي مكان
+              - link "ابدأ الآن مجانًا" [ref=e303] [cursor=pointer]:
+                - /url: /register
+                - img [ref=e304]
+                - text: ابدأ الآن مجانًا
+            - img "منصة مسار على جهاز تعليمي" [ref=e306]
+          - generic [ref=e308]:
+            - generic [ref=e309]:
+              - img "منصة مسار" [ref=e310]
+              - paragraph [ref=e311]: خطواتك الأولى نحو التفوق
+            - generic [ref=e312]:
+              - heading "روابط سريعة" [level=3] [ref=e313]
+              - list [ref=e314]:
+                - listitem [ref=e315]:
+                  - link "الدورات" [ref=e316] [cursor=pointer]:
+                    - /url: "#courses"
+                - listitem [ref=e317]:
+                  - link "المعلمون" [ref=e318] [cursor=pointer]:
+                    - /url: "#teachers"
+                - listitem [ref=e319]:
+                  - link "الأسئلة الشائعة" [ref=e320] [cursor=pointer]:
+                    - /url: /faq
+            - generic [ref=e321]:
+              - heading "الدعم والمساعدة" [level=3] [ref=e322]
+              - list [ref=e323]:
+                - listitem [ref=e324]:
+                  - link "تواصل معنا" [ref=e325] [cursor=pointer]:
+                    - /url: "#contact"
+                - listitem [ref=e326]: سياسة الخصوصية
+                - listitem [ref=e327]: الشروط والأحكام
+            - generic [ref=e328]:
+              - heading "تابعنا" [level=3] [ref=e329]
+              - generic [ref=e330]:
+                - img [ref=e332]
+                - img [ref=e335]
+                - img [ref=e339]
+                - img [ref=e343]
+                - img [ref=e347]
+              - paragraph [ref=e350]: قنوات التواصل قريبًا
+    - button "فتح الدعم المباشر" [active] [ref=e352]:
+      - img [ref=e353]
+```

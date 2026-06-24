@@ -17,6 +17,7 @@ using NaderGorge.Application.Features.Admin.Commands;
 
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Commands;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 
 namespace NaderGorge.Infrastructure.Services;
@@ -1179,121 +1180,32 @@ public sealed class LiveSupportService(
 
     public async Task ConfirmPendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid proposalId, CancellationToken ct)
     {
-        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
-
-        var action = await _db.LiveSupportAIPendingActions.FirstOrDefaultAsync(x => x.Id == proposalId && x.ConversationId == conversationId, ct);
-        if (action == null) throw new LiveSupportException("NOT_FOUND", "Pending action proposal not found.");
-
-        if (action.Status != LiveSupportAIPendingActionStatus.PendingConfirmation)
-            throw new LiveSupportException("CONFLICT", "Action is not in a confirmable state.");
-
-        if (action.ExpiresAt < DateTime.UtcNow)
-        {
-            action.Status = LiveSupportAIPendingActionStatus.Expired;
-            action.CompletedAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync(ct);
-            throw new LiveSupportException("CONFLICT", "Action has expired.");
-        }
-
-        var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == action.PolicyVersionId, ct);
-        if (policy == null || !policy.IsEnabled)
-            throw new LiveSupportException("CONFLICT", "Active policy has been changed or disabled.");
-
-        var actionKeys = System.Text.Json.JsonSerializer.Deserialize<List<string>>(policy.ActionKeysJson) ?? new List<string>();
-        if (!actionKeys.Contains(action.ActionKey))
-            throw new LiveSupportException("CONFLICT", "Action key is no longer enabled.");
-
-        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-
-        action.Status = LiveSupportAIPendingActionStatus.Executing;
-        await _db.SaveChangesAsync(ct);
-
+        if (_mediator is null) throw new InvalidOperationException("Mediator is required.");
         try
         {
-            var resultMessage = await ExecuteActionPayloadAsync(
-                conversationId, 
-                action.ActionKey, 
-                System.Text.Encoding.UTF8.GetString(action.EncryptedPayload ?? Array.Empty<byte>()), 
-                conversation.LinkedStudentUserId ?? Guid.Empty, 
-                conversation.LinkedStudentUserId ?? Guid.Empty, 
-                ct
-            );
-
-            action.Status = LiveSupportAIPendingActionStatus.Succeeded;
-            action.ConfirmedAt = DateTime.UtcNow;
-            action.CompletedAt = DateTime.UtcNow;
-            action.ConfirmedByUserId = conversation.LinkedStudentUserId;
-            action.Version++;
-
-            var feedbackMessage = new LiveSupportMessage
-            {
-                ConversationId = conversationId,
-                SenderType = LiveSupportSenderType.System,
-                ClientMessageId = $"sys-action-{action.Id:N}",
-                Type = LiveSupportMessageType.Text,
-                Content = $"[System] تم تنفيذ الإجراء بنجاح: {action.ActionKey}. النتيجة: {resultMessage}",
-                SentAt = DateTime.UtcNow
-            };
-            _db.LiveSupportMessages.Add(feedbackMessage);
-            conversation.LastMessageAt = feedbackMessage.SentAt;
-            conversation.Version++;
-
-            AddEvent(conversationId, LiveSupportEventType.AIActionConfirmed, conversation.LinkedStudentUserId, null, action.Id);
-            AddEvent(conversationId, LiveSupportEventType.AIActionSucceeded, conversation.LinkedStudentUserId, null, action.Id);
-            AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, feedbackMessage.Id);
-
-            await _db.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
+            await _mediator.Send(new ConfirmLiveSupportAIActionCommand(participant, conversationId, proposalId, proposalId.ToString("N")), ct);
         }
-        catch (Exception ex)
+        catch (LiveSupportException ex)
         {
-            action.Status = LiveSupportAIPendingActionStatus.Failed;
-            action.FailureCode = ex is LiveSupportException le ? le.Code : "EXECUTION_FAILED";
-            action.CompletedAt = DateTime.UtcNow;
-            action.Version++;
-
-            AddEvent(conversationId, LiveSupportEventType.AIActionFailed, conversation.LinkedStudentUserId, null, action.Id);
-
-            await _db.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
+            if (ex.Code is "CONFIRMATION_EXPIRED" or "ACTION_REVOKED" or "DECISION_NOT_CONFIRMABLE")
+                throw new LiveSupportException("CONFLICT", ex.Message);
             throw;
         }
     }
 
     public async Task CancelPendingActionAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid proposalId, CancellationToken ct)
     {
-        var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
-
-        var action = await _db.LiveSupportAIPendingActions.FirstOrDefaultAsync(x => x.Id == proposalId && x.ConversationId == conversationId, ct);
-        if (action == null) throw new LiveSupportException("NOT_FOUND", "Pending action proposal not found.");
-
-        if (action.Status != LiveSupportAIPendingActionStatus.PendingConfirmation)
-            throw new LiveSupportException("CONFLICT", "Action is not in a cancellable state.");
-
-        action.Status = LiveSupportAIPendingActionStatus.Cancelled;
-        action.CompletedAt = DateTime.UtcNow;
-        action.Version++;
-        if (conversation != null)
+        if (_mediator is null) throw new InvalidOperationException("Mediator is required.");
+        try
         {
-            var message = new LiveSupportMessage
-            {
-                ConversationId = conversationId,
-                SenderType = LiveSupportSenderType.System,
-                ClientMessageId = $"sys-cancel-action-{action.Id:N}",
-                Type = LiveSupportMessageType.Text,
-                Content = $"[System] رفض الطالب تنفيذ الإجراء: {action.ActionKey}.",
-                SentAt = DateTime.UtcNow
-            };
-            _db.LiveSupportMessages.Add(message);
-            conversation.LastMessageAt = message.SentAt;
-            conversation.Version++;
-
-            AddEvent(conversationId, LiveSupportEventType.MessageSent, null, null, message.Id);
+            await _mediator.Send(new CancelLiveSupportAIDecisionCommand(participant, conversationId, proposalId, proposalId.ToString("N")), ct);
         }
-
-        AddEvent(conversationId, LiveSupportEventType.AIActionCancelled, conversation?.LinkedStudentUserId, null, action.Id);
-
-        await _db.SaveChangesAsync(ct);
+        catch (LiveSupportException ex)
+        {
+            if (ex.Code is "DECISION_NOT_CANCELLABLE")
+                throw new LiveSupportException("CONFLICT", ex.Message);
+            throw;
+        }
     }
 
     public async Task ConfirmHandoffAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
