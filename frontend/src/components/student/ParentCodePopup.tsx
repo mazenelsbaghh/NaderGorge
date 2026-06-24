@@ -11,6 +11,11 @@ export function ParentCodePopup() {
   const [copied, setCopied] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isContractOpen, setIsContractOpen] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const checkContract = () => {
@@ -24,6 +29,10 @@ export function ParentCodePopup() {
   }, []);
 
   console.log('ParentCodePopup RENDERING: code =', parentTrackingCode, 'seen =', hasSeenTrackingCodePopup, 'isContractOpen =', isContractOpen);
+
+  if (!mounted) {
+    return null;
+  }
 
   // If the popup has already been seen, or if there is no tracking code, or if the onboarding contract modal is still open, do not display it.
   if (hasSeenTrackingCodePopup || !parentTrackingCode || isContractOpen) {

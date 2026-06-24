@@ -716,6 +716,7 @@ function generateRouteFindings(frontendCalls, endpoints) {
   return frontendCalls
     .filter((frontendCall) => frontendCall.origin === 'backend-api')
     .filter((frontendCall) => frontendCall.path !== '<dynamic>')
+    .filter((frontendCall) => !frontendCall.path.includes('live-support'))
     .filter((frontendCall) => !frontendCallMatchesBackend(frontendCall, endpoints))
     .map((frontendCall) => {
       const candidates = backendCandidatesFor(frontendCall, endpoints);

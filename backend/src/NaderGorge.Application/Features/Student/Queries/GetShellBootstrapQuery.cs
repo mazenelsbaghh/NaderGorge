@@ -13,7 +13,9 @@ public record ShellBootstrapDto(
     decimal CurrentBalance,
     StudentGamificationDto Gamification,
     StudentThemePreferencesDto ThemePreferences,
-    string? AvatarSlug
+    string? AvatarSlug,
+    string? ParentTrackingCode,
+    bool HasSeenTrackingCodePopup
 );
 
 public record StudentGamificationDto(
@@ -75,7 +77,9 @@ public class GetShellBootstrapQueryHandler : IRequestHandler<GetShellBootstrapQu
             currentBalance,
             gamificationDto,
             themePreferencesDto,
-            profile?.AvatarSlug
+            profile?.AvatarSlug,
+            profile?.ParentTrackingCode,
+            profile?.HasSeenTrackingCodePopup ?? false
         );
 
         return ApiResponse<ShellBootstrapDto>.Ok(dto);

@@ -21,7 +21,7 @@ test.describe('Parent Code Popup and Header Badge', () => {
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'clipboard', {
         value: {
-          writeText: async (text) => {
+          writeText: async (text: string) => {
             (window as any)._copiedText = text;
           },
           readText: async () => (window as any)._copiedText || ''
@@ -87,7 +87,7 @@ test.describe('Parent Code Popup and Header Badge', () => {
     });
 
     // Go to login page
-    await page.goto('http://app.localhost:3000/login');
+    await page.goto('http://localhost:8739/login');
     await page.waitForTimeout(1000);
 
     // Perform login
@@ -180,7 +180,7 @@ test.describe('Parent Code Popup and Header Badge', () => {
     });
 
     // Go to login page
-    await page.goto('http://app.localhost:3000/login');
+    await page.goto('http://localhost:8739/login');
     await page.waitForTimeout(1000);
 
     // Perform login

@@ -53,7 +53,7 @@ npm --prefix worker test
 ### Android App (Kotlin / Jetpack Compose)
 Since local machine does not have JDK installed, we execute compilation and unit tests inside a Docker container:
 ```bash
-docker run --rm -v $(pwd)/mobile/parent-android:/app -w /app gradle:8-jdk17-alpine ./gradlew testDebugUnitTest
+docker run --rm -v $(pwd)/mobile/parent-android:/app -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew testDebugUnitTest
 ```
 
 ### iOS App (Swift / SwiftUI)
@@ -72,7 +72,7 @@ We provide shortcut Makefile tasks to run the complete build verification:
 ```makefile
 # Makefile targets for mobile compilation checks
 build-mobile-android:
-	docker run --rm -v $(shell pwd)/mobile/parent-android:/app -w /app gradle:8-jdk17-alpine ./gradlew testDebugUnitTest
+	docker run --rm -v "$(PWD)/mobile/parent-android:/app" -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew test
 
 build-mobile-ios:
 	cd mobile/parent-ios && swift build && swift test

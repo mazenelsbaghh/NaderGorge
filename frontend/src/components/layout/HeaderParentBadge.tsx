@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Copy, Check, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useStudentShellStore } from '@/stores/student-shell-store';
@@ -8,7 +8,13 @@ import { useStudentShellStore } from '@/stores/student-shell-store';
 export function HeaderParentBadge() {
   const parentTrackingCode = useStudentShellStore((state) => state.parentTrackingCode);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
   if (!parentTrackingCode) return null;
 
   const handleCopy = async () => {

@@ -104,7 +104,7 @@ mobile/parent-ios/
 - Backend: `dotnet test backend/NaderGorge.sln --filter "FullyQualifiedName~Parent"`
 - Worker: `npm --prefix worker test`
 - Frontend: `npx --prefix frontend playwright test tests/e2e/parent-flow.spec.ts`
-- Android App: `docker run --rm -v $(pwd)/mobile/parent-android:/app -w /app gradle:8-jdk17-alpine ./gradlew test`
+- Android App: `docker run --rm -v $(pwd)/mobile/parent-android:/app -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew test`
 - iOS App: `cd mobile/parent-ios && swift test`
 
 **Docker Gate Required**:

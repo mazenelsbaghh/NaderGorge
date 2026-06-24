@@ -41,7 +41,7 @@ Client-side token list storage (`EncryptedSharedPreferences` on Android, `Keycha
 ### Decision
 - **Android**: Enforce Android code quality and compilation checks by running Gradle inside a standard Docker container:
   ```bash
-  docker run --rm -v $(pwd)/mobile/parent-android:/app -w /app gradle:8-jdk17-alpine ./gradlew test assembleDebug
+  docker run --rm -v $(pwd)/mobile/parent-android:/app -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew test
   ```
 - **iOS**: iOS app is structured as a Swift Package Manager (SPM) application. This allows compiling and testing the core business logic, view models, and API integrations using:
   ```bash

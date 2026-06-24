@@ -130,4 +130,4 @@ As a Developer/QA Engineer, I want the Android and iOS apps to compile, build, a
 - **A-001**: Parents do not have credentials (username/password) in the `Users` table; authorization is purely stateless JWT tokens containing the `StudentId` stored in the mobile app.
 - **A-002**: Firebase Admin SDK will use a mock service configuration if the real Firebase JSON credentials are not provided during automated testing.
 - **A-003**: The mobile apps target Android SDK 34 / Kotlin 1.9+ (Jetpack Compose) and iOS 17+ / Swift 5.9+ (SwiftUI).
-- **A-004**: Host machine has `swiftc` or Swift compiler tools for iOS compilation, and Java/Gradle is built via a Docker container (`gradle:8-jdk17-alpine`) to bypass missing local Java.
+- **A-004**: Host machine has `swiftc` or Swift compiler tools for iOS compilation, and Java/Gradle is built via a Docker container (`mobiledevops/android-sdk-image:34.0.0`) to bypass missing local Java.

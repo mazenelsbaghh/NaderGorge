@@ -1,0 +1,151 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - navigation "القائمة الرئيسية" [ref=e4]:
+        - generic [ref=e5]:
+          - link "الملف الشخصي" [ref=e6] [cursor=pointer]:
+            - /url: /student/profile
+            - generic [ref=e8]: ES
+          - navigation [ref=e9]:
+            - link "لوحة التحكم" [ref=e10] [cursor=pointer]:
+              - /url: /student
+              - img [ref=e11]
+            - link "باقاتي" [ref=e14] [cursor=pointer]:
+              - /url: /student/packages
+              - img [ref=e17]
+            - link "المجتمع" [ref=e20] [cursor=pointer]:
+              - /url: /student/community
+              - img [ref=e23]
+            - link "المدرسين" [ref=e25] [cursor=pointer]:
+              - /url: /student/teachers
+              - img [ref=e28]
+            - link "أخطائي" [ref=e31] [cursor=pointer]:
+              - /url: /student/mistakes
+              - img [ref=e34]
+            - link "تفعيل كود" [ref=e43] [cursor=pointer]:
+              - /url: /student/code-redemption
+              - img [ref=e46]
+            - link "الإشعارات" [ref=e49] [cursor=pointer]:
+              - /url: /student/notifications
+              - img [ref=e52]
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - link "120 ج.م" [ref=e58] [cursor=pointer]:
+              - /url: /student/balance
+              - img [ref=e59]
+              - generic [ref=e62]: 120 ج.م
+            - 'generic "نقاطي: 100" [ref=e63]':
+              - img [ref=e64]
+              - generic [ref=e66]: "100"
+          - button "التحويل إلى الوضع الداكن" [ref=e68]:
+            - img [ref=e69]
+            - generic [ref=e71]: Toggle theme
+          - link "الملف الشخصي" [ref=e72] [cursor=pointer]:
+            - /url: /student/profile
+            - img [ref=e73]
+          - button "تسجيل الخروج" [ref=e76]:
+            - img [ref=e77]
+      - main [ref=e80]:
+        - generic [ref=e82]:
+          - navigation [ref=e83]:
+            - generic [ref=e84]: المساحة الدراسية
+            - img [ref=e85]
+            - generic [ref=e87]: بوابة الطالب
+          - generic [ref=e88]:
+            - link "120 ج.م" [ref=e89] [cursor=pointer]:
+              - /url: /student/balance
+              - img [ref=e90]
+              - generic [ref=e93]: 120 ج.م
+            - link "5" [ref=e94] [cursor=pointer]:
+              - /url: /student/notifications
+              - img [ref=e95]
+              - generic [ref=e98]: "5"
+            - button "التحويل إلى الوضع الداكن" [ref=e99]:
+              - img [ref=e100]
+              - generic [ref=e102]: Toggle theme
+            - link "ES" [ref=e103] [cursor=pointer]:
+              - /url: /student/profile
+              - generic [ref=e105]: ES
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - heading "أهلاً بيك، E2E Student 1" [level=1] [ref=e109]
+              - paragraph [ref=e110]: ابدأ بالخطوة الجاهزة لك الآن.
+            - generic [ref=e111]:
+              - generic [ref=e112]:
+                - paragraph [ref=e113]: التقدم الكلي
+                - paragraph [ref=e114]: 0 من 3 درس
+              - progressbar "التقدم الكلي" [ref=e115]:
+                - img [ref=e116]
+                - generic [ref=e119]: 0%
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - generic [ref=e123]:
+                  - img [ref=e125]
+                  - generic [ref=e128]:
+                    - paragraph [ref=e129]: خطوتك الآن
+                    - heading "E2E Lesson" [level=2] [ref=e130]
+                - paragraph [ref=e131]: ارجع مباشرة إلى E2E Student Package، الدرس 0.
+              - button "كمّل الدرس" [ref=e132]:
+                - text: كمّل الدرس
+                - img [ref=e133]
+            - complementary [ref=e136]:
+              - generic [ref=e137]:
+                - generic [ref=e138]:
+                  - paragraph [ref=e139]: التالي بعد المذاكرة
+                  - heading "أقرب امتحان" [level=2] [ref=e140]
+                - img [ref=e142]
+              - generic [ref=e149]:
+                - article [ref=e150]:
+                  - generic [ref=e151]: جاهز الآن
+                  - heading "E2E Essay Exam" [level=3] [ref=e152]
+                  - paragraph [ref=e153]: مرتبط بدرس E2E Lesson 2
+                  - button "ابدأ الامتحان" [ref=e154]:
+                    - text: ابدأ الامتحان
+                    - img [ref=e155]
+                - group [ref=e158]:
+                  - generic "1 امتحانات أخرى" [ref=e159] [cursor=pointer]:
+                    - generic [ref=e160]: 1 امتحانات أخرى
+                    - img [ref=e161]
+          - generic [ref=e163]:
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - heading "باقاتك الدراسية" [level=2] [ref=e166]
+                - paragraph [ref=e167]: افتح باقة لمتابعة دروسها وتقدمك داخلها.
+              - generic [ref=e168]: 1 باقة
+            - generic [ref=e170]:
+              - heading "E2E Physics" [level=3] [ref=e171]
+              - button "E2E Student Package E2E Teacher 0 من 3 درس 0% 0" [ref=e173]:
+                - generic [ref=e175]:
+                  - generic [ref=e176]:
+                    - generic [ref=e177]:
+                      - heading "E2E Student Package" [level=4] [ref=e178]
+                      - paragraph [ref=e179]: E2E Teacher
+                    - img [ref=e180]
+                  - generic [ref=e183]:
+                    - generic [ref=e184]:
+                      - generic [ref=e185]: 0 من 3 درس
+                      - generic [ref=e186]: 0%
+                    - progressbar "التقدم في E2E Student Package" [ref=e187]
+          - generic [ref=e188]:
+            - group [ref=e189]:
+              - generic "روابط وخدمات المحفظة، الأكواد، والأخطاء" [ref=e190] [cursor=pointer]:
+                - generic [ref=e191]:
+                  - generic [ref=e192]: روابط وخدمات
+                  - generic [ref=e193]: المحفظة، الأكواد، والأخطاء
+                - img [ref=e194]
+            - group [ref=e196]:
+              - generic "أرقام حسابك ملخص إضافي عند الحاجة" [ref=e197] [cursor=pointer]:
+                - generic [ref=e198]:
+                  - generic [ref=e199]: أرقام حسابك
+                  - generic [ref=e200]: ملخص إضافي عند الحاجة
+                - img [ref=e201]
+        - paragraph [ref=e205]: منصة مسار
+    - button "فتح الدعم المباشر" [ref=e207]:
+      - img [ref=e208]
+  - alert [ref=e210]
+```
