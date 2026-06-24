@@ -269,6 +269,16 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
             await _db.SaveChangesAsync(ct);
 
+            // Enqueue notification payload for parent push notifications
+            await _jobEnqueuer.EnqueueJobAsync("notifications", "parent-push", new
+            {
+                StudentId = request.UserId,
+                Title = "حل اختبار جديد",
+                Body = $"تم حل اختبار {exam.Title} بنجاح.",
+                Category = "Exam",
+                ParentPush = true
+            });
+
             var pendingEssays = _db.EssaySubmissions.Local
                 .Where(essay => essay.StudentExamAttemptId == attempt.Id)
                 .ToList();

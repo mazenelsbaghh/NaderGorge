@@ -94,6 +94,7 @@ public class AppDbContext : DbContext, IAppDbContext
 
     // Phase 2: Notifications
     public DbSet<NotificationEvent> NotificationEvents => Set<NotificationEvent>();
+    public DbSet<ParentDeviceToken> ParentDeviceTokens => Set<ParentDeviceToken>();
     public DbSet<StudentNote> StudentNotes => Set<StudentNote>();
 
     // Phase 2: HR Core
@@ -273,6 +274,9 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(s => s.LightThemePaletteId).HasMaxLength(100);
             e.Property(s => s.DarkThemePaletteId).HasMaxLength(100);
             e.Property(s => s.CurrentMode).HasMaxLength(10).HasDefaultValue("light");
+            e.Property(s => s.ParentTrackingCode).HasMaxLength(6);
+            e.HasIndex(s => s.ParentTrackingCode).IsUnique();
+            e.Property(s => s.HasSeenTrackingCodePopup).HasDefaultValue(false);
         });
 
         // Device
@@ -823,6 +827,20 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("notification_events");
             e.HasKey(n => n.Id);
             e.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId);
+        });
+
+        // ParentDeviceToken
+        modelBuilder.Entity<ParentDeviceToken>(e =>
+        {
+            e.ToTable("ParentDeviceTokens");
+            e.HasKey(t => t.Id);
+            e.HasOne(t => t.Student)
+             .WithMany()
+             .HasForeignKey(t => t.StudentId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(t => t.DeviceToken).IsRequired().HasMaxLength(500);
+            e.Property(t => t.Platform).IsRequired().HasMaxLength(50);
+            e.HasIndex(t => new { t.StudentId, t.DeviceToken }).IsUnique();
         });
 
         // Phase 3: Term

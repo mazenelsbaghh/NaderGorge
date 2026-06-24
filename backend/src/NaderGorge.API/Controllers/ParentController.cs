@@ -4,14 +4,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.Reports.Queries;
+using NaderGorge.Application.Features.Parent.Commands;
+using NaderGorge.Application.Features.Parent.Queries;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace NaderGorge.API.Controllers;
 
 [ApiController]
-[Route("api/parent/reports")]
+[Route("api/parent")]
 public class ParentController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -23,7 +27,31 @@ public class ParentController : ControllerBase
         _configuration = configuration;
     }
 
-    [HttpGet("{studentId}/summary")]
+    [HttpPost("verify-code")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyCode([FromBody] VerifyParentCodeRequest request, CancellationToken ct)
+    {
+        var command = new VerifyParentCodeCommand(request.TrackingCode, request.DeviceToken, request.Platform);
+        var result = await _mediator.Send(command, ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("student-details")]
+    [Authorize(Policy = "RequireParent")]
+    public async Task<IActionResult> GetStudentDetails(CancellationToken ct)
+    {
+        var studentIdClaim = User.FindFirst("StudentId")?.Value;
+        if (!Guid.TryParse(studentIdClaim, out var studentProfileId))
+        {
+            return Unauthorized(ApiResponse.Fail("غير مصرح بالوصول لبيانات الطالب"));
+        }
+
+        var query = new GetStudentAcademicDetailsQuery(studentProfileId);
+        var result = await _mediator.Send(query, ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("reports/{studentId}/summary")]
     [AllowAnonymous]
     [EnableRateLimiting("parent-report")]
     public async Task<IActionResult> GetSummaryReport(Guid studentId, [FromQuery] string? token, CancellationToken ct)
@@ -37,7 +65,7 @@ public class ParentController : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
-    [HttpPost("{studentId}/links")]
+    [HttpPost("reports/{studentId}/links")]
     [Authorize(Roles = "Admin")]
     public IActionResult CreateParentReportLink(Guid studentId)
     {
@@ -123,4 +151,11 @@ public class ParentController : ControllerBase
     }
 
     private sealed record ParentReportTokenPayload(Guid StudentId, string Purpose, long Exp);
+}
+
+public class VerifyParentCodeRequest
+{
+    public string TrackingCode { get; set; } = string.Empty;
+    public string? DeviceToken { get; set; }
+    public string? Platform { get; set; }
 }

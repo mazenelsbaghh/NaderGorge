@@ -198,6 +198,8 @@ export interface ShellBootstrapDto {
   gamification: StudentGamificationDto;
   themePreferences: StudentThemePreferencesDto;
   avatarSlug?: string | null;
+  parentTrackingCode?: string;
+  hasSeenTrackingCodePopup?: boolean;
 }
 
 export const studentService = {
@@ -275,6 +277,10 @@ export const studentService = {
       },
     });
     return res.data?.data;
+  },
+
+  acknowledgeTrackingPopup: async (): Promise<void> => {
+    await apiClient.post('/student/acknowledge-tracking-popup');
   }
 };
 

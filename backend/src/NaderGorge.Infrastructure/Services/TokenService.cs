@@ -110,4 +110,29 @@ public class TokenService : ITokenService
             return null;
         }
     }
+
+    public string GenerateParentToken(Guid studentId)
+    {
+        var secret = _config["JwtSettings:Secret"]
+            ?? throw new InvalidOperationException("JWT Secret not configured");
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Role, "Parent"),
+            new Claim("StudentId", studentId.ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: _config["JwtSettings:Issuer"],
+            audience: _config["JwtSettings:Audience"],
+            claims: claims,
+            expires: DateTime.UtcNow.AddYears(1),
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 }

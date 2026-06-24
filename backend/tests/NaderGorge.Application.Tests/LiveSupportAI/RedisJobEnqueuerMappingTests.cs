@@ -12,7 +12,7 @@ public sealed class RedisJobEnqueuerMappingTests
         var payload = JsonSerializer.Serialize(new { turnId, conversationId = Guid.NewGuid() });
 
         Assert.Equal("live support turn", RedisJobEnqueuer.ResolveJobType("ai-live-support-turns", "respond"));
-        Assert.Equal($"turn:{turnId:D}", RedisJobEnqueuer.ResolveStableJobId("ai-live-support-turns", payload));
+        Assert.Equal($"turn-{turnId:D}", RedisJobEnqueuer.ResolveStableJobId("ai-live-support-turns", payload));
     }
 
     [Fact]

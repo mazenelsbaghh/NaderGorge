@@ -54,7 +54,7 @@ public class RedisJobEnqueuer : IJobEnqueuer
         {
             if (!TryGetString(root, "turnId", "TurnId", out var turnId) || !Guid.TryParse(turnId, out var parsedTurnId))
                 throw new InvalidOperationException("Live-support queue payload requires a valid turnId.");
-            return $"turn:{parsedTurnId:D}";
+            return $"turn-{parsedTurnId:D}";
         }
 
         foreach (var pair in new[]

@@ -3326,6 +3326,38 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("notification_events", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Notifications.ParentDeviceToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DeviceToken")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.ToTable("parent_device_tokens", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.OutboxEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4162,6 +4194,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int>("GradeLevel")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("HasSeenTrackingCodePopup")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<bool>("IsFatherAlive")
                         .HasColumnType("boolean");
 
@@ -4184,6 +4221,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("ParentPhone")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ParentTrackingCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("SchoolName")
                         .HasColumnType("text");
@@ -4213,6 +4254,9 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentTrackingCode")
+                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
@@ -6040,6 +6084,17 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Notifications.ParentDeviceToken", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.StudentProfile", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Package", b =>

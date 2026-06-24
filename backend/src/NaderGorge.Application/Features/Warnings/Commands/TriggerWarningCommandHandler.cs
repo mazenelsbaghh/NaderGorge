@@ -85,7 +85,9 @@ public class TriggerWarningCommandHandler : IRequestHandler<TriggerWarningComman
             WarningId = warning.Id,
             StudentId = request.StudentId,
             Severity = request.Severity.ToString(),
-            Message = request.TriggerReason
+            Message = request.TriggerReason,
+            ParentPush = true,
+            Category = "Warning"
         });
 
         return ApiResponse<Guid>.Ok(warning.Id, "Warning triggered successfully.");

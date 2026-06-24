@@ -12,12 +12,18 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
     private readonly IAppDbContext _dbContext;
     private readonly IPublisher _publisher;
     private readonly IAccessCheckService _access;
+    private readonly NaderGorge.Application.Interfaces.IJobEnqueuer _jobEnqueuer;
 
-    public SubmitHomeworkCommandHandler(IAppDbContext dbContext, IPublisher publisher, IAccessCheckService access)
+    public SubmitHomeworkCommandHandler(
+        IAppDbContext dbContext,
+        IPublisher publisher,
+        IAccessCheckService access,
+        NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer)
     {
         _dbContext = dbContext;
         _publisher = publisher;
         _access = access;
+        _jobEnqueuer = jobEnqueuer;
     }
 
     public async Task<ApiResponse<bool>> Handle(SubmitHomeworkCommand request, CancellationToken cancellationToken)
@@ -229,6 +235,16 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
         try
         {
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            // Enqueue notification payload for parent push notifications
+            await _jobEnqueuer.EnqueueJobAsync("notifications", "parent-push", new
+            {
+                StudentId = request.StudentId,
+                HomeworkId = request.HomeworkId,
+                HomeworkTitle = homework.Title,
+                ParentPush = true,
+                Category = "Homework"
+            });
         }
         catch (DbUpdateException ex)
         {

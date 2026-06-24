@@ -172,6 +172,9 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("RequireStudent", policy =>
         policy.RequireRole("Student"));
+
+    options.AddPolicy("RequireParent", policy =>
+        policy.RequireRole("Parent"));
 });
 
 // ---------- Rate Limiting ----------

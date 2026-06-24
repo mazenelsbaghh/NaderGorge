@@ -79,6 +79,13 @@ public class StudentController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("acknowledge-tracking-popup")]
+    public async Task<IActionResult> AcknowledgeTrackingPopup()
+    {
+        var result = await _mediator.Send(new AcknowledgeTrackingPopupCommand(GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("profile")]
     public async Task<IActionResult> GetProfile()
     {

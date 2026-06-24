@@ -48,6 +48,8 @@ import { useLessonFocusStore } from '@/stores/lesson-focus-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useStudentShellStore } from '@/stores/student-shell-store';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
+import { ParentCodePopup } from '@/components/student/ParentCodePopup';
+import { HeaderParentBadge } from '@/components/layout/HeaderParentBadge';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
@@ -495,38 +497,41 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   <ChevronLeft className="h-3 w-3" />
                   <span className="text-[var(--admin-primary-strong)]">بوابة الطالب</span>
                 </nav>
-                {/* Desktop-only header actions */}
-                <div className="hidden lg:flex items-center gap-3">
-                  <SidebarBalance />
-                  <Link
-                    href="/student/notifications"
-                    className="relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
-                    title="الإشعارات"
-                  >
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute top-1 left-1 h-4.5 w-4.5 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-xs font-black rounded-full flex items-center justify-center">
-                        {unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                  <AnimatedThemeToggler
-                    checked={isDark}
-                    onToggle={toggleTheme}
-                    aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
-                  />
-                  <Link
-                    href="/student/profile"
-                    className="hover:scale-105 transition duration-300"
-                    title="الملف الشخصي"
-                  >
-                    <UserAvatar
-                      avatarSlug={user?.avatarSlug}
-                      fullName={user?.fullName}
-                      size="sm"
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <HeaderParentBadge />
+                  {/* Desktop-only header actions */}
+                  <div className="hidden lg:flex items-center gap-3">
+                    <SidebarBalance />
+                    <Link
+                      href="/student/notifications"
+                      className="relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
+                      title="الإشعارات"
+                    >
+                      <Bell className="h-5 w-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1 left-1 h-4.5 w-4.5 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-xs font-black rounded-full flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                    <AnimatedThemeToggler
+                      checked={isDark}
+                      onToggle={toggleTheme}
+                      aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
+                      className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
                     />
-                  </Link>
+                    <Link
+                      href="/student/profile"
+                      className="hover:scale-105 transition duration-300"
+                      title="الملف الشخصي"
+                    >
+                      <UserAvatar
+                        avatarSlug={user?.avatarSlug}
+                        fullName={user?.fullName}
+                        size="sm"
+                      />
+                    </Link>
+                  </div>
                 </div>
               </div>
             </motion.header>
@@ -762,6 +767,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
           </motion.div>
         )}
       </AnimatePresence>
+      <ParentCodePopup />
     </div>
   );
 }

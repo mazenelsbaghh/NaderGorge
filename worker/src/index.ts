@@ -475,7 +475,13 @@ async function startWorker() {
           targetJobId = jobId;
       } else if (jobType === 'notification') {
           targetQueue = notifQueue;
-          bullmqJobName = parsedPayload.WarningId ? 'send-warning' : 'chat-mention';
+          if (parsedPayload.WarningId) {
+              bullmqJobName = 'send-warning';
+          } else if (parsedPayload.ParentPush) {
+              bullmqJobName = 'parent-push';
+          } else {
+              bullmqJobName = 'chat-mention';
+          }
           targetJobId = jobId;
       } else if (jobType === 'live support turn') {
           targetQueue = liveSupportQueue;

@@ -45,4 +45,25 @@ public class StudentProfile : BaseEntity
     /// </summary>
     public StudyTrack? StudyTrack { get; set; }
     public string? AvatarSlug { get; set; }
+
+    // ── Parent Tracking ──────────────────────────────────────────────────
+    public string? ParentTrackingCode { get; set; }
+    public bool HasSeenTrackingCodePopup { get; set; } = false;
+
+    public StudentProfile()
+    {
+        ParentTrackingCode = GenerateRandomCode();
+    }
+
+    private static string GenerateRandomCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        var result = new char[6];
+        for (int i = 0; i < 6; i++)
+        {
+            result[i] = chars[random.Next(chars.Length)];
+        }
+        return new string(result);
+    }
 }

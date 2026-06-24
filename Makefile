@@ -6,7 +6,8 @@
         verify-surfaces verify-surfaces-static \
         migrate migrate-add \
         dev frontend backend stop \
-        logs-production logs-production-backend
+        logs-production logs-production-backend \
+        build-mobile-android build-mobile-ios build-mobile
 
 .DEFAULT_GOAL := help
 
@@ -328,3 +329,31 @@ logs-production: ## Tail live logs from ALL services on the production server
 
 logs-production-backend: ## Tail backend logs from the production server
 	sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 "cd /var/www/nadergorge && docker compose logs -f backend"
+
+
+# =============================================================================
+# MOBILE BUILDS
+# =============================================================================
+
+build-mobile-android: ## Build and test the Android mobile app in Docker
+	@if [ -d "mobile/android" ]; then \
+		echo "Building Android app in Docker..."; \
+		docker run --rm -v $(PWD)/mobile/android:/home/gradle/project -w /home/gradle/project gradle:8-jdk17-alpine gradle test assembleDebug; \
+	elif [ -d "android" ]; then \
+		echo "Building Android app in Docker..."; \
+		docker run --rm -v $(PWD)/android:/home/gradle/project -w /home/gradle/project gradle:8-jdk17-alpine gradle test assembleDebug; \
+	else \
+		echo "Android project directory not found. Checked 'mobile/android' and 'android'."; \
+	fi
+
+build-mobile-ios: ## Compile and test the iOS mobile app on host
+	@if [ -d "mobile/ios" ]; then \
+		echo "Building iOS app..."; \
+		cd mobile/ios && (xcodebuild -scheme NaderGorgeParent -sdk iphonesimulator clean build test || swift test && swift build); \
+	elif [ -d "ios" ]; then \
+		echo "Building iOS app..."; \
+		cd ios && (xcodebuild -scheme NaderGorgeParent -sdk iphonesimulator clean build test || swift test && swift build); \
+	else \
+		echo "iOS project directory not found. Checked 'mobile/ios' and 'ios'."; 	fi
+
+build-mobile: build-mobile-android build-mobile-ios ## Compile and test both mobile apps
