@@ -26,6 +26,57 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
     public async Task<IActionResult> Availability(CancellationToken ct) => Ok(ApiResponse<LiveSupportAvailabilityDto>.Ok(await _service.GetAvailabilityAsync(ct)));
 
     [AllowAnonymous]
+    [HttpGet("debug-availability")]
+    public async Task<IActionResult> DebugAvailability(CancellationToken ct)
+    {
+        Console.WriteLine("[DEBUG] Start DebugAvailability");
+        try
+        {
+            var sp = HttpContext.RequestServices;
+            var db = (IAppDbContext)sp.GetService(typeof(IAppDbContext))!;
+            var settingsReader = (ICachedPlatformSettingsReader)sp.GetService(typeof(ICachedPlatformSettingsReader))!;
+
+            Console.WriteLine("[DEBUG] Step 1: Settings");
+            var settings = await settingsReader.GetAsync(ct);
+            Console.WriteLine($"[DEBUG] Step 1 Done: LiveSupportEnabled={settings.LiveSupportEnabled}");
+
+            Console.WriteLine("[DEBUG] Step 2: Query staff");
+            var staffIds = await db.LiveSupportStaffConfigs.Where(c => c.IsEnabled && db.EmployeeProfiles.Any(e => e.UserId == c.UserId && db.AttendanceLogs.Any(a => a.EmployeeId == e.Id && a.ClockOut == null))).Select(x => x.UserId).ToListAsync(ct);
+            Console.WriteLine($"[DEBUG] Step 2 Done: staffIds count={staffIds.Count}");
+
+            Console.WriteLine("[DEBUG] Step 3: Check presence");
+            var staff = 0;
+            foreach (var id in staffIds)
+            {
+                Console.WriteLine($"[DEBUG] Checking presence for {id}");
+                var presenceStore = (ILiveSupportPresenceStore)sp.GetService(typeof(ILiveSupportPresenceStore))!;
+                if (presenceStore is null)
+                {
+                    Console.WriteLine("[DEBUG] presenceStore is null!");
+                }
+                else
+                {
+                    var isConnected = await presenceStore.IsConnectedAsync(id);
+                    Console.WriteLine($"[DEBUG] Presence result: {isConnected}");
+                }
+                staff++;
+            }
+            Console.WriteLine($"[DEBUG] Step 3 Done: staff={staff}");
+
+            Console.WriteLine("[DEBUG] Step 4: AI policy");
+            var aiActive = await db.LiveSupportAIPolicyVersions.AnyAsync(x => x.Status == LiveSupportAIPolicyStatus.Published && x.IsEnabled, ct);
+            Console.WriteLine($"[DEBUG] Step 4 Done: aiActive={aiActive}");
+
+            return Ok(new { success = true, liveSupportEnabled = settings.LiveSupportEnabled, staffCount = staff, aiActive });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DEBUG] Exception: {ex}");
+            return StatusCode(500, ex.ToString());
+        }
+    }
+
+    [AllowAnonymous]
     [HttpPost("guest/session")]
     [EnableRateLimiting("live-support-public")]
     public async Task<IActionResult> CreateGuestSession(CreateGuestSessionRequest request, CancellationToken ct)
