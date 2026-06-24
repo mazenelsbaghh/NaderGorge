@@ -77,9 +77,9 @@ export function LoginForm() {
       const origins = getSurfaceOrigins();
       let redirectDestination = `${origins.student}/student`;
 
-      const hasAdmin = allowedDomains.includes('admin') || roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
-      const hasTeacher = allowedDomains.includes('teacher') || roles.some(r => r.toLowerCase().includes('teacher'));
-      const hasAssistant = allowedDomains.includes('assistant') || roles.some(r => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
+      const hasAdmin = allowedDomains.includes('admin') || roles.some((r: string) => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
+      const hasTeacher = allowedDomains.includes('teacher') || roles.some((r: string) => r.toLowerCase().includes('teacher'));
+      const hasAssistant = allowedDomains.includes('assistant') || roles.some((r: string) => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
 
       if (hasAdmin) {
         redirectDestination = `${origins.admin}/admin`;
