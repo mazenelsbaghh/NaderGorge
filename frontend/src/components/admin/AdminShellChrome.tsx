@@ -383,7 +383,7 @@ export function AdminShellChrome({
               </span>
             </Link>
 
-            {(roles.includes('Assistant') || roles.includes('Staff')) && (
+            {(roles.includes('Assistant') || roles.includes('Staff') || user?.allowedDomains?.includes('assistant')) && (
               <Link
                 href="/assistant/dashboard"
                 prefetch={false}

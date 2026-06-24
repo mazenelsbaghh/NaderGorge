@@ -24,16 +24,17 @@ export default function NotFoundPage() {
 
   const origins = getSurfaceOrigins();
   const roles = user?.roles || [];
+  const allowedDomains = user?.allowedDomains || [];
 
   // Determine the default home page for the user based on their role
   let homeLink = '/';
-  if (roles.includes('Admin') || roles.includes('Supervisor')) {
+  if (allowedDomains.includes('admin') || roles.includes('Admin') || roles.includes('Supervisor')) {
     homeLink = `${origins.admin}/admin`;
-  } else if (roles.includes('Teacher')) {
+  } else if (allowedDomains.includes('teacher') || roles.includes('Teacher')) {
     homeLink = `${origins.teacher}/teacher`;
-  } else if (roles.includes('Assistant') || roles.includes('Staff')) {
+  } else if (allowedDomains.includes('assistant') || roles.includes('Assistant') || roles.includes('Staff')) {
     homeLink = `${origins.assistant}/assistant`;
-  } else if (roles.includes('Student')) {
+  } else if (allowedDomains.includes('student') || roles.includes('Student')) {
     homeLink = `${origins.student}/student`;
   } else {
     // If not logged in, go to the active surface's login page

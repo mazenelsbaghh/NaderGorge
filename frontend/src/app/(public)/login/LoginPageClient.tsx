@@ -72,14 +72,15 @@ export default function LoginPageClient() {
 
       const origins = getSurfaceOrigins();
       const roles = user?.roles || [];
+      const allowedDomains = user?.allowedDomains || [];
 
       // Default destinations
       let defaultDestination = `${origins.student}/student`;
-      if (roles.includes('Admin') || roles.includes('Supervisor')) {
+      if (allowedDomains.includes('admin') || roles.includes('Admin') || roles.includes('Supervisor')) {
         defaultDestination = `${origins.admin}/admin`;
-      } else if (roles.includes('Teacher')) {
+      } else if (allowedDomains.includes('teacher') || roles.includes('Teacher')) {
         defaultDestination = `${origins.teacher}/teacher`;
-      } else if (roles.includes('Assistant') || roles.includes('Staff')) {
+      } else if (allowedDomains.includes('assistant') || roles.includes('Assistant') || roles.includes('Staff')) {
         defaultDestination = `${origins.assistant}/assistant`;
       }
 
