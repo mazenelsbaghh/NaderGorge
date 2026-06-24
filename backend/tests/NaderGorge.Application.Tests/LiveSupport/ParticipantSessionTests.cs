@@ -147,7 +147,7 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAITurnOrchestrator(db, null!, null!));
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
@@ -164,11 +164,10 @@ public sealed class ParticipantSessionTests
         Assert.NotNull(turn);
         Assert.Equal(LiveSupportAITurnStatus.Queued, turn.Status);
 
-        // Verify that the job was enqueued in Redis
-        Assert.Single(fakeEnqueuer.EnqueuedJobs);
-        var job = fakeEnqueuer.EnqueuedJobs[0];
-        Assert.Equal("ai-live-support-turns", job.queueName);
-        Assert.Equal("respond", job.jobName);
+        // Verify that the turn was created in the DB and outbox event added
+        var outbox = await db.OutboxEvents.FirstOrDefaultAsync(x => x.Type == "LiveSupportAITurnQueued");
+        Assert.NotNull(outbox);
+        Assert.Contains(turn.Id.ToString(), outbox.PayloadJson);
     }
 
     [Fact]
@@ -193,7 +192,7 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAITurnOrchestrator(db, null!, null!));
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
@@ -263,7 +262,7 @@ public sealed class ParticipantSessionTests
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
         var mediator = new FakeMediator();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, mediator: mediator);
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, mediator: mediator, aiTurnOrchestrator: new NaderGorge.Infrastructure.Services.LiveSupportAI.LiveSupportAITurnOrchestrator(db, null!, null!));
 
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);

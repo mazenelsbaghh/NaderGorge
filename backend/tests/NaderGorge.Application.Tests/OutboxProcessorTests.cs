@@ -273,7 +273,7 @@ public class OutboxProcessorTests : IDisposable
         Assert.Null(updatedEvent.ProcessedAt);
         Assert.Equal(1, updatedEvent.RetryCount);
         Assert.False(updatedEvent.IsDeadLetter);
-        Assert.Contains("SignalR connection lost", updatedEvent.LastError);
+        Assert.Contains("OUTBOX_DISPATCH_FAILED", updatedEvent.LastError);
     }
 
     [Fact]

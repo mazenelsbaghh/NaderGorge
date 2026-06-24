@@ -44,6 +44,8 @@
 - Real-provider acceptance attempt (T119, still unchecked): configured Gemini Developer API was reached with both `gemini-2.5-flash` and `gemini-2.5-flash-lite`; both returned the classified safe outcome `quota-exhausted` before a decision. No credential, raw provider body, prompt transcript, or personal data was recorded. A successful provider decision/reconnect screenshot remains blocked by external quota.
 
 - [x] T123: Outbox queue payload deserialization now accepts contracted camelCase and rejects invalid payloads; focused mapping/outbox tests pass 6/6.
+- [x] T064, T065, T066, T068, T071, T074 (US3 Human Handoff): Integrated and routed all handoff entry points (user confirmation, verification exhaustion, turn failure, transfer, emergency disable) atomically through `ILiveSupportAIHandoffService` without duplication. Added `LiveSupportAISummaryDto` and mapped safe summaries to staff workspace bootstrap and types. Verified with Playwright E2E handoff test cases and 6/6 database integration and unit tests passing.
+- [x] T075, T076, T082 (US7 Data Preservation and Recovery): Implemented and verified stale/expired transitions (including `ProviderCompleted` recovery). Tested concurrency precedence races (Callback vs Close vs Handoff vs Recovery) in `LiveSupportAIRecoveryConcurrencyTests.cs`. Ran and passed all 202 unit tests and 12 PostgreSQL integration tests successfully.
 - [x] T124: AI context projections now use authoritative `UserId` fields; backend solution build passes with 0 errors and 0 warnings.
 - [x] T125: Context test now reads JSON semantically; both context allowlist/redaction and knowledge ranking/bounds tests pass 2/2.
 

@@ -23,6 +23,14 @@ public sealed record LiveSupportMessageDto(
     string Content,
     DateTime SentAt);
 
+public sealed record LiveSupportAISummaryDto(
+    string? HandoffSafeSummary,
+    string? HandoffReasonCode,
+    long? PolicyVersion,
+    string? VerificationStatus,
+    IReadOnlyList<string> AttemptedActionKeys,
+    IReadOnlyList<string> FailedTurnErrors);
+
 public sealed record LiveSupportConversationDto(
     Guid Id,
     LiveSupportParticipantType ParticipantType,
@@ -39,7 +47,8 @@ public sealed record LiveSupportConversationDto(
     bool CanSend,
     bool CanRate,
     bool IsAiActive,
-    bool IsAiTyping);
+    bool IsAiTyping,
+    LiveSupportAISummaryDto? AiSummary);
 
 public sealed record LiveSupportGuestSessionDto(Guid Id, string DisplayName, DateTime ExpiresAt, string CookieToken);
 

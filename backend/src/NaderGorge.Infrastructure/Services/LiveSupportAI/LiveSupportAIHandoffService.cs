@@ -33,9 +33,10 @@ public sealed class LiveSupportAIHandoffService(IAppDbContext db, ILiveSupportAs
             await transaction.CommitAsync(cancellationToken);
             return "REPLAYED";
         }
+        Guid? confirmedProposalId = null;
         if (!forced)
         {
-            var proposal = await db.LiveSupportAIPendingActions.SingleOrDefaultAsync(item => item.ConversationId == conversationId && item.DecisionKind == LiveSupportAIPendingDecisionKind.Handoff && item.Status == LiveSupportAIPendingActionStatus.PendingConfirmation, cancellationToken)
+            var proposal = await db.LiveSupportAIPendingActions.SingleOrDefaultAsync(item => item.ConversationId == conversationId && (item.DecisionKind == LiveSupportAIPendingDecisionKind.Handoff || item.ActionKey == "system.handoff") && item.Status == LiveSupportAIPendingActionStatus.PendingConfirmation, cancellationToken)
                 ?? throw new LiveSupportException("HANDOFF_CONFIRMATION_REQUIRED", "يجب تأكيد التحويل أولًا.");
             proposal.Status = LiveSupportAIPendingActionStatus.Succeeded;
             proposal.ConfirmedAt = DateTime.UtcNow;
@@ -43,9 +44,15 @@ public sealed class LiveSupportAIHandoffService(IAppDbContext db, ILiveSupportAs
             proposal.ConfirmedByUserId = participant?.StudentUserId;
             proposal.ConfirmedByGuestSessionId = participant?.GuestSessionId;
             proposal.Version++;
+            confirmedProposalId = proposal.Id;
         }
         var now = DateTime.UtcNow;
-        foreach (var pending in await db.LiveSupportAIPendingActions.Where(item => item.ConversationId == conversationId && item.Status == LiveSupportAIPendingActionStatus.PendingConfirmation).ToListAsync(cancellationToken))
+        var pendingQuery = db.LiveSupportAIPendingActions.Where(item => item.ConversationId == conversationId && item.Status == LiveSupportAIPendingActionStatus.PendingConfirmation);
+        if (confirmedProposalId.HasValue)
+        {
+            pendingQuery = pendingQuery.Where(item => item.Id != confirmedProposalId.Value);
+        }
+        foreach (var pending in await pendingQuery.ToListAsync(cancellationToken))
         {
             pending.Status = LiveSupportAIPendingActionStatus.Invalidated;
             pending.FailureCode = "HUMAN_HANDOFF";
