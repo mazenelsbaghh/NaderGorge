@@ -99,5 +99,6 @@ TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 - 144-ai-live-support-refinements: specs/144-ai-live-support-refinements/plan.md
 - 145-ai-live-support-actions: specs/145-ai-live-support-actions/plan.md
 - 146-ai-live-support-completion: specs/146-ai-live-support-completion/plan.md
+- 147-parent-tracking-app: specs/147-parent-tracking-app/plan.md
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

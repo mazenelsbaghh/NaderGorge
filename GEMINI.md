@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-06-15
+Auto-generated from all feature plans. Last updated: 2026-06-24
 
 ## Active Technologies
 
@@ -22,6 +22,7 @@ tests/
 : Follow standard conventions
 
 ## Recent Changes
+- 147-parent-tracking-app: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 
 - 131-homework-progression-fixes: Added
 

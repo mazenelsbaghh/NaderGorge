@@ -2,8 +2,8 @@
 
 - [x] Phase 1: Feature Specification (`speckit-specify`)
 - [x] Phase 2: Arabic Clarification (`speckit-clarify`)
-- [ ] Phase 3: Technical Planning (`speckit-plan`)
-- [ ] Phase 4: Detailed Task Breakdown (`speckit-tasks`)
+- [x] Phase 3: Technical Planning (`speckit-plan`)
+- [x] Phase 4: Detailed Task Breakdown (`speckit-tasks`)
 - [ ] Phase 5: Implementation (`speckit-implement`)
 - [ ] Phase 6: Deep Architectural, Code & UI/UX Critique
 - [ ] Phase 7: Clean Code Guard (`clean-code-guard`)

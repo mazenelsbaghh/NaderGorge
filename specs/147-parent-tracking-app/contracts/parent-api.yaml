@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: Parent Tracking API
+  version: 1.0.0
+  description: API endpoints for generating codes, verifying them from parent apps, and accessing student academic details.
+
+paths:
+  /api/student/acknowledge-tracking-popup:
+    post:
+      summary: Acknowledge parent code popup view
+      description: Sets HasSeenTrackingCodePopup to true so the modal isn't shown again to the student.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Acknowledged successfully
+        '401':
+          description: Unauthorized
+
+  /api/parent/verify-code:
+    post:
+      summary: Verify parent tracking code
+      description: Verifies student parent tracking code and returns JWT token plus student name. Registers FCM token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - trackingCode
+                - deviceToken
+                - platform
+              properties:
+                trackingCode:
+                  type: string
+                  example: "NG79F4"
+                  maxLength: 6
+                deviceToken:
+                  type: string
+                  example: "fcm_token_xyz"
+                platform:
+                  type: string
+                  enum: [android, ios]
+                  example: "android"
+      responses:
+        '200':
+          description: Code verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: Stateless JWT Token with Role Parent and StudentId claim
+                    example: "eyJhbGciOi..."
+                  studentName:
+                    type: string
+                    example: "أحمد محمد"
+        '400':
+          description: Invalid tracking code or request body
+        '404':
+          description: Student profile not found
+
+  /api/parent/student-details:
+    get:
+      summary: Get student academic details
+      description: Fetches full academic, attendance, homework, and warning details for the student ID in the token.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Detailed student profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  studentName:
+                    type: string
+                  grade:
+                    type: string
+                  school:
+                    type: string
+                  avatarSlug:
+                    type: string
+                  attendance:
+                    type: object
+                    properties:
+                      totalLessons:
+                        type: integer
+                      watchedLessons:
+                        type: integer
+                      completionRate:
+                        type: number
+                  exams:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        examTitle:
+                          type: string
+                        score:
+                          type: number
+                        totalScore:
+                          type: number
+                        percentage:
+                          type: number
+                        submittedAt:
+                          type: string
+                        status:
+                          type: string
+                  homeworks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        isSubmitted:
+                          type: boolean
+                        grade:
+                          type: string
+                        submittedAt:
+                          type: string
+                  warnings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        reason:
+                          type: string
+                        severity:
+                          type: string
+                        createdAt:
+                          type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Requires Role Parent)
+        '404':
+          description: Student details not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
