@@ -28,7 +28,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
     try {
       const data = await liveSupportService.getStudentContext(conversation.id);
       setContext(data);
-    } catch (cause) {
+    } catch {
       setError('تعذر تحميل بيانات الطالب. حاول مرة أخرى.');
     } finally {
       setLoading(false);

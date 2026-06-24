@@ -7,6 +7,7 @@ import { assistantService, TaskDetailsDto } from '@/services/assistant-service';
 import { useAuthStore } from '@/stores/auth-store';
 import { Clock, Send, Paperclip, ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 import toast from 'react-hot-toast';
 
 export default function TaskDetailPageClient() {
@@ -164,7 +165,8 @@ export default function TaskDetailPageClient() {
   const isAssignee = details?.task.assigneeId === user?.id;
 
   return (
-    <AssistantShellChrome
+    <NavRouteGuard routePath="/assistant/tasks" permission="tasks.manage">
+      <AssistantShellChrome
       activePath="/assistant/tasks"
       sectionLabel="المهام"
       pageTitle={details?.task.title ?? 'تفاصيل المهمة'}
@@ -341,5 +343,6 @@ export default function TaskDetailPageClient() {
         </div>
       )}
     </AssistantShellChrome>
+    </NavRouteGuard>
   );
 }

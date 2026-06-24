@@ -11,6 +11,7 @@ import { ConversationQueueList } from '@/components/live-support/staff/Conversat
 import { StaffConversationWorkspace } from '@/components/live-support/staff/StaffConversationWorkspace';
 import { StaffConversationLayout } from '@/components/live-support/staff/StaffConversationLayout';
 import { useLiveSupportStore } from '@/stores/live-support-store';
+import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 
 export default function AssistantLiveSupportPageClient() {
   const [bootstrap, setBootstrap] = useState<LiveSupportStaffBootstrap>();
@@ -68,7 +69,7 @@ export default function AssistantLiveSupportPageClient() {
     setSelected(undefined); setMessages([]); await refresh();
   }
 
-  return <AssistantShellChrome activePath="/assistant/live-support" sectionLabel="خدمة العملاء" pageTitle="مركز الدعم المباشر" subtitle="التوزيع يتم تلقائيًا حسب الحضور والحمل والحد الأقصى المحدد لكل موظف.">
+  return <NavRouteGuard routePath="/assistant/live-support"><AssistantShellChrome activePath="/assistant/live-support" sectionLabel="خدمة العملاء" pageTitle="مركز الدعم المباشر" subtitle="التوزيع يتم تلقائيًا حسب الحضور والحمل والحد الأقصى المحدد لكل موظف.">
     {!bootstrap && !error ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin"/></div> : null}
     {error ? <div role="alert" className={`rounded-2xl p-5 ${needsStaffActivation ? 'border border-amber-200 bg-amber-50 text-amber-950' : 'border border-red-200 bg-red-50 text-red-800'}`}>
       <p className="font-bold">{needsStaffActivation ? 'الحساب لديه صلاحية، لكنه غير مضاف لتوزيع المحادثات' : error}</p>
@@ -83,5 +84,5 @@ export default function AssistantLiveSupportPageClient() {
         context={selected ? <StudentContextPanel conversation={selected} onConversationChange={(updated) => { setSelected(updated); setBootstrap((current) => current ? { ...current, conversations: current.conversations.map((item) => item.id === updated.id ? updated : item) } : current); }}/> : undefined}
       />
     </div>}
-  </AssistantShellChrome>;
+  </AssistantShellChrome></NavRouteGuard>;
 }

@@ -12,7 +12,7 @@ export function StaffConversationLayout({ queue, workspace, context }: { queue: 
     } else if (mobileView === 'queue') {
       setMobileView('workspace');
     }
-  }, [context]);
+  }, [context, mobileView]);
 
   return (
     <div className="min-h-[620px] min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white">

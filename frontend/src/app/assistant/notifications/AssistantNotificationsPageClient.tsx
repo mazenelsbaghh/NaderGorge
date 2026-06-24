@@ -3,6 +3,7 @@
 import React from 'react';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { Bell, Info, CheckCircle, Clock } from 'lucide-react';
+import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 
 export default function AssistantNotificationsPageClient() {
   const mockNotifications = [
@@ -36,7 +37,8 @@ export default function AssistantNotificationsPageClient() {
   ];
 
   return (
-    <AssistantShellChrome
+    <NavRouteGuard routePath="/assistant/notifications">
+      <AssistantShellChrome
       activePath="/assistant/notifications"
       sectionLabel="التنبيهات"
       pageTitle="مركز الإشعارات والتنبيهات"
@@ -68,5 +70,6 @@ export default function AssistantNotificationsPageClient() {
         })}
       </div>
     </AssistantShellChrome>
+    </NavRouteGuard>
   );
 }

@@ -6,6 +6,7 @@ import { VacationRequestModal } from '@/components/admin';
 import { hrService, VacationDto } from '@/services/hr-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { Calendar, Compass, RefreshCw, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 import toast from 'react-hot-toast';
 
 export default function AssistantVacationsPageClient() {
@@ -63,7 +64,8 @@ export default function AssistantVacationsPageClient() {
   };
 
   return (
-    <AssistantShellChrome
+    <NavRouteGuard routePath="/assistant/vacations">
+      <AssistantShellChrome
       activePath="/assistant/vacations"
       sectionLabel="الموارد البشرية"
       pageTitle="طلبات الإجازة"
@@ -164,5 +166,6 @@ export default function AssistantVacationsPageClient() {
         onSuccess={fetchVacations}
       />
     </AssistantShellChrome>
+    </NavRouteGuard>
   );
 }
