@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Infrastructure.Services;
+using Xunit;
 
 namespace NaderGorge.Application.Tests.LiveSupport;
 
@@ -21,5 +22,26 @@ public sealed class StudentLinkTests
         Assert.Equal(1, await fixture.Db.LiveSupportStudentLinkHistories.CountAsync());
         var search = await service.SearchStudentsAsync(LiveSupportTestData.StaffAId, false, updated.Id, "555", CancellationToken.None);
         Assert.Contains(search, x => x.UserId == target.Id && x.MaskedPhone != target.PhoneNumber);
+    }
+
+    [Fact]
+    public async Task RemoveStudentLink_UnlinksStudentAndPersistsHistory()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+        
+        var targetId = LiveSupportTestData.Conversation().Id;
+        var conv = await fixture.Db.LiveSupportConversations.FindAsync(targetId);
+        Assert.NotNull(conv!.LinkedStudentUserId);
+
+        var updated = await service.ChangeStudentLinkAsync(LiveSupportTestData.StaffAId, false, targetId, null, "إلغاء الربط للتصحيح", 1, CancellationToken.None);
+        
+        Assert.Null(updated.LinkedStudentUserId);
+        
+        var history = await fixture.Db.LiveSupportStudentLinkHistories.FirstOrDefaultAsync(x => x.ConversationId == targetId);
+        Assert.NotNull(history);
+        Assert.Equal(LiveSupportTestData.StudentId, history.PreviousStudentUserId);
+        Assert.Null(history.NewStudentUserId);
+        Assert.Equal("إلغاء الربط للتصحيح", history.Reason);
     }
 }

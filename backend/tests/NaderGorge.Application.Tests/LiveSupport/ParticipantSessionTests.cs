@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Dtos;
+using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using MediatR;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
@@ -112,7 +115,11 @@ public sealed class ParticipantSessionTests
         Assert.Equal("الدعم متاح الآن", result.Message);
     }
 
-    private static LiveSupportService CreateService(AppDbContext db) => new(db, new EnabledSettingsReader());
+    private static LiveSupportService CreateService(AppDbContext db)
+    {
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder(), new FakeDataProtector());
+        return new LiveSupportService(db, new EnabledSettingsReader(), aiTurnOrchestrator: orchestrator);
+    }
 
     private static async Task<Guid> SeedEligibleStaffAsync(AppDbContext db)
     {
@@ -147,12 +154,22 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder(), new FakeDataProtector());
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: orchestrator);
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
 
         var sendResult = await service.SendParticipantMessageAsync(participant, conversation.Id, Guid.NewGuid().ToString(), "أهلاً بك", LiveSupportMessageType.Text, CancellationToken.None);
+
+        var outboxEvents = await db.OutboxEvents.Where(x => x.ProcessedAt == null).ToListAsync();
+        foreach (var evt in outboxEvents)
+        {
+            if (NaderGorge.API.BackgroundServices.LiveSupportAIOutboxQueueDispatcher.IsTurnQueueEvent(evt))
+            {
+                await NaderGorge.API.BackgroundServices.LiveSupportAIOutboxQueueDispatcher.DispatchAsync(evt, fakeEnqueuer);
+            }
+        }
 
         // Verify that the AI state was initialized
         var aiState = await db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id);
@@ -193,12 +210,22 @@ public sealed class ParticipantSessionTests
 
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01088888888");
         var fakeEnqueuer = new FakeJobEnqueuer();
-        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer);
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder(), new FakeDataProtector());
+        var service = new LiveSupportService(db, new EnabledSettingsReader(), jobEnqueuer: fakeEnqueuer, aiTurnOrchestrator: orchestrator);
         
         var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
         var conversation = await service.CreateConversationAsync(participant, null, null, CancellationToken.None);
 
         await service.SendParticipantMessageAsync(participant, conversation.Id, Guid.NewGuid().ToString(), "أهلاً بك", LiveSupportMessageType.Text, CancellationToken.None);
+
+        var outboxEvents = await db.OutboxEvents.Where(x => x.ProcessedAt == null).ToListAsync();
+        foreach (var evt in outboxEvents)
+        {
+            if (NaderGorge.API.BackgroundServices.LiveSupportAIOutboxQueueDispatcher.IsTurnQueueEvent(evt))
+            {
+                await NaderGorge.API.BackgroundServices.LiveSupportAIOutboxQueueDispatcher.DispatchAsync(evt, fakeEnqueuer);
+            }
+        }
 
         var turn = await db.LiveSupportAITurns.FirstAsync(x => x.ConversationId == conversation.Id);
         
@@ -488,5 +515,34 @@ public sealed class ParticipantSessionTests
     {
         public Task<CachedPlatformSettings> GetAsync(CancellationToken cancellationToken) => Task.FromResult(CachedPlatformSettings.Default with { LiveSupportEnabled = true });
         public void Invalidate() { }
+    }
+
+    private sealed class FakeDataProtector : ILiveSupportAIDataProtector
+    {
+        public byte[] Protect(ReadOnlySpan<byte> plaintext) => plaintext.ToArray();
+        public byte[] Unprotect(ReadOnlySpan<byte> protectedPayload) => protectedPayload.ToArray();
+        public string ComputeKeyedDigest(string purpose, ReadOnlySpan<byte> value) => Convert.ToHexString(value.ToArray()).ToLowerInvariant();
+    }
+
+    private sealed class FakeContextBuilder : ILiveSupportAIContextBuilder
+    {
+        public Task<LiveSupportAIWorkerClaimDto> BuildAsync(Guid turnId, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new LiveSupportAIWorkerClaimDto(
+                "1",
+                turnId,
+                Guid.Empty,
+                Guid.Empty,
+                1,
+                turnId.ToString(),
+                DateTime.UtcNow.AddMinutes(5),
+                "Test Instructions",
+                Array.Empty<LiveSupportAIKnowledgeDocumentDto>(),
+                new Dictionary<string, object?>(),
+                new[] { new LiveSupportAIContextMessageDto("Student", "أهلاً بك", DateTime.UtcNow) },
+                Array.Empty<LiveSupportAIAllowedActionDto>(),
+                new[] { "reply" }
+            ));
+        }
     }
 }
