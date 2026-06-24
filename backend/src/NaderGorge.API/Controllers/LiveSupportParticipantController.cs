@@ -155,6 +155,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
 
     [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/ai/actions/{proposalId:guid}/confirm")]
+    [EnableRateLimiting("live-support-ai-confirmation")]
     public async Task<IActionResult> ConfirmAction(Guid conversationId, Guid proposalId, CancellationToken ct)
     {
         var participant = await ResolveParticipantAsync(ct);
@@ -169,6 +170,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
 
     [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/ai/actions/{proposalId:guid}/cancel")]
+    [EnableRateLimiting("live-support-ai-confirmation")]
     public async Task<IActionResult> CancelAction(Guid conversationId, Guid proposalId, CancellationToken ct)
     {
         var participant = await ResolveParticipantAsync(ct);
@@ -294,6 +296,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
 
     [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/ai/account-proposal/confirm")]
+    [EnableRateLimiting("live-support-ai-registration")]
     public IActionResult ConfirmRegistration(Guid conversationId, LiveSupportRegisterGuestDto request)
     {
         _ = conversationId;

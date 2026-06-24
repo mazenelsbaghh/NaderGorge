@@ -63,7 +63,7 @@ export function AIPendingActionCard({ action, onConfirm, onCancel }: AIPendingAc
   };
 
   return (
-    <div dir="rtl" className="my-3 rounded-2xl border border-cyan-100 bg-cyan-50 p-4 shadow-sm">
+    <div dir="rtl" role="region" aria-label="تأكيد الإجراء المطلوب" className="my-3 rounded-2xl border border-cyan-100 bg-cyan-50 p-4 shadow-sm">
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-cyan-100 text-cyan-800">
           <ShieldAlert size={20} />
