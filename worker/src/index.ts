@@ -494,6 +494,9 @@ async function startWorker() {
           return;
       }
 
+      // Ensure BullMQ Job IDs never contain colons to avoid namespace/key errors
+      targetJobId = targetJobId.replace(/:/g, '-');
+
       logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
 
       // Remove any existing job with the same ID to allow re-running/retrying the job cleanly
