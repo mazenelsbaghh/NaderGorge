@@ -6,11 +6,11 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
 function hasAdminAccess(roles: string[] | undefined) {
-  return !!roles?.length && (
-    roles.includes("Admin") ||
-    roles.includes("Supervisor") ||
-    roles.includes("Assistant") ||
-    roles.includes("Staff")
+  return !!roles?.length && roles.some(r =>
+    r.toLowerCase().includes("admin") ||
+    r.toLowerCase().includes("supervisor") ||
+    r.toLowerCase().includes("assistant") ||
+    r.toLowerCase().includes("staff")
   );
 }
 

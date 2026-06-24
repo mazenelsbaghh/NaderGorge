@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
 function hasAssistantAccess(roles: string[] | undefined) {
-  return !!roles?.length && (roles.includes("Assistant") || roles.includes("Staff") || roles.includes("Admin") || roles.includes("Supervisor"));
+  return !!roles?.length && roles.some(r =>
+    r.toLowerCase().includes("assistant") ||
+    r.toLowerCase().includes("staff") ||
+    r.toLowerCase().includes("admin") ||
+    r.toLowerCase().includes("supervisor")
+  );
 }
 
 export function AssistantGuard({ children }: { children: React.ReactNode }) {

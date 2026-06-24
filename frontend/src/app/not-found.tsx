@@ -28,13 +28,18 @@ export default function NotFoundPage() {
 
   // Determine the default home page for the user based on their role
   let homeLink = '/';
-  if (allowedDomains.includes('admin') || roles.includes('Admin') || roles.includes('Supervisor')) {
+  const hasAdmin = allowedDomains.includes('admin') || roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
+  const hasTeacher = allowedDomains.includes('teacher') || roles.some(r => r.toLowerCase().includes('teacher'));
+  const hasAssistant = allowedDomains.includes('assistant') || roles.some(r => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
+  const hasStudent = allowedDomains.includes('student') || roles.some(r => r.toLowerCase().includes('student'));
+
+  if (hasAdmin) {
     homeLink = `${origins.admin}/admin`;
-  } else if (allowedDomains.includes('teacher') || roles.includes('Teacher')) {
+  } else if (hasTeacher) {
     homeLink = `${origins.teacher}/teacher`;
-  } else if (allowedDomains.includes('assistant') || roles.includes('Assistant') || roles.includes('Staff')) {
+  } else if (hasAssistant) {
     homeLink = `${origins.assistant}/assistant`;
-  } else if (allowedDomains.includes('student') || roles.includes('Student')) {
+  } else if (hasStudent) {
     homeLink = `${origins.student}/student`;
   } else {
     // If not logged in, go to the active surface's login page

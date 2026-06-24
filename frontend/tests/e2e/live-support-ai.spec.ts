@@ -1,7 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const appUrl = process.env.LIVE_SUPPORT_E2E_URL || "http://localhost:8738";
+const appUrl = process.env.LIVE_SUPPORT_E2E_URL || "http://localhost:3000";
 const conversationId = "14600000-0000-0000-0000-000000000001";
+
+// Helper to construct browser-compatible CORS headers for mocked routes
+function getHeaders(route: any) {
+  const origin = route.request().headers().origin || "*";
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE, HEAD",
+    "Access-Control-Allow-Headers": "Content-Type, X-App-Surface, Authorization"
+  };
+}
 
 async function mockParticipant(
   page: Page,
@@ -23,16 +34,10 @@ async function mockParticipant(
     isAiTyping: turnState === "Queued"
   };
 
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
-    "Access-Control-Allow-Headers": "Content-Type, X-App-Surface, Authorization"
-  };
-
   await page.route("**/api/live-support/availability", route =>
     route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({
         success: true,
         data: { isAvailable: true, availableStaffCount: 0, code: "AI_AVAILABLE", message: "متاح" }
@@ -43,7 +48,7 @@ async function mockParticipant(
   await page.route("**/api/live-support/participant/conversations", route =>
     route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: [conversation] })
     })
   );
@@ -51,7 +56,7 @@ async function mockParticipant(
   await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/snapshot`, route =>
     route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({
         success: true,
         data: {
@@ -85,7 +90,7 @@ async function mockStaffAuth(page: Page) {
   
   await page.route("**/api/live-support/staff/bootstrap", route => route.fulfill({
     contentType: "application/json",
-    headers: { "Access-Control-Allow-Origin": "*" },
+    headers: getHeaders(route),
     body: JSON.stringify({
       success: true,
       data: {
@@ -103,7 +108,7 @@ async function mockStaffAuth(page: Page) {
   
   await page.route(`**/api/live-support/staff/conversations/${conversationId}/messages**`, route => route.fulfill({
     contentType: "application/json",
-    headers: { "Access-Control-Allow-Origin": "*" },
+    headers: getHeaders(route),
     body: JSON.stringify({
       success: true,
       data: [
@@ -114,7 +119,7 @@ async function mockStaffAuth(page: Page) {
   
   await page.route(`**/api/live-support/staff/conversations/${conversationId}/events**`, route => route.fulfill({
     contentType: "application/json",
-    headers: { "Access-Control-Allow-Origin": "*" },
+    headers: getHeaders(route),
     body: JSON.stringify({
       success: true,
       data: []
@@ -137,7 +142,7 @@ async function mockAdminAuth(page: Page) {
   
   await page.route("**/api/live-support/admin/ai/config", route => route.fulfill({
     contentType: "application/json",
-    headers: { "Access-Control-Allow-Origin": "*" },
+    headers: getHeaders(route),
     body: JSON.stringify({
       success: true,
       data: {
@@ -171,7 +176,7 @@ async function mockAdminAuth(page: Page) {
   
   await page.route("**/api/live-support/admin/ai/stats**", route => route.fulfill({
     contentType: "application/json",
-    headers: { "Access-Control-Allow-Origin": "*" },
+    headers: getHeaders(route),
     body: JSON.stringify({
       success: true,
       data: {
@@ -186,7 +191,7 @@ async function mockAdminAuth(page: Page) {
   
   await page.route("**/api/live-support/admin/ai/active-conversations", route => route.fulfill({
     contentType: "application/json",
-    headers: { "Access-Control-Allow-Origin": "*" },
+    headers: getHeaders(route),
     body: JSON.stringify({
       success: true,
       data: [
@@ -197,6 +202,11 @@ async function mockAdminAuth(page: Page) {
 }
 
 test.describe("AI live support participant", () => {
+  test.beforeEach(async ({ page }) => {
+    page.on('console', msg => console.log('PARTICIPANT PAGE LOG:', msg.text()));
+    page.on('pageerror', err => console.error('PARTICIPANT PAGE ERROR:', err.message));
+  });
+
   test("AI disclosure and thinking state are explicit at 320px", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 720 });
     await mockParticipant(page, "Queued", [
@@ -263,7 +273,7 @@ test.describe("AI live support participant", () => {
       await new Promise(resolve => setTimeout(resolve, 200));
       await route.fulfill({
         contentType: "application/json",
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: getHeaders(route),
         body: JSON.stringify({ success: true, data: { decisionId, executionId: "3333-4444", status: "Succeeded" } })
       });
     });
@@ -305,7 +315,7 @@ test.describe("AI live support participant", () => {
     await page.route(`**/api/live-support/participant/conversations/${conversationId}/ai/verification/${sessionId}/answer`, route => {
       route.fulfill({
         contentType: "application/json",
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: getHeaders(route),
         body: JSON.stringify({
           success: true,
           data: {
@@ -351,7 +361,7 @@ test.describe("AI live support participant", () => {
       registerPayload = route.request().postDataJSON();
       route.fulfill({
         contentType: "application/json",
-        headers: { "Access-Control-Allow-Origin": "*" },
+        headers: getHeaders(route),
         body: JSON.stringify({ success: true, data: { userId: "student-id-123", status: "CreatedAndLinked" } })
       });
     });
@@ -406,7 +416,10 @@ test.describe("AI live support staff and administration", () => {
     page.on('pageerror', err => console.error('STAFF/ADMIN PAGE ERROR:', err.message));
 
     // Seed and login as real admin (which has both admin settings and staff access)
-    const seeded = await request.post('http://localhost:5245/api/e2e/seed', {
+    const seeded = await request.post('http://127.0.0.1:5245/api/e2e/seed', {
+      headers: {
+        'X-E2E-Token': process.env.E2E_TEST_TOKEN || 'E2eOnlyTestTokenValue123456789012345'
+      },
       data: {
         clearDatabase: false,
         seedAdmin: true,
@@ -417,7 +430,7 @@ test.describe("AI live support staff and administration", () => {
     });
     expect(seeded.ok()).toBeTruthy();
 
-    const adminLogin = await request.post('http://localhost:5245/api/auth/login', {
+    const adminLogin = await request.post('http://127.0.0.1:5245/api/auth/login', {
       headers: { 'X-App-Surface': 'admin' },
       data: {
         phoneNumber: '20000000000',
@@ -446,7 +459,7 @@ test.describe("AI live support staff and administration", () => {
   test("staff page renders without horizontal overflow at tablet 768px width", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await mockStaffAuth(page);
-    await page.goto(`http://localhost:8742/assistant/live-support`);
+    await page.goto(`http://staff.localhost:3000/assistant/live-support`);
     await page.waitForTimeout(500);
     
     await expect(page.getByText("حالة الاتصال")).toBeVisible();
@@ -457,7 +470,7 @@ test.describe("AI live support staff and administration", () => {
   test("admin AI page renders without horizontal overflow at desktop 1024px width", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await mockAdminAuth(page);
-    await page.goto(`http://localhost:8740/admin/live-support/ai`);
+    await page.goto(`http://admin.localhost:3000/admin/live-support/ai`);
     await page.waitForTimeout(500);
     
     await expect(page.getByText("الإعدادات وقاعدة القرار")).toBeVisible();
@@ -468,7 +481,7 @@ test.describe("AI live support staff and administration", () => {
   test("keyboard navigation allows tabbing through admin controls", async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await mockAdminAuth(page);
-    await page.goto(`http://localhost:8740/admin/live-support/ai`);
+    await page.goto(`http://admin.localhost:3000/admin/live-support/ai`);
     await page.waitForTimeout(500);
     
     // Focus settings tab
@@ -487,7 +500,7 @@ test.describe("AI live support staff and administration", () => {
     // Mock staff bootstrap DTO and conversations
     await page.route('**/api/live-support/staff/bootstrap', route => route.fulfill({
       contentType: 'application/json',
-      headers: { "Access-Control-Allow-Origin": "*" },
+      headers: getHeaders(route),
       body: JSON.stringify({
         success: true,
         data: {
@@ -549,44 +562,38 @@ test.describe("AI live support staff and administration", () => {
       }
     ];
 
-    const headers = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
-      "Access-Control-Allow-Headers": "Content-Type, X-App-Surface, Authorization"
-    };
-
     // Mock endpoints
     await page.route("**/api/live-support/staff/bootstrap", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: { isCheckedIn: true, isEnabled: true, activeLoad: 1, capacity: 5, waitingCount: 0, conversations: [conversation] } })
     }));
 
     await page.route("**/api/live-support/staff/conversations/" + conversationId + "/messages*", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: [] })
     }));
 
     await page.route("**/api/live-support/staff/conversations/" + conversationId + "/student-context", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: studentContext })
     }));
 
     await page.route("**/api/live-support/staff/conversations/" + conversationId + "/actions", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: actionCatalog })
     }));
 
     await page.route("**/api/live-support/staff/conversations/" + conversationId + "/actions/student.balance.adjust", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: { message: "تم تعديل الرصيد بنجاح." } })
     }));
 
-    await page.goto("http://localhost:8742/assistant/live-support");
+    await page.goto("http://staff.localhost:3000/assistant/live-support");
     
     // Select the conversation
     await page.getByText("مشكلة بالرصيد").first().click();
@@ -646,35 +653,29 @@ test.describe("AI live support staff and administration", () => {
       successfulActions: 19
     };
 
-    const headers = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
-      "Access-Control-Allow-Headers": "Content-Type, X-App-Surface, Authorization"
-    };
-
     // Mock config endpoints
     await page.route("**/api/live-support/admin/ai/config", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: aiConfig })
     }));
 
     await page.route("**/api/live-support/admin/ai/stats*", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: stats })
     }));
 
     await page.route("**/api/live-support/admin/ai/active-conversations", route => route.fulfill({
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, data: [] })
     }));
 
     await page.route("**/api/live-support/admin/ai/disable", route => route.fulfill({
       status: 202,
       contentType: "application/json",
-      headers,
+      headers: getHeaders(route),
       body: JSON.stringify({ success: true, message: "Reconciliation started" })
     }));
 
@@ -683,12 +684,12 @@ test.describe("AI live support staff and administration", () => {
       return route.fulfill({
         status: 409,
         contentType: "application/json",
-        headers,
+        headers: getHeaders(route),
         body: JSON.stringify({ success: false, message: "VERSION_CONFLICT" })
       });
     });
 
-    await page.goto("http://localhost:8740/admin/live-support/ai");
+    await page.goto("http://admin.localhost:3000/admin/live-support/ai");
 
     // Verify stats tab
     await page.getByRole("button", { name: "الإحصائيات والنشاط" }).click();

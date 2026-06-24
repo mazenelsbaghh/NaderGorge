@@ -303,9 +303,8 @@ export function AdminShellChrome({
   const resolvedNavItems = navItems.map((item) => {
     if (item.href === '/admin/crm') {
       const isCrmAgent =
-        user?.roles?.includes('Assistant') &&
-        !user?.roles?.includes('Admin') &&
-        !user?.roles?.includes('Supervisor');
+        user?.roles?.some(r => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff')) &&
+        !user?.roles?.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
       if (isCrmAgent) {
         return { ...item, href: '/assistant/crm' as const };
       }

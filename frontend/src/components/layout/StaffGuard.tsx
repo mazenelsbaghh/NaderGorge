@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
 function hasStaffAccess(roles: string[] | undefined) {
-  return !!roles?.length && (roles.includes("Staff") || roles.includes("Admin") || roles.includes("Supervisor"));
+  return !!roles?.length && roles.some(r =>
+    r.toLowerCase().includes("staff") ||
+    r.toLowerCase().includes("assistant") ||
+    r.toLowerCase().includes("admin") ||
+    r.toLowerCase().includes("supervisor")
+  );
 }
 
 export function StaffGuard({ children }: { children: React.ReactNode }) {

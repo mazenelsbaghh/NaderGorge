@@ -68,11 +68,16 @@ export function GlobalNav() {
     });
   };
 
-  // Navigation links based on auth state
+  const isStaffUser = user?.roles?.some(r =>
+    r.toLowerCase().includes('admin') ||
+    r.toLowerCase().includes('supervisor') ||
+    r.toLowerCase().includes('teacher') ||
+    r.toLowerCase().includes('assistant') ||
+    r.toLowerCase().includes('staff')
+  ) || user?.allowedDomains?.some(d => d === 'admin' || d === 'teacher' || d === 'assistant');
+
   const navLinks = isAuthenticated
-    ? user?.roles?.includes('Admin') ||
-      user?.roles?.includes('Teacher') ||
-      user?.roles?.includes('Assistant')
+    ? isStaffUser
       ? [
           { href: '/admin/users', label: 'المستخدمين' },
           { href: '/admin/content', label: 'المحتوى' },
