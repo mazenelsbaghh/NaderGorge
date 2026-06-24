@@ -25,6 +25,19 @@ export function AssistantGuard({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const debugData = {
+        roles: user?.roles,
+        allowedDomains: user?.allowedDomains,
+        isAuthenticated,
+        isLoading,
+        isAuthorized,
+      };
+      fetch(`/api/debug-auth?data=${encodeURIComponent(JSON.stringify(debugData))}`).catch(() => {});
+    }
+  }, [user, isAuthenticated, isLoading, isAuthorized]);
+
+  useEffect(() => {
     if (isLoading) return;
 
     if (!isAuthenticated) {

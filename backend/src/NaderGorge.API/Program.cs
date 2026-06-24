@@ -92,7 +92,7 @@ builder.Services.AddScoped<IVideoProvider, BunnyVideoProvider>();
 builder.Services.AddHttpClient<IBunnyStreamClient, BunnyStreamClient>();
 builder.Services.AddScoped<IAccessCheckService, AccessCheckService>();
 builder.Services.AddScoped<IVideoEncryptionService, VideoEncryptionService>();
-builder.Services.AddScoped<IJobEnqueuer, RedisJobEnqueuer>();
+builder.Services.AddSingleton<IJobEnqueuer, RedisJobEnqueuer>();
 builder.Services.AddScoped<ICachedPlatformSettingsReader, CachedPlatformSettingsReader>();
 builder.Services.AddScoped<BalanceService>();
 builder.Services.AddScoped<AcademicValidationService>();
