@@ -101,6 +101,7 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var decision = new LiveSupportAIPendingAction
         {
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Id = Guid.NewGuid(),
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
@@ -171,6 +172,7 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var decision = new LiveSupportAIPendingAction
         {
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Id = Guid.NewGuid(),
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
@@ -246,6 +248,7 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var decision = new LiveSupportAIPendingAction
         {
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Id = Guid.NewGuid(),
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
@@ -309,6 +312,7 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var decision = new LiveSupportAIPendingAction
         {
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Id = Guid.NewGuid(),
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
@@ -364,6 +368,7 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var decision = new LiveSupportAIPendingAction
         {
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Id = Guid.NewGuid(),
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
@@ -415,6 +420,7 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var decision = new LiveSupportAIPendingAction
         {
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Id = Guid.NewGuid(),
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
@@ -484,6 +490,7 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var decision = new LiveSupportAIPendingAction
         {
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Id = Guid.NewGuid(),
             ConversationId = conversation.Id,
             TurnId = Guid.NewGuid(),
@@ -529,5 +536,143 @@ public sealed class LiveSupportAIPendingDecisionTests
 
         var ex = await Assert.ThrowsAsync<LiveSupportException>(() => handler.Handle(commandConflict, CancellationToken.None));
         Assert.Equal("IDEMPOTENCY_PAYLOAD_CONFLICT", ex.Code);
+    }
+
+    [Fact]
+    public async Task ConfirmAction_StateFingerprintMismatch_InvalidatesDecisionAndThrowsActionStateChanged()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "01200000000");
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01200000001");
+
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            Id = Guid.NewGuid(),
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Instructions",
+            ActionKeysJson = "[\"system.some_action\"]",
+            CreatedByUserId = admin.Id
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+
+        var conversation = new LiveSupportConversation
+        {
+            Id = Guid.NewGuid(),
+            StudentUserId = student.Id,
+            LinkedStudentUserId = student.Id,
+            Status = LiveSupportConversationStatus.Active,
+            Subject = "Subject",
+            Version = 2 // Current version is 2
+        };
+        db.LiveSupportConversations.Add(conversation);
+
+        var decision = new LiveSupportAIPendingAction
+        {
+            Id = Guid.NewGuid(),
+            ConversationId = conversation.Id,
+            TurnId = Guid.NewGuid(),
+            DecisionKind = LiveSupportAIPendingDecisionKind.Action,
+            StudentUserId = student.Id,
+            PolicyVersionId = policy.Id,
+            ActionKey = "system.some_action",
+            SafeProposalJson = "{}",
+            Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            IdempotencyKey = Guid.NewGuid(),
+            StateFingerprint = $"{conversation.Id:N}:1" // State fingerprint expects version 1!
+        };
+        db.LiveSupportAIPendingActions.Add(decision);
+        await db.SaveChangesAsync();
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AI_CALLBACK_SECRET"] = "Feature146OnlyStrongCallbackSecretValue123456789"
+        }).Build();
+        var protector = new LiveSupportAIDataProtector(configuration);
+        var executor = new FakeActionExecutor();
+        var handler = new ConfirmLiveSupportAIActionCommandHandler(db, protector, executor);
+
+        var command = new ConfirmLiveSupportAIActionCommand(
+            new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null),
+            conversation.Id,
+            decision.Id,
+            "nonce-123"
+        );
+
+        var ex = await Assert.ThrowsAsync<LiveSupportException>(() => handler.Handle(command, CancellationToken.None));
+        Assert.Equal("ACTION_STATE_CHANGED", ex.Code);
+
+        var updated = await db.LiveSupportAIPendingActions.FindAsync(decision.Id);
+        Assert.Equal(LiveSupportAIPendingActionStatus.Invalidated, updated!.Status);
+        Assert.NotNull(updated.CompletedAt);
+    }
+
+    [Fact]
+    public async Task ConfirmAction_ActionNotAllowed_ThrowsActionRevoked()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "01200000000");
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01200000001");
+
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            Id = Guid.NewGuid(),
+            VersionNumber = 1,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "Instructions",
+            ActionKeysJson = "[]", // Action is not allowed!
+            CreatedByUserId = admin.Id
+        };
+        db.LiveSupportAIPolicyVersions.Add(policy);
+
+        var conversation = new LiveSupportConversation
+        {
+            Id = Guid.NewGuid(),
+            StudentUserId = student.Id,
+            LinkedStudentUserId = student.Id,
+            Status = LiveSupportConversationStatus.Active,
+            Subject = "Subject",
+            Version = 1
+        };
+        db.LiveSupportConversations.Add(conversation);
+
+        var decision = new LiveSupportAIPendingAction
+        {
+            Id = Guid.NewGuid(),
+            ConversationId = conversation.Id,
+            TurnId = Guid.NewGuid(),
+            DecisionKind = LiveSupportAIPendingDecisionKind.Action,
+            StudentUserId = student.Id,
+            PolicyVersionId = policy.Id,
+            ActionKey = "system.some_action",
+            SafeProposalJson = "{}",
+            Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            IdempotencyKey = Guid.NewGuid(),
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}"
+        };
+        db.LiveSupportAIPendingActions.Add(decision);
+        await db.SaveChangesAsync();
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AI_CALLBACK_SECRET"] = "Feature146OnlyStrongCallbackSecretValue123456789"
+        }).Build();
+        var protector = new LiveSupportAIDataProtector(configuration);
+        var executor = new FakeActionExecutor();
+        var handler = new ConfirmLiveSupportAIActionCommandHandler(db, protector, executor);
+
+        var command = new ConfirmLiveSupportAIActionCommand(
+            new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null),
+            conversation.Id,
+            decision.Id,
+            "nonce-123"
+        );
+
+        var ex = await Assert.ThrowsAsync<LiveSupportException>(() => handler.Handle(command, CancellationToken.None));
+        Assert.Equal("ACTION_REVOKED", ex.Code);
     }
 }

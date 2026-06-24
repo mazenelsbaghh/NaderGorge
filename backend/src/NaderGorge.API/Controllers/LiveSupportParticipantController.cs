@@ -10,6 +10,7 @@ using MediatR;
 using NaderGorge.Application.Features.LiveSupportAI.Commands;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Validation;
 
 namespace NaderGorge.API.Controllers;
 
@@ -314,10 +315,19 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         if (participant is null) return Unauthorized();
         try
         {
-            var userId = await registrationService.RegisterAndLinkAsync(participant, conversationId,
-                new LiveSupportAISecureRegistrationDto(decisionId, request.IdempotencyKey, request.FullName, request.PhoneNumber, request.Password,
-                    request.DateOfBirth, request.Gender, request.Governorate, request.Address, request.EducationStage, request.GradeLevel,
-                    request.SchoolName, request.ParentPhoneNumber), ct);
+            var dto = new LiveSupportAISecureRegistrationDto(decisionId, request.IdempotencyKey, request.FullName, request.PhoneNumber, request.Password,
+                request.DateOfBirth, request.Gender, request.Governorate, request.Address, request.EducationStage, request.GradeLevel,
+                request.SchoolName, request.ParentPhoneNumber);
+
+            var validator = new LiveSupportAISecureRegistrationValidator();
+            var validationResult = await validator.ValidateAsync(dto, ct);
+            if (!validationResult.IsValid)
+            {
+                var errors = validationResult.Errors.Select(e => e.ErrorMessage).ToList();
+                return StatusCode(StatusCodes.Status422UnprocessableEntity, ApiResponse<object>.Fail("بيانات التسجيل غير صالحة.", errors));
+            }
+
+            var userId = await registrationService.RegisterAndLinkAsync(participant, conversationId, dto, ct);
             return StatusCode(StatusCodes.Status201Created, ApiResponse<object>.Ok(new { userId, status = "CreatedAndLinked" }));
         }
         catch (LiveSupportException ex) { return Error(ex); }
@@ -375,7 +385,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         {
             LiveSupportErrorCodes.SupportUnavailable => StatusCodes.Status423Locked,
             LiveSupportErrorCodes.Forbidden => StatusCodes.Status403Forbidden,
-            "VALIDATION_ERROR" => StatusCodes.Status400BadRequest,
+            "VALIDATION_ERROR" => StatusCodes.Status422UnprocessableEntity,
             "NOT_FOUND" => StatusCodes.Status404NotFound,
             _ => StatusCodes.Status409Conflict
         };

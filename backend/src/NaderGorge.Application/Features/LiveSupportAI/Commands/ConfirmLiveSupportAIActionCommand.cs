@@ -39,6 +39,15 @@ public sealed class ConfirmLiveSupportAIActionCommandHandler(
             throw new LiveSupportException("DECISION_NOT_CONFIRMABLE", "القرار لم يعد متاحًا للتأكيد.");
         if (decision.DecisionKind != LiveSupportAIPendingDecisionKind.Action || !decision.StudentUserId.HasValue || decision.StudentUserId != conversation.LinkedStudentUserId)
             throw new LiveSupportException("ACTION_TARGET_MISMATCH", "هدف الإجراء لم يعد مطابقًا.");
+        if (decision.StateFingerprint != $"{conversation.Id:N}:{conversation.Version}")
+        {
+            decision.Status = LiveSupportAIPendingActionStatus.Invalidated;
+            decision.CompletedAt = DateTime.UtcNow;
+            decision.Version++;
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            throw new LiveSupportException("ACTION_STATE_CHANGED", "تغيرت حالة المحادثة منذ إنشاء الإجراء.");
+        }
         if (decision.ExpiresAt <= DateTime.UtcNow)
         {
             decision.Status = LiveSupportAIPendingActionStatus.Expired;

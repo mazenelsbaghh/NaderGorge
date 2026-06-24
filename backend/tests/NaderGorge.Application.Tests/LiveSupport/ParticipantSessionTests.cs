@@ -122,8 +122,18 @@ public sealed class ParticipantSessionTests
 
     private static LiveSupportService CreateService(AppDbContext db)
     {
-        var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder(), new FakeDataProtector());
-        return new LiveSupportService(db, new EnabledSettingsReader(), aiTurnOrchestrator: orchestrator);
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["AI_CALLBACK_SECRET"] = "Feature146OnlyStrongCallbackSecretValue123456789"
+        }).Build();
+        var protector = new LiveSupportAIDataProtector(config);
+        var verificationService = new LiveSupportAIVerificationService(db, protector, config);
+        var registrationService = new LiveSupportAIRegistrationService(db, new FakeMediator(db), config);
+        var orchestrator = new LiveSupportAITurnOrchestrator(db, new FakeContextBuilder(), protector);
+        return new LiveSupportService(db, new EnabledSettingsReader(),
+            aiTurnOrchestrator: orchestrator,
+            aiVerificationService: verificationService,
+            aiRegistrationService: registrationService);
     }
 
     private static async Task<Guid> SeedEligibleStaffAsync(AppDbContext db)
@@ -322,7 +332,7 @@ public sealed class ParticipantSessionTests
             SafeProposalJson = "{}",
             EncryptedPayload = encrypted,
             PayloadHash = payloadHash,
-            StateFingerprint = "fingerprint",
+            StateFingerprint = $"{conversation.Id:N}:{conversation.Version}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),
             IdempotencyKey = Guid.NewGuid(),
