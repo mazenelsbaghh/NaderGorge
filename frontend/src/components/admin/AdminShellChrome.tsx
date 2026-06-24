@@ -320,7 +320,9 @@ export function AdminShellChrome({
   const allowedNavbarItems = user?.allowedNavbarItems;
   if (allowedNavbarItems && allowedNavbarItems.length > 0) {
     filteredNavItems = filteredNavItems.filter((item) =>
-      allowedNavbarItems.includes(item.href)
+      allowedNavbarItems.some(allowedPath =>
+        allowedPath === item.href || allowedPath.startsWith(item.href + '/')
+      )
     );
   }
 

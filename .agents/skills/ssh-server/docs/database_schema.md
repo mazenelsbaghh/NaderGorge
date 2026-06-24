@@ -674,14 +674,14 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | --- | --- | --- | --- | --- |
 | `AutoCloseAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `DisableRequestedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Column |
+| `DisableRequestedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `HandedOffAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `HandoffReasonCode` | `string` | `character varying(100)` | `YES` | ✅ Sync |
 | `HandoffSafeSummary` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
 | `InactivityWarningSentAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
-| `LastEventSequence` | `long` | `bigint` | `NO` | ❌ Missing Column |
+| `LastEventSequence` | `long` | `bigint` | `NO` | ✅ Sync |
 | `LastParticipantActivityAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
-| `LastRecoveryAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Column |
+| `LastRecoveryAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `Mode` | `int` | `integer` | `NO` | ✅ Sync |
 | `PolicyVersionId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `ResolutionCode` | `string` | `character varying(100)` | `YES` | ✅ Sync |
@@ -727,8 +727,8 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | --- | --- | --- | --- | --- |
 | `ActionExecutionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `ActionKey` | `string` | `character varying(100)` | `NO` | ✅ Sync |
-| `CallbackDecisionHash` | `string` | `character varying(64)` | `YES` | ❌ Missing Column |
-| `CancelledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Column |
+| `CallbackDecisionHash` | `string` | `character varying(64)` | `YES` | ✅ Sync |
+| `CancelledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `ConfirmationNonceHash` | `string` | `character varying(64)` | `NO` | ✅ Sync |
 | `ConfirmedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
@@ -736,7 +736,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `ConfirmedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
-| `DecisionKind` | `int` | `integer` | `NO` | ❌ Missing Column |
+| `DecisionKind` | `int` | `integer` | `NO` | ✅ Sync |
 | `EncryptedPayload` | `byte[]` | `bytea` | `NO` | ✅ Sync |
 | `ExpiresAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `FailureCode` | `string` | `character varying(100)` | `YES` | ✅ Sync |
@@ -788,28 +788,28 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
-| `CallbackAttemptCount` | `int` | `integer` | `NO` | ❌ Missing Column |
-| `CallbackStatus` | `int` | `integer` | `NO` | ❌ Missing Column |
+| `CallbackAttemptCount` | `int` | `integer` | `NO` | ✅ Sync |
+| `CallbackStatus` | `int` | `integer` | `NO` | ✅ Sync |
 | `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `ContextCategoryKeysJson` | `string` | `jsonb` | `NO` | ✅ Sync |
 | `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
-| `DecisionHash` | `string` | `character varying(64)` | `YES` | ❌ Missing Column |
+| `DecisionHash` | `string` | `character varying(64)` | `YES` | ✅ Sync |
 | `DecisionType` | `int?` | `integer` | `YES` | ✅ Sync |
 | `ExpectedConversationVersion` | `long` | `bigint` | `NO` | ✅ Sync |
 | `FailureCode` | `string` | `character varying(100)` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `InputTokenCount` | `int?` | `integer` | `YES` | ✅ Sync |
 | `KnowledgeRevisionIdsJson` | `string` | `jsonb` | `NO` | ✅ Sync |
-| `LastSafeCallbackErrorCode` | `string` | `character varying(100)` | `YES` | ❌ Missing Column |
+| `LastSafeCallbackErrorCode` | `string` | `character varying(100)` | `YES` | ✅ Sync |
 | `LatencyMs` | `int?` | `integer` | `YES` | ✅ Sync |
 | `Model` | `string` | `character varying(150)` | `YES` | ✅ Sync |
-| `NextCallbackAttemptAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Column |
+| `NextCallbackAttemptAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `OutputMessageId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `OutputTokenCount` | `int?` | `integer` | `YES` | ✅ Sync |
 | `PolicyVersionId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `Provider` | `string` | `character varying(100)` | `YES` | ✅ Sync |
-| `ProviderCompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Column |
+| `ProviderCompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `ProviderResponseId` | `string` | `character varying(200)` | `YES` | ✅ Sync |
 | `QueuedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `SafeFailureDetail` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
@@ -856,11 +856,11 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `ConversationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `CorrectCount` | `int` | `integer` | `NO` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
-| `CurrentQuestionIndex` | `int` | `integer` | `NO` | ❌ Missing Column |
+| `CurrentQuestionIndex` | `int` | `integer` | `NO` | ✅ Sync |
 | `ExpiresAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `LastAttemptAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Column |
-| `LockedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ❌ Missing Column |
+| `LastAttemptAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `LockedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `LookupKey` | `string` | `character varying(100)` | `NO` | ✅ Sync |
 | `LookupValueHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
 | `MaxAttempts` | `int` | `integer` | `NO` | ✅ Sync |
@@ -1200,8 +1200,8 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
-| `AllowedDomain` | `string` | `character varying(50)` | `NO` | ❌ Missing Column |
-| `AllowedNavbarItemsJson` | `string` | `character varying(4000)` | `YES` | ❌ Missing Column |
+| `AllowedDomain` | `string` | `character varying(50)` | `NO` | ✅ Sync |
+| `AllowedNavbarItemsJson` | `string` | `character varying(4000)` | `YES` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `Name` | `string` | `character varying(50)` | `NO` | ✅ Sync |

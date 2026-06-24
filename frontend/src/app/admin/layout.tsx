@@ -98,7 +98,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const allowedNavbarItems = user?.allowedNavbarItems;
   if (allowedNavbarItems && allowedNavbarItems.length > 0) {
     filteredMenuItems = filteredMenuItems.filter((item) =>
-      allowedNavbarItems.includes(item.href)
+      allowedNavbarItems.some(allowedPath =>
+        allowedPath === item.href || allowedPath.startsWith(item.href + '/')
+      )
     );
   }
 

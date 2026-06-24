@@ -65,20 +65,23 @@ export function LoginForm() {
           roles: user.roles,
           profileComplete: user.profileComplete,
           permissions: user.permissions || [],
+          allowedDomains: user.allowedDomains || [],
+          allowedNavbarItems: user.allowedNavbarItems || [],
         },
         accessToken,
         rememberMe
       );
 
       const roles = user.roles || [];
+      const allowedDomains = user.allowedDomains || [];
       const origins = getSurfaceOrigins();
       let redirectDestination = `${origins.student}/student`;
 
-      if (roles.includes('Admin') || roles.includes('Supervisor')) {
+      if (allowedDomains.includes('admin') || roles.includes('Admin') || roles.includes('Supervisor')) {
         redirectDestination = `${origins.admin}/admin`;
-      } else if (roles.includes('Teacher')) {
+      } else if (allowedDomains.includes('teacher') || roles.includes('Teacher')) {
         redirectDestination = `${origins.teacher}/teacher`;
-      } else if (roles.includes('Assistant') || roles.includes('Staff')) {
+      } else if (allowedDomains.includes('assistant') || roles.includes('Assistant') || roles.includes('Staff')) {
         redirectDestination = `${origins.assistant}/assistant`;
       }
 

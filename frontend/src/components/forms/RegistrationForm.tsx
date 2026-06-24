@@ -382,6 +382,8 @@ export function RegistrationForm() {
           profileComplete: user.profileComplete,
           avatarSlug: user.avatarSlug,
           permissions: user.permissions || [],
+          allowedDomains: user.allowedDomains || [],
+          allowedNavbarItems: user.allowedNavbarItems || [],
         },
         accessToken,
         true // rememberMe: true ensures session persistence

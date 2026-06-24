@@ -54,44 +54,249 @@ const PERMISSION_DEFINITIONS = [
   { key: 'live_support.route', label: 'استقبال محادثات الدعم', desc: 'يضيف أصحاب هذا الدور إلى توزيع المحادثات تلقائياً بسعة افتراضية، ويمكن تعديل كل موظف لاحقاً' }
 ];
 
-const ADMIN_NAV_OPTIONS = [
-  { key: '/admin/students', label: 'الطلاب' },
-  { key: '/admin/assistants', label: 'المساعدين' },
-  { key: '/admin/admins', label: 'المديرين' },
-  { key: '/admin/teachers', label: 'المعلمين' },
-  { key: '/admin/content', label: 'المحتوى' },
-  { key: '/admin/subjects', label: 'المواد الدراسية' },
-  { key: '/admin/community', label: 'المجتمع' },
-  { key: '/admin/ai-monitor', label: 'تحليل AI' },
-  { key: '/admin/codes', label: 'الأكواد' },
-  { key: '/admin/questions', label: 'الأسئلة' },
-  { key: '/admin/overrides', label: 'التعديلات' },
-  { key: '/admin/watch-requests', label: 'طلبات المشاهدة' },
-  { key: '/admin/forms', label: 'النماذج' },
-  { key: '/admin/operations', label: 'العمليات' },
-  { key: '/admin/hr', label: 'الموارد البشرية' },
-  { key: '/admin/finance', label: 'المالية والرواتب' },
-  { key: '/admin/live-support', label: 'الدعم المباشر' },
-  { key: '/admin/live-support/ai', label: 'الدعم الذكي AI' },
-  { key: '/admin/chat', label: 'التواصل الداخلي' },
-  { key: '/admin/crm', label: 'الكول سنتر' },
-  { key: '/admin/media', label: 'الإنتاج والنشر' },
-  { key: '/admin/reports', label: 'سجل الأمان والتقارير' }
+interface NavOption {
+  key: string;
+  label: string;
+  subItems?: Array<{ key: string; label: string }>;
+}
+
+const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
+  'users.manage': [
+    '/admin/students',
+    '/admin/overrides',
+    '/admin/watch-requests',
+    '/admin/assistants',
+    '/admin/admins',
+    '/admin/teachers',
+    '/admin/finance'
+  ],
+  'content.manage': [
+    '/admin/content',
+    '/admin/content/packages',
+    '/admin/content/sections',
+    '/admin/content/lessons',
+    '/admin/subjects',
+    '/admin/forms'
+  ],
+  'exams.manage': [
+    '/admin/questions',
+    '/admin/content/exams',
+    '/admin/content/homework'
+  ],
+  'codes.manage': [
+    '/admin/codes'
+  ],
+  'watch_requests.manage': [
+    '/admin/watch-requests'
+  ],
+  'comments.manage': [
+    '/admin/content',
+    '/admin/content/lessons'
+  ],
+  'community.manage': [
+    '/admin/community'
+  ],
+  'reports.manage': [
+    '/admin/ai-monitor',
+    '/admin/reports'
+  ],
+  'hr.manage': [
+    '/admin/hr',
+    '/admin/operations',
+    '/assistant/attendance',
+    '/assistant/vacations'
+  ],
+  'tasks.manage': [
+    '/assistant/tasks'
+  ],
+  'chat.manage': [
+    '/admin/chat',
+    '/assistant/chat'
+  ],
+  'crm.manage': [
+    '/admin/crm',
+    '/assistant/crm'
+  ],
+  'payments.manage': [
+    '/admin/finance'
+  ],
+  'media.manage': [
+    '/admin/media'
+  ],
+  'live_support.manage': [
+    '/admin/live-support',
+    '/admin/live-support/ai',
+    '/assistant/live-support'
+  ],
+  'live_support.route': [
+    '/assistant/live-support'
+  ]
+};
+
+const ADMIN_NAV_OPTIONS: NavOption[] = [
+  {
+    key: '/admin/students',
+    label: 'الطلاب',
+    subItems: [
+      { key: '/admin/students', label: 'إدارة الطلاب ومجموعاتهم' },
+      { key: '/admin/watch-requests', label: 'طلبات إعادة المشاهدة' },
+      { key: '/admin/overrides', label: 'التعديلات وتخطي الأجهزة' }
+    ]
+  },
+  {
+    key: '/admin/content',
+    label: 'المحتوى والتعليم',
+    subItems: [
+      { key: '/admin/content/packages', label: 'إدارة باقات المحتوى' },
+      { key: '/admin/content/sections', label: 'الفصول والأقسام الدراسية' },
+      { key: '/admin/content/lessons', label: 'إدارة الدروس والمحاضرات' },
+      { key: '/admin/subjects', label: 'إدارة المواد الدراسية' },
+      { key: '/admin/questions', label: 'بنك الأسئلة والامتحانات' },
+      { key: '/admin/forms', label: 'النماذج والاستمارات العامة' }
+    ]
+  },
+  {
+    key: '/admin/assistants',
+    label: 'المساعدين والأدوار',
+    subItems: [
+      { key: '/admin/assistants', label: 'إدارة حسابات المساعدين' },
+      { key: '/admin/admins', label: 'إدارة حسابات المديرين' }
+    ]
+  },
+  {
+    key: '/admin/teachers',
+    label: 'المعلمين والمشرفين',
+    subItems: [
+      { key: '/admin/teachers', label: 'إدارة حسابات المعلمين' }
+    ]
+  },
+  {
+    key: '/admin/hr',
+    label: 'الموارد البشرية والعمليات',
+    subItems: [
+      { key: '/admin/hr', label: 'الموارد البشرية والموظفين' },
+      { key: '/admin/operations', label: 'سجلات الحضور والعمليات' }
+    ]
+  },
+  {
+    key: '/admin/finance',
+    label: 'المالية والرواتب',
+    subItems: [
+      { key: '/admin/finance', label: 'الحسابات المالية والعمولات' }
+    ]
+  },
+  {
+    key: '/admin/live-support',
+    label: 'الدعم والمساعدة',
+    subItems: [
+      { key: '/admin/live-support', label: 'شاشة الدعم المباشر' },
+      { key: '/admin/live-support/ai', label: 'مراقب الدعم الذكي AI' },
+      { key: '/admin/chat', label: 'غرف المحادثات الداخلية' }
+    ]
+  },
+  {
+    key: '/admin/crm',
+    label: 'الكول سنتر والمبيعات',
+    subItems: [
+      { key: '/admin/crm', label: 'توزيع ومتابعة الكول سنتر' }
+    ]
+  },
+  {
+    key: '/admin/media',
+    label: 'الإنتاج والنشر',
+    subItems: [
+      { key: '/admin/media', label: 'إدارة رفع ونشر المحاضرات' }
+    ]
+  },
+  {
+    key: '/admin/reports',
+    label: 'التقارير والمراقبة',
+    subItems: [
+      { key: '/admin/ai-monitor', label: 'سجلات تحليل AI للفيديو' },
+      { key: '/admin/reports', label: 'سجلات الأمان والـ Audit Logs' }
+    ]
+  }
 ];
 
-const ASSISTANT_NAV_OPTIONS = [
-  { key: '/assistant/dashboard', label: 'الرئيسية' },
-  { key: '/assistant/tasks', label: 'المهام والعمليات' },
-  { key: '/admin/content', label: 'إدارة تعليقات الدروس' },
-  { key: '/admin/community', label: 'إدارة مجتمع الطلاب' },
-  { key: '/admin/questions', label: 'إدارة الامتحانات والأسئلة' },
-  { key: '/admin/watch-requests', label: 'طلبات إعادة المشاهدة' },
-  { key: '/assistant/crm', label: 'الكول سنتر (CRM)' },
-  { key: '/assistant/live-support', label: 'الدعم المباشر' },
-  { key: '/assistant/chat', label: 'التواصل الداخلي' },
-  { key: '/assistant/attendance', label: 'سجل الحضور' },
-  { key: '/assistant/vacations', label: 'طلبات الإجازة' },
-  { key: '/assistant/notifications', label: 'الإشعارات' }
+const ASSISTANT_NAV_OPTIONS: NavOption[] = [
+  {
+    key: '/assistant/dashboard',
+    label: 'الرئيسية',
+    subItems: [
+      { key: '/assistant/dashboard', label: 'لوحة التحكم الرئيسية للمساعد' }
+    ]
+  },
+  {
+    key: '/assistant/tasks',
+    label: 'المهام والعمليات',
+    subItems: [
+      { key: '/assistant/tasks', label: 'عرض وإدارة المهام المسندة' }
+    ]
+  },
+  {
+    key: '/admin/content',
+    label: 'إدارة تعليقات الطلاب',
+    subItems: [
+      { key: '/admin/content', label: 'الرد على تعليقات ومناقشات الدروس' }
+    ]
+  },
+  {
+    key: '/admin/community',
+    label: 'إدارة مجتمع الطلاب',
+    subItems: [
+      { key: '/admin/community', label: 'مراقبة وإدارة منشورات مجتمع الطلاب' }
+    ]
+  },
+  {
+    key: '/admin/questions',
+    label: 'الامتحانات والأسئلة',
+    subItems: [
+      { key: '/admin/questions', label: 'تصحيح الامتحانات المقالية وبنوك الأسئلة' }
+    ]
+  },
+  {
+    key: '/admin/watch-requests',
+    label: 'طلبات إعادة المشاهدة',
+    subItems: [
+      { key: '/admin/watch-requests', label: 'اعتماد طلبات إعادة المشاهدة للطلاب' }
+    ]
+  },
+  {
+    key: '/assistant/crm',
+    label: 'الكول سنتر (CRM)',
+    subItems: [
+      { key: '/assistant/crm', label: 'إجراء مكالمات المتابعة وتسجيل التقارير' }
+    ]
+  },
+  {
+    key: '/assistant/live-support',
+    label: 'الدعم المباشر',
+    subItems: [
+      { key: '/assistant/live-support', label: 'محادثات الدعم المباشر مع الطلاب' }
+    ]
+  },
+  {
+    key: '/assistant/chat',
+    label: 'التواصل الداخلي',
+    subItems: [
+      { key: '/assistant/chat', label: 'المحادثات الداخلية بين فريق العمل' }
+    ]
+  },
+  {
+    key: '/assistant/attendance',
+    label: 'سجل الموظف',
+    subItems: [
+      { key: '/assistant/attendance', label: 'سجل الحضور والانصراف' },
+      { key: '/assistant/vacations', label: 'تقديم ومتابعة طلبات الإجازات' }
+    ]
+  },
+  {
+    key: '/assistant/notifications',
+    label: 'الإشعارات والتنبيهات',
+    subItems: [
+      { key: '/assistant/notifications', label: 'مركز التنبيهات العام للمساعد' }
+    ]
+  }
 ];
 
 export default function AdminSettingsPageClient() {
@@ -139,10 +344,37 @@ export default function AdminSettingsPageClient() {
   const [allowedNavbarItems, setAllowedNavbarItems] = useState<string[]>([]);
   const [roleToDelete, setRoleToDelete] = useState<RoleDto | null>(null);
 
-  const toggleNavbarItem = (itemKey: string) => {
-    setAllowedNavbarItems(prev =>
-      prev.includes(itemKey) ? prev.filter(k => k !== itemKey) : [...prev, itemKey]
-    );
+  const toggleParentNavbarItem = (item: NavOption) => {
+    const subKeys = item.subItems ? item.subItems.map(s => s.key) : [];
+    const allKeys = [item.key, ...subKeys];
+    
+    const hasAnyChecked = allKeys.some(k => allowedNavbarItems.includes(k));
+    
+    if (hasAnyChecked) {
+      setAllowedNavbarItems(prev => prev.filter(k => !allKeys.includes(k)));
+    } else {
+      setAllowedNavbarItems(prev => {
+        const unique = new Set([...prev, ...allKeys]);
+        return Array.from(unique);
+      });
+    }
+  };
+
+  const toggleSubNavbarItem = (subKey: string, parentKey: string) => {
+    setAllowedNavbarItems(prev => {
+      let next = prev.includes(subKey) ? prev.filter(k => k !== subKey) : [...prev, subKey];
+      
+      const parentOption = (allowedDomain === 'admin' ? ADMIN_NAV_OPTIONS : ASSISTANT_NAV_OPTIONS).find(o => o.key === parentKey);
+      if (parentOption && parentOption.subItems) {
+        const anySubChecked = parentOption.subItems.some(sub => next.includes(sub.key));
+        if (anySubChecked && !next.includes(parentKey)) {
+          next.push(parentKey);
+        } else if (!anySubChecked && next.includes(parentKey)) {
+          next = next.filter(k => k !== parentKey);
+        }
+      }
+      return next;
+    });
   };
 
   const handleDomainChange = (domain: string) => {
@@ -264,10 +496,38 @@ export default function AdminSettingsPageClient() {
     }
   };
 
+  const getNavbarItemsForPermissions = (perms: string[], domain: string): string[] => {
+    const keysSet = new Set<string>();
+    
+    if (domain === 'assistant') {
+      keysSet.add('/assistant/dashboard');
+      keysSet.add('/assistant/notifications');
+    }
+
+    perms.forEach(p => {
+      const mapped = PERMISSION_TO_NAV_MAP[p];
+      if (mapped) {
+        mapped.forEach(k => {
+          if (domain === 'admin' && k.startsWith('/admin')) {
+            keysSet.add(k);
+          } else if (domain === 'assistant') {
+            keysSet.add(k);
+          }
+        });
+      }
+    });
+
+    return Array.from(keysSet);
+  };
+
   const togglePermission = (permKey: string) => {
-    setSelectedPermissions(prev => 
-      prev.includes(permKey) ? prev.filter(p => p !== permKey) : [...prev, permKey]
-    );
+    setSelectedPermissions(prev => {
+      const next = prev.includes(permKey) ? prev.filter(p => p !== permKey) : [...prev, permKey];
+      // Sync navbar items automatically based on active domain portal
+      const newNavbarItems = getNavbarItemsForPermissions(next, allowedDomain);
+      setAllowedNavbarItems(newNavbarItems);
+      return next;
+    });
   };
 
   return (
@@ -875,27 +1135,58 @@ export default function AdminSettingsPageClient() {
                 {(allowedDomain === 'admin' || allowedDomain === 'assistant') && (
                   <div className="space-y-3">
                     <label className="block text-sm font-bold text-[var(--admin-text)]">
-                      تخصيص عناصر القائمة الجانبية (Navigation Items)
+                      تخصيص عناصر القائمة الجانبية والصفحات الداخلية (Navigation & Sub-Pages)
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[30vh] overflow-y-auto pr-1">
+                    <div className="space-y-4 max-h-[35vh] overflow-y-auto pr-1 border border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card-soft)]/50">
                       {(allowedDomain === 'admin' ? ADMIN_NAV_OPTIONS : ASSISTANT_NAV_OPTIONS).map((item) => {
-                        const isChecked = allowedNavbarItems.includes(item.key);
+                        const isParentChecked = allowedNavbarItems.includes(item.key) || (item.subItems && item.subItems.some(sub => allowedNavbarItems.includes(sub.key)));
+                        const hasSubItems = !!item.subItems;
+
                         return (
-                          <div
-                            key={item.key}
-                            onClick={() => toggleNavbarItem(item.key)}
-                            className={`flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer select-none text-right ${
-                              isChecked
-                                ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)] text-[var(--admin-primary)]'
-                                : 'bg-[var(--admin-card-soft)] border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
-                            }`}
-                          >
-                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
-                              isChecked ? 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-white' : 'border-[var(--admin-border)] bg-[var(--admin-card)]'
-                            }`}>
-                              {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          <div key={item.key} className="space-y-2 border-b border-[var(--admin-border)]/50 pb-3 last:border-0 last:pb-0">
+                            {/* Parent item */}
+                            <div
+                              onClick={() => toggleParentNavbarItem(item)}
+                              className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer select-none text-right ${
+                                isParentChecked
+                                  ? 'bg-[var(--admin-primary-15)] border-[var(--admin-primary)]/40 text-[var(--admin-primary)]'
+                                  : 'bg-[var(--admin-card-strong)] border-[var(--admin-border)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                              }`}
+                            >
+                              <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                isParentChecked ? 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-white' : 'border-[var(--admin-border)] bg-[var(--admin-card)]'
+                              }`}>
+                                {isParentChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              </div>
+                              <span className="text-sm font-black">{item.label}</span>
                             </div>
-                            <span className="text-sm font-bold">{item.label}</span>
+
+                            {/* Sub items */}
+                            {item.subItems && (
+                              <div className="mr-8 grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                {item.subItems.map((sub) => {
+                                  const isSubChecked = allowedNavbarItems.includes(sub.key);
+                                  return (
+                                    <div
+                                      key={sub.key}
+                                      onClick={() => toggleSubNavbarItem(sub.key, item.key)}
+                                      className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer select-none text-right ${
+                                        isSubChecked
+                                          ? 'bg-[var(--admin-primary-5)] border-[var(--admin-primary)]/20 text-[var(--admin-primary)]'
+                                          : 'bg-[var(--admin-card)] border-[var(--admin-border)]/50 text-[var(--admin-muted)] hover:text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                                      }`}
+                                    >
+                                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                                        isSubChecked ? 'bg-[var(--admin-primary)] border-[var(--admin-primary)] text-white' : 'border-[var(--admin-border)] bg-[var(--admin-card)]'
+                                      }`}>
+                                        {isSubChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                      </div>
+                                      <span className="text-xs font-bold">{sub.label}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
