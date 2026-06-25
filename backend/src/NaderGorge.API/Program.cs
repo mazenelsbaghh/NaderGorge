@@ -127,6 +127,7 @@ builder.Services.AddSignalR()
 builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
 builder.Services.AddHostedService<LiveSupportRecoveryBackgroundService>();
 builder.Services.AddHostedService<LiveSupportAIRecoveryBackgroundService>();
+builder.Services.AddHostedService<RechargeRequestExpiryBackgroundService>();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
