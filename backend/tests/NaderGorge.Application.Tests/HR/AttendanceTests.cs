@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.HR.Commands;
 using NaderGorge.Application.Features.HR.Queries;
+using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Infrastructure.Data;
@@ -248,5 +250,51 @@ public class AttendanceTests
         Assert.NotNull(result.Data);
         Assert.True(result.Data!.HasProfile);
         Assert.Equal(7, result.Data.TargetDailyHours);
+    }
+
+    [Fact]
+    public async Task ClockIn_InvokesAssignWaiting_WhenAssignmentCoordinatorIsProvided()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Test Employee 9", "01234567909");
+
+        var profile = new EmployeeProfile
+        {
+            UserId = user.Id,
+            BasicSalary = 5000,
+            StandardStartTime = new TimeSpan(23, 59, 59),
+            TargetDailyHours = 8
+        };
+        db.EmployeeProfiles.Add(profile);
+        await db.SaveChangesAsync();
+
+        var fakeCoordinator = new FakeAssignmentCoordinator();
+        var handler = new ClockInCommandHandler(db, fakeCoordinator);
+        var result = await handler.Handle(
+            new ClockInCommand(user.Id, "127.0.0.1", "TestAgent"),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.True(fakeCoordinator.AssignWaitingCalled);
+    }
+
+    private class FakeAssignmentCoordinator : ILiveSupportAssignmentCoordinator
+    {
+        public bool AssignWaitingCalled { get; private set; }
+        public Task AssignWaitingAsync(CancellationToken ct)
+        {
+            AssignWaitingCalled = true;
+            return Task.CompletedTask;
+        }
+
+        public Task<LiveSupportConversationDto> TransferAsync(Guid actorUserId, bool isAdmin, Guid conversationId, Guid? targetStaffUserId, string reason, CancellationToken ct)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ReleaseStaffAssignmentsAsync(Guid staffUserId, LiveSupportAssignmentEndReason reason, CancellationToken ct)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

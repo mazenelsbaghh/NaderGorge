@@ -15,6 +15,17 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
+## Table: `ParentDeviceTokens`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DeviceToken` | `string` | `character varying(500)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Platform` | `string` | `character varying(50)` | `NO` | ✅ Sync |
+| `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
 ## Table: `PlatformSettings`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
@@ -1125,17 +1136,6 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `SubjectId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `TargetGrade` | `string` | `character varying(100)` | `NO` | ✅ Sync |
 | `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
-
-## Table: `parent_device_tokens`
-
-| Column Name | C# Type | Database Type | Nullable? | Status |
-| --- | --- | --- | --- | --- |
-| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
-| `DeviceToken` | `string` | `character varying(500)` | `NO` | ✅ Sync |
-| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `Platform` | `string` | `character varying(50)` | `NO` | ✅ Sync |
-| `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
 ## Table: `payroll_adjustments`

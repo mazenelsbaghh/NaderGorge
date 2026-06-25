@@ -8,9 +8,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+import com.nadergorge.parent.data.api.StudentDetailsResponse
+import com.nadergorge.parent.data.storage.LinkedStudent
+
 sealed class LinkingUiState {
     object Idle : LinkingUiState()
     object Loading : LinkingUiState()
+    data class Review(val student: LinkedStudent, val details: StudentDetailsResponse) : LinkingUiState()
     data class Success(val studentName: String) : LinkingUiState()
     data class Error(val message: String) : LinkingUiState()
 }
@@ -26,8 +30,9 @@ class LinkingViewModel(
     val code: StateFlow<String> = _code.asStateFlow()
 
     fun onCodeChange(newCode: String) {
-        if (newCode.length <= 6) {
-            _code.value = newCode.uppercase()
+        val filtered = newCode.filter { it.isDigit() }
+        if (filtered.length <= 6) {
+            _code.value = filtered
         }
     }
 
@@ -40,16 +45,26 @@ class LinkingViewModel(
 
         _uiState.value = LinkingUiState.Loading
         viewModelScope.launch {
-            repository.verifyAndLink(currentCode, deviceToken)
-                .onSuccess { linkedStudent ->
-                    _uiState.value = LinkingUiState.Success(linkedStudent.name)
+            repository.verifyCodeOnly(currentCode, deviceToken)
+                .onSuccess { (linkedStudent, details) ->
+                    _uiState.value = LinkingUiState.Review(linkedStudent, details)
                 }
                 .onFailure { error ->
                     _uiState.value = LinkingUiState.Error(
-                        "الرمز غير صالح، يرجى التحقق وإعادة المحاولة"
+                        error.message ?: "الرمز غير صالح، يرجى التحقق وإعادة المحاولة"
                     )
                 }
         }
+    }
+
+    fun confirmLink(student: LinkedStudent) {
+        repository.saveLinkedStudent(student)
+        _uiState.value = LinkingUiState.Success(student.name)
+    }
+
+    fun cancelLink() {
+        _uiState.value = LinkingUiState.Idle
+        _code.value = ""
     }
     
     fun resetState() {

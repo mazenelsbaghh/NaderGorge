@@ -152,6 +152,11 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
     public DbSet<WebVitalsMetric> WebVitalsMetrics => Set<WebVitalsMetric>();
 
+    // SMS Payment Auto-Matcher
+    public DbSet<DigitalWallet> DigitalWallets => Set<DigitalWallet>();
+    public DbSet<RechargeRequest> RechargeRequests => Set<RechargeRequest>();
+    public DbSet<IncomingSmsLog> IncomingSmsLogs => Set<IncomingSmsLog>();
+
     public Task<StudentAnswer?> FindStudentAnswerAsync(
         Guid studentExamAttemptId,
         Guid examQuestionId,
@@ -1618,6 +1623,72 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.OutcomeCodesJson).HasColumnType("jsonb");
             e.HasIndex(x => new { x.SessionId, x.AttemptNumber }).IsUnique();
             e.HasOne<LiveSupportAIVerificationSession>().WithMany().HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // DigitalWallet mapping
+        modelBuilder.Entity<DigitalWallet>(e =>
+        {
+            e.ToTable("digital_wallets");
+            e.HasKey(dw => dw.Id);
+            e.HasIndex(dw => dw.PhoneNumber).IsUnique();
+            e.HasIndex(dw => dw.PairingToken).IsUnique();
+            e.Property(dw => dw.PhoneNumber).HasMaxLength(20).IsRequired();
+            e.Property(dw => dw.Label).HasMaxLength(100).IsRequired();
+            e.Property(dw => dw.PairingToken).HasMaxLength(20).IsRequired();
+            e.Property(dw => dw.DailyLimit).HasPrecision(18, 2);
+            e.Property(dw => dw.MonthlyLimit).HasPrecision(18, 2);
+            e.Property(dw => dw.CurrentBalance).HasPrecision(18, 2);
+        });
+
+        // RechargeRequest mapping
+        modelBuilder.Entity<RechargeRequest>(e =>
+        {
+            e.ToTable("recharge_requests");
+            e.HasKey(rr => rr.Id);
+            
+            e.HasOne(rr => rr.User)
+                .WithMany()
+                .HasForeignKey(rr => rr.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            e.HasOne(rr => rr.Wallet)
+                .WithMany(w => w.RechargeRequests)
+                .HasForeignKey(rr => rr.WalletId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            e.HasOne(rr => rr.ResolvedByUser)
+                .WithMany()
+                .HasForeignKey(rr => rr.ResolvedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            e.HasOne(rr => rr.MatchedSmsLog)
+                .WithOne(sms => sms.MatchedRechargeRequest)
+                .HasForeignKey<RechargeRequest>(rr => rr.MatchedSmsLogId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            e.Property(rr => rr.Amount).HasPrecision(18, 2);
+            e.Property(rr => rr.SenderPhoneNumber).HasMaxLength(20).IsRequired();
+            e.Property(rr => rr.ScreenshotUrl).HasMaxLength(1000);
+            e.Property(rr => rr.RejectionReason).HasMaxLength(500);
+        });
+
+        // IncomingSmsLog mapping
+        modelBuilder.Entity<IncomingSmsLog>(e =>
+        {
+            e.ToTable("incoming_sms_logs");
+            e.HasKey(sms => sms.Id);
+            
+            e.HasOne(sms => sms.Wallet)
+                .WithMany(w => w.IncomingSmsLogs)
+                .HasForeignKey(sms => sms.WalletId)
+                .OnDelete(DeleteBehavior.Restrict);
+                
+            e.HasIndex(sms => sms.DeduplicationHash).IsUnique();
+            e.Property(sms => sms.Sender).HasMaxLength(100).IsRequired();
+            e.Property(sms => sms.Body).HasMaxLength(1000).IsRequired();
+            e.Property(sms => sms.DeduplicationHash).HasMaxLength(64).IsRequired();
+            e.Property(sms => sms.ParsedAmount).HasPrecision(18, 2);
+            e.Property(sms => sms.ParsedSenderPhone).HasMaxLength(20);
         });
     }
 

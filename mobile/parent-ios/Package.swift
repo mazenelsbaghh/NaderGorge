@@ -17,7 +17,8 @@ let package = Package(
         .target(
             name: "NaderGorgeParent",
             dependencies: [],
-            path: "Sources/NaderGorgeParent"),
+            path: "Sources/NaderGorgeParent",
+            resources: [.process("Resources")]),
         .target(
             name: "XCTest",
             dependencies: [],

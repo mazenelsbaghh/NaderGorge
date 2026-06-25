@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -26,7 +26,7 @@ namespace NaderGorge.Infrastructure.Migrations
                 nullable: true);
 
             migrationBuilder.CreateTable(
-                name: "parent_device_tokens",
+                name: "ParentDeviceTokens",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -38,9 +38,9 @@ namespace NaderGorge.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_parent_device_tokens", x => x.Id);
+                    table.PrimaryKey("PK_ParentDeviceTokens", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_parent_device_tokens_student_profiles_StudentId",
+                        name: "FK_ParentDeviceTokens_student_profiles_StudentId",
                         column: x => x.StudentId,
                         principalTable: "student_profiles",
                         principalColumn: "Id",
@@ -54,8 +54,8 @@ namespace NaderGorge.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_parent_device_tokens_StudentId",
-                table: "parent_device_tokens",
+                name: "IX_ParentDeviceTokens_StudentId",
+                table: "ParentDeviceTokens",
                 column: "StudentId");
         }
 
@@ -63,7 +63,7 @@ namespace NaderGorge.Infrastructure.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "parent_device_tokens");
+                name: "ParentDeviceTokens");
 
             migrationBuilder.DropIndex(
                 name: "IX_student_profiles_ParentTrackingCode",

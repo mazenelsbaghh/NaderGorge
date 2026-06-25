@@ -1,13 +1,29 @@
 import Foundation
 import Combine
 
+public enum LinkingUiState: Equatable {
+    case idle
+    case loading
+    case review(student: StudentProfile, details: StudentDetailsResponse)
+    case success(studentName: String)
+    case error(message: String)
+}
+
 @MainActor
 public class LinkingViewModel: ObservableObject {
-    @Published public var trackingCode: String = ""
+    @Published public var trackingCode: String = "" {
+        didSet {
+            let filtered = trackingCode.filter { $0.isNumber }
+            if filtered != trackingCode {
+                trackingCode = filtered
+            }
+        }
+    }
     @Published public var isLoading: Bool = false
     @Published public var errorMessage: String? = nil
     @Published public var successMessage: String? = nil
     @Published public var linkedStudentName: String? = nil
+    @Published public var uiState: LinkingUiState = .idle
     
     private let apiService: APIServiceProtocol
     private let keychainService: KeychainService
@@ -21,10 +37,13 @@ public class LinkingViewModel: ObservableObject {
         errorMessage = nil
         successMessage = nil
         linkedStudentName = nil
+        uiState = .loading
         
-        let trimmedCode = trackingCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let trimmedCode = trackingCode.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedCode.count == 6 else {
-            errorMessage = "الرمز غير صالح، يجب أن يتكون من 6 أحرف."
+            let errorMsg = "الرمز غير صالح، يجب أن يتكون من 6 أرقام."
+            errorMessage = errorMsg
+            uiState = .error(message: errorMsg)
             return
         }
         
@@ -35,20 +54,47 @@ public class LinkingViewModel: ObservableObject {
             let response = try await apiService.verifyCode(trackingCode: trimmedCode, deviceToken: deviceToken)
             
             guard let studentId = JWTDecoder.decodeStudentId(from: response.token) else {
-                errorMessage = "رمز التوثيق المستلم غير صالح."
+                let errorMsg = "رمز التوثيق المستلم غير صالح."
+                errorMessage = errorMsg
+                uiState = .error(message: errorMsg)
                 return
             }
             
-            let profile = StudentProfile(studentId: studentId, name: response.studentName, token: response.token)
-            try keychainService.addProfile(profile)
+            let student = StudentProfile(studentId: studentId, name: response.studentName, token: response.token)
             
-            linkedStudentName = response.studentName
-            successMessage = "تم ربط الطالب \(response.studentName) بنجاح!"
-            trackingCode = ""
+            // Phase 2: Fetch student details using the new token BEFORE saving to keychain
+            let details = try await apiService.fetchStudentDetails(token: response.token)
+            
+            uiState = .review(student: student, details: details)
         } catch let error as APIError {
-            errorMessage = error.localizedDescription
+            let errorMsg = error.localizedDescription
+            errorMessage = errorMsg
+            uiState = .error(message: errorMsg)
         } catch {
-            errorMessage = "حدث خطأ غير متوقع: \(error.localizedDescription)"
+            let errorMsg = "حدث خطأ غير متوقع: \(error.localizedDescription)"
+            errorMessage = errorMsg
+            uiState = .error(message: errorMsg)
         }
+    }
+    
+    public func confirmLink(student: StudentProfile) {
+        do {
+            try keychainService.addProfile(student)
+            linkedStudentName = student.name
+            successMessage = "تم ربط الطالب \(student.name) بنجاح!"
+            trackingCode = ""
+            uiState = .success(studentName: student.name)
+        } catch {
+            let errorMsg = "فشل في حفظ ملف الطالب."
+            errorMessage = errorMsg
+            uiState = .error(message: errorMsg)
+        }
+    }
+    
+    public func cancelLink() {
+        uiState = .idle
+        trackingCode = ""
+        errorMessage = nil
+        successMessage = nil
     }
 }

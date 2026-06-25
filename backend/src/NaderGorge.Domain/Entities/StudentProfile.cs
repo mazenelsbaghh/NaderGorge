@@ -57,7 +57,7 @@ public class StudentProfile : BaseEntity
 
     private static string GenerateRandomCode()
     {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        const string chars = "0123456789";
         var random = new Random();
         var result = new char[6];
         for (int i = 0; i < 6; i++)

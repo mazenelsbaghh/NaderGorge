@@ -66,7 +66,7 @@ class NaderGorgeParentTests: XCTestCase {
         
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertNotNil(viewModel.errorMessage)
-        XCTAssertEqual(viewModel.errorMessage, "الرمز غير صالح، يجب أن يتكون من 6 أحرف.")
+        XCTAssertEqual(viewModel.errorMessage, "الرمز غير صالح، يجب أن يتكون من 6 أرقام.")
         XCTAssertNil(viewModel.successMessage)
     }
     
@@ -77,18 +77,40 @@ class NaderGorgeParentTests: XCTestCase {
         let response = VerifyCodeResponse(token: mockToken, studentName: "أحمد محمد")
         mockAPI.verifyCodeResult = .success(response)
         
-        viewModel.trackingCode = "NG79F4"
+        let mockDetails = StudentDetailsResponse(
+            studentName: "أحمد محمد",
+            grade: "الصف الثالث الثانوي",
+            school: "مدرسة الأورمان",
+            avatarSlug: "avatar-lion",
+            attendance: AttendanceSummary(totalLessons: 10, watchedLessons: 8, completionRate: 80.0),
+            exams: [],
+            homeworks: [],
+            warnings: []
+        )
+        mockAPI.fetchStudentDetailsResult = .success(mockDetails)
+        
+        viewModel.trackingCode = "123456"
         await viewModel.linkStudent()
         
         XCTAssertNil(viewModel.errorMessage)
-        XCTAssertEqual(viewModel.linkedStudentName, "أحمد محمد")
-        XCTAssertEqual(viewModel.successMessage, "تم ربط الطالب أحمد محمد بنجاح!")
-        XCTAssertEqual(viewModel.trackingCode, "")
         
-        let loaded = keychain.loadProfiles()
-        XCTAssertEqual(loaded.count, 1)
-        XCTAssertEqual(loaded.first?.name, "أحمد محمد")
-        XCTAssertEqual(loaded.first?.studentId, UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"))
+        if case .review(let student, let details) = viewModel.uiState {
+            XCTAssertEqual(student.name, "أحمد محمد")
+            XCTAssertEqual(details.studentName, "أحمد محمد")
+            
+            viewModel.confirmLink(student: student)
+            
+            XCTAssertEqual(viewModel.linkedStudentName, "أحمد محمد")
+            XCTAssertEqual(viewModel.successMessage, "تم ربط الطالب أحمد محمد بنجاح!")
+            XCTAssertEqual(viewModel.trackingCode, "")
+            
+            let loaded = keychain.loadProfiles()
+            XCTAssertEqual(loaded.count, 1)
+            XCTAssertEqual(loaded.first?.name, "أحمد محمد")
+            XCTAssertEqual(loaded.first?.studentId, UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"))
+        } else {
+            XCTAssertTrue(false, "Expected .review state, but got \(viewModel.uiState)")
+        }
     }
     
     @MainActor
@@ -96,7 +118,7 @@ class NaderGorgeParentTests: XCTestCase {
         let viewModel = LinkingViewModel(apiService: mockAPI, keychainService: keychain)
         mockAPI.verifyCodeResult = .failure(APIError.invalidCode)
         
-        viewModel.trackingCode = "NG79F4"
+        viewModel.trackingCode = "123456"
         await viewModel.linkStudent()
         
         XCTAssertNotNil(viewModel.errorMessage)

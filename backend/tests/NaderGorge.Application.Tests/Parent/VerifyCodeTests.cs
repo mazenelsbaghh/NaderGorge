@@ -51,7 +51,7 @@ public class VerifyCodeTests : IDisposable
         // Assert
         Assert.NotNull(profile1.ParentTrackingCode);
         Assert.Equal(6, profile1.ParentTrackingCode.Length);
-        Assert.Matches("^[A-Z0-9]{6}$", profile1.ParentTrackingCode);
+        Assert.Matches("^[0-9]{6}$", profile1.ParentTrackingCode);
         Assert.NotEqual(profile1.ParentTrackingCode, profile2.ParentTrackingCode);
     }
 
@@ -66,13 +66,13 @@ public class VerifyCodeTests : IDisposable
         var profile = new StudentProfile
         {
             UserId = user.Id,
-            ParentTrackingCode = "ABC123"
+            ParentTrackingCode = "123456"
         };
         _db.StudentProfiles.Add(profile);
         await _db.SaveChangesAsync();
 
         var handler = new VerifyParentCodeCommandHandler(_db, _tokenService);
-        var command = new VerifyParentCodeCommand("ABC123", null, null);
+        var command = new VerifyParentCodeCommand("123456", null, null);
 
         // Act
         var response = await handler.Handle(command, CancellationToken.None);
@@ -96,7 +96,7 @@ public class VerifyCodeTests : IDisposable
     {
         // Arrange
         var handler = new VerifyParentCodeCommandHandler(_db, _tokenService);
-        var command = new VerifyParentCodeCommand("XYZ999", null, null);
+        var command = new VerifyParentCodeCommand("999999", null, null);
 
         // Act
         var response = await handler.Handle(command, CancellationToken.None);
@@ -117,13 +117,13 @@ public class VerifyCodeTests : IDisposable
         var profile = new StudentProfile
         {
             UserId = user.Id,
-            ParentTrackingCode = "FCM789"
+            ParentTrackingCode = "789123"
         };
         _db.StudentProfiles.Add(profile);
         await _db.SaveChangesAsync();
 
         var handler = new VerifyParentCodeCommandHandler(_db, _tokenService);
-        var command = new VerifyParentCodeCommand("FCM789", "mock_fcm_token", "android");
+        var command = new VerifyParentCodeCommand("789123", "mock_fcm_token", "android");
 
         // Act - 1st call
         var response1 = await handler.Handle(command, CancellationToken.None);

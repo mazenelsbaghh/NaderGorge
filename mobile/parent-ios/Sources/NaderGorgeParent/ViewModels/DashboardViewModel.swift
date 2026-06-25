@@ -30,6 +30,17 @@ public class DashboardViewModel: ObservableObject {
         await fetchDetails()
     }
     
+    public func switchProfile(_ profile: StudentProfile?) {
+        selectedProfile = profile
+        if profile != nil {
+            Task {
+                await fetchDetails()
+            }
+        } else {
+            studentDetails = nil
+        }
+    }
+    
     public func fetchDetails() async {
         guard let profile = selectedProfile else {
             studentDetails = nil

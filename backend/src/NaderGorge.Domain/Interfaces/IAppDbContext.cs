@@ -150,6 +150,11 @@ public interface IAppDbContext
     DbSet<OutboxEvent> OutboxEvents { get; }
     DbSet<WebVitalsMetric> WebVitalsMetrics { get; }
 
+    // SMS Payment Auto-Matcher
+    DbSet<DigitalWallet> DigitalWallets { get; }
+    DbSet<RechargeRequest> RechargeRequests { get; }
+    DbSet<IncomingSmsLog> IncomingSmsLogs { get; }
+
     Task<StudentAnswer?> FindStudentAnswerAsync(Guid studentExamAttemptId, Guid examQuestionId, CancellationToken cancellationToken = default);
     Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;
     Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);

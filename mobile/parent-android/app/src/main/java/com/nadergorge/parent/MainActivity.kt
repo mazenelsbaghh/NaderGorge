@@ -15,6 +15,8 @@ import com.nadergorge.parent.ui.screens.DashboardScreen
 import com.nadergorge.parent.ui.screens.DashboardViewModel
 import com.nadergorge.parent.ui.screens.LinkingScreen
 import com.nadergorge.parent.ui.screens.LinkingViewModel
+import com.nadergorge.parent.ui.screens.OnboardingScreen
+import com.nadergorge.parent.ui.screens.SplashScreen
 import com.nadergorge.parent.ui.theme.ParentAppTheme
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -41,7 +43,7 @@ class MainActivity : ComponentActivity() {
             .build()
 
         val retrofit = Retrofit.Builder()
-            .baseUrl("http://10.0.2.2:5245/") // standard Android Emulator localhost address
+            .baseUrl("https://api.massar-academy.net/") // massar production server URL
             .client(client)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -58,18 +60,35 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var currentScreen by remember { mutableStateOf("dashboard") }
+                    var currentScreen by remember { mutableStateOf("splash") }
                     val activeStudent by dashboardViewModel.activeStudent.collectAsState()
 
                     LaunchedEffect(activeStudent) {
+                        if (currentScreen == "splash") return@LaunchedEffect
                         if (activeStudent == null) {
-                            currentScreen = "link"
+                            if (currentScreen != "link") {
+                                currentScreen = "onboarding"
+                            }
                         } else {
                             currentScreen = "dashboard"
                         }
                     }
 
                     when (currentScreen) {
+                        "splash" -> {
+                            SplashScreen(
+                                onFinished = {
+                                    currentScreen = if (activeStudent == null) "onboarding" else "dashboard"
+                                }
+                            )
+                        }
+                        "onboarding" -> {
+                            OnboardingScreen(
+                                onStartTracking = {
+                                    currentScreen = "link"
+                                }
+                            )
+                        }
                         "link" -> {
                             LinkingScreen(
                                 viewModel = linkingViewModel,

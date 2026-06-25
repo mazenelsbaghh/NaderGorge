@@ -52,13 +52,24 @@ public class BalanceService
         Guid? referenceId = null,
         CancellationToken ct = default)
     {
+        return await AddCredit(userId, amount, description, referenceId, "CodeRedemption", ct);
+    }
+
+    public async Task<BalanceTransaction> AddCredit(
+        Guid userId,
+        decimal amount,
+        string description,
+        Guid? referenceId,
+        string transactionType,
+        CancellationToken ct = default)
+    {
         if (amount <= 0) throw new ArgumentException("Credit amount must be positive", nameof(amount));
 
         var transaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null
             ? null
             : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
         try
-        {
+         {
             var balance = await GetOrCreateBalance(userId, ct);
             var now = DateTime.UtcNow;
             int affectedRows;
@@ -89,7 +100,7 @@ public class BalanceService
                 StudentBalanceId = balance.Id,
                 Amount = amount,
                 BalanceAfter = balance.CurrentBalance,
-                TransactionType = "CodeRedemption",
+                TransactionType = transactionType,
                 ReferenceId = referenceId,
                 Description = description
             };

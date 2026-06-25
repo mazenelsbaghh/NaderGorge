@@ -9,10 +9,10 @@ interface ParentApiService {
     @POST("api/parent/verify-code")
     suspend fun verifyCode(
         @Body request: VerifyCodeRequest
-    ): VerifyCodeResponse
+    ): ApiResponse<VerifyCodeResponse>
 
     @GET("api/parent/student-details")
     suspend fun getStudentDetails(
         @Header("Authorization") authHeader: String
-    ): StudentDetailsResponse
+    ): ApiResponse<StudentDetailsResponse>
 }

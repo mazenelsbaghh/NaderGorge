@@ -1131,6 +1131,70 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("devices", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.DigitalWallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("CurrentBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("DailyLimit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("DeviceStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("LastSeenAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("MonthlyLimit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("PairingToken")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("SmsSenderFilters")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PairingToken")
+                        .IsUnique();
+
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique();
+
+                    b.ToTable("digital_wallets", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1673,6 +1737,63 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("homework_submissions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.IncomingSmsLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DeduplicationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("IsMatched")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("MatchedRechargeRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("ParsedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("ParsedSenderPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Sender")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeduplicationHash")
+                        .IsUnique();
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("incoming_sms_logs", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Lesson", b =>
@@ -3353,9 +3474,10 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StudentId");
+                    b.HasIndex("StudentId", "DeviceToken")
+                        .IsUnique();
 
-                    b.ToTable("parent_device_tokens", (string)null);
+                    b.ToTable("ParentDeviceTokens", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.OutboxEvent", b =>
@@ -3723,6 +3845,70 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("QuestionBankItemId");
 
                     b.ToTable("question_options", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.RechargeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("MatchedSmsLogId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReservationExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ScreenshotUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("SenderPhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatchedSmsLogId")
+                        .IsUnique();
+
+                    b.HasIndex("ResolvedByUserId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("WalletId");
+
+                    b.ToTable("recharge_requests", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.RefreshToken", b =>
@@ -4223,8 +4409,8 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("ParentTrackingCode")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
 
                     b.Property<string>("SchoolName")
                         .HasColumnType("text");
@@ -5598,6 +5784,17 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.IncomingSmsLog", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.DigitalWallet", "Wallet")
+                        .WithMany("IncomingSmsLogs")
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Wallet");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Lesson", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.ContentSection", "ContentSection")
@@ -6193,6 +6390,39 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Question");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.RechargeRequest", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.IncomingSmsLog", "MatchedSmsLog")
+                        .WithOne("MatchedRechargeRequest")
+                        .HasForeignKey("NaderGorge.Domain.Entities.RechargeRequest", "MatchedSmsLogId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "ResolvedByUser")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.DigitalWallet", "Wallet")
+                        .WithMany("RechargeRequests")
+                        .HasForeignKey("WalletId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MatchedSmsLog");
+
+                    b.Navigation("ResolvedByUser");
+
+                    b.Navigation("User");
+
+                    b.Navigation("Wallet");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.RefreshToken", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.User", "User")
@@ -6620,6 +6850,13 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Submissions");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.DigitalWallet", b =>
+                {
+                    b.Navigation("IncomingSmsLogs");
+
+                    b.Navigation("RechargeRequests");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Exam", b =>
                 {
                     b.Navigation("Attempts");
@@ -6637,6 +6874,11 @@ namespace NaderGorge.Infrastructure.Migrations
             modelBuilder.Entity("NaderGorge.Domain.Entities.Homework.HomeworkSubmission", b =>
                 {
                     b.Navigation("Answers");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.IncomingSmsLog", b =>
+                {
+                    b.Navigation("MatchedRechargeRequest");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Lesson", b =>

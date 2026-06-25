@@ -90,7 +90,7 @@ public class GetDetailsTests : IDisposable
             GradeLevel = GradeLevel.SecondSecondary,
             SchoolName = "مدرسة الأورمان الثانوية",
             AvatarSlug = "avatar-lion",
-            ParentTrackingCode = "XYZ789"
+            ParentTrackingCode = "789123"
         };
         _db.StudentProfiles.Add(profile);
         await _db.SaveChangesAsync();

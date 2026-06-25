@@ -40,7 +40,7 @@ def main():
     sql_insert_values = f'INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion") VALUES {values_list} ON CONFLICT DO NOTHING;\n'
     combined_sql = f"{sql_create_table}{sql_insert_values}"
     
-    db_cmd = 'docker exec -i massar_db psql -U postgres -d masar_platform'
+    db_cmd = 'docker exec -i massar_db psql -U postgres -d massar_platform_test'
     code, out, err = run_cmd(db_cmd, input_data=combined_sql)
     
     if code != 0:
