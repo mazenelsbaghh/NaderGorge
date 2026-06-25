@@ -22,6 +22,10 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
             await service.GetStaffBootstrapAsync(staffId, Context.User!.IsInRole("Admin"), Context.ConnectionAborted);
             await presence.ConnectedAsync(staffId, Context.ConnectionId);
             await Groups.AddToGroupAsync(Context.ConnectionId, $"LiveSupport:Staff:{staffId:N}");
+            if (service is ILiveSupportAssignmentCoordinator coordinator)
+            {
+                await coordinator.AssignWaitingAsync(Context.ConnectionAborted);
+            }
         }
         else if (await ParticipantAsync() is { } participant)
             await Groups.AddToGroupAsync(Context.ConnectionId, participant.Type == LiveSupportParticipantType.Student

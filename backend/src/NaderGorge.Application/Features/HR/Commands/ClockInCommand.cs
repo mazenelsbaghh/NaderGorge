@@ -5,6 +5,7 @@ using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Features.LiveSupport.Interfaces;
 
 namespace NaderGorge.Application.Features.HR.Commands;
 
@@ -25,10 +26,12 @@ public class ClockInCommandValidator : AbstractValidator<ClockInCommand>
 public class ClockInCommandHandler : IRequestHandler<ClockInCommand, ApiResponse<Guid>>
 {
     private readonly IAppDbContext _db;
+    private readonly ILiveSupportAssignmentCoordinator? _assignmentCoordinator;
 
-    public ClockInCommandHandler(IAppDbContext db)
+    public ClockInCommandHandler(IAppDbContext db, ILiveSupportAssignmentCoordinator? assignmentCoordinator = null)
     {
         _db = db;
+        _assignmentCoordinator = assignmentCoordinator;
     }
 
     public async Task<ApiResponse<Guid>> Handle(ClockInCommand request, CancellationToken ct)
@@ -103,6 +106,11 @@ public class ClockInCommandHandler : IRequestHandler<ClockInCommand, ApiResponse
             });
         }
         await _db.SaveChangesAsync(ct);
+
+        if (_assignmentCoordinator is not null)
+        {
+            await _assignmentCoordinator.AssignWaitingAsync(ct);
+        }
 
         return ApiResponse<Guid>.Ok(attendanceLog.Id);
     }

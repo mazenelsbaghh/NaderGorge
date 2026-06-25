@@ -406,6 +406,7 @@ public sealed class LiveSupportService(
         }
         foreach (var window in schedule) _db.LiveSupportScheduleWindows.Add(new LiveSupportScheduleWindow { StaffConfigId = config.Id, DayOfWeek = window.DayOfWeek, StartLocalTime = window.StartLocalTime, EndLocalTime = window.EndLocalTime });
         await _db.SaveChangesAsync(ct);
+        await AssignOldestWaitingAsync(ct);
         return await MapStaffConfigAsync(config, ct);
     }
 
