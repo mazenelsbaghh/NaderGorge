@@ -18,6 +18,7 @@ public record InitiateRechargeCommand(
 public class InitiateRechargeDto
 {
     public Guid RechargeRequestId { get; set; }
+    public string ReviewCode { get; set; } = string.Empty;
     public string WalletPhoneNumber { get; set; } = string.Empty;
     public string WalletLabel { get; set; } = string.Empty;
     public DateTime ExpirationTime { get; set; }
@@ -105,6 +106,7 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         var dto = new InitiateRechargeDto
         {
             RechargeRequestId = rechargeRequest.Id,
+            ReviewCode = rechargeRequest.Id.ToString("N")[..8].ToUpperInvariant(),
             WalletPhoneNumber = selectedWallet.PhoneNumber,
             WalletLabel = selectedWallet.Label,
             ExpirationTime = expiration

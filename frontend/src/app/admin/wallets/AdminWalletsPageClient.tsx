@@ -7,11 +7,13 @@ import {
   Activity, 
   TrendingUp, 
   Copy, 
+  FileText,
   RefreshCw, 
   Edit2, 
   Wifi,
   WifiOff
 } from 'lucide-react';
+import Link from 'next/link';
 import { 
   AdminShellChrome, 
   AdminDataTable, 
@@ -396,10 +398,19 @@ export default function AdminWalletsPageClient() {
       pageTitle="إدارة المحافظ الرقمية"
       subtitle="إدارة محافظ Vodafone Cash وتطبيقات الاستماع والحدود اليومية للمطابقة الآلية."
       action={
-        <NeumorphButton onClick={handleOpenAddModal} intent="primary" size="md">
-          <Plus className="h-4 w-4" />
-          إضافة محفظة جديدة
-        </NeumorphButton>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/recharge-verification"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 text-sm font-black text-[var(--admin-text)] shadow-sm transition hover:bg-[var(--admin-hover)]"
+          >
+            <FileText className="h-4 w-4" />
+            التحويلات وطلبات الشحن
+          </Link>
+          <NeumorphButton onClick={handleOpenAddModal} intent="primary" size="md">
+            <Plus className="h-4 w-4" />
+            إضافة محفظة جديدة
+          </NeumorphButton>
+        </div>
       }
     >
       <div className="flex flex-col gap-6">

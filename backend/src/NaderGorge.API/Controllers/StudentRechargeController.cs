@@ -30,6 +30,13 @@ public class StudentRechargeController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("requests")]
+    public async Task<IActionResult> GetMyRequests(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetMyRechargeRequestsQuery(GetUserId()), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("submit")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> SubmitRecharge(

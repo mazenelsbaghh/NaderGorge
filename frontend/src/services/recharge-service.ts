@@ -2,6 +2,7 @@ import apiClient from '@/services/api-client';
 
 export interface InitiateRechargeResponse {
   rechargeRequestId: string;
+  reviewCode: string;
   walletPhoneNumber: string;
   walletLabel: string;
   expirationTime: string;
@@ -10,6 +11,21 @@ export interface InitiateRechargeResponse {
 export interface SubmitRechargeResponse {
   isMatched: boolean;
   message: string;
+  reviewCode: string;
+}
+
+export interface StudentRechargeRequestDto {
+  id: string;
+  reviewCode: string;
+  amount: number;
+  senderPhoneNumber: string;
+  walletLabel: string;
+  walletPhoneNumber: string;
+  status: number;
+  screenshotUrl?: string;
+  rejectionReason?: string;
+  createdAt: string;
+  resolvedAt?: string;
 }
 
 export const rechargeService = {
@@ -30,5 +46,10 @@ export const rechargeService = {
       },
     });
     return data;
+  },
+
+  getMyRequests: async () => {
+    const { data } = await apiClient.get<{ success: boolean; data: StudentRechargeRequestDto[] }>('/student/recharge/requests');
+    return data.data || [];
   },
 };

@@ -23,6 +23,7 @@ public class SubmitRechargeDto
 {
     public bool IsMatched { get; set; }
     public string Message { get; set; } = string.Empty;
+    public string ReviewCode { get; set; } = string.Empty;
 }
 
 public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeCommand, ApiResponse<SubmitRechargeDto>>
@@ -151,7 +152,8 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         var dto = new SubmitRechargeDto
         {
             IsMatched = isMatched,
-            Message = message
+            Message = message,
+            ReviewCode = rechargeRequest.Id.ToString("N")[..8].ToUpperInvariant()
         };
 
         return ApiResponse<SubmitRechargeDto>.Ok(dto, "تم إرسال الطلب بنجاح");

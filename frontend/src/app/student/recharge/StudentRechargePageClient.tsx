@@ -3,26 +3,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, 
-  Sparkles, 
   ArrowRight, 
   Copy, 
   Upload, 
   CheckCircle, 
   Clock, 
-  AlertTriangle,
-  Smartphone,
   ChevronLeft
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { rechargeService, type InitiateRechargeResponse } from '@/services/recharge-service';
+import type { StudentRechargeRequestDto } from '@/services/recharge-service';
 import toast from 'react-hot-toast';
 
 export default function StudentRechargePageClient() {
-  const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState<number>(100);
   const [loading, setLoading] = useState(false);
+  const [requests, setRequests] = useState<StudentRechargeRequestDto[]>([]);
 
   // Step 2 state
   const [rechargeData, setRechargeData] = useState<InitiateRechargeResponse | null>(null);
@@ -35,6 +32,19 @@ export default function StudentRechargePageClient() {
   // Step 3 state
   const [isMatched, setIsMatched] = useState(false);
   const [outcomeMessage, setOutcomeMessage] = useState('');
+  const [reviewCode, setReviewCode] = useState('');
+
+  const fetchRequests = async () => {
+    try {
+      setRequests(await rechargeService.getMyRequests());
+    } catch {
+      setRequests([]);
+    }
+  };
+
+  useEffect(() => {
+    void fetchRequests();
+  }, []);
 
   useEffect(() => {
     if (step === 2 && rechargeData) {
@@ -74,6 +84,7 @@ export default function StudentRechargePageClient() {
       const response = await rechargeService.initiate(amount);
       if (response.success && response.data) {
         setRechargeData(response.data);
+        setReviewCode(response.data.reviewCode);
         setStep(2);
         toast.success(response.message);
       } else {
@@ -124,7 +135,9 @@ export default function StudentRechargePageClient() {
       if (response.success && response.data) {
         setIsMatched(response.data.isMatched);
         setOutcomeMessage(response.data.message);
+        setReviewCode(response.data.reviewCode);
         setStep(3);
+        void fetchRequests();
         if (response.data.isMatched) {
           toast.success('تم شحن رصيدك وتفعيله تلقائياً بنجاح! 🎉');
         } else {
@@ -220,7 +233,8 @@ export default function StudentRechargePageClient() {
                   <input 
                     type="number" 
                     required
-                    min="10"
+                    min="1"
+                    step="1"
                     placeholder="مثال: 150"
                     value={amount || ''}
                     onChange={(e) => setAmount(Number(e.target.value))}
@@ -232,7 +246,7 @@ export default function StudentRechargePageClient() {
 
               {/* Predefined Amounts */}
               <div className="grid grid-cols-4 gap-2">
-                {[50, 100, 150, 200].map((val) => (
+                {[50, 100, 200, 500].map((val) => (
                   <button
                     key={val}
                     type="button"
@@ -245,8 +259,11 @@ export default function StudentRechargePageClient() {
                   >
                     {val} ج.م
                   </button>
-                ))}
+                  ))}
               </div>
+              <p className="text-[11px] font-semibold text-[var(--admin-muted)]">
+                الأزرار اختصارات فقط. يمكنك كتابة أي رقم في خانة المبلغ.
+              </p>
             </div>
 
             <button
@@ -277,7 +294,7 @@ export default function StudentRechargePageClient() {
                   {formatTimer(timeLeft)}
                 </div>
                 <div className="text-[11px] font-semibold text-[var(--admin-muted)] leading-relaxed">
-                  يتم حجز المحفظة مؤقتاً لتفادي تخطي حدود الاستقبال. يرجى التحويل وتقديم البيانات فوراً.
+                  يتم حجز المحفظة مؤقتاً لتفادي تخطي حدود الاستقبال. كود المراجعة: <span className="font-mono font-black text-[var(--admin-text)]">{reviewCode}</span>
                 </div>
               </div>
             </div>
@@ -331,6 +348,7 @@ export default function StudentRechargePageClient() {
                 
                 {screenshotPreview ? (
                   <div className="relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] overflow-hidden aspect-video flex items-center justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                       src={screenshotPreview} 
                       alt="Screenshot Preview" 
@@ -416,6 +434,12 @@ export default function StudentRechargePageClient() {
               <p className="text-sm font-semibold text-[var(--admin-muted)] leading-relaxed max-w-md mx-auto">
                 {outcomeMessage}
               </p>
+              {reviewCode && (
+                <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-2 text-sm font-black text-[var(--admin-text)]">
+                  <span>كود المراجعة</span>
+                  <span className="font-mono text-[var(--admin-primary)]">{reviewCode}</span>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-[var(--admin-border)] flex flex-col gap-2">
@@ -441,6 +465,40 @@ export default function StudentRechargePageClient() {
           </div>
         )}
 
+      </div>
+
+      <div className="mx-auto max-w-xl rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-sm">
+        <h2 className="mb-4 text-lg font-black text-[var(--admin-text)]">طلباتي الأخيرة للشحن</h2>
+        {requests.length === 0 ? (
+          <p className="py-6 text-center text-sm font-semibold text-[var(--admin-muted)]">لا توجد طلبات شحن سابقة.</p>
+        ) : (
+          <div className="space-y-3">
+            {requests.map((request) => {
+              const statusLabel = request.status === 0 ? 'قيد المراجعة' : request.status === 1 ? 'تمت المطابقة' : request.status === 2 ? 'مقبول' : request.status === 3 ? 'مرفوض' : 'منتهي';
+              const statusClass = request.status === 3
+                ? 'bg-rose-500/10 text-rose-600'
+                : request.status === 0
+                  ? 'bg-amber-500/10 text-amber-600'
+                  : 'bg-emerald-500/10 text-emerald-600';
+              return (
+                <div key={request.id} className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-base font-black text-[var(--admin-text)]">{request.amount} ج.م</p>
+                      <p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">كود المراجعة: <span className="font-mono text-[var(--admin-primary)]">{request.reviewCode}</span></p>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-black ${statusClass}`}>{statusLabel}</span>
+                  </div>
+                  <div className="mt-3 grid gap-1 text-xs font-semibold text-[var(--admin-muted)]">
+                    <span>من: <span className="font-mono">{request.senderPhoneNumber || 'لم يرسل بعد'}</span></span>
+                    <span>إلى: {request.walletLabel} <span className="font-mono">{request.walletPhoneNumber}</span></span>
+                    {request.rejectionReason ? <span className="text-rose-600">سبب الرفض: {request.rejectionReason}</span> : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

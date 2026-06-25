@@ -26,7 +26,6 @@ import com.nadergorge.paymentlistener.data.api.SyncStatusResponse
 import com.nadergorge.paymentlistener.data.preference.PreferenceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
@@ -41,7 +40,6 @@ fun DashboardScreen(
     var isSyncing by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var lastSyncTime by remember { mutableStateOf<String>("لم تتم المزامنة بعد") }
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
     // Periodical background syncing (heartbeat) every 30 seconds
@@ -80,48 +78,18 @@ fun DashboardScreen(
         }
     }
 
-    val manualSync = {
-        scope.launch {
-            isSyncing = true
-            errorMsg = null
-            try {
-                val token = prefManager.getPairingToken()
-                val apiService = ApiClient.getApiService(context)
-                if (token != null && apiService != null) {
-                    val balance = prefManager.getLastBalance().toDouble()
-                    val response = withContext(Dispatchers.IO) {
-                        apiService.syncStatus(token, SyncStatusRequest(balance))
-                    }
-
-                    if (response.isSuccessful && response.body()?.success == true) {
-                        val data = response.body()!!.data!!
-                        syncData = data
-                        prefManager.saveSmsFilters(data.smsSenderFilters)
-                        prefManager.saveLastBalance(data.currentBalance.toFloat())
-                        lastSyncTime = SimpleDateFormat("hh:mm:ss a", Locale.getDefault()).format(Date())
-                    } else {
-                        errorMsg = response.body()?.message ?: "فشل في تحديث البيانات."
-                    }
-                } else {
-                    errorMsg = "إعدادات الربط مفقودة."
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                errorMsg = "فشل الاتصال: ${e.localizedMessage}"
-            } finally {
-                isSyncing = false
-            }
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("لوحة التحكم بالمستمع", fontWeight = FontWeight.Bold) },
                 actions = {
-                    IconButton(onClick = { manualSync() }, enabled = !isSyncing) {
-                        Text("مزامنة", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    }
+                    Text(
+                        text = if (isSyncing) "جاري التحديث" else "مزامنة تلقائية",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                 }
             )
         }

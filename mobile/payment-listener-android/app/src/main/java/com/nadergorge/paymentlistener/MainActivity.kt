@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.nadergorge.paymentlistener.data.preference.PreferenceManager
+import com.nadergorge.paymentlistener.service.BackgroundSyncScheduler
 import com.nadergorge.paymentlistener.ui.screens.DashboardScreen
 import com.nadergorge.paymentlistener.ui.screens.SetupScreen
 
@@ -28,6 +29,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         val prefManager = PreferenceManager(this)
+        if (!prefManager.getServerUrl().isNullOrBlank() && !prefManager.getPairingToken().isNullOrBlank()) {
+            BackgroundSyncScheduler.schedule(this)
+        }
 
         setContent {
             MaterialTheme {
@@ -90,6 +94,7 @@ class MainActivity : ComponentActivity() {
                             SetupScreen(
                                 prefManager = prefManager,
                                 onSetupSuccess = {
+                                    BackgroundSyncScheduler.schedule(this)
                                     currentScreen = "dashboard"
                                 }
                             )
@@ -99,6 +104,7 @@ class MainActivity : ComponentActivity() {
                                 DashboardScreen(
                                     prefManager = prefManager,
                                     onDisconnect = {
+                                        BackgroundSyncScheduler.cancel(this)
                                         currentScreen = "setup"
                                     }
                                 )
