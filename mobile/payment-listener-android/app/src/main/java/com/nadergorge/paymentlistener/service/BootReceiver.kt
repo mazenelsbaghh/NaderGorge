@@ -12,6 +12,7 @@ class BootReceiver : BroadcastReceiver() {
         val prefManager = PreferenceManager(context)
         if (!prefManager.getServerUrl().isNullOrBlank() && !prefManager.getPairingToken().isNullOrBlank()) {
             BackgroundSyncScheduler.schedule(context)
+            BackgroundSyncScheduler.startRealtimeService(context)
         }
     }
 }

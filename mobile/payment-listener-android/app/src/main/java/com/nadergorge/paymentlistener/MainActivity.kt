@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
         val prefManager = PreferenceManager(this)
         if (!prefManager.getServerUrl().isNullOrBlank() && !prefManager.getPairingToken().isNullOrBlank()) {
             BackgroundSyncScheduler.schedule(this)
+            BackgroundSyncScheduler.startRealtimeService(this)
         }
 
         setContent {
@@ -95,6 +96,7 @@ class MainActivity : ComponentActivity() {
                                 prefManager = prefManager,
                                 onSetupSuccess = {
                                     BackgroundSyncScheduler.schedule(this)
+                                    BackgroundSyncScheduler.startRealtimeService(this)
                                     currentScreen = "dashboard"
                                 }
                             )

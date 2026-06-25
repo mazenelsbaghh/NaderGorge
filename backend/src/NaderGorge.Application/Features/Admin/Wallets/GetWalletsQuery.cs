@@ -61,9 +61,10 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
                 filters = new List<string> { "VodafoneCash" };
             }
 
-            // Check heartbeat timeout to auto-disconnect device after 2 minutes
+            // Foreground sync heartbeats every 30 seconds; WorkManager fallback is limited to 15 minutes.
+            // Keep the admin status connected long enough to survive temporary Android background throttling.
             var status = w.DeviceStatus;
-            if (status == "Connected" && w.LastSeenAt.HasValue && DateTime.UtcNow - w.LastSeenAt.Value > TimeSpan.FromMinutes(2))
+            if (status == "Connected" && w.LastSeenAt.HasValue && DateTime.UtcNow - w.LastSeenAt.Value > TimeSpan.FromMinutes(20))
             {
                 status = "Disconnected";
                 w.DeviceStatus = "Disconnected";
