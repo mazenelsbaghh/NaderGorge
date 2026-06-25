@@ -1470,7 +1470,7 @@ public sealed class LiveSupportService(
             action.ActionKey,
             action.SafeProposalJson,
             action.Status.ToString(),
-            action.ExpiresAt
+            DateTime.SpecifyKind(action.ExpiresAt, DateTimeKind.Utc)
         );
     }
 
@@ -1537,7 +1537,7 @@ public sealed class LiveSupportService(
             lastSequence,
             !IsTerminal(conversation.Status) && (state is null || state.Mode is LiveSupportAIMode.AiActive or LiveSupportAIMode.HumanAssigned),
             turn?.Status.ToString(),
-            pending is null ? null : new LiveSupportAIPendingDecisionDto(pending.Id, pending.DecisionKind, pending.ActionKey, pending.SafeProposalJson, pending.Status, pending.ExpiresAt, pending.FailureCode),
+            pending is null ? null : new LiveSupportAIPendingDecisionDto(pending.Id, pending.DecisionKind, pending.ActionKey, pending.SafeProposalJson, pending.Status, DateTime.SpecifyKind(pending.ExpiresAt, DateTimeKind.Utc), pending.FailureCode),
             verification is null ? null : new LiveSupportAIVerificationStateDto(verification.Id, verification.Status, null, verification.AttemptCount, verification.MaxAttempts),
             queuePosition,
             messages.Cast<object>().ToList());
