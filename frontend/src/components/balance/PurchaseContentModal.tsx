@@ -198,12 +198,12 @@ export function PurchaseContentModal({
                   </button>
                 ) : (
                   <button
-                    onClick={() => router.push('/student/balance')}
+                    onClick={() => router.push('/student/recharge')}
                     disabled={purchasing || loading}
                     type="button"
                     className="inline-flex min-h-12 flex-[2] items-center justify-center rounded-full bg-[var(--admin-card-strong)] px-4 py-3 text-sm font-black text-[var(--admin-text)] shadow-sm transition hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
                   >
-                    شحن الرصيد
+                    شحن ورفع الإثبات
                   </button>
                 )}
               </div>

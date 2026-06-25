@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CreditCard, ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
+import Link from 'next/link';
+import { CreditCard, ArrowDownRight, ArrowUpRight, Wallet, Upload } from 'lucide-react';
 import { balanceService, StudentBalanceDto } from '@/services/balance-service';
 import { registerCacheStore, unregisterCacheStore } from '@/lib/cache-invalidation';
 
@@ -66,15 +67,24 @@ export function BalanceDisplay() {
               {currentBalance.toLocaleString('en-US')} <span className="text-lg font-bold sm:text-xl">ج.م</span>
             </h2>
           </div>
-          <div className="self-start rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-15)] p-4 backdrop-blur-md sm:self-auto">
-            <Wallet className="h-8 w-8 text-[var(--admin-primary-contrast)]" />
+          <div className="flex flex-col items-stretch gap-3 sm:items-end">
+            <div className="self-start rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-15)] p-4 backdrop-blur-md sm:self-auto">
+              <Wallet className="h-8 w-8 text-[var(--admin-primary-contrast)]" />
+            </div>
+            <Link
+              href="/student/recharge"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-black text-[var(--admin-primary)] shadow-sm transition hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            >
+              <Upload className="h-4 w-4" />
+              <span>شحن بالتحويل ورفع الإثبات</span>
+            </Link>
           </div>
         </div>
         
         {currentBalance <= 0 && (
           <div className="mt-6 flex items-start gap-3 rounded-xl border border-[var(--admin-primary-15)] bg-[var(--admin-card-soft)]/15 p-4 backdrop-blur-md">
             <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-[var(--admin-primary-contrast)]" />
-            <p className="text-sm font-medium leading-7 text-[var(--admin-primary-contrast)]">رصيدك غير كافٍ. يرجى شحن الرصيد باستخدام كود الشحن.</p>
+            <p className="text-sm font-medium leading-7 text-[var(--admin-primary-contrast)]">رصيدك غير كافٍ. يمكنك الشحن بكود أو التحويل ورفع لقطة الشاشة.</p>
           </div>
         )}
       </div>
