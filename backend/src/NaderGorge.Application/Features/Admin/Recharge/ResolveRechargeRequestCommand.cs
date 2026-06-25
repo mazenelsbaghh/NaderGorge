@@ -31,6 +31,8 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
 
     public async Task<ApiResponse<bool>> Handle(ResolveRechargeRequestCommand request, CancellationToken ct)
     {
+        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+
         var rechargeRequest = await _db.RechargeRequests
             .Include(r => r.Wallet)
             .FirstOrDefaultAsync(r => r.Id == request.RechargeRequestId, ct);

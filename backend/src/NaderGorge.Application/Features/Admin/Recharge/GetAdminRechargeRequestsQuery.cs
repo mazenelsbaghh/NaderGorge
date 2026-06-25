@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -23,6 +24,8 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
 
     public async Task<ApiResponse<List<AdminRechargeRequestDto>>> Handle(GetAdminRechargeRequestsQuery request, CancellationToken ct)
     {
+        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+
         var query = _db.RechargeRequests
             .Include(r => r.User)
             .Include(r => r.Wallet)

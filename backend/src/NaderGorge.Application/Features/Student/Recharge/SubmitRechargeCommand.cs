@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -28,6 +29,8 @@ public class SubmitRechargeDto
 
 public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeCommand, ApiResponse<SubmitRechargeDto>>
 {
+    private static readonly Regex EgyptianMobileRegex = new(@"^01[0125]\d{8}$", RegexOptions.Compiled);
+
     private readonly IAppDbContext _db;
     private readonly IContentImageStorage _imageStorage;
     private readonly BalanceService _balanceService;
@@ -41,8 +44,15 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
     public async Task<ApiResponse<SubmitRechargeDto>> Handle(SubmitRechargeCommand request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.SenderPhoneNumber))
+        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+
+        var senderPhoneNumber = NormalizePhone(request.SenderPhoneNumber);
+
+        if (string.IsNullOrWhiteSpace(senderPhoneNumber))
             return ApiResponse<SubmitRechargeDto>.Fail("رقم الهاتف المرسل مطلوب");
+
+        if (!EgyptianMobileRegex.IsMatch(senderPhoneNumber))
+            return ApiResponse<SubmitRechargeDto>.Fail("رقم الهاتف المحول منه يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015.");
 
         if (request.ScreenshotBytes == null || request.ScreenshotBytes.Length == 0)
             return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل مطلوبة");
@@ -76,7 +86,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         }
 
         // Update request details
-        rechargeRequest.SenderPhoneNumber = request.SenderPhoneNumber.Trim();
+        rechargeRequest.SenderPhoneNumber = senderPhoneNumber;
         rechargeRequest.ScreenshotUrl = screenshotUrl;
         rechargeRequest.ReservationExpiresAt = null; // Clear expiration since it is now submitted
 
@@ -158,4 +168,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
         return ApiResponse<SubmitRechargeDto>.Ok(dto, "تم إرسال الطلب بنجاح");
     }
+
+    private static string NormalizePhone(string phone) =>
+        new((phone ?? string.Empty).Where(char.IsDigit).ToArray());
 }
