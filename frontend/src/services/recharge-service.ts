@@ -21,7 +21,7 @@ export interface StudentRechargeRequestDto {
   senderPhoneNumber: string;
   walletLabel: string;
   walletPhoneNumber: string;
-  status: number;
+  status: number | string;
   screenshotUrl?: string;
   rejectionReason?: string;
   createdAt: string;

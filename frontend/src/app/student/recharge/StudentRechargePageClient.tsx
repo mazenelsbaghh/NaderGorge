@@ -15,6 +15,30 @@ import { rechargeService, type InitiateRechargeResponse } from '@/services/recha
 import type { StudentRechargeRequestDto } from '@/services/recharge-service';
 import toast from 'react-hot-toast';
 
+const isApprovedRechargeStatus = (status: StudentRechargeRequestDto['status']) =>
+  status === 1 || status === 2 || status === 'Matched' || status === 'Approved';
+
+const isRejectedRechargeStatus = (status: StudentRechargeRequestDto['status']) =>
+  status === 3 || status === 'Rejected';
+
+const getRechargeStatusLabel = (status: StudentRechargeRequestDto['status']) => {
+  if (status === 0 || status === 'Pending') return 'قيد المراجعة';
+  if (status === 1 || status === 'Matched') return 'تمت المطابقة';
+  if (status === 2 || status === 'Approved') return 'مقبول';
+  if (status === 3 || status === 'Rejected') return 'مرفوض';
+  return 'منتهي';
+};
+
+const getRechargeStatusClass = (status: StudentRechargeRequestDto['status']) => {
+  if (isRejectedRechargeStatus(status)) return 'bg-rose-500/10 text-rose-600';
+  if (status === 0 || status === 'Pending') return 'bg-amber-500/10 text-amber-600';
+  return 'bg-emerald-500/10 text-emerald-600';
+};
+
+const refreshStudentBalance = () => {
+  window.dispatchEvent(new Event('refresh-student-balance'));
+};
+
 export default function StudentRechargePageClient() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [amount, setAmount] = useState<number>(100);
@@ -93,15 +117,16 @@ export default function StudentRechargePageClient() {
         setRequests(latestRequests);
         const currentRequest = latestRequests.find((request) => request.id === requestId);
 
-        if (currentRequest?.status === 1 || currentRequest?.status === 2) {
+        if (currentRequest && isApprovedRechargeStatus(currentRequest.status)) {
           setIsMatched(true);
           setReviewState('approved');
           setOutcomeMessage('تمت الموافقة على الشحن وإضافة الرصيد لحسابك بنجاح.');
+          refreshStudentBalance();
           toast.success('تمت الموافقة على الشحن وإضافة الرصيد.');
           return;
         }
 
-        if (currentRequest?.status === 3) {
+        if (currentRequest && isRejectedRechargeStatus(currentRequest.status)) {
           setIsMatched(false);
           setReviewState('rejected');
           setOutcomeMessage(currentRequest.rejectionReason || 'تم رفض طلب الشحن. راجع بيانات التحويل أو تواصل مع الدعم.');
@@ -197,6 +222,7 @@ export default function StudentRechargePageClient() {
         if (response.data.isMatched) {
           setReviewState('approved');
           setOutcomeMessage(response.data.message || 'تمت الموافقة على الشحن وإضافة الرصيد لحسابك بنجاح.');
+          refreshStudentBalance();
           toast.success('تم شحن رصيدك وتفعيله تلقائياً بنجاح! 🎉');
         } else {
           setReviewState('checking');
@@ -557,12 +583,8 @@ export default function StudentRechargePageClient() {
         ) : (
           <div className="space-y-3">
             {requests.map((request) => {
-              const statusLabel = request.status === 0 ? 'قيد المراجعة' : request.status === 1 ? 'تمت المطابقة' : request.status === 2 ? 'مقبول' : request.status === 3 ? 'مرفوض' : 'منتهي';
-              const statusClass = request.status === 3
-                ? 'bg-rose-500/10 text-rose-600'
-                : request.status === 0
-                  ? 'bg-amber-500/10 text-amber-600'
-                  : 'bg-emerald-500/10 text-emerald-600';
+              const statusLabel = getRechargeStatusLabel(request.status);
+              const statusClass = getRechargeStatusClass(request.status);
               return (
                 <div key={request.id} className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
                   <div className="flex items-center justify-between gap-3">
