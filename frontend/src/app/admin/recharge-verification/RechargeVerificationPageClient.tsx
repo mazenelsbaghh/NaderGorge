@@ -306,7 +306,7 @@ export default function RechargeVerificationPageClient() {
 
   return (
     <AdminShellChrome
-      activePath="/admin/finance"
+      activePath="/admin/recharge-verification"
       sectionLabel="المالية والمدفوعات"
       pageTitle="مراجعة وتأكيد طلبات الشحن"
       subtitle="مراجعة طلبات الشحن المرفقة بصور التحويل ومطابقتها يدوياً برسائل التأكيد غير المطابقة."

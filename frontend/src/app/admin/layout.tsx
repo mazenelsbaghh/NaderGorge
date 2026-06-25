@@ -23,6 +23,8 @@ const ROUTE_PERMISSIONS = [
   { pattern: /^\/admin\/codes(\/|$)/, permissions: ['codes.manage'] },
   { pattern: /^\/admin\/questions(\/|$)/, permissions: ['exams.manage'] },
   { pattern: /^\/admin\/watch-requests(\/|$)/, permissions: ['watch_requests.manage'] },
+  { pattern: /^\/admin\/wallets(\/|$)/, permissions: ['payments.manage'] },
+  { pattern: /^\/admin\/recharge-verification(\/|$)/, permissions: ['payments.manage'] },
   { pattern: /^\/admin\/settings(\/|$)/, permissions: ['settings.manage'] },
   { pattern: /^\/admin\/live-support(\/|$)/, permissions: ['live_support.manage'] },
 ];

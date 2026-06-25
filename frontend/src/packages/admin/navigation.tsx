@@ -15,6 +15,7 @@ import {
   Coins,
   Briefcase,
   Headphones,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -38,6 +39,8 @@ export const adminMenuItems = [
   { label: 'بنك الأسئلة', href: '/admin/questions', icon: <Shield className="h-4 w-4" />, permission: 'exams.manage' },
   { label: 'التعديلات', href: '/admin/overrides', icon: <Wrench className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'المالية والرواتب', href: '/admin/finance', icon: <Coins className="h-4 w-4" />, permission: 'users.manage' },
+  { label: 'محافظ الشحن', href: '/admin/wallets', icon: <Wallet className="h-4 w-4" />, permission: 'payments.manage' },
+  { label: 'مطابقة الشحن', href: '/admin/recharge-verification', icon: <Shield className="h-4 w-4" />, permission: 'payments.manage' },
   { label: 'التواصل الداخلي', href: '/admin/chat', icon: <MessageSquareText className="h-4 w-4" /> },
   { label: 'الدعم المباشر', href: '/admin/live-support', icon: <Headphones className="h-4 w-4" />, permission: 'live_support.manage' },
   { label: 'مساعد الدعم الذكي', href: '/admin/live-support/ai', icon: <Sparkles className="h-4 w-4" />, permission: 'live_support.manage' },
@@ -103,6 +106,18 @@ export const adminRootLinks: AdminRootLink[] = [
     title: 'المالية والحسابات',
     body: 'إدارة رواتب الموظفين والزيادات والخصومات، ومراجعة أرباح المعلمين وتسوية سحوباتهم.',
     icon: Coins,
+  },
+  {
+    href: '/admin/wallets',
+    title: 'محافظ الشحن',
+    body: 'إدارة المحافظ الرقمية وتطبيقات الاستماع وحدود المطابقة الآلية.',
+    icon: Wallet,
+  },
+  {
+    href: '/admin/recharge-verification',
+    title: 'مطابقة الشحن',
+    body: 'مراجعة طلبات الشحن ومطابقتها برسائل التحويل غير المطابقة تلقائياً.',
+    icon: Shield,
   },
   {
     href: '/admin/live-support',

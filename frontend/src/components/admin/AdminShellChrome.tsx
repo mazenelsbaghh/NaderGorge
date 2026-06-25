@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ArrowRight,
   Headphones,
+  Wallet,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -37,6 +38,7 @@ import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground
 import { useAuthStore } from '@/stores/auth-store';
 import { AdminBreadcrumbs } from './AdminBreadcrumbs';
 import { useHasPermission } from '@/hooks/useHasPermission';
+import { walletService, type WalletDto } from '@/services/wallet-service';
 
 type AdminShellRoute =
   | '/admin'
@@ -58,6 +60,8 @@ type AdminShellRoute =
   | '/admin/hr/my-attendance'
   | '/admin/operations'
   | '/admin/finance'
+  | '/admin/wallets'
+  | '/admin/recharge-verification'
   | '/teacher'
   | '/teacher/packages'
   | '/teacher/codes'
@@ -188,6 +192,18 @@ const navItems: Array<{
     permission: 'users.manage',
   },
   {
+    href: '/admin/wallets',
+    label: 'محافظ الشحن',
+    icon: Wallet,
+    permission: 'payments.manage',
+  },
+  {
+    href: '/admin/recharge-verification',
+    label: 'مطابقة الشحن',
+    icon: ClipboardList,
+    permission: 'payments.manage',
+  },
+  {
     href: '/admin/live-support',
     label: 'الدعم المباشر',
     icon: Headphones,
@@ -247,7 +263,7 @@ const GROUP_CONFIG = [
     id: 'admin_hr_finance',
     label: 'الإدارة والمالية',
     icon: Briefcase,
-    hrefs: ['/admin/operations', '/admin/hr', '/admin/finance'],
+    hrefs: ['/admin/operations', '/admin/hr', '/admin/finance', '/admin/wallets', '/admin/recharge-verification'],
   },
   {
     id: 'crm_chat',
@@ -262,6 +278,77 @@ const GROUP_CONFIG = [
     hrefs: ['/admin/ai-monitor', '/admin/reports'],
   },
 ];
+
+const formatWalletAmount = (amount: number) => {
+  const formatter = new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 0,
+    notation: Math.abs(amount) >= 100_000 ? 'compact' : 'standard',
+  });
+
+  return formatter.format(amount);
+};
+
+function AdminWalletBalanceBadge() {
+  const [wallets, setWallets] = useState<WalletDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    walletService
+      .getWallets()
+      .then((data) => {
+        if (!isMounted) return;
+        setWallets(data);
+        setHasError(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setHasError(true);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const activeWallets = wallets.filter((wallet) => wallet.isActive);
+  const totalBalance = activeWallets.reduce(
+    (sum, wallet) => sum + Number(wallet.currentBalance || 0),
+    0
+  );
+
+  return (
+    <Link
+      href="/admin/wallets"
+      prefetch={false}
+      className="flex min-h-14 w-full items-center justify-start gap-3 rounded-[18px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-2 py-2 text-[var(--admin-text)] transition-all duration-300 hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
+      aria-label="رصيد محافظ الشحن"
+      title="رصيد محافظ الشحن"
+    >
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--admin-primary-15)] text-[var(--admin-primary)]">
+        <Wallet className="h-4.5 w-4.5" />
+      </span>
+      <span className="hidden min-w-0 flex-1 group-hover/sidebar:block">
+        <span className="block truncate text-xs font-black text-[var(--admin-text)]">
+          {isLoading
+            ? 'جار تحميل الرصيد'
+            : hasError
+              ? 'تعذر تحميل الرصيد'
+              : `${formatWalletAmount(totalBalance)} ج.م`}
+        </span>
+        <span className="block truncate text-[11px] font-bold text-[var(--admin-muted)]">
+          {hasError ? 'افتح المحافظ للمراجعة' : `${activeWallets.length} محفظة نشطة`}
+        </span>
+      </span>
+    </Link>
+  );
+}
 
 export function AdminShellChrome({
   activePath,
@@ -461,6 +548,7 @@ export function AdminShellChrome({
         </div>
 
         <div className="space-y-3 px-3 flex-shrink-0 mt-4">
+          {hasPermission('payments.manage') && <AdminWalletBalanceBadge />}
           <div className="flex justify-start px-1 items-center transition-all duration-300">
             <AnimatedThemeToggler
               checked={isDark}
@@ -508,6 +596,16 @@ export function AdminShellChrome({
         <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9">
           <div className="w-full">
             <div className="flex items-center justify-end gap-2 mb-4 lg:hidden w-full">
+              {hasPermission('payments.manage') && (
+                <Link
+                  href="/admin/wallets"
+                  className="flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)]"
+                  aria-label="رصيد محافظ الشحن"
+                  title="رصيد محافظ الشحن"
+                >
+                  <Wallet className="h-4 w-4" />
+                </Link>
+              )}
               <AnimatedThemeToggler
                 checked={isDark}
                 onToggle={toggleTheme}

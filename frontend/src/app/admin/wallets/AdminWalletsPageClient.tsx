@@ -375,7 +375,7 @@ export default function AdminWalletsPageClient() {
 
   return (
     <AdminShellChrome
-      activePath="/admin/finance"
+      activePath="/admin/wallets"
       sectionLabel="المالية والمدفوعات"
       pageTitle="إدارة المحافظ الرقمية"
       subtitle="إدارة محافظ Vodafone Cash وتطبيقات الاستماع والحدود اليومية للمطابقة الآلية."
