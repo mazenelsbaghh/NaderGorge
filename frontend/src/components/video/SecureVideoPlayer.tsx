@@ -314,6 +314,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             clearTimeout(embedReadyTimeoutRef.current);
             embedReadyTimeoutRef.current = null;
           }
+          if (activeSessionIdRef.current && consumedSessionIdRef.current !== activeSessionIdRef.current) {
+            const sessionId = activeSessionIdRef.current;
+            consumedSessionIdRef.current = sessionId;
+            void videoSessionService.consumeSession(sessionId).catch((err) => {
+              consumedSessionIdRef.current = null;
+              devConsole.error('Failed to consume video session after player ready:', err);
+            });
+          }
           setStatus('ready');
           setDuration(msg.data.duration || 0);
           setVolume(msg.data.volume || 100);
@@ -427,6 +435,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const pendingTrackedSeconds = useRef(0);
   const flushInFlight = useRef(false);
   const activeSessionIdRef = useRef<string | null>(null);
+  const consumedSessionIdRef = useRef<string | null>(null);
   const nextProgressSequenceRef = useRef(1);
   const activeProgressRequestRef = useRef<{ sequence: number; seconds: number } | null>(null);
   const trackingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -621,6 +630,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const response = await videoSessionService.createSession(lessonVideoId);
       const session = response.data.data;
       activeSessionIdRef.current = session.sessionId;
+      consumedSessionIdRef.current = null;
       nextProgressSequenceRef.current = 1;
       activeProgressRequestRef.current = null;
       pendingTrackedSeconds.current = 0;
@@ -653,12 +663,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         setErrorMessage('تعذر تحميل مشغل الفيديو. تأكد من إعدادات الاتصال الداخلي بين الواجهة والباك اند.');
       }, 12000);
 
-      const consumeAfterIframeLoad = () => {
-        void videoSessionService.consumeSession(session.sessionId).catch((err) => {
-          devConsole.error('Failed to consume video session after iframe load:', err);
-        });
-      };
-
       // 2. Render appropriately based on provider
       const providerName = session.provider?.toLowerCase() || 'youtube';
       setProvider(providerName);
@@ -669,7 +673,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         
         const iframe = document.createElement('iframe');
         iframe.src = embedUrl;
-        iframe.onload = consumeAfterIframeLoad;
         iframe.style.position = 'absolute';
         iframe.style.top = '0';
         iframe.style.left = '0';
