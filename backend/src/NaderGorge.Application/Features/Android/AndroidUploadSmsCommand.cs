@@ -124,8 +124,8 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
                     matchedRequest.MatchedSmsLogId = smsLog.Id;
                     matchedRequest.MatchedSmsLog = smsLog;
 
-                    // Update Wallet balance
-                    wallet.CurrentBalance += amount;
+                    // Vodafone Cash messages include the authoritative wallet balance after the transfer.
+                    wallet.CurrentBalance = parserResult.CurrentBalance ?? wallet.CurrentBalance + amount;
 
                     // Save matching state first so entities exist/have IDs
                     _db.IncomingSmsLogs.Add(smsLog);
@@ -161,6 +161,11 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         // If not matched (or not parsed successfully), just log it
         if (!isMatched)
         {
+            if (parserResult.CurrentBalance.HasValue)
+            {
+                wallet.CurrentBalance = parserResult.CurrentBalance.Value;
+            }
+
             _db.IncomingSmsLogs.Add(smsLog);
             await _db.SaveChangesAsync(ct);
         }

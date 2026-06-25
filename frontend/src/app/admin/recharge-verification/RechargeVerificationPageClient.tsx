@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { 
   Check, 
   X, 
-  Image as ImageIcon, 
   FileText, 
   Smartphone, 
   Search, 
@@ -27,6 +26,45 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import { walletService, type AdminRechargeRequestDto, type AdminIncomingSmsLogDto } from '@/services/wallet-service';
 import toast from 'react-hot-toast';
 
+type RechargeStatusValue = AdminRechargeRequestDto['status'];
+type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 'all';
+
+const ASSET_BASE_URL = (
+  process.env.NEXT_PUBLIC_ASSETS_URL ||
+  process.env.NEXT_PUBLIC_ASSET_BASE_URL ||
+  'https://assets.massar-academy.net'
+).replace(/\/$/, '');
+
+const normalizeRechargeStatus = (status: RechargeStatusValue): number | null => {
+  if (typeof status === 'number') return status;
+
+  const normalized = status.toLowerCase();
+  switch (normalized) {
+    case 'pending':
+      return 0;
+    case 'matched':
+      return 1;
+    case 'approved':
+      return 2;
+    case 'rejected':
+      return 3;
+    case 'expired':
+      return 4;
+    default:
+      return null;
+  }
+};
+
+const isRechargeStatus = (status: RechargeStatusValue, expected: number) =>
+  normalizeRechargeStatus(status) === expected;
+
+const resolveAssetUrl = (url?: string | null) => {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('/uploads/')) return `${ASSET_BASE_URL}${url}`;
+  return url;
+};
+
 export default function RechargeVerificationPageClient() {
   const [requests, setRequests] = useState<AdminRechargeRequestDto[]>([]);
   const [unmatchedSms, setUnmatchedSms] = useState<AdminIncomingSmsLogDto[]>([]);
@@ -34,7 +72,7 @@ export default function RechargeVerificationPageClient() {
   const [error, setError] = useState('');
   
   // Filters
-  const [statusFilter, setStatusFilter] = useState<number | 'all'>(0); // Default to Pending (0)
+  const [statusFilter, setStatusFilter] = useState<RechargeStatusFilter>(0); // Default to Pending (0)
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
@@ -131,8 +169,8 @@ export default function RechargeVerificationPageClient() {
     }
   };
 
-  const getStatusBadge = (status: number) => {
-    switch (status) {
+  const getStatusBadge = (status: RechargeStatusValue) => {
+    switch (normalizeRechargeStatus(status)) {
       case 0:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-500">
@@ -173,13 +211,13 @@ export default function RechargeVerificationPageClient() {
   };
 
   // Calculations for stats
-  const pendingCount = requests.filter(r => r.status === 0).length;
-  const totalPendingAmount = requests.filter(r => r.status === 0).reduce((acc, r) => acc + r.amount, 0);
+  const pendingCount = requests.filter(r => isRechargeStatus(r.status, 0)).length;
+  const totalPendingAmount = requests.filter(r => isRechargeStatus(r.status, 0)).reduce((acc, r) => acc + r.amount, 0);
   const unmatchedSmsCount = unmatchedSms.length;
 
   // Filtered requests
   const filteredRequests = requests.filter(r => {
-    const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || isRechargeStatus(r.status, statusFilter);
     const matchesSearch = 
       r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.studentPhoneNumber.includes(searchQuery) ||
@@ -227,10 +265,10 @@ export default function RechargeVerificationPageClient() {
       label: 'صورة المعاملة',
       render: (r) => (
         <div className="flex items-center justify-center">
-          {r.screenshotUrl ? (
-            <div className="relative group cursor-pointer" onClick={() => setViewScreenshotUrl(r.screenshotUrl!)}>
+          {resolveAssetUrl(r.screenshotUrl) ? (
+            <div className="relative group cursor-pointer" onClick={() => setViewScreenshotUrl(resolveAssetUrl(r.screenshotUrl))}>
               <img 
-                src={r.screenshotUrl} 
+                src={resolveAssetUrl(r.screenshotUrl) || undefined} 
                 alt="proof" 
                 className="h-10 w-16 object-cover rounded-lg border border-[var(--admin-border)] hover:opacity-85 transition-opacity" 
               />
@@ -264,7 +302,7 @@ export default function RechargeVerificationPageClient() {
       label: 'الإجراءات',
       align: 'left',
       render: (r) => {
-        if (r.status !== 0) {
+        if (!isRechargeStatus(r.status, 0)) {
           if (r.resolvedAt) {
             return (
               <div className="text-right text-[10px] text-[var(--admin-muted)]">
@@ -573,18 +611,18 @@ export default function RechargeVerificationPageClient() {
               </div>
             </div>
 
-            {approveModalRequest.screenshotUrl && (
+            {resolveAssetUrl(approveModalRequest.screenshotUrl) && (
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--admin-text)]">صورة التحويل المرفقة:</label>
                 <div className="relative group max-h-48 overflow-hidden rounded-xl border border-[var(--admin-border)] flex justify-center bg-black/5">
                   <img 
-                    src={approveModalRequest.screenshotUrl} 
+                    src={resolveAssetUrl(approveModalRequest.screenshotUrl) || undefined} 
                     alt="proof preview" 
                     className="max-h-48 object-contain" 
                   />
                   <button
                     type="button"
-                    onClick={() => setViewScreenshotUrl(approveModalRequest.screenshotUrl!)}
+                    onClick={() => setViewScreenshotUrl(resolveAssetUrl(approveModalRequest.screenshotUrl))}
                     className="absolute bottom-2 right-2 p-2 rounded-lg bg-black/60 text-white hover:bg-black/80 transition-colors"
                   >
                     <Maximize2 className="h-4 w-4" />

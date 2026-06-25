@@ -27,6 +27,22 @@ public class SmsParserTests
         Assert.Equal(expectedPhone, result.SenderPhone);
     }
 
+    [Fact]
+    public void Parse_ShouldExtractCurrentBalance_WhenVodafoneCashMessageIncludesBalance()
+    {
+        // Arrange
+        const string body = "تم استلام مبلغ 55.00 جنيه من رقم 01272629089 المسجل بإسم ابراهيم حسن يونس حسن عطيه على رقم محفظتك  01096132447.\nرصيدك الحالي: 208.93 جنيه\nتاريخ العملية: 15:47 26-06-20\nرقم العملية: 021004733606";
+
+        // Act
+        var result = SmsParser.Parse(body);
+
+        // Assert
+        Assert.True(result.IsParsedSuccessfully);
+        Assert.Equal(55.00m, result.Amount);
+        Assert.Equal("01272629089", result.SenderPhone);
+        Assert.Equal(208.93m, result.CurrentBalance);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

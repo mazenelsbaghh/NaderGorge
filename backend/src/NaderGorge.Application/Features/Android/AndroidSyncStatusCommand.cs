@@ -63,11 +63,6 @@ public class AndroidSyncStatusCommandHandler : IRequestHandler<AndroidSyncStatus
         wallet.DeviceStatus = "Connected";
         wallet.LastSeenAt = DateTime.UtcNow;
 
-        if (request.CurrentBalance.HasValue)
-        {
-            wallet.CurrentBalance = request.CurrentBalance.Value;
-        }
-
         await _db.SaveChangesAsync(ct);
 
         // Calculate limits received (Egypt Local Time)
@@ -107,7 +102,7 @@ public class AndroidSyncStatusCommandHandler : IRequestHandler<AndroidSyncStatus
         foreach (var ow in otherWallets)
         {
             var status = ow.DeviceStatus;
-            if (status == "Connected" && ow.LastSeenAt.HasValue && DateTime.UtcNow - ow.LastSeenAt.Value > TimeSpan.FromMinutes(2))
+            if (status == "Connected" && ow.LastSeenAt.HasValue && DateTime.UtcNow - ow.LastSeenAt.Value > TimeSpan.FromMinutes(20))
             {
                 status = "Disconnected";
             }

@@ -43,7 +43,7 @@ export interface AdminRechargeRequestDto {
   amount: number;
   senderPhoneNumber: string;
   screenshotUrl?: string;
-  status: number; // RechargeRequestStatus
+  status: number | string; // RechargeRequestStatus
   createdAt: string;
   resolvedAt?: string;
   resolvedByUserId?: string;

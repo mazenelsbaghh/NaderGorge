@@ -68,7 +68,8 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
                 }
 
                 rechargeRequest.Status = RechargeRequestStatus.Approved;
-                rechargeRequest.Wallet.CurrentBalance += rechargeRequest.Amount;
+                var linkedSmsBalance = smsLog == null ? null : SmsParser.Parse(smsLog.Body).CurrentBalance;
+                rechargeRequest.Wallet.CurrentBalance = linkedSmsBalance ?? rechargeRequest.Wallet.CurrentBalance + rechargeRequest.Amount;
 
                 await _db.SaveChangesAsync(ct);
 

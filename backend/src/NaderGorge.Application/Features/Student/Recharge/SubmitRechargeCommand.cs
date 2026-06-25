@@ -112,8 +112,8 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
                 matchedSms.IsMatched = true;
                 matchedSms.MatchedRechargeRequestId = rechargeRequest.Id;
 
-                // Update Wallet balance
-                rechargeRequest.Wallet.CurrentBalance += rechargeRequest.Amount;
+                var matchedSmsBalance = SmsParser.Parse(matchedSms.Body).CurrentBalance;
+                rechargeRequest.Wallet.CurrentBalance = matchedSmsBalance ?? rechargeRequest.Wallet.CurrentBalance + rechargeRequest.Amount;
 
                 await _db.SaveChangesAsync(ct);
 
