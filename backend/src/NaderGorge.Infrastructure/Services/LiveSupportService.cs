@@ -1146,17 +1146,48 @@ public sealed class LiveSupportService(
         var aiState = await _db.LiveSupportAIConversationStates.FirstOrDefaultAsync(x => x.ConversationId == turn.ConversationId, ct);
         if (aiState is not null && aiState.Mode == LiveSupportAIMode.AiActive)
         {
-            if (_handoffService == null) throw new InvalidOperationException("Handoff service is not available.");
-            await _handoffService.HandoffAsync(
-                turn.ConversationId,
-                participant: null,
-                actorUserId: null,
-                reasonCode: "AI_TURN_FAILED",
-                safeSummary: $"فشل المساعد الذكي في معالجة الطلب: {request.FailureCode}",
-                forced: true,
-                idempotencyKey: $"turn-fail-{turnId}",
-                cancellationToken: ct);
+            var content = "نعتذر، واجه المساعد الذكي مشكلة في معالجة طلبك حالياً. هل تود التحويل إلى أحد موظفي الدعم؟";
+            var message = new LiveSupportMessage
+            {
+                ConversationId = turn.ConversationId,
+                SenderType = LiveSupportSenderType.AI,
+                ClientMessageId = $"ai-fail-{turn.Id:N}",
+                Type = LiveSupportMessageType.Text,
+                Content = content,
+                SentAt = DateTime.UtcNow
+            };
+            _db.LiveSupportMessages.Add(message);
+            conversation.LastMessageAt = message.SentAt;
+            conversation.Version++;
 
+            aiState.HandoffReasonCode = "AI_TURN_FAILED";
+            aiState.HandoffSafeSummary = $"تعذر إكمال طلبك تلقائياً ({request.FailureCode})";
+            aiState.Version++;
+
+            var policy = await _db.LiveSupportAIPolicyVersions.FirstOrDefaultAsync(x => x.Id == turn.PolicyVersionId, ct);
+            var expirySeconds = policy?.PendingActionExpirySeconds > 0 ? policy.PendingActionExpirySeconds : 300;
+
+            var pendingAction = new LiveSupportAIPendingAction
+            {
+                ConversationId = turn.ConversationId,
+                TurnId = turn.Id,
+                StudentUserId = conversation.LinkedStudentUserId ?? Guid.Empty,
+                PolicyVersionId = turn.PolicyVersionId,
+                ActionKey = "system.handoff",
+                SafeProposalJson = System.Text.Json.JsonSerializer.Serialize(new {
+                    reasonCode = aiState.HandoffReasonCode,
+                    safeSummaryAr = aiState.HandoffSafeSummary
+                }),
+                Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
+                ExpiresAt = DateTime.UtcNow.AddSeconds(expirySeconds),
+                IdempotencyKey = Guid.NewGuid(),
+                Version = 1
+            };
+            _db.LiveSupportAIPendingActions.Add(pendingAction);
+
+            AddEvent(conversation.Id, LiveSupportEventType.MessageSent, null, null, message.Id);
+            AddEvent(conversation.Id, LiveSupportEventType.AIReplySent, null, null, message.Id);
+            AddEvent(conversation.Id, LiveSupportEventType.AIHandoffRequested, null, null, turn.Id);
             AddEvent(conversation.Id, LiveSupportEventType.AITurnFailed, null, null, turn.Id);
             await _db.SaveChangesAsync(ct);
         }
