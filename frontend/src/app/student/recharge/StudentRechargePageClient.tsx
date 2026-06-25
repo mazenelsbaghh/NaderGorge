@@ -33,6 +33,8 @@ export default function StudentRechargePageClient() {
   const [isMatched, setIsMatched] = useState(false);
   const [outcomeMessage, setOutcomeMessage] = useState('');
   const [reviewCode, setReviewCode] = useState('');
+  const [reviewState, setReviewState] = useState<'checking' | 'approved' | 'manual' | 'rejected'>('manual');
+  const [reviewTimeLeft, setReviewTimeLeft] = useState(60);
 
   const fetchRequests = async () => {
     try {
@@ -71,6 +73,61 @@ export default function StudentRechargePageClient() {
       }
     };
   }, [step, rechargeData]);
+
+  useEffect(() => {
+    if (step !== 3 || reviewState !== 'checking' || !rechargeData) return;
+
+    let isActive = true;
+    const startedAt = Date.now();
+    const requestId = rechargeData.rechargeRequestId;
+
+    const checkRequestStatus = async () => {
+      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      const remainingSeconds = Math.max(0, 60 - elapsedSeconds);
+      setReviewTimeLeft(remainingSeconds);
+
+      try {
+        const latestRequests = await rechargeService.getMyRequests();
+        if (!isActive) return;
+
+        setRequests(latestRequests);
+        const currentRequest = latestRequests.find((request) => request.id === requestId);
+
+        if (currentRequest?.status === 1 || currentRequest?.status === 2) {
+          setIsMatched(true);
+          setReviewState('approved');
+          setOutcomeMessage('تمت الموافقة على الشحن وإضافة الرصيد لحسابك بنجاح.');
+          toast.success('تمت الموافقة على الشحن وإضافة الرصيد.');
+          return;
+        }
+
+        if (currentRequest?.status === 3) {
+          setIsMatched(false);
+          setReviewState('rejected');
+          setOutcomeMessage(currentRequest.rejectionReason || 'تم رفض طلب الشحن. راجع بيانات التحويل أو تواصل مع الدعم.');
+          return;
+        }
+      } catch {
+        // Keep checking until the one-minute window ends.
+      }
+
+      if (remainingSeconds === 0) {
+        setIsMatched(false);
+        setReviewState('manual');
+        setOutcomeMessage('طلبك تحت المراجعة الآن. سنطابق التحويل تلقائياً عند وصول رسالة المحفظة أو يراجعه الأدمن.');
+      }
+    };
+
+    void checkRequestStatus();
+    const intervalId = window.setInterval(() => {
+      void checkRequestStatus();
+    }, 3000);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(intervalId);
+    };
+  }, [step, reviewState, rechargeData]);
 
   const handleInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,14 +191,18 @@ export default function StudentRechargePageClient() {
 
       if (response.success && response.data) {
         setIsMatched(response.data.isMatched);
-        setOutcomeMessage(response.data.message);
         setReviewCode(response.data.reviewCode);
         setStep(3);
         void fetchRequests();
         if (response.data.isMatched) {
+          setReviewState('approved');
+          setOutcomeMessage(response.data.message || 'تمت الموافقة على الشحن وإضافة الرصيد لحسابك بنجاح.');
           toast.success('تم شحن رصيدك وتفعيله تلقائياً بنجاح! 🎉');
         } else {
-          toast.success('تم تقديم طلب الشحن بنجاح وقيد المراجعة.');
+          setReviewState('checking');
+          setReviewTimeLeft(60);
+          setOutcomeMessage('جاري التأكد من وصول رسالة الشحن. انتظر لحظات قبل تحويل الطلب للمراجعة.');
+          toast.success('تم استلام الإثبات وجاري التأكد من الشحن.');
         }
       } else {
         toast.error(response.message || 'تعذر تقديم طلب الشحن.');
@@ -420,6 +481,14 @@ export default function StudentRechargePageClient() {
                 <div className="h-20 w-20 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                   <CheckCircle className="h-14 w-14" />
                 </div>
+              ) : reviewState === 'checking' ? (
+                <div className="h-20 w-20 rounded-full bg-sky-500/10 flex items-center justify-center text-sky-500">
+                  <Clock className="h-14 w-14 animate-spin" />
+                </div>
+              ) : reviewState === 'rejected' ? (
+                <div className="h-20 w-20 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+                  <Clock className="h-14 w-14" />
+                </div>
               ) : (
                 <div className="h-20 w-20 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
                   <Clock className="h-14 w-14 animate-pulse" />
@@ -429,11 +498,23 @@ export default function StudentRechargePageClient() {
 
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-[var(--admin-text)]">
-                {isMatched ? 'تم تفعيل الشحن آلياً!' : 'تم تقديم الطلب'}
+                {isMatched
+                  ? 'تمت الموافقة على الشحن!'
+                  : reviewState === 'checking'
+                    ? 'جاري التأكد من الشحن'
+                    : reviewState === 'rejected'
+                      ? 'تم رفض طلب الشحن'
+                      : 'الطلب تحت المراجعة'}
               </h2>
               <p className="text-sm font-semibold text-[var(--admin-muted)] leading-relaxed max-w-md mx-auto">
                 {outcomeMessage}
               </p>
+              {reviewState === 'checking' && (
+                <div className="mx-auto flex max-w-sm flex-col gap-2 rounded-2xl border border-sky-500/20 bg-sky-500/10 p-3 text-sm font-bold text-sky-700 dark:text-sky-300">
+                  <span>ننتظر وصول رسالة المحفظة ومطابقتها تلقائياً.</span>
+                  <span className="font-mono text-lg font-black">{reviewTimeLeft} ثانية</span>
+                </div>
+              )}
               {reviewCode && (
                 <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-2 text-sm font-black text-[var(--admin-text)]">
                   <span>كود المراجعة</span>
@@ -456,6 +537,8 @@ export default function StudentRechargePageClient() {
                   setSenderPhone('');
                   setScreenshot(null);
                   setScreenshotPreview(null);
+                  setReviewState('manual');
+                  setReviewTimeLeft(60);
                 }}
                 className="w-full py-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-all"
               >
