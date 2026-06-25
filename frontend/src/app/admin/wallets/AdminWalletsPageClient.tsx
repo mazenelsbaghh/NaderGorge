@@ -24,6 +24,14 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import { walletService, type WalletDto, type CreateWalletDto, type UpdateWalletLimitsDto } from '@/services/wallet-service';
 import toast from 'react-hot-toast';
 
+const SMS_SENDER_OPTIONS = [
+  { value: 'VF-Cash', label: 'VF-Cash', hint: 'فودافون كاش، الاسم الظاهر في الرسائل غالباً' },
+  { value: 'VodafoneCash', label: 'VodafoneCash', hint: 'فودافون كاش، اسم بديل لبعض الأجهزة' },
+  { value: 'EtisalatCash', label: 'EtisalatCash', hint: 'اتصالات كاش' },
+  { value: 'OrangeCash', label: 'OrangeCash', hint: 'أورنج كاش' },
+  { value: 'InstaPay', label: 'InstaPay', hint: 'إنستاباي' },
+];
+
 export default function AdminWalletsPageClient() {
   const [wallets, setWallets] = useState<WalletDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +47,15 @@ export default function AdminWalletsPageClient() {
   const [label, setLabel] = useState('');
   const [dailyLimit, setDailyLimit] = useState(30000);
   const [monthlyLimit, setMonthlyLimit] = useState(100000);
-  const [smsSenderFiltersText, setSmsSenderFiltersText] = useState('VodafoneCash, EtisalatCash, OrangeCash');
+  const [smsSenderFilters, setSmsSenderFilters] = useState<string[]>(['VF-Cash', 'VodafoneCash']);
+
+  const toggleSmsSenderFilter = (value: string) => {
+    setSmsSenderFilters((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
+  };
 
   useEffect(() => {
     fetchWallets();
@@ -104,7 +120,7 @@ export default function AdminWalletsPageClient() {
     setLabel('');
     setDailyLimit(30000);
     setMonthlyLimit(100000);
-    setSmsSenderFiltersText('VodafoneCash, EtisalatCash, OrangeCash');
+    setSmsSenderFilters(['VF-Cash', 'VodafoneCash']);
     setActiveModal('add');
   };
 
@@ -113,7 +129,7 @@ export default function AdminWalletsPageClient() {
     setLabel(wallet.label);
     setDailyLimit(wallet.dailyLimit);
     setMonthlyLimit(wallet.monthlyLimit);
-    setSmsSenderFiltersText(wallet.smsSenderFilters.join(', '));
+    setSmsSenderFilters(wallet.smsSenderFilters?.length ? wallet.smsSenderFilters : ['VF-Cash', 'VodafoneCash']);
     setActiveModal('edit');
   };
 
@@ -124,17 +140,17 @@ export default function AdminWalletsPageClient() {
       return;
     }
 
-    const filters = smsSenderFiltersText
-      .split(/[,،]/)
-      .map(s => s.trim())
-      .filter(Boolean);
+    if (smsSenderFilters.length === 0) {
+      toast.error('اختر اسم مرسل واحد على الأقل.');
+      return;
+    }
 
     const dto: CreateWalletDto = {
       phoneNumber: phoneNumber.trim(),
       label: label.trim(),
       dailyLimit,
       monthlyLimit,
-      smsSenderFilters: filters,
+      smsSenderFilters,
     };
 
     try {
@@ -164,16 +180,16 @@ export default function AdminWalletsPageClient() {
       return;
     }
 
-    const filters = smsSenderFiltersText
-      .split(/[,،]/)
-      .map(s => s.trim())
-      .filter(Boolean);
+    if (smsSenderFilters.length === 0) {
+      toast.error('اختر اسم مرسل واحد على الأقل.');
+      return;
+    }
 
     const dto: UpdateWalletLimitsDto = {
       label: label.trim(),
       dailyLimit,
       monthlyLimit,
-      smsSenderFilters: filters,
+      smsSenderFilters,
     };
 
     try {
@@ -498,17 +514,33 @@ export default function AdminWalletsPageClient() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-[var(--admin-text)]">أسماء مرسلي الرسائل المستهدفة (SMS Senders)</label>
-            <input 
-              type="text" 
-              value={smsSenderFiltersText}
-              onChange={(e) => setSmsSenderFiltersText(e.target.value)}
-              placeholder="مثال: VodafoneCash, InstaPay, OrangeCash"
-              className="admin-input"
-            />
+            <div className="grid gap-2 sm:grid-cols-2">
+              {SMS_SENDER_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition ${
+                    smsSenderFilters.includes(option.value)
+                      ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary)]'
+                      : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={smsSenderFilters.includes(option.value)}
+                    onChange={() => toggleSmsSenderFilter(option.value)}
+                    className="mt-1 h-4 w-4 accent-[var(--admin-primary)]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-black">{option.label}</span>
+                    <span className="block text-[11px] font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
             <span className="text-[11px] text-[var(--admin-muted)] leading-relaxed">
-              اكتب أسماء الجهات التي تأتي منها رسائل التأكيد، مفصولة بفاصلة. سيقوم تطبيق الأندرويد بتصفية الرسائل بناءً على هذه القائمة فقط.
+              اختر أسماء الجهات التي تأتي منها رسائل التأكيد. تطبيق الأندرويد يلتقط الرسائل من هذه الأسماء فقط.
             </span>
           </div>
 
@@ -575,17 +607,33 @@ export default function AdminWalletsPageClient() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <label className="text-sm font-bold text-[var(--admin-text)]">أسماء مرسلي الرسائل المستهدفة (SMS Senders)</label>
-            <input 
-              type="text" 
-              value={smsSenderFiltersText}
-              onChange={(e) => setSmsSenderFiltersText(e.target.value)}
-              placeholder="مثال: VodafoneCash, InstaPay"
-              className="admin-input"
-            />
+            <div className="grid gap-2 sm:grid-cols-2">
+              {SMS_SENDER_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition ${
+                    smsSenderFilters.includes(option.value)
+                      ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary)]'
+                      : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)] text-[var(--admin-text)] hover:bg-[var(--admin-hover)]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={smsSenderFilters.includes(option.value)}
+                    onChange={() => toggleSmsSenderFilter(option.value)}
+                    className="mt-1 h-4 w-4 accent-[var(--admin-primary)]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-black">{option.label}</span>
+                    <span className="block text-[11px] font-medium leading-5 text-[var(--admin-muted)]">{option.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
             <span className="text-[11px] text-[var(--admin-muted)] leading-relaxed">
-              اكتب أسماء الجهات التي تأتي منها رسائل التأكيد، مفصولة بفاصلة. سيقوم تطبيق الأندرويد بتصفية الرسائل بناءً على هذه القائمة فقط.
+              اختر أسماء الجهات التي تأتي منها رسائل التأكيد. تطبيق الأندرويد يلتقط الرسائل من هذه الأسماء فقط.
             </span>
           </div>
 

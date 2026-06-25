@@ -15,6 +15,7 @@ public class SmsParserTests
     [InlineData("بقيمة 500.00 ج.م من 01200001111", 500.00, "01200001111")]
     [InlineData("100 ج.م من 01033332222", 100.00, "01033332222")]
     [InlineData("تم استقبال 20 ج.م من 01144445555", 20.00, "01144445555")]
+    [InlineData("تم استلام مبلغ 55.00 جنيه من رقم 01272629089 المسجل بإسم ابراهيم حسن يونس حسن عطيه على رقم محفظتك  01096132447.\nرصيدك الحالي: 208.93 جنيه\nتاريخ العملية: 15:47 26-06-20\nرقم العملية: 021004733606", 55.00, "01272629089")]
     public void Parse_ShouldExtractAmountAndPhoneNumber_WhenValidEgyptianSms(string body, decimal expectedAmount, string expectedPhone)
     {
         // Act

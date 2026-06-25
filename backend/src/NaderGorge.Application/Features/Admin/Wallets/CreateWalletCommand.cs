@@ -57,8 +57,8 @@ public class CreateWalletCommandHandler : IRequestHandler<CreateWalletCommand, A
         } while (tokenExists);
 
         var filters = request.SmsSenderFilters != null && request.SmsSenderFilters.Any()
-            ? request.SmsSenderFilters
-            : new List<string> { "VodafoneCash" };
+            ? request.SmsSenderFilters.Select(s => s.Trim()).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+            : new List<string> { "VF-Cash", "VodafoneCash" };
 
         var wallet = new DigitalWallet
         {

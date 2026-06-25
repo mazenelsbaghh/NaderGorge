@@ -16,8 +16,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nadergorge.paymentlistener.R
 import com.nadergorge.paymentlistener.data.api.ApiClient
+import com.nadergorge.paymentlistener.data.api.ApiResponse
 import com.nadergorge.paymentlistener.data.api.SyncStatusRequest
 import com.nadergorge.paymentlistener.data.preference.PreferenceManager
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,12 +31,12 @@ fun SetupScreen(
     onSetupSuccess: () -> Unit
 ) {
     val defaultServerUrl = stringResource(R.string.default_server_url)
-    var serverUrl by remember { mutableStateOf(defaultServerUrl) }
     var pairingCode by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val gson = remember { Gson() }
 
     Column(
         modifier = Modifier
@@ -53,7 +55,7 @@ fun SetupScreen(
         )
 
         Text(
-            text = "أدخل عنوان السيرفر وكود الربط لربط هذا الهاتف وتلقي ومزامنة الرسائل تلقائياً.",
+            text = "أدخل كود الربط من لوحة الإدارة لربط هذا الهاتف وتلقي ومزامنة الرسائل تلقائياً.",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -61,23 +63,8 @@ fun SetupScreen(
         )
 
         OutlinedTextField(
-            value = serverUrl,
-            onValueChange = { serverUrl = it },
-            label = { Text("رابط السيرفر (Server URL)") },
-            placeholder = { Text(defaultServerUrl) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Next
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        )
-
-        OutlinedTextField(
             value = pairingCode,
-            onValueChange = { pairingCode = it.uppercase() },
+            onValueChange = { pairingCode = it.trim().uppercase() },
             label = { Text("كود الربط (Pairing Code)") },
             placeholder = { Text("كود مكون من 8 أرقام وحروف") },
             singleLine = true,
@@ -103,8 +90,8 @@ fun SetupScreen(
 
         Button(
             onClick = {
-                if (serverUrl.isBlank() || pairingCode.isBlank()) {
-                    errorMessage = "يرجى ملء كافة الحقول."
+                if (pairingCode.isBlank()) {
+                    errorMessage = "يرجى إدخال كود الربط."
                     return@Button
                 }
 
@@ -112,13 +99,15 @@ fun SetupScreen(
                 errorMessage = null
 
                 scope.launch {
-                    // Temporarily save to perform test request
-                    prefManager.saveServerUrl(ApiClient.normalizeBaseUrl(serverUrl).trimEnd('/'))
-                    prefManager.savePairingToken(pairingCode)
+                    val normalizedServerUrl = ApiClient.normalizeBaseUrl(defaultServerUrl).trimEnd('/')
+                    val normalizedPairingCode = pairingCode.trim().uppercase()
+
+                    prefManager.saveServerUrl(normalizedServerUrl)
+                    prefManager.savePairingToken(normalizedPairingCode)
 
                     val apiService = ApiClient.getApiService(context)
                     if (apiService == null) {
-                        errorMessage = "عنوان السيرفر غير صالح."
+                        errorMessage = "تعذر تجهيز اتصال السيرفر."
                         isLoading = false
                         prefManager.clearConfiguration()
                         return@launch
@@ -126,7 +115,7 @@ fun SetupScreen(
 
                     try {
                         val response = withContext(Dispatchers.IO) {
-                            apiService.syncStatus(pairingCode, SyncStatusRequest(null))
+                            apiService.syncStatus(normalizedPairingCode, SyncStatusRequest(null))
                         }
 
                         if (response.isSuccessful && response.body()?.success == true) {
@@ -138,13 +127,19 @@ fun SetupScreen(
                             
                             onSetupSuccess()
                         } else {
-                            val msg = response.body()?.message ?: "كود الربط غير صالح أو السيرفر غير مستجيب."
+                            val msg = response.body()?.message
+                                ?: response.errorBody()?.string()?.let { raw ->
+                                    runCatching {
+                                        gson.fromJson(raw, ApiResponse::class.java).message
+                                    }.getOrNull()
+                                }
+                                ?: "كود الربط غير صالح أو المحفظة غير نشطة."
                             errorMessage = msg
                             prefManager.clearConfiguration()
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        errorMessage = "فشل الاتصال بالسيرفر. تأكد من صحة الرابط واتصال الإنترنت."
+                        errorMessage = "فشل الاتصال بالسيرفر. تأكد من اتصال الإنترنت."
                         prefManager.clearConfiguration()
                     } finally {
                         isLoading = false

@@ -48,7 +48,12 @@ public class UpdateWalletLimitsCommandHandler : IRequestHandler<UpdateWalletLimi
         
         if (request.SmsSenderFilters != null && request.SmsSenderFilters.Any())
         {
-            wallet.SmsSenderFilters = JsonSerializer.Serialize(request.SmsSenderFilters);
+            var filters = request.SmsSenderFilters
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            wallet.SmsSenderFilters = JsonSerializer.Serialize(filters);
         }
 
         wallet.UpdatedAt = DateTime.UtcNow;

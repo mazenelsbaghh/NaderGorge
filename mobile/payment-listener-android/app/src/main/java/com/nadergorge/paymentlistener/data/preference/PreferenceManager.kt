@@ -58,12 +58,12 @@ class PreferenceManager(context: Context) {
     }
 
     fun getSmsFilters(): List<String> {
-        val json = sharedPreferences.getString(KEY_SMS_FILTERS, null) ?: return listOf("VodafoneCash")
+        val json = sharedPreferences.getString(KEY_SMS_FILTERS, null) ?: return listOf("VF-Cash", "VodafoneCash")
         return try {
             val type = object : TypeToken<List<String>>() {}.type
-            gson.fromJson(json, type) ?: listOf("VodafoneCash")
+            gson.fromJson(json, type) ?: listOf("VF-Cash", "VodafoneCash")
         } catch (e: Exception) {
-            listOf("VodafoneCash")
+            listOf("VF-Cash", "VodafoneCash")
         }
     }
 
