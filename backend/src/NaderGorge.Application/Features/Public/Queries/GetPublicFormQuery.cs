@@ -39,7 +39,7 @@ public class GetPublicFormQueryHandler : IRequestHandler<GetPublicFormQuery, Api
         var now = DateTime.UtcNow;
         if (form.StartsAt.HasValue && form.StartsAt.Value > now)
         {
-            var localTime = form.StartsAt.Value.AddHours(2);
+            var localTime = CairoTime.ToLocal(form.StartsAt.Value);
             return ApiResponse<PublicFormDto>.Fail($"عذراً، هذا النموذج لم يبدأ بعد. سيبدأ استقبال الطلبات في {localTime:yyyy-MM-dd HH:mm}.");
         }
 

@@ -33,12 +33,10 @@ export const useStudentShellStore = create<StudentShellState>((set, get) => ({
   hasSeenTrackingCodePopup: true, // Default to true to prevent screen flash before bootstrap load
 
   fetchBootstrap: async (force = false) => {
-    console.log('fetchBootstrap CALLED in store, force:', force);
     const { lastFetchedAt, isLoading } = get();
     const now = Date.now();
 
     if (isLoading) {
-      console.log('fetchBootstrap: isLoading is true, skipping');
       return;
     }
     if (!force && lastFetchedAt && now - lastFetchedAt < CACHE_TTL) {
@@ -48,7 +46,6 @@ export const useStudentShellStore = create<StudentShellState>((set, get) => ({
     set({ isLoading: true });
     try {
       const data = await studentService.getShellBootstrap();
-      console.log('BOOTSTRAP DATA FETCHED CLIENT SIDE:', JSON.stringify(data));
       set({
         unreadNotificationsCount: data.unreadNotificationsCount,
         currentBalance: Number(data.currentBalance),
@@ -61,7 +58,10 @@ export const useStudentShellStore = create<StudentShellState>((set, get) => ({
         isLoading: false,
       });
     } catch (err) {
-      console.error('Failed to fetch student shell bootstrap:', err);
+      // A guest can be redirected while this request is in flight; 401 is an
+      // expected outcome and must not create a production console error.
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status !== 401) console.error('Failed to fetch student shell bootstrap');
       set({ isLoading: false });
     }
   },

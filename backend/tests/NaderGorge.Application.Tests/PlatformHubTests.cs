@@ -43,6 +43,11 @@ public class PlatformHubTests
             return Task.FromResult(LessonAccessAllowed);
         }
 
+        public Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(LessonAccessAllowed);
+        }
+
         public Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(ExamAccessAllowed);
@@ -87,7 +92,7 @@ public class PlatformHubTests
 
         var accessCheck = new FakeAccessCheckService();
         var hub = new PlatformHub(accessCheck);
-        
+
         var groups = new FakeGroupManager();
         var context = new FakeHubCallerContext(principal);
 
@@ -113,7 +118,7 @@ public class PlatformHubTests
 
         var accessCheck = new FakeAccessCheckService();
         var hub = new PlatformHub(accessCheck);
-        
+
         var groups = new FakeGroupManager();
         var context = new FakeHubCallerContext(principal);
 
@@ -144,7 +149,7 @@ public class PlatformHubTests
 
         var accessCheck = new FakeAccessCheckService { PackageAccessAllowed = true };
         var hub = new PlatformHub(accessCheck);
-        
+
         var groups = new FakeGroupManager();
         var context = new FakeHubCallerContext(principal);
 
@@ -174,7 +179,7 @@ public class PlatformHubTests
 
         var accessCheck = new FakeAccessCheckService { PackageAccessAllowed = false };
         var hub = new PlatformHub(accessCheck);
-        
+
         var groups = new FakeGroupManager();
         var context = new FakeHubCallerContext(principal);
 
@@ -211,7 +216,7 @@ public class PlatformHubTests
 
         var accessCheck = new FakeAccessCheckService { PackageAccessAllowed = false }; // Service says false
         var hub = new PlatformHub(accessCheck);
-        
+
         var groups = new FakeGroupManager();
         var context = new FakeHubCallerContext(principal);
 
@@ -270,7 +275,7 @@ public class PlatformHubTests
 
         var accessCheck = new FakeAccessCheckService { LessonAccessAllowed = true };
         var hub = new PlatformHub(accessCheck);
-        
+
         var groups = new FakeGroupManager();
         var context = new FakeHubCallerContext(principal);
 
@@ -295,7 +300,7 @@ public class PlatformHubTests
 
         var accessCheck = new FakeAccessCheckService();
         var hub = new PlatformHub(accessCheck);
-        
+
         var groups = new FakeGroupManager();
         var context = new FakeHubCallerContext(principal);
 

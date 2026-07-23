@@ -1,6 +1,7 @@
 using System.Text.Json;
 using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Application.Features.LiveSupportAI.Services;
 using NaderGorge.Infrastructure.Services.LiveSupportAI;
 
 namespace NaderGorge.Application.Tests.LiveSupportAI;
@@ -19,7 +20,7 @@ public sealed class LiveSupportAIContextBuilderTests
             IsEnabled = true,
             SystemInstructions = "تعليمات موثوقة فقط",
             ReadableDataKeysJson = "[\"identity.basic\"]",
-            ActionKeysJson = "[]",
+            ActionKeysJson = "[\"student.devices.disconnect-all\"]",
             CreatedByUserId = user.Id,
             Version = 1
         };
@@ -80,6 +81,9 @@ public sealed class LiveSupportAIContextBuilderTests
         Assert.DoesNotContain(user.PhoneNumber, studentJson, StringComparison.Ordinal);
         Assert.DoesNotContain(user.PasswordHash, studentJson, StringComparison.Ordinal);
         Assert.Equal("تعليمات موثوقة فقط", context.SystemInstructions);
+        Assert.Single(context.AllowedActions);
+        Assert.Equal(JsonValueKind.Object, context.AllowedActions[0].ArgumentsSchema.ValueKind);
+        Assert.Equal(JsonValueKind.Object, context.AllowedActions[0].ArgumentsSchema.GetProperty("properties").ValueKind);
     }
 
     [Fact]
@@ -125,5 +129,59 @@ public sealed class LiveSupportAIContextBuilderTests
         Assert.InRange(documents.Count, 1, 8);
         Assert.Contains("الباقات", documents[0].Content, StringComparison.Ordinal);
         Assert.True(documents.Sum(document => document.Content.Length) <= 10_000);
+    }
+
+    [Fact]
+    public async Task Readable_catalog_keys_are_materialized_as_bounded_safe_context()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "طالب السياق", "01200000148");
+        var policy = new LiveSupportAIPolicyVersion
+        {
+            VersionNumber = 148,
+            Status = LiveSupportAIPolicyStatus.Published,
+            IsEnabled = true,
+            SystemInstructions = "test",
+            ReadableDataKeysJson = JsonSerializer.Serialize(LiveSupportAICatalog.ReadableData.Keys),
+            ActionKeysJson = "[]",
+            CreatedByUserId = user.Id,
+            Version = 1
+        };
+        var conversation = new LiveSupportConversation
+        {
+            ParticipantType = LiveSupportParticipantType.Student,
+            LinkedStudentUserId = user.Id,
+            Status = LiveSupportConversationStatus.Waiting,
+            Version = 1
+        };
+        db.AddRange(policy, conversation);
+        var source = new LiveSupportMessage
+        {
+            ConversationId = conversation.Id,
+            SenderType = LiveSupportSenderType.Student,
+            ClientMessageId = "all-readable-keys",
+            Type = LiveSupportMessageType.Text,
+            Content = "أحتاج مساعدة",
+            SentAt = DateTime.UtcNow
+        };
+        db.Add(source);
+        await db.SaveChangesAsync();
+        var turn = new LiveSupportAITurn
+        {
+            ConversationId = conversation.Id,
+            SourceMessageId = source.Id,
+            PolicyVersionId = policy.Id,
+            ExpectedConversationVersion = conversation.Version,
+            Status = LiveSupportAITurnStatus.Processing,
+            QueuedAt = DateTime.UtcNow,
+            Version = 1
+        };
+        db.Add(turn);
+        await db.SaveChangesAsync();
+
+        var context = await new LiveSupportAIContextBuilder(db, new LiveSupportAIKnowledgeService(db)).BuildAsync(turn.Id, CancellationToken.None);
+        Assert.Equal(LiveSupportAICatalog.ReadableData.Keys.OrderBy(key => key), context.StudentContext.Keys.OrderBy(key => key));
+        Assert.DoesNotContain("PasswordHash", JsonSerializer.Serialize(context.StudentContext), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("secret", JsonSerializer.Serialize(context.StudentContext), StringComparison.OrdinalIgnoreCase);
     }
 }

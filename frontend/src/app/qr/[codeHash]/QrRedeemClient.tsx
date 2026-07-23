@@ -74,10 +74,10 @@ export function QrRedeemClient({ codeHash }: { codeHash: string }) {
                   إعادة المحاولة
                 </button>
                 <Link
-                  href="/student/code-redemption"
+                  href="/student/packages"
                   className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-bold transition-colors hover:bg-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2"
                 >
-                  إدخال الكود يدويا
+                  عرض الباقات
                 </Link>
               </div>
             </>

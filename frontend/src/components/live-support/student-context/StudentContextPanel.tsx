@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Search, UserRound, Wallet, MonitorSmartphone, BookOpenCheck, Trophy, StickyNote, ChevronDown, ChevronUp, AlertCircle, RefreshCw } from 'lucide-react';
 import { liveSupportService, type LiveSupportConversation, type LiveSupportStudentContextSectionKey, type LiveSupportStudentContextSections, type LiveSupportStudentSearchResult } from '@/services/live-support-service';
 import { StudentActionsPanel } from './StudentActionsPanel';
+import { getEducationStageLabel, getGradeLevelLabel } from '@/lib/academic-labels';
 
 export function StudentContextPanel({ conversation, onConversationChange }: { conversation: LiveSupportConversation; onConversationChange: (value: LiveSupportConversation) => void }) {
   const [sections, setSections] = useState<Partial<LiveSupportStudentContextSections>>({});
@@ -41,6 +42,21 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
     (Object.keys(expandedSections) as LiveSupportStudentContextSectionKey[])
       .filter(section => expandedSections[section])
       .forEach(section => void loadSection(section));
+  }
+
+  async function refreshConversationAfterAction() {
+    if (conversation.linkedStudentUserId) {
+      refreshExpandedSections();
+      return;
+    }
+
+    try {
+      const bootstrap = await liveSupportService.getStaffBootstrap();
+      const updatedConversation = bootstrap.conversations.find((item) => item.id === conversation.id);
+      if (updatedConversation) onConversationChange(updatedConversation);
+    } catch {
+      setError('تم تنفيذ الإجراء، لكن تعذر تحديث بيانات المحادثة. أعد فتحها من القائمة.');
+    }
   }
 
   async function search() {
@@ -128,7 +144,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
             ))}
           </div>
         </div>
-        <StudentActionsPanel conversationId={conversation.id} hasStudent={false} onCompleted={() => window.location.reload()} />
+        <StudentActionsPanel conversationId={conversation.id} hasStudent={false} onCompleted={() => void refreshConversationAfterAction()} />
       </aside>
     );
   }
@@ -161,7 +177,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
                   <p>الهاتف: {sections.basic.phoneNumber}</p>
                   <p>كود الطالب: {sections.basic.studentCode || 'بدون كود'}</p>
                   <p>الحالة: {sections.basic.isActive ? 'نشط' : 'موقوف'}</p>
-                  <p>المرحلة: {sections.basic.educationStage || 'غير محددة'} · {sections.basic.gradeLevel || 'غير محددة'}</p>
+                  <p>المرحلة: {getEducationStageLabel(sections.basic.educationStage)} · {getGradeLevelLabel(sections.basic.gradeLevel)}</p>
                   <p>المحافظة: {sections.basic.governorate || 'غير محددة'}</p>
                   <p>المدرسة: {sections.basic.schoolName || 'غير محددة'}</p>
                 </>
@@ -179,10 +195,10 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
               {sectionErrors.metrics && <SectionError message={sectionErrors.metrics} onRetry={() => void loadSection('metrics')} />}
               {sections.metrics && (
                 <div className="grid grid-cols-2 gap-2">
-                  <Metric icon={Wallet} label="الرصيد الحالي" value={`${sections.metrics.balance} ج.م`} />
-                  <Metric icon={Trophy} label="نقاط الطالب" value={String(sections.metrics.points)} />
-                  <Metric icon={BookOpenCheck} label="محاولات الامتحانات" value={String(sections.metrics.examAttempts)} />
-                  <Metric icon={MonitorSmartphone} label="الأجهزة المسجلة" value={String(sections.metrics.devicesCount)} />
+                  <Metric icon={Wallet} label="الرصيد الحالي" value={formatMetric(sections.metrics.balance, ' ج.م')} />
+                  <Metric icon={Trophy} label="نقاط الطالب" value={formatMetric(sections.metrics.points)} />
+                  <Metric icon={BookOpenCheck} label="محاولات الامتحانات" value={formatMetric(sections.metrics.examAttempts)} />
+                  <Metric icon={MonitorSmartphone} label="الأجهزة المسجلة" value={formatMetric(sections.metrics.devicesCount)} />
                 </div>
               )}
             </div>
@@ -303,4 +319,8 @@ function Metric({ icon: Icon, label, value }: { icon: typeof UserRound; label: s
       <p className="font-bold text-slate-900">{value}</p>
     </div>
   );
+}
+
+function formatMetric(value: number | null | undefined, suffix = ''): string {
+  return value == null ? '—' : `${value}${suffix}`;
 }

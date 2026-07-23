@@ -10,13 +10,17 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
-import { requireWorkerAdminToken, validateWorkerSecurityConfig } from './security.js';
-import { logQueueEvent } from './logging.js';
+import { validateWorkerSecurityConfig } from './security.js';
+import { logInfo } from './logging.js';
 import { markJobCancellation, clearJobCancellation } from './cancellation.js';
+import { createWorkerAdminGuard, isWorkerAdminEnabled } from './server/adminAccess.js';
+import { ingestStreamJob, type QueueSet } from './queues/jobIngestion.js';
+import { claimStaleStreamMessages } from './queues/streamRecovery.js';
 import { readAIConfig } from './services/aiConfig.js';
 import { TemporaryAudioStorage } from './services/temporaryAudioStorage.js';
 import { generateLiveSupportReply } from './services/geminiService.js';
 import { runLiveSupportAgent, type LiveSupportClaimContext } from './services/liveSupportAgent.js';
+import { fetchWithTimeout } from './services/workerFetch.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
@@ -68,7 +72,7 @@ async function reportProgressToBackend(jobId: string, progress: any) {
       percentage = Number(progress) || 0;
     }
 
-    const res = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
+    const res = await fetchWithTimeout(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -94,7 +98,7 @@ async function reportFailureToBackend(jobId: string, errorMsg: string) {
     const backendBaseUrl = process.env.BACKEND_API_URL || 'http://localhost:5245';
     const apiKey = process.env.API_CALLBACK_SECRET;
 
-    const res = await fetch(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
+    const res = await fetchWithTimeout(`${backendBaseUrl}/api/v1/internal/callbacks/ai-progress`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -226,14 +230,31 @@ async function startLiveSupportWorker() {
 }
 
 async function startCronJobs() {
-    // Basic JS Interval as a mock Cron Job for MVP. 
-    // Usually BullMQ repeated jobs can handle this, but an interval works fine.
-    console.log('[Worker] Commitment Engine Nightly Sweep starting every 24 hours (simulated hourly for testing).');
-    setInterval(async () => {
+    const runAtNextCairoDay = () => {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',
+      }).formatToParts(now);
+      const value = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value);
+      const nextLocal = new Date(Date.UTC(value('year'), value('month') - 1, value('day') + 1, 2, 5));
+      const offsetName = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Africa/Cairo', timeZoneName: 'longOffset',
+      }).formatToParts(nextLocal).find((part) => part.type === 'timeZoneName')?.value ?? 'GMT+00:00';
+      const offset = /GMT([+-])(\d{2}):(\d{2})/.exec(offsetName);
+      const offsetMilliseconds = offset
+        ? (Number(offset[2]) * 60 + Number(offset[3])) * 60_000 * (offset[1] === '+' ? 1 : -1)
+        : 0;
+      return Math.max(0, nextLocal.getTime() - offsetMilliseconds - now.getTime());
+    };
+    const schedule = () => setTimeout(async () => {
         try {
             await runNightlySweep();
         } catch(e) { console.error('Sweep failed', e); }
-    }, 1000 * 60 * 60); // Run every hour
+        schedule();
+    }, runAtNextCairoDay());
+
+    console.log('[Worker] Commitment Engine Nightly Sweep scheduled for 02:05 Africa/Cairo.');
+    schedule();
 }
 
 async function startWorker() {
@@ -251,6 +272,8 @@ async function startWorker() {
   const notifQueue = new Queue('notifications', { connection });
   const essayQueue = new Queue('ai-essay-grading', { connection });
   const liveSupportQueue = new Queue('ai-live-support-turns', { connection });
+  const queues: QueueSet = { aiQueue, mindmapsQueue, notifQueue, essayQueue, liveSupportQueue };
+  const workerAdminGuard = createWorkerAdminGuard();
 
   const app = express();
   if (process.env.NODE_ENV !== 'production') {
@@ -259,7 +282,7 @@ async function startWorker() {
   app.use(express.json());
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
-  app.post('/internal/live-support/preview', requireWorkerAdminToken, async (req, res) => {
+  app.post('/internal/live-support/preview', workerAdminGuard, async (req, res) => {
     const startedAt = Date.now();
     try {
       const context = req.body as LiveSupportClaimContext;
@@ -309,12 +332,11 @@ async function startWorker() {
 
     try {
       const base = (process.env.BACKEND_API_URL || 'http://localhost:5245').replace(/\/$/, '').replace(/\/api\/v1$/, '');
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2_000);
-      try {
-        const response = await fetch(`${base}/api/v1/internal/callbacks/live-support-ai/readiness`, { headers: { 'X-Internal-Token': process.env.AI_CALLBACK_SECRET! }, signal: controller.signal });
-        callbackOk = response.ok;
-      } finally { clearTimeout(timer); }
+      const response = await fetchWithTimeout(`${base}/api/v1/internal/callbacks/live-support-ai/readiness`, {
+        headers: { 'X-Internal-Token': process.env.AI_CALLBACK_SECRET! },
+        timeoutMs: 2_000,
+      });
+      callbackOk = response.ok;
     } catch {
       callbackOk = false;
     }
@@ -342,7 +364,7 @@ async function startWorker() {
   });
   
   // Custom API endpoint to fetch Job Status directly for frontend
-  app.get('/api/status/:id', requireWorkerAdminToken, async (req, res) => {
+  app.get('/api/status/:id', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
       let job = await aiQueue.getJob(jobId);
@@ -366,7 +388,7 @@ async function startWorker() {
   });
 
   // Cancel Job endpoint
-  app.delete('/api/status/:id', requireWorkerAdminToken, async (req, res) => {
+  app.delete('/api/status/:id', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
       let job = await aiQueue.getJob(jobId);
@@ -388,7 +410,7 @@ async function startWorker() {
   });
 
   // Retry failed Job endpoint
-  app.post('/api/status/:id/retry', requireWorkerAdminToken, async (req, res) => {
+  app.post('/api/status/:id/retry', workerAdminGuard, async (req, res) => {
     try {
       const jobId = String(req.params.id);
       let job = await aiQueue.getJob(jobId);
@@ -406,134 +428,25 @@ async function startWorker() {
     }
   });
 
-  // Setup Bull Board
-  const serverAdapter = new ExpressAdapter();
-  serverAdapter.setBasePath('/ui');
-  createBullBoard({
-    queues: [
-      new BullMQAdapter(aiQueue),
-      new BullMQAdapter(mindmapsQueue),
-      new BullMQAdapter(notifQueue),
-      new BullMQAdapter(essayQueue),
-      new BullMQAdapter(liveSupportQueue)
-    ],
-    serverAdapter: serverAdapter,
-  });
-
-  app.use('/ui', requireWorkerAdminToken, serverAdapter.getRouter());
-  app.listen(3001, () => {
-    console.log('[Worker] Bull Board Dashboard running on http://localhost:3001/ui');
-  });
-
-  async function handleStreamMessage(
-    messageStreamId: string,
-    fields: string[]
-  ) {
-      const obj: any = {};
-      for (let i = 0; i < fields.length; i += 2) {
-          const key = fields[i];
-          if (key !== undefined) {
-              obj[key] = fields[i + 1];
-          }
-      }
-
-      const { jobType, jobId, payload } = obj;
-      if (!jobType || !payload) {
-          console.warn(`[Worker] Invalid stream message: ${messageStreamId}`);
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-          return;
-      }
-
-      let parsedPayload: any;
-      try {
-          parsedPayload = JSON.parse(payload);
-      } catch (err) {
-          console.error(`[Worker] Failed to parse payload for message ${messageStreamId}`, err);
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-          return;
-      }
-
-      let targetQueue: Queue;
-      let bullmqJobName: string;
-      let targetJobId: string;
-
-      if (jobType === 'video analysis') {
-          targetQueue = aiQueue;
-          bullmqJobName = 'analyze';
-          targetJobId = jobId;
-      } else if (jobType === 'mind maps') {
-          targetQueue = mindmapsQueue;
-          bullmqJobName = 'generate';
-          const chapId = parsedPayload.chapterId || parsedPayload.ChapterId;
-          const vidId = parsedPayload.lessonVideoId || parsedPayload.LessonVideoId;
-          targetJobId = chapId ? `${vidId}_mindmap_${chapId}` : `${vidId}_mindmaps`;
-      } else if (jobType === 'essay') {
-          targetQueue = essayQueue;
-          bullmqJobName = 'evaluate';
-          targetJobId = jobId;
-      } else if (jobType === 'notification') {
-          targetQueue = notifQueue;
-          if (parsedPayload.WarningId) {
-              bullmqJobName = 'send-warning';
-          } else if (parsedPayload.ParentPush) {
-              bullmqJobName = 'parent-push';
-          } else {
-              bullmqJobName = 'chat-mention';
-          }
-          targetJobId = jobId;
-      } else if (jobType === 'live support turn') {
-          targetQueue = liveSupportQueue;
-          bullmqJobName = 'respond';
-          targetJobId = jobId;
-      } else {
-          console.warn(`[Worker] Unknown jobType: ${jobType}`);
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-          return;
-      }
-
-      // Ensure BullMQ Job IDs never contain colons to avoid namespace/key errors
-      targetJobId = targetJobId.replace(/:/g, '-');
-
-      logQueueEvent('job-stream', `Ingesting ${jobType} job to BullMQ`, { jobId: targetJobId });
-
-      // Remove any existing job with the same ID to allow re-running/retrying the job cleanly
-      try {
-          const existingJob = await targetQueue.getJob(targetJobId);
-          if (existingJob) {
-              await existingJob.remove();
-          }
-      } catch (err: any) {
-          console.warn(`[Worker] Failed to remove existing job ${targetJobId}:`, err.message);
-      }
-
-      // Clear any cancellation marker in Redis
-      try {
-          await clearJobCancellation(targetJobId);
-      } catch (err: any) {
-          console.warn(`[Worker] Failed to clear cancellation for job ${targetJobId}:`, err.message);
-      }
-
-      try {
-          const isLiveSupportTurn = jobType === 'live support turn';
-          await targetQueue.add(bullmqJobName, parsedPayload, {
-              jobId: targetJobId,
-              ...JOB_RETENTION_OPTIONS,
-              attempts: isLiveSupportTurn ? 4 : 5,
-              backoff: {
-                  type: 'exponential',
-                  delay: isLiveSupportTurn ? 2000 : 5000
-              }
-          });
-
-          await redis.xack('job-stream', 'worker-group', messageStreamId);
-          await redis.xdel('job-stream', messageStreamId);
-      } catch (err: any) {
-          console.error(`[Worker] Failed to enqueue job ${targetJobId} into BullMQ: ${err.message}`);
-      }
+  if (isWorkerAdminEnabled()) {
+    const serverAdapter = new ExpressAdapter();
+    serverAdapter.setBasePath('/ui');
+    createBullBoard({
+      queues: [
+        new BullMQAdapter(aiQueue),
+        new BullMQAdapter(mindmapsQueue),
+        new BullMQAdapter(notifQueue),
+        new BullMQAdapter(essayQueue),
+        new BullMQAdapter(liveSupportQueue)
+      ],
+      serverAdapter: serverAdapter,
+    });
+    app.use('/ui', workerAdminGuard, serverAdapter.getRouter());
   }
+
+  app.listen(3001, () => {
+    logInfo('worker', isWorkerAdminEnabled() ? 'Worker HTTP server running with admin UI enabled.' : 'Worker HTTP server running with admin UI disabled.', { port: 3001 });
+  });
 
   (async () => {
       const consumerName = `worker-consumer-${crypto.randomUUID().substring(0, 8)}`;
@@ -550,6 +463,7 @@ async function startWorker() {
 
       while (true) {
           try {
+              await claimStaleStreamMessages(redis, queues, consumerName);
               const pendingData = (await redis.xreadgroup(
                   'GROUP', 'worker-group', consumerName,
                   'COUNT', '10',
@@ -562,7 +476,7 @@ async function startWorker() {
                   if (messages && messages.length > 0) {
                       console.log(`[Worker] Processing ${messages.length} pending messages from backlog...`);
                       for (const [messageStreamId, fields] of messages) {
-                          await handleStreamMessage(messageStreamId, fields);
+                          await ingestStreamJob(redis, queues, messageStreamId, fields);
                       }
                       continue;
                   }
@@ -580,7 +494,7 @@ async function startWorker() {
                   const [_, messages] = newData[0];
                   if (messages && messages.length > 0) {
                       for (const [messageStreamId, fields] of messages) {
-                          await handleStreamMessage(messageStreamId, fields);
+                          await ingestStreamJob(redis, queues, messageStreamId, fields);
                       }
                   }
               }

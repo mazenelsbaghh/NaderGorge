@@ -68,7 +68,7 @@ export function StudentThemeSettingsPanel({
           {/* Avatar Selection Section */}
           <section className="space-y-3">
             <h3 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
-              شخصيتك الكارتونية (علماء ومفكرون)
+              شخصيتك الكارتونية (كورة وعلوم وفن)
             </h3>
             <div className="grid grid-cols-3 gap-3">
               {AVATAR_LIST.map((avatar) => {
@@ -186,7 +186,7 @@ function PaletteSection({
             >
               <div className="flex items-center gap-4">
                 <div
-                  className="h-12 w-12 rounded-[18px] border border-white/10 shadow-inner"
+                  className="h-12 w-12 rounded-[18px] border border-[var(--admin-border)] shadow-inner"
                   style={{
                     background: `linear-gradient(135deg, ${palette.previewAccent}, ${palette.tokens['--admin-primary-strong'] ?? palette.previewAccent})`,
                   }}

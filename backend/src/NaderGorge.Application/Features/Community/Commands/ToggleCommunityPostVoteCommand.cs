@@ -19,10 +19,12 @@ public record ToggleCommunityPostVoteCommand(Guid PostId, Guid OptionId, Guid Us
 public class ToggleCommunityPostVoteCommandHandler : IRequestHandler<ToggleCommunityPostVoteCommand, ApiResponse<ToggleCommunityPostVoteResponse>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public ToggleCommunityPostVoteCommandHandler(IAppDbContext db)
+    public ToggleCommunityPostVoteCommandHandler(IAppDbContext db, IAcademicScopeService? academicScope = null)
     {
         _db = db;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<ToggleCommunityPostVoteResponse>> Handle(ToggleCommunityPostVoteCommand request, CancellationToken ct)
@@ -33,6 +35,17 @@ public class ToggleCommunityPostVoteCommandHandler : IRequestHandler<ToggleCommu
 
         if (post == null || post.Status != CommunityPostStatus.Approved)
             return ApiResponse<ToggleCommunityPostVoteResponse>.Fail("Poll not found", new List<string> { "NOT_FOUND" });
+
+        if (_academicScope != null && !await _academicScope.IsOwnerEligibleForStudentAsync(
+                StudentFacingScopeOwnerType.CommunityPost,
+                request.PostId,
+                request.UserId,
+                ct))
+        {
+            return ApiResponse<ToggleCommunityPostVoteResponse>.Fail(
+                "This poll is not available for your academic scope.",
+                new List<string> { "ACADEMIC_SCOPE_DENIED" });
+        }
 
         if (!post.IsPoll)
             return ApiResponse<ToggleCommunityPostVoteResponse>.Fail("This post is not a poll", new List<string> { "NOT_A_POLL" });

@@ -16,37 +16,13 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/live-support")]
-public sealed class LiveSupportParticipantController(ILiveSupportService service, ILiveSupportGuestSessionService guestSessions, IMediator mediator, ILiveSupportAIVerificationService verificationService, ILiveSupportAIRegistrationService registrationService, ILiveSupportAIHandoffService handoffService) : ControllerBase
+public sealed class LiveSupportParticipantController(ILiveSupportService service, IMediator mediator, ILiveSupportAIVerificationService verificationService, ILiveSupportAIRegistrationService registrationService, ILiveSupportAIHandoffService handoffService) : ControllerBase
 {
-    private const string GuestCookie = "massar_support_guest";
     private readonly ILiveSupportService _service = service;
 
     [AllowAnonymous]
     [HttpGet("availability")]
     public async Task<IActionResult> Availability(CancellationToken ct) => Ok(ApiResponse<LiveSupportAvailabilityDto>.Ok(await _service.GetAvailabilityAsync(ct)));
-
-    [AllowAnonymous]
-    [HttpPost("guest/session")]
-    [EnableRateLimiting("live-support-public")]
-    public async Task<IActionResult> CreateGuestSession(CreateGuestSessionRequest request, CancellationToken ct)
-    {
-        try
-        {
-            var session = await guestSessions.IssueAsync(request.DisplayName, request.PhoneNumber, HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown", Request.Headers.UserAgent.ToString(), ct);
-            Response.Cookies.Append(GuestCookie, session.CookieToken, new CookieOptions { HttpOnly = true, Secure = !HttpContext.Request.Host.Host.Contains("localhost", StringComparison.OrdinalIgnoreCase), SameSite = SameSiteMode.Lax, Expires = session.ExpiresAt, IsEssential = true, Path = "/" });
-            return StatusCode(StatusCodes.Status201Created, ApiResponse<object>.Ok(new { session.Id, session.DisplayName, session.ExpiresAt }));
-        }
-        catch (LiveSupportException ex) { return Error(ex); }
-    }
-
-    [AllowAnonymous]
-    [HttpDelete("guest/session")]
-    public async Task<IActionResult> RevokeGuestSession(CancellationToken ct)
-    {
-        await guestSessions.RevokeAsync(Request.Cookies[GuestCookie], ct);
-        Response.Cookies.Delete(GuestCookie, new CookieOptions { Path = "/" });
-        return NoContent();
-    }
 
     [AllowAnonymous]
     [HttpGet("participant/conversations")]
@@ -91,7 +67,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
     [HttpPost("participant/conversations/{conversationId:guid}/attachments")]
     [RequestSizeLimit(10 * 1024 * 1024)]
     [EnableRateLimiting("live-support-public")]
-    public async Task<IActionResult> Upload(Guid conversationId, IFormFile file, CancellationToken ct)
+    public async Task<IActionResult> Upload(Guid conversationId, [FromForm] IFormFile file, CancellationToken ct)
     {
         var participant = await ResolveParticipantAsync(ct);
         if (participant is null) return Unauthorized();
@@ -112,7 +88,8 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         try
         {
             var item = await _service.OpenParticipantAttachmentAsync(participant, conversationId, attachmentId, ct);
-            return File(item.Content, item.ContentType, item.FileName, enableRangeProcessing: true);
+            Response.Headers.ContentDisposition = $"attachment; filename=\"{Uri.EscapeDataString(item.FileName)}\"";
+            return File(item.Content, item.ContentType, enableRangeProcessing: true);
         }
         catch (LiveSupportException ex) { return Error(ex); }
     }
@@ -212,6 +189,21 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         {
             await mediator.Send(new CancelLiveSupportAIDecisionCommand(participant, conversationId, decisionId, request.IdempotencyKey), ct);
             return Ok(ApiResponse<object>.Ok(new { decisionId, status = "Cancelled" }));
+        }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("participant/conversations/{conversationId:guid}/ai/handoff/request")]
+    [EnableRateLimiting("live-support-ai-confirmation")]
+    public async Task<IActionResult> RequestHumanHandoff(Guid conversationId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try
+        {
+            await handoffService.HandoffAsync(conversationId, participant, participant.StudentUserId, "PARTICIPANT_REQUEST", "طلب المستخدم التحويل لموظف دعم.", true, $"participant-request:{conversationId:N}", ct);
+            return Ok(ApiResponse<object>.Ok(new { success = true, message = "Conversation queued for human support." }));
         }
         catch (LiveSupportException ex) { return Error(ex); }
     }
@@ -371,12 +363,12 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
-    private async Task<LiveSupportParticipantIdentity?> ResolveParticipantAsync(CancellationToken ct)
+    private Task<LiveSupportParticipantIdentity?> ResolveParticipantAsync(CancellationToken ct)
     {
         var idValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (User.Identity?.IsAuthenticated == true && User.IsInRole("Student") && Guid.TryParse(idValue, out var userId))
-            return new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, userId, null);
-        return await guestSessions.ValidateAsync(Request.Cookies[GuestCookie], ct);
+            return Task.FromResult<LiveSupportParticipantIdentity?>(new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, userId, null));
+        return Task.FromResult<LiveSupportParticipantIdentity?>(null);
     }
 
     private IActionResult Error(LiveSupportException ex)
@@ -393,7 +385,6 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
     }
 }
 
-public sealed record CreateGuestSessionRequest(string DisplayName, string PhoneNumber);
 public sealed record CreateConversationRequest(string? Subject, Guid? PreviousConversationId);
 public sealed record SendMessageRequest(string ClientMessageId, string? Content, LiveSupportMessageType Type = LiveSupportMessageType.Text, Guid? AttachmentId = null);
 public sealed record SubmitRatingRequest(int Stars, string? Comment);

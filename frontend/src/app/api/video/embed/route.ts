@@ -37,6 +37,8 @@ try {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'SAMEORIGIN',
       'Content-Security-Policy': "frame-ancestors 'self'",
+      // YouTube requires an HTTP Referer (or equivalent client identity) for embeds.
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
     },
   });
 }
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest) {
     const host = request.headers.get('host');
 
     if (dest === 'document' && !referer) {
-      return iframeError('Embed must be loaded within Massar Platform', 403);
+      return iframeError('Embed must be loaded within Massar Academy', 403);
     }
 
     if (referer && host && !referer.includes(host)) {
@@ -109,24 +111,13 @@ export async function GET(request: NextRequest) {
     const parsed = JSON.parse(decrypted) as { Provider: string; VideoId: string; StudentName?: string; StudentPhone?: string };
     const videoId = parsed.VideoId;
     const provider = parsed.Provider?.toLowerCase() || 'youtube';
-    const studentName = parsed.StudentName || 'Massar Platform';
+    const studentName = parsed.StudentName || 'Massar Academy';
     const studentPhone = parsed.StudentPhone || '';
 
-    let html = '';
-    if (provider === 'vk') {
-      // T004 & T021: Parse ProviderVideoId
-      const match = videoId.match(/oid=([^&]+)&id=([^&]+)/);
-      if (!match) {
-        return iframeError('Invalid VK video identifier format. Expected: oid=-XXXXX&id=XXXXX', 400);
-      }
-      const oid = match[1];
-      const id = match[2];
-      html = generateVkEmbedHtml(oid, id, studentName, studentPhone);
-    } else if (provider === 'bunny') {
-      html = generateBunnyEmbedHtml(videoId, studentName, studentPhone);
-    } else {
-      html = generateYouTubeEmbedHtml(videoId, studentName, studentPhone);
+    if (provider === 'vk' && !videoId.match(/oid=([^&]+)&id=([^&]+)/)) {
+      return iframeError('Invalid VK video identifier format. Expected: oid=-XXXXX&id=XXXXX', 400);
     }
+    const html = generateVideoEmbedHtml(provider, videoId, studentName, studentPhone);
 
     return new NextResponse(html, {
       status: 200,
@@ -136,12 +127,27 @@ export async function GET(request: NextRequest) {
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'SAMEORIGIN',
         'Content-Security-Policy': "frame-ancestors 'self'",
+        // Preserve the application origin for the nested YouTube iframe.
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
       },
     });
   } catch (error) {
     console.error('[video-embed] Decryption failed:', error);
     return iframeError('Session expired or invalid', 403);
   }
+}
+
+/** Shared by secured lesson sessions and public teacher-introduction videos. */
+export function generateVideoEmbedHtml(provider: string, videoId: string, studentName = 'Massar Academy', studentPhone = ''): string {
+  const normalizedProvider = provider.toLowerCase();
+  if (normalizedProvider === 'vk') {
+    const match = videoId.match(/oid=([^&]+)&id=([^&]+)/);
+    return match ? generateVkEmbedHtml(match[1], match[2], studentName, studentPhone) : '';
+  }
+  if (normalizedProvider === 'bunny') {
+    return generateBunnyEmbedHtml(videoId, studentName, studentPhone);
+  }
+  return generateYouTubeEmbedHtml(videoId, studentName, studentPhone);
 }
 
 function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPhone: string): string {
@@ -151,7 +157,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
   }
 
   const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=true`);
-  const watermarkBrand = escapeHtml('Massar Platform');
+  const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
 
@@ -160,6 +166,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Player</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -340,7 +347,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
       var x = 10 + Math.random() * 70;
       var y = 10 + Math.random() * 70;
       watermark.style.transform = 'translate3d(' + x + 'vw,' + y + 'vh,0)';
-    }, 12000);
+    }, 120000);
   </script>
 </body>
 </html>`;
@@ -361,7 +368,7 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
   // ── Server-side: XOR-encode the video ID so it never appears as plain text ──
   const xorKey = Math.floor(Math.random() * 200) + 50;
   const encodedId = Array.from(videoId).map(c => c.charCodeAt(0) ^ xorKey);
-  const watermarkBrand = JSON.stringify('Massar Platform');
+  const watermarkBrand = JSON.stringify('Massar Academy');
   const watermarkStudentName = JSON.stringify(studentName);
   const watermarkStudentPhone = JSON.stringify(studentPhone);
 
@@ -370,6 +377,7 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>Player</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -438,7 +446,7 @@ setInterval(function() {
   var topPos = Math.random() * 80 + 10;
   var leftPos = Math.random() * 80 + 10;
   watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
-}, 12000);
+}, 120000);
 
 wrap.appendChild(ytDiv);
 wrap.appendChild(watermark);
@@ -534,6 +542,9 @@ function onYouTubeIframeAPIReady() {
     videoId: _vid,  // use decoded variable, not plain string
     playerVars: {
       autoplay: 1, controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3, playsinline: 1,
+      // Explicit client identity is required by YouTube when an embed is nested in our secure player.
+      origin: window.location.origin,
+      widget_referrer: window.location.origin,
       start: (typeof window._lastVideoTime !== 'undefined' && window._lastVideoTime > 0) ? Math.floor(window._lastVideoTime) : 0
     },
     events: {
@@ -629,7 +640,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
   const vkUrl = `https://vk.com/video_ext.php?oid=${oid}&id=${videoId}&hd=2&js_api=1`;
   const xorKey = Math.floor(Math.random() * 200) + 50; // random key 50-249
   const encoded = Array.from(vkUrl).map(c => c.charCodeAt(0) ^ xorKey);
-  const watermarkBrand = JSON.stringify('Massar Platform');
+  const watermarkBrand = JSON.stringify('Massar Academy');
   const watermarkStudentName = JSON.stringify(studentName);
   const watermarkStudentPhone = JSON.stringify(studentPhone);
 
@@ -786,7 +797,7 @@ function generateVkEmbedHtml(oid: string, videoId: string, studentName: string, 
       var topPos = Math.random() * 80 + 10;
       var leftPos = Math.random() * 80 + 10;
       watermark.style.transform = 'translate3d(' + leftPos + 'vw, ' + topPos + 'vh, 0)';
-    }, 12000);
+    }, 120000);
 
     function postToParent(type, data) {
       try { window.parent.postMessage({ source: 'video-embed', type: type, data: data }, window.location.origin); } catch (e) { }

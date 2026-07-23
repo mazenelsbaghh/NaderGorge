@@ -61,14 +61,14 @@ export function CommunityPostPoll({ postId, options, initialUserVoteOptionId, to
             className={`relative flex w-full flex-col justify-center overflow-hidden rounded-lg border p-3 text-right transition-all
               ${
                 isSelected
-                  ? 'border-[#0866ff] bg-[#0866ff]/5'
+                  ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)]'
                   : 'border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)]'
               }`}
           >
             {/* Progress Bar Background */}
             <div
               className={`absolute bottom-0 left-0 top-0 opacity-20 transition-all duration-500 ease-out ${
-                isSelected ? 'bg-[#0866ff]' : 'bg-gray-300 dark:bg-gray-600'
+                isSelected ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-muted)]'
               }`}
               style={{ width: `${percentage}%` }}
             />
@@ -76,21 +76,21 @@ export function CommunityPostPoll({ postId, options, initialUserVoteOptionId, to
             <div className="relative z-10 flex w-full items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 {isSelected ? (
-                  <CheckCircle2 className="h-4 w-4 text-[#0866ff]" />
+                  <CheckCircle2 className="h-4 w-4 text-[var(--admin-primary)]" />
                 ) : (
-                  <div className="h-4 w-4 rounded-full border border-gray-400 dark:border-gray-500" />
+                  <div className="h-4 w-4 rounded-full border border-[var(--admin-muted)]" />
                 )}
-                <span className={`text-[15px] font-bold ${isSelected ? 'text-[#0866ff]' : 'text-[var(--admin-text)]'}`}>
+                <span className={`text-[15px] font-bold ${isSelected ? 'text-[var(--admin-primary)]' : 'text-[var(--admin-text)]'}`}>
                   {option.text}
                 </span>
               </div>
-              <span className="text-sm font-bold text-gray-500 dark:text-gray-400">
+              <span className="text-sm font-bold text-[var(--admin-muted)]">
                 {percentage}%
               </span>
             </div>
             
             {userVoteId !== null && (
-              <div className="relative z-10 mt-1 flex px-6 text-[12px] text-gray-500 dark:text-gray-400">
+              <div className="relative z-10 mt-1 flex px-6 text-[12px] text-[var(--admin-muted)]">
                 {option.voteCount} صوت
               </div>
             )}
@@ -98,7 +98,7 @@ export function CommunityPostPoll({ postId, options, initialUserVoteOptionId, to
         );
       })}
 
-      <div className="pt-2 text-[13px] text-gray-500 dark:text-[var(--admin-muted)] text-right">
+      <div className="pt-2 text-right text-[13px] text-[var(--admin-muted)]">
         إجمالي الأصوات: {displayTotal}
       </div>
     </div>

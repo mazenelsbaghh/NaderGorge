@@ -22,6 +22,7 @@ import {
   Camera,
   Loader2,
   Image as ImageIcon,
+  Pencil,
 } from 'lucide-react';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -64,6 +65,8 @@ export interface ContentHierarchyPanelProps {
   hasImage?: boolean;
   /** Called with { title, order, price, summary, imageFile } to create a new child */
   onCreate: (data: { title: string; order: number; price: number; summary?: string; imageFile?: File | null }) => Promise<void>;
+  /** Optional inline update for existing rows */
+  onUpdate?: (id: string, data: { title: string; order: number; price: number; summary?: string }) => Promise<void>;
   /** Optional callback to upload an image for an existing item */
   onImageUpload?: (id: string, file: File) => Promise<void>;
   /** Called when deleting an item */
@@ -104,6 +107,7 @@ export function ContentHierarchyPanel({
   hasSummary = false,
   hasImage = false,
   onCreate,
+  onUpdate,
   onImageUpload,
   onDelete,
   deleteConfirmText,
@@ -118,6 +122,12 @@ export function ContentHierarchyPanel({
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [rowUploadingId, setRowUploadingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editingItem, setEditingItem] = useState<HierarchyItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editSummary, setEditSummary] = useState('');
+  const [editOrder, setEditOrder] = useState(1);
+  const [editPrice, setEditPrice] = useState(0);
+  const [updating, setUpdating] = useState(false);
   const [confirmTarget, setConfirmTarget] = useState<HierarchyItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +179,39 @@ export function ContentHierarchyPanel({
       setIsAdding(false);
     } finally {
       setSaving(false);
+    }
+  }
+
+  function startEditing(item: HierarchyItem) {
+    setEditingItem(item);
+    setEditTitle(item.title);
+    setEditSummary(item.subtitle ?? '');
+    setEditOrder(item.order);
+    setEditPrice(item.price ?? 0);
+  }
+
+  function cancelEditing() {
+    setEditingItem(null);
+    setEditTitle('');
+    setEditSummary('');
+    setEditOrder(1);
+    setEditPrice(0);
+  }
+
+  async function handleUpdate() {
+    if (!editingItem || !onUpdate || !editTitle.trim()) return;
+    if (hasSummary && !editSummary.trim()) return;
+    try {
+      setUpdating(true);
+      await onUpdate(editingItem.id, {
+        title: editTitle.trim(),
+        order: editOrder,
+        price: editPrice,
+        summary: editSummary.trim() || undefined,
+      });
+      cancelEditing();
+    } finally {
+      setUpdating(false);
     }
   }
 
@@ -266,6 +309,87 @@ export function ContentHierarchyPanel({
         {/* Item list */}
         {items.map((item) => {
           const isDeleting = deletingId === item.id;
+          const isEditing = editingItem?.id === item.id;
+
+          if (isEditing) {
+            return (
+              <div key={item.id} className="rounded-2xl border-2 border-[var(--admin-primary)] bg-[var(--admin-primary-15)]/25 p-4">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_112px_128px_auto] lg:items-end">
+                  <label className="space-y-1.5">
+                    <span className="text-xs font-bold text-[var(--admin-muted)]">الاسم</span>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="admin-input"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !hasSummary) {
+                          e.preventDefault();
+                          void handleUpdate();
+                        }
+                        if (e.key === 'Escape') cancelEditing();
+                      }}
+                    />
+                  </label>
+
+                  <NumberField value={editOrder} onChange={setEditOrder} minValue={1}>
+                    <NumberField.Label className="mb-1.5 block text-xs font-bold text-[var(--admin-muted)]">الترتيب</NumberField.Label>
+                    <NumberField.Group className="h-11">
+                      <NumberField.DecrementButton />
+                      <NumberField.Input />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                  </NumberField>
+
+                  <NumberField value={editPrice} onChange={setEditPrice} minValue={0}>
+                    <NumberField.Label className="mb-1.5 block text-xs font-bold text-[var(--admin-muted)]">السعر (ج)</NumberField.Label>
+                    <NumberField.Group className="h-11">
+                      <NumberField.DecrementButton />
+                      <NumberField.Input />
+                      <NumberField.IncrementButton />
+                    </NumberField.Group>
+                  </NumberField>
+
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelEditing}
+                      disabled={updating}
+                      className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-[var(--admin-border)] px-4 text-sm font-bold text-[var(--admin-muted)] transition hover:bg-[var(--admin-card-strong)] disabled:opacity-50"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      إلغاء
+                    </button>
+                    <NeumorphButton
+                      onClick={() => void handleUpdate()}
+                      disabled={updating || !editTitle.trim() || (hasSummary && !editSummary.trim())}
+                      loading={updating}
+                      intent="primary"
+                      size="md"
+                      pill
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      حفظ
+                    </NeumorphButton>
+                  </div>
+                </div>
+
+                {hasSummary && (
+                  <label className="mt-3 block space-y-1.5">
+                    <span className="text-xs font-bold text-[var(--admin-muted)]">نبذة الحصة</span>
+                    <textarea
+                      value={editSummary}
+                      onChange={(e) => setEditSummary(e.target.value)}
+                      rows={2}
+                      className="admin-input resize-none"
+                    />
+                  </label>
+                )}
+              </div>
+            );
+          }
+
           const Row = (
             <div
               key={item.id}
@@ -355,6 +479,23 @@ export function ContentHierarchyPanel({
               {/* Actions */}
               {item.href && (
                 <ChevronLeft className="h-4 w-4 text-[var(--admin-muted)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              )}
+
+              {onUpdate && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startEditing(item);
+                  }}
+                  disabled={isDeleting}
+                  className="shrink-0 rounded-xl p-2 text-[var(--admin-muted)] opacity-0 transition-all hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] group-hover:opacity-100 disabled:opacity-40"
+                  title="تعديل"
+                  aria-label={`تعديل ${item.title}`}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
               )}
 
               {onDelete && (

@@ -7,6 +7,7 @@ import { RefreshCw, Search, Clock, AlertTriangle } from 'lucide-react';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import TaskDetailsModal from '@/components/assistant/TaskDetailsModal';
 import toast from 'react-hot-toast';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 export function AssistantOperationsTaskBoard() {
   const { user } = useAuthStore();
@@ -52,6 +53,15 @@ export function AssistantOperationsTaskBoard() {
 
   useEffect(() => {
     fetchTasks();
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    const cleanupTasksCache = registerCacheStore('operations:tasks', () => {}, () => void fetchTasks());
+    const cleanupDashboardCache = registerCacheStore('operations:dashboard', () => {}, () => void fetchTasks());
+    return () => {
+      cleanupTasksCache();
+      cleanupDashboardCache();
+    };
   }, [fetchTasks]);
 
   const getPriorityBadge = (priority: number | string) => {
@@ -110,23 +120,25 @@ export function AssistantOperationsTaskBoard() {
   return (
     <div className="space-y-6 text-right" dir="rtl">
       {/* Top Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-[var(--admin-card-soft)] p-4 rounded-3xl border border-[var(--admin-border)]">
-        <div className="flex flex-1 w-full min-w-[280px] items-center gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-[var(--admin-card-soft)] p-4 rounded-3xl border border-[var(--admin-border)]">
+        <label className="flex min-w-0 w-full flex-1 items-center gap-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2">
           <Search className="h-4 w-4 text-[var(--admin-muted)]" />
+          <span className="sr-only">البحث في المهام التشغيلية</span>
           <input
             type="text"
             placeholder="ابحث في مهامك التشغيلية..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none text-right"
+            aria-label="البحث في المهام التشغيلية"
+            className="min-w-0 w-full bg-transparent text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none text-right"
           />
-        </div>
+        </label>
         <NeumorphButton
           intent="primary"
           size="md"
           onClick={fetchTasks}
           disabled={loading}
-          className="flex items-center gap-1.5 w-full sm:w-auto"
+          className="flex w-full shrink-0 items-center gap-1.5 sm:w-auto"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           تحديث المهام
@@ -149,10 +161,12 @@ export function AssistantOperationsTaskBoard() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTasks.map((task) => (
-            <div
+            <button
+              type="button"
               key={task.id}
               onClick={() => setSelectedTaskId(task.id)}
-              className="group cursor-pointer flex flex-col rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 shadow-sm hover:shadow-[0_12px_28px_var(--admin-shadow)] transition-all duration-200"
+              className="group flex w-full flex-col rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-all duration-200 hover:shadow-[0_12px_28px_var(--admin-shadow)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2"
+              aria-label={`فتح تفاصيل المهمة: ${task.title}`}
             >
               <div className="flex justify-between items-center mb-3">
                 {getPriorityBadge(task.priority)}
@@ -176,7 +190,7 @@ export function AssistantOperationsTaskBoard() {
                 {getStatusBadge(task.status)}
                 <span className="text-xs text-[var(--admin-muted)]">تعيين بواسطة: {task.createdByName}</span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

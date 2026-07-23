@@ -58,7 +58,8 @@ public sealed record LiveSupportStaffBootstrapDto(
     int ActiveLoad,
     int Capacity,
     int WaitingCount,
-    IReadOnlyList<LiveSupportConversationDto> Conversations);
+    IReadOnlyList<LiveSupportConversationDto> Conversations,
+    IReadOnlyList<LiveSupportCannedReplyDto> CannedReplies);
 
 public sealed record LiveSupportSendResultDto(LiveSupportMessageDto Message, bool Replayed);
 public sealed record LiveSupportMessagePageDto(IReadOnlyList<LiveSupportMessageDto> Items, string? NextCursor, long LastEventSequence, IReadOnlyList<LiveSupportTimelineItemDto> MissedEvents);
@@ -77,7 +78,8 @@ public sealed record LiveSupportStaffConfigDto(
     long Version,
     IReadOnlyList<LiveSupportScheduleWindowDto> Schedule);
 
-public sealed record LiveSupportAdminConfigDto(bool FeatureEnabled, IReadOnlyList<LiveSupportStaffConfigDto> Staff);
+public sealed record LiveSupportCannedReplyDto(string Id, string Title, string Content, bool SendImmediately);
+public sealed record LiveSupportAdminConfigDto(bool FeatureEnabled, IReadOnlyList<LiveSupportStaffConfigDto> Staff, IReadOnlyList<LiveSupportCannedReplyDto> CannedReplies);
 
 public sealed record LiveSupportStudentSearchDto(Guid UserId, string FullName, string MaskedPhone, string? StudentCode);
 public sealed record LiveSupportDeviceDto(Guid Id, string? Name, string? Type, string? Os, string? Browser, DateTime LastUsedAt, bool IsActive);

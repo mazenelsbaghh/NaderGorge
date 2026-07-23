@@ -1,25 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Smartphone, 
-  Activity, 
-  TrendingUp, 
-  Copy, 
+import {
+  Plus,
+  Smartphone,
+  Activity,
+  TrendingUp,
+  Copy,
   FileText,
-  RefreshCw, 
-  Edit2, 
+  RefreshCw,
+  Edit2,
   Wifi,
   WifiOff
 } from 'lucide-react';
 import Link from 'next/link';
-import { 
-  AdminShellChrome, 
-  AdminDataTable, 
+import {
+  AdminShellChrome,
+  AdminDataTable,
   AdminColumn,
   AdminStatCard,
-  AdminModal
+  AdminModal,
+  AdminConfirmationDialog
 } from '@/components/admin';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -43,6 +44,7 @@ export default function AdminWalletsPageClient() {
   // Modals state
   const [activeModal, setActiveModal] = useState<'add' | 'edit' | null>(null);
   const [selectedWallet, setSelectedWallet] = useState<WalletDto | null>(null);
+  const [walletPendingTokenReset, setWalletPendingTokenReset] = useState<WalletDto | null>(null);
 
   // Form states
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -82,7 +84,7 @@ export default function AdminWalletsPageClient() {
     try {
       const newStatus = !currentStatus;
       await walletService.toggleWallet(walletId, newStatus);
-      setWallets(prev => 
+      setWallets(prev =>
         prev.map(w => w.id === walletId ? { ...w, isActive: newStatus } : w)
       );
       toast.success(newStatus ? 'تم تفعيل المحفظة بنجاح.' : 'تم إيقاف تفعيل المحفظة.');
@@ -95,14 +97,11 @@ export default function AdminWalletsPageClient() {
   };
 
   const handleRegenerateToken = async (walletId: string) => {
-    if (!confirm('هل أنت متأكد من إعادة توليد كود الربط؟ سيؤدي هذا إلى فصل التطبيق الحالي المرتبط بهذه المحفظة.')) {
-      return;
-    }
     setActionLoading(walletId);
     try {
       const response = await walletService.regenerateToken(walletId);
       if (response.success) {
-        setWallets(prev => 
+        setWallets(prev =>
           prev.map(w => w.id === walletId ? { ...w, pairingToken: response.data, deviceStatus: 'Disconnected' } : w)
         );
         toast.success('تم إعادة توليد كود الربط بنجاح.');
@@ -247,8 +246,8 @@ export default function AdminWalletsPageClient() {
         return (
           <div className="flex flex-col items-start gap-1">
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
-              isConnected 
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500' 
+              isConnected
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500'
                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-500'
             }`}>
               {isConnected ? (
@@ -283,7 +282,7 @@ export default function AdminWalletsPageClient() {
               <span className="text-[var(--admin-muted)] font-mono">/ {w.dailyLimit} ج.م</span>
             </div>
             <div className="h-2 w-full rounded-full bg-[var(--admin-card-strong)] overflow-hidden">
-              <div 
+              <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   isNearLimit ? 'bg-rose-500' : 'bg-[var(--admin-primary)]'
                 }`}
@@ -307,7 +306,7 @@ export default function AdminWalletsPageClient() {
               <span className="text-[var(--admin-muted)] font-mono">/ {w.monthlyLimit} ج.م</span>
             </div>
             <div className="h-2 w-full rounded-full bg-[var(--admin-card-strong)] overflow-hidden">
-              <div 
+              <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   isNearLimit ? 'bg-rose-500' : 'bg-[var(--admin-primary)]'
                 }`}
@@ -335,7 +334,7 @@ export default function AdminWalletsPageClient() {
           <code className="bg-[var(--admin-card-strong)] border border-[var(--admin-border)] px-2.5 py-1 rounded-lg text-xs font-mono font-bold text-[var(--admin-primary)] tracking-wider">
             {w.pairingToken}
           </code>
-          <button 
+          <button
             type="button"
             onClick={() => copyToClipboard(w.pairingToken)}
             title="نسخ الكود"
@@ -343,9 +342,9 @@ export default function AdminWalletsPageClient() {
           >
             <Copy className="h-3.5 w-3.5" />
           </button>
-          <button 
+          <button
             type="button"
-            onClick={() => handleRegenerateToken(w.id)}
+            onClick={() => setWalletPendingTokenReset(w)}
             disabled={actionLoading === w.id}
             title="إعادة توليد كود الربط"
             className="p-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:text-amber-500 hover:bg-[var(--admin-hover)] transition-colors disabled:opacity-50"
@@ -361,8 +360,8 @@ export default function AdminWalletsPageClient() {
       render: (w) => (
         <div className="flex items-center justify-center">
           <label className="relative inline-flex items-center cursor-pointer select-none">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               className="sr-only peer"
               checked={w.isActive}
               disabled={actionLoading === w.id}
@@ -457,7 +456,7 @@ export default function AdminWalletsPageClient() {
         {/* Table/Content */}
         <div className="admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)]">
           <h2 className="text-xl font-black text-[var(--admin-text)] mb-4">قائمة المحافظ المتصلة</h2>
-          
+
           <AdminDataTable
             data={wallets}
             columns={columns}
@@ -480,8 +479,8 @@ export default function AdminWalletsPageClient() {
         <form onSubmit={handleAddSubmit} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-[var(--admin-text)]">رقم الهاتف (الخاص بالمحفظة) *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               placeholder="مثال: 01012345678"
               value={phoneNumber}
@@ -492,8 +491,8 @@ export default function AdminWalletsPageClient() {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-[var(--admin-text)]">الاسم التعريفي للمحفظة *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               placeholder="مثال: محفظة فودافون كاش الرئيسية"
               value={label}
@@ -505,8 +504,8 @@ export default function AdminWalletsPageClient() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد اليومي (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={dailyLimit}
                 onChange={(e) => setDailyLimit(Number(e.target.value))}
@@ -515,8 +514,8 @@ export default function AdminWalletsPageClient() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد الشهري (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={monthlyLimit}
                 onChange={(e) => setMonthlyLimit(Number(e.target.value))}
@@ -556,16 +555,16 @@ export default function AdminWalletsPageClient() {
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-3">
-            <NeumorphButton 
-              type="button" 
+            <NeumorphButton
+              type="button"
               intent="ghost"
               onClick={() => setActiveModal(null)}
               disabled={loading}
             >
               إلغاء
             </NeumorphButton>
-            <NeumorphButton 
-              type="submit" 
+            <NeumorphButton
+              type="submit"
               intent="primary"
               loading={loading}
             >
@@ -585,8 +584,8 @@ export default function AdminWalletsPageClient() {
         <form onSubmit={handleEditSubmit} className="mt-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-[var(--admin-text)]">الاسم التعريفي للمحفظة *</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               required
               placeholder="مثال: محفظة فودافون كاش الرئيسية"
               value={label}
@@ -598,8 +597,8 @@ export default function AdminWalletsPageClient() {
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد اليومي (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={dailyLimit}
                 onChange={(e) => setDailyLimit(Number(e.target.value))}
@@ -608,8 +607,8 @@ export default function AdminWalletsPageClient() {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-bold text-[var(--admin-text)]">الحد الشهري (ج.م)</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 min="0"
                 value={monthlyLimit}
                 onChange={(e) => setMonthlyLimit(Number(e.target.value))}
@@ -649,16 +648,16 @@ export default function AdminWalletsPageClient() {
           </div>
 
           <div className="mt-6 flex items-center justify-end gap-3">
-            <NeumorphButton 
-              type="button" 
+            <NeumorphButton
+              type="button"
               intent="ghost"
               onClick={() => setActiveModal(null)}
               disabled={loading}
             >
               إلغاء
             </NeumorphButton>
-            <NeumorphButton 
-              type="submit" 
+            <NeumorphButton
+              type="submit"
               intent="primary"
               loading={loading}
             >
@@ -667,6 +666,20 @@ export default function AdminWalletsPageClient() {
           </div>
         </form>
       </AdminModal>
+      <AdminConfirmationDialog
+        open={walletPendingTokenReset !== null}
+        onClose={() => setWalletPendingTokenReset(null)}
+        onConfirm={async () => {
+          if (!walletPendingTokenReset) return;
+          await handleRegenerateToken(walletPendingTokenReset.id);
+          setWalletPendingTokenReset(null);
+        }}
+        title="إعادة توليد كود الربط"
+        consequence={`سيتم فصل التطبيق المتصل بمحفظة «${walletPendingTokenReset?.label ?? ''}» فورًا، ولن يعمل مرة أخرى قبل إدخال الكود الجديد.`}
+        confirmLabel="إعادة توليد الكود وفصل الجهاز"
+        variant="danger"
+        isConfirming={actionLoading === walletPendingTokenReset?.id}
+      />
     </AdminShellChrome>
   );
 }

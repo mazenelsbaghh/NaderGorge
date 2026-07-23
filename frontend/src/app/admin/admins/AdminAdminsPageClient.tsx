@@ -31,9 +31,11 @@ import {
   getInitials,
 } from '@/components/admin/admin-utils';
 import { AdminUserListDto, adminService } from '@/services/admin-service';
+import { translateRole } from '@/packages/brand';
 import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { useDisableEmployee } from '@/features/employee';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -65,6 +67,7 @@ export default function AdminAdminsPageClient() {
   const [exporting, setExporting] = useState(false);
 
   const currentUser = useAuthStore((state) => state.user);
+  const disableEmployee = useDisableEmployee();
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -97,7 +100,7 @@ export default function AdminAdminsPageClient() {
 
     const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
     try {
-      await adminService.updateUserStatus(user.id, nextStatus);
+      await disableEmployee.mutateAsync({ userId: user.id, status: nextStatus });
       setUsers((currentUsers) =>
         currentUsers.map((entry) =>
           entry.id === user.id ? { ...entry, status: nextStatus } : entry
@@ -144,7 +147,7 @@ export default function AdminAdminsPageClient() {
         const rowData = [
           u.fullName,
           u.phoneNumber,
-          u.roles.join(' | '),
+          u.roles.map(translateRole).join(' | '),
           statusLabel(u.status),
           new Date(u.createdAt).toLocaleDateString('ar-EG'),
         ];
@@ -214,7 +217,7 @@ export default function AdminAdminsPageClient() {
       label: 'الأدوار والصلاحيات',
       render: (u) => (
         <span className="text-sm font-bold text-[var(--admin-text)]">
-          {u.roles.join(', ') || 'مدير عام'}
+          {u.roles.map(translateRole).join('، ') || 'مدير عام'}
         </span>
       ),
     },

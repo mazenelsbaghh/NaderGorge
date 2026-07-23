@@ -42,6 +42,15 @@ public class ExceptionHandlingMiddleware
             var response = ApiResponse.Fail(ex.Message);
             await context.Response.WriteAsJsonAsync(response);
         }
+        catch (ForbiddenException ex)
+        {
+            _logger.LogWarning("Forbidden access: {Message}", ex.Message);
+            context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+            context.Response.ContentType = "application/json";
+
+            var response = ApiResponse.Fail(ex.Message);
+            await context.Response.WriteAsJsonAsync(response);
+        }
         catch (KeyNotFoundException ex)
         {
             _logger.LogWarning("Not found at {Method} {Path}: {Message}", context.Request.Method, context.Request.Path, ex.Message);
@@ -77,6 +86,22 @@ public class ExceptionHandlingMiddleware
                 return;
             }
 
+            if (IsExpectedConflict(sqlState))
+            {
+                _logger.LogWarning(
+                    "Database conflict at {Method} {Path}. SqlState: {SqlState}, Constraint: {ConstraintName}",
+                    context.Request.Method,
+                    context.Request.Path,
+                    sqlState,
+                    constraintName);
+                context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+                context.Response.ContentType = "application/json";
+
+                var response = ApiResponse.Fail(GetConflictMessage(constraintName));
+                await context.Response.WriteAsJsonAsync(response);
+                return;
+            }
+
             throw;
         }
         catch (Exception ex)
@@ -91,4 +116,15 @@ public class ExceptionHandlingMiddleware
             await context.Response.WriteAsJsonAsync(response);
         }
     }
+
+    private static bool IsExpectedConflict(string? sqlState)
+    {
+        return sqlState is "23505" or "23514" or "40001";
+    }
+
+    private static string GetConflictMessage(string? constraintName) => constraintName switch
+    {
+        "IX_student_access_grants_UserId_GrantType_TermId" => "لديك صلاحية مفعلة بالفعل لنفس الترم. لا يمكن تفعيل الكود مرتين لنفس المحتوى.",
+        _ => "تعذر تنفيذ العملية لأن البيانات تغيّرت. حدّث الصفحة ثم حاول مرة أخرى."
+    };
 }

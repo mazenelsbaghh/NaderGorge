@@ -13,6 +13,8 @@ public record TeacherPayoutDto(
     string Status,
     string? RejectionReason,
     DateTime CreatedAt,
+    DateTime? ApprovedAt,
+    DateTime? PaidAt,
     DateTime? HandledAt
 );
 
@@ -46,6 +48,8 @@ public class GetTeacherPayoutsQueryHandler : IRequestHandler<GetTeacherPayoutsQu
             tp.Status.ToString(),
             tp.RejectionReason,
             tp.CreatedAt,
+            tp.ApprovedAt,
+            tp.PaidAt,
             tp.HandledAt
         )).ToList();
 

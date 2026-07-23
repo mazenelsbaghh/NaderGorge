@@ -1,6 +1,6 @@
 async function globalSetup() {
   // Call the robust .NET backend hook specifically built for destroying/seeding E2e DB connections.
-  const apiEndpoint = 'http://localhost:5245/api/e2e/seed';
+  const apiEndpoint = 'http://api.lvh.me:5245/api/e2e/seed';
 
   for (let i = 0; i < 3; i++) {
     try {
@@ -28,7 +28,7 @@ async function globalSetup() {
 
       console.log('✅ Successfully seeded NaderGorge E2E testing database.');
       return;
-    } catch (e) {
+    } catch {
       if (i === 2) {
         console.warn(
           '⚠️ WARNING: Could not reach the API E2E seeding endpoint. Tests requiring live backend will fail, but fully mocked tests will proceed.'

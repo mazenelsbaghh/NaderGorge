@@ -1,25 +1,38 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Teacher.Finance.Queries;
 
 public record GetTeacherTransactionsQuery(
     Guid TeacherUserId,
+    DateTime? Date = null,
+    DateTime? From = null,
+    DateTime? To = null,
+    string? Status = null,
     int Page = 1,
     int PageSize = 20
 ) : IRequest<ApiResponse<PagedResult<TeacherTransactionDto>>>;
 
 public record TeacherTransactionDto(
     Guid Id,
-    string PackageName,
+    DateTime OccurredAt,
+    string SourceType,
+    string ContentName,
     string StudentName,
-    long SerialNumber,
-    decimal Price,
-    decimal CommissionRate,
-    decimal CommissionEarned,
-    DateTime ActivatedAt
+    string? StudentPhone,
+    long? CodeSerialNumber,
+    decimal GrossAmount,
+    decimal DiscountAmount,
+    decimal PaidAmount,
+    decimal TeacherShareAmount,
+    decimal PlatformShareAmount,
+    string AllocationMode,
+    decimal AllocationValue,
+    string ReviewStatus,
+    string PayoutStatus
 );
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
@@ -43,29 +56,74 @@ public class GetTeacherTransactionsQueryHandler : IRequestHandler<GetTeacherTran
             return ApiResponse<PagedResult<TeacherTransactionDto>>.Fail("حساب المعلم غير موجود");
         }
 
-        var query = _db.AccessCodeActivationLogs
-            .Include(l => l.Student)
-            .Include(l => l.Package)
-            .Include(l => l.AccessCode).ThenInclude(c => c.CodeGroup)
-            .Where(l => l.TeacherId == teacherProfile.Id);
+        var query = _db.TeacherFinancialAllocations
+            .Include(a => a.TeacherFinancialEvent)
+            .Where(a => a.TeacherId == teacherProfile.Id);
+
+        if (request.Date.HasValue)
+        {
+            var (day, nextDay) = CairoTime.GetDayRangeUtc(request.Date.Value);
+            query = query.Where(a => a.TeacherFinancialEvent.OccurredAt >= day && a.TeacherFinancialEvent.OccurredAt < nextDay);
+        }
+        else
+        {
+            if (request.From.HasValue)
+            {
+                var (from, _) = CairoTime.GetDayRangeUtc(request.From.Value);
+                query = query.Where(a => a.TeacherFinancialEvent.OccurredAt >= from);
+            }
+
+            if (request.To.HasValue)
+            {
+                var (_, to) = CairoTime.GetDayRangeUtc(request.To.Value);
+                query = query.Where(a => a.TeacherFinancialEvent.OccurredAt < to);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            var hasReviewStatus = Enum.TryParse<TeacherFinancialReviewStatus>(request.Status, true, out var reviewStatus);
+            var hasPayoutStatus = Enum.TryParse<TeacherFinancialPayoutStatus>(request.Status, true, out var payoutStatus);
+
+            if (hasReviewStatus && hasPayoutStatus)
+            {
+                query = query.Where(a => a.ReviewStatus == reviewStatus || a.PayoutStatus == payoutStatus);
+            }
+            else if (hasReviewStatus)
+            {
+                query = query.Where(a => a.ReviewStatus == reviewStatus);
+            }
+            else if (hasPayoutStatus)
+            {
+                query = query.Where(a => a.PayoutStatus == payoutStatus);
+            }
+        }
 
         var totalCount = await query.CountAsync(ct);
 
         var items = await query
-            .OrderByDescending(l => l.ActivatedAt)
+            .OrderByDescending(a => a.TeacherFinancialEvent.OccurredAt)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(ct);
 
-        var dtos = items.Select(l => new TeacherTransactionDto(
-            l.Id,
-            l.Package?.Name ?? l.AccessCode.CodeGroup.Name,
-            l.Student?.FullName ?? "Unknown Student",
-            l.AccessCode.SerialNumber,
-            l.Price,
-            l.CommissionRate,
-            l.CommissionEarned,
-            l.ActivatedAt
+        var dtos = items.Select(a => new TeacherTransactionDto(
+            a.Id,
+            a.TeacherFinancialEvent.OccurredAt,
+            a.TeacherFinancialEvent.SourceType.ToString(),
+            a.ContentNameSnapshot,
+            a.StudentNameSnapshot ?? "Unknown Student",
+            a.StudentPhoneSnapshot,
+            a.CodeSerialNumber,
+            a.TeacherFinancialEvent.GrossAmount,
+            a.TeacherFinancialEvent.DiscountAmount,
+            a.TeacherFinancialEvent.PaidAmount,
+            a.TeacherShareAmount,
+            a.PlatformShareAmount,
+            a.AllocationMode.ToString(),
+            a.AllocationValue,
+            a.ReviewStatus.ToString(),
+            a.PayoutStatus.ToString()
         )).ToList();
 
         return ApiResponse<PagedResult<TeacherTransactionDto>>.Ok(

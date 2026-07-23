@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 export type FormFieldType = 'text' | 'longtext' | 'number' | 'email' | 'phone' | 'select' | 'checkbox' | 'governorate' | 'district';
 
@@ -89,6 +90,7 @@ export async function createAdminForm(form: {
   fieldsJson: string;
 }): Promise<string> {
   const { data } = await apiClient.post<{ data: string }>('/admin/forms', form);
+  invalidateMany(['forms', 'reports']);
   return data.data;
 }
 
@@ -109,6 +111,7 @@ export async function updateAdminForm(
   }
 ): Promise<void> {
   await apiClient.put(`/admin/forms/${id}`, { ...form, id });
+  invalidateMany(['forms', `forms:${id}`]);
 }
 
 /**
@@ -116,6 +119,7 @@ export async function updateAdminForm(
  */
 export async function deleteAdminForm(id: string): Promise<void> {
   await apiClient.delete(`/admin/forms/${id}`);
+  invalidateMany(['forms', `forms:${id}`, 'reports']);
 }
 
 /**
@@ -139,6 +143,7 @@ export async function updateSubmissionStatus(
     status,
     adminNotes,
   });
+  invalidateMany(['forms:submissions', 'reports']);
 }
 
 /**
@@ -154,4 +159,5 @@ export async function getPublicForm(slug: string): Promise<PublicFormDto> {
  */
 export async function submitPublicForm(slug: string, answers: Record<string, string>): Promise<void> {
   await apiClient.post(`/public/forms/${slug}/submit`, answers);
+  invalidateMany(['forms', 'reports']);
 }

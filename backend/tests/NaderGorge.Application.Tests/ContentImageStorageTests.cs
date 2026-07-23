@@ -38,6 +38,27 @@ public class ContentImageStorageTests
         }
     }
 
+    [Fact]
+    public async Task SpoofedImageBytes_AreRejectedByImageDecoder()
+    {
+        var temporaryRoot = Path.Combine(Path.GetTempPath(), $"content-image-{Guid.NewGuid():N}");
+        var webRoot = Path.Combine(temporaryRoot, "wwwroot");
+        Directory.CreateDirectory(webRoot);
+
+        try
+        {
+            var storage = new ContentImageStorage(new TestWebHostEnvironment(webRoot));
+            await using var spoofedStream = new MemoryStream("<html>not an image</html>"u8.ToArray());
+
+            await Assert.ThrowsAsync<UnknownImageFormatException>(() =>
+                storage.SaveAsWebpAsync(spoofedStream, "package", CancellationToken.None));
+        }
+        finally
+        {
+            Directory.Delete(temporaryRoot, recursive: true);
+        }
+    }
+
     private sealed class TestWebHostEnvironment(string webRootPath) : IWebHostEnvironment
     {
         public string ApplicationName { get; set; } = "NaderGorge.Tests";

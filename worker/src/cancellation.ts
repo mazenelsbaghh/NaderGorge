@@ -35,6 +35,10 @@ export async function throwIfCancellationRequested(job: Job) {
   }
 }
 
+export async function isJobCancellationMarked(jobId: string | number) {
+  return Boolean(await cancellationRedis.get(cancellationKey(jobId)));
+}
+
 export async function clearJobCancellation(jobId: string | number) {
   await cancellationRedis.del(cancellationKey(jobId));
 }

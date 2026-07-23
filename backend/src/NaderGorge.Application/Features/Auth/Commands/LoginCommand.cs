@@ -11,7 +11,7 @@ namespace NaderGorge.Application.Features.Auth.Commands;
 // ---- Login Command ----
 public record LoginCommand(string PhoneNumber, string Password, string DeviceFingerprint, string? DeviceName, string? IpAddress, string? AppSurface = null) : IRequest<ApiResponse<LoginResponse>>;
 public record LoginResponse(string AccessToken, string RefreshToken, UserDto User);
-public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, string[] Permissions, bool ProfileComplete, string? AvatarSlug, string[] AllowedDomains, string[] AllowedNavbarItems);
+public record UserDto(Guid Id, string FullName, string Phone, string[] Roles, string[] Permissions, bool ProfileComplete, string? AvatarSlug, string[] AllowedDomains, string[] AllowedNavbarItems, int AuthorizationVersion = 0);
 
 public class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
@@ -49,6 +49,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
 
         var roles = user.UserRoles.Select(ur => ur.Role.Name).ToArray();
         var isStaff = roles.Any(r => !string.Equals(r, "Student", StringComparison.OrdinalIgnoreCase));
+        var isDelegatedTeacher = user.UserRoles.Any(userRole => userRole.Role.Type == Domain.Enums.RoleType.Teacher)
+            && !user.UserRoles.Any(userRole => userRole.Role.Type is not Domain.Enums.RoleType.Teacher and not Domain.Enums.RoleType.Student)
+            && !await _db.TeacherProfiles.AnyAsync(profile => profile.UserId == user.Id, ct);
 
         var isStaffSurface = 
             string.Equals(request.AppSurface, "admin", StringComparison.OrdinalIgnoreCase) ||
@@ -61,6 +64,11 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
             if (!isStaff)
             {
                 throw new UnauthorizedAccessException("Invalid phone number or password");
+            }
+
+            if (isDelegatedTeacher && !await _db.TeacherStaffMembers.AnyAsync(member => member.UserId == user.Id && member.IsActive, ct))
+            {
+                throw new UnauthorizedAccessException("تم إيقاف حساب الاستاف أو إزالة ربطه بحساب المدرس.");
             }
         }
         else // student or landing
@@ -200,7 +208,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         var allowedDomains = allowedDomainsList.Distinct().ToArray();
         var allowedNavbarItems = allowedNavbarItemsList.Distinct().ToArray();
 
-        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug, allowedDomains, allowedNavbarItems);
+        var userDto = new UserDto(user.Id, user.FullName, user.PhoneNumber, roles, permissions, user.IsProfileComplete, user.StudentProfile?.AvatarSlug, allowedDomains, allowedNavbarItems, user.SecurityStampVersion);
         return ApiResponse<LoginResponse>.Ok(new LoginResponse(accessToken, refreshToken, userDto));
     }
 }

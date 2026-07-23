@@ -28,30 +28,8 @@ import {
 } from "lucide-react";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
+import { GRADE_LEVEL_LABELS } from "@/lib/academic-labels";
 
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: 'الأول الثانوي',
-  SecondSecondary: 'الثاني الثانوي',
-  SecondaryGrade3: 'الثالث الثانوي',
-  FirstBaccalaureate: 'الأول بكالوريا',
-  SecondBaccalaureate: 'الثاني بكالوريا',
-  PrimaryGrade1: 'الأول الابتدائي',
-  PrimaryGrade2: 'الثاني الابتدائي',
-  PrimaryGrade3: 'الثالث الابتدائي',
-  PrimaryGrade4: 'الرابع الابتدائي',
-  PrimaryGrade5: 'الخامس الابتدائي',
-  PrimaryGrade6: 'السادس الابتدائي',
-  PrepGrade1: 'الأول الإعدادي',
-  PrepGrade2: 'الثاني الإعدادي',
-  PrepGrade3: 'الثالث الإعدادي',
-  AzhariPrimary1: 'الأول الابتدائي الأزهري',
-  AzhariPrep1: 'الأول الإعدادي الأزهري',
-  AzhariSecondary1: 'الأول الثانوي الأزهري',
-  AmericanGrade9: 'Grade 9',
-  AmericanGrade10: 'Grade 10',
-  AmericanGrade11: 'Grade 11',
-  AmericanGrade12: 'Grade 12',
-};
 import {
   contentService,
   type ContentSectionDto,
@@ -60,8 +38,10 @@ import {
   type TermDto,
 } from "@/services/content-service";
 
-import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+import { registerCacheStore } from "@/lib/cache-invalidation";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
+
+const GRADE_NAMES = GRADE_LEVEL_LABELS;
 
 /* ─── Stagger helpers ─────────────────────────────────────────────────── */
 const stagger = {
@@ -114,10 +94,8 @@ export default function TermDetailPageClient() {
   useEffect(() => {
     void load();
     if (termId) {
-      registerCacheStore(`content:term:${termId}`, () => {}, load);
-      return () => {
-        unregisterCacheStore(`content:term:${termId}`);
-      };
+      const cleanupCacheStore = registerCacheStore(`content:term:${termId}`, () => {}, load);
+      return cleanupCacheStore;
     }
   }, [load, termId]);
 
@@ -399,7 +377,7 @@ export default function TermDetailPageClient() {
                 );
               })()}
             </div>
-            
+
             {hasAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
                 <CheckCircle2 className="inline h-4 w-4 mr-1" /> {isTermPurchased && !hasDirectPackageAccess ? 'هذا الترم مفعّل في حسابك بالفعل.' : 'هذه الباقة مفعّلة في حسابك بالفعل.'} يمكنك البدء في دراسة الأقسام مباشرة.
@@ -414,13 +392,6 @@ export default function TermDetailPageClient() {
                   <Sparkles className="h-4 w-4" />
                   {term != null ? ((term.price ?? 0) > 0 ? 'شراء الترم' : 'تفعيل الترم مجاناً') : 'شراء الباقة'}
                 </button>
-                <Link
-                  href="/student/code-redemption"
-                  prefetch={false}
-                  className="w-full inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-5 py-3 text-sm font-bold text-[var(--admin-primary)] transition-all hover:bg-[var(--admin-primary-15)] active:scale-[0.98]"
-                >
-                  لدي كود تفعيل
-                </Link>
               </div>
             )}
           </div>

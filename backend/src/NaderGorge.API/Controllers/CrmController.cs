@@ -5,19 +5,24 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.CRM.Commands;
 using NaderGorge.Application.Features.CRM.Queries;
 using NaderGorge.Domain.Enums;
+using NaderGorge.Application.Services;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/crm")]
 [Authorize(Roles = "Admin,Supervisor,Assistant,Teacher,Staff")]
+[HasPermission("crm.manage")]
 public class CrmController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly TeacherAuthorizationService _teacherAuthorization;
 
-    public CrmController(IMediator mediator)
+    public CrmController(IMediator mediator, TeacherAuthorizationService teacherAuthorization)
     {
         _mediator = mediator;
+        _teacherAuthorization = teacherAuthorization;
     }
 
     private Guid GetUserId()
@@ -39,6 +44,7 @@ public class CrmController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await _teacherAuthorization.IsTeacherOwnerOrNonTeacherAsync(userId, ct)) return Forbid();
 
         var query = new GetCrmStudentsQuery(userId, page, pageSize, search, status, agentId, priority, onlyOverdue);
         var result = await _mediator.Send(query, ct);
@@ -64,6 +70,7 @@ public class CrmController : ControllerBase
     {
         var agentId = GetUserId();
         if (agentId == Guid.Empty) return Unauthorized();
+        if (!await _teacherAuthorization.IsTeacherOwnerOrNonTeacherAsync(agentId, ct)) return Forbid();
 
         var command = new LogCrmCallCommand(studentId, agentId, request.Outcome, request.Notes, request.NextFollowUpDate);
         var result = await _mediator.Send(command, ct);
@@ -77,6 +84,7 @@ public class CrmController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await _teacherAuthorization.IsTeacherOwnerOrNonTeacherAsync(userId, ct)) return Forbid();
 
         var query = new GetCrmStudentHistoryQuery(studentId, userId);
         var result = await _mediator.Send(query, ct);

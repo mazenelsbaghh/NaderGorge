@@ -13,4 +13,8 @@ public class AuditLog : BaseEntity
     public string? NewValues { get; set; }
     public string? IpAddress { get; set; }
     public string? CorrelationId { get; set; }
+    public string? RequestId { get; set; }
+    public string ActorType { get; set; } = "User";
+    public string? ActorSnapshot { get; set; }
+    public string? Reason { get; set; }
 }

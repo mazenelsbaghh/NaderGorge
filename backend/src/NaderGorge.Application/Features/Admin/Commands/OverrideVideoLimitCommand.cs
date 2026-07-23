@@ -42,17 +42,34 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
 
     public async Task<ApiResponse> Handle(OverrideVideoLimitCommand request, CancellationToken cancellationToken)
     {
-        // Find existing watch event or throw
-        var watchEvent = await _context.VideoWatchEvents
-            .Include(v => v.LessonVideo)
-            .FirstOrDefaultAsync(v => v.UserId == request.UserId && v.LessonVideoId == request.VideoId, cancellationToken);
+        if (request.AddedViews <= 0)
+            return ApiResponse.Fail("Added views must be greater than zero.");
 
+        var video = await _context.LessonVideos
+            .FirstOrDefaultAsync(video => video.Id == request.VideoId, cancellationToken);
+        if (video == null) return ApiResponse.Fail("Video not found.");
+
+        var watchEvent = await _context.VideoWatchEvents
+            .FirstOrDefaultAsync(item => item.UserId == request.UserId && item.LessonVideoId == request.VideoId, cancellationToken);
+
+        int oldLimit = watchEvent?.CustomMaxWatchCount ?? video.MaxWatchCount;
+        if (oldLimit == 0)
+            return ApiResponse.Fail("This video already has unlimited views.");
+
+        // Support can add views before the student opens the video for the first time.
+        // In that case there is no watch record yet, so create the minimal record first.
         if (watchEvent == null)
         {
-            throw new KeyNotFoundException("VideoWatchEvent not found");
+            watchEvent = new VideoWatchEvent
+            {
+                Id = Guid.NewGuid(),
+                UserId = request.UserId,
+                LessonVideoId = request.VideoId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            };
+            _context.VideoWatchEvents.Add(watchEvent);
         }
-
-        int oldLimit = watchEvent.CustomMaxWatchCount ?? watchEvent.LessonVideo.MaxWatchCount;
 
         // "Adding views" increases the maximum watch count for this student.
         watchEvent.CustomMaxWatchCount = oldLimit + request.AddedViews;
@@ -92,7 +109,7 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
                 userId = request.UserId,
                 videoId = request.VideoId,
                 newLimit = watchEvent.CustomMaxWatchCount.Value,
-                lessonId = watchEvent.LessonVideo.LessonId
+                lessonId = video.LessonId
             })
         };
         _context.OutboxEvents.Add(limitChangedEvent);
@@ -115,7 +132,7 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
                 TargetUserId = req.UserId.ToString(),
                 PayloadJson = JsonSerializer.Serialize(new
                 {
-                    lessonId = watchEvent.LessonVideo.LessonId,
+                    lessonId = video.LessonId,
                     videoId = req.LessonVideoId,
                     status = "Approved",
                     allowedWatchCount = watchEvent.CustomMaxWatchCount.Value
@@ -129,4 +146,3 @@ public class OverrideVideoLimitCommandHandler : IRequestHandler<OverrideVideoLim
         return ApiResponse.Ok("Video limit overridden successfully.");
     }
 }
-

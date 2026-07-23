@@ -14,6 +14,7 @@ import { StudentGuard } from "@/components/layout/StudentGuard";
 import { StudentThemeProvider } from "@/hooks/useStudentTheme";
 import { MaintenanceGuard } from "@/components/layout/MaintenanceGuard";
 import { LiveSupportLauncher } from "@/components/live-support/participant/LiveSupportLauncher";
+import { PlatformPopup } from '@/components/platform/PlatformPopup';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -29,7 +30,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       <StudentGuard>
         <MaintenanceGuard>
           <StudentShellChrome>{children}</StudentShellChrome>
-          <LiveSupportLauncher />
+          <PlatformPopup />
+          <LiveSupportLauncher avoidMobileBottomNav />
         </MaintenanceGuard>
       </StudentGuard>
     </StudentThemeProvider>

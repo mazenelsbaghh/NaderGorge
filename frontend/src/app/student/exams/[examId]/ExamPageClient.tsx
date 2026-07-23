@@ -13,6 +13,9 @@ export default function ExamPageClient() {
   const examId = params.examId as string;
   const packageId = searchParams.get('packageId') || undefined;
   const lessonId = searchParams.get('lessonId') || undefined;
+  const fromPublicExams = searchParams.get('from') === 'public-exams';
+  const resultReturnHref = fromPublicExams ? '/student/public-exams' : undefined;
+  const resultReturnLabel = fromPublicExams ? 'العودة للامتحانات العامة' : undefined;
   
   const [exam, setExam] = useState<ActiveExamAttemptDto | null>(null);
   const [passedResult, setPassedResult] = useState<ExamResultDto | null>(null);
@@ -28,7 +31,7 @@ export default function ExamPageClient() {
 
     try {
       try {
-        const passedResultResponse = await examService.getLatestPassedResult(examId);
+        const passedResultResponse = await examService.getLatestResult(examId);
         setPassedResult(passedResultResponse.data.data);
         setExam(null);
         return;
@@ -96,7 +99,15 @@ export default function ExamPageClient() {
     if (passedResult) {
       return (
         <div className="mx-auto max-w-5xl pb-16">
-          <ExamResultPanel result={passedResult} packageId={packageId} lessonId={passedResult.lessonId} onRestart={loadExam} />
+          <ExamResultPanel
+            result={passedResult}
+            packageId={packageId}
+            lessonId={passedResult.lessonId}
+            onRestart={loadExam}
+            onResultRefresh={setPassedResult}
+            returnHref={resultReturnHref}
+            returnLabel={resultReturnLabel}
+          />
         </div>
       );
     }
@@ -110,6 +121,8 @@ export default function ExamPageClient() {
           onClick={() => {
             if (packageId && lessonId) {
               router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+            } else if (fromPublicExams) {
+              router.push('/student/public-exams');
             } else {
               router.push(packageId ? `/student/packages/${packageId}` : '/student');
             }
@@ -130,6 +143,8 @@ export default function ExamPageClient() {
           onClick={() => {
             if (packageId && lessonId) {
               router.push(`/student/packages/${packageId}/lessons/${lessonId}`);
+            } else if (fromPublicExams) {
+              router.push('/student/public-exams');
             } else {
               router.push(packageId ? `/student/packages/${packageId}` : '/student');
             }
@@ -143,7 +158,17 @@ export default function ExamPageClient() {
         </button>
       )}
 
-      <ExamViewer examId={examId} examTitle={exam.title} examDescription={exam.description} attempt={exam} packageId={packageId} lessonId={lessonId} onRestart={loadExam} />
+      <ExamViewer
+        examId={examId}
+        examTitle={exam.title}
+        examDescription={exam.description}
+        attempt={exam}
+        packageId={packageId}
+        lessonId={lessonId}
+        onRestart={loadExam}
+        resultReturnHref={resultReturnHref}
+        resultReturnLabel={resultReturnLabel}
+      />
     </div>
   );
 }

@@ -58,7 +58,7 @@ public class CommunityController : ControllerBase
     [HttpPost("posts/{postId:guid}/comments")]
     public async Task<IActionResult> CreatePostComment(Guid postId, [FromBody] CreateCommunityCommentRequest request)
     {
-        var response = await _mediator.Send(new CreateCommunityPostCommentCommand(postId, GetUserId(), request.Body));
+        var response = await _mediator.Send(new CreateCommunityPostCommentCommand(postId, GetUserId(), request.Body, request.ParentCommentId));
         if (!response.Success)
         {
             if (response.Errors?.Contains("NOT_FOUND") == true)
@@ -76,6 +76,9 @@ public class CommunityController : ControllerBase
         var response = await _mediator.Send(new ToggleCommunityPostLikeCommand(postId, GetUserId()));
         if (!response.Success && response.Errors?.Contains("NOT_FOUND") == true)
             return NotFound(response);
+
+        if (!response.Success)
+            return BadRequest(response);
 
         return Ok(response);
     }
@@ -97,4 +100,4 @@ public class CommunityController : ControllerBase
 }
 
 public record CreateCommunityPostRequest(string Body, List<string>? PollOptions = null);
-public record CreateCommunityCommentRequest(string Body);
+public record CreateCommunityCommentRequest(string Body, Guid? ParentCommentId = null);

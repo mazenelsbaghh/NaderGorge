@@ -26,6 +26,7 @@ public record AdminUserListDto(
     DateTime CreatedAt,
     string[] Roles,
     string StudentCode,
+    string ParentTrackingCode,
     DateTime? DateOfBirth,
     string Gender,
     string EducationStage,
@@ -71,7 +72,9 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
         {
             query = query.Where(u => u.PhoneNumber.Contains(request.Search) ||
                                      u.FullName.Contains(request.Search) ||
-                                     (u.StudentProfile != null && u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(request.Search)));
+                                     (u.StudentProfile != null && (
+                                         (u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(request.Search)) ||
+                                         (u.StudentProfile.ParentTrackingCode != null && u.StudentProfile.ParentTrackingCode.Contains(request.Search)))));
         }
 
         if (!string.IsNullOrWhiteSpace(request.EducationStage) && Enum.TryParse<NaderGorge.Domain.Enums.EducationStage>(request.EducationStage, true, out var stage))
@@ -117,6 +120,7 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.CreatedAt,
             u.UserRoles.Select(ur => ur.Role.Name).ToArray(),
             u.StudentProfile?.StudentCode ?? "",
+            u.StudentProfile?.ParentTrackingCode ?? "",
             u.StudentProfile?.DateOfBirth,
             u.StudentProfile?.Gender.ToString() ?? "Unknown",
             u.StudentProfile?.EducationStage.ToString() ?? "N/A",

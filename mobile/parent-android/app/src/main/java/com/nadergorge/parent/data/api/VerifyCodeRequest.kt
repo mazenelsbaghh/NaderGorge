@@ -5,3 +5,8 @@ data class VerifyCodeRequest(
     val deviceToken: String,
     val platform: String = "android"
 )
+
+data class RegisterDeviceTokenRequest(
+    val deviceToken: String,
+    val platform: String = "android"
+)

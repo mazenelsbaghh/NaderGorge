@@ -42,6 +42,7 @@ public record HomeworkDashboardDto(
     decimal TotalScore,
     decimal? PassingScore,
     bool IsMandatory,
+    bool IsActive,
     bool IsRandomized,
     List<StudentHomeworkSubmissionSummaryDto> Submissions,
     List<HomeworkQuestionSummaryDto> Questions
@@ -109,6 +110,7 @@ public class GetHomeworkDashboardQueryHandler : IRequestHandler<GetHomeworkDashb
             homework.TotalScore,
             homework.PassingScoreThreshold,
             homework.IsMandatory,
+            homework.IsActive,
             homework.IsRandomized,
             submissionsDto,
             questionsDto

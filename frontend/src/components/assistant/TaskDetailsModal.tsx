@@ -26,6 +26,7 @@ export default function TaskDetailsModal({
 }: TaskDetailsModalProps) {
   const [details, setDetails] = useState<TaskDetailsDto | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
   const [showAttachmentInput, setShowAttachmentInput] = useState(false);
@@ -38,6 +39,7 @@ export default function TaskDetailsModal({
   const fetchDetails = useCallback(async () => {
     if (!taskId) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await assistantService.getOperationsTaskDetails(taskId);
       if (res.data?.success) {
@@ -66,10 +68,12 @@ export default function TaskDetailsModal({
           task: normalizedTask
         });
       } else {
-        toast.error(res.data?.message || 'تعذر تحميل تفاصيل المهمة');
+        setDetails(null);
+        setLoadError(res.data?.message || 'تعذر تحميل تفاصيل المهمة');
       }
     } catch {
-      toast.error('حدث خطأ أثناء تحميل تفاصيل المهمة');
+      setDetails(null);
+      setLoadError('تعذر تحميل تفاصيل المهمة. تحقق من اتصالك ثم حاول مرة أخرى.');
     } finally {
       setLoading(false);
     }
@@ -85,6 +89,7 @@ export default function TaskDetailsModal({
       setRejectionReason('');
     } else {
       setDetails(null);
+      setLoadError(null);
     }
   }, [open, taskId, fetchDetails]);
 
@@ -217,6 +222,13 @@ export default function TaskDetailsModal({
       {loading && !details ? (
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-[var(--admin-primary)]" />
+        </div>
+      ) : loadError ? (
+        <div className="flex min-h-64 flex-col items-center justify-center gap-4 px-6 text-center" role="alert">
+          <p className="text-sm font-bold text-rose-600">{loadError}</p>
+          <NeumorphButton onClick={() => void fetchDetails()} intent="primary" size="sm">
+            إعادة المحاولة
+          </NeumorphButton>
         </div>
       ) : details ? (
         <div className="space-y-6 text-right" dir="rtl">

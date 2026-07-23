@@ -1,4 +1,7 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
+
+const invalidateOperations = () => invalidateMany(['operations:tasks', 'operations:dashboard']);
 
 export interface BackendResponse<T> {
     success: boolean;
@@ -57,7 +60,9 @@ export const assistantService = {
     },
 
     resolveTask: async (taskId: string, resolutionNotes: string) => {
-        return apiClient.post<BackendResponse<Guid>>(`/v1/assistant/tasks/${taskId}/resolve`, { resolutionNotes });
+        const response = await apiClient.post<BackendResponse<Guid>>(`/v1/assistant/tasks/${taskId}/resolve`, { resolutionNotes });
+        invalidateOperations();
+        return response;
     },
 
     // Operations Task Management APIs for Assistants
@@ -70,11 +75,15 @@ export const assistantService = {
     },
 
     updateOperationsTaskStatus: async (taskId: string, status: number) => {
-        return apiClient.post<BackendResponse<boolean>>(`/v1/assistant/tasks/my/${taskId}/status`, { status });
+        const response = await apiClient.post<BackendResponse<boolean>>(`/v1/assistant/tasks/my/${taskId}/status`, { status });
+        invalidateOperations();
+        return response;
     },
 
     addOperationsTaskComment: async (taskId: string, content: string, attachmentUrl?: string) => {
-        return apiClient.post<BackendResponse<string>>(`/v1/assistant/tasks/my/${taskId}/comments`, { content, attachmentUrl });
+        const response = await apiClient.post<BackendResponse<string>>(`/v1/assistant/tasks/my/${taskId}/comments`, { content, attachmentUrl });
+        invalidateOperations();
+        return response;
     },
 
     // Operations Task Management APIs for Admins/Supervisors
@@ -101,11 +110,15 @@ export const assistantService = {
         priority: number;
         dueDate?: string;
     }) => {
-        return apiClient.post<BackendResponse<string>>('/admin/operations/tasks', taskData);
+        const response = await apiClient.post<BackendResponse<string>>('/admin/operations/tasks', taskData);
+        invalidateOperations();
+        return response;
     },
 
     resolveAdminOperationsTaskApproval: async (taskId: string, approve: boolean, rejectionReason?: string) => {
-        return apiClient.post<BackendResponse<boolean>>(`/admin/operations/tasks/${taskId}/resolve`, { approve, rejectionReason });
+        const response = await apiClient.post<BackendResponse<boolean>>(`/admin/operations/tasks/${taskId}/resolve`, { approve, rejectionReason });
+        invalidateOperations();
+        return response;
     }
 };
 

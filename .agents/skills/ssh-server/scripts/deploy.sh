@@ -16,8 +16,9 @@ SERVER_USER="root"
 SERVER_PASS="MazenElsbagh.12"
 SERVER_APP_DIR="/var/www/nadergorge"
 SERVER_GIT_DIR="/var/www/nadergorge.git"
+SERVER_KEY="${HOME}/.ssh/nader_gorge_prod"
 
-SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=15 -o PreferredAuthentications=password -o ServerAliveInterval=30 -o ServerAliveCountMax=5"
+SSH_OPTS="-i ${SERVER_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o PreferredAuthentications=publickey,password -o ServerAliveInterval=30 -o ServerAliveCountMax=5"
 export SSHPASS="${SERVER_PASS}"
 SSH_CMD="sshpass -e ssh ${SSH_OPTS} ${SERVER_USER}@${SERVER_HOST}"
 
@@ -42,6 +43,7 @@ DEPLOY=true
 FORCE_FULL=false
 REBUILD_BACKEND=false
 REBUILD_ALL=false
+SKIP_GITHUB="${SKIP_GITHUB:-false}"
 
 for arg in "$@"; do
   case "$arg" in
@@ -223,8 +225,12 @@ confirm_plan() {
 # STEP 2: Push to GitHub (origin)
 # =============================================================================
 push_to_github() {
+  if [[ "$SKIP_GITHUB" == "true" ]]; then
+    log_warn "Skipping GitHub push (SKIP_GITHUB=true)"
+    return 0
+  fi
   log_step "Pushing to GitHub (origin/${BRANCH})"
-  if git push origin HEAD 2>&1; then
+  if GIT_TERMINAL_PROMPT=0 GIT_ASKPASS=/bin/false git push origin HEAD 2>&1; then
     log_ok "GitHub updated"
   else
     log_warn "GitHub push failed (may already be up to date)"

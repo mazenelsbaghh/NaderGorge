@@ -5,36 +5,16 @@ import { useRouter } from 'next/navigation';
 import { Download, Search, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AdminDataTable, type AdminColumn } from './AdminDataTable';
 import { adminService, type ContentSubscriberDto } from '@/services/admin-service';
+import { getEducationStageLabel, getGradeLevelLabel } from '@/lib/academic-labels';
 import toast from 'react-hot-toast';
 
 interface ContentSubscribersTabProps {
-  contentType: 'package' | 'term' | 'section';
+  contentType: 'package' | 'term' | 'section' | 'lesson';
   contentId: string;
   contentName: string;
 }
 
 const PAGE_SIZE = 10;
-
-const EDUCATION_STAGE_MAP: Record<string, string> = {
-  Primary: 'ابتدائي',
-  Preparatory: 'إعدادي',
-  Secondary: 'ثانوي',
-};
-
-const GRADE_LEVEL_MAP: Record<string, string> = {
-  FirstPrimary: 'أولى ابتدائي',
-  SecondPrimary: 'ثانية ابتدائي',
-  ThirdPrimary: 'ثالثة ابتدائي',
-  FourthPrimary: 'رابعة ابتدائي',
-  FifthPrimary: 'خامسة ابتدائي',
-  SixthPrimary: 'سادسة ابتدائي',
-  FirstPreparatory: 'أولى إعدادي',
-  SecondPreparatory: 'ثانية إعدادي',
-  ThirdPreparatory: 'ثالثة إعدادي',
-  FirstSecondary: 'أولى ثانوي',
-  SecondSecondary: 'ثانية ثانوي',
-  ThirdSecondary: 'ثالثة ثانوي',
-};
 
 function formatDate(iso: string): string {
   try {
@@ -47,6 +27,19 @@ function formatDate(iso: string): string {
     return iso;
   }
 }
+
+const purchaseTypeLabel: Record<ContentSubscriberDto['purchaseType'], string> = {
+  Package: 'باقة',
+  Term: 'ترم',
+  Month: 'قسم',
+  Lesson: 'حصة',
+};
+
+const purchaseMethodLabel: Record<ContentSubscriberDto['purchaseMethod'], string> = {
+  Code: 'كود',
+  Gift: 'هدية',
+  Balance: 'رصيد',
+};
 
 export default function ContentSubscribersTab({
   contentType,
@@ -138,17 +131,26 @@ export default function ContentSubscribersTab({
     {
       key: 'stage',
       label: 'المرحلة',
-      render: (row) => <span>{EDUCATION_STAGE_MAP[row.educationStage] ?? row.educationStage ?? '—'}</span>,
+      render: (row) => <span>{getEducationStageLabel(row.educationStage)}</span>,
     },
     {
       key: 'grade',
       label: 'الصف',
-      render: (row) => <span>{GRADE_LEVEL_MAP[row.gradeLevel] ?? row.gradeLevel ?? '—'}</span>,
+      render: (row) => <span>{getGradeLevelLabel(row.gradeLevel)}</span>,
     },
     {
       key: 'enrolledAt',
       label: 'تاريخ الاشتراك',
       render: (row) => <span className="text-xs">{formatDate(row.enrolledAt)}</span>,
+    },
+    {
+      key: 'purchase',
+      label: 'نوع الاشتراك',
+      render: (row) => (
+        <span className="inline-flex rounded-full bg-[var(--admin-primary-15)] px-2.5 py-1 text-xs font-bold text-[var(--admin-primary)]">
+          {purchaseTypeLabel[row.purchaseType] ?? row.purchaseType} · {purchaseMethodLabel[row.purchaseMethod] ?? row.purchaseMethod}
+        </span>
+      ),
     },
     {
       key: 'status',
@@ -204,7 +206,7 @@ export default function ContentSubscribersTab({
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 text-sm font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-hover)] disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
-            {exporting ? 'جارٍ التنزيل...' : 'تنزيل CSV'}
+            {exporting ? 'جارٍ التنزيل...' : 'تنزيل بيانات المشترين'}
           </button>
         </div>
       </div>

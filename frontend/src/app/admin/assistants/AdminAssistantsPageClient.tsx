@@ -35,6 +35,7 @@ import { AdminUserListDto, adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { translateRole } from '@/packages/brand';
+import { useDisableEmployee } from '@/features/employee';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -65,6 +66,7 @@ export default function AdminAssistantsPageClient() {
   const [selectedAssistant, setSelectedAssistant] = useState<AdminUserListDto | null>(null);
   const [profileUser, setProfileUser] = useState<AdminUserListDto | null>(null);
   const [exporting, setExporting] = useState(false);
+  const disableEmployee = useDisableEmployee();
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -92,7 +94,7 @@ export default function AdminAssistantsPageClient() {
   async function handleToggleStatus(user: AdminUserListDto) {
     const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
     try {
-      await adminService.updateUserStatus(user.id, nextStatus);
+      await disableEmployee.mutateAsync({ userId: user.id, status: nextStatus });
       setUsers((currentUsers) =>
         currentUsers.map((entry) =>
           entry.id === user.id ? { ...entry, status: nextStatus } : entry
@@ -139,7 +141,7 @@ export default function AdminAssistantsPageClient() {
         const rowData = [
           u.fullName,
           u.phoneNumber,
-          u.roles.join(' | '),
+          u.roles.map(translateRole).join(' | '),
           statusLabel(u.status),
           new Date(u.createdAt).toLocaleDateString('ar-EG'),
         ];

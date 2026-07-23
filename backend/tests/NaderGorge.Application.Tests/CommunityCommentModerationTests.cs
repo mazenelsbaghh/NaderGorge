@@ -77,4 +77,56 @@ public class CommunityCommentModerationTests
         Assert.Empty(rejectedStudentView.Data!);
         Assert.Equal("Not appropriate", db.CommunityPostComments.Single().RejectionReason);
     }
+
+    [Fact]
+    public async Task CreateCommunityComment_StoresReplyAgainstItsParentComment()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var author = await TestAppDbContextFactory.SeedUserAsync(db, "Author", "104");
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "205");
+        var post = await TestAppDbContextFactory.SeedApprovedCommunityPostAsync(db, author);
+        var parent = new NaderGorge.Domain.Entities.CommunityPostComment
+        {
+            PostId = post.Id,
+            AuthorUserId = author.Id,
+            Body = "Original comment",
+            Status = CommunityCommentStatus.Approved
+        };
+        db.CommunityPostComments.Add(parent);
+        await db.SaveChangesAsync();
+
+        var result = await new CreateCommunityPostCommentCommandHandler(db).Handle(
+            new CreateCommunityPostCommentCommand(post.Id, student.Id, "Reply", parent.Id),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(parent.Id, result.Data!.ParentCommentId);
+        Assert.Equal(parent.Id, db.CommunityPostComments.Single(c => c.Id == result.Data.Id).ParentCommentId);
+    }
+
+    [Fact]
+    public async Task CreateCommunityComment_RejectsReplyToCommentFromAnotherPost()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var author = await TestAppDbContextFactory.SeedUserAsync(db, "Author", "105");
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "206");
+        var firstPost = await TestAppDbContextFactory.SeedApprovedCommunityPostAsync(db, author);
+        var secondPost = await TestAppDbContextFactory.SeedApprovedCommunityPostAsync(db, author);
+        var unrelatedComment = new NaderGorge.Domain.Entities.CommunityPostComment
+        {
+            PostId = secondPost.Id,
+            AuthorUserId = author.Id,
+            Body = "Other post comment",
+            Status = CommunityCommentStatus.Approved
+        };
+        db.CommunityPostComments.Add(unrelatedComment);
+        await db.SaveChangesAsync();
+
+        var result = await new CreateCommunityPostCommentCommandHandler(db).Handle(
+            new CreateCommunityPostCommentCommand(firstPost.Id, student.Id, "Invalid reply", unrelatedComment.Id),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("PARENT_COMMENT_NOT_FOUND", result.Errors!);
+    }
 }

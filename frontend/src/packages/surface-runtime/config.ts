@@ -1,4 +1,10 @@
-export type SurfaceName = 'landing' | 'student' | 'admin' | 'teacher' | 'assistant' | 'all';
+export type SurfaceName =
+  | 'landing'
+  | 'student'
+  | 'admin'
+  | 'teacher'
+  | 'assistant'
+  | 'all';
 
 export type RouteBoundaryAction = 'next' | 'rewrite' | 'redirect';
 
@@ -57,10 +63,13 @@ export function getSurfaceName(value?: string): SurfaceName {
 
   // 2. Subdomain detection
   const domainOnly = host.split(':')[0];
-  if (domainOnly.startsWith('admin.') || domainOnly.startsWith('super.')) return 'admin';
-  if (domainOnly.startsWith('app.') || domainOnly.startsWith('student.')) return 'student';
+  if (domainOnly.startsWith('admin.') || domainOnly.startsWith('super.'))
+    return 'admin';
+  if (domainOnly.startsWith('app.') || domainOnly.startsWith('student.'))
+    return 'student';
   if (domainOnly.startsWith('teacher.')) return 'teacher';
-  if (domainOnly.startsWith('staff.') || domainOnly.startsWith('assistant.')) return 'assistant';
+  if (domainOnly.startsWith('staff.') || domainOnly.startsWith('assistant.'))
+    return 'assistant';
 
   return 'landing';
 }
@@ -76,24 +85,47 @@ export function getSurfaceOrigins(requestHost?: string): SurfaceOrigins {
     protocol = window.location.protocol;
   } else if (requestHost) {
     hostname = requestHost;
-    protocol = hostname.includes('localhost') || hostname.includes('127.0.0.1') ? 'http:' : 'https:';
+    protocol =
+      hostname.includes('localhost') || hostname.includes('127.0.0.1')
+        ? 'http:'
+        : 'https:';
   } else {
     return {
-      landing: normalizeOrigin(process.env.LANDING_PUBLIC_ORIGIN || 'http://localhost:8738'),
-      student: normalizeOrigin(process.env.STUDENT_PUBLIC_ORIGIN || 'http://localhost:8739'),
-      admin: normalizeOrigin(process.env.ADMIN_PUBLIC_ORIGIN || 'http://localhost:8740'),
-      teacher: normalizeOrigin(process.env.TEACHER_PUBLIC_ORIGIN || 'http://localhost:8741'),
-      assistant: normalizeOrigin(process.env.ASSISTANT_PUBLIC_ORIGIN || 'http://localhost:8742'),
+      landing: normalizeOrigin(
+        process.env.LANDING_PUBLIC_ORIGIN || 'http://localhost:8738'
+      ),
+      student: normalizeOrigin(
+        process.env.STUDENT_PUBLIC_ORIGIN || 'http://localhost:8739'
+      ),
+      admin: normalizeOrigin(
+        process.env.ADMIN_PUBLIC_ORIGIN || 'http://localhost:8740'
+      ),
+      teacher: normalizeOrigin(
+        process.env.TEACHER_PUBLIC_ORIGIN || 'http://localhost:8741'
+      ),
+      assistant: normalizeOrigin(
+        process.env.ASSISTANT_PUBLIC_ORIGIN || 'http://localhost:8742'
+      ),
       mainDomain,
     };
   }
 
-  const isLocal = hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.startsWith('192.168.') || hostname.startsWith('10.');
+  const isLvhLocal =
+    hostname === 'lvh.me' ||
+    hostname.endsWith('.lvh.me') ||
+    hostname.includes('.lvh.me:');
+  const isLocal =
+    isLvhLocal ||
+    hostname.includes('localhost') ||
+    hostname.includes('127.0.0.1') ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.');
 
   if (!isLocal) {
     const domainOnly = hostname.split(':')[0];
     const hostParts = domainOnly.split('.');
-    const detectedDomain = hostParts.length >= 2 ? hostParts.slice(-2).join('.') : domainOnly;
+    const detectedDomain =
+      hostParts.length >= 2 ? hostParts.slice(-2).join('.') : domainOnly;
 
     return {
       landing: `${protocol}//${detectedDomain}`,
@@ -122,7 +154,10 @@ export function getSurfaceOrigins(requestHost?: string): SurfaceOrigins {
 
   // Single port (e.g. 3000) with subdomains
   const hostWithoutPort = hostname.split(':')[0];
-  const baseHost = hostWithoutPort.replace(/^(admin|super|app|student|teacher|staff|assistant)\./, '');
+  const baseHost = hostWithoutPort.replace(
+    /^(admin|super|app|student|teacher|staff|assistant)\./,
+    ''
+  );
   const activePort = port ? `:${port}` : '';
 
   return {
@@ -135,12 +170,18 @@ export function getSurfaceOrigins(requestHost?: string): SurfaceOrigins {
   };
 }
 
-export function createRedirectUrl(origin: string, pathname: string, search = '') {
+export function createRedirectUrl(
+  origin: string,
+  pathname: string,
+  search = ''
+) {
   const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
   return `${normalizeOrigin(origin)}${normalizedPath}${search}`;
 }
 
-export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBoundaryDecision {
+export function getRouteBoundaryDecision(
+  input: RouteBoundaryInput
+): RouteBoundaryDecision {
   const { surface, pathname, search = '', host } = input;
   const origins = getSurfaceOrigins(host);
 
@@ -161,7 +202,7 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       };
     }
 
-    if (pathname.startsWith('/teacher')) {
+    if (pathname === '/teacher' || pathname.startsWith('/teacher/')) {
       return {
         action: 'redirect',
         destination: createRedirectUrl(origins.teacher, pathname, search),
@@ -170,6 +211,14 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
     }
 
     if (pathname.startsWith('/assistant')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.assistant, pathname, search),
+        surface,
+      };
+    }
+
+    if (pathname.startsWith('/employee')) {
       return {
         action: 'redirect',
         destination: createRedirectUrl(origins.assistant, pathname, search),
@@ -193,7 +242,12 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       return { action: 'rewrite', destination: '/student', surface };
     }
 
-    if (pathname.startsWith('/admin') || pathname.startsWith('/teacher') || pathname.startsWith('/assistant')) {
+    if (
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/teacher') ||
+      pathname.startsWith('/assistant') ||
+      pathname.startsWith('/employee')
+    ) {
       return {
         action: 'rewrite',
         destination: '/not-found',
@@ -209,7 +263,12 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       return { action: 'rewrite', destination: '/admin', surface };
     }
 
-    if (pathname.startsWith('/student') || pathname.startsWith('/teacher') || pathname.startsWith('/assistant')) {
+    if (
+      pathname.startsWith('/student') ||
+      pathname.startsWith('/teacher') ||
+      pathname.startsWith('/assistant') ||
+      pathname.startsWith('/employee')
+    ) {
       return {
         action: 'rewrite',
         destination: '/not-found',
@@ -233,7 +292,20 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       return { action: 'rewrite', destination: '/teacher', surface };
     }
 
-    if (pathname.startsWith('/student') || pathname.startsWith('/admin') || pathname.startsWith('/assistant')) {
+    if (pathname === '/teachers' || pathname.startsWith('/teachers/')) {
+      return {
+        action: 'redirect',
+        destination: createRedirectUrl(origins.landing, pathname, search),
+        surface,
+      };
+    }
+
+    if (
+      pathname.startsWith('/student') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/assistant') ||
+      pathname.startsWith('/employee')
+    ) {
       return {
         action: 'rewrite',
         destination: '/not-found',
@@ -249,7 +321,11 @@ export function getRouteBoundaryDecision(input: RouteBoundaryInput): RouteBounda
       return { action: 'rewrite', destination: '/assistant', surface };
     }
 
-    if (pathname.startsWith('/student') || pathname.startsWith('/teacher') || pathname.startsWith('/admin')) {
+    if (
+      pathname.startsWith('/student') ||
+      pathname.startsWith('/teacher') ||
+      pathname.startsWith('/admin')
+    ) {
       return {
         action: 'rewrite',
         destination: '/not-found',
@@ -272,9 +348,15 @@ export function isValidRedirectUrl(url: string, surface: SurfaceName): boolean {
     return true;
   }
 
-  if (surface === 'student' && (url.startsWith('/student') || url.startsWith('/onboarding') || url.startsWith('/parent'))) return true;
+  if (
+    surface === 'student' &&
+    (url.startsWith('/student') ||
+      url.startsWith('/onboarding') ||
+      url.startsWith('/parent'))
+  )
+    return true;
   if (surface === 'teacher' && url.startsWith('/teacher')) return true;
-  if (surface === 'assistant' && url.startsWith('/assistant')) return true;
+  if (surface === 'assistant' && (url.startsWith('/assistant') || url.startsWith('/employee'))) return true;
   if (surface === 'admin' && url.startsWith('/admin')) return true;
 
   return false;

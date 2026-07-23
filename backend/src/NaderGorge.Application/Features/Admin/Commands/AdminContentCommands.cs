@@ -5,10 +5,11 @@ using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Features.Admin.VideoTypes;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CreatePackageCommand(string Name, string Description, decimal Price, Guid SubjectId, string TargetGrade, Guid? TeacherId = null, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreatePackageCommand(string Name, string Description, decimal Price, Guid SubjectId, string TargetGrade, Guid? TeacherId = null, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand, ApiResponse<Guid>>
 {
@@ -23,6 +24,9 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 
     public async Task<ApiResponse<Guid>> Handle(CreatePackageCommand request, CancellationToken ct)
     {
+        if (request.AcademicScopes is { Count: 0 })
+            return ApiResponse<Guid>.Fail("يجب تحديد نطاق أكاديمي واحد على الأقل.", new List<string> { "ACADEMIC_SCOPE_REQUIRED" });
+
         if (request.SubjectId == Guid.Empty)
         {
             return ApiResponse<Guid>.Fail("Subject is required.");
@@ -83,15 +87,11 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             return ApiResponse<Guid>.Fail("Selected teacher profile not found.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.TargetGrade))
+        var requestedGrades = ContentAcademicScopeValidation.GetTargetGrades(request.AcademicScopes, request.TargetGrade);
+        if (requestedGrades.Count == 0)
         {
-            return ApiResponse<Guid>.Fail("Target grade is required.");
+            return ApiResponse<Guid>.Fail("يجب اختيار صف دراسي واحد على الأقل.");
         }
-
-        string normalizedRequestedGrade = request.TargetGrade.Trim();
-        if (normalizedRequestedGrade == "1st Secondary") normalizedRequestedGrade = "FirstSecondary";
-        else if (normalizedRequestedGrade == "2nd Secondary") normalizedRequestedGrade = "SecondSecondary";
-        else if (normalizedRequestedGrade == "3rd Secondary") normalizedRequestedGrade = "SecondaryGrade3";
 
         var allowedGrades = teacherProfile.Specialization
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -103,11 +103,18 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             })
             .ToList();
 
-        bool isGradeAllowed = allowedGrades.Any(g => string.Equals(g, normalizedRequestedGrade, StringComparison.OrdinalIgnoreCase));
-        if (!isGradeAllowed)
+        var unsupportedGrades = requestedGrades
+            .Where(grade => !allowedGrades.Any(allowed => string.Equals(allowed, grade, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+        if (unsupportedGrades.Count > 0)
         {
-            return ApiResponse<Guid>.Fail("The selected grade is not allowed for this teacher.");
+            return ApiResponse<Guid>.Fail("المدرس غير مخصص للصف أو الصفوف المختارة.");
         }
+
+        await ContentAcademicScopeValidation.EnsureExactScopeSubjectEligibilityAsync(_db, request.AcademicScopes, ct);
+        var scopeValidation = await ContentAcademicScopeValidation.ValidateScopesOrPackageLegacyAsync(_db, request.AcademicScopes, request.TargetGrade, ct);
+        if (!scopeValidation.IsEligible)
+            return ApiResponse<Guid>.Fail(scopeValidation.Message ?? "نطاق الباقة الأكاديمي غير صالح.", new List<string> { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" });
 
         var pkg = new Package
         {
@@ -115,7 +122,7 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             Description = request.Description,
             Price = request.Price,
             SubjectId = request.SubjectId,
-            TargetGrade = string.IsNullOrWhiteSpace(request.TargetGrade) ? "All" : request.TargetGrade,
+            TargetGrade = string.Join(',', requestedGrades),
             TeacherId = teacherId
         };
         _db.Packages.Add(pkg);
@@ -134,6 +141,15 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
         _db.OutboxEvents.Add(outboxEvent);
 
         await _db.SaveChangesAsync(ct);
+        await ContentAcademicScopeValidation.SyncScopesOrPackageLegacyAsync(
+            _db,
+            StudentFacingScopeOwnerType.Package,
+            pkg.Id,
+            request.AcademicScopes,
+            request.TargetGrade,
+            request.CurrentUserId,
+            ct);
+
         return ApiResponse<Guid>.Ok(pkg.Id);
     }
 }
@@ -168,7 +184,170 @@ public class TogglePackageActiveCommandHandler : IRequestHandler<TogglePackageAc
         return ApiResponse<bool>.Ok(pkg.IsActive);
     }
 }
-public record CreateTermCommand(string Title, int Order, Guid PackageId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+
+internal static class ContentAcademicScopeValidation
+{
+    public static IReadOnlyList<string> GetTargetGrades(
+        IReadOnlyList<AcademicScopeDto>? scopes,
+        string? fallbackTargetGrade)
+    {
+        var grades = scopes?
+            .Where(scope => scope.GradeLevel.HasValue)
+            .Select(scope => scope.GradeLevel!.Value.ToString())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (grades is { Count: > 0 })
+            return grades;
+
+        return string.IsNullOrWhiteSpace(fallbackTargetGrade)
+            ? []
+            : fallbackTargetGrade
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(NormalizeGradeAlias)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+    }
+
+    public static async Task<AcademicScopeCheckResult> ValidateExplicitScopesAsync(
+        IAppDbContext db,
+        IReadOnlyList<AcademicScopeDto>? scopes,
+        CancellationToken ct)
+    {
+        if (scopes == null)
+            return AcademicScopeCheckResult.Eligible();
+
+        return await ValidateScopesAsync(db, scopes, ct);
+    }
+
+    public static async Task<AcademicScopeCheckResult> ValidateScopesOrPackageLegacyAsync(
+        IAppDbContext db,
+        IReadOnlyList<AcademicScopeDto>? scopes,
+        string? targetGrade,
+        CancellationToken ct)
+    {
+        return await ValidateScopesAsync(db, scopes ?? BuildPackageLegacyScopes(targetGrade), ct);
+    }
+
+    public static async Task EnsureExactScopeSubjectEligibilityAsync(
+        IAppDbContext db,
+        IReadOnlyList<AcademicScopeDto>? scopes,
+        CancellationToken ct)
+    {
+        if (scopes == null || scopes.Count == 0)
+            return;
+
+        foreach (var scope in scopes)
+        {
+            if (scope.ScopeLevel != AcademicScopeLevel.Exact ||
+                !scope.EducationStage.HasValue ||
+                !scope.GradeLevel.HasValue ||
+                !scope.SubjectId.HasValue)
+            {
+                continue;
+            }
+
+            var subjectExists = await db.Subjects.AnyAsync(subject => subject.Id == scope.SubjectId.Value, ct);
+            if (!subjectExists)
+                continue;
+
+            var existing = await db.AcademicSubjectEligibilities.FirstOrDefaultAsync(item =>
+                item.EducationStage == scope.EducationStage.Value &&
+                item.GradeLevel == scope.GradeLevel.Value &&
+                item.SubjectId == scope.SubjectId.Value,
+                ct);
+
+            if (existing == null)
+            {
+                db.AcademicSubjectEligibilities.Add(new AcademicSubjectEligibility
+                {
+                    EducationStage = scope.EducationStage.Value,
+                    GradeLevel = scope.GradeLevel.Value,
+                    SubjectId = scope.SubjectId.Value,
+                    IsActive = true,
+                });
+            }
+            else if (!existing.IsActive)
+            {
+                existing.IsActive = true;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+    }
+
+    public static async Task SyncExplicitScopesAsync(
+        IAppDbContext db,
+        StudentFacingScopeOwnerType ownerType,
+        Guid ownerId,
+        IReadOnlyList<AcademicScopeDto>? scopes,
+        Guid? actorId,
+        CancellationToken ct)
+    {
+        if (scopes == null)
+            return;
+
+        await new AcademicScopeService(db).SyncOwnerScopesAsync(ownerType, ownerId, scopes, actorId, ct);
+    }
+
+    public static async Task SyncScopesOrPackageLegacyAsync(
+        IAppDbContext db,
+        StudentFacingScopeOwnerType ownerType,
+        Guid ownerId,
+        IReadOnlyList<AcademicScopeDto>? scopes,
+        string? targetGrade,
+        Guid? actorId,
+        CancellationToken ct)
+    {
+        await new AcademicScopeService(db).SyncOwnerScopesAsync(ownerType, ownerId, scopes ?? BuildPackageLegacyScopes(targetGrade), actorId, ct);
+    }
+
+    private static async Task<AcademicScopeCheckResult> ValidateScopesAsync(
+        IAppDbContext db,
+        IReadOnlyList<AcademicScopeDto> scopes,
+        CancellationToken ct)
+    {
+        var result = await new AcademicScopeService(db).ValidateScopeDtosAsync(scopes, ct);
+        return result.IsValid
+            ? AcademicScopeCheckResult.Eligible()
+            : AcademicScopeCheckResult.Denied(result.ErrorCode ?? "ACADEMIC_SCOPE_INVALID", result.Message ?? "نطاق أكاديمي غير صالح.");
+    }
+
+    private static IReadOnlyList<AcademicScopeDto> BuildPackageLegacyScopes(string? targetGrade)
+    {
+        if (string.Equals(targetGrade?.Trim(), "All", StringComparison.OrdinalIgnoreCase))
+            return [new AcademicScopeDto(AcademicScopeLevel.PlatformWide)];
+
+        return targetGrade?
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(gradeValue => AcademicScopeService.TryNormalizeGradeAlias(gradeValue, out var grade)
+                ? new AcademicScopeDto(AcademicScopeLevel.GradeAllSubjects, InferStageForGrade(grade), grade)
+                : null)
+            .OfType<AcademicScopeDto>()
+            .ToList()
+            ?? [];
+    }
+
+    private static string NormalizeGradeAlias(string grade)
+    {
+        return AcademicScopeService.TryNormalizeGradeAlias(grade, out var normalized)
+            ? normalized.ToString()
+            : grade;
+    }
+
+    private static EducationStage InferStageForGrade(GradeLevel grade)
+    {
+        foreach (EducationStage stage in Enum.GetValues<EducationStage>())
+        {
+            if (AcademicValidationService.IsGradeValidForStage(stage, grade))
+                return stage;
+        }
+
+        return EducationStage.Secondary;
+    }
+}
+
+public record CreateTermCommand(string Title, int Order, Guid PackageId, decimal Price, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiResponse<Guid>>
 {
@@ -183,6 +362,10 @@ public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiRe
 
     public async Task<ApiResponse<Guid>> Handle(CreateTermCommand request, CancellationToken ct)
     {
+        var scopeValidation = await ContentAcademicScopeValidation.ValidateExplicitScopesAsync(_db, request.AcademicScopes, ct);
+        if (!scopeValidation.IsEligible)
+            return ApiResponse<Guid>.Fail(scopeValidation.Message ?? "نطاق الترم الأكاديمي غير صالح.", new List<string> { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" });
+
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessPackageAsync(request.CurrentUserId.Value, request.PackageId, ct);
@@ -225,11 +408,19 @@ public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiRe
         _db.OutboxEvents.Add(termPublishedEvent);
 
         await _db.SaveChangesAsync(ct);
+        await ContentAcademicScopeValidation.SyncExplicitScopesAsync(
+            _db,
+            StudentFacingScopeOwnerType.Term,
+            term.Id,
+            request.AcademicScopes,
+            request.CurrentUserId,
+            ct);
+
         return ApiResponse<Guid>.Ok(term.Id);
     }
 }
 
-public record UpdateTermCommand(Guid Id, string Title, int Order, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+public record UpdateTermCommand(Guid Id, string Title, int Order, decimal Price, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse>;
 
 public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiResponse>
 {
@@ -244,6 +435,10 @@ public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiRe
 
     public async Task<ApiResponse> Handle(UpdateTermCommand request, CancellationToken ct)
     {
+        var scopeValidation = await ContentAcademicScopeValidation.ValidateExplicitScopesAsync(_db, request.AcademicScopes, ct);
+        if (!scopeValidation.IsEligible)
+            return ApiResponse.Fail(scopeValidation.Message ?? "نطاق الترم الأكاديمي غير صالح.", new List<string> { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" });
+
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessTermAsync(request.CurrentUserId.Value, request.Id, ct);
@@ -271,6 +466,14 @@ public class UpdateTermCommandHandler : IRequestHandler<UpdateTermCommand, ApiRe
         _db.OutboxEvents.Add(outboxEvent);
 
         await _db.SaveChangesAsync(ct);
+        await ContentAcademicScopeValidation.SyncExplicitScopesAsync(
+            _db,
+            StudentFacingScopeOwnerType.Term,
+            term.Id,
+            request.AcademicScopes,
+            request.CurrentUserId,
+            ct);
+
         return ApiResponse.Ok();
     }
 }
@@ -323,7 +526,7 @@ public class DeleteTermCommandHandler : IRequestHandler<DeleteTermCommand, ApiRe
 }
 
 // --- Sections ---
-public record CreateSectionCommand(string Title, int Order, Guid TermId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreateSectionCommand(string Title, int Order, Guid TermId, decimal Price, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand, ApiResponse<Guid>>
 {
@@ -338,6 +541,10 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
 
     public async Task<ApiResponse<Guid>> Handle(CreateSectionCommand request, CancellationToken ct)
     {
+        var scopeValidation = await ContentAcademicScopeValidation.ValidateExplicitScopesAsync(_db, request.AcademicScopes, ct);
+        if (!scopeValidation.IsEligible)
+            return ApiResponse<Guid>.Fail(scopeValidation.Message ?? "نطاق القسم الأكاديمي غير صالح.", new List<string> { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" });
+
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessTermAsync(request.CurrentUserId.Value, request.TermId, ct);
@@ -386,12 +593,20 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
         }
 
         await _db.SaveChangesAsync(ct);
+        await ContentAcademicScopeValidation.SyncExplicitScopesAsync(
+            _db,
+            StudentFacingScopeOwnerType.ContentSection,
+            sec.Id,
+            request.AcademicScopes,
+            request.CurrentUserId,
+            ct);
+
         return ApiResponse<Guid>.Ok(sec.Id);
     }
 }
 
 // --- Update Section ---
-public record UpdateSectionCommand(Guid Id, string Title, int Order, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+public record UpdateSectionCommand(Guid Id, string Title, int Order, decimal Price, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse>;
 
 public class UpdateSectionCommandHandler : IRequestHandler<UpdateSectionCommand, ApiResponse>
 {
@@ -406,6 +621,10 @@ public class UpdateSectionCommandHandler : IRequestHandler<UpdateSectionCommand,
 
     public async Task<ApiResponse> Handle(UpdateSectionCommand request, CancellationToken ct)
     {
+        var scopeValidation = await ContentAcademicScopeValidation.ValidateExplicitScopesAsync(_db, request.AcademicScopes, ct);
+        if (!scopeValidation.IsEligible)
+            return ApiResponse.Fail(scopeValidation.Message ?? "نطاق القسم الأكاديمي غير صالح.", new List<string> { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" });
+
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessSectionAsync(request.CurrentUserId.Value, request.Id, ct);
@@ -420,12 +639,20 @@ public class UpdateSectionCommandHandler : IRequestHandler<UpdateSectionCommand,
         section.Price = request.Price;
 
         await _db.SaveChangesAsync(ct);
+        await ContentAcademicScopeValidation.SyncExplicitScopesAsync(
+            _db,
+            StudentFacingScopeOwnerType.ContentSection,
+            section.Id,
+            request.AcademicScopes,
+            request.CurrentUserId,
+            ct);
+
         return ApiResponse.Ok();
     }
 }
 
 // --- Update Lesson ---
-public record UpdateLessonCommand(Guid Id, string Title, string Summary, int Order, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+public record UpdateLessonCommand(Guid Id, string Title, string Summary, int Order, decimal Price, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse>;
 
 public class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCommand, ApiResponse>
 {
@@ -440,6 +667,10 @@ public class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCommand, A
 
     public async Task<ApiResponse> Handle(UpdateLessonCommand request, CancellationToken ct)
     {
+        var scopeValidation = await ContentAcademicScopeValidation.ValidateExplicitScopesAsync(_db, request.AcademicScopes, ct);
+        if (!scopeValidation.IsEligible)
+            return ApiResponse.Fail(scopeValidation.Message ?? "نطاق الدرس الأكاديمي غير صالح.", new List<string> { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" });
+
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, request.Id, ct);
@@ -455,11 +686,19 @@ public class UpdateLessonCommandHandler : IRequestHandler<UpdateLessonCommand, A
         lesson.Price = request.Price;
 
         await _db.SaveChangesAsync(ct);
+        await ContentAcademicScopeValidation.SyncExplicitScopesAsync(
+            _db,
+            StudentFacingScopeOwnerType.Lesson,
+            lesson.Id,
+            request.AcademicScopes,
+            request.CurrentUserId,
+            ct);
+
         return ApiResponse.Ok();
     }
 }
 
-public record CreateLessonCommand(string Title, string Summary, int Order, Guid SectionId, Guid? ExamId, decimal Price, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreateLessonCommand(string Title, string Summary, int Order, Guid SectionId, Guid? ExamId, decimal Price, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, ApiResponse<Guid>>
 {
@@ -474,6 +713,10 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
 
     public async Task<ApiResponse<Guid>> Handle(CreateLessonCommand request, CancellationToken ct)
     {
+        var scopeValidation = await ContentAcademicScopeValidation.ValidateExplicitScopesAsync(_db, request.AcademicScopes, ct);
+        if (!scopeValidation.IsEligible)
+            return ApiResponse<Guid>.Fail(scopeValidation.Message ?? "نطاق الدرس الأكاديمي غير صالح.", new List<string> { scopeValidation.ErrorCode ?? "ACADEMIC_SCOPE_INVALID" });
+
         if (request.CurrentUserId.HasValue)
         {
             var canAccess = await _auth.CanAccessSectionAsync(request.CurrentUserId.Value, request.SectionId, ct);
@@ -514,11 +757,19 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
         }
 
         await _db.SaveChangesAsync(ct);
+        await ContentAcademicScopeValidation.SyncExplicitScopesAsync(
+            _db,
+            StudentFacingScopeOwnerType.Lesson,
+            lesson.Id,
+            request.AcademicScopes,
+            request.CurrentUserId,
+            ct);
+
         return ApiResponse<Guid>.Ok(lesson.Id);
     }
 }
 
-public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, bool IsActive = true, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
+public record CreateVideoCommand(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid LessonId, Guid VideoTypeId, bool IsActive = true, Guid? CurrentUserId = null) : IRequest<ApiResponse<Guid>>;
 
 public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, ApiResponse<Guid>>
 {
@@ -546,6 +797,11 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             return ApiResponse<Guid>.Fail("Invalid provider. Supported: youtube, vk, bunny");
         }
 
+        if (!await VideoTypeRules.IsActiveAsync(_db, request.VideoTypeId, ct))
+        {
+            return ApiResponse<Guid>.Fail("اختر نوع فيديو نشطاً.", ["VIDEO_TYPE_INVALID"]);
+        }
+
         var normalizedProvider = VideoProviders.Normalize(request.Provider);
         var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
         string extractedId = request.UrlOrEmbedCode;
@@ -562,6 +818,7 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
             Order = request.Order,
             MaxWatchCount = request.Limit,
             LessonId = request.LessonId,
+            VideoTypeId = request.VideoTypeId,
             IsActive = request.IsActive
         };
         _db.LessonVideos.Add(video);
@@ -584,7 +841,7 @@ public class CreateVideoCommandHandler : IRequestHandler<CreateVideoCommand, Api
     }
 }
 
-public record UpdateVideoCommand(Guid Id, string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+public record UpdateVideoCommand(Guid Id, string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid VideoTypeId, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
 
 public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, ApiResponse>
 {
@@ -615,6 +872,11 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
             return ApiResponse.Fail("Invalid provider. Supported: youtube, vk, bunny");
         }
 
+        if (video.VideoTypeId != request.VideoTypeId && !await VideoTypeRules.IsActiveAsync(_db, request.VideoTypeId, ct))
+        {
+            return ApiResponse.Fail("اختر نوع فيديو نشطاً.", ["VIDEO_TYPE_INVALID"]);
+        }
+
         var normalizedProvider = VideoProviders.Normalize(request.Provider);
         var providerImpl = _providers.FirstOrDefault(p => p.Name.Equals(normalizedProvider, StringComparison.OrdinalIgnoreCase));
         var extractedId = request.UrlOrEmbedCode;
@@ -628,6 +890,7 @@ public class UpdateVideoCommandHandler : IRequestHandler<UpdateVideoCommand, Api
         video.ProviderVideoId = extractedId;
         video.Order = request.Order;
         video.MaxWatchCount = request.Limit;
+        video.VideoTypeId = request.VideoTypeId;
 
         var outboxEvent = new OutboxEvent
         {
@@ -736,8 +999,8 @@ public record AttachHomeworkCommand(
 public record AttachHomeworkOptionDto(string Text, bool IsCorrect);
 
 public record AttachHomeworkQuestionDto(
-    string Text, 
-    int Order, 
+    string Text,
+    int Order,
     decimal Points,
     string Type,
     List<AttachHomeworkOptionDto>? Options = null,
@@ -1033,6 +1296,49 @@ public class LinkVideoExamCommandHandler : IRequestHandler<LinkVideoExamCommand,
 }
 
 public record UnlinkVideoExamCommand(Guid VideoId, Guid ExamId, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+
+public record SetExamActiveStatusCommand(Guid ExamId, bool IsActive, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+
+public class SetExamActiveStatusCommandHandler : IRequestHandler<SetExamActiveStatusCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public SetExamActiveStatusCommandHandler(IAppDbContext db, TeacherAuthorizationService auth) { _db = db; _auth = auth; }
+
+    public async Task<ApiResponse> Handle(SetExamActiveStatusCommand request, CancellationToken ct)
+    {
+        var exam = await _db.Exams.FirstOrDefaultAsync(x => x.Id == request.ExamId, ct);
+        if (exam == null) return ApiResponse.Fail("Exam not found");
+        if (request.CurrentUserId.HasValue && !await _auth.CanAccessExamAsync(request.CurrentUserId.Value, request.ExamId, ct))
+            return ApiResponse.Fail("Unauthorized access to this exam.");
+        exam.IsActive = request.IsActive;
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
+
+public record SetHomeworkActiveStatusCommand(Guid HomeworkId, bool IsActive, Guid? CurrentUserId = null) : IRequest<ApiResponse>;
+
+public class SetHomeworkActiveStatusCommandHandler : IRequestHandler<SetHomeworkActiveStatusCommand, ApiResponse>
+{
+    private readonly IAppDbContext _db;
+    private readonly TeacherAuthorizationService _auth;
+
+    public SetHomeworkActiveStatusCommandHandler(IAppDbContext db, TeacherAuthorizationService auth) { _db = db; _auth = auth; }
+
+    public async Task<ApiResponse> Handle(SetHomeworkActiveStatusCommand request, CancellationToken ct)
+    {
+        var homework = await _db.Homeworks.FirstOrDefaultAsync(x => x.Id == request.HomeworkId, ct);
+        if (homework == null) return ApiResponse.Fail("Homework not found");
+        if (request.CurrentUserId.HasValue && !await _auth.CanAccessLessonAsync(request.CurrentUserId.Value, homework.LessonId, ct))
+            return ApiResponse.Fail("Unauthorized access to this homework.");
+        homework.IsActive = request.IsActive;
+        homework.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return ApiResponse.Ok();
+    }
+}
 
 public class UnlinkVideoExamCommandHandler : IRequestHandler<UnlinkVideoExamCommand, ApiResponse>
 {

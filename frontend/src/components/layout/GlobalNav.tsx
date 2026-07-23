@@ -41,6 +41,9 @@ export function GlobalNav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isLanding = pathname === '/';
+  const isPublicTeachersPage =
+    pathname === '/teachers' || pathname.startsWith('/teachers/');
+  const isPublicPackagePage = pathname.startsWith('/packages/');
   const isStudentArea = pathname.startsWith('/student');
   const isAdminArea = pathname.startsWith('/admin');
   const isTeacherArea = pathname.startsWith('/teacher');
@@ -68,13 +71,18 @@ export function GlobalNav() {
     });
   };
 
-  const isStaffUser = user?.roles?.some(r =>
-    r.toLowerCase().includes('admin') ||
-    r.toLowerCase().includes('supervisor') ||
-    r.toLowerCase().includes('teacher') ||
-    r.toLowerCase().includes('assistant') ||
-    r.toLowerCase().includes('staff')
-  ) || user?.allowedDomains?.some(d => d === 'admin' || d === 'teacher' || d === 'assistant');
+  const isStaffUser =
+    user?.roles?.some(
+      (r) =>
+        r.toLowerCase().includes('admin') ||
+        r.toLowerCase().includes('supervisor') ||
+        r.toLowerCase().includes('teacher') ||
+        r.toLowerCase().includes('assistant') ||
+        r.toLowerCase().includes('staff')
+    ) ||
+    user?.allowedDomains?.some(
+      (d) => d === 'admin' || d === 'teacher' || d === 'assistant'
+    );
 
   const navLinks = isAuthenticated
     ? isStaffUser
@@ -87,15 +95,15 @@ export function GlobalNav() {
       : [
           { href: '/student', label: 'لوحة التحكم' },
           { href: '/student/packages', label: 'باقاتي' },
-          { href: '/student/code-redemption', label: 'تفعيل كود' },
         ]
-    : isLanding
+    : isLanding || isPublicTeachersPage || isPublicPackagePage
       ? [
           { href: '/', label: 'الرئيسية' },
-          { href: '#courses', label: 'الدورات' },
-          { href: '#teachers', label: 'المعلمون' },
-          { href: '#about-platform', label: 'عن المنصة' },
-          { href: '#testimonials', label: 'آراء الطلبة' },
+          { href: '/#courses', label: 'الدورات' },
+          { href: '/#teachers', label: 'المعلمون' },
+          { href: '/#about-platform', label: 'عن المنصة' },
+          { href: '/#testimonials', label: 'آراء الطلبة' },
+          { href: '/parent', label: 'متابعة ولي الأمر' },
         ]
       : [];
 
@@ -143,7 +151,7 @@ export function GlobalNav() {
                   href="/register"
                   className="hidden md:inline-flex text-[15px] h-[46px] items-center px-6"
                 >
-                  احجز مكانك
+                  إنشاء حساب
                 </InteractiveHoverButton>
               </>
             )}
@@ -253,7 +261,7 @@ export function GlobalNav() {
                     }}
                     className="w-full text-base h-12 flex items-center justify-center"
                   >
-                    احجز مكانك
+                    إنشاء حساب
                   </InteractiveHoverButton>
                 </>
               )}

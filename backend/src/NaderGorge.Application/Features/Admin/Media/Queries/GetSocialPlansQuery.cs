@@ -42,12 +42,14 @@ public class GetSocialPlansQueryHandler : IRequestHandler<GetSocialPlansQuery, A
 
         if (request.StartDate.HasValue)
         {
-            query = query.Where(sp => sp.ScheduledDate >= request.StartDate.Value);
+            var (startUtc, _) = CairoTime.GetDayRangeUtc(request.StartDate.Value);
+            query = query.Where(sp => sp.ScheduledDate >= startUtc);
         }
 
         if (request.EndDate.HasValue)
         {
-            query = query.Where(sp => sp.ScheduledDate <= request.EndDate.Value);
+            var (endUtc, _) = CairoTime.GetDayRangeUtc(request.EndDate.Value);
+            query = query.Where(sp => sp.ScheduledDate < endUtc);
         }
 
         var items = await query

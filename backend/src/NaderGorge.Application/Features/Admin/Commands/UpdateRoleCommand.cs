@@ -43,6 +43,20 @@ public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, ApiRe
 
         var normalizedName = request.Name.Trim();
 
+        var requestedPermissions = request.Permissions ?? [];
+        var requestedNavbarItems = request.AllowedNavbarItems ?? [];
+        var permissionsJson = JsonSerializer.Serialize(requestedPermissions);
+        if (!DelegatedRoleDomainPolicy.TryNormalize(request.AllowedDomain, out var allowedDomain))
+        {
+            return ApiResponse.Fail("اختر بوابة المدير أو بوابة المساعد للدور المفوض", new List<string> { "ROLE_DOMAIN_INVALID" });
+        }
+
+        var allowedNavbarItemsJson = JsonSerializer.Serialize(requestedNavbarItems);
+        var roleDefinitionChanged = !string.Equals(role.Name, normalizedName, StringComparison.Ordinal)
+            || !string.Equals(role.PermissionsJson, permissionsJson, StringComparison.Ordinal)
+            || !string.Equals(role.AllowedDomain, allowedDomain, StringComparison.Ordinal)
+            || !string.Equals(role.AllowedNavbarItemsJson, allowedNavbarItemsJson, StringComparison.Ordinal);
+
         // Check duplicates
         var exists = await _db.Roles.AnyAsync(r => r.Id != request.Id && r.Name.ToLower() == normalizedName.ToLower(), cancellationToken);
         if (exists)
@@ -50,13 +64,25 @@ public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, ApiRe
             return ApiResponse.Fail("اسم الدور مسجل بالفعل", new List<string> { "ROLE_NAME_DUPLICATE" });
         }
 
-        var permissions = request.Permissions ?? [];
+        var permissions = requestedPermissions;
         var previouslyRoutesConversations = HasRoutingPermission(role.PermissionsJson);
         var routesConversations = permissions.Contains(LiveSupportRoutingPermissions.ReceiveConversations, StringComparer.OrdinalIgnoreCase);
         role.Name = normalizedName;
-        role.PermissionsJson = JsonSerializer.Serialize(permissions);
-        role.AllowedDomain = request.AllowedDomain ?? "all";
-        role.AllowedNavbarItemsJson = JsonSerializer.Serialize(request.AllowedNavbarItems ?? new List<string>());
+        role.PermissionsJson = permissionsJson;
+        role.AllowedDomain = allowedDomain;
+        role.AllowedNavbarItemsJson = allowedNavbarItemsJson;
+
+        var affectedUsers = roleDefinitionChanged
+            ? await _db.Users
+                .Where(user => user.UserRoles.Any(userRole => userRole.RoleId == role.Id))
+                .ToListAsync(cancellationToken)
+            : [];
+
+        foreach (var affectedUser in affectedUsers)
+        {
+            affectedUser.SecurityStampVersion += 1;
+            AddUserAuthorizationChangedEvent(affectedUser.Id, role.Id, affectedUser.SecurityStampVersion, request.ActorUserId);
+        }
 
         if (previouslyRoutesConversations != routesConversations)
         {
@@ -81,6 +107,29 @@ public class UpdateRoleCommandHandler : IRequestHandler<UpdateRoleCommand, ApiRe
         await _db.SaveChangesAsync(cancellationToken);
 
         return ApiResponse.Ok("تم تعديل الدور بنجاح");
+    }
+
+    private void AddUserAuthorizationChangedEvent(Guid userId, Guid roleId, int authorizationVersion, Guid actorUserId)
+    {
+        _db.OutboxEvents.Add(new NaderGorge.Domain.Entities.OutboxEvent
+        {
+            Type = "StaffDataChanged",
+            TargetUserId = userId.ToString(),
+            TargetGroup = "Role_Staff",
+            PayloadJson = JsonSerializer.Serialize(new
+            {
+                schemaVersion = "2",
+                eventId = Guid.NewGuid(),
+                occurredAt = DateTime.UtcNow,
+                scopes = new[] { "users", "settings" },
+                operation = "updated",
+                entityType = "Role",
+                entityIds = new[] { roleId },
+                userId,
+                authorizationVersion,
+                actorUserId
+            })
+        });
     }
 
     private static bool HasRoutingPermission(string? permissionsJson)

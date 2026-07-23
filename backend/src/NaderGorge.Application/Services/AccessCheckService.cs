@@ -7,10 +7,12 @@ namespace NaderGorge.Application.Services;
 public class AccessCheckService : IAccessCheckService
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public AccessCheckService(IAppDbContext db)
+    public AccessCheckService(IAppDbContext db, IAcademicScopeService? academicScope = null)
     {
         _db = db;
+        _academicScope = academicScope;
     }
 
     public async Task<bool> HasAccessToPackageAsync(Guid userId, Guid packageId, CancellationToken ct = default)
@@ -24,6 +26,13 @@ public class AccessCheckService : IAccessCheckService
         if (userRoles.Contains("Admin") || userRoles.Contains("Teacher"))
             return true;
 
+        var packageVisible = await _db.Packages
+            .Where(package => package.Id == packageId)
+            .Select(package => (bool?)package.Teacher.IsContentVisibleToStudents)
+            .FirstOrDefaultAsync(ct);
+        if (packageVisible == false)
+            return false;
+
         // Only a Package-level grant gives access to the whole package
         var hasAccess = await _db.StudentAccessGrants
             .AnyAsync(g => g.UserId == userId &&
@@ -32,7 +41,8 @@ public class AccessCheckService : IAccessCheckService
                            g.PackageId == packageId &&
                            (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
 
-        return hasAccess;
+        return hasAccess &&
+            await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.Package, packageId, userId, ct);
     }
 
     public async Task<bool> HasAccessToLessonAsync(Guid userId, Guid lessonId, CancellationToken ct = default)
@@ -57,6 +67,13 @@ public class AccessCheckService : IAccessCheckService
         var termId = lesson.ContentSection?.TermId;
         var packageId = lesson.ContentSection?.Term?.PackageId;
 
+        var teacherVisible = await _db.Lessons
+            .Where(item => item.Id == lessonId)
+            .Select(item => (bool?)item.ContentSection.Term.Package.Teacher.IsContentVisibleToStudents)
+            .FirstOrDefaultAsync(ct);
+        if (teacherVisible == false)
+            return false;
+
         // Check cascading access: Lesson → Section → Term → Package
         // Each level must match its GrantType to prevent cross-level leaks
         var hasAccess = await _db.StudentAccessGrants
@@ -71,7 +88,65 @@ public class AccessCheckService : IAccessCheckService
                            ),
                        ct);
 
-        return hasAccess;
+        return hasAccess &&
+            await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.Lesson, lessonId, userId, ct);
+    }
+
+    public async Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default)
+    {
+        var video = await _db.LessonVideos
+            .AsNoTracking()
+            .Where(v => v.Id == lessonVideoId && v.IsActive)
+            .Select(v => new
+            {
+                v.LessonId,
+                v.VideoTypeId,
+                ContentSectionId = v.Lesson.ContentSectionId,
+                TermId = v.Lesson.ContentSection.TermId,
+                PackageId = v.Lesson.ContentSection.Term.PackageId,
+                TeacherId = v.Lesson.ContentSection.Term.Package.TeacherId
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (video == null)
+            return false;
+
+        var videoTeacherVisible = await _db.TeacherProfiles
+            .Where(teacher => teacher.Id == video.TeacherId)
+            .Select(teacher => (bool?)teacher.IsContentVisibleToStudents)
+            .FirstOrDefaultAsync(ct);
+        if (videoTeacherVisible == false)
+            return false;
+
+        if (await HasAccessToLessonAsync(userId, video.LessonId, ct))
+            return true;
+
+        var now = DateTime.UtcNow;
+        var hasDirectVideoAccess = await _db.StudentAccessGrants.AnyAsync(g =>
+            g.UserId == userId &&
+            g.IsActive &&
+            g.GrantType == CodeType.Video &&
+            (g.ExpiresAt == null || g.ExpiresAt > now) &&
+            (g.MaxUses == null || g.UsesConsumed < g.MaxUses) &&
+            (
+                g.LessonVideoId == lessonVideoId ||
+                (
+                    g.VideoTypeId != null &&
+                    g.VideoTypeId == video.VideoTypeId &&
+                    (g.LessonId == null || g.LessonId == video.LessonId) &&
+                    (g.ContentSectionId == null || g.ContentSectionId == video.ContentSectionId) &&
+                    (g.TermId == null || g.TermId == video.TermId) &&
+                    (g.PackageId == null || g.PackageId == video.PackageId) &&
+                    (
+                        g.AccessCode == null ||
+                        g.AccessCode.CodeGroup.TeacherId == null ||
+                        g.AccessCode.CodeGroup.TeacherId == video.TeacherId
+                    )
+                )
+            ), ct);
+
+        return hasDirectVideoAccess &&
+            await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.LessonVideo, lessonVideoId, userId, ct);
     }
 
     public async Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken ct = default)
@@ -85,15 +160,62 @@ public class AccessCheckService : IAccessCheckService
         if (userRoles.Contains("Admin") || userRoles.Contains("Teacher"))
             return true;
 
+        var now = DateTime.UtcNow;
+        var examVisible = await _db.Exams
+            .Where(exam => exam.Id == examId)
+            .Select(exam => (bool?)exam.CreatedByTeacher.IsContentVisibleToStudents)
+            .FirstOrDefaultAsync(ct);
+        if (examVisible == false)
+            return false;
+        var publicProduct = await _db.PublicExamProducts
+            .Where(x => x.ExamId == examId)
+            .Select(x => new
+            {
+                x.Id,
+                x.IsPublished,
+                x.IsPaid,
+                x.AvailableFrom,
+                x.AvailableUntil,
+                x.DisabledAt
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (publicProduct != null)
+        {
+            if (!publicProduct.IsPublished ||
+                publicProduct.DisabledAt != null ||
+                (publicProduct.AvailableFrom != null && publicProduct.AvailableFrom > now) ||
+                (publicProduct.AvailableUntil != null && publicProduct.AvailableUntil <= now))
+                return false;
+
+            if (!await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.PublicExamProduct, publicProduct.Id, userId, ct))
+                return false;
+
+            if (!publicProduct.IsPaid)
+                return true;
+
+            var hasPublicExamAccess = await _db.StudentAccessGrants.AnyAsync(g =>
+                g.UserId == userId &&
+                g.IsActive &&
+                g.GrantType == CodeType.Exam &&
+                g.PublicExamProductId == publicProduct.Id &&
+                (g.ExpiresAt == null || g.ExpiresAt > now), ct);
+
+            if (hasPublicExamAccess)
+                return true;
+        }
+
         // 1. Direct Exam access grant
         var hasDirectAccess = await _db.StudentAccessGrants
             .AnyAsync(g => g.UserId == userId &&
                            g.IsActive &&
                            g.GrantType == CodeType.Exam &&
                            g.ExamId == examId &&
-                           (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
+                           (g.ExpiresAt == null || g.ExpiresAt > now), ct);
 
-        if (hasDirectAccess) return true;
+        if (hasDirectAccess &&
+            await IsAcademicallyEligibleAsync(StudentFacingScopeOwnerType.Exam, examId, userId, ct))
+            return true;
 
         // 2. Lesson-linked Exam access
         var lessonIds = await _db.Lessons
@@ -118,14 +240,8 @@ public class AccessCheckService : IAccessCheckService
             if (await HasAccessToLessonAsync(userId, video.LessonId, ct))
                 return true;
 
-            var hasVideoGrant = await _db.StudentAccessGrants
-                .AnyAsync(g => g.UserId == userId &&
-                               g.IsActive &&
-                               g.GrantType == CodeType.Video &&
-                               g.LessonVideoId == video.Id &&
-                               (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
-
-            if (hasVideoGrant) return true;
+            if (await HasAccessToVideoAsync(userId, video.Id, ct))
+                return true;
         }
 
         var examWithVideo = await _db.Exams
@@ -133,25 +249,29 @@ public class AccessCheckService : IAccessCheckService
             .Select(e => new { e.LessonVideoId })
             .FirstOrDefaultAsync(ct);
 
-        if (examWithVideo != null)
+        if (examWithVideo?.LessonVideoId is Guid linkedVideoId)
         {
-            var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == examWithVideo.LessonVideoId.Value, ct);
+            var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == linkedVideoId, ct);
             if (video != null)
             {
                 if (await HasAccessToLessonAsync(userId, video.LessonId, ct))
                     return true;
 
-                var hasVideoGrant = await _db.StudentAccessGrants
-                    .AnyAsync(g => g.UserId == userId &&
-                                   g.IsActive &&
-                                   g.GrantType == CodeType.Video &&
-                                   g.LessonVideoId == video.Id &&
-                                   (g.ExpiresAt == null || g.ExpiresAt > DateTime.UtcNow), ct);
-
-                if (hasVideoGrant) return true;
+                if (await HasAccessToVideoAsync(userId, video.Id, ct))
+                    return true;
             }
         }
 
         return false;
+    }
+
+    private async Task<bool> IsAcademicallyEligibleAsync(
+        StudentFacingScopeOwnerType ownerType,
+        Guid ownerId,
+        Guid userId,
+        CancellationToken ct)
+    {
+        return _academicScope == null ||
+            await _academicScope.IsOwnerEligibleForStudentAsync(ownerType, ownerId, userId, ct);
     }
 }

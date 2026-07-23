@@ -3,15 +3,22 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
-import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3, Trash2 } from 'lucide-react';
+import { BookCheck, FileQuestion, GraduationCap, LayoutList, Timer, Plus, BarChart3, Power } from 'lucide-react';
 import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 
-export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnlink?: () => void }) {
+export function AttachedExamViewer({
+  examId,
+  surface = 'admin',
+}: {
+  examId: string;
+  surface?: 'admin' | 'teacher';
+}) {
   const router = useRouter();
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const examBasePath = surface === 'teacher' ? '/teacher/packages/exams' : '/admin/content/exams';
 
   const loadData = useCallback(async () => {
     try {
@@ -23,6 +30,17 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
       setLoading(false);
     }
   }, [examId]);
+
+  const toggleStatus = async () => {
+    if (!data) return;
+    try {
+      await adminService.setExamStatus(examId, !data.isActive);
+      setData({ ...data, isActive: !data.isActive });
+      toast.success(data.isActive ? 'تم تعطيل الامتحان، وسيظل محفوظاً.' : 'تم تفعيل الامتحان.');
+    } catch {
+      toast.error('تعذر تحديث حالة الامتحان.');
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -64,20 +82,12 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
             )}
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0">
-            {onUnlink && (
-              <NeumorphButton
-                type="button"
-                onClick={onUnlink}
-                intent="danger"
-                size="md"
-                pill
-              >
-                <Trash2 className="w-4 h-4 ml-2" /> إلغاء ربط الامتحان
-              </NeumorphButton>
-            )}
+            <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
+              <Power className="w-4 h-4 ml-2" /> {data.isActive ? 'تعطيل الامتحان' : 'تفعيل الامتحان'}
+            </NeumorphButton>
             <NeumorphButton
               type="button"
-              onClick={() => router.push(`/admin/content/exams/${examId}`)}
+              onClick={() => router.push(`${examBasePath}/${examId}`)}
               intent="primary"
               size="md"
               pill
@@ -86,7 +96,7 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
             </NeumorphButton>
             <NeumorphButton
               type="button"
-              onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
+              onClick={() => router.push(`${examBasePath}/${examId}/add-question`)}
               intent="primary"
               size="md"
               pill
@@ -194,7 +204,7 @@ export function AttachedExamViewer({ examId, onUnlink }: { examId: string; onUnl
               <p className="text-xs text-[var(--admin-muted)] opacity-70 mb-4">لم يتم إدراج أي أسئلة حتى الآن. تأكد من إعداد الأسئلة للطلاب.</p>
               <NeumorphButton
                 type="button"
-                onClick={() => router.push(`/admin/content/exams/${examId}/add-question`)}
+                onClick={() => router.push(`${examBasePath}/${examId}/add-question`)}
                 intent="primary"
                 size="sm"
                 pill

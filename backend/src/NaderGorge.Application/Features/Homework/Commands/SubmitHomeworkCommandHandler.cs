@@ -151,7 +151,7 @@ public class SubmitHomeworkCommandHandler : IRequestHandler<SubmitHomeworkComman
                 Id = Guid.NewGuid(),
                 HomeworkSubmissionId = submission.Id,
                 QuestionId = answerInput.QuestionId,
-                ProvidedAnswer = answerInput.ProvidedAnswer
+                ProvidedAnswer = answerInput.ProvidedAnswer ?? string.Empty
             };
 
             switch (question.QuestionType)

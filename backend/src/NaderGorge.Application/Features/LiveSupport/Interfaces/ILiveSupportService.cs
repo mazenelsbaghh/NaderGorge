@@ -23,6 +23,9 @@ public interface ILiveSupportService
     Task<LiveSupportConversationDto> TransferAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid? targetStaffUserId, string reason, CancellationToken ct);
     Task<LiveSupportAdminConfigDto> GetAdminConfigAsync(CancellationToken ct);
     Task SetFeatureEnabledAsync(bool enabled, CancellationToken ct);
+    Task UpdateCannedRepliesAsync(IReadOnlyList<LiveSupportCannedReplyDto> replies, CancellationToken ct);
+    Task<IReadOnlyList<LiveSupportCannedReplyDto>> GetStaffCannedRepliesAsync(Guid staffUserId, CancellationToken ct);
+    Task UpdateStaffCannedRepliesAsync(Guid staffUserId, IReadOnlyList<LiveSupportCannedReplyDto> replies, CancellationToken ct);
     Task<LiveSupportStaffConfigDto> UpdateStaffConfigAsync(Guid actorUserId, Guid staffUserId, bool enabled, int capacity, long? expectedVersion, IReadOnlyList<LiveSupportScheduleWindowDto> schedule, CancellationToken ct);
     Task ReleaseStaffAssignmentsAsync(Guid staffUserId, LiveSupportAssignmentEndReason reason, CancellationToken ct);
     Task<IReadOnlyList<LiveSupportStudentSearchDto>> SearchStudentsAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string query, CancellationToken ct);

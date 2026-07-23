@@ -1,6 +1,6 @@
 export const PLATFORM_IDENTITY = {
   arabicName: 'منصة مسار',
-  englishName: 'Massar Platform',
+  englishName: 'Massar Academy',
   logo: {
     full: '/images/logo.svg',
     mark: '/images/logo-mark.svg',
@@ -23,4 +23,3 @@ export const ROLE_TRANSLATIONS: Record<string, string> = {
 export function translateRole(role: string): string {
   return ROLE_TRANSLATIONS[role] || role;
 }
-

@@ -3,62 +3,64 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
-  BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload,
+  BookOpenText, Plus, ChevronLeft, Sparkles, Video, Search, Eye, Folder, FolderOpen, FileText, Upload, Tags,
 } from 'lucide-react';
 import { AdminShellChrome, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
-import { contentService, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
+import { contentService, CONTENT_CACHE_KEYS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { Dropdown } from '@/components/ui/dropdown';
+import {
+  GRADE_LEVEL_LABELS,
+  GRADES_BY_STAGE,
+  getGradeLevelLabel,
+  type EducationStage,
+  type GradeLevel,
+} from '@/lib/academic-labels';
+import { useAuthStore } from '@/stores/auth-store';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: 'الأول الثانوي',
-  SecondSecondary: 'الثاني الثانوي',
-  SecondaryGrade3: 'الثالث الثانوي',
-  FirstBaccalaureate: 'الأول بكالوريا',
-  SecondBaccalaureate: 'الثاني بكالوريا',
-  PrimaryGrade1: 'الأول الابتدائي',
-  PrimaryGrade2: 'الثاني الابتدائي',
-  PrimaryGrade3: 'الثالث الابتدائي',
-  PrimaryGrade4: 'الرابع الابتدائي',
-  PrimaryGrade5: 'الخامس الابتدائي',
-  PrimaryGrade6: 'السادس الابتدائي',
-  PrepGrade1: 'الأول الإعدادي',
-  PrepGrade2: 'الثاني الإعدادي',
-  PrepGrade3: 'الثالث الإعدادي',
-  AzhariPrimary1: 'الأول الابتدائي الأزهري',
-  AzhariPrep1: 'الأول الإعدادي الأزهري',
-  AzhariSecondary1: 'الأول الثانوي الأزهري',
-  AmericanGrade9: 'Grade 9',
-  AmericanGrade10: 'Grade 10',
-  AmericanGrade11: 'Grade 11',
-  AmericanGrade12: 'Grade 12',
-};
+const GRADE_NAMES = GRADE_LEVEL_LABELS;
 
-function getTeacherPackageGrades(teacher: TeacherDto | undefined): { value: string; label: string }[] {
+function getStageForGrade(grade: string): EducationStage | '' {
+  for (const [stage, groups] of Object.entries(GRADES_BY_STAGE) as [EducationStage, typeof GRADES_BY_STAGE[EducationStage]][]) {
+    if (groups.some((group) => group.grades.some((item) => item.value === grade))) {
+      return stage;
+    }
+  }
+
+  return '';
+}
+
+function getTeacherPackageGrades(teacher: TeacherDto | undefined): { value: GradeLevel; label: string }[] {
   if (!teacher || !teacher.specialization) return [];
   const specs = teacher.specialization.split(',');
-  const list: { value: string; label: string }[] = [];
-  
-  const mapping: Record<string, { value: string; label: string }> = {
-    'FirstSecondary': { value: '1st Secondary', label: 'الصف الأول الثانوي' },
-    'SecondSecondary': { value: '2nd Secondary', label: 'الصف الثاني الثانوي' },
-    'SecondaryGrade3': { value: '3rd Secondary', label: 'الصف الثالث الثانوي' },
-    '1st Secondary': { value: '1st Secondary', label: 'الصف الأول الثانوي' },
-    '2nd Secondary': { value: '2nd Secondary', label: 'الصف الثاني الثانوي' },
-    '3rd Secondary': { value: '3rd Secondary', label: 'الصف الثالث الثانوي' },
+  const list: { value: GradeLevel; label: string }[] = [];
+
+  const mapping: Record<string, { value: GradeLevel; label: string }> = {
+    'FirstSecondary': { value: 'FirstSecondary', label: getGradeLevelLabel('FirstSecondary') },
+    'SecondSecondary': { value: 'SecondSecondary', label: getGradeLevelLabel('SecondSecondary') },
+    'SecondaryGrade3': { value: 'SecondaryGrade3', label: getGradeLevelLabel('SecondaryGrade3') },
+    '1st Secondary': { value: 'FirstSecondary', label: getGradeLevelLabel('1st Secondary') },
+    '2nd Secondary': { value: 'SecondSecondary', label: getGradeLevelLabel('2nd Secondary') },
+    '3rd Secondary': { value: 'SecondaryGrade3', label: getGradeLevelLabel('3rd Secondary') },
   };
 
   specs.forEach(spec => {
     const trimmed = spec.trim();
     if (mapping[trimmed]) {
       list.push(mapping[trimmed]);
+    } else if (getStageForGrade(trimmed)) {
+      list.push({ value: trimmed as GradeLevel, label: getGradeLevelLabel(trimmed) });
     } else {
-      list.push({ value: trimmed, label: GRADE_NAMES[trimmed] || trimmed });
+      const compact = trimmed.replace(/\s+/g, '');
+      if (getStageForGrade(compact)) {
+        list.push({ value: compact as GradeLevel, label: getGradeLevelLabel(compact) });
+      }
     }
   });
 
@@ -66,15 +68,15 @@ function getTeacherPackageGrades(teacher: TeacherDto | undefined): { value: stri
 }
 
 // ─── Create Package Inline Form ───────────────────────────────────────────────
-function CreatePackageRow({ 
-  onSuccess, 
-  teachers, 
+function CreatePackageRow({
+  onSuccess,
+  teachers,
   subjects,
   activeTeacherId
-}: { 
-  onSuccess: () => void; 
-  teachers: TeacherDto[]; 
-  subjects: SubjectDto[]; 
+}: {
+  onSuccess: () => void;
+  teachers: TeacherDto[];
+  subjects: SubjectDto[];
   activeTeacherId?: string | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -83,9 +85,9 @@ function CreatePackageRow({
   const [price, setPrice] = useState('');
   const [selectedTeacherId, setSelectedTeacherId] = useState(activeTeacherId || '');
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
-  const [selectedGrade, setSelectedGrade] = useState('');
+  const [selectedGrades, setSelectedGrades] = useState<GradeLevel[]>([]);
   const [saving, setSaving] = useState(false);
-  
+
   // Image Upload States
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -120,7 +122,7 @@ function CreatePackageRow({
   };
 
   async function handleCreate() {
-    if (!name.trim() || !selectedSubjectId || !selectedTeacherId || !selectedGrade) return;
+    if (!name.trim() || !selectedSubjectId || !selectedTeacherId || selectedGrades.length === 0) return;
     try {
       setSaving(true);
       const newPkg = await adminService.createPackage({
@@ -128,8 +130,14 @@ function CreatePackageRow({
         description: description.trim(),
         price: Number(price) || 0,
         subjectId: selectedSubjectId,
-        targetGrade: selectedGrade,
-        teacherId: selectedTeacherId
+        targetGrade: selectedGrades.join(','),
+        teacherId: selectedTeacherId,
+        academicScopes: selectedGrades.map((grade) => ({
+          scopeLevel: 'Exact',
+          educationStage: getStageForGrade(grade) as EducationStage,
+          gradeLevel: grade,
+          subjectId: selectedSubjectId,
+        })),
       });
 
       if (newPkg?.id && imageFile) {
@@ -141,9 +149,9 @@ function CreatePackageRow({
       }
 
       toast.success('تمت إضافة الباقة بنجاح.');
-      setName(''); setDescription(''); setPrice(''); 
+      setName(''); setDescription(''); setPrice('');
       if (!activeTeacherId) setSelectedTeacherId('');
-      setSelectedSubjectId(''); setSelectedGrade('');
+      setSelectedSubjectId(''); setSelectedGrades([]);
       setImageFile(null); setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setOpen(false);
@@ -170,6 +178,7 @@ function CreatePackageRow({
   }));
 
   const teacherGrades = getTeacherPackageGrades(selectedTeacher);
+  const gradeOptions = teacherGrades;
 
   if (!open) {
     return (
@@ -211,11 +220,11 @@ function CreatePackageRow({
         placeholder="السعر (جنيه مصري)"
         className="admin-input"
       />
-      
+
       {/* صورة الباقة */}
       <div className="space-y-1 text-right">
         <span className="text-xs font-bold text-[var(--admin-muted)]">صورة الباقة (اختياري)</span>
-        <div 
+        <div
           onClick={() => fileInputRef.current?.click()}
           className="relative flex flex-col items-center justify-center border-2 border-dashed border-[var(--admin-border)] rounded-2xl p-4 bg-[var(--admin-card)] hover:border-[var(--admin-primary)] cursor-pointer transition min-h-[100px]"
         >
@@ -253,7 +262,7 @@ function CreatePackageRow({
           />
         </div>
       </div>
-      
+
       {!activeTeacherId && (
         <Dropdown
           value={selectedTeacherId}
@@ -261,7 +270,7 @@ function CreatePackageRow({
             const stringVal = Array.isArray(val) ? val[0] : val;
             setSelectedTeacherId(stringVal);
             setSelectedSubjectId('');
-            setSelectedGrade('');
+            setSelectedGrades([]);
           }}
           options={teacherOptions}
           placeholder="اختر المدرس..."
@@ -274,7 +283,7 @@ function CreatePackageRow({
         onChange={(val) => {
           const stringVal = Array.isArray(val) ? val[0] : val;
           setSelectedSubjectId(stringVal);
-          setSelectedGrade('');
+          setSelectedGrades([]);
         }}
         options={subjectOptions}
         placeholder={selectedTeacherId ? 'اختر المادة...' : 'يرجى اختيار المدرس أولاً...'}
@@ -283,16 +292,18 @@ function CreatePackageRow({
       />
 
       <Dropdown
-        value={selectedGrade}
+        value={selectedGrades}
         onChange={(val) => {
-          const stringVal = Array.isArray(val) ? val[0] : val;
-          setSelectedGrade(stringVal);
+          setSelectedGrades((Array.isArray(val) ? val : [val]) as GradeLevel[]);
         }}
-        options={teacherGrades}
-        placeholder="اختر الصف الدراسي..."
+        options={gradeOptions}
+        placeholder="اختر الصفوف والمراحل الدراسية..."
         disabled={!selectedSubjectId}
+        multiple
+        searchable
         className="w-full"
       />
+      <p className="text-xs text-[var(--admin-muted)]">يمكن اختيار أكثر من صف، مثل الأول الثانوي والأول بكالوريا، لنفس الكورس.</p>
 
       <div className="flex justify-end gap-2 pt-1">
         <button
@@ -303,7 +314,7 @@ function CreatePackageRow({
         </button>
         <NeumorphButton
           onClick={() => void handleCreate()}
-          disabled={saving || !name.trim() || !selectedSubjectId || !selectedTeacherId || !selectedGrade}
+          disabled={saving || !name.trim() || !selectedSubjectId || !selectedTeacherId || selectedGrades.length === 0}
           loading={saving}
           intent="primary"
           size="md"
@@ -543,6 +554,7 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'assistant' }) {
+  const user = useAuthStore((state) => state.user);
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
@@ -556,7 +568,7 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
     try {
       setLoading(true);
       const [packagesRes, subjectsRes, teachersRes] = await Promise.all([
-        contentService.getPackages({ force: true }),
+        contentService.getPackages(),
         teacherService.getSubjects().catch(() => ({ success: true, data: [] as SubjectDto[] })),
         teacherService.getTeachers().catch(() => ({ success: true, data: [] as TeacherDto[] }))
       ]);
@@ -570,7 +582,11 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
     }
   }, []);
 
-  useEffect(() => { void loadPackages(); }, [loadPackages]);
+  useEffect(() => {
+    void loadPackages();
+    const cleanupCacheStore = registerCacheStore(CONTENT_CACHE_KEYS.packages, () => {}, () => void loadPackages());
+    return cleanupCacheStore;
+  }, [loadPackages]);
 
   // Filter packages based on search, subject, and teacher
   const filtered = packages.filter((p) => {
@@ -591,19 +607,33 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
 
   const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
   const shellActivePath = mode === 'assistant' ? '/assistant/content' : '/admin/content';
+  const isAssistantWorkspace = mode === 'assistant';
 
   return (
     <Shell
       activePath={shellActivePath as any}
-      sectionLabel="إدارة المحتوى"
-      pageTitle="المناهج التعليمية"
-      subtitle={activeTeacher ? `إدارة باقات ومحتوى المعلم: ${activeTeacher.fullName}` : "اختر المعلم أولاً لتصفح وإدارة المحتوى الدراسي الخاص به"}
+      sectionLabel={isAssistantWorkspace ? 'مساحة عمل المحتوى' : 'إدارة المحتوى'}
+      pageTitle={isAssistantWorkspace ? 'متابعة المحتوى الدراسي' : 'المناهج التعليمية'}
+      subtitle={activeTeacher
+        ? `${isAssistantWorkspace ? 'متابعة' : 'إدارة'} باقات ومحتوى المعلم: ${activeTeacher.fullName}`
+        : 'اختر المعلم أولاً لتصفح المحتوى الدراسي الخاص به'}
     >
       {loading ? (
         <AdminPageSkeleton />
       ) : (
         <div className="space-y-8 animate-[fadeIn_0.3s_ease-out]">
-          
+          {mode !== 'assistant' && user?.roles.includes('Admin') && (
+            <div className="flex justify-end">
+              <Link
+                href="/admin/content/video-types"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-[var(--admin-card)] px-4 text-sm font-bold text-[var(--admin-primary)] transition-colors duration-200 hover:bg-[var(--admin-primary-15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+              >
+                <Tags className="h-4 w-4" aria-hidden="true" />
+                إدارة أنواع الفيديو
+              </Link>
+            </div>
+          )}
+
           {activeTeacher ? (
             /* Scoped Teacher View */
             <div className="space-y-6">
@@ -625,9 +655,9 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                 <div className="flex items-center gap-3">
                   {activeTeacher.profileImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img 
-                      src={resolveMediaUrl(activeTeacher.profileImageUrl)} 
-                      alt={activeTeacher.fullName} 
+                    <img
+                      src={resolveMediaUrl(activeTeacher.profileImageUrl)}
+                      alt={activeTeacher.fullName}
                       className="w-10 h-10 rounded-xl object-cover border border-[var(--admin-border)]"
                     />
                   ) : (
@@ -661,7 +691,7 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                     className="admin-input pr-11"
                   />
                 </div>
-                
+
                 <div className="min-w-[200px]">
                   <Dropdown
                     value={selectedSubjectId}
@@ -690,10 +720,10 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                     لا توجد باقات مضافة لهذا المعلم تلتزم بشروط الفلترة.
                   </div>
                 )}
-                <CreatePackageRow 
-                  onSuccess={loadPackages} 
-                  teachers={teachers} 
-                  subjects={subjects} 
+                <CreatePackageRow
+                  onSuccess={loadPackages}
+                  teachers={teachers}
+                  subjects={subjects}
                   activeTeacherId={activeTeacherId}
                 />
               </div>
@@ -720,7 +750,7 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                     className="admin-input pr-11"
                   />
                 </div>
-                
+
                 <div className="min-w-[200px]">
                   <Dropdown
                     value={selectedSubjectId}
@@ -747,9 +777,9 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                     const teacherPackagesCount = packages.filter(p => p.teacherId === teacher.id).length;
                     const gradeList = teacher.specialization ? teacher.specialization.split(',') : [];
                     const teacherSubjects = subjects.filter(s => teacher.subjectIds?.includes(s.id));
-                    
+
                     return (
-                      <div 
+                      <div
                         key={teacher.id}
                         onClick={() => {
                           setActiveTeacherId(teacher.id);
@@ -762,9 +792,9 @@ export default function AdminContentPageClient({ mode }: { mode?: 'admin' | 'ass
                           <div className="flex items-center gap-4 mb-4">
                             {teacher.profileImageUrl ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img 
-                                src={resolveMediaUrl(teacher.profileImageUrl)} 
-                                alt={teacher.fullName} 
+                              <img
+                                src={resolveMediaUrl(teacher.profileImageUrl)}
+                                alt={teacher.fullName}
                                 className="w-14 h-14 rounded-2xl object-cover border border-[var(--admin-border)] shadow-sm"
                               />
                             ) : (

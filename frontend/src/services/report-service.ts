@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 export interface WarningDto {
   severity: string;
@@ -136,6 +137,8 @@ export const reportService = {
   },
 
   createParentReportLink: async (studentId: string) => {
-    return apiClient.post<{ data: { token: string; expiresInDays: number } }>(`/parent/reports/${studentId}/links`);
+    const response = await apiClient.post<{ data: { token: string; expiresAt: string; expiresInHours: number; expiresInDays: number } }>(`/parent/reports/${studentId}/links`);
+    invalidateMany(['reports', `reports:parent:${studentId}`]);
+    return response;
   }
 };

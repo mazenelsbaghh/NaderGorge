@@ -25,6 +25,18 @@ public class RemoveDeviceCommandHandler : IRequestHandler<RemoveDeviceCommand, A
         var userId = device.UserId;
         var fingerprint = device.DeviceFingerprint;
 
+        var activeRefreshTokens = await _db.RefreshTokens
+            .Where(refreshToken =>
+                refreshToken.UserId == userId &&
+                refreshToken.DeviceFingerprint == fingerprint &&
+                !refreshToken.IsRevoked)
+            .ToListAsync(ct);
+
+        foreach (var refreshToken in activeRefreshTokens)
+        {
+            refreshToken.IsRevoked = true;
+        }
+
         _db.Devices.Remove(device);
 
         _db.AuditLogs.Add(new AuditLog

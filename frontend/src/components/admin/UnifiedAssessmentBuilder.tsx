@@ -6,7 +6,6 @@ import { adminService } from '@/services/admin-service';
 import { NumberField } from '@/components/ui/number-field';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import toast from 'react-hot-toast';
-import NeumorphButton from '@/components/ui/neumorph-button';
 
 interface UnifiedAssessmentBuilderProps {
   type: 'exam' | 'homework';
@@ -14,6 +13,7 @@ interface UnifiedAssessmentBuilderProps {
   videos?: { id: string; title: string }[];
   onSuccess?: () => void;
   forceTargetType?: 'Lesson' | 'Video';
+  surface?: 'admin' | 'teacher';
 }
 
 export function UnifiedAssessmentBuilder({ 
@@ -21,9 +21,11 @@ export function UnifiedAssessmentBuilder({
   lessonId, 
   videos = [], 
   onSuccess,
-  forceTargetType
+  forceTargetType,
+  surface = 'admin',
 }: UnifiedAssessmentBuilderProps) {
   const isExam = type === 'exam';
+  const audienceLabel = surface === 'teacher' ? 'لطلابك' : 'للطلاب';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -145,7 +147,7 @@ export function UnifiedAssessmentBuilder({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder={`مثال: ${isExam ? 'الاختبار الأول' : 'الواجب الأسبوعي'} على الدرس`}
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all"
+                className="admin-input w-full"
               />
             </div>
 
@@ -245,8 +247,8 @@ export function UnifiedAssessmentBuilder({
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="يرجى الإجابة على جميع الأسئلة..."
-                className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] focus:ring-1 focus:ring-[var(--admin-primary)] transition-all h-24 resize-none"
+                placeholder={`اكتب تعليمات واضحة ${audienceLabel}...`}
+                className="admin-input h-24 w-full resize-none"
               />
             </div>
 
@@ -284,7 +286,7 @@ export function UnifiedAssessmentBuilder({
                       >
                         <Video className="w-5 h-5 opacity-80" />
                         <div className="text-right">
-                          <span className="block font-bold">اختبار لفيديو (Pop Quiz)</span>
+                          <span className="block font-bold">اختبار لفيديو</span>
                           <span className="text-xs opacity-80">يظهر بعد انتهاء الطالب من الفيديو</span>
                         </div>
                       </button>
@@ -330,24 +332,20 @@ export function UnifiedAssessmentBuilder({
 
             
             <div className="mt-8 pt-6 border-t border-[var(--admin-border)] flex justify-end">
-              <NeumorphButton
+              <button
                 type="submit"
                 disabled={saving}
-                loading={saving}
-                intent="primary"
-                size="xl"
-                pill
-                className="w-full sm:w-auto px-10 shadow-lg shadow-blue-500/20"
+                className="admin-btn-primary w-full justify-center px-10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 <Save className="w-5 h-5 ml-2" />
                 {saving 
                   ? 'يتم الحفظ...' 
                   : isExam 
                     ? targetType === 'Video' 
-                      ? 'إنشاء امتحان الفيديو (Pop Quiz)' 
+                      ? 'إنشاء امتحان الفيديو' 
                       : 'إنشاء امتحان الحصة ككل' 
                     : 'إنشاء الواجب الأساسي'}
-              </NeumorphButton>
+              </button>
             </div>
           </div>
         </div>

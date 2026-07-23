@@ -67,12 +67,16 @@ public class GetLatestPassedExamResultQueryHandler : IRequestHandler<GetLatestPa
 
         var attempt = await _db.StudentExamAttempts
             .AsNoTracking()
-            .Where(a => a.UserId == request.UserId && a.ExamId == request.ExamId && a.IsPassed)
+            .Where(a => a.UserId == request.UserId
+                && a.ExamId == request.ExamId
+                && a.IsPassed
+                && (_db.StudentAnswers.Any(answer => answer.StudentExamAttemptId == a.Id)
+                    || _db.EssaySubmissions.Any(essay => essay.StudentExamAttemptId == a.Id)))
             .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
             .FirstOrDefaultAsync(ct);
 
         if (attempt == null)
-            return ApiResponse<ExamResultDto>.Fail("No passed attempt found");
+            return ApiResponse<ExamResultDto>.Fail("No completed attempt found");
 
         var answers = await _db.StudentAnswers
             .AsNoTracking()

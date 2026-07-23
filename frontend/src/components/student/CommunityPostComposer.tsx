@@ -4,13 +4,19 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { BarChart3, Plus, X } from 'lucide-react';
 
-import { communityService, type CreateCommunityPostResponse } from '@/services/community-service';
+import type { CreateCommunityPostResponse } from '@/services/community-service';
 
 type CommunityPostComposerProps = {
   onCreated: (post: { id: string; body: string; status: string; createdAt: string; isPoll: boolean }) => void;
+  submitPost: (body: string, pollOptions?: string[]) => Promise<CreateCommunityPostResponse | undefined>;
+  placeholder?: string;
 };
 
-export function CommunityPostComposer({ onCreated }: CommunityPostComposerProps) {
+export function CommunityPostComposer({
+  onCreated,
+  submitPost,
+  placeholder = "بم تفكر؟",
+}: CommunityPostComposerProps) {
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [isPollEnabled, setIsPollEnabled] = useState(false);
@@ -38,8 +44,7 @@ export function CommunityPostComposer({ onCreated }: CommunityPostComposerProps)
 
     setSubmitting(true);
     try {
-      const response = await communityService.createCommunityPost(trimmed, isPollEnabled ? validOptions : undefined);
-      const created = response.data?.data as CreateCommunityPostResponse | undefined;
+      const created = await submitPost(trimmed, isPollEnabled ? validOptions : undefined);
 
       if (created) {
         onCreated({
@@ -86,8 +91,8 @@ export function CommunityPostComposer({ onCreated }: CommunityPostComposerProps)
         </div>
         <div className="flex-1">
           <textarea
-            className="w-full min-h-[60px] resize-none border-none bg-transparent pt-2 text-[18px] focus:ring-0 text-gray-900 dark:text-[var(--admin-text)] placeholder-gray-500 dark:placeholder-gray-400 outline-none"
-            placeholder={isPollEnabled ? "توضيح الاستطلاع..." : "بم تفكر؟"}
+            className="w-full min-h-[60px] resize-none border-none bg-transparent pt-2 text-[18px] text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:ring-0"
+            placeholder={isPollEnabled ? "توضيح الاستطلاع..." : placeholder}
             value={body}
             onChange={(e) => {
               setBody(e.target.value);
@@ -108,14 +113,14 @@ export function CommunityPostComposer({ onCreated }: CommunityPostComposerProps)
                         placeholder={`الخيار ${idx + 1}`}
                         value={option}
                         onChange={(e) => updatePollOption(idx, e.target.value)}
-                        className="flex-1 rounded-lg border border-[var(--admin-border)] bg-transparent px-3 py-2 text-[14px] text-gray-900 focus:border-[#0866ff] focus:outline-none focus:ring-1 focus:ring-[#0866ff] dark:text-gray-100"
+                        className="flex-1 rounded-lg border border-[var(--admin-border)] bg-transparent px-3 py-2 text-[14px] text-[var(--admin-text)] focus:border-[var(--admin-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--admin-primary)]"
                         maxLength={200}
                       />
                       {pollOptions.length > 2 && (
                         <button
                           type="button"
                           onClick={() => removePollOption(idx)}
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--admin-danger)] hover:bg-[var(--admin-danger-10)]"
                         >
                           <X className="h-5 w-5" />
                         </button>
@@ -140,13 +145,13 @@ export function CommunityPostComposer({ onCreated }: CommunityPostComposerProps)
       </div>
 
       <div className="px-4 pb-3">
-        <div className="flex items-center justify-between border-t border-gray-200 dark:border-[var(--admin-border)] pt-3 mt-1">
+        <div className="mt-1 flex items-center justify-between border-t border-[var(--admin-border)] pt-3">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setIsPollEnabled(!isPollEnabled)}
               className={`flex items-center justify-center rounded-full p-2 transition-colors ${
-                isPollEnabled ? 'bg-[var(--admin-primary-10)] text-[var(--admin-primary)]' : 'text-gray-500 hover:bg-[var(--admin-hover)] dark:text-gray-400'
+                isPollEnabled ? 'bg-[var(--admin-primary-10)] text-[var(--admin-primary)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
               }`}
               title="إضافة استطلاع رأي"
             >
@@ -156,7 +161,7 @@ export function CommunityPostComposer({ onCreated }: CommunityPostComposerProps)
           <button
             type="submit"
             disabled={submitting || !body.trim()}
-            className="rounded-md bg-[#0866ff] px-6 py-1.5 text-[14px] font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-[var(--admin-primary)] px-6 py-1.5 text-[14px] font-bold text-[var(--admin-primary-contrast)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? 'جارٍ النشر...' : 'نشر'}
           </button>

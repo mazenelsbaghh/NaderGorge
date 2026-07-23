@@ -95,6 +95,34 @@ public class TeacherIsolationTests
     }
 
     [Fact]
+    public async Task DelegatedStaff_RequiresExplicitWorkspacePermissionAndResolvesOwnerScope()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var (teacherUser, teacherProfile) = await OnboardTeacherAsync(db, "Teacher Owner", "01044444444");
+        var teacherRole = await db.Roles.SingleAsync(role => role.Type == RoleType.Teacher);
+        var staffUser = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher Staff", "01055555555");
+        db.UserRoles.Add(new UserRole { UserId = staffUser.Id, RoleId = teacherRole.Id });
+        var membership = new TeacherStaffMember
+        {
+            TeacherId = teacherProfile.Id,
+            UserId = staffUser.Id,
+            CreatedByTeacherUserId = teacherUser.Id,
+            PermissionKeys = "finance"
+        };
+        db.TeacherStaffMembers.Add(membership);
+        await db.SaveChangesAsync();
+        var authorization = new TeacherAuthorizationService(db);
+
+        Assert.False(await authorization.CanAccessTeacherWorkspacePermissionAsync(staffUser.Id, "chat", default));
+        Assert.False(await authorization.IsTeacherOwnerOrNonTeacherAsync(staffUser.Id, default));
+
+        var workspace = await authorization.GetWorkspaceAccessAsync(staffUser.Id, default);
+        Assert.NotNull(workspace);
+        Assert.Equal(teacherUser.Id, workspace.TeacherUserId);
+        Assert.Contains("finance", workspace.PermissionKeys);
+    }
+
+    [Fact]
     public async Task CanAccessExam_IsIsolatedBetweenTeachers()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();

@@ -8,17 +8,20 @@ namespace NaderGorge.Application.Features.Content.Queries;
 
 public record LessonCockpitVideoChapterDto(Guid Id, string Title, int StartTime, int EndTime, string SummaryText, string? MindmapImageUrl, int Order);
 public record LessonCockpitVideoExamDto(Guid ExamId, string Title);
-public record LessonCockpitVideoDto(Guid Id, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null);
+public record LessonCockpitVideoTypeDto(Guid Id, string Name, bool IsActive);
+public record LessonCockpitVideoDto(Guid Id, string InternalCode, string Title, string Provider, string Url, int Order, int MaxWatchCount, bool IsProcessingAI, bool IsProcessingMindmaps, bool IsActive, LessonCockpitVideoTypeDto VideoType, Guid? ExamId = null, List<LessonCockpitVideoExamDto>? Exams = null, List<LessonCockpitVideoChapterDto>? Chapters = null);
 public record LessonCockpitResourceDto(Guid Id, string Title, string FileUrl, string ResourceType);
 public record LessonCockpitHomeworkDto(Guid Id, string Title, bool IsMandatory, decimal? PassingScoreThreshold);
 public record LessonCockpitCommentSummaryDto(int Total, int Pending, int Approved, int Rejected);
 
 public record LessonCockpitDto(
     Guid LessonId,
+    string InternalCode,
     string Title,
     string Summary,
     Guid? ExamId,
     decimal Price,
+    int Order,
     List<LessonCockpitVideoDto> Videos,
     List<LessonCockpitResourceDto> Resources,
     List<LessonCockpitHomeworkDto> Homework,
@@ -52,6 +55,8 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
         var lesson = await _db.Lessons
             .Include(l => l.Videos)
                 .ThenInclude(v => v.VideoChapters)
+            .Include(l => l.Videos)
+                .ThenInclude(v => v.VideoType)
             .Include(l => l.Resources)
             .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
 
@@ -84,10 +89,12 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
 
         var dto = new LessonCockpitDto(
             lesson.Id,
+            lesson.InternalCode,
             lesson.Title,
             lesson.Summary,
             lesson.ExamId,
             lesson.Price,
+            lesson.Order,
             lesson.Videos.OrderBy(v => v.Order).Select(v =>
             {
                 var chapters = v.VideoChapters?.OrderBy(c => c.Order)
@@ -101,6 +108,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
 
                 return new LessonCockpitVideoDto(
                     v.Id,
+                    v.InternalCode,
                     v.Title,
                     v.Provider,
                     v.ProviderVideoId,
@@ -109,6 +117,7 @@ public class GetLessonCockpitQueryHandler : IRequestHandler<GetLessonCockpitQuer
                     v.IsProcessingAI,
                     v.IsProcessingMindmaps,
                     v.IsActive,
+                    new LessonCockpitVideoTypeDto(v.VideoType.Id, v.VideoType.Name, v.VideoType.IsActive),
                     v.ExamId,
                     examsForVideo,
                     chapters

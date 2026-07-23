@@ -6,4 +6,5 @@ export { PackageGrid } from '@/components/student-dashboard/PackageGrid';
 export { StatsStrip } from '@/components/student-dashboard/StatsStrip';
 export { StudentHero } from '@/components/student-dashboard/StudentHero';
 export { UpcomingExamsPanel } from '@/components/student-dashboard/UpcomingExamsPanel';
+export { UpcomingHomeworkPanel } from '@/components/student-dashboard/UpcomingHomeworkPanel';
 export { QuickAccessPanel } from '@/components/student-dashboard/QuickAccessPanel';

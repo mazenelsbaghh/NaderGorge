@@ -11,12 +11,13 @@ import {
   StatsStrip,
   StudentHero,
   UpcomingExamsPanel,
+  UpcomingHomeworkPanel,
   QuickAccessPanel,
 } from "@/packages/student";
 import { studentService, type DashboardDto, type QuickAccessItemDto } from "@/services/student-service";
 import { useAuthStore } from "@/stores/auth-store";
 import { RegistrationInstructionsModal } from "@/components/registration/RegistrationInstructionsModal";
-import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+import { registerCacheStore } from "@/lib/cache-invalidation";
 
 export default function StudentDashboardClient() {
   const [data, setData] = useState<DashboardDto | null>(null);
@@ -88,10 +89,8 @@ export default function StudentDashboardClient() {
   }, [fetchDashboard]);
 
   useEffect(() => {
-    registerCacheStore('student:exams', () => {}, fetchDashboard);
-    return () => {
-      unregisterCacheStore('student:exams');
-    };
+    const cleanupCacheStore = registerCacheStore('student:exams', () => {}, fetchDashboard);
+    return cleanupCacheStore;
   }, [fetchDashboard]);
 
   if (loading) {
@@ -133,6 +132,7 @@ export default function StudentDashboardClient() {
     activePackages: [],
     resumePoint: undefined,
     upcomingExams: [],
+    upcomingHomeworks: [],
     overallProgressPercent: 0,
     totalLessonsCompleted: 0,
     totalLessons: 0,
@@ -159,7 +159,7 @@ export default function StudentDashboardClient() {
 
       <StudentHero data={d} />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] xl:items-stretch">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)] xl:items-stretch">
         <ContinueLearningCard
           resumePoint={d.resumePoint ?? undefined}
           hasActivePackages={d.activePackages.length > 0}
@@ -170,14 +170,20 @@ export default function StudentDashboardClient() {
               );
               return;
             }
-            router.push(d.activePackages.length > 0 ? "/student/packages" : "/student/code-redemption");
+            router.push("/student/packages");
           }}
         />
 
-        <UpcomingExamsPanel
-          exams={d.upcomingExams}
-          onStartExam={(examId) => router.push(`/student/exams/${examId}`)}
-        />
+        <div className="grid gap-4 xl:min-h-[32rem] xl:grid-rows-2">
+          <UpcomingExamsPanel
+            exams={d.upcomingExams}
+            onStartExam={(examId) => router.push(`/student/exams/${examId}`)}
+          />
+          <UpcomingHomeworkPanel
+            homeworks={d.upcomingHomeworks}
+            onStartHomework={(homeworkId) => router.push(`/student/homework/${homeworkId}`)}
+          />
+        </div>
       </div>
 
       {(d.activePackages.length === 0 || (!d.resumePoint && d.totalLessonsCompleted === 0)) && (
@@ -187,7 +193,7 @@ export default function StudentDashboardClient() {
       <PackageGrid
         packages={d.activePackages}
         onOpenPackage={(packageId) => router.push(`/student/packages/${packageId}`)}
-        onActivateCode={() => router.push("/student/code-redemption")}
+        onBrowsePackages={() => router.push("/student/packages")}
       />
 
       {quickAccessItems.length > 0 && <QuickAccessPanel items={quickAccessItems} />}

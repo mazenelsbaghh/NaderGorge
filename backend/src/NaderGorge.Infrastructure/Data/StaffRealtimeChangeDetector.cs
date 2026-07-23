@@ -6,6 +6,7 @@ using NaderGorge.Domain.Entities.Gamification;
 using NaderGorge.Domain.Entities.Homework;
 using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Entities.Student;
+using NaderGorge.Domain.Events;
 
 namespace NaderGorge.Infrastructure.Data;
 
@@ -20,6 +21,7 @@ internal static class StaffRealtimeChangeDetector
             [typeof(StudentProfile)] = ["users"],
             [typeof(Device)] = ["users"],
             [typeof(TeacherProfile)] = ["users", "subjects"],
+            [typeof(TeacherStaffMember)] = ["users", "settings"],
             [typeof(TeacherSubject)] = ["users", "subjects"],
             [typeof(TeacherPhoto)] = ["users"],
             [typeof(StudentNote)] = ["users"],
@@ -61,7 +63,6 @@ internal static class StaffRealtimeChangeDetector
             [typeof(TaskComment)] = ["operations"],
             [typeof(EmployeeProfile)] = ["hr", "users"],
             [typeof(AttendanceLog)] = ["hr"],
-            [typeof(EmployeeVacation)] = ["hr"],
             [typeof(CrmStudentStatus)] = ["crm"],
             [typeof(CrmCallLog)] = ["crm"],
             [typeof(MediaProductionPipeline)] = ["media"],
@@ -82,18 +83,59 @@ internal static class StaffRealtimeChangeDetector
 
     public static OutboxEvent? CreateEvent(ChangeTracker changeTracker)
     {
-        var scopes = changeTracker.Entries()
+        var entries = changeTracker.Entries()
             .Where(IsChangedEntity)
+            .ToList();
+        var scopes = entries
             .SelectMany(entry => EntityScopes.GetValueOrDefault(entry.Metadata.ClrType) ?? [])
             .Distinct(StringComparer.Ordinal)
             .OrderBy(scope => scope, StringComparer.Ordinal)
             .ToArray();
 
-        return scopes.Length == 0 ? null : new OutboxEvent
+        if (scopes.Length == 0)
+            return null;
+
+        var entityTypes = entries
+            .Select(entry => entry.Metadata.ClrType.Name)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        var operation = entries.Select(entry => entry.State).Distinct().Count() == 1 && entityTypes.Length == 1
+            ? entries[0].State switch
+            {
+                EntityState.Added => DataChangedOperations.Created,
+                EntityState.Deleted => DataChangedOperations.Deleted,
+                _ => DataChangedOperations.Updated
+            }
+            : DataChangedOperations.Bulk;
+
+        // A single outbox row represents the whole SaveChanges batch. When the
+        // batch contains different entity types, EntityType must remain null
+        // rather than relying on SingleOrDefault (which throws after a valid
+        // multi-entity write). Consumers should use Scopes/EntityIds for bulk
+        // invalidation; a single type is retained as a useful optimization.
+        var dataChangedEvent = new DataChangedEvent
+        {
+            EventId = Guid.NewGuid(),
+            OccurredAt = DateTimeOffset.UtcNow,
+            Scopes = scopes,
+            EntityType = entityTypes.Length == 1 ? entityTypes[0] : null,
+            EntityIds = entries.Select(entry => entry.Entity is Domain.Common.BaseEntity entity ? entity.Id : Guid.Empty)
+                .Where(id => id != Guid.Empty)
+                .Distinct()
+                .ToArray(),
+            Operation = operation
+        };
+
+        return new OutboxEvent
         {
             Type = "StaffDataChanged",
             TargetGroup = "Role_Staff",
-            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new { scopes })
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(dataChangedEvent, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+            })
         };
     }
 

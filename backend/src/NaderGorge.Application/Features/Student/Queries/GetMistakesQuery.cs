@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Queries;
@@ -58,44 +59,46 @@ public record HomeworkWeaknessDto(
 public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResponse<StudentMistakesDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService _academicScope;
 
-    public GetMistakesQueryHandler(IAppDbContext db)
+    public GetMistakesQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
     {
         _db = db;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<StudentMistakesDto>> Handle(GetMistakesQuery request, CancellationToken ct)
     {
-        // 1. Direct counts on DB
+        var mistakeExamIds = await _db.StudentAnswers
+            .AsNoTracking()
+            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect)
+            .Select(sa => sa.Attempt.ExamId)
+            .Distinct()
+            .ToListAsync(ct);
+
+        var eligibleMistakeExamIds = await FilterEligibleOwnerIdsAsync(
+            StudentFacingScopeOwnerType.Exam,
+            mistakeExamIds,
+            request.UserId,
+            ct);
+
+        // 1. Direct counts on DB after current academic eligibility is applied
         var totalExamMistakes = await _db.StudentAnswers
             .AsNoTracking()
-            .CountAsync(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect, ct);
+            .CountAsync(sa =>
+                sa.Attempt.UserId == request.UserId &&
+                !sa.IsCorrect &&
+                eligibleMistakeExamIds.Contains(sa.Attempt.ExamId),
+                ct);
 
-        var examsWithMistakes = await _db.StudentAnswers
-            .AsNoTracking()
-            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect)
-            .Select(sa => sa.Attempt.ExamId)
-            .Distinct()
-            .CountAsync(ct);
-
-        var weakHomeworkCount = await _db.HomeworkSubmissions
-            .AsNoTracking()
-            .CountAsync(s => s.StudentId == request.UserId &&
-                (s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Missed ||
-                (s.Homework.PassingScoreThreshold.HasValue &&
-                 s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded &&
-                 s.OverallScore < s.Homework.PassingScoreThreshold.Value)), ct);
+        var examsWithMistakes = eligibleMistakeExamIds.Count;
 
         // 2. Fetch only paged exam IDs that have mistakes
-        var pagedExamIds = await _db.StudentAnswers
-            .AsNoTracking()
-            .Where(sa => sa.Attempt.UserId == request.UserId && !sa.IsCorrect)
-            .Select(sa => sa.Attempt.ExamId)
-            .Distinct()
+        var pagedExamIds = eligibleMistakeExamIds
             .OrderByDescending(id => id)
             .Skip(request.Skip)
             .Take(request.Take)
-            .ToListAsync(ct);
+            .ToList();
 
         var attempts = await _db.StudentExamAttempts
             .AsNoTracking()
@@ -245,11 +248,20 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
             .ToListAsync(ct);
 
         var homeworkLessonIds = homeworkSubmissions.Select(s => s.HomeworkLessonId).Distinct().ToList();
+        var eligibleHomeworkLessonIds = await FilterEligibleOwnerIdsAsync(
+            StudentFacingScopeOwnerType.Lesson,
+            homeworkLessonIds,
+            request.UserId,
+            ct);
+        homeworkSubmissions = homeworkSubmissions
+            .Where(s => eligibleHomeworkLessonIds.Contains(s.HomeworkLessonId))
+            .ToList();
+
         var homeworkLessons = homeworkLessonIds.Count == 0
             ? new Dictionary<Guid, (Guid? PackageId, string PackageName, string LessonTitle)>()
             : (await _db.Lessons
                 .AsNoTracking()
-                .Where(l => homeworkLessonIds.Contains(l.Id))
+                .Where(l => eligibleHomeworkLessonIds.Contains(l.Id))
                 .Select(l => new {
                     l.Id,
                     l.Title,
@@ -259,12 +271,17 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
                 .ToListAsync(ct))
                 .ToDictionary(l => l.Id, l => (PackageId: (Guid?)l.PackageId, PackageName: l.PackageName, LessonTitle: l.Title));
 
-        var weakHomework = homeworkSubmissions
+        var weakHomeworkCandidates = homeworkSubmissions
             .Where(s =>
                 s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Missed ||
                 (s.HomeworkPassingScoreThreshold.HasValue &&
                  s.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded &&
                  s.OverallScore < s.HomeworkPassingScoreThreshold.Value))
+            .ToList();
+
+        var weakHomeworkCount = weakHomeworkCandidates.Count;
+
+        var weakHomework = weakHomeworkCandidates
             .Select(s =>
             {
                 homeworkLessons.TryGetValue(s.HomeworkLessonId, out var lessonInfo);
@@ -295,5 +312,21 @@ public class GetMistakesQueryHandler : IRequestHandler<GetMistakesQuery, ApiResp
             examMistakeGroups,
             weakHomework
         ));
+    }
+
+    private async Task<List<Guid>> FilterEligibleOwnerIdsAsync(
+        StudentFacingScopeOwnerType ownerType,
+        List<Guid> ownerIds,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var eligible = new List<Guid>();
+        foreach (var ownerId in ownerIds)
+        {
+            if (await _academicScope.IsOwnerEligibleForStudentAsync(ownerType, ownerId, userId, ct))
+                eligible.Add(ownerId);
+        }
+
+        return eligible;
     }
 }

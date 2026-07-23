@@ -1,6 +1,10 @@
 import apiClient from './api-client';
-import { registerCacheStore } from '@/lib/cache-invalidation';
 import type { AxiosResponse } from 'axios';
+
+export const CONTENT_CACHE_KEYS = {
+  packages: 'content:packages',
+  lessons: 'content:lessons',
+} as const;
 
 export interface PackageDto {
   id: string;
@@ -51,6 +55,17 @@ export interface LessonSummaryDto {
   lockedReason?: string;
   blockingExamId?: string;
   blockingHomeworkLessonId?: string;
+  videos?: LessonVideoSummaryDto[];
+}
+
+export interface LessonVideoSummaryDto {
+  id: string;
+  title: string;
+  order: number;
+  hasAccess: boolean;
+  isUnlockedByCode?: boolean;
+  videoTypeId?: string;
+  videoTypeName?: string;
 }
 
 export interface VideoChapterDto {
@@ -71,6 +86,11 @@ export interface VideoDto {
   limit: number;
   watched: number;
   isLocked: boolean;
+  hasAccess?: boolean;
+  isUnlockedByCode?: boolean;
+  unlockLabel?: string;
+  videoTypeId?: string;
+  videoTypeName?: string;
   watchedSeconds: number;
   lastWatchedAt?: string;
   subtitleUrl?: string;
@@ -139,6 +159,7 @@ export interface LessonDetailDto {
   homeworkStatus?: string;
   termId?: string;
   sectionId?: string;
+  isVideoOnlyAccess?: boolean;
 }
 
 
@@ -191,46 +212,14 @@ interface ContentApiResponse<T> {
   data?: T;
 }
 
-const PACKAGES_CACHE_TTL_MS = 10_000;
 type PackagesResponse = AxiosResponse<ContentApiResponse<PackageDto[]>>;
 
-let packagesInFlight: Promise<PackagesResponse> | null = null;
-let packagesCache: PackagesResponse | null = null;
-let packagesCacheAt = 0;
-
-const readPackagesFromCache = () => packagesCache?.data?.data ?? [];
-
 export const contentService = {
-  clearPackagesCache: () => {
-    packagesCache = null;
-    packagesCacheAt = 0;
-    packagesInFlight = null;
-  },
-  getPackages: (options?: { force?: boolean }) => {
-    const force = options?.force ?? false;
-    const isCacheFresh = !force && packagesCache && Date.now() - packagesCacheAt < PACKAGES_CACHE_TTL_MS;
-
-    if (isCacheFresh && packagesCache) {
-      return Promise.resolve(packagesCache);
-    }
-
-    if (!force && packagesInFlight) {
-      return packagesInFlight;
-    }
-
-    packagesInFlight = apiClient.get('/content/packages').then((response) => {
-      packagesCache = response;
-      packagesCacheAt = Date.now();
-      return response;
-    }).finally(() => {
-      packagesInFlight = null;
-    });
-
-    return packagesInFlight;
-  },
-  peekCachedPackageById: (packageId: string) => {
-    if (!packageId) return null;
-    return readPackagesFromCache().find((pkg) => pkg.id === packageId) ?? null;
+  // Kept source-compatible for callers that still pass force while the old
+  // module-level cache is retired. Every request now reads current server data.
+  getPackages: (options?: { force?: boolean }): Promise<PackagesResponse> => {
+    void options;
+    return apiClient.get('/content/packages');
   },
   getTerms: (packageId: string) => apiClient.get(`/content/packages/${packageId}/terms`),
   getPackageCodePage: (packageId: string) => apiClient.get<ContentApiResponse<PackageCodePageDto>>(`/content/packages/${packageId}/code-page`),
@@ -243,10 +232,3 @@ export const contentService = {
   createLessonComment: (lessonId: string, body: string) =>
     apiClient.post<ContentApiResponse<CreateLessonCommentResponse>>(`/content/lessons/${lessonId}/comments`, { body }),
 };
-
-// Register with centralized cache invalidation registry
-registerCacheStore(
-  'content:packages',
-  () => contentService.clearPackagesCache(),
-  () => void contentService.getPackages({ force: true })
-);

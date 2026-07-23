@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">مستمع المدفوعات</string>
+    <string name="app_name">Massar PAY</string>
     <string name="default_server_url">https://api.massar-academy.net</string>
 </resources>

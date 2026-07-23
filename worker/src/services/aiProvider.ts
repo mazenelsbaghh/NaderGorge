@@ -14,6 +14,11 @@ export class AIProviderExecutionError extends Error {
   }
 }
 
+export interface AIProviderExecution<T> {
+  value: T;
+  provider: 'vertex' | 'developer';
+}
+
 export class AIProviderGateway {
   constructor(private readonly config: AIConfig) {}
 
@@ -21,10 +26,10 @@ export class AIProviderGateway {
     operation: AIOperation;
     vertex: () => Promise<T>;
     developer: () => Promise<T>;
-  }): Promise<T> {
+  }): Promise<AIProviderExecution<T>> {
     if (this.config.primaryProvider === 'developer') {
       try {
-        return await input.developer();
+        return { value: await input.developer(), provider: 'developer' };
       } catch (error) {
         const failure = classifyAIError(error);
         throw new AIProviderExecutionError(
@@ -35,7 +40,7 @@ export class AIProviderGateway {
     }
 
     try {
-      return await input.vertex();
+      return { value: await input.vertex(), provider: 'vertex' };
     } catch (primaryError) {
       const primary = classifyAIError(primaryError);
       if (!isQuotaExhausted(primaryError)) {
@@ -61,7 +66,7 @@ export class AIProviderGateway {
       }
 
       try {
-        return await input.developer();
+        return { value: await input.developer(), provider: 'developer' };
       } catch (fallbackError) {
         const fallback = classifyAIError(fallbackError);
         throw new AIProviderExecutionError(

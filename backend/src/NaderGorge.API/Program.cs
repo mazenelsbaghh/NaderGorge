@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using FluentValidation;
 using MediatR;
@@ -30,6 +31,8 @@ var builder = WebApplication.CreateBuilder(args);
 SecurityConfigurationValidator.Validate(builder);
 
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<NaderGorge.Application.Common.HR.IHrRequestContext, NaderGorge.API.Services.HttpHrRequestContext>();
 
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
 if (string.IsNullOrWhiteSpace(redisConnectionString) && !builder.Environment.IsDevelopment())
@@ -72,6 +75,9 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 });
 builder.Services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportQueryService, NaderGorge.Application.Features.Reporting.ReportQueryService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IReportExportService, NaderGorge.Infrastructure.Services.ReportExportService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Reporting.IStudentLedgerExportService, NaderGorge.Infrastructure.Services.StudentLedgerExportService>();
 
 // ---------- Redis ----------
 builder.Services.AddSingleton<IRedisConnectionFactory, RedisConnectionFactory>();
@@ -81,22 +87,47 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(ApiResponse).Assembly));
 builder.Services.AddValidatorsFromAssembly(typeof(ApiResponse).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(NaderGorge.Application.Common.HR.HrAuthorizationBehavior<,>));
 
 // ---------- Services ----------
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IAuditRepository, AuditRepository>();
+builder.Services.AddScoped<NaderGorge.Application.Common.HR.IHrAuditWriter, NaderGorge.Application.Common.HR.HrAuditWriter>();
+builder.Services.AddScoped<NaderGorge.Application.Common.HR.IHrAuthorizationService, NaderGorge.Application.Common.HR.HrAuthorizationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.People.IHrLifecycleNotificationService, NaderGorge.Application.Features.HR.People.HrLifecycleNotificationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Attendance.AttendancePolicyEvaluator>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Leave.LeaveRequestService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Approvals.ApprovalEngine>();
+builder.Services.AddHostedService<NaderGorge.API.Services.HrApprovalEscalationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Payroll.PayrollCalculationEngine>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Payroll.Commands.PayrollRunService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Payroll.FinancialRequests.FinancialRequestService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Lifecycle.DocumentAssetService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Performance.PerformanceCaseService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Recruitment.RecruitmentService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Lifecycle.LifecycleOrchestrationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Migration.HrMigrationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Retention.HrRetentionService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.HR.Reporting.WorkforceReportService>();
 builder.Services.AddScoped<IVideoProvider, YouTubeVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, VkVideoProvider>();
 builder.Services.AddScoped<IVideoProvider, BunnyVideoProvider>();
 builder.Services.AddHttpClient<IBunnyStreamClient, BunnyStreamClient>();
 builder.Services.AddScoped<IAccessCheckService, AccessCheckService>();
+builder.Services.AddScoped<IAcademicScopeService, AcademicScopeService>();
+builder.Services.AddScoped<IGiftUsageService, GiftUsageService>();
+builder.Services.AddScoped<IPromotionalBalanceService, PromotionalBalanceService>();
+builder.Services.AddScoped<ISalesTargetResolver, SalesTargetResolver>();
+builder.Services.AddScoped<IDiscountEngine, DiscountEngine>();
+builder.Services.AddScoped<ISalesRedemptionService, SalesRedemptionService>();
 builder.Services.AddScoped<IVideoEncryptionService, VideoEncryptionService>();
 builder.Services.AddSingleton<IJobEnqueuer, RedisJobEnqueuer>();
 builder.Services.AddScoped<ICachedPlatformSettingsReader, CachedPlatformSettingsReader>();
 builder.Services.AddScoped<BalanceService>();
 builder.Services.AddScoped<AcademicValidationService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
+builder.Services.AddScoped<TeacherAccountingService>();
 builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
 builder.Services.AddScoped<IContentImageStorage, ContentImageStorage>();
 builder.Services.AddScoped<ILiveSupportService, LiveSupportService>();
@@ -119,6 +150,8 @@ builder.Services.AddScoped<ILiveSupportEventWriter, NaderGorge.Application.Featu
 builder.Services.AddSingleton<ILiveSupportAttachmentStorage, LiveSupportAttachmentStorage>();
 builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStore>();
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
+builder.Services.AddHttpClient<WhatsAppCloudService>();
+builder.Services.AddScoped<WhatsAppExamNotificationService>();
 builder.Services.AddSignalR()
     .AddStackExchangeRedis(redisConnectionString ?? "localhost:6379,abortConnect=false", options =>
     {
@@ -127,6 +160,7 @@ builder.Services.AddSignalR()
 builder.Services.AddHostedService<OutboxProcessorBackgroundService>();
 builder.Services.AddHostedService<LiveSupportRecoveryBackgroundService>();
 builder.Services.AddHostedService<LiveSupportAIRecoveryBackgroundService>();
+builder.Services.AddHostedService<RechargeRequestExpiryBackgroundService>();
 
 // ---------- Authentication ----------
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -157,6 +191,52 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     context.Token = accessToken;
                 }
                 return Task.CompletedTask;
+            },
+            OnTokenValidated = async context =>
+            {
+                if (context.Principal?.IsInRole("Parent") == true &&
+                    !string.IsNullOrWhiteSpace(context.Principal.FindFirst("StudentId")?.Value))
+                {
+                    return;
+                }
+
+                var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!Guid.TryParse(userIdValue, out var userId))
+                {
+                    context.Fail("Invalid user claim.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices.GetRequiredService<IAppDbContext>();
+                var user = await db.Users
+                    .AsNoTracking()
+                    .Where(item => item.Id == userId)
+                    .Select(item => new
+                    {
+                        item.IsActive,
+                        item.PasswordResetVersion,
+                        item.SecurityStampVersion
+                    })
+                    .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                if (user is null || !user.IsActive)
+                {
+                    context.Fail("User session is no longer active.");
+                    return;
+                }
+
+                if (!int.TryParse(context.Principal?.FindFirst("passwordResetVersion")?.Value, out var tokenPasswordVersion) ||
+                    tokenPasswordVersion != user.PasswordResetVersion)
+                {
+                    context.Fail("User password state changed.");
+                    return;
+                }
+
+                if (!int.TryParse(context.Principal?.FindFirst("securityStampVersion")?.Value, out var tokenSecurityVersion) ||
+                    tokenSecurityVersion != user.SecurityStampVersion)
+                {
+                    context.Fail("User security state changed.");
+                }
             }
         };
     });
@@ -254,6 +334,8 @@ if (app.Environment.EnvironmentName != "E2e")
     var db = scope.ServiceProvider.GetRequiredService<NaderGorge.Infrastructure.Data.AppDbContext>();
     var canSeedDefaults = app.Configuration.GetValue<bool>("SeedDefaults:Enabled") && app.Environment.IsDevelopment();
     await NaderGorge.Infrastructure.Data.Seeder.SeedAsync(db, canSeedDefaults);
+    if (app.Configuration.GetValue<bool>("SeedDemoCatalog:Enabled"))
+        await NaderGorge.Infrastructure.Data.DemoCatalogSeeder.SeedAsync(db);
 }
 
 app.Run();

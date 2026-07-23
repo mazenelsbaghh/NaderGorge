@@ -17,22 +17,41 @@ public interface IAppDbContext
     DbSet<Role> Roles { get; }
     DbSet<UserRole> UserRoles { get; }
     DbSet<AuditLog> AuditLogs { get; }
+    DbSet<ReportDefinition> ReportDefinitions { get; }
     DbSet<StudentProfile> StudentProfiles { get; }
+    DbSet<AcademicSubjectEligibility> AcademicSubjectEligibilities { get; }
+    DbSet<StudentFacingAcademicScope> StudentFacingAcademicScopes { get; }
     DbSet<Device> Devices { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<CodeGroup> CodeGroups { get; }
     DbSet<AccessCode> AccessCodes { get; }
     DbSet<StudentAccessGrant> StudentAccessGrants { get; }
+    DbSet<GiftIssuance> GiftIssuances { get; }
+    DbSet<GiftRecipient> GiftRecipients { get; }
+    DbSet<PromotionalBalanceAllocation> PromotionalBalanceAllocations { get; }
+    DbSet<PromotionalBalanceUsage> PromotionalBalanceUsages { get; }
+    DbSet<SalesRule> SalesRules { get; }
+    DbSet<DiscountStackingPolicy> DiscountStackingPolicies { get; }
+    DbSet<SalesCoupon> SalesCoupons { get; }
+    DbSet<SalesCouponUsage> SalesCouponUsages { get; }
+    DbSet<PrintableCodeBatch> PrintableCodeBatches { get; }
+    DbSet<PrintableSalesCode> PrintableSalesCodes { get; }
+    DbSet<PrintableCodeRedemption> PrintableCodeRedemptions { get; }
+    DbSet<PrintableCodeTemplate> PrintableCodeTemplates { get; }
+    DbSet<PublicExamProduct> PublicExamProducts { get; }
+    DbSet<SalesFinancialEffect> SalesFinancialEffects { get; }
 
     // Content
     DbSet<Subject> Subjects { get; }
     DbSet<TeacherProfile> TeacherProfiles { get; }
+    DbSet<TeacherStaffMember> TeacherStaffMembers { get; }
     DbSet<TeacherSubject> TeacherSubjects { get; }
     DbSet<Package> Packages { get; }
     DbSet<PackageCodePageProfile> PackageCodePageProfiles { get; }
     DbSet<ContentSection> ContentSections { get; }
     DbSet<Lesson> Lessons { get; }
     DbSet<LessonVideo> LessonVideos { get; }
+    DbSet<VideoType> VideoTypes { get; }
     DbSet<BunnyVideoAsset> BunnyVideoAssets { get; }
     DbSet<BunnyUsageSnapshot> BunnyUsageSnapshots { get; }
     DbSet<VideoChapter> VideoChapters { get; }
@@ -97,9 +116,71 @@ public interface IAppDbContext
 
     // Phase 2: HR Core
     DbSet<EmployeeProfile> EmployeeProfiles { get; }
+    DbSet<HrIdempotencyRecord> HrIdempotencyRecords { get; }
+    DbSet<HrModuleRollout> HrModuleRollouts { get; }
+    DbSet<OrganizationUnit> OrganizationUnits { get; }
+    DbSet<JobPosition> JobPositions { get; }
+    DbSet<JobGrade> JobGrades { get; }
+    DbSet<WorkLocation> WorkLocations { get; }
+    DbSet<CostCenter> CostCenters { get; }
+    DbSet<EmploymentAssignment> EmploymentAssignments { get; }
+    DbSet<EmploymentContract> EmploymentContracts { get; }
+    DbSet<WorkCalendar> WorkCalendars { get; }
+    DbSet<ShiftTemplate> ShiftTemplates { get; }
+    DbSet<ShiftSegment> ShiftSegments { get; }
+    DbSet<ShiftAssignment> ShiftAssignments { get; }
+    DbSet<ShiftSwapRequest> ShiftSwapRequests { get; }
+    DbSet<AttendancePolicy> AttendancePolicies { get; }
+    DbSet<AttendancePolicyAssignment> AttendancePolicyAssignments { get; }
+    DbSet<TrustedAttendanceDevice> TrustedAttendanceDevices { get; }
+    DbSet<AttendancePolicyException> AttendancePolicyExceptions { get; }
+    DbSet<AttendanceAttempt> AttendanceAttempts { get; }
+    DbSet<AttendanceSession> AttendanceSessions { get; }
+    DbSet<AttendanceBreak> AttendanceBreaks { get; }
+    DbSet<WorkdayClassification> WorkdayClassifications { get; }
+    DbSet<AttendanceCorrection> AttendanceCorrections { get; }
+    DbSet<LeaveType> LeaveTypes { get; }
+    DbSet<LeavePolicy> LeavePolicies { get; }
+    DbSet<LeaveBalance> LeaveBalances { get; }
+    DbSet<LeaveLedgerEntry> LeaveLedgerEntries { get; }
+    DbSet<HrLeaveRequest> HrLeaveRequests { get; }
+    DbSet<ApprovalDefinition> ApprovalDefinitions { get; }
+    DbSet<ApprovalDefinitionStep> ApprovalDefinitionSteps { get; }
+    DbSet<ApprovalInstance> ApprovalInstances { get; }
+    DbSet<ApprovalStepInstance> ApprovalStepInstances { get; }
+    DbSet<ApprovalDelegation> ApprovalDelegations { get; }
+    DbSet<PayComponent> PayComponents { get; }
+    DbSet<PayrollRule> PayrollRules { get; }
+    DbSet<EmployeeCompensation> EmployeeCompensations { get; }
+    DbSet<HrPayrollRun> HrPayrollRuns { get; }
+    DbSet<EmployeePayroll> EmployeePayrolls { get; }
+    DbSet<PayrollLineItem> PayrollLineItems { get; }
+    DbSet<Payslip> Payslips { get; }
+    DbSet<PayrollSettlementAdjustment> PayrollSettlementAdjustments { get; }
+    DbSet<HrFinancialRequest> HrFinancialRequests { get; }
+    DbSet<HrFinancialInstallment> HrFinancialInstallments { get; }
+    DbSet<HrPayrollInputSource> HrPayrollInputSources { get; }
+    DbSet<EmployeeDocument> EmployeeDocuments { get; }
+    DbSet<EmployeeDocumentVersion> EmployeeDocumentVersions { get; }
+    DbSet<HrAsset> HrAssets { get; }
+    DbSet<AssetCustody> AssetCustodies { get; }
+    DbSet<PerformanceCycle> PerformanceCycles { get; }
+    DbSet<PerformanceGoal> PerformanceGoals { get; }
+    DbSet<PerformanceReview> PerformanceReviews { get; }
+    DbSet<EmployeeCase> EmployeeCases { get; }
+    DbSet<CaseEvidence> CaseEvidence { get; }
+    DbSet<CaseResponse> CaseResponses { get; }
+    DbSet<DisciplinaryAction> DisciplinaryActions { get; }
+    DbSet<Requisition> Requisitions { get; }
+    DbSet<Candidate> Candidates { get; }
+    DbSet<CandidateInterview> CandidateInterviews { get; }
+    DbSet<CandidateOffer> CandidateOffers { get; }
+    DbSet<EmployeeLifecycleTask> EmployeeLifecycleTasks { get; }
+    DbSet<OffboardingProcess> OffboardingProcesses { get; }
+    DbSet<HrMigrationBatch> HrMigrationBatches { get; }
+    DbSet<HrMigrationRecordMap> HrMigrationRecordMaps { get; }
+    DbSet<HrMigrationConflict> HrMigrationConflicts { get; }
     DbSet<AttendanceLog> AttendanceLogs { get; }
-    DbSet<EmployeeVacation> EmployeeVacations { get; }
-
     DbSet<TaskItem> TaskItems { get; }
     DbSet<TaskComment> TaskComments { get; }
 
@@ -146,6 +227,12 @@ public interface IAppDbContext
     DbSet<PayrollAdjustment> PayrollAdjustments { get; }
     DbSet<TeacherAccount> TeacherAccounts { get; }
     DbSet<TeacherPayout> TeacherPayouts { get; }
+    DbSet<TeacherFinancialEvent> TeacherFinancialEvents { get; }
+    DbSet<TeacherFinancialAllocation> TeacherFinancialAllocations { get; }
+    DbSet<TeacherPayoutAdjustment> TeacherPayoutAdjustments { get; }
+    DbSet<SharedTeacherPackage> SharedTeacherPackages { get; }
+    DbSet<SharedTeacherPackageTeacher> SharedTeacherPackageTeachers { get; }
+    DbSet<SharedTeacherPackageItem> SharedTeacherPackageItems { get; }
     DbSet<AccessCodeActivationLog> AccessCodeActivationLogs { get; }
     DbSet<OutboxEvent> OutboxEvents { get; }
     DbSet<WebVitalsMetric> WebVitalsMetrics { get; }

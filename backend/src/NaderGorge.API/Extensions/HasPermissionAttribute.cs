@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Security.Claims;
+using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.API.Extensions;
 
@@ -18,34 +21,61 @@ public class HasPermissionAttribute : TypeFilterAttribute
 public class PermissionFilter : IAsyncAuthorizationFilter
 {
     private readonly string _permission;
+    private readonly IAppDbContext _db;
 
-    public PermissionFilter(string permission)
+    public PermissionFilter(string permission, IAppDbContext db)
     {
         _permission = permission;
+        _db = db;
     }
 
-    public Task OnAuthorizationAsync(AuthorizationFilterContext context)
+    public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
         var user = context.HttpContext.User;
         if (user == null || user.Identity == null || !user.Identity.IsAuthenticated)
         {
             context.Result = new UnauthorizedResult();
-            return Task.CompletedTask;
+            return;
         }
 
         // Admins bypass all checks
         if (user.IsInRole("Admin"))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         // Check for specific permission claim
         var hasPermission = user.Claims.Any(c => c.Type == "permission" && c.Value.Equals(_permission, StringComparison.OrdinalIgnoreCase));
         if (!hasPermission)
         {
+            if (_permission.Equals("gifts.manage", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    Guid? actorId = Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var parsedId)
+                        ? parsedId
+                        : null;
+                    _db.AuditLogs.Add(new AuditLog
+                    {
+                        Action = "GiftPermissionDenied",
+                        EntityType = nameof(GiftIssuance),
+                        PerformedByUserId = actorId,
+                        OldValues = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            permission = _permission,
+                            method = context.HttpContext.Request.Method,
+                            path = context.HttpContext.Request.Path.Value
+                        })
+                    });
+                    await _db.SaveChangesAsync(context.HttpContext.RequestAborted);
+                }
+                catch
+                {
+                    // Authorization denial must not depend on audit persistence availability.
+                }
+            }
             context.Result = new ForbidResult();
         }
 
-        return Task.CompletedTask;
     }
 }

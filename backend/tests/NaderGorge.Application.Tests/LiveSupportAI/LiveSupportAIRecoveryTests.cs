@@ -53,7 +53,7 @@ public sealed class LiveSupportAIRecoveryTests
     }
 
     [Fact]
-    public async Task Recovery_handles_inactivity_warning()
+    public async Task Recovery_closes_conversation_after_thirty_minutes_of_inactivity()
     {
         await using var db = TestAppDbContextFactory.Create();
         var now = DateTime.UtcNow;
@@ -65,10 +65,13 @@ public sealed class LiveSupportAIRecoveryTests
 
         var result = await new LiveSupportAIRecoveryService(db, handoff).RecoverBatchAsync(now, 10, default);
 
-        Assert.Equal(1, result.InactivityWarnings);
+        Assert.Equal(1, result.AutoClosedConversations);
         var updatedState = await db.LiveSupportAIConversationStates.SingleAsync();
-        Assert.NotNull(updatedState.InactivityWarningSentAt);
-        Assert.NotNull(updatedState.AutoCloseAt);
+        var updatedConversation = await db.LiveSupportConversations.SingleAsync();
+        Assert.Equal(LiveSupportConversationStatus.Closed, updatedConversation.Status);
+        Assert.Equal("AUTO_CLOSED_INACTIVE", updatedConversation.CloseReason);
+        Assert.Equal("INACTIVITY_TIMEOUT", updatedState.ResolutionCode);
+        Assert.Equal(now, updatedState.AutoCloseAt);
     }
 
     [Fact]

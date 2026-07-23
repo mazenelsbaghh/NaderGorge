@@ -15,10 +15,12 @@ public record ClearNotificationsCommand(Guid UserId) : IRequest<ApiResponse<bool
 public class ClearNotificationsCommandHandler : IRequestHandler<ClearNotificationsCommand, ApiResponse<bool>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public ClearNotificationsCommandHandler(IAppDbContext db)
+    public ClearNotificationsCommandHandler(IAppDbContext db, IAcademicScopeService? academicScope = null)
     {
         _db = db;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<bool>> Handle(ClearNotificationsCommand request, CancellationToken ct)
@@ -26,6 +28,30 @@ public class ClearNotificationsCommandHandler : IRequestHandler<ClearNotificatio
         var unreadNotifications = await _db.NotificationEvents
             .Where(n => n.UserId == request.UserId && n.ReadAt == null)
             .ToListAsync(ct);
+
+        if (_academicScope != null)
+        {
+            var eligibleNotifications = new List<NaderGorge.Domain.Entities.Notifications.NotificationEvent>(unreadNotifications.Count);
+            foreach (var notification in unreadNotifications)
+            {
+                if (!notification.AcademicScopeOwnerType.HasValue || !notification.AcademicScopeOwnerId.HasValue)
+                {
+                    eligibleNotifications.Add(notification);
+                    continue;
+                }
+
+                if (await _academicScope.IsOwnerEligibleForStudentAsync(
+                        notification.AcademicScopeOwnerType.Value,
+                        notification.AcademicScopeOwnerId.Value,
+                        request.UserId,
+                        ct))
+                {
+                    eligibleNotifications.Add(notification);
+                }
+            }
+
+            unreadNotifications = eligibleNotifications;
+        }
 
         if (unreadNotifications.Any())
         {

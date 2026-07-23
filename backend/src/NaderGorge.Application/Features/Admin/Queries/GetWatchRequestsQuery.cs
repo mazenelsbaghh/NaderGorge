@@ -14,13 +14,22 @@ public record AdminWatchRequestDto(
     string StudentPhone,
     Guid LessonVideoId,
     string VideoTitle,
+    string TeacherName,
+    string PackageName,
+    string TermTitle,
+    string SectionTitle,
+    string LessonTitle,
+    string StudentReason,
     int Status,
     DateTime CreatedAt,
     DateTime? ResolvedAt,
     string? Reason,
     int CurrentWatchCount,
     int MaxWatchCount,
-    bool ReachedLimit
+    bool ReachedLimit,
+    int BaseWatchCount,
+    int? VideoDurationSeconds,
+    bool HasPreviousRequest
 );
 
 public record GetWatchRequestsQuery() : IRequest<ApiResponse<List<AdminWatchRequestDto>>>;
@@ -48,6 +57,14 @@ public class GetWatchRequestsQueryHandler : IRequestHandler<GetWatchRequestsQuer
                 StudentPhone = r.User != null ? r.User.PhoneNumber : string.Empty,
                 r.LessonVideoId,
                 VideoTitle = r.LessonVideo != null ? r.LessonVideo.Title : string.Empty,
+                TeacherName = r.LessonVideo != null && r.LessonVideo.Lesson.ContentSection.Term.Package.Teacher.User != null
+                    ? r.LessonVideo.Lesson.ContentSection.Term.Package.Teacher.User.FullName
+                    : string.Empty,
+                PackageName = r.LessonVideo != null ? r.LessonVideo.Lesson.ContentSection.Term.Package.Name : string.Empty,
+                TermTitle = r.LessonVideo != null ? r.LessonVideo.Lesson.ContentSection.Term.Title : string.Empty,
+                SectionTitle = r.LessonVideo != null ? r.LessonVideo.Lesson.ContentSection.Title : string.Empty,
+                LessonTitle = r.LessonVideo != null ? r.LessonVideo.Lesson.Title : string.Empty,
+                StudentReason = r.RequestReason,
                 Status = (int)r.Status,
                 r.CreatedAt,
                 r.ResolvedAt,
@@ -56,7 +73,16 @@ public class GetWatchRequestsQueryHandler : IRequestHandler<GetWatchRequestsQuer
                     .Where(w => w.UserId == r.UserId && w.LessonVideoId == r.LessonVideoId)
                     .Select(w => new { w.WatchCount, MaxLimit = w.CustomMaxWatchCount })
                     .FirstOrDefault(),
-                VideoMaxLimit = r.LessonVideo != null ? r.LessonVideo.MaxWatchCount : 0
+                VideoMaxLimit = r.LessonVideo != null ? r.LessonVideo.MaxWatchCount : 0,
+                VideoDurationSeconds = r.LessonVideo != null
+                    ? (r.LessonVideo.BunnyVideoAsset != null
+                        ? r.LessonVideo.BunnyVideoAsset.DurationSeconds
+                        : r.LessonVideo.VideoChapters.Select(chapter => (int?)chapter.EndTime).Max())
+                    : null,
+                HasPreviousRequest = _context.ExtraWatchRequests.Any(previous =>
+                    previous.UserId == r.UserId
+                    && previous.LessonVideoId == r.LessonVideoId
+                    && previous.Id != r.Id)
             })
             .ToListAsync(cancellationToken);
 
@@ -71,17 +97,25 @@ public class GetWatchRequestsQueryHandler : IRequestHandler<GetWatchRequestsQuer
                 r.StudentPhone,
                 r.LessonVideoId,
                 r.VideoTitle,
+                r.TeacherName,
+                r.PackageName,
+                r.TermTitle,
+                r.SectionTitle,
+                r.LessonTitle,
+                r.StudentReason,
                 r.Status,
                 r.CreatedAt,
                 r.ResolvedAt,
                 r.Reason,
                 currentCount,
                 maxCount,
-                reachedLimit
+                reachedLimit,
+                r.VideoMaxLimit,
+                r.VideoDurationSeconds,
+                r.HasPreviousRequest
             );
         }).ToList();
 
         return ApiResponse<List<AdminWatchRequestDto>>.Ok(dtos);
     }
 }
-

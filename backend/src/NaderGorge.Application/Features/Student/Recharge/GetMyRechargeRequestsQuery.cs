@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -18,6 +19,8 @@ public class StudentRechargeRequestDto
     public Guid Id { get; set; }
     public string ReviewCode { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+    public Guid? TeacherId { get; set; }
+    public string? TeacherName { get; set; }
     public string SenderPhoneNumber { get; set; } = string.Empty;
     public string WalletLabel { get; set; } = string.Empty;
     public string WalletPhoneNumber { get; set; } = string.Empty;
@@ -36,9 +39,12 @@ public class GetMyRechargeRequestsQueryHandler : IRequestHandler<GetMyRechargeRe
 
     public async Task<ApiResponse<List<StudentRechargeRequestDto>>> Handle(GetMyRechargeRequestsQuery request, CancellationToken ct)
     {
+        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+
         var requests = await _db.RechargeRequests
             .AsNoTracking()
             .Include(r => r.Wallet)
+            .Include(r => r.Teacher!).ThenInclude(t => t.User)
             .Where(r => r.UserId == request.UserId)
             .OrderByDescending(r => r.CreatedAt)
             .Take(20)
@@ -50,6 +56,8 @@ public class GetMyRechargeRequestsQueryHandler : IRequestHandler<GetMyRechargeRe
                 Id = r.Id,
                 ReviewCode = r.Id.ToString("N").Substring(0, 8).ToUpper(),
                 Amount = r.Amount,
+                TeacherId = r.TeacherId,
+                TeacherName = r.Teacher != null && r.Teacher.User != null ? r.Teacher.User.FullName : null,
                 SenderPhoneNumber = r.SenderPhoneNumber,
                 WalletLabel = r.Wallet.Label,
                 WalletPhoneNumber = r.Wallet.PhoneNumber,

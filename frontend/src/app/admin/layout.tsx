@@ -10,8 +10,11 @@ import { adminMenuItems } from "@/packages/admin";
 import { useHasPermission } from "@/hooks/useHasPermission";
 import { useAuthStore } from "@/stores/auth-store";
 import { StaffRealtimeBoundary } from "@/components/layout/StaffRealtimeBoundary";
+import { hrAdminRoutePermissions } from "@/lib/hr-permissions";
 
-const ROUTE_PERMISSIONS = [
+const ROUTE_PERMISSIONS: Array<{ pattern: RegExp; permissions: string[]; adminOnly?: boolean }> = [
+  { pattern: /^\/admin\/content\/video-types(\/|$)/, permissions: [], adminOnly: true },
+  { pattern: /^\/admin\/gifts(\/|$)/, permissions: ['gifts.manage'] },
   { pattern: /^\/admin\/users(\/|$)/, permissions: ['users.manage'] },
   { pattern: /^\/admin\/teachers(\/|$)/, permissions: ['users.manage'] },
   { pattern: /^\/admin\/overrides(\/|$)/, permissions: ['users.manage'] },
@@ -20,12 +23,20 @@ const ROUTE_PERMISSIONS = [
   { pattern: /^\/admin\/forms(\/|$)/, permissions: ['content.manage'] },
   { pattern: /^\/admin\/community(\/|$)/, permissions: ['community.manage'] },
   { pattern: /^\/admin\/ai-monitor(\/|$)/, permissions: ['reports.manage'] },
+  { pattern: /^\/admin\/reports(\/|$)/, permissions: ['reports.manage'] },
+  { pattern: /^\/admin\/codes\/templates(\/|$)/, permissions: ['sales.templates.manage'] },
   { pattern: /^\/admin\/codes(\/|$)/, permissions: ['codes.manage'] },
+  { pattern: /^\/admin\/sales(\/|$)/, permissions: ['sales.manage'] },
+  { pattern: /^\/admin\/discounts(\/|$)/, permissions: ['sales.manage'] },
+  { pattern: /^\/admin\/public-exams(\/|$)/, permissions: ['public_exams.manage'] },
   { pattern: /^\/admin\/questions(\/|$)/, permissions: ['exams.manage'] },
   { pattern: /^\/admin\/watch-requests(\/|$)/, permissions: ['watch_requests.manage'] },
   { pattern: /^\/admin\/wallets(\/|$)/, permissions: ['payments.manage'] },
   { pattern: /^\/admin\/recharge-verification(\/|$)/, permissions: ['payments.manage'] },
+  { pattern: /^\/admin\/hr(\/|$)/, permissions: [...hrAdminRoutePermissions['/admin/hr']] },
+  { pattern: /^\/admin\/finance(\/|$)/, permissions: [...hrAdminRoutePermissions['/admin/finance']] },
   { pattern: /^\/admin\/settings(\/|$)/, permissions: ['settings.manage'] },
+  { pattern: /^\/admin\/popup(\/|$)/, permissions: ['settings.manage'] },
   { pattern: /^\/admin\/live-support(\/|$)/, permissions: ['live_support.manage'] },
 ];
 
@@ -38,8 +49,9 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
   const allowedNavbarItems = user?.allowedNavbarItems;
   const roles = user?.roles || [];
   const isAdmin = roles.some(
-    (r: string) => r.toLowerCase() === 'admin' || r.toLowerCase() === 'supervisor'
+    (r: string) => r.toLowerCase() === 'admin'
   );
+  const isBuiltInAdmin = roles.some((r: string) => r.toLowerCase() === 'admin');
 
   // Check if the current path is allowed by allowedNavbarItems
   const isNavAllowed =
@@ -68,12 +80,16 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
     );
 
     if (matchedRoute) {
+      if (matchedRoute.adminOnly && !isBuiltInAdmin) {
+        router.replace("/admin/unauthorized");
+        return;
+      }
       const hasAny = matchedRoute.permissions.some((p) => hasPermission(p));
-      if (!hasAny) {
+      if (!matchedRoute.adminOnly && !hasAny) {
         router.replace("/admin/unauthorized");
       }
     }
-  }, [pathname, isLoading, isAuthenticated, hasPermission, router, isNavAllowed]);
+  }, [pathname, isLoading, isAuthenticated, hasPermission, router, isNavAllowed, isBuiltInAdmin]);
 
   if (isLoading || !isAuthenticated) {
     return null;
@@ -90,8 +106,11 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
     : null;
 
   if (matchedRoute) {
+    if (matchedRoute.adminOnly && !isBuiltInAdmin) {
+      return null;
+    }
     const hasAny = matchedRoute.permissions.some((p) => hasPermission(p));
-    if (!hasAny) {
+    if (!matchedRoute.adminOnly && !hasAny) {
       return null;
     }
   }

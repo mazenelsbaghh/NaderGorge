@@ -36,7 +36,20 @@ public class UpdateUserStatusCommandHandler : IRequestHandler<UpdateUserStatusCo
                 new List<string> { "ADMIN_CANNOT_BE_DISABLED" });
         }
 
+        var statusChanged = user.IsActive != isNewActive;
         user.IsActive = isNewActive;
+
+        if (statusChanged)
+        {
+            user.SecurityStampVersion += 1;
+            AddUserAuthorizationChangedEvent(user.Id, user.SecurityStampVersion, request.AdminId, isNewActive);
+
+            var activeRefreshTokens = await _db.RefreshTokens
+                .Where(refreshToken => refreshToken.UserId == user.Id && !refreshToken.IsRevoked)
+                .ToListAsync(ct);
+            foreach (var refreshToken in activeRefreshTokens)
+                refreshToken.IsRevoked = true;
+        }
 
         _db.AuditLogs.Add(new AuditLog
         {
@@ -51,5 +64,29 @@ public class UpdateUserStatusCommandHandler : IRequestHandler<UpdateUserStatusCo
 
         await _db.SaveChangesAsync(ct);
         return ApiResponse.Ok($"User status updated to {request.NewStatus}");
+    }
+
+    private void AddUserAuthorizationChangedEvent(Guid userId, int authorizationVersion, Guid actorUserId, bool isActive)
+    {
+        _db.OutboxEvents.Add(new OutboxEvent
+        {
+            Type = "StaffDataChanged",
+            TargetUserId = userId.ToString(),
+            TargetGroup = "Role_Staff",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                schemaVersion = "2",
+                eventId = Guid.NewGuid(),
+                occurredAt = DateTime.UtcNow,
+                scopes = new[] { "users", "settings" },
+                operation = "updated",
+                entityType = "User",
+                entityIds = new[] { userId },
+                userId,
+                isActive,
+                authorizationVersion,
+                actorUserId
+            })
+        });
     }
 }

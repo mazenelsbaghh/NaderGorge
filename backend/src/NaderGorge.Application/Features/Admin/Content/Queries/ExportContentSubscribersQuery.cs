@@ -22,6 +22,7 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
     public async Task<byte[]> Handle(ExportContentSubscribersQuery request, CancellationToken ct)
     {
         var grantType = MapContentType(request.ContentType);
+        var contentName = await ResolveContentNameAsync(request.ContentType, request.ContentId, ct);
 
         var query = _db.StudentAccessGrants.AsQueryable();
 
@@ -33,6 +34,7 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
             "package" => query.Where(sag => sag.PackageId == request.ContentId),
             "term" => query.Where(sag => sag.TermId == request.ContentId),
             "section" => query.Where(sag => sag.ContentSectionId == request.ContentId),
+            "lesson" => query.Where(sag => sag.LessonId == request.ContentId),
             _ => query.Where(sag => false)
         };
 
@@ -58,14 +60,15 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
                 ParentPhone = sag.User.StudentProfile != null ? sag.User.StudentProfile.ParentPhone : "",
                 MotherPhone = sag.User.StudentProfile != null ? sag.User.StudentProfile.MotherPhone : "",
                 sag.GrantedAt,
-                sag.IsActive
+                sag.IsActive,
+                PurchaseMethod = sag.AccessCodeId != null ? "كود" : sag.GiftRecipientId != null ? "هدية" : "رصيد"
             })
             .ToListAsync(ct);
 
         var sb = new StringBuilder();
 
         // Header row
-        sb.AppendLine("الاسم الكامل,رقم الهاتف,المحافظة,المنطقة,المرحلة,الصف,المدرسة,هاتف الأب,هاتف الأم,تاريخ الاشتراك,الحالة");
+        sb.AppendLine("الاسم الكامل,رقم الهاتف,المحافظة,المنطقة,المرحلة,الصف,المدرسة,هاتف الأب,هاتف الأم,نوع المحتوى,المحتوى المشترى,طريقة الاشتراك,تاريخ الاشتراك,الحالة");
 
         foreach (var row in rows)
         {
@@ -79,6 +82,9 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
                 CsvEscape(row.SchoolName ?? ""),
                 CsvEscape(row.ParentPhone ?? ""),
                 CsvEscape(row.MotherPhone ?? ""),
+                CsvEscape(MapContentTypeAr(request.ContentType)),
+                CsvEscape(contentName),
+                CsvEscape(row.PurchaseMethod),
                 CsvEscape(row.GrantedAt.ToString("yyyy-MM-dd")),
                 CsvEscape(row.IsActive ? "نشط" : "ملغى")
             ));
@@ -109,9 +115,31 @@ public class ExportContentSubscribersQueryHandler : IRequestHandler<ExportConten
             "package" => CodeType.Package,
             "term" => CodeType.Term,
             "section" => CodeType.Month,
+            "lesson" => CodeType.Lesson,
             _ => null
         };
     }
+
+    private async Task<string> ResolveContentNameAsync(string contentType, Guid contentId, CancellationToken ct)
+    {
+        return contentType.ToLowerInvariant() switch
+        {
+            "package" => await _db.Packages.Where(item => item.Id == contentId).Select(item => item.Name).FirstOrDefaultAsync(ct) ?? "",
+            "term" => await _db.Terms.Where(item => item.Id == contentId).Select(item => item.Title).FirstOrDefaultAsync(ct) ?? "",
+            "section" => await _db.ContentSections.Where(item => item.Id == contentId).Select(item => item.Title).FirstOrDefaultAsync(ct) ?? "",
+            "lesson" => await _db.Lessons.Where(item => item.Id == contentId).Select(item => item.Title).FirstOrDefaultAsync(ct) ?? "",
+            _ => ""
+        };
+    }
+
+    private static string MapContentTypeAr(string contentType) => contentType.ToLowerInvariant() switch
+    {
+        "package" => "باقة",
+        "term" => "ترم",
+        "section" => "قسم",
+        "lesson" => "حصة",
+        _ => contentType
+    };
 
     private static string MapEducationStageAr(string stage)
     {

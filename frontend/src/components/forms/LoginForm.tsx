@@ -11,7 +11,8 @@
  */
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Eye, EyeOff, Phone } from 'lucide-react';
@@ -24,6 +25,7 @@ import { getSurfaceOrigins, getSurfaceName, isValidRedirectUrl } from '@/package
 
 export function LoginForm() {
   const { setAuth } = useAuthStore();
+  const router = useRouter();
   const reduceMotion = useReducedMotion();
 
   const [formData, setFormData] = useState({ phoneNumber: '', password: '' });
@@ -31,6 +33,24 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!error) return;
+
+    // The login page has its own scroll container. When an error is inserted
+    // above the fields, keep the feedback in view without jumping the document
+    // to an arbitrary position or hiding the submit action.
+    const frame = window.requestAnimationFrame(() => {
+      errorRef.current?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [error, reduceMotion]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,9 +116,19 @@ export function LoginForm() {
       }
 
       if (targetUrl && isValidRedirectUrl(targetUrl, getSurfaceName())) {
-        window.location.replace(targetUrl);
+        const destination = new URL(targetUrl, window.location.origin);
+        if (destination.origin === window.location.origin) {
+          router.replace(`${destination.pathname}${destination.search}${destination.hash}`);
+        } else {
+          window.location.replace(destination.toString());
+        }
       } else {
-        window.location.replace(redirectDestination);
+        const destination = new URL(redirectDestination);
+        if (destination.origin === window.location.origin) {
+          router.replace(`${destination.pathname}${destination.search}${destination.hash}`);
+        } else {
+          window.location.replace(destination.toString());
+        }
       }
     } catch (error: unknown) {
       const message = isAxiosError<{ message?: string }>(error)
@@ -122,6 +152,7 @@ export function LoginForm() {
       {/* ── Error Banner ── */}
       {error && (
         <motion.div
+          ref={errorRef}
           role="alert"
           aria-live="assertive"
           className="auth-error-banner"

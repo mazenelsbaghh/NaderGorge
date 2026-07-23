@@ -6,6 +6,7 @@ import { extractAudioFromVideo } from '../utils/audioExtractor.js';
 import { analyzeVideoChapters } from '../services/geminiService.js';
 import type { VideoAIResult } from '../services/geminiService.js';
 import { throwIfCancellationRequested } from '../cancellation.js';
+import { classifyExternalFailure, fetchWithTimeout } from '../services/workerFetch.js';
 
 // Resolve worker root reliably regardless of process.cwd()
 const __filename = fileURLToPath(import.meta.url);
@@ -18,8 +19,10 @@ const API_KEY = process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRE
 /** Push progress to backend → SignalR → admin frontend in real time */
 async function notifyProgress(jobId: string, percentage: number, stage: string, status = 'active') {
     try {
-        await fetch(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-progress`, {
+        await fetchWithTimeout(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-progress`, {
             method: 'POST',
+            timeoutMs: 10_000,
+            operation: 'ai-progress',
             headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
             body: JSON.stringify({ jobId, progress: percentage, status, message: stage }),
         });
@@ -102,8 +105,10 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         await throwIfCancellationRequested(job);
         console.log(`[Job ${job.id}] Pushing results to backend via Webhook...`);
         
-        const webhookResponse = await fetch(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-analysis-completed`, {
+        const webhookResponse = await fetchWithTimeout(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-analysis-completed`, {
             method: 'POST',
+            timeoutMs: 10_000,
+            operation: 'ai-analysis-callback',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Internal-Token': API_KEY
@@ -131,7 +136,8 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         
     } catch (error) {
         console.error(`[Job ${job.id}] Failed processing video:`, error);
-        await notifyProgress(lessonVideoId, 0, String(error), 'failed');
+        const failure = classifyExternalFailure(error);
+        await notifyProgress(lessonVideoId, 0, failure.remediation, 'failed');
         throw error;
     } finally {
         // Cleanup temp audio file ONLY when the pipeline is completely successful.

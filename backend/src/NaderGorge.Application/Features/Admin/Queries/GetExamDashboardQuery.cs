@@ -7,6 +7,7 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.Application.Features.Admin.Queries;
 
 public record StudentExamResultSummaryDto(
+    Guid AttemptId,
     Guid StudentId,
     string StudentName,
     string StudentPhone, // Added for better tracking
@@ -46,12 +47,14 @@ public record ExamQuestionSummaryDto(
 
 public record ExamDashboardDto(
     Guid ExamId,
+    string InternalCode,
     string Title,
     string Description,
     int QuestionCount,
     decimal TotalScore,
     decimal PassingScore,
     int? DurationMinutes,
+    bool IsActive,
     List<StudentExamResultSummaryDto> Attempts,
     List<ExamQuestionSummaryDto> Questions
 );
@@ -103,6 +106,7 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
                 }
 
                 return new StudentExamResultSummaryDto(
+                    a.Id,
                     a.UserId,
                     a.User?.FullName ?? "طالب محذوف",
                     a.User?.PhoneNumber ?? "غير متوفر",
@@ -152,12 +156,14 @@ public class GetExamDashboardQueryHandler : IRequestHandler<GetExamDashboardQuer
 
         var dto = new ExamDashboardDto(
             exam.Id,
+            exam.InternalCode,
             exam.Title,
             exam.Description,
             exam.ExamQuestions.Count,
             exam.TotalScore,
             exam.PassingScore,
             exam.DurationMinutes,
+            exam.IsActive,
             attemptsDto,
             questionsDto
         );

@@ -19,6 +19,7 @@ import {
   MediaPipelineDto
 } from '@/services/media-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 const YoutubeIcon = (props: any) => (
   <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -85,8 +86,10 @@ export default function SocialPlannerView() {
   const fetchPlans = useCallback(async () => {
     try {
       // Fetch plans for current month
-      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59).toISOString();
+      // Date-only values are Cairo calendar dates; the backend converts their boundaries to UTC.
+      const start = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+      const end = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-01`;
       
       const data = await mediaService.getSocialPlans({ startDate: start, endDate: end });
       setPlans(data || []);
@@ -108,6 +111,8 @@ export default function SocialPlannerView() {
   useEffect(() => {
     fetchPlans();
     fetchPipelines();
+    const cleanupCacheStore = registerCacheStore('media:social-plans', () => setPlans([]), fetchPlans);
+    return cleanupCacheStore;
   }, [fetchPlans, fetchPipelines]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {

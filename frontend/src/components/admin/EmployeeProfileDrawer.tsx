@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Briefcase, Loader2, Coins, Clock, Hourglass } from 'lucide-react';
-import { hrService, SaveEmployeeProfilePayload } from '@/services/hr-service';
+import { SaveEmployeeProfilePayload } from '@/services/hr-service';
+import { useEmployee, useUpdateEmployeeProfile } from '@/features/employee';
 import toast from 'react-hot-toast';
 
 interface EmployeeProfileDrawerProps {
@@ -27,16 +28,15 @@ export function EmployeeProfileDrawer({
   const [loading, setLoading] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const employeeQuery = useEmployee(open ? userId : undefined);
+  const updateProfile = useUpdateEmployeeProfile();
 
   useEffect(() => {
-    if (open && userId) {
-      const loadProfile = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const employees = await hrService.listEmployees();
-          const currentEmp = employees.find((emp) => emp.id === userId);
-          if (currentEmp?.employeeProfile) {
+    if (open) {
+      setLoading(employeeQuery.isLoading);
+      setError(employeeQuery.error ? 'حدث خطأ أثناء تحميل بيانات الملف التعريفي للموظف.' : null);
+      const currentEmp = employeeQuery.data;
+      if (currentEmp?.employeeProfile) {
             setBasicSalary(currentEmp.employeeProfile.basicSalary);
             // Format standardStartTime from "hh:mm:ss" or similar to "hh:mm"
             const timeStr =
@@ -48,21 +48,14 @@ export function EmployeeProfileDrawer({
               setStandardStartTime(timeStr);
             }
             setTargetDailyHours(currentEmp.employeeProfile.targetDailyHours);
-          } else {
+      } else if (!employeeQuery.isLoading) {
             // Reset to default settings
             setBasicSalary(0);
             setStandardStartTime('09:00');
             setTargetDailyHours(8);
-          }
-        } catch {
-          setError('حدث خطأ أثناء تحميل بيانات الملف التعريفي للموظف.');
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadProfile();
+      }
     }
-  }, [open, userId]);
+  }, [open, employeeQuery.data, employeeQuery.error, employeeQuery.isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,13 +86,14 @@ export function EmployeeProfileDrawer({
     };
 
     try {
-      const res = await hrService.saveEmployeeProfile(payload);
-      if (res.success) {
+      const res = await updateProfile.mutateAsync({
+        ...payload,
+        expectedUpdatedAt: employeeQuery.data?.employeeProfile?.updatedAt ?? null,
+      });
+      if (res) {
         toast.success('تم حفظ إعدادات ملف الموظف بنجاح ✅');
         onSuccess();
         onClose();
-      } else {
-        setError(res.message || 'فشل حفظ الملف التعريفي');
       }
     } catch (err: any) {
       setError(

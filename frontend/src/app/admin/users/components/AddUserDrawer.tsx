@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, X, UserPlus, Loader2, Package, Shield, GraduationCap } from 'lucide-react';
 import {
@@ -9,6 +10,7 @@ import {
   AdminPackageListItemDto,
 } from '@/services/admin-service';
 import toast from 'react-hot-toast';
+import { useCreateEmployee, useProvisionEmployee } from '@/features/employee';
 
 type Role = string;
 
@@ -60,6 +62,11 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
   const [errors, setErrors] = useState<FieldError>({});
   const [dynamicRoles, setDynamicRoles] = useState<any[]>([]);
   const [selectedAssistantRole, setSelectedAssistantRole] = useState<string>('');
+  const [basicSalary, setBasicSalary] = useState('0');
+  const [standardStartTime, setStandardStartTime] = useState('09:00');
+  const [targetDailyHours, setTargetDailyHours] = useState('8');
+  const createEmployee = useCreateEmployee();
+  const provisionEmployee = useProvisionEmployee();
 
   // Load packages when Student role is selected
   useEffect(() => {
@@ -84,6 +91,9 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
       setSelectedPackageIds([]);
       setErrors({});
       setSelectedAssistantRole('');
+      setBasicSalary('0');
+      setStandardStartTime('09:00');
+      setTargetDailyHours('8');
     }
   }, [open, defaultRole]);
 
@@ -131,6 +141,12 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
     if (role === 'Assistant' && !selectedAssistantRole) {
       newErrors.general = 'يرجى اختيار دور المساعد المخصص، أو إنشاء دور جديد في الإعدادات';
     }
+    if (role === 'Assistant' && (!Number.isFinite(Number(basicSalary)) || Number(basicSalary) < 0)) {
+      newErrors.general = 'الراتب الأساسي يجب أن يكون رقماً موجباً أو صفراً';
+    }
+    if (role === 'Assistant' && (!Number.isInteger(Number(targetDailyHours)) || Number(targetDailyHours) < 1 || Number(targetDailyHours) > 24)) {
+      newErrors.general = 'ساعات العمل اليومية يجب أن تكون بين 1 و24';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -152,18 +168,21 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
     };
 
     try {
-      const res = await adminService.createUser(payload);
-      if (res?.data) {
-        toast.success(`تم إنشاء حساب "${res.data.fullName}" بنجاح ✅`);
+      const created = role === 'Assistant'
+        ? await provisionEmployee.mutateAsync({
+            fullName: payload.fullName,
+            phoneNumber: payload.phoneNumber,
+            password: payload.password,
+            role: payload.role,
+            basicSalary: Number(basicSalary),
+            standardStartTime,
+            targetDailyHours: Number(targetDailyHours),
+          })
+        : await createEmployee.mutateAsync(payload);
+      if (created) {
+        toast.success(`تم إنشاء حساب "${created.fullName}" بنجاح ✅`);
         onSuccess();
         onClose();
-      } else {
-        const errorCode = (res as any)?.errors?.[0];
-        if (errorCode === 'PHONE_ALREADY_EXISTS') {
-          setErrors({ phoneNumber: 'رقم الهاتف مسجل بالفعل' });
-        } else {
-          setErrors({ general: (res as any)?.message || 'حدث خطأ، يرجى المحاولة مرة أخرى' });
-        }
       }
     } catch (err: any) {
       const errorCode = err?.response?.data?.errors?.[0];
@@ -183,7 +202,9 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
     );
   }
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -400,6 +421,23 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
                 </div>
 
                 {/* Packages (Student only) */}
+                {role === 'Assistant' && (
+                  <div className="grid gap-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:grid-cols-3">
+                    <div>
+                      <label htmlFor="employee-salary" className="mb-1.5 block text-sm font-bold text-[var(--admin-text)]">الراتب الأساسي</label>
+                      <input id="employee-salary" type="number" min="0" step="0.01" value={basicSalary} onChange={(event) => setBasicSalary(event.target.value)} className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
+                    </div>
+                    <div>
+                      <label htmlFor="employee-start-time" className="mb-1.5 block text-sm font-bold text-[var(--admin-text)]">بداية العمل</label>
+                      <input id="employee-start-time" type="time" value={standardStartTime} onChange={(event) => setStandardStartTime(event.target.value)} className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
+                    </div>
+                    <div>
+                      <label htmlFor="employee-daily-hours" className="mb-1.5 block text-sm font-bold text-[var(--admin-text)]">الساعات اليومية</label>
+                      <input id="employee-daily-hours" type="number" min="1" max="24" value={targetDailyHours} onChange={(event) => setTargetDailyHours(event.target.value)} className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)]" />
+                    </div>
+                  </div>
+                )}
+
                 <AnimatePresence>
                   {role === 'Student' && (
                     <motion.div
@@ -508,6 +546,7 @@ export function AddUserDrawer({ open, onClose, onSuccess, defaultRole }: AddUser
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

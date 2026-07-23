@@ -5,7 +5,6 @@ import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
 
 export default function AssistantError({
-  error,
   reset,
 }: {
   error: Error & { digest?: string };
@@ -30,9 +29,8 @@ export default function AssistantError({
           حدث خطأ غير متوقع
         </h2>
 
-        {/* Error message */}
         <p className="mb-6 text-sm leading-relaxed text-[var(--admin-muted)] font-medium">
-          {error.message || 'حدث خطأ أثناء تحميل هذه الصفحة.'}
+          حدثت مشكلة أثناء تحميل الصفحة. حاول مرة أخرى، وإذا استمرت المشكلة تواصل مع الدعم الفني.
         </p>
 
         {/* Actions */}

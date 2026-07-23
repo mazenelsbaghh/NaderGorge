@@ -3,6 +3,8 @@ namespace NaderGorge.Application.Common;
 public static class PlatformSettingKeys
 {
     public const string VideoWatchThresholdPercentage = "VideoWatchThresholdPercentage";
+    public const string YouTubeWatchThresholdPercentage = "YouTubeWatchThresholdPercentage";
+    public const string BunnyWatchThresholdPercentage = "BunnyWatchThresholdPercentage";
     public const string MaxExtraWatchRequestsPerVideo = "MaxExtraWatchRequestsPerVideo";
     public const string HintPenaltyPercentage = "HintPenaltyPercentage";
 
@@ -17,9 +19,15 @@ public static class PlatformSettingKeys
     public const string WatermarkOpacity = "WatermarkOpacity";
     public const string MaintenanceMode = "MaintenanceMode";
     public const string MaintenanceMessage = "MaintenanceMessage";
+    public const string ParentAppUpdateRequired = "ParentAppUpdateRequired";
+    public const string ParentAppUpdateUrl = "ParentAppUpdateUrl";
+    public const string ParentAppUpdateMessage = "ParentAppUpdateMessage";
     public const string BunnyStreamStorageRateUsdPerGb = "BunnyStreamStorageRateUsdPerGb";
     public const string BunnyStreamBandwidthRateUsdPerGb = "BunnyStreamBandwidthRateUsdPerGb";
     public const string LiveSupportEnabled = "LiveSupportEnabled";
+    public const string ShowSupportOutsideAccount = "ShowSupportOutsideAccount";
+    public const string GuestSupportWhatsAppNumber = "GuestSupportWhatsAppNumber";
+    public const string LiveSupportCannedReplies = "LiveSupportCannedReplies";
     public const string PlayerShadowTopOpacity = "PlayerShadowTopOpacity";
     public const string PlayerShadowBottomOpacity = "PlayerShadowBottomOpacity";
     public const string YouTubePlayerShadowHideDelaySeconds = "YouTubePlayerShadowHideDelaySeconds";
@@ -29,4 +37,13 @@ public static class PlatformSettingKeys
     public const string EnabledPlayerShadowProviders = "EnabledPlayerShadowProviders";
     public const string PlayerShadowTopSolid = "PlayerShadowTopSolid";
     public const string PlayerShadowBottomSolid = "PlayerShadowBottomSolid";
+
+    public const string PlatformPopupEnabled = "PlatformPopupEnabled";
+    public const string PlatformPopupTitle = "PlatformPopupTitle";
+    public const string PlatformPopupBody = "PlatformPopupBody";
+    public const string PlatformPopupImageUrl = "PlatformPopupImageUrl";
+    public const string PlatformPopupActionUrl = "PlatformPopupActionUrl";
+    public const string PlatformPopupActionLabel = "PlatformPopupActionLabel";
+    public const string PlatformPopupDisplayInterval = "PlatformPopupDisplayInterval";
+    public const string PlatformPopupExpiresAt = "PlatformPopupExpiresAt";
 }

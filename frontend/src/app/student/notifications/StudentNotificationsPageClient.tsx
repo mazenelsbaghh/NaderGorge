@@ -7,33 +7,39 @@ import { studentService, StudentNotificationDto } from "@/services/student-servi
 import { useStudentTheme } from "@/hooks/useStudentTheme";
 import { fadeSlideUp } from "@/lib/motion";
 
-import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+import { registerCacheStore } from "@/lib/cache-invalidation";
 
 export default function StudentNotificationsPageClient() {
   const { isReady } = useStudentTheme();
   const [notifications, setNotifications] = useState<StudentNotificationDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const fetchNotifications = () => {
+    setLoading(true);
+    setError(null);
     studentService.getNotifications()
       .then((res) => {
         setNotifications(res);
       })
-      .catch((err) => console.error("Error fetching notifications:", err))
+      .catch((err) => {
+        console.error("Error fetching notifications:", err);
+        setError("تعذر تحميل الإشعارات. حاول مرة أخرى.");
+      })
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchNotifications();
-    registerCacheStore('notifications', () => {}, fetchNotifications);
-    return () => {
-      unregisterCacheStore('notifications');
-    };
+    const cleanupCacheStore = registerCacheStore('notifications', () => {}, fetchNotifications);
+    return cleanupCacheStore;
   }, []);
 
   const handleMarkAsRead = async (id: string) => {
     setActioningId(id);
+    setActionError(null);
     try {
       await studentService.markNotificationAsRead(id);
       // Update locally
@@ -46,6 +52,7 @@ export default function StudentNotificationsPageClient() {
       }
     } catch (err) {
       console.error("Error marking notification as read:", err);
+      setActionError("تعذر تحديث الإشعار. حاول مرة أخرى.");
     } finally {
       setActioningId(null);
     }
@@ -57,6 +64,23 @@ export default function StudentNotificationsPageClient() {
         <div className="text-center space-y-4">
           <div className="h-12 w-12 border-4 border-[var(--admin-primary)] border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-sm text-[var(--admin-muted)]">جاري تحميل الإشعارات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center px-4" dir="rtl">
+        <div className="max-w-md space-y-4 text-center">
+          <p role="alert" className="text-sm font-bold text-[var(--admin-danger)]">{error}</p>
+          <button
+            type="button"
+            onClick={fetchNotifications}
+            className="rounded-xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-bold text-[var(--admin-primary-contrast)]"
+          >
+            إعادة المحاولة
+          </button>
         </div>
       </div>
     );
@@ -91,6 +115,12 @@ export default function StudentNotificationsPageClient() {
 
       {/* Notifications List */}
       <div className="rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-xl">
+        {actionError && (
+          <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] px-4 py-3 text-xs font-bold text-[var(--admin-danger)]">
+            <span>{actionError}</span>
+            <button type="button" onClick={() => setActionError(null)} className="underline">إخفاء</button>
+          </div>
+        )}
         <div className="flex items-center justify-between border-b border-[var(--admin-border)] pb-4 mb-6">
           <h2 className="text-lg font-black text-[var(--admin-text)] flex items-center gap-2">
             <Bell className="h-5 w-5 text-[var(--admin-primary)]" />
@@ -108,7 +138,7 @@ export default function StudentNotificationsPageClient() {
                 <Bell className="h-10 w-10" />
               </div>
               <h4 className="font-bold text-[var(--admin-text)] text-sm">صندوق إشعاراتك فارغ</h4>
-              <p className="text-xs text-[var(--admin-muted)]">عندما يرسل المعلمون إعلانات جديدة، ستظهر هنا.</p>
+              <p className="text-xs text-[var(--admin-muted)]">الإشعارات العامة أو المطابقة لبياناتك الدراسية ستظهر هنا عند وصولها.</p>
             </div>
           ) : (
             notifications.map((notif) => (

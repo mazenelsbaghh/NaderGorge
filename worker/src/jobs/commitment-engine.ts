@@ -7,6 +7,19 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/nadergorge?schema=public'
 });
 
+const cairoDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Africa/Cairo',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function cairoDateKey(now = new Date()) {
+  const parts = cairoDateFormatter.formatToParts(now);
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
 export async function runNightlySweep() {
     console.log('[CommitmentEngine] Starting nightly student status evaluation sweep...');
     const client = await pool.connect();
@@ -33,7 +46,7 @@ export async function runNightlySweep() {
             
             for (const student of inactiveStudents) {
                 const warningId = crypto.randomUUID();
-                const dateStr = new Date().toISOString().split('T')[0];
+                const dateStr = cairoDateKey();
                 const occurrenceKey = `commitment:${student.Id}:inactive_7d:${dateStr}`;
                 await client.query(`
                     INSERT INTO "warning_events" ("Id", "StudentId", "Severity", "TriggerReason", "IsResolved", "OccurrenceKey", "CreatedAt")

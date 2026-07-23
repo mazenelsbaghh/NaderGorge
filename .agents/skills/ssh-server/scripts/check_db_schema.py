@@ -32,6 +32,7 @@ def parse_snapshot(snapshot_path):
     entity_pattern = re.compile(r'modelBuilder\.Entity\("(?P<name>[^"]+)",\s*b\s*=>')
     property_pattern = re.compile(r'b\.(Property|PrimitiveCollection)<(?P<type>[^>]+)>\("(?P<name>[^"]+)"\)')
     column_type_pattern = re.compile(r'\.HasColumnType\("(?P<db_type>[^"]+)"\)')
+    column_name_pattern = re.compile(r'\.HasColumnName\("(?P<column_name>[^"]+)"\)')
     table_pattern = re.compile(r'b\.ToTable\("(?P<table_name>[^"]+)"')
     is_required_pattern = re.compile(r'\.IsRequired\(\)')
     max_length_pattern = re.compile(r'\.HasMaxLength\((?P<length>\d+)\)')
@@ -93,6 +94,10 @@ def parse_snapshot(snapshot_path):
                 col_type_match = column_type_pattern.search(stripped)
                 if col_type_match:
                     current_properties[-1]["db_type"] = col_type_match.group("db_type")
+
+                column_name_match = column_name_pattern.search(stripped)
+                if column_name_match:
+                    current_properties[-1]["name"] = column_name_match.group("column_name")
                 
                 if is_required_pattern.search(stripped):
                     current_properties[-1]["is_nullable"] = "NO"
@@ -224,6 +229,10 @@ def compare_schemas(expected_entities, prod_schema):
         prod_table = prod_schema[expected_table]
         for col in expected_cols:
             col_name = col["name"]
+            # PostgreSQL exposes xmin as a system column; it is intentionally
+            # absent from information_schema.columns.
+            if col_name == "xmin" and col["db_type"].lower() == "xid":
+                continue
             if col_name not in prod_table:
                 errors.append(f"❌ Table '{expected_table}' is missing column '{col_name}'. Expected type: {col['db_type']}")
             else:

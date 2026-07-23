@@ -4,16 +4,22 @@ plugins {
     id 'com.google.gms.google-services'
 }
 
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace 'com.nadergorge.parent'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
-        applicationId "com.nadergorge.parent"
+        applicationId "com.massar.parent"
         minSdk 26
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        targetSdk 35
+        versionCode 13
+        versionName "2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -21,8 +27,20 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties["keyAlias"]
+                keyPassword keystoreProperties["keyPassword"]
+                storeFile file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
@@ -71,8 +89,8 @@ dependencies {
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
     // Firebase (FCM)
-    implementation platform('com.google.firebase:firebase-bom:32.7.2')
-    implementation 'com.google.firebase:firebase-messaging-ktx'
+    implementation platform('com.google.firebase:firebase-bom:34.15.0')
+    implementation 'com.google.firebase:firebase-messaging'
 
     // Testing
     testImplementation 'junit:junit:4.13.2'

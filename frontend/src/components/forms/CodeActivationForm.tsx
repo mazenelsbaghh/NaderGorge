@@ -9,11 +9,11 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 
 import { authService } from "@/services/auth-service";
+import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
 interface CodeActivationFormProps {
   onSuccess: () => void;
 }
-
 export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
   const inputId = "student-code-activation-input";
   const hintId = "student-code-activation-hint";
@@ -31,6 +31,12 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
     teacherName: string;
     teacherProfileImageUrl?: string;
   } | null>(null);
+  const teacherAvatarFallback = preview
+    ? `https://avatar.vercel.sh/${encodeURIComponent(preview.teacherName)}`
+    : "";
+  const teacherAvatarUrl = preview?.teacherProfileImageUrl
+    ? resolveMediaUrl(preview.teacherProfileImageUrl)
+    : teacherAvatarFallback;
 
   const handleValidate = async (e: FormEvent) => {
     e.preventDefault();
@@ -110,12 +116,15 @@ export function CodeActivationForm({ onSuccess }: CodeActivationFormProps) {
             <div className="flex items-center gap-3">
               <div className="relative h-9 w-9 overflow-hidden rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-strong)]">
                 <Image
-                  src={preview.teacherProfileImageUrl || `https://avatar.vercel.sh/${encodeURIComponent(preview.teacherName)}`}
+                  src={teacherAvatarUrl}
                   alt={preview.teacherName}
                   fill
                   className="object-cover"
                   sizes="36px"
                   unoptimized
+                  onError={(event) => {
+                    event.currentTarget.src = teacherAvatarFallback;
+                  }}
                 />
               </div>
               <span className="text-xs font-bold text-[var(--admin-text)]">{preview.teacherName}</span>

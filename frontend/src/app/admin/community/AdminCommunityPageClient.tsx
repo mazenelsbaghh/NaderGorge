@@ -1,8 +1,6 @@
 'use client';
 
-import { MessageSquareText, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
-import NeumorphButton from '@/components/ui/neumorph-button';
+import { MessageSquareText } from 'lucide-react';
 
 import { AdminShellChrome } from '@/components/admin';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
@@ -12,21 +10,14 @@ import { CommunityPostsModerationTable } from '@/components/admin/CommunityPosts
 export default function AdminCommunityPageClient({ mode }: { mode?: 'admin' | 'assistant' }) {
   const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
   const activePath = mode === 'assistant' ? '/assistant/community' : '/admin/community';
+  const isAssistantWorkspace = mode === 'assistant';
 
   return (
     <Shell
       activePath={activePath as any}
-      sectionLabel="إدارة المجتمع"
+      sectionLabel={isAssistantWorkspace ? 'مساحة عمل المجتمع' : 'إدارة المجتمع'}
       pageTitle="مجتمع الطلاب"
       subtitle="مراجعة البوستات المرسلة واعتماد المناسب منها قبل ظهوره للطلاب."
-      action={
-        <Link href="/student/community" prefetch={false} passHref legacyBehavior>
-          <NeumorphButton intent="primary" size="lg" pill>
-            <ExternalLink className="h-4 w-4 ml-1.5" />
-            تصفح مجتمع الطلاب
-          </NeumorphButton>
-        </Link>
-      }
       headerAccessory={
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-15)] bg-[var(--admin-primary-10)] px-4 py-2 text-xs font-black tracking-[0.18em] text-[var(--admin-primary)]">
           <MessageSquareText className="h-4 w-4" />
@@ -41,4 +32,3 @@ export default function AdminCommunityPageClient({ mode }: { mode?: 'admin' | 'a
     </Shell>
   );
 }
-

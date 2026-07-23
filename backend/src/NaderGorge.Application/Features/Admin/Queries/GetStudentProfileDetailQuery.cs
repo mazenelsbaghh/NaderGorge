@@ -52,6 +52,10 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
         var allGrants = await _context.StudentAccessGrants
             .Where(g => g.UserId == request.UserId)
             .Include(g => g.CancelledByUser)
+            .Include(g => g.AccessCode)
+                .ThenInclude(c => c!.CodeGroup)
+                    .ThenInclude(cg => cg.Teacher)
+                        .ThenInclude(t => t!.User)
             .OrderByDescending(g => g.CreatedAt)
             .ToListAsync(cancellationToken);
 
@@ -69,6 +73,13 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                     {
                         var pkg = await _context.Packages.FindAsync(new object[] { grant.PackageId.Value }, cancellationToken);
                         if (pkg != null) { name = pkg.Name; price = pkg.Price; contentId = pkg.Id; }
+                    }
+                    else
+                    {
+                        var teacherName = grant.AccessCode?.CodeGroup?.Teacher?.User?.FullName;
+                        name = string.IsNullOrWhiteSpace(teacherName)
+                            ? "باكدج عام للمنصة"
+                            : $"باكدج عام لمدرس {teacherName}";
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Term:
@@ -163,10 +174,21 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 WatchCount = v.WatchCount,
                 MaxWatchCount = v.CustomMaxWatchCount ?? v.LessonVideo.MaxWatchCount,
                 WatchedSeconds = Math.Max(0, v.TimeWatchedInSeconds),
+                ActualWatchedSeconds = Math.Max(0m, v.ActualWatchedSeconds),
+                LastPlaybackRate = v.LastPlaybackRate,
+                PlaybackRateBreakdownJson = v.PlaybackRateBreakdownJson,
                 IsLocked = v.IsLocked && v.WatchCount >= (v.CustomMaxWatchCount ?? v.LessonVideo.MaxWatchCount),
                 LastWatchedAt = v.UpdatedAt ?? v.CreatedAt
             })
             .ToListAsync(cancellationToken);
+
+        foreach (var activity in watchActivities)
+        {
+            activity.PlaybackRateSeconds = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, decimal>>(activity.PlaybackRateBreakdownJson) ?? new();
+            activity.AveragePlaybackRate = activity.ActualWatchedSeconds > 0
+                ? decimal.Round(activity.WatchedSeconds / (decimal)activity.ActualWatchedSeconds, 2)
+                : activity.LastPlaybackRate;
+        }
 
         var auditLogs = await _context.AuditLogs
             .Include(a => a.PerformedByUser)
@@ -211,6 +233,40 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 .ToListAsync(cancellationToken);
         }
 
+        var now = DateTime.UtcNow;
+        var promotionalBalancesRaw = await _context.PromotionalBalanceAllocations
+            .AsNoTracking()
+            .Where(x => x.StudentId == request.UserId && x.AvailableAmount > 0 && (x.ExpiresAt == null || x.ExpiresAt > now))
+            .Select(x => new
+            {
+                x.TeacherId,
+                TeacherName = x.Teacher != null ? x.Teacher.User.FullName : "رصيد مخصص عام",
+                x.AvailableAmount,
+                x.OriginalAmount,
+                x.ConsumedAmount,
+                x.ExpiresAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var promotionalBalances = promotionalBalancesRaw
+            .GroupBy(x => new { x.TeacherId, x.TeacherName })
+            .Select(group => new StudentPromotionalBalanceDto
+            {
+                TeacherId = group.Key.TeacherId,
+                TeacherName = group.Key.TeacherName,
+                AvailableAmount = group.Sum(x => x.AvailableAmount),
+                OriginalAmount = group.Sum(x => x.OriginalAmount),
+                ConsumedAmount = group.Sum(x => x.ConsumedAmount),
+                NearestExpiresAt = group
+                    .Where(x => x.ExpiresAt.HasValue)
+                    .OrderBy(x => x.ExpiresAt)
+                    .Select(x => x.ExpiresAt)
+                    .FirstOrDefault()
+            })
+            .OrderByDescending(x => x.AvailableAmount)
+            .ThenBy(x => x.TeacherName)
+            .ToList();
+
         return new StudentProfileExtendedDto
         {
             Id = user.Id,
@@ -231,6 +287,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             Governorate = user.StudentProfile?.Governorate,
             Address = user.StudentProfile?.Address,
             StudentCode = user.StudentProfile?.StudentCode,
+            ParentTrackingCode = user.StudentProfile?.ParentTrackingCode,
             IsProfileComplete = user.IsProfileComplete,
 
             // ── Academic fields ──────────────────────────────────────────
@@ -260,10 +317,13 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             WatchTracking = new WatchTrackingSummaryDto
             {
                 TotalWatchedSeconds = watchActivities.Sum(activity => activity.WatchedSeconds),
+                TotalActualWatchedSeconds = watchActivities.Sum(activity => activity.ActualWatchedSeconds),
+                AveragePlaybackRate = CalculateAveragePlaybackRate(watchActivities),
                 WatchedVideosCount = watchActivities.Count,
                 Activities = watchActivities
             },
             CurrentBalance = balance?.CurrentBalance ?? 0m,
+            PromotionalBalances = promotionalBalances,
             BalanceTransactions = balanceTransactions,
             AuditTrail = auditLogs,
             Notes = await _context.StudentNotes
@@ -281,5 +341,13 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 })
                 .ToListAsync(cancellationToken)
         };
+    }
+
+    private static decimal CalculateAveragePlaybackRate(IReadOnlyCollection<StudentVideoWatchActivityDto> activities)
+    {
+        var actualWatchedSeconds = activities.Sum(activity => activity.ActualWatchedSeconds);
+        return actualWatchedSeconds > 0
+            ? decimal.Round(activities.Sum(activity => activity.WatchedSeconds) / actualWatchedSeconds, 2)
+            : 1m;
     }
 }

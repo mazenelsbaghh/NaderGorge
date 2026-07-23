@@ -31,7 +31,8 @@ public record TeacherMostWatchedVideoDto(
     string VideoTitle,
     string LessonTitle,
     int TotalWatchCount,
-    int TotalTimeWatchedSeconds
+    int TotalTimeWatchedSeconds,
+    decimal AveragePlaybackRate
 );
 
 public record TeacherInactiveStudentAlertDto(
@@ -96,7 +97,8 @@ public class GetTeacherActivityQueryHandler : IRequestHandler<GetTeacherActivity
             {
                 VideoId = g.Key,
                 TotalWatchCount = g.Sum(v => v.WatchCount),
-                TotalTimeWatchedSeconds = g.Sum(v => v.TimeWatchedInSeconds)
+                TotalTimeWatchedSeconds = g.Sum(v => v.TimeWatchedInSeconds),
+                TotalActualWatchedSeconds = g.Sum(v => v.ActualWatchedSeconds)
             })
             .OrderByDescending(w => w.TotalWatchCount)
             .Take(10)
@@ -119,7 +121,8 @@ public class GetTeacherActivityQueryHandler : IRequestHandler<GetTeacherActivity
                     detail.Title,
                     detail.Lesson.Title,
                     w.TotalWatchCount,
-                    w.TotalTimeWatchedSeconds
+                    w.TotalTimeWatchedSeconds,
+                    CalculateAveragePlaybackRate(w.TotalTimeWatchedSeconds, w.TotalActualWatchedSeconds)
                 );
             })
             .ToList();
@@ -172,4 +175,7 @@ public class GetTeacherActivityQueryHandler : IRequestHandler<GetTeacherActivity
 
         return ApiResponse<TeacherActivityDto>.Ok(dto);
     }
+
+    private static decimal CalculateAveragePlaybackRate(int trackedSeconds, decimal actualSeconds) =>
+        actualSeconds > 0 ? decimal.Round(trackedSeconds / actualSeconds, 2) : 1m;
 }

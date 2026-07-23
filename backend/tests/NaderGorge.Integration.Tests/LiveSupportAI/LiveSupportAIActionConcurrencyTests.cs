@@ -68,7 +68,7 @@ public sealed class LiveSupportAIActionConcurrencyTests
             Status = LiveSupportAIPolicyStatus.Published,
             IsEnabled = true,
             SystemInstructions = "Instructions",
-            ActionKeysJson = "[\"system.some_action\"]",
+            ActionKeysJson = "[\"student.devices.disconnect-all\"]",
             CreatedByUserId = admin.Id,
             Version = 1
         };
@@ -128,7 +128,7 @@ public sealed class LiveSupportAIActionConcurrencyTests
             DecisionKind = LiveSupportAIPendingDecisionKind.Action,
             StudentUserId = student.Id,
             PolicyVersionId = policy.Id,
-            ActionKey = "system.some_action",
+            ActionKey = "student.devices.disconnect-all",
             SafeProposalJson = "{}",
             Status = LiveSupportAIPendingActionStatus.PendingConfirmation,
             ExpiresAt = DateTime.UtcNow.AddMinutes(5),

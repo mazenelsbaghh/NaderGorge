@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Wallet, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Wallet, AlertTriangle, CheckCircle, BadgePercent, X } from 'lucide-react';
 import { InlineLoader } from '@/components/ui/loading-indicator';
-import { balanceService, CodeType, StudentBalanceDto } from '@/services/balance-service';
+import { balanceService, CodeType, PurchaseFundingPreviewDto } from '@/services/balance-service';
 import { useRouter } from 'next/navigation';
 import { invalidateMany } from '@/lib/cache-invalidation';
 
@@ -28,11 +28,13 @@ export function PurchaseContentModal({
 }: PurchaseContentModalProps) {
   const router = useRouter();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const [balanceDto, setBalanceDto] = useState<StudentBalanceDto | null>(null);
+  const [preview, setPreview] = useState<PurchaseFundingPreviewDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -40,8 +42,10 @@ export function PurchaseContentModal({
       setLoading(true);
       setError('');
       setSuccess(false);
-      balanceService.getBalance()
-        .then(data => setBalanceDto(data))
+      setCouponCode('');
+      setAppliedCouponCode('');
+      balanceService.getPurchasePreview(contentType, contentId)
+        .then(data => setPreview(data))
         .catch((err: unknown) => {
           const message = err instanceof Error ? err.message : 'تعذر تحميل رصيد المحفظة حالياً';
           setError(message);
@@ -52,7 +56,7 @@ export function PurchaseContentModal({
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [isOpen, contentType, contentId, price]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -71,15 +75,49 @@ export function PurchaseContentModal({
 
   if (!isOpen) return null;
 
-  const currentBalance = balanceDto?.currentBalance || 0;
+  const currentBalance = preview?.currentPaidBalance || 0;
   const isFree = price === 0;
-  const isSufficient = isFree || currentBalance >= price;
+  const isSufficient = isFree || preview?.isSufficient === true;
+  const requiredRechargeAmount = Math.max(0, (preview?.paidAmountToUse ?? price) - currentBalance);
+  const trimmedCouponCode = couponCode.trim();
+  const couponInputChanged = trimmedCouponCode !== appliedCouponCode;
+  const hasDiscount = (preview?.couponDiscountAmount ?? 0) > 0 || (preview?.printableCodeDiscountAmount ?? 0) > 0;
+  const basePrice = preview?.price ?? price;
+  const discountedPrice = preview?.discountedPrice ?? price;
+  const displayPrice = discountedPrice;
+  const hasVisiblePriceReduction = displayPrice < basePrice;
+
+  const refreshPreview = async (nextCouponCode: string) => {
+    setLoading(true);
+    setError('');
+    try {
+      const couponCodes = nextCouponCode ? [nextCouponCode] : undefined;
+      const data = await balanceService.getPurchasePreview(contentType, contentId, { couponCodes });
+      setPreview(data);
+      setAppliedCouponCode(nextCouponCode);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'تعذر تطبيق كود الخصم';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    await refreshPreview(trimmedCouponCode);
+  };
+
+  const handleRemoveCoupon = async () => {
+    setCouponCode('');
+    await refreshPreview('');
+  };
 
   const handlePurchase = async () => {
     try {
       setPurchasing(true);
       setError('');
-      await balanceService.purchaseContent(contentType, contentId);
+      const couponCodes = appliedCouponCode ? [appliedCouponCode] : undefined;
+      await balanceService.purchaseContent(contentType, contentId, { couponCodes });
       setSuccess(true);
       setTimeout(() => {
         invalidateMany(['student:shell', 'student:balance', 'content:packages']);
@@ -116,7 +154,7 @@ export function PurchaseContentModal({
           <>
             <div className="mb-6 flex items-start justify-between gap-4">
               <h3 id="purchase-modal-title" className="text-xl font-extrabold text-[var(--admin-text)]">{isFree ? 'تأكيد التفعيل' : 'تأكيد الشراء'}</h3>
-              <button 
+              <button
                 ref={closeButtonRef}
                 onClick={onClose}
                 type="button"
@@ -131,8 +169,15 @@ export function PurchaseContentModal({
               <div id="purchase-modal-description" className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-center">
                 <p className="mb-2 text-sm font-bold uppercase tracking-wider text-[var(--admin-muted)]">المحتوى المطلوب</p>
                 <p className="text-lg font-black text-[var(--admin-text)]">{contentName}</p>
-                <div className="mt-3 inline-block rounded-full bg-[var(--admin-primary-15)] px-4 py-1.5 text-xl font-black text-[var(--admin-primary)]">
-                  {isFree ? 'مجاني' : `${price} ج.م`}
+                <div className="mt-3 inline-flex flex-wrap items-center justify-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-1.5 text-xl font-black text-[var(--admin-primary)]">
+                  {isFree ? 'مجاني' : (
+                    <>
+                      {hasVisiblePriceReduction ? (
+                        <span className="text-sm font-bold text-[var(--admin-muted)] line-through">{basePrice} ج.م</span>
+                      ) : null}
+                      <span>{displayPrice} ج.م</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -148,26 +193,110 @@ export function PurchaseContentModal({
                   <InlineLoader className="text-[var(--admin-primary)]" />
                 </div>
               ) : (
-                <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
-                  <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-sm font-bold text-[var(--admin-muted)]">رصيد محفظتك</span>
-                    <span className="flex items-center gap-1.5 font-mono text-sm font-bold text-[var(--admin-text)]">
-                      <Wallet className="h-4 w-4 text-[var(--admin-primary)]" />
-                      {currentBalance} ج.م
-                    </span>
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                    <label htmlFor="purchase-coupon-code" className="mb-2 flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
+                      <BadgePercent className="h-4 w-4 text-[var(--admin-primary)]" />
+                      كود الخصم
+                    </label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        id="purchase-coupon-code"
+                        value={couponCode}
+                        onChange={(event) => setCouponCode(event.target.value)}
+                        disabled={purchasing || loading}
+                        placeholder="اكتب الكود هنا"
+                        className="min-h-11 flex-1 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-3 py-2 text-sm font-bold text-[var(--admin-text)] outline-none transition placeholder:text-[var(--admin-muted)] focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary)]/20 disabled:opacity-70"
+                        dir="ltr"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={purchasing || loading || !trimmedCouponCode || !couponInputChanged}
+                          className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] disabled:opacity-60 sm:flex-none"
+                        >
+                          تطبيق
+                        </button>
+                        {appliedCouponCode ? (
+                          <button
+                            type="button"
+                            onClick={handleRemoveCoupon}
+                            disabled={purchasing || loading}
+                            className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--admin-card-strong)] text-[var(--admin-muted)] transition hover:text-[var(--admin-text)] disabled:opacity-60"
+                            aria-label="إزالة كود الخصم"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    {appliedCouponCode && hasDiscount ? (
+                      <p className="mt-2 text-xs font-bold text-[var(--admin-success)]">تم تطبيق الكود {appliedCouponCode}</p>
+                    ) : appliedCouponCode ? (
+                      <p className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">تم فحص الكود لكنه لم يغيّر سعر هذا المحتوى.</p>
+                    ) : couponInputChanged && trimmedCouponCode ? (
+                      <p className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300">اضغط تطبيق لحساب الخصم قبل الشراء.</p>
+                    ) : null}
                   </div>
-                  
-                  {!isSufficient ? (
-                     <div className="mt-4 flex items-start gap-2 rounded-xl bg-[var(--admin-danger-10)] p-3 text-sm font-bold text-[var(--admin-danger)]">
-                       <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                       <p>رصيدك غير كافٍ. يرجى شحن رصيدك للمتابعة.</p>
-                     </div>
-                  ) : (
-                     <div className="mt-4 flex items-center gap-2 rounded-xl bg-[var(--admin-success-10)] p-3 text-sm font-bold text-[var(--admin-success)]">
-                       <CheckCircle className="h-4 w-4 shrink-0" />
-                       <p>رصيدك يكفي لإتمام هذه العملية.</p>
-                     </div>
-                  )}
+
+                  <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                    <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <span className="text-sm font-bold text-[var(--admin-muted)]">الرصيد العام للمنصة</span>
+                      <span className="flex items-center gap-1.5 font-mono text-sm font-bold text-[var(--admin-text)]">
+                        <Wallet className="h-4 w-4 text-[var(--admin-primary)]" />
+                        {currentBalance} ج.م
+                      </span>
+                    </div>
+                    {hasDiscount || hasVisiblePriceReduction ? (
+                      <div className="mt-3 grid gap-2 rounded-xl border border-[var(--admin-primary)]/20 bg-[var(--admin-primary)]/10 px-3 py-2 text-sm font-bold text-[var(--admin-text)]">
+                        <div className="flex items-center justify-between">
+                          <span>السعر قبل الخصم</span>
+                          <span>{basePrice} ج.م</span>
+                        </div>
+                        {(preview?.couponDiscountAmount ?? 0) > 0 ? (
+                          <div className="flex items-center justify-between text-[var(--admin-success)]">
+                            <span>خصم الكوبون</span>
+                            <span>-{preview?.couponDiscountAmount ?? 0} ج.م</span>
+                          </div>
+                        ) : null}
+                        {(preview?.promotionalAmountToUse ?? 0) > 0 ? (
+                          <div className="flex items-center justify-between text-[var(--admin-success)]">
+                            <span>رصيد مخصص</span>
+                            <span>-{preview?.promotionalAmountToUse} ج.م</span>
+                          </div>
+                        ) : null}
+                        <div className="flex items-center justify-between border-t border-[var(--admin-border)] pt-2">
+                          <span>السعر بعد الخصم</span>
+                          <span>{discountedPrice} ج.م</span>
+                        </div>
+                      </div>
+                    ) : null}
+                    {(preview?.promotionalAmountToUse ?? 0) > 0 ? (
+                      <div className="mt-3 flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                        <span>رصيد مخصص مؤهل لهذا المحتوى</span>
+                        <span>{preview?.promotionalAmountToUse} ج.م</span>
+                      </div>
+                    ) : null}
+                    {!isFree ? (
+                      <div className="mt-2 flex items-center justify-between px-1 text-xs font-bold text-[var(--admin-muted)]">
+                        <span>المطلوب من الرصيد العام</span>
+                        <span>{preview?.paidAmountToUse ?? price} ج.م</span>
+                      </div>
+                    ) : null}
+
+                    {!isSufficient ? (
+                       <div className="mt-4 flex items-start gap-2 rounded-xl bg-[var(--admin-danger-10)] p-3 text-sm font-bold text-[var(--admin-danger)]">
+                         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                         <p>الرصيد المؤهل لهذا المدرس أو الرصيد العام غير كافٍ. يرجى شحن الرصيد المناسب للمتابعة.</p>
+                       </div>
+                    ) : (
+                       <div className="mt-4 flex items-center gap-2 rounded-xl bg-[var(--admin-success-10)] p-3 text-sm font-bold text-[var(--admin-success)]">
+                         <CheckCircle className="h-4 w-4 shrink-0" />
+                         <p>رصيدك يكفي لإتمام هذه العملية.</p>
+                       </div>
+                    )}
+                    </div>
                 </div>
               )}
 
@@ -189,7 +318,7 @@ export function PurchaseContentModal({
                 {isSufficient ? (
                   <button
                     onClick={handlePurchase}
-                    disabled={purchasing || loading}
+                    disabled={purchasing || loading || (!!trimmedCouponCode && couponInputChanged)}
                     type="button"
                     className="inline-flex min-h-12 flex-[2] items-center justify-center gap-2 rounded-full bg-[var(--admin-primary)] px-4 py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg transition hover:bg-[var(--admin-primary-strong)] disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"
                   >
@@ -198,7 +327,7 @@ export function PurchaseContentModal({
                   </button>
                 ) : (
                   <button
-                    onClick={() => router.push('/student/recharge')}
+                    onClick={() => router.push(`/student/recharge?amount=${encodeURIComponent(requiredRechargeAmount.toFixed(2))}`)}
                     disabled={purchasing || loading}
                     type="button"
                     className="inline-flex min-h-12 flex-[2] items-center justify-center rounded-full bg-[var(--admin-card-strong)] px-4 py-3 text-sm font-black text-[var(--admin-text)] shadow-sm transition hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary)] disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)]"

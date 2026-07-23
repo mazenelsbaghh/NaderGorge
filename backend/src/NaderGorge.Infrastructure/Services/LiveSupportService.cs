@@ -80,7 +80,11 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportConversationDto> CreateConversationAsync(LiveSupportParticipantIdentity participant, string? subject, Guid? previousConversationId, CancellationToken ct)
     {
-        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        // Routing is serialized by the PostgreSQL advisory transaction lock below.
+        // ReadCommitted avoids taking a stale Serializable snapshot while waiting
+        // for that lock, which otherwise produces avoidable 40001 failures under
+        // concurrent conversation creation.
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         await AcquireRoutingLockAsync(ct);
         var availability = await GetAvailabilityAsync(ct);
         if (!availability.IsAvailable)
@@ -179,10 +183,17 @@ public sealed class LiveSupportService(
     {
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة.");
-        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "image/jpeg", "image/png", "image/webp", "application/pdf", "audio/mpeg", "audio/mp4", "audio/ogg" };
-        if (!allowed.Contains(contentType) || sizeBytes is <= 0 or > 10 * 1024 * 1024) throw new LiveSupportException("VALIDATION_ERROR", "نوع الملف غير مدعوم أو حجمه أكبر من 10 ميجابايت.");
+        if (sizeBytes is <= 0 or > 10 * 1024 * 1024) throw new LiveSupportException("VALIDATION_ERROR", "نوع الملف غير مدعوم أو حجمه أكبر من 10 ميجابايت.");
         if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "رفع الملفات غير متاح مؤقتًا.");
-        var stored = await _attachmentStorage.SaveAsync(content, fileName, contentType, sizeBytes, ct);
+        LiveSupportStoredAttachment stored;
+        try
+        {
+            stored = await _attachmentStorage.SaveAsync(content, fileName, contentType, sizeBytes, ct);
+        }
+        catch (InvalidUploadContentException)
+        {
+            throw new LiveSupportException("VALIDATION_ERROR", "نوع الملف غير مدعوم أو لا يطابق محتواه.");
+        }
         var entity = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = participant.StudentUserId?.ToString("N") ?? participant.GuestSessionId!.Value.ToString("N") };
         _db.LiveSupportAttachments.Add(entity);
         await _db.SaveChangesAsync(ct);
@@ -271,7 +282,7 @@ public sealed class LiveSupportService(
             x.Status != LiveSupportConversationStatus.Closed && x.Status != LiveSupportConversationStatus.Abandoned &&
             (isAdmin || x.CurrentOwnerUserId == staffUserId)).OrderByDescending(x => x.LastMessageAt).ToListAsync(ct);
         return new LiveSupportStaffBootstrapDto(config?.IsEnabled ?? isAdmin, checkedIn, conversations.Count, config?.MaxActiveConversations ?? 50,
-            await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null, ct), await MapManyAsync(conversations, ct));
+            await _db.LiveSupportQueueEntries.CountAsync(x => x.DequeuedAt == null, ct), await MapManyAsync(conversations, ct), await GetRepliesForStaffAsync(staffUserId, ct));
     }
 
     public async Task<IReadOnlyList<LiveSupportMessageDto>> GetStaffMessagesAsync(Guid staffUserId, bool isAdmin, Guid conversationId, int pageSize, CancellationToken ct)
@@ -329,7 +340,7 @@ public sealed class LiveSupportService(
                 cancellationToken: ct);
         }
 
-        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         await AcquireRoutingLockAsync(ct);
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة.");
@@ -370,7 +381,7 @@ public sealed class LiveSupportService(
             }
         }
         result.Sort((a, b) => string.Compare(a.StaffName, b.StaffName, StringComparison.CurrentCulture));
-        return new LiveSupportAdminConfigDto((await _settings.GetAsync(ct)).LiveSupportEnabled, result);
+        return new LiveSupportAdminConfigDto((await _settings.GetAsync(ct)).LiveSupportEnabled, result, await GetCannedRepliesAsync(ct));
     }
 
     public async Task SetFeatureEnabledAsync(bool enabled, CancellationToken ct)
@@ -384,6 +395,50 @@ public sealed class LiveSupportService(
         else { setting.Value = enabled.ToString(); setting.UpdatedAt = DateTime.UtcNow; }
         await _db.SaveChangesAsync(ct);
         _settings.Invalidate();
+    }
+
+    public async Task UpdateCannedRepliesAsync(IReadOnlyList<LiveSupportCannedReplyDto> replies, CancellationToken ct)
+    {
+        if (replies.Count > 30 || replies.Any(x => string.IsNullOrWhiteSpace(x.Id) || string.IsNullOrWhiteSpace(x.Title) || x.Title.Trim().Length > 80 || string.IsNullOrWhiteSpace(x.Content) || x.Content.Trim().Length > 4000))
+            throw new LiveSupportException("VALIDATION_ERROR", "الردود الثابتة غير صالحة. الحد الأقصى 30 ردًا، و4000 حرف للنص.");
+        var safe = replies.Select(x => new LiveSupportCannedReplyDto(x.Id.Trim(), x.Title.Trim(), x.Content.Trim(), x.SendImmediately)).ToList();
+        var setting = await _db.PlatformSettings.FirstOrDefaultAsync(x => x.Key == PlatformSettingKeys.LiveSupportCannedReplies, ct);
+        var json = System.Text.Json.JsonSerializer.Serialize(safe);
+        if (setting is null) _db.PlatformSettings.Add(new NaderGorge.Domain.Entities.PlatformSetting { Key = PlatformSettingKeys.LiveSupportCannedReplies, Value = json });
+        else { setting.Value = json; setting.UpdatedAt = DateTime.UtcNow; }
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public Task<IReadOnlyList<LiveSupportCannedReplyDto>> GetStaffCannedRepliesAsync(Guid staffUserId, CancellationToken ct) => GetPersonalCannedRepliesAsync(staffUserId, ct);
+
+    public async Task UpdateStaffCannedRepliesAsync(Guid staffUserId, IReadOnlyList<LiveSupportCannedReplyDto> replies, CancellationToken ct)
+    {
+        if (replies.Count > 30 || replies.Any(x => string.IsNullOrWhiteSpace(x.Id) || string.IsNullOrWhiteSpace(x.Title) || x.Title.Trim().Length > 80 || string.IsNullOrWhiteSpace(x.Content) || x.Content.Trim().Length > 4000)) throw new LiveSupportException("VALIDATION_ERROR", "الردود الثابتة غير صالحة.");
+        var key = $"LiveSupportCannedReplies:{staffUserId:N}";
+        var json = System.Text.Json.JsonSerializer.Serialize(replies.Select(x => new LiveSupportCannedReplyDto(x.Id.Trim(), x.Title.Trim(), x.Content.Trim(), x.SendImmediately)));
+        var setting = await _db.PlatformSettings.FirstOrDefaultAsync(x => x.Key == key, ct);
+        if (setting is null) _db.PlatformSettings.Add(new PlatformSetting { Key = key, Value = json }); else { setting.Value = json; setting.UpdatedAt = DateTime.UtcNow; }
+        await _db.SaveChangesAsync(ct);
+    }
+
+    private async Task<IReadOnlyList<LiveSupportCannedReplyDto>> GetRepliesForStaffAsync(Guid staffUserId, CancellationToken ct)
+    {
+        var name = await _db.Users.AsNoTracking().Where(x => x.Id == staffUserId).Select(x => x.FullName).FirstOrDefaultAsync(ct) ?? "فريق الدعم";
+        return (await GetCannedRepliesAsync(ct)).Concat(await GetPersonalCannedRepliesAsync(staffUserId, ct)).Select(x => x with { Content = x.Content.Replace("{{اسم الموظف}}", name, StringComparison.Ordinal) }).ToList();
+    }
+
+    private async Task<IReadOnlyList<LiveSupportCannedReplyDto>> GetPersonalCannedRepliesAsync(Guid staffUserId, CancellationToken ct)
+    {
+        var json = await _db.PlatformSettings.AsNoTracking().Where(x => x.Key == $"LiveSupportCannedReplies:{staffUserId:N}").Select(x => x.Value).FirstOrDefaultAsync(ct);
+        try { return string.IsNullOrWhiteSpace(json) ? [] : System.Text.Json.JsonSerializer.Deserialize<List<LiveSupportCannedReplyDto>>(json) ?? []; } catch { return []; }
+    }
+
+    private async Task<IReadOnlyList<LiveSupportCannedReplyDto>> GetCannedRepliesAsync(CancellationToken ct)
+    {
+        var json = await _db.PlatformSettings.AsNoTracking().Where(x => x.Key == PlatformSettingKeys.LiveSupportCannedReplies).Select(x => x.Value).FirstOrDefaultAsync(ct);
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try { return System.Text.Json.JsonSerializer.Deserialize<List<LiveSupportCannedReplyDto>>(json) ?? []; }
+        catch (System.Text.Json.JsonException) { return []; }
     }
 
     public async Task<LiveSupportStaffConfigDto> UpdateStaffConfigAsync(Guid actorUserId, Guid staffUserId, bool enabled, int capacity, long? expectedVersion, IReadOnlyList<LiveSupportScheduleWindowDto> schedule, CancellationToken ct)
@@ -412,7 +467,7 @@ public sealed class LiveSupportService(
 
     public async Task ReleaseStaffAssignmentsAsync(Guid staffUserId, LiveSupportAssignmentEndReason reason, CancellationToken ct)
     {
-        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         await AcquireRoutingLockAsync(ct);
         var assignments = await _db.LiveSupportAssignments.Where(x => x.StaffUserId == staffUserId && x.EndedAt == null).ToListAsync(ct);
         var now = DateTime.UtcNow;
@@ -497,12 +552,14 @@ public sealed class LiveSupportService(
     {
         var student = await _db.Users.AsNoTracking().Where(user => user.Id == studentId).Select(user => new
         {
-            user.FullName, user.PhoneNumber, user.IsActive,
-            StudentCode = user.StudentProfile == null ? null : user.StudentProfile.StudentCode,
-            Governorate = user.StudentProfile == null ? null : user.StudentProfile.Governorate,
-            SchoolName = user.StudentProfile == null ? null : user.StudentProfile.SchoolName,
-            EducationStage = user.StudentProfile == null ? null : user.StudentProfile.EducationStage.ToString(),
-            GradeLevel = user.StudentProfile == null ? null : user.StudentProfile.GradeLevel.ToString()
+            fullName = user.FullName,
+            phoneNumber = user.PhoneNumber,
+            isActive = user.IsActive,
+            studentCode = user.StudentProfile == null ? null : user.StudentProfile.StudentCode,
+            governorate = user.StudentProfile == null ? null : user.StudentProfile.Governorate,
+            schoolName = user.StudentProfile == null ? null : user.StudentProfile.SchoolName,
+            educationStage = user.StudentProfile == null ? null : user.StudentProfile.EducationStage.ToString(),
+            gradeLevel = user.StudentProfile == null ? null : user.StudentProfile.GradeLevel.ToString()
         }).SingleOrDefaultAsync(ct) ?? throw new LiveSupportException("NOT_FOUND", "الطالب غير موجود.");
         return JsonSerializer.SerializeToElement(student);
     }
@@ -513,7 +570,7 @@ public sealed class LiveSupportService(
         var points = await _db.StudentGamifications.AsNoTracking().Where(row => row.StudentId == studentId).Select(row => (int?)row.TotalPoints).SingleOrDefaultAsync(ct) ?? 0;
         var exams = await _db.StudentExamAttempts.CountAsync(row => row.UserId == studentId, ct);
         var devices = await _db.Devices.CountAsync(row => row.UserId == studentId, ct);
-        return JsonSerializer.SerializeToElement(new { Balance = balance, Points = points, ExamAttempts = exams, DevicesCount = devices });
+        return JsonSerializer.SerializeToElement(new { balance, points, examAttempts = exams, devicesCount = devices });
     }
 
     private async Task<JsonElement> GetStudentStudySectionAsync(Guid studentId, CancellationToken ct)
@@ -521,28 +578,28 @@ public sealed class LiveSupportService(
         var grants = await _db.StudentAccessGrants.CountAsync(row => row.UserId == studentId && row.IsActive, ct);
         var watches = await _db.VideoWatchEvents.CountAsync(row => row.UserId == studentId, ct);
         var homework = await _db.HomeworkSubmissions.CountAsync(row => row.StudentId == studentId, ct);
-        return JsonSerializer.SerializeToElement(new { ActiveGrants = grants, WatchEvents = watches, HomeworkSubmissions = homework });
+        return JsonSerializer.SerializeToElement(new { activeGrants = grants, watchEvents = watches, homeworkSubmissions = homework });
     }
 
     private async Task<JsonElement> GetStudentDevicesSectionAsync(Guid studentId, CancellationToken ct)
     {
         var devices = await _db.Devices.AsNoTracking().Where(row => row.UserId == studentId).OrderByDescending(row => row.LastUsedAt)
-            .Take(100).Select(row => new LiveSupportDeviceDto(row.Id, row.DeviceName, row.DeviceType, row.OsName, row.BrowserName, row.LastUsedAt, row.IsActive)).ToListAsync(ct);
-        return JsonSerializer.SerializeToElement(new { Devices = devices });
+            .Take(100).Select(row => new { id = row.Id, name = row.DeviceName, type = row.DeviceType, os = row.OsName, browser = row.BrowserName, lastUsedAt = row.LastUsedAt, isActive = row.IsActive }).ToListAsync(ct);
+        return JsonSerializer.SerializeToElement(new { devices });
     }
 
     private async Task<JsonElement> GetStudentNotesSectionAsync(Guid studentId, CancellationToken ct)
     {
         var notes = await _db.StudentNotes.AsNoTracking().Where(row => row.StudentId == studentId).OrderByDescending(row => row.IsPinned).ThenByDescending(row => row.CreatedAt)
-            .Take(100).Select(row => new LiveSupportNoteDto(row.Id, row.Content, row.IsPinned, row.CreatedAt)).ToListAsync(ct);
-        return JsonSerializer.SerializeToElement(new { Notes = notes });
+            .Take(100).Select(row => new { id = row.Id, content = row.Content, isPinned = row.IsPinned, createdAt = row.CreatedAt }).ToListAsync(ct);
+        return JsonSerializer.SerializeToElement(new { notes });
     }
 
     private async Task<JsonElement> GetStudentCrmSectionAsync(Guid studentId, CancellationToken ct)
     {
         var crm = await _db.CrmStudentStatuses.AsNoTracking().Where(row => row.StudentId == studentId)
-            .Select(row => new { Status = row.Status.ToString(), Priority = row.Priority.ToString() }).SingleOrDefaultAsync(ct);
-        return JsonSerializer.SerializeToElement(new { Status = crm?.Status, Priority = crm?.Priority });
+            .Select(row => new { status = row.Status.ToString(), priority = row.Priority.ToString() }).SingleOrDefaultAsync(ct);
+        return JsonSerializer.SerializeToElement(new { status = crm?.status, priority = crm?.priority });
     }
 
     public async Task<LiveSupportAdminDashboardDto> GetAdminDashboardAsync(CancellationToken ct)
@@ -559,9 +616,11 @@ public sealed class LiveSupportService(
             performance.Add(new LiveSupportStaffPerformanceDto(config.UserId, await _db.Users.Where(x => x.Id == config.UserId).Select(x => x.FullName).FirstOrDefaultAsync(ct) ?? "موظف", conversationIds.Count,
                 await _db.LiveSupportAssignments.Where(x => x.StaffUserId == config.UserId && x.EndReason == LiveSupportAssignmentEndReason.Closed).Select(x => x.ConversationId).Distinct().CountAsync(ct), ratings.Count, ratings.Count == 0 ? null : ratings.Average()));
         }
-        var today = DateTime.UtcNow.Date;
+        var cairo = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairo);
+        var todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localNow.Date, DateTimeKind.Unspecified), cairo);
         return new LiveSupportAdminDashboardDto(conversations.Count(x => x.Status == LiveSupportConversationStatus.Waiting), conversations.Count(x => x.Status is LiveSupportConversationStatus.Assigned or LiveSupportConversationStatus.Active),
-            await _db.LiveSupportConversations.CountAsync(x => x.Status == LiveSupportConversationStatus.Closed && x.ClosedAt >= today, ct), rows, performance);
+            await _db.LiveSupportConversations.CountAsync(x => x.Status == LiveSupportConversationStatus.Closed && x.ClosedAt >= todayStartUtc, ct), rows, performance);
     }
 
     public async Task<LiveSupportConversationTimelineDto> GetAdminTimelineAsync(Guid conversationId, CancellationToken ct)
@@ -612,7 +671,13 @@ public sealed class LiveSupportService(
                 staff = null;
                 foreach (var candidate in candidates) if (await _presence.IsConnectedAsync(candidate.Config.UserId)) { staff = candidate; break; }
             }
-            var queue = await _db.LiveSupportQueueEntries.Where(x => x.DequeuedAt == null).OrderBy(x => x.Sequence).ThenBy(x => x.Id).FirstOrDefaultAsync(ct);
+            var queue = await _db.LiveSupportQueueEntries
+                .Where(x => x.DequeuedAt == null &&
+                            _db.LiveSupportConversations.Any(conversation =>
+                                conversation.Id == x.ConversationId &&
+                                conversation.Status == LiveSupportConversationStatus.Waiting))
+                .OrderBy(x => x.Sequence).ThenBy(x => x.Id)
+                .FirstOrDefaultAsync(ct);
             if (staff is null || queue is null) return;
             var conversation = await _db.LiveSupportConversations.FirstAsync(x => x.Id == queue.ConversationId, ct);
             await AssignConversationAsync(conversation, staff.Config, ct, queue);
@@ -1255,6 +1320,12 @@ public sealed class LiveSupportService(
         var eventId = Guid.NewGuid();
         var occurredAt = DateTime.UtcNow;
         var sequence = occurredAt.Ticks;
+        var pendingSequence = _db.LiveSupportEvents.Local
+            .Where(x => x.ConversationId == conversationId)
+            .Select(x => x.Sequence)
+            .DefaultIfEmpty(0)
+            .Max();
+        if (pendingSequence >= sequence) sequence = pendingSequence + 1;
         _db.LiveSupportEvents.Add(new LiveSupportEvent { Id = eventId, ConversationId = conversationId, Type = type, ActorUserId = actor, ActorGuestSessionId = guest, RelatedEntityId = relatedId, OccurredAt = occurredAt, Sequence = sequence });
         var payload = System.Text.Json.JsonSerializer.Serialize(new { eventId, conversationId, sequence, occurredAt, type = type.ToString(), payload = new { relatedId } });
         _db.OutboxEvents.Add(new OutboxEvent { Type = "LiveSupportEvent", TargetGroup = $"LiveSupport:Conversation:{conversationId:N}", PayloadJson = payload });

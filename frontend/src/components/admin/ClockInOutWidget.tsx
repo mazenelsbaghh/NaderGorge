@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Play, Square, Clock, Loader2, Award, Zap } from 'lucide-react';
 import { hrService, AttendanceLogDto } from '@/services/hr-service';
 import toast from 'react-hot-toast';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 
 export function ClockInOutWidget() {
   const [activeSession, setActiveSession] = useState<AttendanceLogDto | null>(
@@ -13,6 +14,7 @@ export function ClockInOutWidget() {
   const [targetDailyHours, setTargetDailyHours] = useState<number>(8);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [clockOutConfirmationOpen, setClockOutConfirmationOpen] = useState(false);
 
   // Live Clock & Stopwatch states
   const [now, setNow] = useState<Date | null>(null);
@@ -92,17 +94,6 @@ export function ClockInOutWidget() {
   };
 
   const handleClockOut = async () => {
-    if (activeSession) {
-      const clockInTime = new Date(activeSession.clockIn).getTime();
-      const elapsedMs = Date.now() - clockInTime;
-      const elapsedHours = elapsedMs / (1000 * 60 * 60);
-      if (elapsedHours < targetDailyHours) {
-        const confirmText = `تحذير: لم تكمل ساعات العمل المطلوبة اليوم بعد (${targetDailyHours} ساعات). هل أنت متأكد من تسجيل الانصراف؟`;
-        if (!window.confirm(confirmText)) {
-          return;
-        }
-      }
-    }
     setActionLoading(true);
     try {
       const res = await hrService.clockOut();
@@ -118,6 +109,16 @@ export function ClockInOutWidget() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const requestClockOut = () => {
+    if (!activeSession) return;
+    const elapsedHours = (Date.now() - new Date(activeSession.clockIn).getTime()) / (1000 * 60 * 60);
+    if (elapsedHours < targetDailyHours) {
+      setClockOutConfirmationOpen(true);
+      return;
+    }
+    void handleClockOut();
   };
 
   const formatTime = (date: Date) => {
@@ -223,7 +224,7 @@ export function ClockInOutWidget() {
 
               <button
                 type="button"
-                onClick={handleClockOut}
+                onClick={requestClockOut}
                 disabled={actionLoading}
                 className="flex w-full md:w-44 items-center justify-center gap-2 rounded-2xl bg-red-500 py-3.5 text-sm font-extrabold text-white transition-all hover:bg-red-600 hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -264,6 +265,19 @@ export function ClockInOutWidget() {
           )}
         </div>
       </div>
+      <AdminConfirmationDialog
+        open={clockOutConfirmationOpen}
+        onClose={() => setClockOutConfirmationOpen(false)}
+        onConfirm={async () => {
+          await handleClockOut();
+          setClockOutConfirmationOpen(false);
+        }}
+        title="تأكيد تسجيل الانصراف المبكر"
+        consequence={`لم تُكمل ساعات العمل المستهدفة لليوم بعد (${targetDailyHours} ساعات). سيُسجَّل الانصراف الآن وفقًا للوقت الحالي.`}
+        confirmLabel="تسجيل الانصراف"
+        variant="danger"
+        isConfirming={actionLoading}
+      />
     </div>
   );
 }

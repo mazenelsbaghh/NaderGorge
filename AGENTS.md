@@ -1,6 +1,6 @@
 # nader gorge Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-06-24
+Auto-generated from all feature plans. Last updated: 2026-07-22
 
 ## Active Technologies
 - C# (.NET 9) Backend, TypeScript (Next.js) Frontend + Next.js App Router API Handlers (Proxy), Cheerio/HtmlAgilityPack (for scraping the embed tag), PostgreSQL (Data Store) (034-telegram-video-provider)
@@ -56,6 +56,14 @@ Auto-generated from all feature plans. Last updated: 2026-06-24
 - PostgreSQL for authoritative AI policy/knowledge/turn/action/verification state; Redis for queue delivery, distributed locks, cancellation hints, and SignalR backplane; no vector database in this phase (143-ai-live-support-agent)
 - C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac (146-ai-live-support-completion)
 - PostgreSQL authoritative state and append-only evidence; Redis queue delivery, recovery hints, routing locks, and SignalR backplane; no vector database (146-ai-live-support-completion)
+- C# 13 on .NET 9; TypeScript 5.9 strict on Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, Next.js App Router, Axios, Zustand, Tailwind CSS, Lucide Reac (151-content-identity-and-types)
+- PostgreSQL 16 through EF Core migrations (151-content-identity-and-types)
+- C# 13 on .NET 9 backend; TypeScript 5.x strict on Next.js 16.2.7 / React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, Next.js App Router, Axios service layer, Zustand, Tailwind CSS, Lucide React. (159-student-academic-scope-enforcement)
+- PostgreSQL through EF Core migrations; no Redis or worker storage change required. (159-student-academic-scope-enforcement)
+- C# 13/.NET 9 backend; TypeScript 5.x/Next.js 16.2.7/React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9/Npgsql, SignalR 9, Redis backplane, Axios, Zustand, Tailwind CSS; evaluate `@tanstack/react-query` as the single query cache. (160-employee-realtime-refresh)
+- PostgreSQL for user authorization/version and durable outbox state; Redis for SignalR backplane/ephemeral coordination; browser memory/local auth storage for session bootstrap; no worker storage change. (160-employee-realtime-refresh)
+- C# 13 على .NET 9؛ TypeScript 5.9 strict على Next.js 16.2.7 وReact 19.2.4 + ASP.NET Core Web API، MediatR، FluentValidation، EF Core 9.0.6/Npgsql 9.0.4، SignalR 9 مع Redis backplane، Next.js App Router، Axios، Zustand، Tailwind CSS، Lucide Reac (164-comprehensive-hr-platform)
+- PostgreSQL 16 للبيانات الموثوقة؛ مخزن الملفات الحالي للمرفقات؛ Redis للتنسيق المؤقت وSignalR فقط وليس كمصدر HR (164-comprehensive-hr-platform)
 
 - TypeScript (strict) — Next.js 16.2.1 / React 19 + framer-motion ^12.38.0, lucide-react ^1.7.0, clsx + tailwind-merge (via `@/lib/utils`) (033-custom-video-player)
 
@@ -68,37 +76,23 @@ tests/
 
 ## Commands
 
-npm test && npm run lint
+make verify
+
+For focused frontend checks: `cd frontend && npm run lint && npm run build`.
+For Phase 1 browser smoke: start the backend in E2E mode per `docs/verification-contract.md`, then run `make verify-e2e`.
 
 ## Code Style
 
 TypeScript (strict) — Next.js 16.2.1 / React 19: Follow standard conventions
 
 ## Recent Changes
-- 146-ai-live-support-completion: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6 with Redis backplane, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac
-- 143-ai-live-support-agent: Added C# 13 on .NET 9; TypeScript 5.9 strict on Node.js 20; Next.js 16.2.7 and React 19.2.4 + ASP.NET Core, MediatR, EF Core 9.0.6, Npgsql 9.0.4, SignalR 9.0.6, StackExchange.Redis 2.12.4, BullMQ 5.71.1, `@google/genai` 1.47.0, Axios, Zustand, Tailwind CSS, Lucide Reac
-- 142-live-support-command-center: Added live support command-center planning for guest/student chat, attendance-gated routing, capacity queues, student actions, audit, and ratings.
-- 139-vertex-ai-worker-migration: Added TypeScript 5.9.3 strict mode on Node.js 20 + `@google/genai` 1.47.0, `@google-cloud/storage`, BullMQ 5.71.1, Express 5.2.1, undici 7.24.6
+- 164-comprehensive-hr-platform: Added C# 13 على .NET 9؛ TypeScript 5.9 strict على Next.js 16.2.7 وReact 19.2.4 + ASP.NET Core Web API، MediatR، FluentValidation، EF Core 9.0.6/Npgsql 9.0.4، SignalR 9 مع Redis backplane، Next.js App Router، Axios، Zustand، Tailwind CSS، Lucide Reac
+- 160-employee-realtime-refresh: Added C# 13/.NET 9 backend; TypeScript 5.x/Next.js 16.2.7/React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9/Npgsql, SignalR 9, Redis backplane, Axios, Zustand, Tailwind CSS; evaluate `@tanstack/react-query` as the single query cache.
+- 159-student-academic-scope-enforcement: Added C# 13 on .NET 9 backend; TypeScript 5.x strict on Next.js 16.2.7 / React 19.2.4 frontend; Node.js worker unchanged. + ASP.NET Core Web API, MediatR, FluentValidation, EF Core 9.0.6, Npgsql 9.0.4, Next.js App Router, Axios service layer, Zustand, Tailwind CSS, Lucide React.
 
 
 <!-- MANUAL ADDITIONS START -->
 <!-- SPECKIT START -->
-- 129-comprehensive-e2e-testing: specs/129-comprehensive-e2e-testing/plan.md
-- 132-watch-requests-refinements-and-repurchases: specs/132-watch-requests-refinements-and-revocations/plan.md
-- 133-e2e-flow-subject-teacher-package: specs/133-e2e-flow-subject-teacher-package/plan.md
-- 134-package-partial-enrollment: specs/134-package-partial-enrollment/plan.md
-- 135-video-exam-locking: specs/135-video-exam-locking/plan.md
-- 136-audio-upload-restrictions-and-reviews: specs/136-audio-upload-restrictions-and-reviews/plan.md
-- 137-assessment-controls-media: specs/137-assessment-controls-media/plan.md
-- 138-bunny-video-provider: specs/138-bunny-video-provider/plan.md
-- 139-vertex-ai-worker-migration: specs/139-vertex-ai-worker-migration/plan.md
-- 140-fix-video-session-counting: specs/140-fix-video-session-counting/plan.md
-- 141-teacher-photo-refinement-and-bunny-stream: specs/141-teacher-photo-refinement-and-bunny-stream/plan.md
-- 142-live-support-command-center: specs/142-live-support-command-center/plan.md
-- 143-ai-live-support-agent: specs/143-ai-live-support-agent/plan.md
-- 144-ai-live-support-refinements: specs/144-ai-live-support-refinements/plan.md
-- 145-ai-live-support-actions: specs/145-ai-live-support-actions/plan.md
-- 146-ai-live-support-completion: specs/146-ai-live-support-completion/plan.md
-- 147-parent-tracking-app: specs/147-parent-tracking-app/plan.md
+Current implementation plan: `specs/164-comprehensive-hr-platform/plan.md` (Single-company comprehensive HR platform with atomic employee creation, staged rollout, approvals, attendance, payroll, lifecycle, and safe migration).
 <!-- SPECKIT END -->
 <!-- MANUAL ADDITIONS END -->

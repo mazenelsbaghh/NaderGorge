@@ -59,19 +59,19 @@ public class UpdateTaskStatusCommandHandler : IRequestHandler<UpdateTaskStatusCo
         {
             if (task.AssigneeId != request.UserId)
             {
-                throw new UnauthorizedAccessException("You are not authorized to update this task.");
+                throw new ForbiddenException("You are not authorized to update this task.");
             }
 
             // 1. Cannot transition out of Completed or Review
             if (task.Status == TaskStatus.Completed || task.Status == TaskStatus.Review)
             {
-                throw new UnauthorizedAccessException("Only managers can change the status of tasks in Review or Completed status.");
+                throw new ForbiddenException("Only managers can change the status of tasks in Review or Completed status.");
             }
 
             // 2. Cannot transition TO Completed directly (must go through Review for approval)
             if (request.Status == TaskStatus.Completed)
             {
-                throw new UnauthorizedAccessException("Task completion requires manager approval. Please transition to Review.");
+                throw new ForbiddenException("Task completion requires manager approval. Please transition to Review.");
             }
         }
 

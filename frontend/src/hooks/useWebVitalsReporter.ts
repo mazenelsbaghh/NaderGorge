@@ -4,6 +4,9 @@ import apiClient from '@/services/api-client';
 import { useAuthStore } from '@/stores/auth-store';
 
 const QUEUE_KEY = 'web_vitals_queue';
+const SAMPLE_KEY = 'web_vitals_sampled';
+const QUEUE_LIMIT = 20;
+const PRODUCTION_SAMPLE_RATE = 0.05;
 
 interface QueuedMetric {
   metricName: string;
@@ -26,14 +29,34 @@ function getQueue(): QueuedMetric[] {
 function saveQueue(queue: QueuedMetric[]) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(-QUEUE_LIMIT)));
   } catch (e) {
     console.error('Failed to save web vitals queue:', e);
   }
 }
 
+function shouldReportWebVitals() {
+  if (typeof window === 'undefined') return false;
+
+  if (process.env.NODE_ENV !== 'production') {
+    return false;
+  }
+
+  try {
+    const stored = sessionStorage.getItem(SAMPLE_KEY);
+    if (stored) return stored === '1';
+
+    const sampled = Math.random() < PRODUCTION_SAMPLE_RATE;
+    sessionStorage.setItem(SAMPLE_KEY, sampled ? '1' : '0');
+    return sampled;
+  } catch {
+    return Math.random() < PRODUCTION_SAMPLE_RATE;
+  }
+}
+
 export function useWebVitalsReporter() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const shouldReport = shouldReportWebVitals();
 
   // Function to send a single metric
   const sendMetric = useCallback(async (metric: QueuedMetric) => {
@@ -67,7 +90,7 @@ export function useWebVitalsReporter() {
 
   // Flush queue on mount or when auth state changes or when online status changes
   useEffect(() => {
-    if (isAuthenticated) {
+    if (shouldReport && isAuthenticated) {
       void flushQueue();
 
       const handleOnline = () => {
@@ -81,9 +104,11 @@ export function useWebVitalsReporter() {
         };
       }
     }
-  }, [isAuthenticated, flushQueue]);
+  }, [isAuthenticated, flushQueue, shouldReport]);
 
   useReportWebVitals((metric) => {
+    if (!shouldReport) return;
+
     const body: QueuedMetric = {
       metricName: metric.name,
       value: metric.value,
@@ -99,11 +124,6 @@ export function useWebVitalsReporter() {
         queue.push(body);
         saveQueue(queue);
       });
-    } else {
-      // Queue it locally
-      const queue = getQueue();
-      queue.push(body);
-      saveQueue(queue);
     }
   });
 }

@@ -20,6 +20,7 @@ import {
 } from '@/services/media-service';
 import { hrService, EmployeeDto } from '@/services/hr-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 const STAGES: { key: MediaStage; label: string; color: string; bg: string; border: string }[] = [
   { key: 'Preparation', label: 'تحضير', color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-100/50 dark:bg-slate-900/40', border: 'border-slate-300/45 dark:border-slate-700/45' },
@@ -74,6 +75,8 @@ export default function MediaPipelineBoard() {
 
   useEffect(() => {
     fetchData();
+    const cleanupCacheStore = registerCacheStore('media:pipelines', () => setPipelines([]), fetchData);
+    return cleanupCacheStore;
   }, [fetchData]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {

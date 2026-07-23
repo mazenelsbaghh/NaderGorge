@@ -1,6 +1,9 @@
 package com.nadergorge.parent.data.repository
 
 import com.nadergorge.parent.data.api.ParentApiService
+import com.nadergorge.parent.data.api.ParentAppConfigResponse
+import com.nadergorge.parent.data.api.ParentNotificationResponse
+import com.nadergorge.parent.data.api.RegisterDeviceTokenRequest
 import com.nadergorge.parent.data.api.StudentDetailsResponse
 import com.nadergorge.parent.data.api.VerifyCodeRequest
 import com.nadergorge.parent.data.storage.LinkedStudent
@@ -98,6 +101,7 @@ class ParentRepository(
 
     fun saveLinkedStudent(linkedStudent: LinkedStudent) {
         storageService.addLinkedStudent(linkedStudent)
+        storageService.setActiveStudentId(linkedStudent.studentId)
     }
 
     suspend fun getStudentDetails(studentId: String): Result<StudentDetailsResponse> {
@@ -110,6 +114,70 @@ class ParentRepository(
                 return Result.failure(Exception(apiResponse.message ?: "فشل تحميل البيانات"))
             }
             Result.success(apiResponse.data)
+        } catch (e: Exception) {
+            Result.failure(handleException(e))
+        }
+    }
+
+    suspend fun registerDeviceTokenForStudent(studentId: String, deviceToken: String): Result<Boolean> {
+        val student = storageService.getLinkedStudents().firstOrNull { it.studentId == studentId }
+            ?: return Result.failure(Exception("Student not found locally"))
+
+        if (deviceToken.isBlank() || deviceToken == "android-parent-pending-token") {
+            return Result.success(false)
+        }
+
+        return try {
+            val response = apiService.registerDeviceToken(
+                authHeader = "Bearer ${student.token}",
+                request = RegisterDeviceTokenRequest(deviceToken = deviceToken)
+            )
+            if (!response.success) {
+                return Result.failure(Exception(response.message ?: "فشل تحديث رمز الإشعارات"))
+            }
+            Result.success(response.data ?: true)
+        } catch (e: Exception) {
+            Result.failure(handleException(e))
+        }
+    }
+
+    suspend fun getNotifications(studentId: String): Result<List<ParentNotificationResponse>> {
+        val student = storageService.getLinkedStudents().firstOrNull { it.studentId == studentId }
+            ?: return Result.failure(Exception("Student not found locally"))
+
+        return try {
+            val response = apiService.getNotifications("Bearer ${student.token}")
+            if (!response.success || response.data == null) {
+                return Result.failure(Exception(response.message ?: "فشل تحميل التنبيهات"))
+            }
+            Result.success(response.data)
+        } catch (e: Exception) {
+            Result.failure(handleException(e))
+        }
+    }
+
+    suspend fun markNotificationAsRead(studentId: String, notificationId: String): Result<Boolean> {
+        val student = storageService.getLinkedStudents().firstOrNull { it.studentId == studentId }
+            ?: return Result.failure(Exception("Student not found locally"))
+
+        return try {
+            val response = apiService.markNotificationAsRead("Bearer ${student.token}", notificationId)
+            if (!response.success) {
+                return Result.failure(Exception(response.message ?: "فشل تحديث التنبيه"))
+            }
+            Result.success(response.data ?: true)
+        } catch (e: Exception) {
+            Result.failure(handleException(e))
+        }
+    }
+
+    suspend fun getAppConfig(): Result<ParentAppConfigResponse> {
+        return try {
+            val response = apiService.getAppConfig()
+            if (!response.success || response.data == null) {
+                return Result.failure(Exception(response.message ?: "فشل تحميل إعدادات التطبيق"))
+            }
+            Result.success(response.data)
         } catch (e: Exception) {
             Result.failure(handleException(e))
         }

@@ -21,6 +21,7 @@ export interface TrackProgressRequest {
   sessionId: string;
   progressSequence: number;
   secondsWatched: number;
+  playbackRate: number;
   totalDurationSeconds: number;
 }
 
@@ -38,6 +39,7 @@ export interface WatchProgressResponse {
 export type ExtraWatchRequestStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface ExtraWatchStatusDto {
+  canWatch: boolean;
   hasPendingRequest: boolean;
   hasRejectedRequest: boolean;
   requestStatus?: ExtraWatchRequestStatus | null;
@@ -55,8 +57,8 @@ export const videoSessionService = {
     return apiClient.post(`/student/video-session/${sessionId}/consume`, {});
   },
 
-  requestExtraWatch: (lessonVideoId: string) => {
-    return apiClient.post(`/student/video-session/${lessonVideoId}/request-extra`, {});
+  requestExtraWatch: (lessonVideoId: string, reason: string) => {
+    return apiClient.post(`/student/video-session/${lessonVideoId}/request-extra`, { reason });
   },
 
   getExtraWatchStatus: (lessonVideoId: string) => {
@@ -68,6 +70,7 @@ export const videoSessionService = {
       sessionId: request.sessionId,
       progressSequence: request.progressSequence,
       secondsWatched: request.secondsWatched,
+      playbackRate: request.playbackRate,
       totalDurationSeconds: request.totalDurationSeconds,
     });
   },

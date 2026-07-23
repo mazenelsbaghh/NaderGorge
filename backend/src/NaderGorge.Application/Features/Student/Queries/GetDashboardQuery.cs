@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Queries;
@@ -12,6 +13,7 @@ public record DashboardDto(
     List<ActivePackageDto> ActivePackages,
     ResumePointDto? ResumePoint,
     List<UpcomingExamDto> UpcomingExams,
+    List<UpcomingHomeworkDto> UpcomingHomeworks,
     int OverallProgressPercent,
     int TotalLessonsCompleted,
     int TotalLessons,
@@ -35,12 +37,18 @@ public record ActivePackageDto(
 );
 public record ResumePointDto(Guid PackageId, string PackageName, Guid LessonId, string LessonTitle, int LessonOrder);
 public record UpcomingExamDto(Guid ExamId, string ExamTitle, string LessonTitle);
+public record UpcomingHomeworkDto(Guid HomeworkId, string HomeworkTitle, string LessonTitle);
 
 public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiResponse<DashboardDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService _academicScope;
 
-    public GetDashboardQueryHandler(IAppDbContext db) => _db = db;
+    public GetDashboardQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    {
+        _db = db;
+        _academicScope = academicScope;
+    }
 
     public async Task<ApiResponse<DashboardDto>> Handle(GetDashboardQuery request, CancellationToken ct)
     {
@@ -64,6 +72,8 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             .Select(g => g.PackageId!.Value)
             .Distinct()
             .ToList();
+
+        packageIds = await FilterEligibleOwnerIdsAsync(StudentFacingScopeOwnerType.Package, packageIds, request.UserId, ct);
 
         // Get packages with flat lesson list projected
         var packages = await _db.Packages
@@ -102,7 +112,12 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
 
         foreach (var pkg in packages)
         {
-            var allLessons = pkg.Lessons;
+            var eligibleLessonIds = await FilterEligibleOwnerIdsAsync(
+                StudentFacingScopeOwnerType.Lesson,
+                pkg.Lessons.Select(l => l.Id).ToList(),
+                request.UserId,
+                ct);
+            var allLessons = pkg.Lessons.Where(l => eligibleLessonIds.Contains(l.Id)).ToList();
             var completed = allLessons.Count(l => completedLessonIds.Contains(l.Id));
             var total = allLessons.Count;
             totalLessonsAll += total;
@@ -177,6 +192,28 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             }
         }
 
+        var homeworkRows = await _db.Homeworks
+            .AsNoTracking()
+            .Where(h => allLessonIds.Contains(h.LessonId))
+            .Select(h => new { h.Id, h.Title, h.LessonId, h.PassingScoreThreshold, h.TotalScore })
+            .ToListAsync(ct);
+
+        var gradedHomeworkIds = await _db.HomeworkSubmissions
+            .AsNoTracking()
+            .Where(s => s.StudentId == request.UserId && s.Status == Domain.Entities.Homework.SubmissionStatus.Graded)
+            .Select(s => new { s.HomeworkId, s.OverallScore })
+            .ToListAsync(ct);
+
+        var upcomingHomeworks = homeworkRows
+            .Where(h => !gradedHomeworkIds.Any(s => s.HomeworkId == h.Id && s.OverallScore >= (h.PassingScoreThreshold ?? 0)))
+            .OrderBy(h => h.Title)
+            .Take(5)
+            .Select(h => new UpcomingHomeworkDto(
+                h.Id,
+                h.Title,
+                packages.SelectMany(p => p.Lessons).FirstOrDefault(l => l.Id == h.LessonId)?.Title ?? "درس مرتبط"))
+            .ToList();
+
         var codesRedeemed = grants.Count;
         var overallPct = totalLessonsAll > 0 ? (int)Math.Round((double)totalCompletedAll / totalLessonsAll * 100) : 0;
 
@@ -189,11 +226,28 @@ public class GetDashboardQueryHandler : IRequestHandler<GetDashboardQuery, ApiRe
             activePackages,
             resume,
             upcomingExams,
+            upcomingHomeworks,
             overallPct,
             totalCompletedAll,
             totalLessonsAll,
             codesRedeemed,
             user.AvatarSlug
         ));
+    }
+
+    private async Task<List<Guid>> FilterEligibleOwnerIdsAsync(
+        StudentFacingScopeOwnerType ownerType,
+        List<Guid> ownerIds,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var eligible = new List<Guid>();
+        foreach (var ownerId in ownerIds)
+        {
+            if (await _academicScope.IsOwnerEligibleForStudentAsync(ownerType, ownerId, userId, ct))
+                eligible.Add(ownerId);
+        }
+
+        return eligible;
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 using System.Collections.Generic;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -23,6 +24,7 @@ public class StudentProfileExtendedDto
     public string? Governorate { get; set; }
     public string? Address { get; set; }
     public string? StudentCode { get; set; }
+    public string? ParentTrackingCode { get; set; }
     public bool IsProfileComplete { get; set; }
 
     // ── Academic fields ─────────────────────────────────────────────────
@@ -44,9 +46,20 @@ public class StudentProfileExtendedDto
     public List<VideoOverrideDto> Overrides { get; set; } = new();
     public WatchTrackingSummaryDto WatchTracking { get; set; } = new();
     public decimal CurrentBalance { get; set; }
+    public List<StudentPromotionalBalanceDto> PromotionalBalances { get; set; } = new();
     public List<StudentBalanceTransactionDto> BalanceTransactions { get; set; } = new();
     public List<AuditLogDto> AuditTrail { get; set; } = new();
     public List<StudentNoteDto> Notes { get; set; } = new();
+}
+
+public class StudentPromotionalBalanceDto
+{
+    public Guid? TeacherId { get; set; }
+    public string TeacherName { get; set; } = string.Empty;
+    public decimal AvailableAmount { get; set; }
+    public decimal OriginalAmount { get; set; }
+    public decimal ConsumedAmount { get; set; }
+    public DateTime? NearestExpiresAt { get; set; }
 }
 
 public class StudentBalanceTransactionDto
@@ -116,6 +129,8 @@ public class VideoOverrideDto
 public class WatchTrackingSummaryDto
 {
     public int TotalWatchedSeconds { get; set; }
+    public decimal TotalActualWatchedSeconds { get; set; }
+    public decimal AveragePlaybackRate { get; set; } = 1m;
     public int WatchedVideosCount { get; set; }
     public List<StudentVideoWatchActivityDto> Activities { get; set; } = new();
 }
@@ -131,6 +146,12 @@ public class StudentVideoWatchActivityDto
     public int WatchCount { get; set; }
     public int MaxWatchCount { get; set; }
     public int WatchedSeconds { get; set; }
+    public decimal ActualWatchedSeconds { get; set; }
+    public decimal LastPlaybackRate { get; set; } = 1m;
+    public decimal AveragePlaybackRate { get; set; } = 1m;
+    public Dictionary<string, decimal> PlaybackRateSeconds { get; set; } = new();
+    [JsonIgnore]
+    public string PlaybackRateBreakdownJson { get; set; } = "{}";
     public bool IsLocked { get; set; }
     public DateTime LastWatchedAt { get; set; }
 }

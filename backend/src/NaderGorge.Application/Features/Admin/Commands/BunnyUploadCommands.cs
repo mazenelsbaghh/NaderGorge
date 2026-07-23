@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Interfaces;
+using NaderGorge.Application.Features.Admin.VideoTypes;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -18,6 +19,7 @@ public record CreateBunnyTusUploadCommand(
     string Title,
     int Order,
     int MaxWatchCount,
+    Guid VideoTypeId,
     string? FileName,
     long? FileSizeBytes,
     Guid CurrentUserId) : IRequest<ApiResponse<BunnyTusUploadSessionDto>>;
@@ -42,6 +44,7 @@ public record FetchBunnyVideoCommand(
     string Title,
     int Order,
     int MaxWatchCount,
+    Guid VideoTypeId,
     string SourceUrl,
     Guid CurrentUserId) : IRequest<ApiResponse<BunnyUploadStatusDto>>;
 
@@ -70,6 +73,11 @@ public sealed class CreateBunnyTusUploadCommandHandler : IRequestHandler<CreateB
             return ApiResponse<BunnyTusUploadSessionDto>.Fail(ownership.Message);
         }
 
+        if (!await VideoTypeRules.IsActiveAsync(_db, request.VideoTypeId, cancellationToken))
+        {
+            return ApiResponse<BunnyTusUploadSessionDto>.Fail("اختر نوع فيديو نشطاً.", ["VIDEO_TYPE_INVALID"]);
+        }
+
         var bunnyVideo = await _bunny.CreateVideoAsync(request.Title.Trim(), collectionId: null, cancellationToken);
         var lessonVideo = new LessonVideo
         {
@@ -79,6 +87,7 @@ public sealed class CreateBunnyTusUploadCommandHandler : IRequestHandler<CreateB
             Order = request.Order,
             MaxWatchCount = request.MaxWatchCount,
             LessonId = request.LessonId,
+            VideoTypeId = request.VideoTypeId,
             IsActive = true
         };
         _db.LessonVideos.Add(lessonVideo);
@@ -187,6 +196,11 @@ public sealed class FetchBunnyVideoCommandHandler : IRequestHandler<FetchBunnyVi
             return ApiResponse<BunnyUploadStatusDto>.Fail(ownership.Message);
         }
 
+        if (!await VideoTypeRules.IsActiveAsync(_db, request.VideoTypeId, cancellationToken))
+        {
+            return ApiResponse<BunnyUploadStatusDto>.Fail("اختر نوع فيديو نشطاً.", ["VIDEO_TYPE_INVALID"]);
+        }
+
         var bunnyVideo = await _bunny.CreateVideoAsync(request.Title.Trim(), collectionId: null, cancellationToken);
         var fetchResult = await _bunny.FetchVideoAsync(request.SourceUrl, request.Title.Trim(), collectionId: null, cancellationToken);
         if (!fetchResult.Success)
@@ -202,6 +216,7 @@ public sealed class FetchBunnyVideoCommandHandler : IRequestHandler<FetchBunnyVi
             Order = request.Order,
             MaxWatchCount = request.MaxWatchCount,
             LessonId = request.LessonId,
+            VideoTypeId = request.VideoTypeId,
             IsActive = false
         };
         _db.LessonVideos.Add(lessonVideo);

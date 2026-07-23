@@ -1,22 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Check, 
-  X, 
-  FileText, 
-  Smartphone, 
-  Search, 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock, 
+import {
+  Check,
+  X,
+  FileText,
+  Smartphone,
+  Search,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
   HelpCircle,
   Link as LinkIcon,
   Maximize2
 } from 'lucide-react';
-import { 
-  AdminShellChrome, 
-  AdminDataTable, 
+import {
+  AdminShellChrome,
+  AdminDataTable,
   AdminColumn,
   AdminStatCard,
   AdminModal
@@ -70,7 +70,7 @@ export default function RechargeVerificationPageClient() {
   const [unmatchedSms, setUnmatchedSms] = useState<AdminIncomingSmsLogDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   // Filters
   const [statusFilter, setStatusFilter] = useState<RechargeStatusFilter>(0); // Default to Pending (0)
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,7 +91,7 @@ export default function RechargeVerificationPageClient() {
     try {
       setLoading(true);
       setError('');
-      
+
       // Fetch requests and unmatched SMS logs in parallel
       const [reqData, smsData] = await Promise.all([
         walletService.getRechargeRequests(),
@@ -218,7 +218,7 @@ export default function RechargeVerificationPageClient() {
   // Filtered requests
   const filteredRequests = requests.filter(r => {
     const matchesStatus = statusFilter === 'all' || isRechargeStatus(r.status, statusFilter);
-    const matchesSearch = 
+    const matchesSearch =
       r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.studentPhoneNumber.includes(searchQuery) ||
       r.senderPhoneNumber.includes(searchQuery) ||
@@ -246,8 +246,17 @@ export default function RechargeVerificationPageClient() {
       render: (r) => (
         <div>
           <div className="font-mono font-bold text-sm text-[var(--admin-text)]">{r.amount} ج.م</div>
-          <div className="text-xs text-[var(--admin-muted)] mt-0.5">من: <span className="font-mono font-semibold">{r.senderPhoneNumber}</span></div>
+          <div className="text-xs text-[var(--admin-muted)] mt-0.5">الرصيد: <span className="font-semibold">{r.teacherName ? `للمدرس ${r.teacherName}` : 'عام'}</span></div>
         </div>
+      )
+    },
+    {
+      key: 'senderPhoneNumber',
+      label: 'رقم المحول منه',
+      render: (r) => (
+        <span dir="ltr" className="font-mono text-sm font-bold text-[var(--admin-text)]">
+          {r.senderPhoneNumber || 'غير مسجل'}
+        </span>
       )
     },
     {
@@ -267,10 +276,11 @@ export default function RechargeVerificationPageClient() {
         <div className="flex items-center justify-center">
           {resolveAssetUrl(r.screenshotUrl) ? (
             <div className="relative group cursor-pointer" onClick={() => setViewScreenshotUrl(resolveAssetUrl(r.screenshotUrl))}>
-              <img 
-                src={resolveAssetUrl(r.screenshotUrl) || undefined} 
-                alt="proof" 
-                className="h-10 w-16 object-cover rounded-lg border border-[var(--admin-border)] hover:opacity-85 transition-opacity" 
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolveAssetUrl(r.screenshotUrl) || undefined}
+                alt="proof"
+                className="h-10 w-16 object-cover rounded-lg border border-[var(--admin-border)] hover:opacity-85 transition-opacity"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity">
                 <Maximize2 className="h-3 w-3 text-white" />
@@ -390,8 +400,8 @@ export default function RechargeVerificationPageClient() {
             <button
               onClick={() => setStatusFilter(0)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === 0 
-                  ? 'bg-[var(--admin-primary)] text-white shadow' 
+                statusFilter === 0
+                  ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
               }`}
             >
@@ -400,8 +410,8 @@ export default function RechargeVerificationPageClient() {
             <button
               onClick={() => setStatusFilter(1)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === 1 
-                  ? 'bg-[var(--admin-primary)] text-white shadow' 
+                statusFilter === 1
+                  ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
               }`}
             >
@@ -410,8 +420,8 @@ export default function RechargeVerificationPageClient() {
             <button
               onClick={() => setStatusFilter(2)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === 2 
-                  ? 'bg-[var(--admin-primary)] text-white shadow' 
+                statusFilter === 2
+                  ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
               }`}
             >
@@ -420,8 +430,8 @@ export default function RechargeVerificationPageClient() {
             <button
               onClick={() => setStatusFilter(3)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === 3 
-                  ? 'bg-[var(--admin-primary)] text-white shadow' 
+                statusFilter === 3
+                  ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
               }`}
             >
@@ -430,8 +440,8 @@ export default function RechargeVerificationPageClient() {
             <button
               onClick={() => setStatusFilter(4)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === 4 
-                  ? 'bg-[var(--admin-primary)] text-white shadow' 
+                statusFilter === 4
+                  ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
               }`}
             >
@@ -440,8 +450,8 @@ export default function RechargeVerificationPageClient() {
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === 'all' 
-                  ? 'bg-[var(--admin-primary)] text-white shadow' 
+                statusFilter === 'all'
+                  ? 'bg-[var(--admin-primary)] text-white shadow'
                   : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
               }`}
             >
@@ -456,7 +466,7 @@ export default function RechargeVerificationPageClient() {
             </span>
             <input
               type="text"
-              placeholder="بحث باسم الطالب، الهاتف، القيمة..."
+              placeholder="بحث بالطالب أو رقم المحول أو القيمة..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="admin-input ps-9 py-1.5 text-xs w-full"
@@ -509,7 +519,7 @@ export default function RechargeVerificationPageClient() {
                 </div>
               ) : (
                 unmatchedSms.map((sms) => (
-                  <div 
+                  <div
                     key={sms.id}
                     className="p-3.5 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] hover:border-[var(--admin-primary-15)] transition-all flex flex-col gap-1.5"
                   >
@@ -534,8 +544,8 @@ export default function RechargeVerificationPageClient() {
 
                     <div className="text-[9px] text-[var(--admin-muted)] flex items-center justify-between mt-1">
                       <span>محفظة: {sms.walletLabel}</span>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => {
                           navigator.clipboard.writeText(sms.body);
                           toast.success('تم نسخ الرسالة');
@@ -562,10 +572,11 @@ export default function RechargeVerificationPageClient() {
       >
         <div className="mt-4 flex items-center justify-center bg-black/5 rounded-xl p-2 border border-[var(--admin-border)] max-h-[80vh] overflow-auto">
           {viewScreenshotUrl && (
-            <img 
-              src={viewScreenshotUrl} 
-              alt="proof detail" 
-              className="max-w-full h-auto rounded-lg shadow-lg" 
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={viewScreenshotUrl}
+              alt="proof detail"
+              className="max-w-full h-auto rounded-lg shadow-lg"
             />
           )}
         </div>
@@ -615,10 +626,11 @@ export default function RechargeVerificationPageClient() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--admin-text)]">صورة التحويل المرفقة:</label>
                 <div className="relative group max-h-48 overflow-hidden rounded-xl border border-[var(--admin-border)] flex justify-center bg-black/5">
-                  <img 
-                    src={resolveAssetUrl(approveModalRequest.screenshotUrl) || undefined} 
-                    alt="proof preview" 
-                    className="max-h-48 object-contain" 
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={resolveAssetUrl(approveModalRequest.screenshotUrl) || undefined}
+                    alt="proof preview"
+                    className="max-h-48 object-contain"
                   />
                   <button
                     type="button"
@@ -637,7 +649,7 @@ export default function RechargeVerificationPageClient() {
                 <LinkIcon className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
                 ربط رسالة SMS تأكيدية (اختياري)
               </label>
-              
+
               <select
                 value={selectedSmsId}
                 onChange={(e) => setSelectedSmsId(e.target.value)}
@@ -647,12 +659,12 @@ export default function RechargeVerificationPageClient() {
                 {unmatchedSms.map(sms => {
                   const isAmountMatch = sms.parsedAmount === approveModalRequest.amount;
                   const isPhoneMatch = sms.parsedSenderPhone === approveModalRequest.senderPhoneNumber;
-                  
+
                   let badge = '';
                   if (isAmountMatch && isPhoneMatch) badge = ' (مطابقة للمبلغ والهاتف ★)';
                   else if (isAmountMatch) badge = ' (مطابقة للمبلغ)';
                   else if (isPhoneMatch) badge = ' (مطابقة للهاتف)';
-                  
+
                   return (
                     <option key={sms.id} value={sms.id}>
                       {sms.parsedAmount ? `${sms.parsedAmount} ج.م` : 'مبلغ غير معروف'} - {sms.parsedSenderPhone || 'بدون هاتف'} [{sms.walletLabel}]{badge}

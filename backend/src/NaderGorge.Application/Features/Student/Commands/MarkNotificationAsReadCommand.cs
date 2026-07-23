@@ -14,10 +14,12 @@ public record MarkNotificationAsReadCommand(Guid NotificationId, Guid UserId) : 
 public class MarkNotificationAsReadCommandHandler : IRequestHandler<MarkNotificationAsReadCommand, ApiResponse<bool>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public MarkNotificationAsReadCommandHandler(IAppDbContext db)
+    public MarkNotificationAsReadCommandHandler(IAppDbContext db, IAcademicScopeService? academicScope = null)
     {
         _db = db;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<bool>> Handle(MarkNotificationAsReadCommand request, CancellationToken ct)
@@ -28,6 +30,18 @@ public class MarkNotificationAsReadCommandHandler : IRequestHandler<MarkNotifica
         if (notification == null)
         {
             return ApiResponse<bool>.Fail("التنبيه غير موجود");
+        }
+
+        if (_academicScope != null &&
+            notification.AcademicScopeOwnerType.HasValue &&
+            notification.AcademicScopeOwnerId.HasValue &&
+            !await _academicScope.IsOwnerEligibleForStudentAsync(
+                notification.AcademicScopeOwnerType.Value,
+                notification.AcademicScopeOwnerId.Value,
+                request.UserId,
+                ct))
+        {
+            return ApiResponse<bool>.Fail("التنبيه غير متاح لنطاقك الدراسي الحالي.", new List<string> { "ACADEMIC_SCOPE_DENIED" });
         }
 
         notification.ReadAt = DateTime.UtcNow;

@@ -11,7 +11,13 @@ public record GetTermsQuery(Guid PackageId, Guid? UserId = null) : IRequest<ApiR
 public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<List<TermDto>>>
 {
     private readonly IAppDbContext _db;
-    public GetTermsQueryHandler(IAppDbContext db) => _db = db;
+    private readonly IAcademicScopeService _academicScope;
+
+    public GetTermsQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    {
+        _db = db;
+        _academicScope = academicScope;
+    }
 
     public async Task<ApiResponse<List<TermDto>>> Handle(GetTermsQuery request, CancellationToken ct)
     {
@@ -20,6 +26,24 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
             .OrderBy(t => t.Order)
             .Select(t => new { t.Id, t.Title, t.Order, t.Price, t.ImageUrl })
             .ToListAsync(ct);
+
+        if (request.UserId.HasValue && !await IsPrivilegedUserAsync(request.UserId.Value, ct))
+        {
+            var eligibleTerms = new List<Guid>();
+            foreach (var term in terms)
+            {
+                if (await _academicScope.IsOwnerEligibleForStudentAsync(
+                        StudentFacingScopeOwnerType.Term,
+                        term.Id,
+                        request.UserId.Value,
+                        ct))
+                {
+                    eligibleTerms.Add(term.Id);
+                }
+            }
+
+            terms = terms.Where(t => eligibleTerms.Contains(t.Id)).ToList();
+        }
 
         // Determine which terms the student has already purchased
         var purchasedTermIds = new HashSet<Guid>();
@@ -60,5 +84,21 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
         )).ToList();
 
         return ApiResponse<List<TermDto>>.Ok(result);
+    }
+
+    private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)
+    {
+        return await _db.UserRoles
+            .Include(ur => ur.Role)
+            .Where(ur => ur.UserId == userId)
+            .AnyAsync(ur =>
+                ur.Role.Type == RoleType.Admin ||
+                ur.Role.Type == RoleType.Assistant ||
+                ur.Role.Type == RoleType.AssistantReviewer ||
+                ur.Role.Type == RoleType.AssistantAcademic ||
+                ur.Role.Type == RoleType.Supervisor ||
+                ur.Role.Type == RoleType.Staff ||
+                ur.Role.Type == RoleType.Teacher,
+                ct);
     }
 }

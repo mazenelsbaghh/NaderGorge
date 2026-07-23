@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpLeft, BookMarked, Bug, ChevronDown, KeyRound, Wallet } from "lucide-react";
+import { ArrowUpLeft, BookMarked, Bug, ChevronDown, Wallet } from "lucide-react";
 
 const destinations = [
   {
@@ -17,12 +17,6 @@ const destinations = [
     icon: Wallet,
   },
   {
-    href: "/student/code-redemption",
-    title: "تفعيل الكود",
-    description: "فعّل باقة جديدة أو أضف رصيدًا.",
-    icon: KeyRound,
-  },
-  {
     href: "/student/mistakes",
     title: "ملف الأخطاء",
     description: "ارجع للأسئلة التي تحتاج مراجعة.",
@@ -36,7 +30,7 @@ export function StudentDestinationsPanel() {
       <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-5 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)] sm:px-6">
         <span>
           <span className="block text-base font-black text-[var(--admin-text)]">روابط وخدمات</span>
-          <span className="mt-0.5 block text-xs text-[var(--admin-muted)]">المحفظة، الأكواد، والأخطاء</span>
+          <span className="mt-0.5 block text-xs text-[var(--admin-muted)]">المحفظة، الباقات، والأخطاء</span>
         </span>
         <ChevronDown className="h-5 w-5 text-[var(--admin-primary)] transition-transform group-open:rotate-180" />
       </summary>

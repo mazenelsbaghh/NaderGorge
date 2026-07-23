@@ -1,6 +1,5 @@
-import PackageCodeRedemptionPageClient from "./PackageCodeRedemptionPageClient";
+import PackageCodeRedemptionPageClient from './PackageCodeRedemptionPageClient';
 
 export default async function PackageCodeRedemptionPage({ params }: { params: Promise<{ packageId: string }> }) {
-  const resolvedParams = await params;
-  return <PackageCodeRedemptionPageClient params={resolvedParams} />;
+  return <PackageCodeRedemptionPageClient params={await params} />;
 }

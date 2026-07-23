@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast';
 import { mediaService, MediaKpisDto } from '@/services/media-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 export default function MediaKpiDashboard() {
   const [kpis, setKpis] = useState<MediaKpisDto | null>(null);
@@ -18,6 +19,8 @@ export default function MediaKpiDashboard() {
 
   useEffect(() => {
     fetchKpis();
+    const cleanupCacheStore = registerCacheStore('media:kpis', () => setKpis(null), fetchKpis);
+    return cleanupCacheStore;
   }, []);
 
   const fetchKpis = async () => {

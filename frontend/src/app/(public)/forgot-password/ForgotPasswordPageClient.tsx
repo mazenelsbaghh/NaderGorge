@@ -143,7 +143,7 @@ export default function ForgotPasswordPageClient() {
       {/* ── Ripple Interactive Background ── */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <RippleGrid
-          gridColor={isDark ? '#64748b' : '#94a3b8'}
+          gridColor="var(--admin-primary)"
           rippleIntensity={0.05}
           gridSize={10}
           gridThickness={isDark ? 15 : 12}

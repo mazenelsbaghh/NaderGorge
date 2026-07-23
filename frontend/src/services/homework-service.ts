@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 export interface HomeworkQuestionDto {
     id: string;
@@ -93,7 +94,9 @@ export const homeworkService = {
     },
 
     submitHomework: async (homeworkId: string, answers: AnswerSubmissionDto[]) => {
-        return apiClient.post(`/homework/${homeworkId}/submit`, answers);
+        const response = await apiClient.post(`/homework/${homeworkId}/submit`, answers);
+        invalidateMany(['student:homeworks', 'assessments']);
+        return response;
     },
 
     startHomework: (homeworkId: string) =>

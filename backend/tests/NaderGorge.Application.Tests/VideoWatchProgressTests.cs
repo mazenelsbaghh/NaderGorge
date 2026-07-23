@@ -68,7 +68,7 @@ public class VideoWatchProgressTests
         await db.SaveChangesAsync();
 
         var second = await handler.Handle(
-            new TrackWatchProgressCommand(fixture.Video.Id, fixture.UserId, secondSession.Id, 1, 3, 100),
+            new TrackWatchProgressCommand(fixture.Video.Id, fixture.UserId, secondSession.Id, 1, 3, 1, 100),
             CancellationToken.None);
 
         Assert.True(second.Success);
@@ -116,7 +116,7 @@ public class VideoWatchProgressTests
         var fixture = await SeedFixtureAsync(db, maxWatchCount: 3);
 
         var mismatched = await CreateHandler(db).Handle(
-            new TrackWatchProgressCommand(fixture.Video.Id, Guid.NewGuid(), fixture.SessionId, 1, 10, 100),
+            new TrackWatchProgressCommand(fixture.Video.Id, Guid.NewGuid(), fixture.SessionId, 1, 10, 1, 100),
             CancellationToken.None);
 
         Assert.False(mismatched.Success);
@@ -209,7 +209,7 @@ public class VideoWatchProgressTests
         new(db, FixedSettingsReader.Default);
 
     private static TrackWatchProgressCommand Command(Fixture fixture, long sequence, double seconds) =>
-        new(fixture.Video.Id, fixture.UserId, fixture.SessionId, sequence, seconds, 100);
+        new(fixture.Video.Id, fixture.UserId, fixture.SessionId, sequence, seconds, 1, 100);
 
     private static async Task<Fixture> SeedFixtureAsync(AppDbContext db, int maxWatchCount)
     {
@@ -269,6 +269,7 @@ public class VideoWatchProgressTests
         public static readonly AllowAccess Instance = new();
         public Task<bool> HasAccessToPackageAsync(Guid userId, Guid packageId, CancellationToken ct = default) => Task.FromResult(true);
         public Task<bool> HasAccessToLessonAsync(Guid userId, Guid lessonId, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> HasAccessToVideoAsync(Guid userId, Guid lessonVideoId, CancellationToken ct = default) => Task.FromResult(true);
         public Task<bool> HasAccessToExamAsync(Guid userId, Guid examId, CancellationToken ct = default) => Task.FromResult(true);
     }
 

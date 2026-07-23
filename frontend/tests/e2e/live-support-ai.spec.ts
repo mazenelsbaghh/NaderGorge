@@ -484,11 +484,13 @@ test.describe("AI live support staff and administration", () => {
       body: JSON.stringify({ success: true, data: [] })
     }));
 
-    await page.route("**/api/live-support/staff/conversations/" + conversationId + "/student-context/basic", route => route.fulfill({
-      contentType: "application/json",
-      headers: getHeaders(route),
-      body: JSON.stringify({ success: true, data: { section: "basic", data: studentContext } })
-    }));
+    let basicSectionAttempts = 0;
+    await page.route("**/api/live-support/staff/conversations/" + conversationId + "/student-context/basic", route => {
+      basicSectionAttempts += 1;
+      return route.fulfill(basicSectionAttempts === 1
+        ? { status: 503, contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ message: "تعذر تحميل القسم" }) }
+        : { contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { section: "basic", data: studentContext } }) });
+    });
 
     await page.route("**/api/live-support/staff/conversations/" + conversationId + "/actions", route => route.fulfill({
       contentType: "application/json",
@@ -517,6 +519,8 @@ test.describe("AI live support staff and administration", () => {
     
     // Toggle Profile Context lazy loading
     await page.getByRole("button", { name: "الملف الشخصي" }).click();
+    await expect(page.getByText("تعذر تحميل هذا القسم. حاول مرة أخرى.")).toBeVisible();
+    await page.getByRole("button", { name: "إعادة المحاولة" }).click();
     await expect(page.getByText("طالب ذكي")).toBeVisible();
     await expect(page.getByText("STUD-146")).toBeVisible();
 
@@ -531,7 +535,7 @@ test.describe("AI live support staff and administration", () => {
 
     // Confirm execution
     await page.getByRole("button", { name: "تأكيد تعديل الرصيد" }).click();
-    await expect(page.getByRole("status")).toContainText("تم تعديل الرصيد بنجاح");
+    await expect(page.getByRole("dialog").getByText("تم تعديل الرصيد بنجاح.", { exact: true })).toBeVisible();
     await page.getByLabel("إغلاق").click();
     await page.getByRole("button", { name: "تعديل الرصيد" }).click();
     await page.getByLabel("السبب").fill("إعادة محاولة");
@@ -715,8 +719,16 @@ test.describe("AI live support staff and administration", () => {
     }));
     await page.route(`**/api/live-support/staff/conversations/${conversationId}/messages*`, route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: [] }) }));
     await page.route(`**/api/live-support/staff/conversations/${conversationId}/actions`, route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: [] }) }));
-    await page.route(`**/api/live-support/staff/conversations/${conversationId}/students/search*`, route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: [{ userId: "student-2", fullName: "طالب للربط", maskedPhone: "010******10", studentCode: "ST-2" }] }) }));
-    await page.route(`**/api/live-support/staff/conversations/${conversationId}/student-link`, route => route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { ...unlinkedConversation, linkedStudentUserId: "student-2", version: 4 } }) }));
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/students/search*`, route => {
+      const replacement = new URL(route.request().url()).searchParams.get("query") === "بديل";
+      return route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: [replacement
+        ? { userId: "student-3", fullName: "طالب بديل", maskedPhone: "010******11", studentCode: "ST-3" }
+        : { userId: "student-2", fullName: "طالب للربط", maskedPhone: "010******10", studentCode: "ST-2" }] }) });
+    });
+    await page.route(`**/api/live-support/staff/conversations/${conversationId}/student-link`, route => {
+      const body = route.request().postDataJSON() as { studentUserId: string | null };
+      return route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { ...unlinkedConversation, linkedStudentUserId: body.studentUserId, version: body.studentUserId ? 4 : 5 } }) });
+    });
     await page.goto("http://staff.localhost:3000/assistant/live-support");
     await page.getByText("ربط حساب").first().click();
     await page.getByPlaceholder("الاسم، الهاتف، أو الكود").fill("طالب");
@@ -724,6 +736,15 @@ test.describe("AI live support staff and administration", () => {
     await expect(page.getByText("طالب للربط")).toBeVisible();
     page.once('dialog', dialog => dialog.accept("الزائر أكد ملكية الحساب"));
     await page.getByText("طالب للربط").click();
+    await expect(page.getByRole("button", { name: "الملف الشخصي" })).toBeVisible();
+    page.once('dialog', dialog => dialog.accept("إلغاء الربط للتصحيح"));
+    await page.getByRole("button", { name: "إلغاء الربط" }).click();
+    await expect(page.getByText("ربط طالب يدويًا")).toBeVisible();
+    await page.getByPlaceholder("الاسم، الهاتف، أو الكود").fill("بديل");
+    await page.getByRole("button", { name: "بحث" }).click();
+    await expect(page.getByText("طالب بديل")).toBeVisible();
+    page.once('dialog', dialog => dialog.accept("استبدال الربط"));
+    await page.getByText("طالب بديل").click();
     await expect(page.getByRole("button", { name: "الملف الشخصي" })).toBeVisible();
   });
 
@@ -755,6 +776,66 @@ test.describe("AI live support staff and administration", () => {
     await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ id: 'staff-1', fullName: 'موظف', phone: '01000000000', roles: ['Staff'], permissions: [], profileComplete: true, allowedDomains: ['admin'] })));
     await page.reload();
     await expect(page.getByRole('heading', { name: 'غير مصرح بالدخول' })).toBeVisible();
+  });
+
+  test("admin AI activity exposes loading, recoverable error, empty, and redacted evidence states", async ({ page }) => {
+    await mockAdminConfiguration(page);
+    await page.route("**/api/live-support/admin/ai/stats*", route => route.fulfill({
+      contentType: "application/json", headers: getHeaders(route),
+      body: JSON.stringify({ success: true, data: { activeConversations: 0, resolvedIssues: 0, handoffs: 0, totalMessagesSent: 0, successfulActions: 0 } })
+    }));
+    await page.route("**/api/live-support/admin/ai/active-conversations", route => route.fulfill({
+      contentType: "application/json", headers: getHeaders(route),
+      body: JSON.stringify({ success: true, data: [] })
+    }));
+
+    let evidenceAttempts = 0;
+    await page.route("**/api/live-support/admin/ai/evidence*", async route => {
+      evidenceAttempts += 1;
+      if (evidenceAttempts === 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return route.fulfill({ status: 503, contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ message: "تعذر تحميل سجل الأدلة." }) });
+      }
+      return route.fulfill({
+        contentType: "application/json", headers: getHeaders(route),
+        body: JSON.stringify({ success: true, data: { items: [], nextCursor: undefined } })
+      });
+    });
+
+    await page.goto("http://admin.localhost:3000/admin/live-support/ai");
+    await page.getByRole("tab", { name: "الإحصائيات والأدلة" }).click();
+    await expect(page.getByRole("heading", { name: "إحصائيات أداء المساعد الذكي" })).toBeVisible();
+    await expect(page.getByLabel("جارٍ التحميل").first()).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText("تعذر تحميل سجل الأدلة.");
+    await expect(page.getByRole("button", { name: "إعادة المحاولة" })).toBeVisible();
+    await page.getByRole("button", { name: "إعادة المحاولة" }).click();
+    await expect(page.getByText("لا يوجد نشاط")).toBeVisible();
+
+    // The evidence contract exposes identifiers/status only; protected values never enter the rendered DOM.
+    expect(await page.locator("body").innerText()).not.toMatch(/password|accessToken|verificationAnswer|lookupValue/i);
+  });
+
+  test("admin AI disabled policy exposes versioned re-enable control", async ({ page }) => {
+    await page.route("**/api/live-support/admin/ai/config", route => route.fulfill({
+      contentType: "application/json", headers: getHeaders(route),
+      body: JSON.stringify({ success: true, data: {
+        draft: null,
+        published: { id: "pub-policy-disabled", versionNumber: 3, status: "Published", isEnabled: false, systemInstructions: "تعليمات", readableDataKeys: [], actionKeys: [], lookupKeys: [], verificationQuestionKeys: ["profile.full_name"], verificationRequiredCorrect: 1, verificationMaxAttempts: 3, pendingActionExpirySeconds: 300, inactivityMinutes: 30, inactivityWarningGraceSeconds: 120, version: 8 },
+        catalogs: { readableData: [], actions: [], lookupKeys: [], verificationQuestions: [{ key: "profile.full_name", label: "الاسم الكامل", description: "الاسم" }] }
+      } })
+    }));
+    let enableCalls = 0;
+    await page.route("**/api/live-support/admin/ai/enable", route => {
+      enableCalls += 1;
+      return route.fulfill({ contentType: "application/json", headers: getHeaders(route), body: JSON.stringify({ success: true, data: { id: "pub-policy-disabled", versionNumber: 3, status: "Published", isEnabled: true, systemInstructions: "تعليمات", readableDataKeys: [], actionKeys: [], lookupKeys: [], verificationQuestionKeys: ["profile.full_name"], verificationRequiredCorrect: 1, verificationMaxAttempts: 3, pendingActionExpirySeconds: 300, inactivityMinutes: 30, inactivityWarningGraceSeconds: 120, version: 9 } }) });
+    });
+
+    await page.goto("http://admin.localhost:3000/admin/live-support/ai");
+    await expect(page.getByText("متوقف — الإصدار 3")).toBeVisible();
+    await expect(page.getByRole("button", { name: "تشغيل وتفعيل المساعد" })).toBeEnabled();
+    await page.getByRole("button", { name: "تشغيل وتفعيل المساعد" }).click();
+    await expect(page.getByRole("status")).toContainText("تم تشغيل وتفعيل المساعد الذكي بنجاح");
+    expect(enableCalls).toBe(1);
   });
 
   test("admin intervention is explicit and audited through the server operation", async ({ page }) => {

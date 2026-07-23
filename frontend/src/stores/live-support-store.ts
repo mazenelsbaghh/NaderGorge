@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { removeConversationDraft, updateConversationDraft } from '@/lib/conversation-drafts';
 
 interface LiveSupportClientState {
   selectedConversationId?: string;
@@ -23,12 +24,8 @@ export const useLiveSupportStore = create<LiveSupportClientState>((set, get) => 
   lastSequenceByConversation: {},
   ownershipLost: {},
   selectConversation: (selectedConversationId) => set({ selectedConversationId }),
-  setDraft: (conversationId, draft) => set((state) => ({ drafts: { ...state.drafts, [conversationId]: draft } })),
-  clearDraft: (conversationId) => set((state) => {
-    const drafts = { ...state.drafts };
-    delete drafts[conversationId];
-    return { drafts };
-  }),
+  setDraft: (conversationId, draft) => set((state) => ({ drafts: updateConversationDraft(state.drafts, conversationId, draft) })),
+  clearDraft: (conversationId) => set((state) => ({ drafts: removeConversationDraft(state.drafts, conversationId) })),
   markEventProcessed: (eventId) => {
     if (get().processedEventIds.includes(eventId)) return false;
     set((state) => ({ processedEventIds: [...state.processedEventIds, eventId].slice(-MAX_PROCESSED_EVENT_IDS) }));

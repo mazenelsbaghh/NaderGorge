@@ -13,6 +13,8 @@ public record AdminRechargeRequestDto
     public string WalletLabel { get; set; } = string.Empty;
     public string WalletPhoneNumber { get; set; } = string.Empty;
     public decimal Amount { get; set; }
+    public Guid? TeacherId { get; set; }
+    public string? TeacherName { get; set; }
     public string SenderPhoneNumber { get; set; } = string.Empty;
     public string? ScreenshotUrl { get; set; }
     public RechargeRequestStatus Status { get; set; }

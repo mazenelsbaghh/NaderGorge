@@ -1,4 +1,6 @@
 using System.Data;
+using System.Collections.Generic;
+using System.Text.Json;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
@@ -14,6 +16,7 @@ public record TrackWatchProgressCommand(
     Guid SessionId,
     long ProgressSequence,
     double SecondsWatched,
+    double PlaybackRate,
     int TotalDurationSeconds
 ) : IRequest<ApiResponse<WatchProgressDto>>;
 
@@ -48,6 +51,8 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
 
         if (request.ProgressSequence <= 0)
             return Fail("Progress sequence required", "PROGRESS_SEQUENCE_REQUIRED");
+        if (!IsSupportedPlaybackRate(request.PlaybackRate))
+            return Fail("Invalid playback rate", "PLAYBACK_RATE_INVALID");
 
         await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
@@ -73,9 +78,12 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             .FirstOrDefaultAsync(v => v.UserId == request.UserId && v.LessonVideoId == request.LessonVideoId, ct);
 
         var settings = await _cachedPlatformSettingsReader.GetAsync(ct);
+        var providerKey = VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny ? PlatformSettingKeys.BunnyWatchThresholdPercentage : VideoProviders.Normalize(video.Provider) == VideoProviders.YouTube ? PlatformSettingKeys.YouTubeWatchThresholdPercentage : PlatformSettingKeys.VideoWatchThresholdPercentage;
+        var providerThreshold = await _db.PlatformSettings.Where(x => x.Key == providerKey).Select(x => x.Value).FirstOrDefaultAsync(ct);
+        var thresholdPercentage = int.TryParse(providerThreshold, out var configuredThreshold) ? Math.Clamp(configuredThreshold, 1, 100) : settings.VideoWatchThresholdPercentage;
         var thresholdSeconds = VideoWatchProgressCalculator.ResolveThresholdSeconds(
             request.TotalDurationSeconds,
-            settings.VideoWatchThresholdPercentage);
+            thresholdPercentage);
         var maxLimit = watchEvent?.CustomMaxWatchCount ?? video.MaxWatchCount;
 
         if (request.ProgressSequence <= session.LastProgressSequence)
@@ -182,11 +190,12 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
         if (context.IsLocked || context.Session.HasRegisteredView)
             return false;
 
-        var acceptedSeconds = VideoWatchProgressCalculator.ResolveAcceptedSeconds(
+        var actualAcceptedSeconds = VideoWatchProgressCalculator.ResolveAcceptedSeconds(
             context.Request.SecondsWatched,
             context.Now,
             context.WatchEvent,
             context.IsNewWatchEvent);
+        var acceptedSeconds = (int)Math.Ceiling(actualAcceptedSeconds * context.Request.PlaybackRate);
         var boundedSeconds = VideoWatchProgressCalculator.CapAtNextViewBoundary(
             context.WatchEvent,
             acceptedSeconds,
@@ -196,9 +205,18 @@ public class TrackWatchProgressCommandHandler : IRequestHandler<TrackWatchProgre
             boundedSeconds,
             context.ThresholdSeconds,
             context.MaxLimit);
+        context.WatchEvent.ActualWatchedSeconds += boundedSeconds / (decimal)context.Request.PlaybackRate;
+        context.WatchEvent.LastPlaybackRate = (decimal)context.Request.PlaybackRate;
+        var breakdown = JsonSerializer.Deserialize<Dictionary<string, decimal>>(context.WatchEvent.PlaybackRateBreakdownJson) ?? new();
+        var rateKey = context.Request.PlaybackRate.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        breakdown[rateKey] = breakdown.GetValueOrDefault(rateKey) + boundedSeconds / (decimal)context.Request.PlaybackRate;
+        context.WatchEvent.PlaybackRateBreakdownJson = JsonSerializer.Serialize(breakdown);
         context.Session.HasRegisteredView = progress.ViewRegistered;
         return progress.ViewRegistered;
     }
+
+    private static bool IsSupportedPlaybackRate(double playbackRate) =>
+        playbackRate is 0.5 or 1 or 1.5 or 2;
 
     private static void RenewSession(VideoPlaybackSession session, long progressSequence, DateTime now)
     {

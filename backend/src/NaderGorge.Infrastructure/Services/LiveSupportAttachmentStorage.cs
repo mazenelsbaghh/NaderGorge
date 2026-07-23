@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services;
@@ -14,16 +15,24 @@ public sealed class LiveSupportAttachmentStorage : ILiveSupportAttachmentStorage
 
     public async Task<LiveSupportStoredAttachment> SaveAsync(Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct)
     {
-        var safeName = Path.GetFileName(fileName);
+        if (sizeBytes is <= 0 or > 10 * 1024 * 1024)
+        {
+            throw new InvalidUploadContentException("Attachment size is outside the allowed range.");
+        }
+
+        await using var memory = new MemoryStream();
+        await content.CopyToAsync(memory, ct);
+        var bytes = memory.ToArray();
+        var validation = UploadFileSafety.Validate(bytes, fileName, contentType, SafeUploadKind.PrivateAttachment);
         var path = $"{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}";
         var fullPath = Resolve(path);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         await using var output = File.Create(fullPath);
         using var sha = SHA256.Create();
         await using var hashing = new CryptoStream(output, sha, CryptoStreamMode.Write);
-        await content.CopyToAsync(hashing, ct);
+        await hashing.WriteAsync(bytes, ct);
         await hashing.FlushFinalBlockAsync(ct);
-        return new(path, safeName, contentType, sizeBytes, Convert.ToHexString(sha.Hash!));
+        return new(path, validation.DisplayFileName, validation.ContentType, bytes.LongLength, Convert.ToHexString(sha.Hash!));
     }
 
     public Task<Stream> OpenReadAsync(string storagePath, CancellationToken ct) => Task.FromResult<Stream>(File.OpenRead(Resolve(storagePath)));

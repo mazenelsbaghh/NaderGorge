@@ -106,6 +106,7 @@ public class VideoSessionController : ControllerBase
             request.SessionId,
             request.ProgressSequence,
             request.SecondsWatched,
+            request.PlaybackRate,
             request.TotalDurationSeconds
         );
         var result = await _mediator.Send(command, ct);
@@ -119,12 +120,12 @@ public class VideoSessionController : ControllerBase
 
     [HttpPost("{lessonVideoId}/request-extra")]
     [Idempotent]
-    public async Task<IActionResult> RequestExtraWatch(Guid lessonVideoId, CancellationToken ct)
+    public async Task<IActionResult> RequestExtraWatch(Guid lessonVideoId, [FromBody] CreateExtraWatchRequest request, CancellationToken ct)
     {
         var userIdString = User.FindFirst("id")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out var userId)) return Unauthorized();
 
-        var result = await _mediator.Send(new CreateExtraWatchRequestCommand(lessonVideoId, userId), ct);
+        var result = await _mediator.Send(new CreateExtraWatchRequestCommand(lessonVideoId, userId, request.Reason), ct);
         if (result.Success) return Ok(result);
         if (result.Errors?.Contains("REQUEST_LIMIT_REACHED") == true) return BadRequest(result);
         if (result.Errors?.Contains("VIDEO_NOT_FOUND") == true) return NotFound(result);
@@ -155,12 +156,18 @@ public class TrackProgressRequest
     public Guid SessionId { get; set; }
     public long ProgressSequence { get; set; }
     public double SecondsWatched { get; set; }
+    public double PlaybackRate { get; set; } = 1;
     public int TotalDurationSeconds { get; set; }
 }
 
 public class CreateVideoSessionRequest
 {
     public Guid LessonVideoId { get; set; }
+}
+
+public class CreateExtraWatchRequest
+{
+    public string Reason { get; set; } = string.Empty;
 }
 
 public record VideoEmbedMaterialResponse(string Token, string Key);

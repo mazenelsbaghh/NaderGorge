@@ -35,6 +35,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { getDistrictsForGovernorate } from '@/data/governorate-districts';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { getEducationStageLabel, getGradeLevelLabel, getStudyTrackLabel } from '@/lib/academic-labels';
 
 const EGYPTIAN_GOVERNORATES = [
   'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'البحيرة', 'الفيوم',
@@ -506,14 +507,14 @@ export function RegistrationForm() {
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">المسار الحالي</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                  {formData.educationStage === 'Secondary' ? 'ثانوية' : formData.educationStage === 'Baccalaureate' ? 'بكالوريا' : 'المرحلة الدراسية'}
+                  {formData.educationStage ? getEducationStageLabel(formData.educationStage) : 'المرحلة الدراسية'}
                 </span>
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                  {formData.gradeLevel || 'الصف الدراسي'}
+                  {formData.gradeLevel ? getGradeLevelLabel(formData.gradeLevel) : 'الصف الدراسي'}
                 </span>
                 {requiresTrack(formData.gradeLevel) ? (
                   <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                    {formData.studyTrack || 'الشعبة / التخصص'}
+                    {formData.studyTrack ? getStudyTrackLabel(formData.studyTrack) : 'الشعبة / التخصص'}
                   </span>
                 ) : null}
               </div>

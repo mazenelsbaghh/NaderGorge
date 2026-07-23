@@ -122,6 +122,7 @@ test('processEvaluateEssayJob runs successfully with Gemini AI mock and triggers
     id: 'essay-job-456',
     data: {
       essaySubmissionId: 'sub-789',
+      questionText: 'ما المقصود بالتشبيه؟',
       answerText: 'إجابة الطالب',
       expectedAnswer: 'الإجابة النموذجية'
     },

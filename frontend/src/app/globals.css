@@ -2,6 +2,31 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+:root {
+  --font-arabic-fallback: "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-latin-fallback: "Segoe UI", Arial, sans-serif;
+}
+
+html,
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+/* Every authenticated workspace has a reliable, visible vertical scroll area.
+   Extra bottom padding keeps the final controls above mobile navigation and iOS safe areas. */
+.app-shell-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-block: 1rem 9rem;
+  scrollbar-gutter: stable;
+}
+
+@media (min-width: 1024px) {
+  .app-shell-scroll {
+    scroll-padding-block-end: 2rem;
+  }
+}
+
 @keyframes app-fade-in {
   from {
     opacity: 0;
@@ -37,7 +62,7 @@ html.theme-switching *::after {
 }
 
 @media (pointer: coarse) {
-  :where(button, [role="button"], input[type="checkbox"], input[type="radio"]) {
+  :where(a, button, select, summary, [role="button"], input[type="checkbox"], input[type="radio"]) {
     min-height: 44px;
     min-width: 44px;
   }
@@ -47,9 +72,9 @@ html.theme-switching *::after {
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-tajawal, var(--font-montserrat), system-ui, sans-serif);
+  --font-sans: var(--font-tajawal, "Tajawal", "Segoe UI", Tahoma, Arial, sans-serif);
   --font-mono: var(--font-geist-mono, monospace);
-  --font-heading: var(--font-tajawal, var(--font-montserrat), system-ui, sans-serif);
+  --font-heading: var(--font-tajawal, "Tajawal", "Segoe UI", Tahoma, Arial, sans-serif);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -151,35 +176,58 @@ html.theme-switching *::after {
   --sidebar-border: rgba(10, 29, 61, 0.12);
   --sidebar-ring: #0A1D3D;
   /* Landing-specific tokens */
-  --landing-bg: #ffffff;
-  --landing-bg-soft: #f9f9fb;
+  --landing-bg: #f7fafb;
+  --landing-bg-soft: #edf4f5;
   --landing-card: rgba(255, 255, 255, 0.95);
-  --landing-card-strong: #eef1f4;
+  --landing-card-strong: #eaf2f3;
   --landing-ink: #0A1D3D;
   --landing-muted: #2E3A47;
-  --landing-accent: #0A1D3D;
-  --landing-accent-strong: #021f45;
+  --landing-accent: #0E8F8F;
+  --landing-accent-strong: #087575;
   --landing-accent-foreground: #ffffff;
   --landing-line: rgba(10, 29, 61, 0.15);
   --landing-line-strong: rgba(10, 29, 61, 0.08);
+  --landing-teal-soft: #dff3f2;
+  --landing-gold-soft: #f8edcf;
+  --landing-navy-soft: #e7edf5;
+  --landing-teachers-surface: radial-gradient(circle at 92% 12%, rgba(14, 143, 143, 0.14), transparent 20rem), linear-gradient(135deg, #f3f9f9 0%, #f8fbfc 54%, #edf5f8 100%);
+  --landing-stories-surface: radial-gradient(circle at 8% 10%, rgba(212, 160, 23, 0.16), transparent 17rem), linear-gradient(135deg, #fffdf7 0%, #fbfaf5 55%, #f4f8f8 100%);
+  --landing-courses-surface: radial-gradient(circle at 88% 18%, rgba(10, 29, 61, 0.1), transparent 22rem), radial-gradient(circle at 12% 90%, rgba(14, 143, 143, 0.12), transparent 17rem), #f3f7fa;
+  --landing-marker-bg: #e8f6f5;
+  --landing-marker-text: #075f5f;
+  --landing-marker-border: rgba(14, 143, 143, 0.25);
+  --landing-marker-dot: #D4A017;
+  --public-canvas: #f6f8fb;
+  --public-surface: #ffffff;
+  --public-surface-muted: #edf3f5;
+  --public-text: #0A1D3D;
+  --public-text-muted: #2E3A47;
+  --public-border: #d5e0e6;
+  --public-primary: #0A1D3D;
+  --public-primary-hover: #021f45;
+  --public-accent: #0E8F8F;
+  --public-accent-hover: #087575;
+  --public-achievement: #8A6500;
 
   /* Admin System Tokens */
-  --admin-bg: #ffffff;
-  --admin-bg-overlay: rgba(255, 255, 255, 0.9);
-  --admin-dot: rgba(10, 29, 61, 0.12);
-  --admin-sidebar: #fcfcfc;
+  --admin-bg: #f5f8fb;
+  --admin-bg-overlay: rgba(245, 248, 251, 0.94);
+  --admin-dot: rgba(14, 143, 143, 0.16);
+  --admin-sidebar: #eef5f5;
   --admin-text: #0A1D3D;
   --admin-muted: #2E3A47;
   --admin-primary: #0A1D3D;
   --admin-primary-strong: #021f45;
   --admin-primary-contrast: #ffffff;
-  --admin-hover: #eef1f4;
-  --admin-card: rgba(255, 255, 255, 0.95);
-  --admin-card-soft: rgba(250, 250, 250, 0.96);
-  --admin-card-strong: rgba(240, 240, 240, 0.96);
+  --admin-hover: #e1f0f0;
+  --admin-card: rgba(255, 255, 255, 0.97);
+  --admin-card-soft: #f1f6f8;
+  --admin-card-strong: #e5eef2;
   --admin-border: rgba(10, 29, 61, 0.15);
   --admin-search: rgba(255, 255, 255, 0.78);
   --admin-footer: #0E8F8F;
+  --admin-accent: #0E8F8F;
+  --admin-accent-soft: #dff3f2;
   --admin-shadow: rgba(10, 29, 61, 0.08);
   --admin-primary-15: rgba(10, 29, 61, 0.12);
   --admin-success: #16a34a;
@@ -249,6 +297,27 @@ html.theme-switching *::after {
   --landing-accent-foreground: oklch(0.16 0.015 240);
   --landing-line: oklch(0.40 0.04 240 / 18%);
   --landing-line-strong: oklch(0.50 0.06 240 / 12%);
+  --landing-teal-soft: oklch(0.26 0.045 190);
+  --landing-gold-soft: oklch(0.28 0.045 85);
+  --landing-navy-soft: oklch(0.27 0.035 245);
+  --landing-teachers-surface: radial-gradient(circle at 92% 12%, oklch(0.56 0.11 190 / 18%), transparent 20rem), linear-gradient(135deg, oklch(0.19 0.018 240) 0%, oklch(0.17 0.018 240) 54%, oklch(0.21 0.025 215) 100%);
+  --landing-stories-surface: radial-gradient(circle at 8% 10%, oklch(0.70 0.13 85 / 15%), transparent 17rem), linear-gradient(135deg, oklch(0.19 0.018 240) 0%, oklch(0.17 0.018 240) 55%, oklch(0.20 0.022 210) 100%);
+  --landing-courses-surface: radial-gradient(circle at 88% 18%, oklch(0.64 0.09 245 / 15%), transparent 22rem), radial-gradient(circle at 12% 90%, oklch(0.56 0.11 190 / 14%), transparent 17rem), oklch(0.18 0.02 235);
+  --landing-marker-bg: oklch(0.25 0.045 190);
+  --landing-marker-text: oklch(0.87 0.08 190);
+  --landing-marker-border: oklch(0.56 0.11 190 / 48%);
+  --landing-marker-dot: oklch(0.76 0.14 85);
+  --public-canvas: oklch(0.16 0.018 240);
+  --public-surface: oklch(0.21 0.02 240);
+  --public-surface-muted: oklch(0.25 0.024 235);
+  --public-text: oklch(0.94 0.015 240);
+  --public-text-muted: oklch(0.78 0.025 225);
+  --public-border: oklch(0.42 0.04 235 / 65%);
+  --public-primary: oklch(0.86 0.04 230);
+  --public-primary-hover: oklch(0.94 0.015 240);
+  --public-accent: oklch(0.76 0.12 190);
+  --public-accent-hover: oklch(0.84 0.1 190);
+  --public-achievement: oklch(0.80 0.14 85);
 
   /* Admin System Tokens - Dark */
   --admin-bg: #111115;
@@ -267,6 +336,8 @@ html.theme-switching *::after {
   --admin-border: rgba(14,143,143,0.2);
   --admin-search: rgba(12,12,15,0.85);
   --admin-footer: #0E8F8F;
+  --admin-accent: #0E8F8F;
+  --admin-accent-soft: oklch(0.25 0.045 190);
   --admin-shadow: rgba(10,29,61,0.5);
   --admin-primary-15: rgba(14,143,143,0.15);
   --admin-success: oklch(0.62 0.15 145);
@@ -427,13 +498,22 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
 @layer components {
   .landing-page {
     position: relative;
-    min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
+    overflow-y: visible;
+    touch-action: pan-y;
     background:
-      radial-gradient(circle at 12% 12%, rgba(14, 143, 143, 0.08), transparent 28%),
-      radial-gradient(circle at 78% 20%, var(--landing-line-strong), transparent 30%),
+      radial-gradient(circle at 10% 5%, rgba(14, 143, 143, 0.12), transparent 24%),
+      radial-gradient(circle at 94% 28%, rgba(212, 160, 23, 0.1), transparent 21%),
       linear-gradient(180deg, var(--landing-bg) 0%, var(--landing-bg-soft) 100%);
     color: var(--landing-ink);
+  }
+
+  html:has(.landing-page),
+  body:has(.landing-page) {
+    height: auto;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
   }
 
   .student-app-background {
@@ -454,8 +534,6 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
     position: relative;
     overflow: hidden;
     background:
-      radial-gradient(circle at 12% 12%, rgba(14, 143, 143, 0.08), transparent 28%),
-      radial-gradient(circle at 78% 20%, var(--landing-line-strong), transparent 30%),
       linear-gradient(180deg, var(--landing-bg) 0%, var(--landing-bg-soft) 100%);
     border-radius: clamp(1rem, 1.4vw, 1.25rem);
     color: var(--landing-ink);
@@ -481,6 +559,71 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
     border-radius: 12px;
   }
 
+  .landing-section--teachers {
+    background: var(--landing-teachers-surface);
+  }
+
+  .landing-section--stories {
+    background: var(--landing-stories-surface);
+  }
+
+  .landing-section--courses {
+    background: var(--landing-courses-surface);
+  }
+
+  .landing-journey-marker {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    border: 1px solid var(--landing-marker-border);
+    border-radius: 9999px;
+    background: var(--landing-marker-bg);
+    padding: 0.5rem 0.75rem;
+    color: var(--landing-marker-text);
+    font-size: 0.8125rem;
+    font-weight: 800;
+  }
+
+  .landing-journey-marker::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--landing-marker-dot);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--landing-marker-dot) 18%, transparent);
+  }
+
+  /* Live support is a dense staff workspace. These aliases keep its legacy
+     slate/cyan utilities aligned with the platform tokens while it migrates. */
+  .live-support-theme :is([class~="bg-white"], [class~="bg-slate-50"], [class~="bg-slate-100"]) {
+    background-color: var(--admin-card);
+  }
+
+  .live-support-theme :is([class~="border-slate-100"], [class~="border-slate-200"], [class~="border-slate-300"]) {
+    border-color: var(--admin-border);
+  }
+
+  .live-support-theme :is([class~="text-slate-950"], [class~="text-slate-900"], [class~="text-slate-800"], [class~="text-slate-700"]) {
+    color: var(--admin-text);
+  }
+
+  .live-support-theme :is([class~="text-slate-600"], [class~="text-slate-500"], [class~="text-slate-400"]) {
+    color: var(--admin-muted);
+  }
+
+  .live-support-theme :is([class~="bg-cyan-50"], [class~="hover:bg-cyan-50"]:hover) {
+    background-color: var(--admin-accent-soft);
+  }
+
+  .live-support-theme :is([class~="text-cyan-700"], [class~="text-cyan-800"], [class~="border-cyan-200"], [class~="border-cyan-700"], [class~="focus:border-cyan-700"]) {
+    color: var(--admin-accent);
+    border-color: var(--admin-accent);
+  }
+
+  .live-support-theme :is([class~="bg-slate-900"], [class~="hover:bg-slate-800"]:hover) {
+    background-color: var(--admin-primary-strong);
+  }
+
   .landing-chip {
     display: inline-flex;
     width: fit-content;
@@ -501,7 +644,7 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
     justify-content: center;
     gap: 0.625rem;
     border-radius: 0.5rem;
-    background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 85%, black));
+    background: #0E8F8F;
     padding: 0.75rem 1.5rem;
     color: var(--landing-accent-foreground);
     font-weight: 900;
@@ -510,7 +653,7 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
 
   .landing-primary-button:hover {
     transform: translateY(-1px);
-    background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 75%, black));
+    background: #0A7474;
   }
 
   .landing-secondary-button {
@@ -596,6 +739,108 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
   .animate-testimonials-vertical-loop {
     animation: testimonials-vertical-loop 18s linear infinite;
     transform: translateZ(0);
+  }
+
+  .teacher-route-shell {
+    position: relative;
+    padding-block: 1.25rem;
+  }
+
+  .teacher-route-line {
+    position: absolute;
+    inset-inline: 1rem;
+    top: 0;
+    height: 2px;
+    overflow: hidden;
+    background: var(--landing-line-strong);
+  }
+
+  .teacher-route-line span {
+    display: block;
+    width: 28%;
+    height: 100%;
+    background: #0E8F8F;
+    animation: teacher-route-progress 4.8s ease-in-out infinite;
+  }
+
+  .teacher-marquee {
+    direction: ltr;
+    overflow: hidden;
+    mask-image: linear-gradient(to left, transparent, black 7%, black 93%, transparent);
+  }
+
+  .teacher-marquee-track {
+    display: flex;
+    width: max-content;
+    gap: 1.25rem;
+    padding: 0.5rem 0;
+    animation: teacher-marquee 32s linear infinite;
+  }
+
+  .teacher-marquee-group {
+    display: flex;
+    gap: 1.25rem;
+  }
+
+  .teacher-marquee:hover .teacher-marquee-track,
+  .teacher-marquee:focus-within .teacher-marquee-track {
+    animation-play-state: paused;
+  }
+
+  .teacher-showcase-card {
+    direction: rtl;
+    width: min(24rem, 82vw);
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: var(--landing-card);
+    box-shadow: 0 8px 16px rgba(10, 29, 61, 0.1);
+  }
+
+  .footer-route-grid {
+    position: absolute;
+    inset: 1.5rem;
+    background-image: radial-gradient(circle, rgba(155, 228, 228, 0.3) 1px, transparent 1.2px);
+    background-position: center;
+    background-size: 1rem 1rem;
+    mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+    pointer-events: none;
+  }
+
+  .footer-step-line {
+    position: absolute;
+    top: 5.5rem;
+    bottom: 4.5rem;
+    right: 3.1rem;
+    width: 1px;
+    background: linear-gradient(to bottom, #38BDBD, rgba(56, 189, 189, 0.05));
+  }
+
+  @media (min-width: 640px) {
+    .footer-step-line {
+      right: 4.35rem;
+    }
+  }
+
+  @keyframes teacher-marquee {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(calc(-50% - 0.625rem), 0, 0); }
+  }
+
+  @keyframes teacher-route-progress {
+    0%, 100% { transform: translateX(-120%); }
+    50% { transform: translateX(400%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .teacher-route-line span,
+    .teacher-marquee-track {
+      animation: none;
+    }
+
+    .teacher-marquee {
+      overflow-x: auto;
+      mask-image: none;
+    }
   }
 
   /* ═══════════════════════════════════════════
@@ -769,6 +1014,209 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
 
   .admin-btn-icon:active {
     box-shadow: none;
+  }
+
+  /* ═══════════════════════════════════════════
+     Massar HR — shared employee/admin vocabulary
+     ═══════════════════════════════════════════ */
+  .hr-theme {
+    color: var(--admin-text);
+  }
+
+  .hr-page {
+    margin-inline: auto;
+    min-height: 100dvh;
+    width: 100%;
+    max-width: 72rem;
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .hr-page--compact {
+    max-width: 64rem;
+  }
+
+  .hr-page-header {
+    margin-bottom: 1.75rem;
+    border-bottom: 1px solid var(--admin-border);
+    padding-bottom: 1.25rem;
+  }
+
+  .hr-brand-mark {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.625rem;
+    color: var(--admin-accent);
+    font-size: 0.8125rem;
+    font-weight: 900;
+  }
+
+  .hr-brand-mark::before {
+    content: "";
+    width: 1.5rem;
+    height: 0.1875rem;
+    border-radius: 9999px;
+    background: var(--admin-accent);
+    box-shadow: 0.5rem 0 0 color-mix(in srgb, var(--admin-accent) 45%, transparent);
+  }
+
+  .hr-page-title {
+    margin-top: 0.375rem;
+    color: var(--admin-text);
+    font-size: 1.75rem;
+    font-weight: 900;
+    line-height: 1.25;
+  }
+
+  .hr-page-description {
+    margin-top: 0.5rem;
+    max-width: 45rem;
+    color: var(--admin-muted);
+    font-size: 0.9375rem;
+    line-height: 1.75;
+  }
+
+  .hr-panel {
+    border: 1px solid var(--admin-border);
+    border-radius: 1rem;
+    background: var(--admin-card);
+    padding: 1.25rem;
+    box-shadow: 0 8px 24px var(--admin-shadow);
+  }
+
+  .hr-panel--accent {
+    border-top: 3px solid var(--admin-accent);
+  }
+
+  .hr-soft-panel {
+    border-radius: 0.75rem;
+    background: var(--admin-card-soft);
+  }
+
+  .hr-icon {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    background: var(--admin-accent-soft);
+    color: var(--admin-accent);
+  }
+
+  .hr-service-link {
+    position: relative;
+    min-height: 9.5rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 1rem;
+    background: var(--admin-card);
+    padding: 1.25rem;
+    transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  }
+
+  .hr-service-link:hover {
+    transform: translateY(-2px);
+    border-color: var(--admin-accent);
+    background: color-mix(in srgb, var(--admin-card) 94%, var(--admin-accent-soft));
+  }
+
+  .hr-service-link:focus-visible {
+    outline: 3px solid var(--admin-primary-15);
+    outline-offset: 3px;
+  }
+
+  .hr-empty,
+  .hr-loading {
+    border: 1px dashed var(--admin-border);
+    border-radius: 1rem;
+    background: var(--admin-card);
+    padding: 3rem 1.25rem;
+    color: var(--admin-muted);
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  .hr-loading {
+    border-style: solid;
+  }
+
+  .hr-status {
+    display: inline-flex;
+    min-height: 1.75rem;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 9999px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  .hr-status::before {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 9999px;
+    background: currentColor;
+  }
+
+  .hr-status--neutral {
+    background: var(--admin-card-strong);
+    color: var(--admin-muted);
+  }
+
+  .hr-status--info {
+    background: var(--admin-accent-soft);
+    color: var(--admin-accent);
+  }
+
+  .hr-status--success {
+    background: var(--admin-success-10);
+    color: var(--admin-success);
+  }
+
+  .hr-status--warning {
+    background: var(--admin-warning-10);
+    color: var(--admin-warning);
+  }
+
+  .hr-status--danger {
+    background: var(--admin-danger-10);
+    color: var(--admin-danger);
+  }
+
+  .hr-theme .admin-panel {
+    border-radius: 1rem;
+    padding: 1.25rem;
+    box-shadow: 0 8px 24px var(--admin-shadow);
+    backdrop-filter: none;
+  }
+
+  .hr-theme .admin-input,
+  .hr-theme .admin-btn-primary {
+    border-radius: 0.75rem;
+  }
+
+  @media (min-width: 640px) {
+    .hr-page {
+      padding: 2rem 2rem 4rem;
+    }
+
+    .hr-panel,
+    .hr-theme .admin-panel {
+      padding: 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hr-service-link {
+      transition: none;
+    }
+
+    .hr-service-link:hover {
+      transform: none;
+    }
   }
 
   /* ─── Shared Checkbox (HeroUI Port) ─── */

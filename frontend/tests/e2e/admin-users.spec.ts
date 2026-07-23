@@ -7,7 +7,7 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
 
   test.beforeEach(async ({ page }) => {
     // 1. Authenticate as Admin
-    await page.goto('http://admin.localhost:3000/login');
+    await page.goto('http://admin.lvh.me:3000/login');
     await page.fill('input[name="phoneNumber"]', adminPhone);
     await page.fill('input[name="password"]', adminPassword);
     await page.click('text=تذكرني', { force: true });
@@ -23,7 +23,7 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
     page,
   }) => {
     // Navigate to Students Management page
-    await page.goto('http://admin.localhost:3000/admin/students');
+    await page.goto('http://admin.lvh.me:3000/admin/students');
 
     // Verify page loaded
     await expect(page.locator('text=إدارة الطلاب')).toBeVisible();
@@ -44,7 +44,7 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
   });
 
   test('T015: Row expansion metadata inspection', async ({ page }) => {
-    await page.goto('http://admin.localhost:3000/admin/students');
+    await page.goto('http://admin.lvh.me:3000/admin/students');
     await expect(page.locator('text=إدارة الطلاب')).toBeVisible();
 
     // Click on the first row's expand/details button (eye icon or row itself)
@@ -62,6 +62,44 @@ test.describe('US2: Admin Profiles & Deep Search', () => {
       console.warn(
         'No users found to expand. Seed may be empty or filtered out.'
       );
+    }
+  });
+});
+
+test.describe('Phase 1 Admin Route Guard', () => {
+  test('admin guard denies unmapped or unauthorized staff direct URLs', async ({ page, request }) => {
+    const response = await request.post('http://api.lvh.me:5245/api/e2e/clear-devices', {
+      headers: {
+        'X-E2E-Token': process.env.E2E_TEST_TOKEN || 'E2eOnlyTestTokenValue123456789012345',
+      },
+      data: { phoneNumber: '20000000003' },
+    });
+    expect(response.ok()).toBeTruthy();
+
+    await page.goto('http://admin.lvh.me:3000/login');
+    const loginResponse = await request.post('http://api.lvh.me:5245/api/auth/login', {
+      headers: { 'X-App-Surface': 'assistant' },
+      data: {
+        phoneNumber: '20000000003',
+        password: 'password',
+        deviceFingerprint: `phase1-admin-guard-${Date.now()}`,
+      },
+    });
+    expect(loginResponse.ok()).toBeTruthy();
+
+    const loginPayload = await loginResponse.json();
+    const session = loginPayload.data ?? loginPayload;
+    expect(session.accessToken).toBeTruthy();
+    expect(session.user).toBeTruthy();
+
+    await page.evaluate(({ accessToken, user }) => {
+      window.localStorage.setItem('accessToken', accessToken);
+      window.localStorage.setItem('user', JSON.stringify(user));
+    }, session);
+
+    for (const path of ['/admin/finance', '/admin/reports', '/admin/hr', '/admin/operations', '/admin/media']) {
+      await page.goto(`http://admin.lvh.me:3000${path}`);
+      await expect(page).toHaveURL(/\/admin\/unauthorized|\/login/, { timeout: 15000 });
     }
   });
 });

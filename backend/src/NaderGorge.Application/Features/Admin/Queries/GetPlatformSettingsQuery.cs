@@ -24,11 +24,16 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
             .ToListAsync(cancellationToken);
 
         EnsureDefault(settings, PlatformSettingKeys.VideoWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.YouTubeWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage.ToString());
+        EnsureDefault(settings, PlatformSettingKeys.BunnyWatchThresholdPercentage, CachedPlatformSettings.Default.VideoWatchThresholdPercentage.ToString());
         EnsureDefault(settings, PlatformSettingKeys.MaxExtraWatchRequestsPerVideo, CachedPlatformSettings.Default.MaxExtraWatchRequestsPerVideo.ToString());
         EnsureDefault(settings, PlatformSettingKeys.HintPenaltyPercentage, CachedPlatformSettings.Default.HintPenaltyPercentage.ToString("0.##"));
         EnsureDefault(settings, PlatformSettingKeys.PlatformName, CachedPlatformSettings.Default.PlatformName);
         EnsureDefault(settings, PlatformSettingKeys.SupportPhoneNumber, CachedPlatformSettings.Default.SupportPhoneNumber);
         EnsureDefault(settings, PlatformSettingKeys.SupportWhatsAppUrl, CachedPlatformSettings.Default.SupportWhatsAppUrl);
+        EnsureDefault(settings, PlatformSettingKeys.LiveSupportEnabled, CachedPlatformSettings.Default.LiveSupportEnabled.ToString().ToLower());
+        EnsureDefault(settings, PlatformSettingKeys.ShowSupportOutsideAccount, CachedPlatformSettings.Default.ShowSupportOutsideAccount.ToString().ToLower());
+        EnsureDefault(settings, PlatformSettingKeys.GuestSupportWhatsAppNumber, CachedPlatformSettings.Default.GuestSupportWhatsAppNumber);
         EnsureDefault(settings, PlatformSettingKeys.YouTubeChannelUrl, CachedPlatformSettings.Default.YouTubeChannelUrl);
         EnsureDefault(settings, PlatformSettingKeys.TelegramChannelUrl, CachedPlatformSettings.Default.TelegramChannelUrl);
         EnsureDefault(settings, PlatformSettingKeys.MaxActiveDevicesPerStudent, CachedPlatformSettings.Default.MaxActiveDevicesPerStudent.ToString());
@@ -36,6 +41,9 @@ public class GetPlatformSettingsQueryHandler : IRequestHandler<GetPlatformSettin
         EnsureDefault(settings, PlatformSettingKeys.WatermarkOpacity, CachedPlatformSettings.Default.WatermarkOpacity.ToString("0.##"));
         EnsureDefault(settings, PlatformSettingKeys.MaintenanceMode, CachedPlatformSettings.Default.MaintenanceMode.ToString().ToLower());
         EnsureDefault(settings, PlatformSettingKeys.MaintenanceMessage, CachedPlatformSettings.Default.MaintenanceMessage);
+        EnsureDefault(settings, PlatformSettingKeys.ParentAppUpdateRequired, CachedPlatformSettings.Default.ParentAppUpdateRequired.ToString().ToLower());
+        EnsureDefault(settings, PlatformSettingKeys.ParentAppUpdateUrl, CachedPlatformSettings.Default.ParentAppUpdateUrl);
+        EnsureDefault(settings, PlatformSettingKeys.ParentAppUpdateMessage, CachedPlatformSettings.Default.ParentAppUpdateMessage);
         EnsureDefault(settings, PlatformSettingKeys.BunnyStreamStorageRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamStorageRateUsdPerGb.ToString("0.######"));
         EnsureDefault(settings, PlatformSettingKeys.BunnyStreamBandwidthRateUsdPerGb, CachedPlatformSettings.Default.BunnyStreamBandwidthRateUsdPerGb.ToString("0.######"));
         EnsureDefault(settings, PlatformSettingKeys.PlayerShadowTopOpacity, CachedPlatformSettings.Default.PlayerShadowTopOpacity.ToString("0.##"));

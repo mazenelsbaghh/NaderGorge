@@ -4,6 +4,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { generateChapterMindmap } from '../services/geminiService.js';
 import { throwIfCancellationRequested } from '../cancellation.js';
+import { fetchWithTimeout } from '../services/workerFetch.js';
+import { AIProviderExecutionError } from '../services/aiProvider.js';
 
 // Resolve worker root reliably regardless of process.cwd()
 const __filename = fileURLToPath(import.meta.url);
@@ -12,16 +14,74 @@ const workerRoot = path.resolve(__dirname, '../../');
 
 const BACKEND_BASE_URL = process.env.BACKEND_API_URL || 'http://localhost:5245';
 const API_KEY = process.env.API_CALLBACK_SECRET || process.env.AI_CALLBACK_SECRET || '';
+const QUOTA_RETRY_DELAY_MS = 60_000;
+const MAX_CHAPTER_QUOTA_RETRIES = 3;
 
 /** Push progress to backend → SignalR → admin frontend in real time */
 async function notifyProgress(jobId: string, percentage: number, stage: string, status = 'active') {
     try {
-        await fetch(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-progress`, {
+        await fetchWithTimeout(`${BACKEND_BASE_URL}/api/v1/internal/callbacks/ai-progress`, {
             method: 'POST',
+            timeoutMs: 10_000,
+            operation: 'mindmap-progress',
             headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
             body: JSON.stringify({ jobId, progress: percentage, status, message: stage }),
         });
     } catch { /* best-effort */ }
+}
+
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isQuotaError(error: unknown) {
+    return error instanceof AIProviderExecutionError &&
+        (error.primaryCategory === 'quota-exhausted' || error.fallbackCategory === 'quota-exhausted');
+}
+
+async function postMindmapResults(lessonVideoId: string, results: Array<{ title: string; imageUrl: string }>) {
+    if (results.length === 0) return;
+
+    const webhookResponse = await fetchWithTimeout(
+        `${BACKEND_BASE_URL}/api/v1/internal/callbacks/mindmaps-completed`,
+        {
+            method: 'POST',
+            timeoutMs: 10_000,
+            operation: 'mindmaps-callback',
+            headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
+            body: JSON.stringify({ videoId: lessonVideoId, mindmaps: results })
+        }
+    );
+    if (!webhookResponse.ok) {
+        const errBody = await webhookResponse.text();
+        throw new Error(`Webhook failed ${webhookResponse.status}: ${errBody}`);
+    }
+}
+
+async function generateWithQuotaBackoff(
+    chapter: ChapterMindmapInput,
+    lessonVideoId: string,
+    teacherPhotoPaths: string[],
+    job: Job<GenerateMindmapsJobData>,
+) {
+    for (let attempt = 0; attempt <= MAX_CHAPTER_QUOTA_RETRIES; attempt++) {
+        try {
+            return await generateChapterMindmap(chapter, lessonVideoId, teacherPhotoPaths);
+        } catch (error) {
+            if (!isQuotaError(error) || attempt === MAX_CHAPTER_QUOTA_RETRIES) {
+                throw error;
+            }
+
+            const stage = `كوتة الذكاء الاصطناعي اتملت. انتظار دقيقة ثم إعادة محاولة خريطة الفصل ${chapter.order} (${attempt + 1}/${MAX_CHAPTER_QUOTA_RETRIES}).`;
+            console.warn(`[Job ${job.id}] ${stage}`);
+            await job.updateProgress({ percentage: 50, stage });
+            await notifyProgress(`${lessonVideoId}_mindmaps`, 50, stage);
+            await sleep(QUOTA_RETRY_DELAY_MS);
+            await throwIfCancellationRequested(job);
+        }
+    }
+
+    throw new Error(`Failed to generate mindmap for chapter ${chapter.order}.`);
 }
 
 
@@ -69,6 +129,8 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
 
     console.log(`[Job ${job.id}] Starting ${isSingleChapter ? 'Single-Chapter Regen' : 'Batch'} Mindmaps for VideoId: ${lessonVideoId}`);
 
+    const results: Array<{ title: string; imageUrl: string }> = [];
+
     try {
         const prepStage = 'تحضير شخصية المدرس...';
         await job.updateProgress({ percentage: 10, stage: prepStage });
@@ -91,34 +153,6 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
 
         const mindmapsDir = path.resolve(process.cwd(), '../backend/src/NaderGorge.API/wwwroot/mindmaps');
 
-        // Clean up old mindmaps on the first attempt of this job.
-        // Retries (attemptsMade > 0) will reuse previously completed mindmaps.
-        const isFirstAttempt = !job.attemptsMade || job.attemptsMade === 0;
-        if (isFirstAttempt && fs.existsSync(mindmapsDir)) {
-            try {
-                const files = fs.readdirSync(mindmapsDir);
-                if (isSingleChapter) {
-                    const prefix = `${lessonVideoId}_chapter_${singleChapter.order}_`;
-                    for (const file of files) {
-                        if (file.startsWith(prefix)) {
-                            fs.unlinkSync(path.join(mindmapsDir, file));
-                            console.log(`[Job ${job.id}] Cleaned up old single mindmap: ${file}`);
-                        }
-                    }
-                } else {
-                    const prefix = `${lessonVideoId}_chapter_`;
-                    for (const file of files) {
-                        if (file.startsWith(prefix)) {
-                            fs.unlinkSync(path.join(mindmapsDir, file));
-                            console.log(`[Job ${job.id}] Cleaned up old batch mindmap: ${file}`);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error(`[Job ${job.id}] Failed to clean up old mindmaps on first attempt:`, err);
-            }
-        }
-
         const totalChapters = chapters.length;
         if (totalChapters === 0) {
             const noChStage = 'لا توجد فصول لتوليد الصور لها.';
@@ -127,16 +161,16 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
             return { success: true, mindmapsGenerated: 0 };
         }
 
-        const results: Array<{ title: string; imageUrl: string }> = [];
         let completedCount = 0;
 
         for (const chapter of chapters) {
             await throwIfCancellationRequested(job);
 
-            // Check if there is already a generated mindmap for this chapter to avoid redundant API calls on retries
+            // Batch generation keeps old mindmaps and only fills missing chapters.
+            // Single-chapter regeneration always requests a fresh design and only replaces the old file after success.
             let existingUrl: string | undefined = undefined;
             try {
-                if (fs.existsSync(mindmapsDir)) {
+                if (!isSingleChapter && fs.existsSync(mindmapsDir)) {
                     const files = fs.readdirSync(mindmapsDir);
                     const prefix = `${lessonVideoId}_chapter_${chapter.order}_`;
                     const match = files.find(f => f.startsWith(prefix) && (f.endsWith('.webp') || f.endsWith('.png')));
@@ -149,7 +183,7 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
                 console.error(`[Job ${job.id}] Failed to check existing mindmaps:`, err);
             }
 
-            const generatedUrl = existingUrl || await generateChapterMindmap(chapter, lessonVideoId, activeTeacherPhotoLocalPaths);
+            const generatedUrl = existingUrl || await generateWithQuotaBackoff(chapter, lessonVideoId, activeTeacherPhotoLocalPaths, job);
             results.push({ title: chapter.title, imageUrl: generatedUrl });
             completedCount++;
             const progressPct = 10 + Math.floor((completedCount / totalChapters) * 80);
@@ -170,10 +204,12 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
             const singleResult = results[0];
             if (singleResult) {
                 console.log(`[Job ${job.id}] Pushing single mindmap for chapterId: ${chapterId}...`);
-                const webhookResponse = await fetch(
+                const webhookResponse = await fetchWithTimeout(
                     `${BACKEND_BASE_URL}/api/v1/internal/callbacks/single-mindmap-completed`,
                     {
                         method: 'POST',
+                        timeoutMs: 10_000,
+                        operation: 'single-mindmap-callback',
                         headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
                         body: JSON.stringify({ chapterId, imageUrl: singleResult.imageUrl })
                     }
@@ -188,18 +224,7 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
         } else {
             // ── Batch (full video): existing webhook ──────────────────────────
             console.log(`[Job ${job.id}] Pushing ${results.length} batch mindmaps to backend...`);
-            const webhookResponse = await fetch(
-                `${BACKEND_BASE_URL}/api/v1/internal/callbacks/mindmaps-completed`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-Internal-Token': API_KEY },
-                    body: JSON.stringify({ videoId: lessonVideoId, mindmaps: results })
-                }
-            );
-            if (!webhookResponse.ok) {
-                const errBody = await webhookResponse.text();
-                throw new Error(`Webhook failed ${webhookResponse.status}: ${errBody}`);
-            }
+            await postMindmapResults(lessonVideoId, results);
         }
 
         console.log(`[Job ${job.id}] Successfully generated ${results.length} mindmaps.`);
@@ -210,6 +235,14 @@ export async function generateMindmapsProcessor(job: Job<GenerateMindmapsJobData
 
     } catch (error) {
         console.error(`[Job ${job.id}] Failed generating mindmaps:`, error);
+        if (!isSingleChapter && results.length > 0) {
+            try {
+                console.warn(`[Job ${job.id}] Saving ${results.length} partial mindmaps before failing.`);
+                await postMindmapResults(lessonVideoId, results);
+            } catch (partialError) {
+                console.error(`[Job ${job.id}] Failed to save partial mindmaps:`, partialError);
+            }
+        }
         throw error;
     }
 }

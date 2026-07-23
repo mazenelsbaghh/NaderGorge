@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Search, Phone, MessageSquare, Calendar, UserPlus, AlertCircle, RefreshCw } from "lucide-react";
+import { Search, Phone, MessageSquare, Calendar, UserPlus, AlertCircle, RefreshCw, ScanLine } from "lucide-react";
 import { crmService, CrmStudentDto } from "@/services/crm-service";
 import { hrService, EmployeeDto } from "@/services/hr-service";
 import { getWhatsAppLink } from "@/utils/phone-utils";
@@ -8,6 +8,7 @@ import NeumorphButton from "@/components/ui/neumorph-button";
 import { Dropdown } from "@/components/ui/dropdown";
 import toast from "react-hot-toast";
 import { formatDate } from "@/components/admin/admin-utils";
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 interface CrmStudentQueueProps {
   mode: "admin" | "agent";
@@ -68,6 +69,15 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
 
   useEffect(() => {
     void loadStudents();
+  }, [loadStudents]);
+
+  useEffect(() => {
+    const cleanupQueueCache = registerCacheStore('crm:queues', () => {}, () => void loadStudents());
+    const cleanupCallsCache = registerCacheStore('crm:calls', () => {}, () => void loadStudents());
+    return () => {
+      cleanupQueueCache();
+      cleanupCallsCache();
+    };
   }, [loadStudents]);
 
   useEffect(() => {
@@ -215,6 +225,10 @@ export const CrmStudentQueue: React.FC<CrmStudentQueueProps> = ({ mode }) => {
                     <div>
                       <h3 className="text-sm font-black text-[var(--admin-text-strong)]">{student.studentName}</h3>
                       <p className="text-xs text-[var(--admin-muted)] mt-0.5" dir="ltr">{student.studentPhone}</p>
+                      <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-[var(--admin-primary-10)] px-2 py-1 font-mono text-[11px] font-bold text-[var(--admin-primary)]">
+                        <ScanLine className="h-3 w-3" />
+                        رقم المتابعة: {student.parentTrackingCode || 'غير متوفر'}
+                      </p>
                     </div>
 
                     <div className="flex gap-2">

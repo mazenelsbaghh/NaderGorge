@@ -62,6 +62,8 @@ public class StartHomeworkAttemptQueryHandler : IRequestHandler<StartHomeworkAtt
 
         if (homework == null)
             return ApiResponse<StartHomeworkAttemptDto>.Fail("Homework not found.");
+        if (!homework.IsActive)
+            return ApiResponse<StartHomeworkAttemptDto>.Fail("هذا الواجب معطل حالياً.");
 
         // Verify student has access to the lesson
         var hasAccess = await _access.HasAccessToLessonAsync(request.StudentId, homework.LessonId, ct);

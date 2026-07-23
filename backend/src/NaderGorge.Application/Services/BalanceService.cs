@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -55,6 +56,68 @@ public class BalanceService
         return await AddCredit(userId, amount, description, referenceId, "CodeRedemption", ct);
     }
 
+    /// <summary>
+    /// Credits balance that can be spent only on a specific teacher's content.
+    /// Scoped balances intentionally use the same allocation ledger as teacher balance codes.
+    /// </summary>
+    public async Task AddTeacherCredit(
+        Guid userId,
+        Guid teacherId,
+        decimal amount,
+        string description,
+        Guid issuedByUserId,
+        CancellationToken ct = default)
+    {
+        if (amount <= 0) throw new ArgumentException("Credit amount must be positive", nameof(amount));
+
+        var teacher = await _db.TeacherProfiles.Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.Id == teacherId, ct)
+            ?? throw new InvalidOperationException("Teacher was not found.");
+
+        var recipient = new GiftRecipient
+        {
+            StudentId = userId,
+            Status = GiftRecipientStatus.Active,
+            OutcomeCode = "DIGITAL_RECHARGE",
+            OutcomeMessage = description
+        };
+        var allocation = new PromotionalBalanceAllocation
+        {
+            StudentId = userId,
+            TeacherId = teacherId,
+            OriginalAmount = amount,
+            AvailableAmount = amount,
+            GiftRecipient = recipient,
+            Status = PromotionalBalanceStatus.Active
+        };
+        var issuance = new GiftIssuance
+        {
+            RequestId = Guid.NewGuid(),
+            TargetType = GiftTargetType.TeacherBalance,
+            TeacherId = teacherId,
+            Amount = amount,
+            Reason = description,
+            IssuedByUserId = issuedByUserId,
+            Status = GiftIssuanceStatus.Active,
+            Recipients = { recipient }
+        };
+        recipient.PromotionalBalanceAllocation = allocation;
+        _db.GiftIssuances.Add(issuance);
+        _db.OutboxEvents.Add(new OutboxEvent
+        {
+            Type = "BalanceChanged",
+            TargetUserId = userId.ToString(),
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                scopedTeacherId = teacherId,
+                scopedTeacherName = teacher.User.FullName,
+                promotionalAmount = amount,
+                formattedBalance = $"{amount:F2} جنيها"
+            })
+        });
+        await _db.SaveChangesAsync(ct);
+    }
+
     public async Task<BalanceTransaction> AddCredit(
         Guid userId,
         decimal amount,
@@ -65,11 +128,22 @@ public class BalanceService
     {
         if (amount <= 0) throw new ArgumentException("Credit amount must be positive", nameof(amount));
 
+        if (referenceId.HasValue)
+        {
+            var existingTransaction = await _db.BalanceTransactions
+                .FirstOrDefaultAsync(tx => tx.TransactionType == transactionType && tx.ReferenceId == referenceId.Value, ct);
+
+            if (existingTransaction != null)
+            {
+                return existingTransaction;
+            }
+        }
+
         var transaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null
             ? null
             : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
         try
-         {
+        {
             var balance = await GetOrCreateBalance(userId, ct);
             var now = DateTime.UtcNow;
             int affectedRows;
@@ -87,6 +161,7 @@ public class BalanceService
                     .Where(b => b.Id == balance.Id)
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance + amount)
+                        .SetProperty(b => b.Version, b => b.Version + 1)
                         .SetProperty(b => b.UpdatedAt, now), ct);
             }
 
@@ -189,6 +264,7 @@ public class BalanceService
                     .Where(b => b.Id == balance.Id && b.CurrentBalance >= amount)
                     .ExecuteUpdateAsync(setters => setters
                         .SetProperty(b => b.CurrentBalance, b => b.CurrentBalance - amount)
+                        .SetProperty(b => b.Version, b => b.Version + 1)
                         .SetProperty(b => b.UpdatedAt, now), ct);
             }
 

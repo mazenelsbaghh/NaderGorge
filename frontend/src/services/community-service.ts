@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 interface CommunityApiResponse<T> {
   success?: boolean;
@@ -44,6 +45,7 @@ export interface CreateCommunityPostResponse {
 export interface CommunityPostCommentDto {
   id: string;
   postId: string;
+  parentCommentId: string | null;
   authorName: string;
   body: string;
   createdAt: string;
@@ -55,6 +57,7 @@ export interface CommunityPostCommentDto {
 export interface CreateCommunityPostCommentResponse {
   id: string;
   postId: string;
+  parentCommentId: string | null;
   createdAt: string;
   status: string;
   message: string;
@@ -73,16 +76,30 @@ export interface ToggleCommunityPostVoteResponse {
 }
 
 export const communityService = {
-  getCommunityPosts: () => apiClient.get<CommunityApiResponse<CommunityPostFeedDto[]>>('/community/posts'),
-  getMyCommunityPosts: () => apiClient.get<CommunityApiResponse<MyCommunityPostDto[]>>('/community/posts/mine'),
-  createCommunityPost: (body: string, pollOptions?: string[]) =>
-    apiClient.post<CommunityApiResponse<CreateCommunityPostResponse>>('/community/posts', { body, pollOptions }),
+  getTeacherCommunityPosts: (teacherId: string) =>
+    apiClient.get<CommunityApiResponse<CommunityPostFeedDto[]>>(`/public/teachers/${teacherId}/community-posts`),
+  getMyTeacherCommunityPosts: (teacherId: string) =>
+    apiClient.get<CommunityApiResponse<MyCommunityPostDto[]>>(`/public/teachers/${teacherId}/community-posts/mine`),
+  createTeacherCommunityPost: async (teacherId: string, body: string, pollOptions?: string[]) => {
+    const response = await apiClient.post<CommunityApiResponse<CreateCommunityPostResponse>>(`/public/teachers/${teacherId}/community-posts`, { body, pollOptions });
+    invalidateMany(['community:posts']);
+    return response;
+  },
   getCommunityPostComments: (postId: string) =>
     apiClient.get<CommunityApiResponse<CommunityPostCommentDto[]>>(`/community/posts/${postId}/comments`),
-  createCommunityPostComment: (postId: string, body: string) =>
-    apiClient.post<CommunityApiResponse<CreateCommunityPostCommentResponse>>(`/community/posts/${postId}/comments`, { body }),
-  toggleCommunityPostLike: (postId: string) =>
-    apiClient.post<CommunityApiResponse<ToggleCommunityPostLikeResponse>>(`/community/posts/${postId}/likes/toggle`, {}),
-  toggleCommunityPostVote: (postId: string, optionId: string) =>
-    apiClient.post<CommunityApiResponse<ToggleCommunityPostVoteResponse>>(`/community/posts/${postId}/polls/${optionId}/vote`, {}),
+  createCommunityPostComment: async (postId: string, body: string, parentCommentId?: string) => {
+    const response = await apiClient.post<CommunityApiResponse<CreateCommunityPostCommentResponse>>(`/community/posts/${postId}/comments`, { body, parentCommentId });
+    invalidateMany(['community:posts']);
+    return response;
+  },
+  toggleCommunityPostLike: async (postId: string) => {
+    const response = await apiClient.post<CommunityApiResponse<ToggleCommunityPostLikeResponse>>(`/community/posts/${postId}/likes/toggle`, {});
+    invalidateMany(['community:posts']);
+    return response;
+  },
+  toggleCommunityPostVote: async (postId: string, optionId: string) => {
+    const response = await apiClient.post<CommunityApiResponse<ToggleCommunityPostVoteResponse>>(`/community/posts/${postId}/polls/${optionId}/vote`, {});
+    invalidateMany(['community:posts']);
+    return response;
+  },
 };

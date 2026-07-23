@@ -33,8 +33,13 @@ public class EssayGradingWorkflowTests
         Assert.True(result.Success);
         Assert.Equal("Pending", result.Data!.ResultState);
         Assert.False(result.Data.IsPassed);
+        var pendingEssayReview = result.Data.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
+        Assert.Null(pendingEssayReview.CorrectOptionText);
+        Assert.Null(pendingEssayReview.WrittenCorrection);
         var savedEssay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
         Assert.Equal(EssaySubmissionStatus.WaitAI, savedEssay.Status);
+        var queuedEvaluation = db.OutboxEvents.Single(e => e.Type == "EssayEvaluationQueued");
+        Assert.Contains(savedEssay.Id.ToString(), queuedEvaluation.PayloadJson);
 
         var statusQuery = new GetExamAttemptGradingStatusQueryHandler(db);
         var status = await statusQuery.Handle(new GetExamAttemptGradingStatusQuery(attempt.Id, student.Id), CancellationToken.None);
@@ -42,7 +47,7 @@ public class EssayGradingWorkflowTests
     }
 
     [Fact]
-    public async Task EssayCallbackAndTeacherGrade_AdvanceLifecycleAndFinalizeAttempt()
+    public async Task EssayCallback_WhenAiReturnsTrue_AwardsEssayPointsAndFinalizesAttempt()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "502");
@@ -60,27 +65,75 @@ public class EssayGradingWorkflowTests
 
         var essay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
 
-        var auth = new TeacherAuthorizationService(db);
-        var gradeBeforeAi = await new GradeEssayCommandHandler(db, auth)
-            .Handle(new GradeEssayCommand(essay.Id, 7m, "Teacher review"), CancellationToken.None);
-        Assert.False(gradeBeforeAi.Success);
-
         var aiHandler = new WebhookEssayGradedCommandHandler(db);
-        var aiResult = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, 6m, "AI review"), CancellationToken.None);
+        var aiResult = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, 1m, "AI says correct"), CancellationToken.None);
         Assert.True(aiResult.Success);
-        Assert.Equal(EssaySubmissionStatus.AIScored, db.EssaySubmissions.Single(e => e.Id == essay.Id).Status);
 
-        essay.Status = EssaySubmissionStatus.WaitTeacher;
-        await db.SaveChangesAsync();
-
-        var gradeResult = await new GradeEssayCommandHandler(db, auth)
-            .Handle(new GradeEssayCommand(essay.Id, 8m, "Teacher final"), CancellationToken.None);
-
-        Assert.True(gradeResult.Success);
-        Assert.Equal(EssaySubmissionStatus.TeacherGraded, db.EssaySubmissions.Single(e => e.Id == essay.Id).Status);
         db.ChangeTracker.Clear();
         var persistedEssay = db.EssaySubmissions.AsNoTracking().Single(e => e.Id == essay.Id);
         Assert.Equal(EssaySubmissionStatus.TeacherGraded, persistedEssay.Status);
+        Assert.Equal(8m, persistedEssay.TeacherFinalScore);
+
+        var persistedAttempt = db.StudentExamAttempts.AsNoTracking().Single(a => a.Id == attempt.Id);
+        Assert.Equal(10m, persistedAttempt.ScoreAchieved);
+        Assert.True(persistedAttempt.IsPassed);
+        Assert.NotNull(persistedAttempt.Evaluation);
+
+        var persistedAnswer = db.StudentAnswers.AsNoTracking().Single(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestionId == essayExamQuestion.Id);
+        Assert.True(persistedAnswer.IsCorrect);
+        Assert.Equal(8m, persistedAnswer.PointsAwarded);
+
+        var statusQuery = new GetExamAttemptGradingStatusQueryHandler(db);
+        var status = await statusQuery.Handle(new GetExamAttemptGradingStatusQuery(attempt.Id, student.Id), CancellationToken.None);
+        Assert.Equal("Completed", status.Data!.ResultState);
+
+        var resultQuery = new GetExamAttemptResultQueryHandler(db);
+        var completedResult = await resultQuery.Handle(new GetExamAttemptResultQuery(attempt.Id, student.Id), CancellationToken.None);
+        Assert.True(completedResult.Success);
+        var completedEssayReview = completedResult.Data!.Questions.Single(q => q.ExamQuestionId == essayExamQuestion.Id);
+        Assert.Equal("A force attracting masses.", completedEssayReview.CorrectOptionText);
+        Assert.Equal("A force attracting masses.", completedEssayReview.WrittenCorrection);
+    }
+
+    [Fact]
+    public async Task EssayCallback_WhenAiReturnsFalse_AwardsZeroAndFinalizesAttempt()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "503");
+        var (exam, mcqExamQuestion, essayExamQuestion, _, _, correctOption, _) = await TestAppDbContextFactory.SeedEssayExamAsync(db);
+        var attempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
+
+        var submitHandler = new SubmitExamCommandHandler(db, new NoOpPublisher(), new FakeJobEnqueuer());
+        await submitHandler.Handle(
+            new SubmitExamCommand(exam.Id, attempt.Id, student.Id, new List<AnswerSubmissionDto>
+            {
+                new(mcqExamQuestion.Id, correctOption.Id, null),
+                new(essayExamQuestion.Id, null, "Wrong gravity explanation")
+            }),
+            CancellationToken.None);
+
+        var essay = db.EssaySubmissions.Single(e => e.StudentExamAttemptId == attempt.Id && e.QuestionId == essayExamQuestion.QuestionBankItemId);
+
+        var aiHandler = new WebhookEssayGradedCommandHandler(db);
+        var aiResult = await aiHandler.Handle(new WebhookEssayGradedCommand(essay.Id, 0m, "AI says incorrect"), CancellationToken.None);
+        Assert.True(aiResult.Success);
+
+        db.ChangeTracker.Clear();
+        var persistedEssay = db.EssaySubmissions.AsNoTracking().Single(e => e.Id == essay.Id);
+        Assert.Equal(EssaySubmissionStatus.TeacherGraded, persistedEssay.Status);
+        Assert.Equal(0m, persistedEssay.TeacherFinalScore);
+
+        var persistedAttempt = db.StudentExamAttempts.AsNoTracking().Single(a => a.Id == attempt.Id);
+        Assert.Equal(2m, persistedAttempt.ScoreAchieved);
+        Assert.False(persistedAttempt.IsPassed);
+
+        var persistedAnswer = db.StudentAnswers.AsNoTracking().Single(a => a.StudentExamAttemptId == attempt.Id && a.ExamQuestionId == essayExamQuestion.Id);
+        Assert.False(persistedAnswer.IsCorrect);
+        Assert.Equal(0m, persistedAnswer.PointsAwarded);
+
+        var statusQuery = new GetExamAttemptGradingStatusQueryHandler(db);
+        var status = await statusQuery.Handle(new GetExamAttemptGradingStatusQuery(attempt.Id, student.Id), CancellationToken.None);
+        Assert.Equal("Completed", status.Data!.ResultState);
     }
 }
 

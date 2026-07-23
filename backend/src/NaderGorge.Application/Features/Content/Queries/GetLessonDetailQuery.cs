@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Services;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
@@ -30,15 +31,16 @@ public record LessonDetailDto(
     string? ExamStatus = null,
     string? HomeworkStatus = null,
     Guid? TermId = null,
-    Guid? SectionId = null
+    Guid? SectionId = null,
+    bool IsVideoOnlyAccess = false
 );
 
 public record LessonHomeworkDto(Guid Id, string Title, string Instructions, bool IsMandatory, decimal? RequiredPointsToPass, decimal TotalScore, List<LessonHomeworkQuestionDto> Questions);
 
 public record LessonHomeworkQuestionDto(
-    Guid Id, 
-    string Text, 
-    int Order, 
+    Guid Id,
+    string Text,
+    int Order,
     int MaxPoints,
     string QuestionType,
     string[]? PossibleAnswers = null,
@@ -61,6 +63,11 @@ public record VideoDto(
     int Limit,
     int Watched,
     bool IsLocked,
+    bool HasAccess,
+    bool IsUnlockedByCode,
+    string? UnlockLabel,
+    Guid? VideoTypeId,
+    string? VideoTypeName,
     int WatchedSeconds,
     DateTime? LastWatchedAt,
     string? SubtitleUrl,
@@ -79,12 +86,18 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
     private readonly TeacherAuthorizationService _auth;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public GetLessonDetailQueryHandler(IAppDbContext db, IAccessCheckService access, TeacherAuthorizationService auth)
+    public GetLessonDetailQueryHandler(
+        IAppDbContext db,
+        IAccessCheckService access,
+        TeacherAuthorizationService auth,
+        IAcademicScopeService? academicScope = null)
     {
         _db = db;
         _access = access;
         _auth = auth;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<LessonDetailDto>> Handle(GetLessonDetailQuery request, CancellationToken ct)
@@ -93,39 +106,156 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .AsNoTracking()
             .Include(l => l.Videos.Where(v => v.IsActive))
                 .ThenInclude(v => v.VideoChapters)
+            .Include(l => l.Videos.Where(v => v.IsActive))
+                .ThenInclude(v => v.VideoType)
             .Include(l => l.ContentSection)
             .ThenInclude(cs => cs.Term)
+                .ThenInclude(t => t.Package)
             .FirstOrDefaultAsync(l => l.Id == request.LessonId, ct);
 
         if (lesson == null)
             return ApiResponse<LessonDetailDto>.Fail("Lesson not found");
 
+        var isPrivilegedUser = await IsPrivilegedUserAsync(request.UserId, ct);
+        if (_academicScope != null &&
+            !isPrivilegedUser &&
+            !await _academicScope.IsOwnerEligibleForStudentAsync(
+                StudentFacingScopeOwnerType.Lesson,
+                request.LessonId,
+                request.UserId,
+                ct))
+        {
+            return ApiResponse<LessonDetailDto>.Fail(
+                "هذا المحتوى غير متاح لنطاقك الدراسي الحالي.",
+                ["ACADEMIC_SCOPE_DENIED"]);
+        }
+
         var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, request.LessonId, ct);
+        var sortedLessonVideos = lesson.Videos.OrderBy(v => v.Order).ToList();
+        if (_academicScope != null && !isPrivilegedUser)
+        {
+            var eligibleVideos = new List<NaderGorge.Domain.Entities.LessonVideo>();
+            foreach (var video in sortedLessonVideos)
+            {
+                if (await _academicScope.IsOwnerEligibleForStudentAsync(
+                        StudentFacingScopeOwnerType.LessonVideo,
+                        video.Id,
+                        request.UserId,
+                        ct))
+                {
+                    eligibleVideos.Add(video);
+                }
+            }
+
+            sortedLessonVideos = eligibleVideos;
+        }
+        var now = DateTime.UtcNow;
+        var codeUnlockedVideoIds = new HashSet<Guid>();
+
+        if (sortedLessonVideos.Count > 0)
+        {
+            var activeVideoCodeGrants = await _db.StudentAccessGrants
+                .AsNoTracking()
+                .Where(g =>
+                    g.UserId == request.UserId &&
+                    g.IsActive &&
+                    g.GrantType == NaderGorge.Domain.Enums.CodeType.Video &&
+                    (g.ExpiresAt == null || g.ExpiresAt > now) &&
+                    (g.MaxUses == null || g.UsesConsumed < g.MaxUses))
+                .Select(g => new
+                {
+                    g.LessonVideoId,
+                    g.VideoTypeId,
+                    g.LessonId,
+                    g.ContentSectionId,
+                    g.TermId,
+                    g.PackageId,
+                    CodeGroupTeacherId = g.AccessCode != null ? g.AccessCode.CodeGroup.TeacherId : null
+                })
+                .ToListAsync(ct);
+
+            foreach (var video in sortedLessonVideos)
+            {
+                var videoTeacherId = lesson.ContentSection?.Term?.Package?.TeacherId;
+                var matched = activeVideoCodeGrants.Any(g =>
+                    g.LessonVideoId == video.Id ||
+                    (
+                        g.VideoTypeId != null &&
+                        g.VideoTypeId == video.VideoTypeId &&
+                        (g.LessonId == null || g.LessonId == video.LessonId) &&
+                        (g.ContentSectionId == null || g.ContentSectionId == lesson.ContentSectionId) &&
+                        (g.TermId == null || g.TermId == lesson.ContentSection?.TermId) &&
+                        (g.PackageId == null || g.PackageId == lesson.ContentSection?.Term?.PackageId) &&
+                        (g.CodeGroupTeacherId == null || g.CodeGroupTeacherId == videoTeacherId)
+                    ));
+
+                if (matched)
+                    codeUnlockedVideoIds.Add(video.Id);
+            }
+        }
+
         if (!hasAccess)
         {
+            var accessibleVideoIds = new HashSet<Guid>();
+            foreach (var video in sortedLessonVideos)
+            {
+                if (await _access.HasAccessToVideoAsync(request.UserId, video.Id, ct))
+                    accessibleVideoIds.Add(video.Id);
+            }
+
+            var partialVideoDtos = sortedLessonVideos
+                .Where(v => accessibleVideoIds.Contains(v.Id))
+                .Select(v => new VideoDto(
+                    v.Id,
+                    v.Title,
+                    v.Provider,
+                    v.Order,
+                    v.MaxWatchCount,
+                    0,
+                    false,
+                    true,
+                    codeUnlockedVideoIds.Contains(v.Id),
+                    codeUnlockedVideoIds.Contains(v.Id) ? "مفتوح بالكود" : null,
+                    v.VideoTypeId,
+                    v.VideoType?.Name,
+                    0,
+                    null,
+                    v.SubtitleUrl,
+                    v.IsProcessingAI,
+                    v.IsProcessingMindmaps,
+                    null,
+                    false,
+                    false,
+                    new List<VideoExamDto>(),
+                    v.VideoChapters.OrderBy(c => c.Order)
+                        .Select(c => new VideoChapterDto(c.Id, c.Title, c.StartTime, c.EndTime, c.SummaryText, c.MindmapImageUrl, c.Order))
+                        .ToList()))
+                .ToList();
+
             var minimalDetail = new LessonDetailDto(
                 lesson.Id,
                 lesson.Title,
                 lesson.Summary,
-                lesson.ContentSection.Term.PackageId,
+                lesson.ContentSection!.Term!.PackageId,
                 null,
                 false,
                 null,
                 false,
                 null,
-                new List<VideoDto>(),
+                partialVideoDtos,
                 false,
                 null,
                 null,
                 null,
                 lesson.Price,
-                false,
+                accessibleVideoIds.Count > 0,
                 false,
                 null,
                 null,
                 null,
                 lesson.ContentSection?.TermId,
-                lesson.ContentSectionId
+                lesson.ContentSectionId,
+                accessibleVideoIds.Count > 0
             );
             return ApiResponse<LessonDetailDto>.Ok(minimalDetail);
         }
@@ -228,8 +358,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                         .OrderByDescending(s => s.SubmittedAt)
                         .FirstOrDefaultAsync(ct);
 
-                    bool prevHwPassed = prevHwSubmission != null 
-                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                    bool prevHwPassed = prevHwSubmission != null
+                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
                                       && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
                     if (!prevHwPassed)
                     {
@@ -252,7 +382,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
         if (!isLocked && lesson.ExamId.HasValue)
         {
             var exam = await _db.Exams.FindAsync(new object[] { lesson.ExamId.Value }, ct);
-            if (exam != null && exam.IsMandatory)
+            if (exam != null && exam.IsActive && exam.IsMandatory)
             {
                 var passedExam = await _db.StudentExamAttempts
                     .AnyAsync(a => a.UserId == request.UserId && a.ExamId == lesson.ExamId.Value && a.IsPassed, ct);
@@ -284,7 +414,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var videoIds = lesson.Videos.Select(v => v.Id).ToList();
         var allVideoExams = await _db.Exams
-            .Where(e => videoIds.Contains(e.LessonVideoId ?? Guid.Empty) || (e.LessonVideoId == null && lesson.Videos.Select(v => v.ExamId).Contains(e.Id)))
+            .Where(e => e.IsActive && (videoIds.Contains(e.LessonVideoId ?? Guid.Empty) || (e.LessonVideoId == null && lesson.Videos.Select(v => v.ExamId).Contains(e.Id))))
             .Select(e => new { e.Id, e.Title, e.LessonVideoId, e.IsMandatory })
             .ToListAsync(ct);
 
@@ -296,7 +426,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             .Distinct()
             .ToListAsync(ct);
 
-        var sortedVideos = lesson.Videos.OrderBy(v => v.Order).ToList();
+        var sortedVideos = sortedLessonVideos;
         var videoDtos = new List<VideoDto>();
 
         foreach (var v in sortedVideos)
@@ -323,6 +453,11 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                 watchEvent?.CustomMaxWatchCount ?? v.MaxWatchCount,
                 watchEvent?.WatchCount ?? 0,
                 (watchEvent?.IsLocked ?? false) && (watchEvent?.WatchCount ?? 0) >= (watchEvent?.CustomMaxWatchCount ?? v.MaxWatchCount),
+                true,
+                codeUnlockedVideoIds.Contains(v.Id),
+                codeUnlockedVideoIds.Contains(v.Id) ? "مفتوح بالكود" : null,
+                v.VideoTypeId,
+                v.VideoType?.Name,
                 Math.Max(0, watchEvent?.TimeWatchedInSeconds ?? 0),
                 watchEvent?.UpdatedAt,
                 v.SubtitleUrl,
@@ -338,7 +473,7 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
         var hw = await _db.Homeworks
             .Include(h => h.Questions)
-            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId, ct);
+            .FirstOrDefaultAsync(h => h.LessonId == request.LessonId && h.IsActive, ct);
 
         LessonHomeworkDto? homeworkDto = null;
         if (hw != null)
@@ -355,9 +490,9 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
 
             var hwQuestions = baseQuery.Select(q =>
                 new LessonHomeworkQuestionDto(
-                    q.Id, 
-                    q.BodyText, 
-                    q.Order, 
+                    q.Id,
+                    q.BodyText,
+                    q.Order,
                     q.PointsActive,
                     q.QuestionType.ToString(),
                     q.PossibleAnswers,
@@ -405,8 +540,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
                     .OrderByDescending(s => s.SubmittedAt)
                     .FirstOrDefaultAsync(ct);
 
-                bool prevHwPassed = prevHwSubmission != null 
-                                  && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                bool prevHwPassed = prevHwSubmission != null
+                                  && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
                                   && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
                 if (!prevHwPassed)
                 {
@@ -510,8 +645,8 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             lesson.Id,
             lesson.Title,
             lesson.Summary,
-            lesson.ContentSection.Term.PackageId,
-            lesson.ExamId,
+            lesson.ContentSection!.Term!.PackageId,
+            await _db.Exams.Where(e => e.Id == lesson.ExamId && e.IsActive).Select(e => (Guid?)e.Id).FirstOrDefaultAsync(ct),
             lessonExamPassed,
             homeworkId,
             homeworkPassed,
@@ -531,5 +666,21 @@ public class GetLessonDetailQueryHandler : IRequestHandler<GetLessonDetailQuery,
             lesson.ContentSectionId
         );
         return ApiResponse<LessonDetailDto>.Ok(detail);
+    }
+
+    private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)
+    {
+        return await _db.UserRoles
+            .Include(ur => ur.Role)
+            .Where(ur => ur.UserId == userId)
+            .AnyAsync(ur =>
+                ur.Role.Type == RoleType.Admin ||
+                ur.Role.Type == RoleType.Assistant ||
+                ur.Role.Type == RoleType.AssistantReviewer ||
+                ur.Role.Type == RoleType.AssistantAcademic ||
+                ur.Role.Type == RoleType.Supervisor ||
+                ur.Role.Type == RoleType.Staff ||
+                ur.Role.Type == RoleType.Teacher,
+                ct);
     }
 }

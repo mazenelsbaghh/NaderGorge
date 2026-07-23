@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
@@ -19,31 +20,66 @@ public record LessonSummaryDto(
     bool IsLocked = false,
     string? LockedReason = null,
     Guid? BlockingExamId = null,
-    Guid? BlockingHomeworkLessonId = null
+    Guid? BlockingHomeworkLessonId = null,
+    List<LessonVideoSummaryDto>? Videos = null
+);
+
+public record LessonVideoSummaryDto(
+    Guid Id,
+    string Title,
+    int Order,
+    bool HasAccess,
+    bool IsUnlockedByCode,
+    Guid? VideoTypeId,
+    string? VideoTypeName
 );
 
 public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiResponse<List<LessonSummaryDto>>>
 {
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
+    private readonly IAcademicScopeService _academicScope;
 
-    public GetLessonsQueryHandler(IAppDbContext db, IAccessCheckService access)
+    public GetLessonsQueryHandler(IAppDbContext db, IAccessCheckService access, IAcademicScopeService academicScope)
     {
         _db = db;
         _access = access;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<List<LessonSummaryDto>>> Handle(GetLessonsQuery request, CancellationToken ct)
     {
         var section = await _db.ContentSections
             .Include(cs => cs.Lessons)
+                .ThenInclude(l => l.Videos.Where(v => v.IsActive))
+                    .ThenInclude(v => v.VideoType)
             .FirstOrDefaultAsync(cs => cs.Id == request.SectionId, ct);
 
         if (section == null)
             return ApiResponse<List<LessonSummaryDto>>.Fail("Section not found");
 
+        var lessons = section.Lessons.OrderBy(l => l.Order).ToList();
+        if (!await IsPrivilegedUserAsync(request.UserId, ct))
+        {
+            var eligibleLessons = new List<Lesson>();
+            foreach (var lesson in lessons)
+            {
+                if (await _academicScope.IsOwnerEligibleForStudentAsync(
+                        StudentFacingScopeOwnerType.Lesson,
+                        lesson.Id,
+                        request.UserId,
+                        ct))
+                {
+                    eligibleLessons.Add(lesson);
+                }
+            }
+
+            lessons = eligibleLessons;
+        }
+
+        var lessonIds = lessons.Select(l => l.Id).ToList();
         var progresses = await _db.LessonProgresses
-            .Where(lp => lp.UserId == request.UserId && section.Lessons.Select(l => l.Id).Contains(lp.LessonId))
+            .Where(lp => lp.UserId == request.UserId && lessonIds.Contains(lp.LessonId))
             .ToListAsync(ct);
 
         var passedExamIds = await _db.StudentExamAttempts
@@ -53,11 +89,44 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
             .ToListAsync(ct);
 
         var dtos = new List<LessonSummaryDto>();
-        foreach (var lesson in section.Lessons.OrderBy(l => l.Order))
+        foreach (var lesson in lessons)
         {
             var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, lesson.Id, ct);
             var isCompleted = progresses.Any(p => p.LessonId == lesson.Id && p.IsCompleted);
             var blockingState = await GetBlockingStateAsync(lesson, section, request.UserId, passedExamIds, ct);
+            var videoSummaries = new List<LessonVideoSummaryDto>();
+            var videos = lesson.Videos.OrderBy(v => v.Order).ToList();
+            if (!await IsPrivilegedUserAsync(request.UserId, ct))
+            {
+                var eligibleVideos = new List<LessonVideo>();
+                foreach (var video in videos)
+                {
+                    if (await _academicScope.IsOwnerEligibleForStudentAsync(
+                            StudentFacingScopeOwnerType.LessonVideo,
+                            video.Id,
+                            request.UserId,
+                            ct))
+                    {
+                        eligibleVideos.Add(video);
+                    }
+                }
+
+                videos = eligibleVideos;
+            }
+
+            foreach (var video in videos)
+            {
+                var hasVideoAccess = await _access.HasAccessToVideoAsync(request.UserId, video.Id, ct);
+                videoSummaries.Add(new LessonVideoSummaryDto(
+                    video.Id,
+                    video.Title,
+                    video.Order,
+                    hasVideoAccess,
+                    hasVideoAccess && !hasAccess,
+                    video.VideoTypeId,
+                    video.VideoType?.Name
+                ));
+            }
 
             dtos.Add(new LessonSummaryDto(
                 lesson.Id,
@@ -70,7 +139,8 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
                 blockingState.IsLocked,
                 blockingState.LockedReason,
                 blockingState.BlockingExamId,
-                blockingState.BlockingHomeworkLessonId
+                blockingState.BlockingHomeworkLessonId,
+                videoSummaries
             ));
         }
 
@@ -186,5 +256,21 @@ public class GetLessonsQueryHandler : IRequestHandler<GetLessonsQuery, ApiRespon
 
 
         return (false, null, null, null);
+    }
+
+    private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)
+    {
+        return await _db.UserRoles
+            .Include(ur => ur.Role)
+            .Where(ur => ur.UserId == userId)
+            .AnyAsync(ur =>
+                ur.Role.Type == RoleType.Admin ||
+                ur.Role.Type == RoleType.Assistant ||
+                ur.Role.Type == RoleType.AssistantReviewer ||
+                ur.Role.Type == RoleType.AssistantAcademic ||
+                ur.Role.Type == RoleType.Supervisor ||
+                ur.Role.Type == RoleType.Staff ||
+                ur.Role.Type == RoleType.Teacher,
+                ct);
     }
 }

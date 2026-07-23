@@ -15,6 +15,11 @@ coverage/
 *.tsbuildinfo
 .npm/
 .yarn/
+worker/dist/
+frontend/playwright-report/
+frontend/test-results/
+playwright-report/
+test-results/
 
 # Environment — secrets (never commit)
 .env
@@ -44,6 +49,17 @@ Thumbs.db
 nginx/logs/
 pgdata/
 redisdata/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Mobile generated artifacts
+**/.gradle/
+**/build/
+**/.kotlin/
+**/gradle-*.zip
+**/*.apk
+**/*.aab
 
 # Backups / SQL Dumps / Sensitive data
 *.sql

@@ -11,7 +11,7 @@ import {
 } from '@/services/content-service';
 import { useAuthStore } from '@/stores/auth-store';
 import { UserAvatar } from '@/components/ui/UserAvatar';
-import { registerCacheStore, unregisterCacheStore } from '@/lib/cache-invalidation';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 type LessonCommentsSectionProps = {
   lessonId: string;
@@ -76,10 +76,8 @@ export function LessonCommentsSection({ lessonId }: LessonCommentsSectionProps) 
   }, [loadComments]);
 
   useEffect(() => {
-    registerCacheStore(`content:lesson:${lessonId}:comments`, () => {}, loadComments);
-    return () => {
-      unregisterCacheStore(`content:lesson:${lessonId}:comments`);
-    };
+    const cleanupCacheStore = registerCacheStore(`content:lesson:${lessonId}:comments`, () => {}, loadComments);
+    return cleanupCacheStore;
   }, [lessonId, loadComments]);
 
   const handleSubmit = async (e: React.FormEvent) => {

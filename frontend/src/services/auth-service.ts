@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { createClientId } from '@/lib/client-id';
 
 export interface RegisterData {
   // ── Personal ───────────────────────────────────────────────────────────
@@ -59,10 +60,28 @@ export interface ResetPasswordData {
   newPassword: string;
 }
 
+export interface CurrentSessionSnapshot {
+  user: {
+    id: string;
+    fullName: string;
+    phone: string;
+    roles: string[];
+    permissions: string[];
+    profileComplete: boolean;
+    avatarSlug?: string | null;
+    allowedDomains?: string[];
+    allowedNavbarItems?: string[];
+    authorizationVersion?: number;
+  };
+  authorizationVersion: number;
+  serverTime: string;
+}
+
 export const authService = {
   register: (data: RegisterData) => apiClient.post('/auth/register', data),
   login: (data: LoginData) => apiClient.post('/auth/login', data),
   refresh: () => apiClient.post('/auth/refresh', {}),
+  getCurrentSession: () => apiClient.get<{ data: CurrentSessionSnapshot }>('/auth/session'),
   logout: () => apiClient.post('/auth/logout', {}),
   completeProfile: (data: CompleteProfileData) => apiClient.post('/auth/complete-profile', data),
   activateCode: (code: string) => apiClient.post('/codes/activate', { code }),
@@ -75,7 +94,7 @@ export function getDeviceFingerprint(): string {
   if (typeof window === 'undefined') return 'ssr';
   let fp = localStorage.getItem('deviceFingerprint');
   if (!fp) {
-    fp = crypto.randomUUID();
+    fp = createClientId();
     localStorage.setItem('deviceFingerprint', fp);
   }
   return fp;

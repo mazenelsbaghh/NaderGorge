@@ -8,7 +8,31 @@ namespace NaderGorge.Application.Features.Admin.Queries;
 
 public record ListCodeGroupsQuery(Guid? CurrentUserId = null) : IRequest<ApiResponse<List<CodeGroupDto>>>;
 
-public record CodeGroupDto(Guid Id, string Name, DateTime CreatedAt, Guid? PackageId, Guid? LessonId, int CodeCount, int UsedCount, Guid TeacherId);
+public record CodeGroupDto(
+    Guid Id,
+    string Name,
+    DateTime CreatedAt,
+    CodeType CodeType,
+    Guid? PackageId,
+    Guid? TermId,
+    Guid? ContentSectionId,
+    Guid? LessonId,
+    Guid? ExamId,
+    Guid? PublicExamProductId,
+    Guid? VideoTypeId,
+    bool IncludeFutureVideos,
+    decimal? BalanceAmount,
+    DateTime? ExpiresAt,
+    bool ExpireActivatedAccess,
+    decimal? DiscountPercentage,
+    SalesOwnerType? RevenueOwner,
+    TeacherAllocationMode? RevenueAllocationMode,
+    decimal? RevenueAllocationValue,
+    CodeAccountingTiming AccountingTiming,
+    DateTime? AccountingRecordedAt,
+    int CodeCount,
+    int UsedCount,
+    Guid? TeacherId);
 
 public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, ApiResponse<List<CodeGroupDto>>>
 {
@@ -31,6 +55,13 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
             {
                 isTeacher = true;
                 teacherId = user.TeacherProfile?.Id;
+                if (teacherId == null)
+                {
+                    teacherId = await _db.TeacherStaffMembers
+                        .Where(member => member.UserId == request.CurrentUserId.Value && member.IsActive && member.User.IsActive)
+                        .Select(member => (Guid?)member.TeacherId)
+                        .FirstOrDefaultAsync(ct);
+                }
             }
         }
 
@@ -39,7 +70,7 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
         if (isTeacher)
         {
             var targetId = teacherId ?? Guid.Empty;
-            query = query.Where(cg => cg.TeacherId == targetId);
+            query = query.Where(cg => cg.TeacherId.HasValue && cg.TeacherId.Value == targetId);
         }
 
         var dtos = await query
@@ -49,8 +80,24 @@ public class ListCodeGroupsQueryHandler : IRequestHandler<ListCodeGroupsQuery, A
                 cg.Id,
                 cg.Name,
                 cg.CreatedAt,
+                cg.CodeType,
                 cg.PackageId,
+                cg.TermId,
+                cg.ContentSectionId,
                 cg.LessonId,
+                cg.ExamId,
+                cg.PublicExamProductId,
+                cg.VideoTypeId,
+                cg.IncludeFutureVideos,
+                cg.BalanceAmount,
+                cg.ExpiresAt,
+                cg.ExpireActivatedAccess,
+                cg.DiscountPercentage,
+                cg.RevenueOwner,
+                cg.RevenueAllocationMode,
+                cg.RevenueAllocationValue,
+                cg.AccountingTiming,
+                cg.AccountingRecordedAt,
                 cg.AccessCodes.Count,
                 cg.AccessCodes.Count(c => c.IsConsumed),
                 cg.TeacherId

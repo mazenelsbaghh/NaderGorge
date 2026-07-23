@@ -35,7 +35,6 @@ public sealed class LiveSupportSecurityTests
     public void PublicMutationsAndSensitiveActionsHaveDedicatedRateLimits()
     {
         static string? Policy(Type controller, string method) => controller.GetMethod(method)!.GetCustomAttributes(typeof(EnableRateLimitingAttribute), true).Cast<EnableRateLimitingAttribute>().Single().PolicyName;
-        Assert.Equal("live-support-public", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.CreateGuestSession)));
         Assert.Equal("live-support-public", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.Create)));
         Assert.Equal("live-support-ai-message", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.Send)));
         Assert.Equal("live-support-public", Policy(typeof(LiveSupportParticipantController), nameof(LiveSupportParticipantController.Upload)));

@@ -36,6 +36,7 @@ public class GetActiveTeachersQueryHandler : IRequestHandler<GetActiveTeachersQu
             .Include(tp => tp.User)
             .Include(tp => tp.TeacherSubjects)
                 .ThenInclude(ts => ts.Subject)
+            .Where(tp => tp.User.IsActive && !tp.User.IsDeleted && tp.IsVisibleToStudents)
             .OrderBy(tp => tp.User.FullName)
             .Select(tp => new PublicTeacherDto(
                 tp.Id,

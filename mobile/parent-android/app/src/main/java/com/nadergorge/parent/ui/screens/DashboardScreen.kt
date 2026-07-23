@@ -1,5 +1,6 @@
 package com.nadergorge.parent.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
@@ -28,29 +29,42 @@ import com.nadergorge.parent.data.api.ExamInfo
 import com.nadergorge.parent.data.api.HomeworkInfo
 import com.nadergorge.parent.data.api.StudentDetailsResponse
 import com.nadergorge.parent.data.api.WarningInfo
+import com.nadergorge.parent.ui.AcademicLabels
 import com.nadergorge.parent.ui.theme.*
+
+private val BottomNavShellHeight = 112.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
     onNavigateToLink: () -> Unit,
+    notificationsEnabled: Boolean = true,
+    onTestNotification: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val linkedStudents by viewModel.linkedStudents.collectAsState()
     val activeStudent by viewModel.activeStudent.collectAsState()
+    val notifications by viewModel.notifications.collectAsState()
 
     var dropdownExpanded by remember { mutableStateOf(false) }
     
     // Navigation tabs inside Dashboard
-    var activeTab by remember { mutableStateOf("home") } // "home", "schedule", "homework", "grades", "more"
-    var activeSubScreen by remember { mutableStateOf<String?>(null) } // "profile", "attendance", "notes", "fees", "notifications", "settings"
+    var activeTab by remember { mutableStateOf("home") }
+    var activeSubScreen by remember { mutableStateOf<String?>(null) }
+
+    BackHandler(enabled = true) {
+        when {
+            activeSubScreen != null -> activeSubScreen = null
+            activeTab != "home" -> activeTab = "home"
+        }
+    }
 
     if (activeSubScreen != null) {
         val details = (uiState as? DashboardUiState.Success)?.details
         val name = details?.studentName ?: activeStudent?.name ?: "طالب مسار"
-        val grade = details?.grade ?: "الصف الدراسي"
+        val grade = AcademicLabels.grade(details?.grade)
         val school = details?.school ?: "مدرسة مسار"
 
         when (activeSubScreen) {
@@ -60,32 +74,53 @@ fun DashboardScreen(
                 school = school,
                 onBack = { activeSubScreen = null }
             )
-            "attendance" -> AttendanceScreen(
-                watchedLessons = details?.attendance?.watchedLessons ?: 18,
-                totalLessons = details?.attendance?.totalLessons ?: 20,
-                completionRate = details?.attendance?.completionRate ?: 90.0,
+            "attendance" -> WatchLogScreen(
+                teachers = details?.teachers ?: emptyList(),
+                watchLessons = details?.watchLessons ?: emptyList(),
+                courses = details?.courses ?: emptyList(),
+                attendance = details?.attendance,
                 onBack = { activeSubScreen = null }
             )
             "grades" -> GradesScreen(
+                teachers = details?.teachers ?: emptyList(),
+                exams = details?.exams ?: emptyList(),
+                courses = details?.courses ?: emptyList(),
+                onBack = { activeSubScreen = null }
+            )
+            "courses" -> CoursesScreen(
+                teachers = details?.teachers ?: emptyList(),
+                courses = details?.courses ?: emptyList(),
+                watchLessons = details?.watchLessons ?: emptyList(),
                 exams = details?.exams ?: emptyList(),
                 onBack = { activeSubScreen = null }
             )
             "homework" -> HomeworkScreen(
+                teachers = details?.teachers ?: emptyList(),
                 homeworks = details?.homeworks ?: emptyList(),
+                courses = details?.courses ?: emptyList(),
                 onBack = { activeSubScreen = null }
             )
             "notes" -> NotesScreen(
                 onBack = { activeSubScreen = null }
             )
-            "fees" -> FeesScreen(
+            "fees" -> BalanceScreen(
+                balance = details?.balance,
                 onBack = { activeSubScreen = null }
             )
             "notifications" -> NotificationsScreen(
                 warnings = details?.warnings ?: emptyList(),
+                notifications = notifications,
+                onNotificationClick = { notification ->
+                    if (!notification.isRead) {
+                        viewModel.markNotificationAsRead(notification.id)
+                    }
+                },
                 onBack = { activeSubScreen = null }
             )
             "settings" -> SettingsScreen(
                 onBack = { activeSubScreen = null },
+                notificationsEnabled = notificationsEnabled,
+                onTestNotification = onTestNotification,
                 onLogout = {
                     activeSubScreen = null
                     activeStudent?.let { viewModel.removeStudent(it.studentId) }
@@ -184,12 +219,16 @@ fun DashboardScreen(
                         when (activeTab) {
                             "home" -> HomeTabView(
                                 details = state.details,
+                                warnings = state.details.warnings,
                                 onNavigateToSub = { activeSubScreen = it }
                             )
-                            "schedule" -> ScheduleScreen(onBack = { activeTab = "home" })
-                            "homework" -> HomeworkScreen(homeworks = state.details.homeworks, onBack = { activeTab = "home" })
-                            "grades" -> GradesScreen(exams = state.details.exams, onBack = { activeTab = "home" })
-                            "more" -> MoreMenuView(onSelectSub = { activeSubScreen = it })
+                            "schedule" -> WatchLogScreen(teachers = state.details.teachers.orEmpty(), watchLessons = state.details.watchLessons.orEmpty(), courses = state.details.courses.orEmpty(), attendance = state.details.attendance, onBack = { activeTab = "home" })
+                            "homework" -> HomeworkScreen(teachers = state.details.teachers.orEmpty(), homeworks = state.details.homeworks, courses = state.details.courses.orEmpty(), onBack = { activeTab = "home" })
+                            "grades" -> GradesScreen(teachers = state.details.teachers.orEmpty(), exams = state.details.exams, courses = state.details.courses.orEmpty(), onBack = { activeTab = "home" })
+                            "more" -> MoreMenuView(
+                                onSelectSub = { activeSubScreen = it },
+                                onNavigateToLink = onNavigateToLink
+                            )
                         }
                     }
                     is DashboardUiState.Error -> {
@@ -205,8 +244,18 @@ fun DashboardScreen(
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(bottom = 16.dp)
                                 )
-                                Button(onClick = { activeStudent?.let { viewModel.fetchStudentDetails(it.studentId) } }) {
+                                Button(
+                                    onClick = { activeStudent?.let { viewModel.fetchStudentDetails(it.studentId) } },
+                                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                                ) {
                                     Text("إعادة المحاولة")
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = onNavigateToLink,
+                                    modifier = Modifier.fillMaxWidth().height(50.dp)
+                                ) {
+                                    Text("ربط طالب جديد")
                                 }
                             }
                         }
@@ -238,9 +287,9 @@ fun DashboardScreen(
                             ) {
                                 val tabs = listOf(
                                     Triple("home", Icons.Default.Home, "الرئيسية"),
-                                    Triple("schedule", Icons.Default.DateRange, "الجدول"),
+                                    Triple("schedule", Icons.Default.PlayArrow, "المشاهدات"),
                                     Triple("homework", Icons.Default.Edit, "الواجبات"),
-                                    Triple("grades", Icons.Default.Star, "الدرجات"),
+                                    Triple("grades", Icons.Default.Star, "امتحانات"),
                                     Triple("more", Icons.Default.Menu, "المزيد")
                                 )
                                 tabs.forEach { (tabId, icon, label) ->
@@ -294,8 +343,11 @@ fun DashboardScreen(
 @Composable
 fun HomeTabView(
     details: StudentDetailsResponse,
+    warnings: List<WarningInfo>,
     onNavigateToSub: (String) -> Unit
 ) {
+    val latestWarnings = warnings.sortedByDescending { it.createdAt }.take(2)
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -344,7 +396,7 @@ fun HomeTabView(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${details.grade} • ${details.school}",
+                            text = "${AcademicLabels.grade(details.grade)} • ${details.school}",
                             fontSize = 11.sp,
                             color = TextSecondary,
                             modifier = Modifier.padding(top = 2.dp)
@@ -359,9 +411,9 @@ fun HomeTabView(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     MetricWidgetCard(
-                        title = "الحضور",
+                        title = "المشاهدات",
                         value = "${details.attendance.completionRate.toInt()}%",
-                        sub = "نسبة الالتزام",
+                        sub = "نسبة إكمال الحصص",
                         icon = Icons.Default.CheckCircle,
                         color = BrandTeal,
                         modifier = Modifier.weight(1f)
@@ -369,9 +421,9 @@ fun HomeTabView(
                         onNavigateToSub("attendance")
                     }
                     MetricWidgetCard(
-                        title = "آخر درجة",
-                        value = "88",
-                        sub = "ممتاز",
+                        title = "امتحانات",
+                        value = "${details.exams.size}",
+                        sub = "محاولات مسجلة",
                         icon = Icons.Default.Star,
                         color = BrandWarmGold,
                         modifier = Modifier.weight(1f)
@@ -391,49 +443,51 @@ fun HomeTabView(
                         onNavigateToSub("homework")
                     }
                     MetricWidgetCard(
-                        title = "الإنذارات",
-                        value = "${details.warnings.size}",
-                        sub = "تنبيه إرشادي",
-                        icon = Icons.Default.Warning,
-                        color = WarningHigh,
+                        title = "الكورسات",
+                        value = "${details.courses.orEmpty().size}",
+                        sub = "كورس مشتري",
+                        icon = Icons.Default.List,
+                        color = BrandWarmGold,
                         modifier = Modifier.weight(1f)
                     ) {
-                        onNavigateToSub("notifications")
+                        onNavigateToSub("courses")
                     }
                 }
             }
         }
 
-        // "تنبيه مهم" Banner Card
-        item {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = BrandWarmGold.copy(alpha = if (isSystemInDarkTheme()) 0.08f else 0.12f)),
-                border = BorderStroke(1.dp, BrandWarmGold.copy(alpha = 0.2f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        if (latestWarnings.isNotEmpty()) {
+            item {
+                val warning = latestWarnings.first()
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = BrandWarmGold.copy(alpha = if (isSystemInDarkTheme()) 0.08f else 0.12f)),
+                    border = BorderStroke(1.dp, BrandWarmGold.copy(alpha = 0.2f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(BrandWarmGold.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Warning, contentDescription = null, tint = BrandWarmGold, modifier = Modifier.size(18.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text("تنبيه مهم جداً", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
-                        Text(
-                            "موعد اختبار الرياضيات الشامل يوم الأحد القادم 12 مايو.",
-                            fontSize = 12.sp,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(BrandWarmGold.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Warning, contentDescription = null, tint = BrandWarmGold, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("تنبيه مهم", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                warning.reason,
+                                fontSize = 12.sp,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -462,56 +516,45 @@ fun HomeTabView(
                     )
                 }
 
-                // Item 1: grading/Arabic
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                if (latestWarnings.isEmpty()) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(BrandTeal.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Star, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("تم رصد درجة اختبار اللغة العربية", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("منذ ساعتين", fontSize = 11.sp, color = Color.Gray)
-                        }
+                        Text(
+                            "لا توجد تنبيهات مسجلة حتى الآن.",
+                            fontSize = 13.sp,
+                            color = TextSecondary,
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
-                }
-
-                // Item 2: absence/person_off
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(WarningHigh.copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
+                } else {
+                    latestWarnings.forEach { warning ->
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = null, tint = WarningHigh, modifier = Modifier.size(18.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text("تسجيل غياب في الحصة الثالثة", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                            Text("أمس", fontSize = 11.sp, color = Color.Gray)
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(WarningHigh.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Warning, contentDescription = null, tint = WarningHigh, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(warning.reason, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(warning.severity, fontSize = 11.sp, color = Color.Gray)
+                                }
+                            }
                         }
                     }
                 }
@@ -561,9 +604,7 @@ fun HomeTabView(
         }
         
         // Spacer for bottom navigation bar overlay safety
-        item {
-            Spacer(modifier = Modifier.height(80.dp))
-        }
+        item { Spacer(modifier = Modifier.height(BottomNavShellHeight)) }
     }
 }
 
@@ -599,21 +640,24 @@ fun MetricWidgetCard(
     }
 }
 
-// --- Tab 5: More Menu View ---
 @Composable
 fun MoreMenuView(
-    onSelectSub: (String) -> Unit
+    onSelectSub: (String) -> Unit,
+    onNavigateToLink: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
+        contentPadding = PaddingValues(bottom = BottomNavShellHeight),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { MoreMenuRow(title = "ربط طالب جديد", icon = Icons.Default.Add) { onNavigateToLink() } }
         item { MoreMenuRow(title = "الملف الشخصي للطالب", icon = Icons.Default.Person) { onSelectSub("profile") } }
-        item { MoreMenuRow(title = "سجل الغياب والحضور", icon = Icons.Default.CheckCircle) { onSelectSub("attendance") } }
+        item { MoreMenuRow(title = "الكورسات والترمات", icon = Icons.Default.List) { onSelectSub("courses") } }
+        item { MoreMenuRow(title = "سجل المشاهدات", icon = Icons.Default.PlayArrow) { onSelectSub("attendance") } }
         item { MoreMenuRow(title = "ملاحظات المدرسين", icon = Icons.Default.Info) { onSelectSub("notes") } }
-        item { MoreMenuRow(title = "المصاريف والمدفوعات", icon = Icons.Default.ShoppingCart) { onSelectSub("fees") } }
+        item { MoreMenuRow(title = "الرصيد وتفاصيل الرصيد", icon = Icons.Default.ShoppingCart) { onSelectSub("fees") } }
         item { MoreMenuRow(title = "إعدادات التطبيق", icon = Icons.Default.Settings) { onSelectSub("settings") } }
     }
 }

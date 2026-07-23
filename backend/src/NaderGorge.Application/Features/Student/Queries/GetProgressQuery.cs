@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Student.Queries;
@@ -22,8 +23,13 @@ public record LessonProgressItemDto(Guid Id, string Title, int Order, bool IsCom
 public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResponse<ProgressDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService _academicScope;
 
-    public GetProgressQueryHandler(IAppDbContext db) => _db = db;
+    public GetProgressQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    {
+        _db = db;
+        _academicScope = academicScope;
+    }
 
     public async Task<ApiResponse<ProgressDto>> Handle(GetProgressQuery request, CancellationToken ct)
     {
@@ -38,6 +44,8 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             .Select(g => g.PackageId!.Value)
             .Distinct()
             .ToList();
+
+        packageIds = await FilterEligibleOwnerIdsAsync(StudentFacingScopeOwnerType.Package, packageIds, request.UserId, ct);
 
         var packages = await _db.Packages
             .AsNoTracking()
@@ -103,7 +111,15 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
         foreach (var pkg in packages)
         {
             var lessonItems = new List<LessonProgressItemDto>();
-            var orderedLessons = pkg.Lessons.OrderBy(l => l.Order).ToList();
+            var eligibleLessonIds = await FilterEligibleOwnerIdsAsync(
+                StudentFacingScopeOwnerType.Lesson,
+                pkg.Lessons.Select(l => l.Id).ToList(),
+                request.UserId,
+                ct);
+            var orderedLessons = pkg.Lessons
+                .Where(l => eligibleLessonIds.Contains(l.Id))
+                .OrderBy(l => l.Order)
+                .ToList();
 
             for (int i = 0; i < orderedLessons.Count; i++)
             {
@@ -162,5 +178,21 @@ public class GetProgressQueryHandler : IRequestHandler<GetProgressQuery, ApiResp
             passedExamIds.Count,
             failedExamCount
         ));
+    }
+
+    private async Task<List<Guid>> FilterEligibleOwnerIdsAsync(
+        StudentFacingScopeOwnerType ownerType,
+        List<Guid> ownerIds,
+        Guid userId,
+        CancellationToken ct)
+    {
+        var eligible = new List<Guid>();
+        foreach (var ownerId in ownerIds)
+        {
+            if (await _academicScope.IsOwnerEligibleForStudentAsync(ownerType, ownerId, userId, ct))
+                eligible.Add(ownerId);
+        }
+
+        return eligible;
     }
 }

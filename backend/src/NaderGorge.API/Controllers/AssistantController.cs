@@ -8,11 +8,13 @@ using NaderGorge.Application.Features.Operations.Commands;
 using NaderGorge.Application.Features.Operations.Queries;
 using NaderGorge.Domain.Entities.Assistant;
 using System.Security.Claims;
+using NaderGorge.API.Extensions;
 
 namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/v1/assistant/tasks")]
+[HasPermission("tasks.manage")]
 public class AssistantController : ControllerBase
 {
     private readonly IMediator _mediator;

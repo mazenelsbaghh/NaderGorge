@@ -11,7 +11,8 @@
     "telegram-login": "tsc -p tsconfig.json && node dist/scripts/telegram-login.js",
     "test-telegram-download": "tsc -p tsconfig.json && node dist/scripts/test-telegram-download.js",
     "dump-tg-history": "tsc -p tsconfig.json && node dist/scripts/dump-tg-history.js",
-    "test": "npm run build && node --test \"dist/**/*.test.js\""
+    "test": "npm run build && node --test \"dist/**/*.test.js\"",
+    "accept:real-ai": "npm run build && node dist/scripts/accept-real-ai-provider.js"
   },
   "keywords": [],
   "author": "",

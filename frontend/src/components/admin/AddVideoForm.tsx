@@ -7,6 +7,7 @@ import { NumberField } from '@/components/ui/number-field';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { Dropdown } from '@/components/ui/dropdown';
 import * as tus from 'tus-js-client';
+import { VideoTypeSelect } from './VideoTypeSelect';
 
 interface AddVideoFormProps {
   lessonId: string;
@@ -20,6 +21,8 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
   const [order, setOrder] = useState(1);
   const [limit, setLimit] = useState(3);
   const [isActive, setIsActive] = useState(true);
+  const [videoTypeId, setVideoTypeId] = useState('');
+  const [videoTypesAvailable, setVideoTypesAvailable] = useState(false);
   const [saving, setSaving] = useState(false);
   const [bunnyMode, setBunnyMode] = useState<'manual' | 'file'>('manual');
   const [bunnyFile, setBunnyFile] = useState<File | null>(null);
@@ -28,6 +31,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!videoTypeId || !videoTypesAvailable) return;
     if (provider === 'bunny' && bunnyMode === 'file' && !bunnyFile) return;
     if (!(provider === 'bunny' && bunnyMode === 'file') && !urlOrEmbedCode.trim()) return;
 
@@ -40,6 +44,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
           title,
           order,
           maxWatchCount: limit,
+          videoTypeId,
           fileName: bunnyFile.name,
           fileSizeBytes: bunnyFile.size,
         });
@@ -64,7 +69,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
           upload.start();
         });
       } else {
-        await adminService.createVideo({ lessonId, title, provider, urlOrEmbedCode, order, limit, isActive });
+        await adminService.createVideo({ lessonId, title, provider, urlOrEmbedCode, order, limit, videoTypeId, isActive });
       }
       toast.success('تمت إضافة الفيديو بنجاح.');
       setTitle('');
@@ -166,6 +171,13 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
         </div>
       )}
       <div className="flex flex-wrap items-end gap-4">
+        <div className="w-full md:w-56">
+          <VideoTypeSelect
+            value={videoTypeId}
+            onChange={setVideoTypeId}
+            onAvailabilityChange={setVideoTypesAvailable}
+          />
+        </div>
         <div className="w-32">
           <NumberField value={order} onChange={setOrder} minValue={1}>
             <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">ترتيب العرض</NumberField.Label>
@@ -200,7 +212,7 @@ export function AddVideoForm({ lessonId, onSuccess }: AddVideoFormProps) {
         </div>
         <NeumorphButton
           type="submit"
-          disabled={saving || !title.trim() || (provider === 'bunny' && bunnyMode === 'file' ? !bunnyFile : !urlOrEmbedCode.trim())}
+          disabled={saving || !videoTypeId || !videoTypesAvailable || !title.trim() || (provider === 'bunny' && bunnyMode === 'file' ? !bunnyFile : !urlOrEmbedCode.trim())}
           loading={saving}
           intent="primary"
           size="lg"

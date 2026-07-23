@@ -55,9 +55,9 @@ export default function TeacherDashboardPageClient() {
       icon: KeyRound,
     },
     {
-      href: "/teacher/exams",
-      title: "الأسئلة والامتحانات",
-      body: "أنشئ الامتحانات وتابع نتائج الطلاب.",
+      href: "/teacher/public-exams",
+      title: "الامتحانات العامة",
+      body: "أنشئ امتحاناً يظهر خارج الحصص ويرتبط بك تلقائياً.",
       icon: Shield,
     },
   ];
@@ -76,7 +76,7 @@ export default function TeacherDashboardPageClient() {
             أ. {user?.fullName || "المعلم"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[var(--admin-muted)]">
-            ابدأ بالإجابات التي تنتظر التصحيح، ثم انتقل إلى إدارة المحتوى والامتحانات.
+            ابدأ بالإجابات التي تنتظر التصحيح، ثم انتقل إلى المحتوى والامتحانات العامة.
           </p>
         </section>
 

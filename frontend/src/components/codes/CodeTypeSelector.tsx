@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Layers, FileText, Calendar, PlayCircle, BookOpen, Award, Wallet, Info, type LucideIcon } from 'lucide-react';
+import { Layers, FileText, Calendar, PlayCircle, BookOpen, Award, Wallet, Info, Tags, type LucideIcon } from 'lucide-react';
 import type { CodeType } from '@/services/code-service';
 import {
   contentService,
@@ -12,19 +12,27 @@ import {
   type LessonDetailDto,
 } from '@/services/content-service';
 import { Dropdown } from '@/components/ui/dropdown';
+import { VideoTypeSelect } from '@/components/admin/VideoTypeSelect';
+import type { PublicExamProductDto } from '@/services/admin-sales-service';
+import { cairoDateTimeLocalToIso, formatCairoDateTimeLocal } from '@/components/admin/admin-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
+type CodeTypeOption = CodeType | 'VideoType' | 'PublicExam';
+
 export interface CodeTypeSelection {
-  codeType: CodeType;
+  codeType: CodeTypeOption;
   packageId?: string;
   termId?: string;
   contentSectionId?: string;
   lessonId?: string;
   examId?: string;
+  publicExamProductId?: string;
+  videoTypeId?: string;
+  includeFutureVideos?: boolean;
   videoTargetIds?: string[];
   balanceAmount?: number;
-  discountPercentage?: number;
   expiresAt?: string;
+  expireActivatedAccess?: boolean;
 }
 
 interface CodeTypeSelectorProps {
@@ -32,44 +40,53 @@ interface CodeTypeSelectorProps {
   onChange: (value: CodeTypeSelection) => void;
   errors?: Record<string, string>;
   packages: PackageDto[];
+  selectedTeacherId?: string;
+  publicExams?: PublicExamProductDto[];
 }
 
 // ── Code Types Metadata ──────────────────────────────────────────────────────
-const CODE_TYPES: { type: CodeType; label: string; icon: LucideIcon; description: string }[] = [
-  { type: 'Package', label: 'كورس / باكدج', icon: Layers, description: 'كود يفتح الكورس كامل (السنة كاملة)' },
+const CODE_TYPES: { type: CodeTypeOption; label: string; icon: LucideIcon; description: string }[] = [
+  { type: 'Package', label: 'كورس / باكدج', icon: Layers, description: 'كود يفتح باكدج محدد للطالب' },
   { type: 'Term', label: 'ترم', icon: Calendar, description: 'كود يفتح ترم كامل بجميع شهوره' },
   { type: 'Month', label: 'شهر / قسم', icon: BookOpen, description: 'كود يفتح شهر دراسي كامل' },
   { type: 'Lesson', label: 'حصة', icon: FileText, description: 'كود لفتح حصة محددة' },
-  { type: 'Video', label: 'مجموعة فيديوهات', icon: PlayCircle, description: 'يفتح فيديو أو أكثر بحرية' },
+  { type: 'VideoType', label: 'نوع فيديو', icon: Tags, description: 'يفتح كل فيديوهات نوع محدد' },
+  { type: 'Video', label: 'فيديوهات محددة', icon: PlayCircle, description: 'يفتح فيديوهات تختارها يدوياً' },
   { type: 'Exam', label: 'امتحان', icon: Award, description: 'كود لفتح امتحان محدد' },
+  { type: 'PublicExam', label: 'امتحان عام', icon: Award, description: 'كود لفتح امتحان عام مستقل' },
   { type: 'Balance', label: 'شحن رصيد', icon: Wallet, description: 'يشحن محفظة الطالب بمبلغ نقدي' },
 ];
 
 
 
-export function CodeTypeSelector({ value, onChange, errors = {}, packages }: CodeTypeSelectorProps) {
+export function CodeTypeSelector({ value, onChange, errors = {}, packages, selectedTeacherId, publicExams = [] }: CodeTypeSelectorProps) {
   const [terms, setTerms] = useState<TermDto[]>([]);
   const [sections, setSections] = useState<ContentSectionDto[]>([]);
   const [lessons, setLessons] = useState<LessonSummaryDto[]>([]);
   const [lessonDetail, setLessonDetail] = useState<LessonDetailDto | null>(null);
 
   // Handlers
-  const setType = (codeType: CodeType) => {
-    onChange({ codeType, discountPercentage: value.discountPercentage, expiresAt: value.expiresAt });
+  const setType = (codeType: CodeTypeOption) => {
+    onChange({ codeType, expiresAt: value.expiresAt });
   };
 
-  const handleField = (field: keyof CodeTypeSelection, val: string | string[] | number | undefined) => {
+  const handleField = (field: keyof CodeTypeSelection, val: string | string[] | number | boolean | undefined) => {
     onChange({ ...value, [field]: val });
   };
 
+  const filteredPackages = useMemo(
+    () => selectedTeacherId ? packages.filter((pkg) => pkg.teacherId === selectedTeacherId) : packages,
+    [packages, selectedTeacherId]
+  );
+
   const selectedPackage = useMemo(
-    () => packages.find((pkg) => pkg.id === value.packageId) ?? null,
-    [packages, value.packageId]
+    () => filteredPackages.find((pkg) => pkg.id === value.packageId) ?? null,
+    [filteredPackages, value.packageId]
   );
 
   const canSelectTerms = !!value.packageId && !['Package', 'Balance'].includes(value.codeType);
-  const canSelectSections = !!value.termId && ['Month', 'Lesson', 'Video', 'Exam'].includes(value.codeType);
-  const canSelectLessons = !!value.contentSectionId && ['Lesson', 'Video', 'Exam'].includes(value.codeType);
+  const canSelectSections = !!value.termId && ['Month', 'Lesson', 'Video', 'VideoType', 'Exam'].includes(value.codeType);
+  const canSelectLessons = !!value.contentSectionId && ['Lesson', 'Video', 'VideoType', 'Exam'].includes(value.codeType);
   const canLoadLessonDetail = !!value.lessonId && ['Video', 'Exam'].includes(value.codeType);
 
   const visibleTerms = useMemo(() => (canSelectTerms ? terms : []), [canSelectTerms, terms]);
@@ -86,6 +103,9 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
     () => visibleSections.find((section) => section.id === value.contentSectionId) ?? null,
     [visibleSections, value.contentSectionId]
   );
+
+  const shouldPreserveVideoType =
+    value.codeType === 'VideoType';
 
   useEffect(() => {
     if (!canSelectTerms) {
@@ -177,6 +197,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
       lessonId: undefined,
       examId: undefined,
       videoTargetIds: undefined,
+      videoTypeId: shouldPreserveVideoType ? value.videoTypeId : undefined,
     });
   };
 
@@ -188,6 +209,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
       lessonId: undefined,
       examId: undefined,
       videoTargetIds: undefined,
+      videoTypeId: shouldPreserveVideoType ? value.videoTypeId : undefined,
     });
   };
 
@@ -198,6 +220,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
       lessonId: undefined,
       examId: undefined,
       videoTargetIds: undefined,
+      videoTypeId: shouldPreserveVideoType ? value.videoTypeId : undefined,
     });
   };
 
@@ -207,6 +230,7 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
       lessonId: lessonId || undefined,
       examId: undefined,
       videoTargetIds: undefined,
+      videoTypeId: shouldPreserveVideoType ? value.videoTypeId : undefined,
     });
   };
 
@@ -218,10 +242,18 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
         onChange={(v) => handlePackageChange(v as string)}
         placeholder="اختر الباكدج"
         searchable
-        options={[{ value: '', label: 'اختر الباكدج' }, ...packages.map((pkg) => ({ value: pkg.id, label: pkg.name }))]}
+        options={[
+          {
+            value: '',
+            label: 'اختر الباكدج',
+          },
+          ...filteredPackages.map((pkg) => ({ value: pkg.id, label: pkg.name })),
+        ]}
         error={errors.packageId}
       />
-      {selectedPackage ? <p className="mt-1 text-xs text-[var(--admin-muted)]">المحدد: {selectedPackage.name}</p> : null}
+      {selectedPackage ? (
+        <p className="mt-1 text-xs text-[var(--admin-muted)]">المحدد: {selectedPackage.name}</p>
+      ) : null}
     </div>
   );
 
@@ -359,7 +391,68 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
             </>
           )}
 
-          {/* Video */}
+          {value.codeType === 'PublicExam' && (
+            <div className="col-span-1 md:col-span-2">
+              <Dropdown
+                label="اختر الامتحان العام"
+                value={value.publicExamProductId || ''}
+                onChange={(publicExamProductId) => handleField('publicExamProductId', (publicExamProductId as string) || undefined)}
+                placeholder="اختر الامتحان العام"
+                searchable
+                options={[
+                  { value: '', label: 'اختر الامتحان العام' },
+                  ...publicExams
+                    .filter((exam) => !exam.disabledAt)
+                    .map((exam) => ({ value: exam.id, label: exam.examTitle })),
+                ]}
+                error={errors.publicExamProductId}
+              />
+              {!publicExams.length && <p className="mt-2 text-xs text-[var(--admin-muted)]">لا توجد امتحانات عامة متاحة للاختيار.</p>}
+            </div>
+          )}
+
+          {/* Video Type */}
+          {value.codeType === 'VideoType' && (
+            <>
+              <div className="col-span-1 md:col-span-2">
+                <VideoTypeSelect
+                  value={value.videoTypeId || ''}
+                  onChange={(videoTypeId) => handleField('videoTypeId', videoTypeId || undefined)}
+                  label="اختر نوع الفيديو"
+                />
+                {errors.videoTypeId && <p className="text-xs text-red-500 mt-1">{errors.videoTypeId}</p>}
+              </div>
+              <fieldset className="col-span-1 md:col-span-2 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-4">
+                <legend className="px-1 text-xs font-bold text-[var(--admin-muted)]">نطاق فيديوهات النوع</legend>
+                <div className="mt-2 grid gap-3 md:grid-cols-2">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-[var(--admin-card-strong)]">
+                    <input
+                      type="radio"
+                      name="video-type-access-scope"
+                      checked={value.includeFutureVideos === false}
+                      onChange={() => handleField('includeFutureVideos', false)}
+                    />
+                    <span className="text-sm text-[var(--admin-text)]"><strong className="block">الفيديوهات الموجودة الآن فقط</strong><span className="text-xs text-[var(--admin-muted)]">لا يفتح أي فيديو يُضاف لاحقاً.</span></span>
+                  </label>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-md p-2 hover:bg-[var(--admin-card-strong)]">
+                    <input
+                      type="radio"
+                      name="video-type-access-scope"
+                      checked={value.includeFutureVideos !== false}
+                      onChange={() => handleField('includeFutureVideos', true)}
+                    />
+                    <span className="text-sm text-[var(--admin-text)]"><strong className="block">كل الفيديوهات الحالية والمستقبلية</strong><span className="text-xs text-[var(--admin-muted)]">يفتح تلقائياً أي فيديو جديد من هذا النوع داخل النطاق المحدد.</span></span>
+                  </label>
+                </div>
+              </fieldset>
+              {renderPackageSelect()}
+              {renderTermSelect()}
+              {renderSectionSelect()}
+              {renderLessonSelect('اختر حصة لتضييق النطاق')}
+            </>
+          )}
+
+          {/* Specific Videos */}
           {value.codeType === 'Video' && (
             <>
               {renderPackageSelect()}
@@ -419,25 +512,8 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
 
         </div>
 
-        {/* ── Optional fields (Discount + Expiration) ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-[var(--admin-border)]/50">
-          <div>
-            <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 flex justify-between">
-              <span>نسبة الخصم % </span>
-              <span className="opacity-50 font-normal">اختياري</span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              placeholder="مثلا: 20"
-              className="w-full bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm text-[var(--admin-text)]"
-              value={value.discountPercentage || ''}
-              onChange={(e) => handleField('discountPercentage', e.target.value ? Number(e.target.value) : undefined)}
-              dir="ltr"
-            />
-          </div>
-
+        {/* ── Optional fields ── */}
+        <div className="grid grid-cols-1 gap-4 mt-4 pt-4 border-t border-[var(--admin-border)]/50">
           <div>
             <label className="text-xs font-bold text-[var(--admin-muted)] mb-1 flex justify-between">
               <span>تاريخ الانتهاء</span>
@@ -446,10 +522,23 @@ export function CodeTypeSelector({ value, onChange, errors = {}, packages }: Cod
             <input
               type="datetime-local"
               className="w-full bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm text-[var(--admin-text)] [color-scheme:dark]"
-              value={value.expiresAt ? new Date(value.expiresAt).toISOString().slice(0, 16) : ''}
-              onChange={(e) => handleField('expiresAt', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+              value={value.expiresAt ? formatCairoDateTimeLocal(value.expiresAt) : ''}
+              onChange={(e) => handleField('expiresAt', e.target.value ? cairoDateTimeLocalToIso(e.target.value) : undefined)}
               dir="ltr"
             />
+            {value.codeType !== 'Balance' && value.expiresAt && (
+              <fieldset className="mt-3 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-3">
+                <legend className="px-1 text-xs font-bold text-[var(--admin-muted)]">بعد تاريخ الانتهاء</legend>
+                <label className="mt-2 flex cursor-pointer items-start gap-3 text-sm text-[var(--admin-text)]">
+                  <input type="radio" name="activated-access-expiry" checked={value.expireActivatedAccess !== false} onChange={() => handleField('expireActivatedAccess', true)} />
+                  <span><strong className="block">ينتهي الوصول للمحتوى</strong><span className="text-xs text-[var(--admin-muted)]">حتى الطالب الذي فعّل الكود قبل التاريخ يتوقف وصوله.</span></span>
+                </label>
+                <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-[var(--admin-text)]">
+                  <input type="radio" name="activated-access-expiry" checked={value.expireActivatedAccess === false} onChange={() => handleField('expireActivatedAccess', false)} />
+                  <span><strong className="block">يبقى المحتوى متاحًا لمن فعّل الكود</strong><span className="text-xs text-[var(--admin-muted)]">بعد التاريخ لا يمكن تفعيل كود جديد فقط.</span></span>
+                </label>
+              </fieldset>
+            )}
           </div>
         </div>
       </div>

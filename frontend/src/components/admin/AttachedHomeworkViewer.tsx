@@ -3,17 +3,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminService, type HomeworkDashboardDto } from '@/services/admin-service';
-import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3 } from 'lucide-react';
+import { ClipboardList, FileQuestion, GraduationCap, LayoutList, Plus, BarChart3, Users, Power } from 'lucide-react';
 import { AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 
-export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
+export function AttachedHomeworkViewer({
+  homeworkId,
+  surface = 'admin',
+}: {
+  homeworkId: string;
+  surface?: 'admin' | 'teacher';
+}) {
   const router = useRouter();
   const [data, setData] = useState<HomeworkDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const homeworkBasePath = surface === 'teacher' ? '/teacher/packages/homework' : '/admin/content/homework';
 
   const loadData = useCallback(async () => {
     try {
@@ -25,6 +32,17 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
       setLoading(false);
     }
   }, [homeworkId]);
+
+  const toggleStatus = async () => {
+    if (!data) return;
+    try {
+      await adminService.setHomeworkStatus(homeworkId, !data.isActive);
+      setData({ ...data, isActive: !data.isActive });
+      toast.success(data.isActive ? 'تم تعطيل الواجب، وسيظل محفوظاً.' : 'تم تفعيل الواجب.');
+    } catch {
+      toast.error('تعذر تحديث حالة الواجب.');
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -65,16 +83,14 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
               <p className="text-[var(--admin-muted)] text-sm">{data.description}</p>
             )}
           </div>
-          <NeumorphButton
-            type="button"
-            onClick={() => router.push(`/admin/content/homework/${homeworkId}/add-question`)}
-            intent="primary"
-            size="md"
-            pill
-            className="shrink-0"
-          >
-            <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
-          </NeumorphButton>
+          <div className="flex flex-wrap gap-3">
+            <NeumorphButton type="button" onClick={toggleStatus} intent={data.isActive ? 'danger' : 'primary'} size="md" pill>
+              <Power className="w-4 h-4 ml-2" /> {data.isActive ? 'تعطيل الواجب' : 'تفعيل الواجب'}
+            </NeumorphButton>
+            <NeumorphButton type="button" onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)} intent="primary" size="md" pill className="shrink-0">
+              <Plus className="w-4 h-4 ml-2" /> إدراج أو تعديل الأسئلة
+            </NeumorphButton>
+          </div>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
@@ -151,7 +167,7 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
               <p className="text-xs text-[var(--admin-muted)] opacity-70 mb-4">لم يتم إدراج أي أسئلة للواجب حتى الآن.</p>
               <NeumorphButton
                 type="button"
-                onClick={() => router.push(`/admin/content/homework/${homeworkId}/add-question`)}
+                onClick={() => router.push(`${homeworkBasePath}/${homeworkId}/add-question`)}
                 intent="primary"
                 size="sm"
                 pill
@@ -161,6 +177,56 @@ export function AttachedHomeworkViewer({ homeworkId }: { homeworkId: string }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Student submissions */}
+      <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h3 className="flex items-center gap-3 text-xl font-bold text-[var(--admin-text)]">
+            <Users className="h-6 w-6 text-[var(--admin-primary)]" />
+            تسليمات الطلاب
+          </h3>
+          <span className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-muted)]">
+            {data.submissions?.length || 0} تسليم
+          </span>
+        </div>
+        {data.submissions && data.submissions.length > 0 ? (
+          <div className="overflow-x-auto rounded-2xl border border-[var(--admin-border)]">
+            <table className="w-full min-w-[680px] text-right text-sm">
+              <thead className="bg-[var(--admin-card-soft)] text-xs font-black text-[var(--admin-muted)]">
+                <tr>
+                  <th className="px-4 py-3">الطالب</th>
+                  <th className="px-4 py-3">الحالة</th>
+                  <th className="px-4 py-3">الدرجة</th>
+                  <th className="px-4 py-3">التقييم</th>
+                  <th className="px-4 py-3">تاريخ التسليم</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--admin-border)]">
+                {data.submissions.map((submission) => (
+                  <tr key={`${submission.studentId}-${submission.startedAt}`} className="text-[var(--admin-text)]">
+                    <td className="px-4 py-4">
+                      <p className="font-black">{submission.studentName}</p>
+                      <p className="mt-1 text-xs text-[var(--admin-muted)]">{submission.studentPhone}</p>
+                    </td>
+                    <td className="px-4 py-4 font-bold">{submission.status}</td>
+                    <td className="px-4 py-4 font-black">{submission.scoreAchieved}</td>
+                    <td className="px-4 py-4 text-[var(--admin-muted)]">{submission.evaluation}</td>
+                    <td className="px-4 py-4 text-[var(--admin-muted)]">
+                      {submission.submittedAt
+                        ? new Date(submission.submittedAt).toLocaleDateString('ar-EG')
+                        : 'لم يتم التسليم'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-background)] px-5 py-8 text-center font-bold text-[var(--admin-muted)]">
+            لا توجد تسليمات لهذا الواجب حتى الآن.
+          </p>
+        )}
       </div>
     </div>
   );

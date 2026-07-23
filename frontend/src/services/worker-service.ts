@@ -1,4 +1,4 @@
-import { getStoredAccessToken } from '@/lib/auth-storage';
+import { getAccessToken } from '@/lib/auth-memory';
 
 export interface WorkerJobStatus {
   id?: string;
@@ -8,7 +8,7 @@ export interface WorkerJobStatus {
 }
 
 async function workerRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = getStoredAccessToken();
+  const token = getAccessToken();
   if (!token) {
     throw new Error('Authentication required');
   }

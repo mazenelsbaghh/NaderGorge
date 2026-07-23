@@ -48,8 +48,18 @@ public class AiAnalysisCompletedCommandHandler : IRequestHandler<AiAnalysisCompl
 
         if (!video.IsProcessingAI)
         {
-            _logger.LogInformation("[AI Callback] Video {VideoId} is not in processing state. Terminal state already reached. Skipping.", request.VideoId);
-            return ApiResponse.Ok("AI chapters already processed");
+            var hasStoredResults = !string.IsNullOrWhiteSpace(video.SubtitleUrl) ||
+                await _db.VideoChapters.AnyAsync(vc => vc.LessonVideoId == request.VideoId, ct);
+            var hasIncomingResults = !string.IsNullOrWhiteSpace(request.SubtitleUrl) ||
+                request.Chapters is { Count: > 0 };
+
+            if (hasStoredResults || !hasIncomingResults)
+            {
+                _logger.LogInformation("[AI Callback] Video {VideoId} is not in processing state and already has terminal AI results. Skipping duplicate callback.", request.VideoId);
+                return ApiResponse.Ok("AI chapters already processed");
+            }
+
+            _logger.LogWarning("[AI Callback] Video {VideoId} is not in processing state but has no stored AI results. Accepting late successful callback.", request.VideoId);
         }
 
         // 2. Delete old chapters by fetching them separately (no tracking on the parent video)

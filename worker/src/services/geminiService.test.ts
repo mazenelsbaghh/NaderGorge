@@ -4,7 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { AIProviderGateway } from './aiProvider.js';
 import type { AIConfig } from './aiConfig.js';
-import { analyzeVideoChapters, evaluateEssayWithAI, generateChapterMindmap, setAIServiceRuntimeFactoryForTests } from './geminiService.js';
+import { analyzeVideoChapters, evaluateEssayWithAI, generateChapterMindmap, generateLiveSupportReply, setAIServiceRuntimeFactoryForTests } from './geminiService.js';
+import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
 
 const vertexConfig: AIConfig = {
   primaryProvider: 'vertex', project: 'p', location: 'global', temporaryBucket: 'bucket',
@@ -104,6 +105,40 @@ test('essay quota exhaustion uses the configured fallback once', async () => {
   }));
   assert.deepEqual(await evaluateEssayWithAI('إجابة'), { isCorrect: false, feedback: 'حاول تاني' });
   assert.equal(fallbackCalls, 1);
+});
+
+test('live support reports Developer provider after Vertex quota fallback and does not retry the request', async () => {
+  let vertexCalls = 0;
+  let developerCalls = 0;
+  const vertex = { models: { generateContent: async () => { vertexCalls++; throw { status: 429 }; } }, files: {} };
+  const developer = { models: { generateContent: async () => { developerCalls++; return { text: '{"schemaVersion":"1","type":"reply","messageAr":"تمام"}' }; } }, files: {} };
+  setAIServiceRuntimeFactoryForTests(() => ({
+    config: vertexConfig, gateway: new AIProviderGateway(vertexConfig), vertex: vertex as any, developer: developer as any,
+  }));
+  const prompt: LiveSupportAgentPrompt = {
+    systemInstruction: 'ساعد بأمان', contents: [{ role: 'user', parts: [{ text: 'مساعدة' }] }],
+    deadlineAt: new Date(Date.now() + 5_000).toISOString(),
+  };
+
+  const result = await generateLiveSupportReply(prompt);
+  assert.equal(result.provider, 'developer');
+  assert.equal(vertexCalls, 1);
+  assert.equal(developerCalls, 1);
+});
+
+test('live support rejects an expired deadline without invoking a provider', async () => {
+  let providerCalls = 0;
+  const client = { models: { generateContent: async () => { providerCalls++; return { text: '{}' }; } }, files: {} };
+  setAIServiceRuntimeFactoryForTests(() => ({
+    config: vertexConfig, gateway: new AIProviderGateway(vertexConfig), vertex: client as any, developer: client as any,
+  }));
+  const prompt: LiveSupportAgentPrompt = {
+    systemInstruction: 'ساعد بأمان', contents: [{ role: 'user', parts: [{ text: 'مساعدة' }] }],
+    deadlineAt: new Date(Date.now() - 1).toISOString(),
+  };
+
+  await assert.rejects(() => generateLiveSupportReply(prompt), /AI_PROVIDER_DEADLINE_EXCEEDED/);
+  assert.equal(providerCalls, 0);
 });
 
 test('mindmap keeps the teacher image first and writes a compatible PNG URL', async (testContext) => {

@@ -122,7 +122,7 @@ export const educationTracks = [
     description: "مناهج شاملة ومبسطة لجميع مواد البكالوريا، مع اختبارات وتمارين على نمط الامتحان.",
     icon: GraduationCap,
     cta: "استكشف مسار البكالوريا",
-    href: "/register",
+    href: "/teachers",
     tone: "teal",
   },
   {
@@ -130,7 +130,7 @@ export const educationTracks = [
     description: "جميع مواد الثانوية العامة: شرح، ملخصات، اختبارات دورية، ومراجعة منظمة قبل الامتحان.",
     icon: BookOpenCheck,
     cta: "استكشف مسار الثانوية العامة",
-    href: "/register",
+    href: "/teachers",
     tone: "navy",
   },
 ] as const;

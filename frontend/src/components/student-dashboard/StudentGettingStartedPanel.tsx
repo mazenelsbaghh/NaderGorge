@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpLeft, BookOpenText, ChevronDown, KeyRound, X } from "lucide-react";
+import { ArrowUpLeft, BookOpenText, ChevronDown, X } from "lucide-react";
 
 import type { DashboardDto } from "@/services/student-service";
 
@@ -18,12 +18,12 @@ type OnboardingVariant = {
   primaryCta: {
     href: string;
     label: string;
-    icon: typeof KeyRound;
+    icon: typeof BookOpenText;
   };
   secondaryCta: {
     href: string;
     label: string;
-    icon: typeof KeyRound;
+    icon: typeof BookOpenText;
   };
   steps: Array<{
     title: string;
@@ -35,21 +35,21 @@ function getVariant(data: DashboardDto): OnboardingVariant | null {
   if (data.activePackages.length === 0) {
     return {
       title: "تحتاج مساعدة في البداية؟",
-      description: "ثلاث خطوات قصيرة من التفعيل حتى أول درس.",
+      description: "ثلاث خطوات قصيرة من اختيار الباقة حتى أول درس.",
       primaryCta: {
-        href: "/student/code-redemption",
-        label: "فعّل كودك",
-        icon: KeyRound,
-      },
-      secondaryCta: {
         href: "/student/packages",
         label: "تصفح الباقات",
         icon: BookOpenText,
       },
+      secondaryCta: {
+        href: "/student/mistakes",
+        label: "راجع ملف الأخطاء",
+        icon: BookOpenText,
+      },
       steps: [
         {
-          title: "افتح الوصول",
-          detail: "فعّل كودًا جديدًا أو راجع الباقات المتاحة لك.",
+          title: "اختر الباقة",
+          detail: "راجع الباقات المتاحة واختر الأنسب لخطتك.",
         },
         {
           title: "ابدأ أول درس",

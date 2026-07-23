@@ -1,5 +1,5 @@
-import TeacherExamsPageClient from "./TeacherExamsPageClient";
+import { redirect } from "next/navigation";
 
 export default function TeacherExamsPage() {
-  return <TeacherExamsPageClient />;
+  redirect("/teacher/public-exams");
 }

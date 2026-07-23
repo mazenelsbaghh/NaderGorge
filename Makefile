@@ -3,13 +3,19 @@
         build-frontend build-landing build-student build-admin build-backend build-worker \
         logs logs-frontend logs-landing logs-student logs-admin logs-backend logs-worker logs-db logs-redis \
         shell-frontend shell-landing shell-student shell-admin shell-backend shell-worker shell-db \
-        verify-surfaces verify-surfaces-static \
+        verify verify-backend verify-frontend verify-worker verify-docker verify-e2e verify-surfaces verify-surfaces-static \
         migrate migrate-add \
         dev frontend backend stop \
         logs-production logs-production-backend \
-        build-mobile-android build-mobile-ios build-mobile
+        android-builder-start android-builder-stop android-builder-reset android-gradle-cache-clean android-builder-shell \
+        build-mobile-android build-mobile-android-offline test-mobile-android build-mobile-ios build-mobile
 
 .DEFAULT_GOAL := help
+
+ANDROID_PROJECT_DIR := $(CURDIR)/mobile/parent-android
+ANDROID_BUILDER_NAME := parent-android-builder
+ANDROID_BUILDER_IMAGE := mobiledevops/android-sdk-image:34.0.0
+ANDROID_GRADLE_VOLUME := parent_android_gradle_cache
 
 help: ## Show all available make targets
 	@echo ""
@@ -161,6 +167,33 @@ verify-audit-remediation: ## Run audit remediation verification commands
 	node scripts/generate-endpoint-inventory.mjs --check
 	docker compose config -q
 
+verify: verify-backend verify-frontend verify-worker verify-docker ## Run the Phase 0 verification contract
+
+verify-backend: ## Restore, build, and test the backend solution
+	dotnet restore backend/NaderGorge.sln
+	dotnet build backend/NaderGorge.sln --no-restore
+	@if [ -n "$${ConnectionStrings__DefaultConnection:-}" ]; then \
+		dotnet test backend/NaderGorge.sln --no-build; \
+	else \
+		echo "Skipping PostgreSQL integration tests: ConnectionStrings__DefaultConnection is not set."; \
+		dotnet test backend/tests/NaderGorge.Application.Tests/NaderGorge.Application.Tests.csproj --no-build; \
+	fi
+
+verify-frontend: ## Lint and build the frontend
+	cd frontend && npm run lint && npm run build
+
+verify-worker: ## Build the Node.js worker
+	cd worker && npm run build
+
+verify-docker: ## Validate Docker Compose configuration
+	docker compose config -q
+
+verify-e2e: ## Run Phase 1 auth/session browser smoke; requires backend E2e mode on api.lvh.me:5245
+	cd frontend && \
+		NEXT_PUBLIC_API_URL=http://api.lvh.me:5245/api \
+		NEXT_PUBLIC_BACKEND_URL=http://api.lvh.me:5245 \
+		npx playwright test tests/e2e/auth.spec.ts tests/e2e/admin-users.spec.ts tests/e2e/parent-report.spec.ts --project=chromium -g "Phase 1|Parent report"
+
 # =============================================================================
 # LOGS
 # =============================================================================
@@ -296,55 +329,80 @@ stop: ## Kill all native processes running on known ports
 # DEPLOYMENT
 # =============================================================================
 
-deploy: ## Stage, commit, merge current branch to main, push to origin, and checkout original branch
-	@CURRENT_BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
-	echo "Deploying from branch: $$CURRENT_BRANCH"; \
-	echo "Staging and committing changes..."; \
-	git add .; \
-	git commit -m "deploy: updates from $$CURRENT_BRANCH" || true; \
-	echo "Switching to main..."; \
-	git checkout main; \
-	echo "Pulling latest main..."; \
-	git pull origin main; \
-	echo "Merging $$CURRENT_BRANCH into main..."; \
-	git merge $$CURRENT_BRANCH; \
-	echo "Pushing to main..."; \
-	git push origin main; \
-	echo "Switching back to $$CURRENT_BRANCH..."; \
-	git checkout $$CURRENT_BRANCH; \
-	echo "Deployment push completed."
+deploy: ## Refuse unsafe auto-stage/commit/merge/push deployment
+	@echo "Refusing unsafe deploy: this target no longer stages, commits, merges, or pushes dirty worktree changes."
+	@echo "Use reviewed git commits and CI/CD, then run an explicit production target with PROD_SSH_HOST configured."
+	@exit 1
 
-deploy-production: deploy ## Push code to production server and rebuild containers with migrations
-	@echo "Pushing code to production server git repository..."
-	git push prod main
-	@echo "Running deployment and database migration fixes on production server..."
-	ssh -o StrictHostKeyChecking=no root@72.62.27.189 "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py"
+deploy-production: ## Run production deploy hook over key-based SSH; requires PROD_SSH_HOST
+	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
+	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "cd /var/www/nadergorge && git pull --ff-only && docker compose up -d --build && python3 /var/www/nadergorge/scratch/fix_migrations_vps.py"
 
-migrate-production: ## Populate migration history and run pending migrations on the VPS production server without rebuild
-	@echo "Connecting and applying migrations to production database..."
-	ssh -o StrictHostKeyChecking=no root@72.62.27.189 "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py --skip-build"
+migrate-production: ## Populate migration history and run pending migrations over key-based SSH; requires PROD_SSH_HOST
+	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
+	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py --skip-build"
 
-logs-production: ## Tail live logs from ALL services on the production server
-	sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 "cd /var/www/nadergorge && docker compose logs -f"
+logs-production: ## Tail live logs from ALL services over key-based SSH; requires PROD_SSH_HOST
+	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
+	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "cd /var/www/nadergorge && docker compose logs -f"
 
-logs-production-backend: ## Tail backend logs from the production server
-	sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 "cd /var/www/nadergorge && docker compose logs -f backend"
+logs-production-backend: ## Tail backend logs over key-based SSH; requires PROD_SSH_HOST
+	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
+	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "cd /var/www/nadergorge && docker compose logs -f backend"
 
 
 # =============================================================================
 # MOBILE BUILDS
 # =============================================================================
 
-build-mobile-android: ## Build and test the Android mobile app in Docker
-	@if [ -d "mobile/parent-android" ]; then \
-		echo "Building Android app in Docker..."; \
-		docker run --rm -v "$(PWD)/mobile/parent-android:/app" -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew test; \
-	elif [ -d "parent-android" ]; then \
-		echo "Building Android app in Docker..."; \
-		docker run --rm -v "$(PWD)/parent-android:/app" -w /app mobiledevops/android-sdk-image:34.0.0 ./gradlew test; \
+android-builder-start: ## Start/reuse the persistent Android Docker builder
+	@test -d "$(ANDROID_PROJECT_DIR)" || (echo "Android project directory not found: $(ANDROID_PROJECT_DIR)" && exit 1)
+	@docker volume create "$(ANDROID_GRADLE_VOLUME)" >/dev/null
+	@if docker ps --format '{{.Names}}' | grep -qx "$(ANDROID_BUILDER_NAME)"; then \
+		echo "Android builder already running: $(ANDROID_BUILDER_NAME)"; \
+	elif docker ps -a --format '{{.Names}}' | grep -qx "$(ANDROID_BUILDER_NAME)"; then \
+		echo "Starting existing Android builder: $(ANDROID_BUILDER_NAME)"; \
+		docker start "$(ANDROID_BUILDER_NAME)" >/dev/null; \
 	else \
-		echo "Android project directory not found. Checked 'mobile/parent-android' and 'parent-android'."; \
+		echo "Creating Android builder: $(ANDROID_BUILDER_NAME)"; \
+		docker run -d \
+			--name "$(ANDROID_BUILDER_NAME)" \
+			--dns 8.8.8.8 \
+			-v "$(ANDROID_PROJECT_DIR):/app" \
+			-v "$(ANDROID_GRADLE_VOLUME):/home/mobiledevops/.gradle" \
+			-e GRADLE_USER_HOME=/home/mobiledevops/.gradle \
+			-w /app \
+			"$(ANDROID_BUILDER_IMAGE)" \
+			tail -f /dev/null >/dev/null; \
 	fi
+	@if ! docker exec "$(ANDROID_BUILDER_NAME)" sh -lc 'test -w /home/mobiledevops/.gradle'; then \
+		docker exec -u root "$(ANDROID_BUILDER_NAME)" chown -R mobiledevops:mobiledevops /home/mobiledevops/.gradle; \
+	fi
+
+android-builder-stop: ## Stop the persistent Android Docker builder
+	@docker stop "$(ANDROID_BUILDER_NAME)" >/dev/null 2>&1 || true
+	@echo "Android builder stopped."
+
+android-builder-reset: ## Recreate the Android Docker builder without deleting Gradle cache
+	@docker rm -f "$(ANDROID_BUILDER_NAME)" >/dev/null 2>&1 || true
+	@$(MAKE) android-builder-start
+
+android-gradle-cache-clean: ## Delete the persistent Android Gradle Docker volume cache
+	@docker rm -f "$(ANDROID_BUILDER_NAME)" >/dev/null 2>&1 || true
+	@docker volume rm "$(ANDROID_GRADLE_VOLUME)" >/dev/null 2>&1 || true
+	@echo "Android Gradle cache deleted."
+
+android-builder-shell: android-builder-start ## Open a shell in the Android Docker builder
+	docker exec -it -w /app "$(ANDROID_BUILDER_NAME)" bash
+
+build-mobile-android: android-builder-start ## Fast debug APK build using the persistent Android builder
+	docker exec -w /app "$(ANDROID_BUILDER_NAME)" ./gradlew assembleDebug --build-cache --parallel
+
+build-mobile-android-offline: android-builder-start ## Fast offline debug APK build after dependencies are cached
+	docker exec -w /app "$(ANDROID_BUILDER_NAME)" ./gradlew assembleDebug --offline --build-cache --parallel
+
+test-mobile-android: android-builder-start ## Run Android unit tests using the persistent Android builder
+	docker exec -w /app "$(ANDROID_BUILDER_NAME)" ./gradlew test --build-cache --parallel
 
 build-mobile-ios: ## Compile and test the iOS mobile app on host
 	@if [ -d "mobile/parent-ios" ]; then \

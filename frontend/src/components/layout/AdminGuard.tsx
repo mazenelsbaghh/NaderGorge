@@ -1,34 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
+import { canAccessAdminRoute, hasAdminSurface } from "@/packages/admin/route-permissions";
 import { useAuthStore } from "@/stores/auth-store";
-
-function hasAdminAccess(roles: string[] | undefined) {
-  return !!roles?.length && roles.some(r =>
-    r.toLowerCase().includes("admin") ||
-    r.toLowerCase().includes("supervisor") ||
-    r.toLowerCase().includes("assistant") ||
-    r.toLowerCase().includes("staff")
-  );
-}
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
-  const hasAdminNavItems = user?.allowedNavbarItems?.some(
-    (item: string) => item.startsWith('/admin/')
-  ) ?? false;
-
-  const isAuthorized = hasAdminAccess(user?.roles) && (
-    !user?.allowedDomains ||
-    user.allowedDomains.length === 0 ||
-    user.allowedDomains.includes("all") ||
-    user.allowedDomains.includes("admin") ||
-    hasAdminNavItems
-  );
+  const isWrongSurface = isAuthenticated && !hasAdminSurface(user);
+  const isAuthorized = canAccessAdminRoute(pathname, user);
 
   useEffect(() => {
     if (isLoading) return;
@@ -38,10 +22,30 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (!isAuthorized) {
-      router.replace("/login");
+    if (isWrongSurface) {
+      return;
     }
-  }, [isAuthenticated, isLoading, router, isAuthorized]);
+
+    if (!isAuthorized) {
+      router.replace("/admin/unauthorized");
+    }
+  }, [isAuthenticated, isLoading, router, isAuthorized, isWrongSurface]);
+
+  if (!isLoading && isWrongSurface) {
+    return (
+      <div
+        dir="rtl"
+        className="flex min-h-dvh items-center justify-center bg-[var(--admin-bg)] px-6 text-[var(--admin-text)]"
+      >
+        <div className="relative max-w-md overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5 text-center shadow-[0_18px_48px_var(--admin-shadow)]">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,var(--admin-primary-15),transparent_42%)]" />
+          <p className="relative text-base font-black text-[var(--admin-text)]">
+            الصفحة غير موجودة أو لا تخص هذا الحساب
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !isAuthenticated || !isAuthorized) {
     return (

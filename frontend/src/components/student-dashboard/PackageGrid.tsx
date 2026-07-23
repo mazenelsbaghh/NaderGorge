@@ -9,13 +9,13 @@ import { resolveMediaUrl } from "@/utils/resolve-media-url";
 type PackageGridProps = {
   packages: ActivePackageDto[];
   onOpenPackage: (packageId: string) => void;
-  onActivateCode: (packageId?: string) => void;
+  onBrowsePackages: () => void;
 };
 
 export function PackageGrid({
   packages,
   onOpenPackage,
-  onActivateCode,
+  onBrowsePackages,
 }: PackageGridProps) {
   const packagesBySubject = packages.reduce<Record<string, ActivePackageDto[]>>(
     (groups, pkg) => {
@@ -49,18 +49,18 @@ export function PackageGrid({
               <BookCopy className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-black text-[var(--admin-text)]">لا توجد باقات مفعلة</h3>
+              <h3 className="font-black text-[var(--admin-text)]">لا توجد باقات مفعلة متاحة لحسابك</h3>
               <p className="mt-1 text-sm leading-6 text-[var(--admin-muted)]">
-                فعّل كودًا لفتح الباقة والدروس المرتبطة بها.
+                اشترِ باقة مطابقة لمرحلتك وصفك لتظهر هنا.
               </p>
             </div>
           </div>
           <button
             type="button"
-            onClick={() => onActivateCode()}
+            onClick={onBrowsePackages}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)] transition-colors hover:bg-[var(--admin-primary-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-card)] sm:w-auto"
           >
-            فعّل كودًا
+            استعرض الباقات
           </button>
         </div>
       ) : (

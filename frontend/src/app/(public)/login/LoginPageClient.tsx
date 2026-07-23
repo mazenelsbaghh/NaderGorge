@@ -79,11 +79,14 @@ export default function LoginPageClient() {
       const hasAdmin = allowedDomains.includes('admin') || roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
       const hasTeacher = allowedDomains.includes('teacher') || roles.some(r => r.toLowerCase().includes('teacher'));
       const hasAssistant = allowedDomains.includes('assistant') || roles.some(r => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
+      const isEmployee = roles.some(r => r.toLowerCase() === 'employee');
 
       if (hasAdmin) {
         defaultDestination = `${origins.admin}/admin`;
       } else if (hasTeacher) {
         defaultDestination = `${origins.teacher}/teacher`;
+      } else if (isEmployee) {
+        defaultDestination = `${origins.assistant}/employee`;
       } else if (hasAssistant) {
         defaultDestination = `${origins.assistant}/assistant`;
       }

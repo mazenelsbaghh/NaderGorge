@@ -27,9 +27,9 @@ export function CommunityFeed({ posts, loading = false }: CommunityFeedProps) {
         </div>
       ) : posts.length === 0 ? (
         <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-5 py-10 text-center shadow-sm">
-          <p className="text-base font-bold text-[var(--admin-text)]">لا توجد بوستات معتمدة حتى الآن.</p>
+          <p className="text-base font-bold text-[var(--admin-text)]">لا توجد منشورات متاحة لك حالياً.</p>
           <p className="mt-2 text-sm font-medium text-[var(--admin-muted)]">
-            أول بوست مقبول سيبدأ نبض المجتمع هنا.
+            تظهر هنا المنشورات المعتمدة المطابقة لمرحلتك وصفك أو المنشورات العامة للمنصة.
           </p>
         </div>
       ) : (

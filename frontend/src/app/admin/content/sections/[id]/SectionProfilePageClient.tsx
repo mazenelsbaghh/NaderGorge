@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpenText, ChevronRight, Video, Clock3, Users } from 'lucide-react';
-import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab } from '@/components/admin';
+import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab, ContentBasicDetailsForm } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
@@ -164,6 +164,16 @@ export default function SectionProfilePageClient(props: { params: { id: string }
               setSection((c: any) => ({ ...c, price: newPrice }));
             }}
           />
+          <ContentBasicDetailsForm
+            title={section.title}
+            order={section.order}
+            price={section.price ?? 0}
+            onSave={async ({ title, order, price }) => {
+              await adminService.updateSection(params.id, { title, order, price });
+              setSection((current: any) => ({ ...current, title, order, price }));
+              await loadSection();
+            }}
+          />
         </div>
       )}
 
@@ -181,6 +191,11 @@ export default function SectionProfilePageClient(props: { params: { id: string }
             onCreate={async ({ title, order, price, summary }) => {
               await adminService.createLesson({ sectionId: params.id, title, summary: summary ?? '', order, price });
               toast.success('تمت إضافة الحصة.');
+              await loadLessons();
+            }}
+            onUpdate={async (id, { title, order, price, summary }) => {
+              await adminService.updateLesson(id, { title, summary: summary ?? '', order, price });
+              toast.success('تم تحديث الحصة.');
               await loadLessons();
             }}
             onRetry={loadLessons}

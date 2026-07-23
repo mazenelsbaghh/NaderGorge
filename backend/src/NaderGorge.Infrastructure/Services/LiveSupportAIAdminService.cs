@@ -243,9 +243,8 @@ public sealed class LiveSupportAIAdminService(
         var documents = await knowledge.SearchPublishedAsync(policy.Id, request.Message, LiveSupportAIContractLimits.MaxKnowledgeDocuments, LiveSupportAIContractLimits.MaxContextCharacters, ct);
         var allowedDecisionTypes = new[] { "reply", "propose_action", "request_verification", "propose_account_creation", "request_resolution", "handoff" };
         var allowedActionKeys = Parse(policy.ActionKeysJson);
-        using var emptySchema = JsonDocument.Parse("{}");
         var actions = allowedActionKeys.Where(LiveSupportAICatalog.Actions.ContainsKey).Select(key =>
-            new LiveSupportAIAllowedActionDto(key, LiveSupportAICatalog.Actions[key].Description, emptySchema.RootElement.Clone())).ToArray();
+            new LiveSupportAIAllowedActionDto(key, LiveSupportAICatalog.Actions[key].Description, LiveSupportAICatalog.GetArgumentsSchema(key))).ToArray();
         var context = new LiveSupportAIWorkerClaimDto(
             "1", Guid.NewGuid(), Guid.NewGuid(), policy.Id, 0, $"preview:{Guid.NewGuid():N}", DateTime.UtcNow.AddSeconds(30),
             policy.SystemInstructions, documents, new Dictionary<string, object?> { ["previewMode"] = true },
@@ -253,13 +252,13 @@ public sealed class LiveSupportAIAdminService(
         LiveSupportAIWorkerPreviewResultDto preview;
         try { preview = await previewClient.PreviewAsync(context, ct); }
         catch (InvalidOperationException exception) { throw new LiveSupportAIAdminException(exception.Message, "تعذر إكمال معاينة المساعد."); }
-        LiveSupportAITurnOrchestrator.ValidateDecision(preview.Decision, preview.DecisionHash);
         if (preview.Decision.Type == "propose_action")
         {
             var actionKey = preview.Decision.Action!.Value.GetProperty("key").GetString();
             if (actionKey is null || !allowedActionKeys.Contains(actionKey, StringComparer.Ordinal))
                 throw new LiveSupportAIAdminException("AI_PREVIEW_ACTION_NOT_ALLOWED", "اقترحت المعاينة إجراءً غير مسموح به.");
         }
+        LiveSupportAITurnOrchestrator.ValidateDecision(preview.Decision, preview.DecisionHash);
         return new LiveSupportAIPreviewResultDto(policy.Id, true, documents.Count, allowedDecisionTypes,
             "DRY_RUN_DECISION_VALIDATED", preview.Decision, preview.DecisionHash, preview.Provider, preview.Model, preview.LatencyMs);
     }

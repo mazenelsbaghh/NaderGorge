@@ -30,7 +30,7 @@ public class EventContractTests
         db.UserRoles.Add(new UserRole { UserId = admin.Id, RoleId = adminRole.Id });
         await db.SaveChangesAsync();
 
-        await SeedTeacherAsync(db);
+        var teacherId = await SeedTeacherAsync(db);
         var handler = new BulkGenerateCodesCommandHandler(db, new NoOpAuditService());
 
         var response = await handler.Handle(new BulkGenerateCodesCommand(
@@ -39,7 +39,8 @@ public class EventContractTests
             Count: 2,
             CodeLength: 6,
             AdminId: admin.Id,
-            BalanceAmount: 100m), CancellationToken.None);
+            BalanceAmount: 100m,
+            TeacherId: teacherId), CancellationToken.None);
 
         Assert.True(response.Success);
         var exportEvent = await db.OutboxEvents.SingleAsync(
@@ -107,8 +108,7 @@ public class EventContractTests
         db.AccessCodes.Add(code);
         await db.SaveChangesAsync();
 
-        var balanceService = new BalanceService(db, new TestLogger<BalanceService>());
-        var handler = new ActivateCodeCommandHandler(db, balanceService);
+        var handler = new ActivateCodeCommandHandler(db, new FakeJobEnqueuer());
 
         var result = await handler.Handle(new ActivateCodeCommand(user.Id, "MATH123456"), CancellationToken.None);
         Assert.True(result.Success);
@@ -127,6 +127,54 @@ public class EventContractTests
         var root2 = payload2.RootElement;
         Assert.Equal(user.Id, root2.GetProperty("userId").GetGuid());
         Assert.Equal(packageId, root2.GetProperty("packageId").GetGuid());
+    }
+
+    [Fact]
+    public async Task ActivateCode_DoesNotConsumeTermCodeWhenStudentAlreadyHasTheTerm()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "704");
+        var (_, term, code) = await SeedTermCodeAsync(db, student.Id);
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            GrantType = CodeType.Term,
+            TermId = term.Id,
+            IsActive = true
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new ActivateCodeCommandHandler(db, new FakeJobEnqueuer());
+        var result = await handler.Handle(new ActivateCodeCommand(student.Id, code.CodePlaintext), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("أنت مشترك بالفعل في الترم «الترم الأول». الكود لم يُستخدم.", result.Message);
+        Assert.False(await db.AccessCodes.Where(item => item.Id == code.Id).Select(item => item.IsConsumed).SingleAsync());
+        Assert.Single(await db.StudentAccessGrants.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ActivateCode_DoesNotConsumeTermCodeWhenStudentHasItsPackage()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "705");
+        var (package, term, code) = await SeedTermCodeAsync(db, student.Id);
+        db.StudentAccessGrants.Add(new StudentAccessGrant
+        {
+            UserId = student.Id,
+            GrantType = CodeType.Package,
+            PackageId = package.Id,
+            IsActive = true
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new ActivateCodeCommandHandler(db, new FakeJobEnqueuer());
+        var result = await handler.Handle(new ActivateCodeCommand(student.Id, code.CodePlaintext), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal("لديك الترم «الترم الأول» بالفعل ضمن الباقة «باقة السنة الدراسية». الكود لم يُستخدم.", result.Message);
+        Assert.False(await db.AccessCodes.Where(item => item.Id == code.Id).Select(item => item.IsConsumed).SingleAsync());
+        Assert.Single(await db.StudentAccessGrants.ToListAsync());
     }
 
     [Fact]
@@ -176,7 +224,7 @@ public class EventContractTests
         Assert.Equal(2m, rootResult.GetProperty("score").GetDecimal());
     }
 
-    private static async Task SeedTeacherAsync(AppDbContext db)
+    private static async Task<Guid> SeedTeacherAsync(AppDbContext db)
     {
         var teacherUser = new User
         {
@@ -184,15 +232,61 @@ public class EventContractTests
             PhoneNumber = "701",
             PasswordHash = "hashed"
         };
-        db.Users.Add(teacherUser);
-        db.TeacherProfiles.Add(new TeacherProfile
+        var teacherProfile = new TeacherProfile
         {
             UserId = teacherUser.Id,
             Bio = "Teacher bio",
             Specialization = "Physics",
             ContactInfo = "701"
-        });
+        };
+        db.Users.Add(teacherUser);
+        db.TeacherProfiles.Add(teacherProfile);
         await db.SaveChangesAsync();
+        return teacherProfile.Id;
+    }
+
+    private static async Task<(Package Package, Term Term, AccessCode Code)> SeedTermCodeAsync(AppDbContext db, Guid createdByUserId)
+    {
+        var subject = new Subject
+        {
+            Name = $"Subject {Guid.NewGuid():N}",
+            NormalizedName = Guid.NewGuid().ToString("N"),
+            Description = "Subject"
+        };
+        var package = new Package
+        {
+            Name = "باقة السنة الدراسية",
+            Description = "Package",
+            Price = 300m,
+            Subject = subject,
+            TargetGrade = "FirstSecondary",
+            TeacherId = Guid.NewGuid()
+        };
+        var term = new Term
+        {
+            Title = "الترم الأول",
+            Package = package,
+            Price = 100m
+        };
+        var group = new CodeGroup
+        {
+            Name = "Term code group",
+            CodeType = CodeType.Term,
+            TermId = term.Id,
+            TotalCodes = 1,
+            CreatedByUserId = createdByUserId
+        };
+        var code = new AccessCode
+        {
+            CodeGroup = group,
+            CodePlaintext = $"TERM{Guid.NewGuid():N}"[..12],
+            CodeHash = "hash",
+            SerialNumber = 1
+        };
+
+        db.AddRange(subject, package, term, group, code);
+        await db.SaveChangesAsync();
+        return (package, term, code);
     }
 
     private sealed class NoOpAuditService : IAuditService
@@ -218,4 +312,3 @@ public class EventContractTests
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) {}
     }
 }
-

@@ -159,7 +159,7 @@ export function AdminModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--admin-text)]/30 p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-[color-mix(in_srgb,var(--admin-text)_30%,transparent)] p-4 backdrop-blur-[2px]"
           onClick={onClose}
           transition={{ duration: prefersReducedMotion ? 0.05 : 0.2 }}
         >

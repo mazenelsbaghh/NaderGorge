@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
+using NaderGorge.Application.Features.LiveSupportAI.Services;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
@@ -65,7 +66,17 @@ public sealed class ConfirmLiveSupportAIActionCommandHandler(
         if (protector.ComputeKeyedDigest("pending-decision", plaintext) != decision.PayloadHash)
             throw new LiveSupportException("ACTION_PAYLOAD_INVALID", "تعذر التحقق من بيانات الإجراء.");
         using var payloadDocument = JsonDocument.Parse(plaintext);
-        var arguments = payloadDocument.RootElement.GetProperty("arguments").Deserialize<Dictionary<string, object?>>() ?? [];
+        if (!payloadDocument.RootElement.TryGetProperty("arguments", out var argumentsElement))
+            throw new LiveSupportException("ACTION_ARGUMENTS_INVALID", "بيانات الإجراء لا تحتوي على الوسائط المطلوبة.");
+        try
+        {
+            LiveSupportAICatalog.ValidateActionArguments(decision.ActionKey, argumentsElement);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new LiveSupportException("ACTION_ARGUMENTS_INVALID", "وسائط الإجراء غير صالحة.");
+        }
+        var arguments = argumentsElement.Deserialize<Dictionary<string, object?>>() ?? [];
         decision.Status = LiveSupportAIPendingActionStatus.Executing;
         decision.ConfirmedAt = DateTime.UtcNow;
         decision.ConfirmedByUserId = request.Participant.StudentUserId;

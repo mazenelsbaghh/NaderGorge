@@ -79,11 +79,16 @@ export default function FaqPageClient() {
           <div className="mt-12 text-center">
             <p className="mb-4 text-sm font-bold text-[var(--landing-muted)]">لسه عندك أسئلة؟</p>
             <Link
-              href="/about"
+              href="#support"
+              onClick={(event) => {
+                event.preventDefault();
+                window.dispatchEvent(new Event('massar:open-support'));
+              }}
               className="inline-flex items-center gap-2 rounded-full bg-[var(--landing-accent)] px-8 py-3.5 text-sm font-extrabold text-[var(--landing-accent-foreground)] shadow-[0_16px_40px_rgba(145,95,42,0.28)] transition hover:-translate-y-0.5 hover:bg-[var(--landing-accent-strong)]"
+              aria-label="فتح نافذة التواصل مع الدعم"
             >
               <MessageCircle className="h-4 w-4" />
-              تواصل مع المُعلم
+              تواصل مع الدعم
             </Link>
           </div>
         </motion.div>

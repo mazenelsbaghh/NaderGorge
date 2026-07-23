@@ -27,6 +27,7 @@ public class UpdatePlatformSettingsCommandHandler : IRequestHandler<UpdatePlatfo
             if (setting != null)
             {
                 setting.Value = kvp.Value;
+                setting.UpdatedAt = DateTime.UtcNow;
             }
             else
             {

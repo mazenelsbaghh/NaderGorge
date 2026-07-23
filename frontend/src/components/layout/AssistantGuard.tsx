@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
 
-function hasAssistantAccess(roles: string[] | undefined) {
+function hasAssistantRole(roles: string[] | undefined) {
   return !!roles?.length && roles.some(r =>
     r.toLowerCase().includes("assistant") ||
     r.toLowerCase().includes("staff") ||
@@ -17,12 +17,9 @@ export function AssistantGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuthStore();
 
-  const isAuthorized = hasAssistantAccess(user?.roles) && (
-    !user?.allowedDomains ||
-    user.allowedDomains.length === 0 ||
-    user.allowedDomains.includes("all") ||
-    user.allowedDomains.includes("assistant")
-  );
+  const isAuthorized = user?.allowedDomains?.length
+    ? user.allowedDomains.includes("all") || user.allowedDomains.includes("assistant")
+    : hasAssistantRole(user?.roles);
 
 
 

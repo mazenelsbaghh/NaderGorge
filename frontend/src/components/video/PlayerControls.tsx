@@ -11,12 +11,14 @@ const CustomSlider = ({
   onChange,
   className,
   chapters,
+  keyboardStepPercent,
   ariaLabel = "شريط التقدم",
 }: {
   value: number;
   onChange: (value: number) => void;
   className?: string;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
+  keyboardStepPercent?: number;
   ariaLabel?: string;
 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ const CustomSlider = ({
   }, [chapters, onChange, snapToChapter]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = e.shiftKey ? 10 : 5;
+    const step = keyboardStepPercent ?? (e.shiftKey ? 10 : 5);
     let nextValue: number | null = null;
 
     switch (e.key) {
@@ -223,9 +225,11 @@ interface PlayerControlsProps {
   currentTimeFormatted: string;
   onPlaybackRateChange?: (rate: number) => void;
   visible: boolean;
+  compact?: boolean;
   provider?: string;
   onControlHover?: (hovering: boolean) => void;
   chapters?: { id?: string; title?: string; startPercent: number; endPercent: number }[];
+  durationSeconds?: number;
 }
 
 export default function PlayerControls({
@@ -242,9 +246,11 @@ export default function PlayerControls({
   currentTimeFormatted,
   onPlaybackRateChange,
   visible,
+  compact = false,
   provider,
   onControlHover,
-  chapters
+  chapters,
+  durationSeconds,
 }: PlayerControlsProps) {
 
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -262,7 +268,12 @@ export default function PlayerControls({
     <AnimatePresence>
       {visible && (
         <motion.div
-          className="absolute bottom-0 mx-auto max-w-[90%] md:max-w-xl left-0 right-0 p-4 mb-4 bg-[#11111198] backdrop-blur-md rounded-2xl z-[100]"
+          className={cn(
+            "absolute bottom-0 left-0 right-0 z-[100] mx-auto bg-[#11111198] backdrop-blur-md",
+            compact
+              ? "mb-2 max-w-[calc(100%-1rem)] rounded-xl p-2.5 sm:mb-4 sm:max-w-xl sm:rounded-2xl sm:p-4"
+              : "mb-4 max-w-[90%] rounded-2xl p-4 md:max-w-xl"
+          )}
           initial={{ y: 20, opacity: 0, filter: "blur(10px)" }}
           animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
           exit={{ y: 20, opacity: 0, filter: "blur(10px)" }}
@@ -272,8 +283,8 @@ export default function PlayerControls({
           onMouseEnter={() => { if (onControlHover) onControlHover(true); }}
           onMouseLeave={() => { if (onControlHover) onControlHover(false); }}
         >
-          <div className="flex items-center gap-3 mb-3 px-1">
-            <span className="text-white text-xs font-medium w-10 text-center shrink-0">
+          <div className={cn("flex items-center px-1", compact ? "mb-2 gap-2" : "mb-3 gap-3")}>
+            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-[10px]" : "w-10 text-xs")}>
               {currentTimeFormatted}
             </span>
             <CustomSlider
@@ -281,15 +292,16 @@ export default function PlayerControls({
               onChange={onSeek}
               className="flex-1"
               chapters={chapters}
+              keyboardStepPercent={durationSeconds && durationSeconds > 0 ? (10 / durationSeconds) * 100 : undefined}
               ariaLabel="تقدم الفيديو"
             />
-            <span className="text-white text-xs font-medium w-10 text-center shrink-0">
+            <span className={cn("shrink-0 text-center font-medium text-white", compact ? "w-8 text-[10px]" : "w-10 text-xs")}>
               {durationFormatted}
             </span>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-white flex-1 min-w-0">
+          <div className={cn("flex items-center justify-between", compact ? "gap-1" : "gap-2")}>
+            <div className={cn("flex min-w-0 flex-1 items-center text-white", compact ? "gap-1" : "gap-2")}>
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                 <Button
                   onClick={(e) => { e.stopPropagation(); onTogglePlay(); }}
@@ -297,17 +309,17 @@ export default function PlayerControls({
                   size="icon"
                   aria-label={isPlaying ? "إيقاف الفيديو مؤقتًا" : "تشغيل الفيديو"}
                   aria-pressed={isPlaying}
-                  className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full"
+                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-9")}
                 >
                   {isPlaying ? (
-                    <Pause className="h-5 w-5" fill="currentColor" />
+                    <Pause className={cn(compact ? "size-4" : "h-5 w-5")} fill="currentColor" />
                   ) : (
-                    <Play className="h-5 w-5" fill="currentColor" />
+                    <Play className={cn(compact ? "size-4" : "h-5 w-5")} fill="currentColor" />
                   )}
                 </Button>
               </motion.div>
 
-              <div className="flex items-center gap-x-2 w-24 sm:w-32 ml-1 shrink-0">
+              <div className={cn("ml-1 flex shrink-0 items-center", compact ? "w-20 gap-x-1 sm:w-28" : "w-24 gap-x-2 sm:w-32")}>
                 <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
                   <Button
                     onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
@@ -315,14 +327,14 @@ export default function PlayerControls({
                     size="icon"
                     aria-label={isMuted || volume === 0 ? "تشغيل الصوت" : "كتم الصوت"}
                     aria-pressed={isMuted || volume === 0}
-                    className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full shrink-0"
+                    className={cn("shrink-0 rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-9")}
                   >
                     {isMuted || volume === 0 ? (
-                      <VolumeX className="h-5 w-5" />
+                      <VolumeX className={cn(compact ? "size-4" : "h-5 w-5")} />
                     ) : volume > 50 ? (
-                      <Volume2 className="h-5 w-5" />
+                      <Volume2 className={cn(compact ? "size-4" : "h-5 w-5")} />
                     ) : (
-                      <Volume1 className="h-5 w-5" />
+                      <Volume1 className={cn(compact ? "size-4" : "h-5 w-5")} />
                     )}
                   </Button>
                 </motion.div>
@@ -390,7 +402,7 @@ export default function PlayerControls({
                       }}
                       variant="ghost"
                       aria-label={`سرعة التشغيل الحالية ${playbackSpeed}x. اضغط لتغيير السرعة`}
-                      className="text-white hover:bg-[#111111d1] hover:text-white h-8 px-2 text-xs font-bold rounded-full"
+                      className={cn("rounded-full text-xs font-bold text-white hover:bg-[#111111d1] hover:text-white", compact ? "h-7 px-1.5 text-[10px]" : "h-8 px-2")}
                     >
                       {playbackSpeed}x
                     </Button>
@@ -406,9 +418,9 @@ export default function PlayerControls({
                   variant="ghost"
                   size="icon"
                   aria-label="تبديل وضع ملء الشاشة"
-                  className="text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)] rounded-full"
+                  className={cn("rounded-full text-white hover:bg-[#111111d1] hover:text-[var(--admin-primary)]", compact && "size-9")}
                 >
-                  <Maximize className="h-5 w-5" />
+                  <Maximize className={cn(compact ? "size-4" : "h-5 w-5")} />
                 </Button>
               </motion.div>
             </div>

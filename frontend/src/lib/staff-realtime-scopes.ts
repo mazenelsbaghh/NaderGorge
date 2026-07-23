@@ -1,5 +1,13 @@
 export interface StaffDataChangedPayload {
   scopes: string[];
+  schemaVersion?: string;
+  eventId?: string;
+  occurredAt?: string;
+  actorUserId?: string;
+  entityType?: string;
+  entityIds?: string[];
+  operation?: 'created' | 'updated' | 'deleted' | 'bulk';
+  version?: number | string;
 }
 
 const blockedEditingRoutes = [
@@ -32,6 +40,7 @@ const scopeRoutes: Record<string, RegExp[]> = {
   hr: [
     /^\/admin\/(hr|assistants|finance)(\/|$)/,
     /^\/assistant\/(attendance|vacations|dashboard)(\/|$)/,
+    /^\/employee(\/|$)/,
   ],
   crm: [/^\/admin\/crm(\/|$)/, /^\/assistant\/crm(\/|$)/],
   media: [/^\/admin\/media(\/|$)/],

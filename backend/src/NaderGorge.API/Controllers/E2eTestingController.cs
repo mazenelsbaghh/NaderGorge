@@ -279,7 +279,23 @@ public class E2eTestingController : ControllerBase
                 foreach (var user in supportUsers)
                 {
                     var employee = await _dbContext.Set<EmployeeProfile>().FirstOrDefaultAsync(x => x.UserId == user.Id);
-                    if (employee is null) { employee = new EmployeeProfile { UserId = user.Id, BasicSalary = 1 }; _dbContext.Set<EmployeeProfile>().Add(employee); await _dbContext.SaveChangesAsync(); }
+                    var employeeNumber = $"E2E-SUPPORT-{user.PhoneNumber}";
+                    if (employee is null)
+                    {
+                        employee = new EmployeeProfile
+                        {
+                            UserId = user.Id,
+                            EmployeeNumber = employeeNumber,
+                            BasicSalary = 1
+                        };
+                        _dbContext.Set<EmployeeProfile>().Add(employee);
+                        await _dbContext.SaveChangesAsync();
+                    }
+                    else if (string.IsNullOrWhiteSpace(employee.EmployeeNumber))
+                    {
+                        employee.EmployeeNumber = employeeNumber;
+                        await _dbContext.SaveChangesAsync();
+                    }
                     var config = await _dbContext.Set<LiveSupportStaffConfig>().FirstOrDefaultAsync(x => x.UserId == user.Id);
                     if (config is null) { config = new LiveSupportStaffConfig { UserId = user.Id, IsEnabled = true, MaxActiveConversations = user.PhoneNumber.EndsWith("03") ? 1 : 2, ConfiguredByUserId = admin.Id, Version = 1 }; _dbContext.Set<LiveSupportStaffConfig>().Add(config); }
                     if (!await _dbContext.Set<AttendanceLog>().AnyAsync(x => x.EmployeeId == employee.Id && x.ClockOut == null))
@@ -398,13 +414,28 @@ public class E2eTestingController : ControllerBase
         await _dbContext.SaveChangesAsync();
 
         var termId = Guid.NewGuid();
+        var defaultVideoType = await _dbContext.Set<VideoType>()
+            .Where(type => type.IsActive)
+            .OrderBy(type => type.SortOrder)
+            .FirstOrDefaultAsync();
+        if (defaultVideoType == null)
+        {
+            defaultVideoType = new VideoType
+            {
+                Name = "شرح",
+                NormalizedName = "شرح",
+                SortOrder = 10,
+                IsActive = true
+            };
+            _dbContext.Set<VideoType>().Add(defaultVideoType);
+        }
         var package = new Package { Id = packageId, Name = "E2E Student Package", Description = "Test", Price = 100, SubjectId = subject.Id, TargetGrade = "1st Secondary", TeacherId = teacher.Id };
         var term = new Term { Id = termId, PackageId = packageId, Title = "E2E Term" };
         var section = new ContentSection { Id = sectionId, TermId = termId, Title = "E2E Section", Order = 0 };
         var lesson = new Lesson { Id = lessonId, ContentSectionId = sectionId, Title = "E2E Lesson", Summary = "Consume me", Order = 0 };
         var lesson2 = new Lesson { Id = lesson2Id, ContentSectionId = sectionId, Title = "E2E Lesson 2", Summary = "Essay lesson", Order = 1 };
         var lesson3 = new Lesson { Id = lesson3Id, ContentSectionId = sectionId, Title = "E2E Lesson 3", Summary = "Exam lesson", Order = 2, ExamId = examId };
-        var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "youtube", ProviderVideoId = "dQw4w9WgXcQ", MaxWatchCount = 2, Order = 0 };
+        var video = new LessonVideo { Id = videoId, LessonId = lessonId, Title = "E2E Video", Provider = "youtube", ProviderVideoId = "dQw4w9WgXcQ", MaxWatchCount = 2, Order = 0, VideoTypeId = defaultVideoType.Id };
         var exam = new Exam { Id = examId, Title = "E2E Exam", Description = "Pass me", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id, IsMandatory = false };
         var essayExam = new Exam { Id = essayExamId, Title = "E2E Essay Exam", Description = "Write something", TotalScore = 10, PassingScore = 5, CreatedByTeacherId = teacher.Id, IsMandatory = false };
 
@@ -636,8 +667,18 @@ public class E2eTestingController : ControllerBase
     private bool UsesE2eDatabase()
     {
         var connectionString = _dbContext.Database.GetConnectionString() ?? string.Empty;
-        return connectionString.Contains("e2e", StringComparison.OrdinalIgnoreCase) ||
-               connectionString.Contains("test", StringComparison.OrdinalIgnoreCase);
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+        var databaseName = builder.Database ?? string.Empty;
+        var allowList = HttpContext.RequestServices
+            .GetRequiredService<IConfiguration>()["E2E_DATABASE_NAME_ALLOWLIST"]
+            ?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            ?? [];
+
+        return allowList.Contains(databaseName, StringComparer.OrdinalIgnoreCase) ||
+               databaseName.StartsWith("e2e_", StringComparison.OrdinalIgnoreCase) ||
+               databaseName.EndsWith("_e2e", StringComparison.OrdinalIgnoreCase) ||
+               databaseName.StartsWith("test_", StringComparison.OrdinalIgnoreCase) ||
+               databaseName.EndsWith("_test", StringComparison.OrdinalIgnoreCase);
     }
 }
 

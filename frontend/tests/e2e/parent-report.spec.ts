@@ -6,7 +6,7 @@ test.describe('Parent Reporting Integration', () => {
 
   test.beforeEach(async ({ request }) => {
     // We assume the DB has the generic students
-    await request.post('http://localhost:5245/api/e2e/seed', {
+    await request.post('http://api.lvh.me:5245/api/e2e/seed', {
       data: {
         clearDatabase: false,
         seedAdmin: true,
@@ -17,7 +17,7 @@ test.describe('Parent Reporting Integration', () => {
 
     // We fetch a student ID via API directly just to make sure we query a valid one
     const loginRes = await request.post(
-      'http://localhost:5245/api/auth/login',
+      'http://api.lvh.me:5245/api/auth/login',
       {
         headers: { 'X-App-Surface': 'student' },
         data: {
@@ -37,19 +37,19 @@ test.describe('Parent Reporting Integration', () => {
 
     // fetch the mock package so the student has some data
     const setupResponse = await request.post(
-      'http://localhost:5245/api/e2e/setup-mock-package'
+      'http://api.lvh.me:5245/api/e2e/setup-mock-package'
     );
     if (setupResponse.ok()) {
       const mockPackageData = await setupResponse.json();
       // Grant package to Student 1
-      await request.post('http://localhost:5245/api/e2e/grant-package', {
+      await request.post('http://api.lvh.me:5245/api/e2e/grant-package', {
         data: { packageId: mockPackageData.packageId },
       });
     }
 
     // Authenticate as Admin to generate parent link token
     const adminLoginRes = await request.post(
-      'http://localhost:5245/api/auth/login',
+      'http://api.lvh.me:5245/api/auth/login',
       {
         headers: { 'X-App-Surface': 'admin' },
         data: {
@@ -67,7 +67,7 @@ test.describe('Parent Reporting Integration', () => {
       if (adminToken) {
         // Request parent link token
         const linkRes = await request.post(
-          `http://localhost:5245/api/parent/reports/${mockStudentId}/links`,
+          `http://api.lvh.me:5245/api/parent/reports/${mockStudentId}/links`,
           {
             headers: { Authorization: `Bearer ${adminToken}` },
           }
@@ -82,7 +82,7 @@ test.describe('Parent Reporting Integration', () => {
 
   test('T011: Parent views report for a valid student ID', async ({ page }) => {
     // Navigate without authentication but with signed token
-    await page.goto(`http://app.localhost:3000/parent-report/${mockStudentId}?token=${signedReportToken}`);
+    await page.goto(`http://app.lvh.me:3000/parent-report/${mockStudentId}?token=${signedReportToken}`);
 
     // Wait for the report headers
     await expect(page.locator('text=تقرير التقدم الأكاديمي').first()).toBeVisible({
@@ -97,11 +97,26 @@ test.describe('Parent Reporting Integration', () => {
 
   test('T012: Parent views report for an invalid ID', async ({ page }) => {
     // Navigate with a fake GUID and token
-    await page.goto('http://app.localhost:3000/parent-report/ffffffff-ffff-ffff-ffff-ffffffffffff?token=invalid.token');
+    await page.goto('http://app.lvh.me:3000/parent-report/ffffffff-ffff-ffff-ffff-ffffffffffff?token=invalid.token');
 
     // Should see failure/not found notice (تنبيه)
     await expect(page.locator('h2:has-text("تنبيه")')).toBeVisible({
       timeout: 10000,
     });
+  });
+
+  test('Phase 1: Parent report rejects invalid token without report data', async ({ page }) => {
+    await page.goto(`http://app.lvh.me:3000/parent-report/${mockStudentId}?token=invalid.token`);
+
+    await expect(page.locator('h2:has-text("تنبيه")')).toBeVisible({
+      timeout: 10000,
+    });
+    await expect(page.locator('text=تقرير التقدم الأكاديمي')).toHaveCount(0);
+  });
+
+  test('Phase 1: Parent report page declares no-referrer policy', async ({ page }) => {
+    await page.goto(`http://app.lvh.me:3000/parent-report/${mockStudentId}?token=${signedReportToken}`);
+
+    await expect(page.locator('meta[name="referrer"][content="no-referrer"]')).toHaveCount(1);
   });
 });

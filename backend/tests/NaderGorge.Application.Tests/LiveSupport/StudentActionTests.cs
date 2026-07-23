@@ -68,6 +68,30 @@ public sealed class StudentActionTests
     }
 
     [Fact]
+    public async Task StudentActionContext_FormatsDeviceLabelAfterTheDatabaseQuery()
+    {
+        // Regression coverage for the 2026-07-14 production incident: device labels
+        // must be composed after materialization, not translated as a PostgreSQL VALUES query.
+        await using var fixture = await ActionFixture.CreateAsync();
+        fixture.Db.Devices.Add(new Device
+        {
+            UserId = fixture.StudentId,
+            DeviceFingerprint = "student-device",
+            DeviceType = "Mobile",
+            OsName = "Android",
+            BrowserName = "Chrome",
+            IsActive = true
+        });
+        await fixture.Db.SaveChangesAsync();
+
+        var context = await fixture.Actions.GetStudentActionContextAsync(
+            fixture.StaffId, false, fixture.ConversationId, CancellationToken.None);
+
+        var device = context.GetProperty("devices")[0];
+        Assert.Equal("Mobile · Android · Chrome", device.GetProperty("label").GetString());
+    }
+
+    [Fact]
     public async Task ActionRejectsMissingLinkWrongOwnerAndCheckedOutStaff()
     {
         await using var fixture = await ActionFixture.CreateAsync();

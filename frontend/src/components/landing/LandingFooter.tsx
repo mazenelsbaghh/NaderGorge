@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   AtSign,
+  GraduationCap,
   Globe,
   MessageCircle,
   Play,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 import { educationTracks, finalCtaFeatures } from './data';
 
@@ -23,33 +24,18 @@ const quickLinks = [
 
 const supportLinks = [
   { label: 'تواصل معنا', href: '#contact' },
-  { label: 'سياسة الخصوصية', href: null },
+  { label: 'سياسة الخصوصية', href: '/privacy' },
   { label: 'الشروط والأحكام', href: null },
 ] as const;
 
 export function LandingFooter() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    const updateThemeState = () => {
-      setIsDark(document.documentElement.classList.contains('dark'));
-    };
-
-    updateThemeState();
-    window.addEventListener('admin-theme-mode-change', updateThemeState);
-    window.addEventListener('storage', updateThemeState);
-
-    return () => {
-      window.removeEventListener('admin-theme-mode-change', updateThemeState);
-      window.removeEventListener('storage', updateThemeState);
-    };
-  }, []);
+  const prefersReducedMotion = useReducedMotion();
 
   return (
     <>
       <section
         id="courses"
-        className="landing-section mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16"
+        className="landing-section landing-section--courses mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16"
       >
         <div className="relative z-10 mx-auto max-w-[1180px]">
           <div className="text-center">
@@ -68,7 +54,7 @@ export function LandingFooter() {
                   key={title}
                   className="landing-panel grid gap-6 p-6 text-right sm:grid-cols-[150px_1fr] sm:items-center"
                 >
-                  <div className="flex aspect-square items-center justify-center rounded-xl bg-[#E7F6F6] dark:bg-teal-950/40 text-[#0E8F8F]">
+                  <div className={`flex aspect-square items-center justify-center rounded-xl text-[var(--landing-accent)] ${tone === 'teal' ? 'bg-[var(--landing-teal-soft)]' : 'bg-[var(--landing-navy-soft)] text-[var(--landing-ink)]'}`}>
                     <Icon className="h-20 w-20" />
                   </div>
                   <div>
@@ -82,8 +68,8 @@ export function LandingFooter() {
                       href={href}
                       className={`mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 text-sm font-black text-white transition hover:-translate-y-0.5 ${
                         tone === 'teal'
-                          ? 'bg-[#0E8F8F] hover:bg-[#0a6d72]'
-                          : 'bg-[var(--landing-accent)] hover:bg-[var(--landing-accent-strong)]'
+                          ? 'bg-[var(--landing-accent)] text-[var(--landing-accent-foreground)] hover:bg-[var(--landing-accent-strong)]'
+                          : 'bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--landing-accent-strong)]'
                       }`}
                     >
                       {cta}
@@ -102,67 +88,79 @@ export function LandingFooter() {
         className="mt-3 overflow-hidden rounded-[clamp(1rem,1.4vw,1.25rem)] bg-[#071832] text-white"
       >
         <section className="relative px-5 py-14 md:px-12 md:py-16 lg:px-16">
-          <div className="absolute inset-0 opacity-50">
-            <div className="absolute left-10 top-10 h-40 w-40 rounded-full bg-[#0E8F8F] blur-[90px]" />
-            <div className="absolute right-20 bottom-10 h-52 w-52 rounded-full bg-[#123A73] blur-[110px]" />
-          </div>
-
-          <div className="relative z-10 mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
-            <div className="text-center lg:text-right">
-              <h2 className="text-balance text-3xl font-black leading-tight md:text-5xl">
-                مستقبلك يبدأ من هنا
+          <div className="footer-route-grid" aria-hidden="true" />
+          <motion.div
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-80px' }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="relative z-10 mx-auto grid max-w-[1180px] overflow-hidden border border-white/15 bg-[#0A1D3D] lg:grid-cols-[1.1fr_0.9fr]"
+          >
+            <div className="p-7 text-center sm:p-10 lg:p-12 lg:text-right">
+              <span className="inline-flex items-center gap-2 text-sm font-black text-[#9BE4E4]">
+                <span className="h-2 w-2 rounded-full bg-[#D4A017]" />
+                خطوتك التالية واضحة
+              </span>
+              <h2 className="mt-4 text-balance text-3xl font-black leading-tight md:text-5xl">
+                ابدأ دراستك بثقة
               </h2>
-              <p className="mt-4 text-lg font-bold leading-8 text-white/82">
-                انضم لآلاف الطلاب وابدأ رحلتك نحو التفوق
+              <p className="mt-4 max-w-xl text-base font-bold leading-8 text-white/82 md:text-lg lg:mr-0">
+                سجّل الآن، اختر المادة والمعلم، وابدأ أول درس في وقتك.
               </p>
-
-              <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                {finalCtaFeatures.map(({ label, detail, icon: Icon }) => (
-                  <div key={label} className="text-center">
-                    <Icon className="mx-auto h-7 w-7 text-[#9BE4E4]" />
-                    <strong className="mt-3 block text-sm font-black">
-                      {label}
-                    </strong>
-                    <span className="mt-1 block text-xs font-bold text-white/70">
-                      {detail}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <Link href="/register" className="landing-primary-button mt-9">
+              <Link href="/register" className="landing-primary-button mt-7">
                 <Play className="h-5 w-5 fill-current" />
-                ابدأ الآن مجانًا
+                أنشئ حسابك مجانًا
               </Link>
             </div>
 
-            <div className="relative mx-auto aspect-[1.25] w-full max-w-lg">
-              <Image
-                src={
-                  isDark
-                    ? '/images/landing-hero-dark.webp'
-                    : '/images/landing-hero.webp'
-                }
-                alt="منصة مسار على جهاز تعليمي"
-                fill
-                sizes="(max-width: 1024px) 92vw, 42vw"
-                className="object-contain"
-              />
+            <div className="relative flex min-h-80 flex-col justify-center overflow-hidden border-t border-white/15 bg-[#0C2850] p-7 sm:p-10 lg:border-t-0 lg:border-r lg:p-12">
+              <div className="footer-step-line" aria-hidden="true" />
+              <p className="relative text-sm font-black text-[#9BE4E4]">
+                كيف تبدأ؟
+              </p>
+              <ol className="relative mt-7 space-y-6">
+                {[
+                  ['01', 'أنشئ حسابك'],
+                  ['02', 'اختر مادّتك'],
+                  ['03', 'ابدأ أول درس'],
+                ].map(([number, label]) => (
+                  <li key={number} className="flex items-center gap-4 text-right">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#38BDBD] text-xs font-black text-[#9BE4E4]">
+                      {number}
+                    </span>
+                    <strong className="text-base font-black text-white">{label}</strong>
+                  </li>
+                ))}
+              </ol>
             </div>
+          </motion.div>
+
+          <div className="relative z-10 mx-auto grid max-w-[1180px] grid-cols-2 border-x border-b border-white/15 sm:grid-cols-4">
+            {finalCtaFeatures.map(({ label, detail, icon: Icon }) => (
+              <div key={label} className="flex min-h-28 flex-col justify-center px-4 text-center not-last:border-l not-last:border-white/15">
+                <Icon className="mx-auto h-5 w-5 text-[#9BE4E4]" aria-hidden="true" />
+                <strong className="mt-2 text-sm font-black">{label}</strong>
+                <span className="mt-1 text-xs font-bold text-white/70">{detail}</span>
+              </div>
+            ))}
           </div>
         </section>
 
         <div className="border-t border-white/10 px-5 py-8 md:px-12 lg:px-16">
           <div className="mx-auto grid max-w-[1180px] gap-8 md:grid-cols-4">
             <div className="text-right">
-              <Image
-                src="/images/logo-mark-light.svg"
-                alt="منصة مسار"
-                width={64}
-                height={64}
-                className="h-16 w-auto object-contain"
-                style={{ width: 'auto', height: 'auto' }}
-              />
+              <div className="relative flex h-16 w-16 items-center justify-center" aria-label="منصة مسار">
+                <GraduationCap className="absolute h-8 w-8 text-[#9BE4E4]" aria-hidden="true" />
+                <Image
+                  src="/images/logo-mark-light.svg"
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="relative h-16 w-16 object-contain"
+                  unoptimized
+                  onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                />
+              </div>
               <p className="mt-3 text-sm font-semibold leading-7 text-white/72">
                 خطواتك الأولى نحو التفوق
               </p>

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.Application.Features.Internal.Commands;
 using NaderGorge.Application.Features.Internal.Queries;
+using NaderGorge.Application.Services;
 
 namespace NaderGorge.API.Controllers;
 
@@ -13,10 +14,12 @@ namespace NaderGorge.API.Controllers;
 public class InternalChatController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly TeacherAuthorizationService _teacherAuthorization;
 
-    public InternalChatController(IMediator mediator)
+    public InternalChatController(IMediator mediator, TeacherAuthorizationService teacherAuthorization)
     {
         _mediator = mediator;
+        _teacherAuthorization = teacherAuthorization;
     }
 
     private Guid GetUserId()
@@ -30,6 +33,7 @@ public class InternalChatController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await CanAccessChatAsync(userId, ct)) return Forbid();
 
         var result = await _mediator.Send(new GetChatRoomsQuery(userId), ct);
         return Ok(result);
@@ -40,6 +44,7 @@ public class InternalChatController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await CanAccessChatAsync(userId, ct)) return Forbid();
 
         var result = await _mediator.Send(new GetChatRoomMessagesQuery(roomId, userId, page, pageSize), ct);
         if (!result.Success) return Forbid();
@@ -52,6 +57,7 @@ public class InternalChatController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await CanAccessChatAsync(userId, ct)) return Forbid();
 
         var command = new CreateChatRoomCommand(request.Name, request.Type, request.ParticipantIds, userId, request.TaskItemId);
         var result = await _mediator.Send(command, ct);
@@ -65,6 +71,7 @@ public class InternalChatController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await CanAccessChatAsync(userId, ct)) return Forbid();
 
         var command = new ArchiveChatRoomCommand(roomId, userId, request.IsArchived);
         var result = await _mediator.Send(command, ct);
@@ -78,6 +85,7 @@ public class InternalChatController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await CanAccessChatAsync(userId, ct)) return Forbid();
 
         var command = new TogglePinMessageCommand(messageId, userId);
         var result = await _mediator.Send(command, ct);
@@ -91,12 +99,24 @@ public class InternalChatController : ControllerBase
     {
         var userId = GetUserId();
         if (userId == Guid.Empty) return Unauthorized();
+        if (!await CanAccessChatAsync(userId, ct)) return Forbid();
 
         var command = new MarkRoomReadCommand(roomId, userId);
         var result = await _mediator.Send(command, ct);
 
         if (!result.Success) return BadRequest(result);
         return Ok(result);
+    }
+
+    private async Task<bool> CanAccessChatAsync(Guid userId, CancellationToken ct)
+    {
+        if (User.IsInRole("Admin") || User.Claims.Any(c =>
+                c.Type == "permission" && c.Value.Equals("chat.manage", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return await _teacherAuthorization.CanAccessTeacherWorkspacePermissionAsync(userId, "chat", ct);
     }
 }
 

@@ -24,7 +24,7 @@ test('provider gateway uses primary and skips fallback on success', async () => 
     vertex: async () => 'vertex',
     developer: async () => { fallbackCalls++; return 'developer'; },
   });
-  assert.equal(result, 'vertex');
+  assert.deepEqual(result, { value: 'vertex', provider: 'vertex' });
   assert.equal(fallbackCalls, 0);
 });
 
@@ -35,8 +35,18 @@ test('provider gateway falls back exactly once for structured quota exhaustion',
     vertex: async () => { throw { status: 429 }; },
     developer: async () => { fallbackCalls++; return 'developer'; },
   });
-  assert.equal(result, 'developer');
+  assert.deepEqual(result, { value: 'developer', provider: 'developer' });
   assert.equal(fallbackCalls, 1);
+});
+
+test('provider gateway reports the fallback provider metadata', async () => {
+  const result = await new AIProviderGateway(config()).execute({
+    operation: 'live-support',
+    vertex: async () => { throw { status: 429 }; },
+    developer: async () => 'fallback-result',
+  });
+  assert.equal(result.provider, 'developer');
+  assert.equal(result.value, 'fallback-result');
 });
 
 test('provider gateway never falls back for non-quota failures', async () => {

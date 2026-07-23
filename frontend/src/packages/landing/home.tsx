@@ -40,7 +40,7 @@ export async function LandingHome() {
   const registeredStudentsCount = await getRegisteredStudentsCount();
 
   return (
-    <main className="landing-page relative min-h-screen overflow-hidden">
+    <main className="landing-page relative min-h-[100dvh] overflow-x-hidden">
       <ScholarlyParticles />
       <div className="landing-shell relative z-10">
         <HeroSection
@@ -54,4 +54,3 @@ export async function LandingHome() {
     </main>
   );
 }
-

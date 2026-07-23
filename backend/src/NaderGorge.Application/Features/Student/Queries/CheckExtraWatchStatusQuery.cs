@@ -9,6 +9,7 @@ namespace NaderGorge.Application.Features.Student.Queries;
 
 public record ExtraWatchStatusDto
 {
+    public bool CanWatch { get; init; }
     public bool HasPendingRequest { get; init; }
     public bool HasRejectedRequest { get; init; }
     public RequestStatus? RequestStatus { get; init; }
@@ -28,17 +29,36 @@ public class CheckExtraWatchStatusQueryHandler : IRequestHandler<CheckExtraWatch
 
     public async Task<ApiResponse<ExtraWatchStatusDto>> Handle(CheckExtraWatchStatusQuery request, CancellationToken cancellationToken)
     {
+        var watchEvent = await _context.VideoWatchEvents
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                item => item.LessonVideoId == request.LessonVideoId && item.UserId == request.UserId,
+                cancellationToken);
+
+        // The current lock state is authoritative. A rejected request remains in the
+        // audit history, but must not block the student after an admin manually adds views.
+        var canWatch = watchEvent is null || !watchEvent.IsLocked;
+
         var latestRequest = await _context.ExtraWatchRequests
             .AsNoTracking()
             .Where(r => r.LessonVideoId == request.LessonVideoId && r.UserId == request.UserId)
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (latestRequest == null)
-            return ApiResponse<ExtraWatchStatusDto>.Ok(new ExtraWatchStatusDto { HasPendingRequest = false, HasRejectedRequest = false, RequestStatus = null });
+        if (canWatch || latestRequest == null)
+        {
+            return ApiResponse<ExtraWatchStatusDto>.Ok(new ExtraWatchStatusDto
+            {
+                CanWatch = canWatch,
+                HasPendingRequest = false,
+                HasRejectedRequest = false,
+                RequestStatus = null
+            });
+        }
 
         return ApiResponse<ExtraWatchStatusDto>.Ok(new ExtraWatchStatusDto
         {
+            CanWatch = false,
             HasPendingRequest = latestRequest.Status == RequestStatus.Pending,
             HasRejectedRequest = latestRequest.Status == RequestStatus.Rejected,
             RequestStatus = latestRequest.Status,

@@ -277,6 +277,42 @@ public class OutboxProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessStaffEventWithoutId_PersistsOneStableIdBeforeRetry()
+    {
+        var userId = Guid.NewGuid();
+        var outboxId = Guid.NewGuid();
+        var @event = new OutboxEvent
+        {
+            Id = outboxId,
+            Type = "StaffDataChanged",
+            TargetUserId = userId.ToString(),
+            PayloadJson = "{\"schemaVersion\":\"2\",\"scopes\":[\"hr\"]}",
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.OutboxEvents.Add(@event);
+        await _db.SaveChangesAsync();
+        ((FakeClientProxy)_hubContext.FakeClients.Group($"User_{userId}")).ShouldThrow = true;
+
+        await InvokeProcessOutboxEventsAsync();
+
+        var updatedEvent = await _db.OutboxEvents.FindAsync(outboxId);
+        using var payload = System.Text.Json.JsonDocument.Parse(updatedEvent!.PayloadJson);
+        Assert.Equal(outboxId.ToString(), payload.RootElement.GetProperty("eventId").GetString());
+        Assert.Equal(1, updatedEvent.RetryCount);
+    }
+
+    [Theory]
+    [InlineData("{\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MessageSent\",\"sequence\":7}", true)]
+    [InlineData("{\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MessageSent\",\"sequence\":99}", true)]
+    [InlineData("{\"type\":\"MessageSent\",\"sequence\":7}", false)]
+    [InlineData("{\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MessageSent\",\"sequence\":0}", false)]
+    [InlineData("not-json", false)]
+    public void LiveSupportPayloadContract_ValidatesIdentityAndSequence(string payload, bool expected)
+    {
+        Assert.Equal(expected, OutboxProcessorBackgroundService.IsValidLiveSupportPayload(payload));
+    }
+
+    [Fact]
     public async Task ProcessEvents_DeadLetterOnFifthFailure_ShouldMarkIsDeadLetter()
     {
         // Arrange

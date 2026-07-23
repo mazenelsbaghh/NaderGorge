@@ -10,6 +10,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `LessonVideoId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `RejectionReason` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `RequestReason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
 | `ResolvedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `Status` | `int` | `integer` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
@@ -66,6 +67,18 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `SessionToken` | `string` | `text` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+
+## Table: `academic_subject_eligibilities`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EducationStage` | `int` | `integer` | `NO` | ✅ Sync |
+| `GradeLevel` | `int` | `integer` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `SubjectId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
 ## Table: `access_code_activation_logs`
 
@@ -134,6 +147,8 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
 | `Action` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `ActorSnapshot` | `string` | `text` | `YES` | ✅ Sync |
+| `ActorType` | `string` | `character varying(20)` | `NO` | ✅ Sync |
 | `CorrelationId` | `string` | `character varying(64)` | `YES` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `EntityId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
@@ -143,6 +158,8 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `NewValues` | `string` | `text` | `YES` | ✅ Sync |
 | `OldValues` | `string` | `text` | `YES` | ✅ Sync |
 | `PerformedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `RequestId` | `string` | `character varying(100)` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
 ## Table: `balance_transactions`
@@ -265,6 +282,8 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
+| `AccountingRecordedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `AccountingTiming` | `int` | `integer` | `NO` | ✅ Sync |
 | `BalanceAmount` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
 | `CodeType` | `int` | `integer` | `NO` | ✅ Sync |
 | `ContentSectionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
@@ -272,16 +291,23 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `DiscountPercentage` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
 | `ExamId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ExpireActivatedAccess` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `ExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IncludeFutureVideos` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `LessonId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
 | `PackageId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `PublicExamProductId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `QrDataGenerated` | `bool` | `boolean` | `NO` | ✅ Sync |
-| `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `RevenueAllocationMode` | `int?` | `integer` | `YES` | ✅ Sync |
+| `RevenueAllocationValue` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
+| `RevenueOwner` | `int?` | `integer` | `YES` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `TermId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `TotalCodes` | `int` | `integer` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `VideoTypeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 
 ## Table: `code_video_targets`
 
@@ -301,6 +327,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Body` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ParentCommentId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `PostId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `RejectionReason` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
 | `ReviewedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
@@ -351,6 +378,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `ReviewedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `ReviewedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
 ## Table: `content_sections`
@@ -426,32 +454,57 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
+## Table: `digital_wallets`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CurrentBalance` | `decimal` | `numeric(18,2)` | `NO` | ✅ Sync |
+| `DailyLimit` | `decimal` | `numeric(18,2)` | `NO` | ✅ Sync |
+| `DeviceStatus` | `string` | `text` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Label` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `LastSeenAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `MonthlyLimit` | `decimal` | `numeric(18,2)` | `NO` | ✅ Sync |
+| `PairingToken` | `string` | `character varying(20)` | `NO` | ✅ Sync |
+| `PhoneNumber` | `string` | `character varying(20)` | `NO` | ✅ Sync |
+| `SmsSenderFilters` | `string` | `text` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `discount_stacking_policies`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsDefault` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `MaxDiscountAmount` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
+| `MaxDiscountPercentage` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
+| `Mode` | `int` | `integer` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(120)` | `NO` | ✅ Sync |
+| `NormalizedName` | `string` | `character varying(120)` | `NO` | ✅ Sync |
+| `PriorityJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
 ## Table: `employee_profiles`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
 | `BasicSalary` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeNumber` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `EmploymentStatus` | `int` | `integer` | `NO` | ✅ Sync |
+| `HireDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `StandardStartTime` | `TimeSpan` | `interval` | `NO` | ✅ Sync |
 | `TargetDailyHours` | `int` | `integer` | `NO` | ✅ Sync |
+| `TerminationDate` | `DateOnly?` | `date` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
-
-## Table: `employee_vacations`
-
-| Column Name | C# Type | Database Type | Nullable? | Status |
-| --- | --- | --- | --- | --- |
-| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
-| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `EndDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
-| `HandledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
-| `HandledBy` | `Guid?` | `uuid` | `YES` | ✅ Sync |
-| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
-| `Reason` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
-| `StartDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
-| `Status` | `int` | `integer` | `NO` | ✅ Sync |
-| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WorkMode` | `int` | `integer` | `NO` | ✅ Sync |
 
 ## Table: `essay_submissions`
 
@@ -494,6 +547,8 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `DisplayQuestionCount` | `int?` | `integer` | `YES` | ✅ Sync |
 | `DurationMinutes` | `int?` | `integer` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `InternalCode` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsMandatory` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsRandomized` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `LessonVideoId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
@@ -524,6 +579,44 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `PointsAwarded` | `int` | `integer` | `NO` | ✅ Sync |
 | `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+
+## Table: `gift_issuances`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `ExamId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IssuedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LessonId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `LessonVideoId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `MaxUses` | `int?` | `integer` | `YES` | ✅ Sync |
+| `PackageId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Reason` | `string` | `character varying(500)` | `NO` | ✅ Sync |
+| `RequestId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `gift_recipients`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `GiftIssuanceId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OutcomeCode` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `OutcomeMessage` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `RevocationReason` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `RevokedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `RevokedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UsesConsumed` | `int` | `integer` | `NO` | ✅ Sync |
 
 ## Table: `homework_answers`
 
@@ -578,6 +671,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `Description` | `string` | `text` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsMandatory` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsRandomized` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `LessonId` | `Guid` | `uuid` | `NO` | ✅ Sync |
@@ -585,6 +679,1021 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Title` | `string` | `character varying(255)` | `NO` | ✅ Sync |
 | `TotalScore` | `decimal` | `numeric` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+
+## Table: `hr_approval_definition_steps`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ApprovalDefinitionId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ApproverKind` | `int` | `integer` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EscalationPermission` | `string` | `character varying(200)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `Order` | `int` | `integer` | `NO` | ✅ Sync |
+| `Permission` | `string` | `character varying(200)` | `YES` | ✅ Sync |
+| `SlaMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `SpecificUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_approval_definitions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `RequestType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_approval_delegations`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DelegateUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `EndsAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `PrincipalUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `Scope` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `StartsAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_approval_instances`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ApprovalDefinitionId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CurrentStepOrder` | `int` | `integer` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `RequestId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `RequestType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `RequesterEmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_approval_step_instances`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActingUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ApprovalDefinitionStepId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ApprovalInstanceId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DecidedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `DecisionReason` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `DelegationId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `DueAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EscalationLevel` | `int` | `integer` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Order` | `int` | `integer` | `NO` | ✅ Sync |
+| `OriginalApproverUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_asset_custodies`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AssetId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `AssignedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `AssignedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `AssignedCondition` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `ClosedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ExceptionApprovedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ExceptionReason` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ReturnCondition` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `ReturnedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_assets`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `SerialNumber` | `string` | `character varying(200)` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Value` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+
+## Table: `hr_attendance_attempts`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Accepted` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `AttendancePolicyId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `AttendanceSessionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DecisionCode` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `EventType` | `int` | `integer` | `NO` | ✅ Sync |
+| `EvidenceJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IdempotencyKey` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `OccurredAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_attendance_breaks`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AttendanceSessionId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EndedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StartedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_attendance_corrections`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AppliedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `AppliedJson` | `string` | `jsonb` | `YES` | ✅ Sync |
+| `AttendanceSessionId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `BeforeJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DecisionReason` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `EvidenceReference` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `HrDecisionByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ManagerDecisionByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ProposedClockedInAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ProposedClockedOutAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_attendance_policies`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Kind` | `int` | `integer` | `NO` | ✅ Sync |
+| `Latitude` | `decimal?` | `numeric(9,6)` | `YES` | ✅ Sync |
+| `Longitude` | `decimal?` | `numeric(9,6)` | `YES` | ✅ Sync |
+| `MaximumAccuracyMeters` | `int` | `integer` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `RadiusMeters` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_attendance_policy_assignments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AttendancePolicyId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EffectiveFrom` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `EffectiveTo` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `EmployeeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ShiftTemplateId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_attendance_policy_exceptions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AllowRemote` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `ApprovedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `EndsAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OverridePolicyId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `StartsAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_attendance_sessions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ClockedInAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `ClockedOutAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EarlyLeaveMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LateMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `OvertimeMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `ShiftAssignmentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+| `WorkDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `WorkedMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_candidate_interviews`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CandidateId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Feedback` | `string` | `character varying(5000)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `InterviewerUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ScheduledAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Score` | `decimal?` | `decimal(5,2)` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_candidate_offers`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AcceptedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `BaseSalary` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CandidateId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Currency` | `string` | `character varying(3)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OfferNumber` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `ProposedStartDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_candidates`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CvAssetReference` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `Email` | `string` | `character varying(320)` | `YES` | ✅ Sync |
+| `EmployeeProfileId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `FullName` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PhoneNumber` | `string` | `character varying(30)` | `NO` | ✅ Sync |
+| `RequisitionId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Stage` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_case_evidence`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AddedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `AssetReference` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `ContentHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeCaseId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_case_responses`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AttachmentReference` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeCaseId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Response` | `string` | `character varying(10000)` | `NO` | ✅ Sync |
+| `SubmittedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_cost_centers`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_disciplinary_actions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ApprovedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeCaseId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `FinancialAmount` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PayrollLineItemId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Reason` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
+| `Type` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_employee_cases`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CaseNumber` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Description` | `string` | `character varying(10000)` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsConfidential` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `OpenedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `Title` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_employee_compensations`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BaseSalary` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Currency` | `string` | `character varying(3)` | `NO` | ✅ Sync |
+| `EffectiveFrom` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `EffectiveTo` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_employee_document_versions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AssetReference` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `ContentHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeDocumentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `MimeType` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `SizeBytes` | `long` | `bigint` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UploadedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_employee_documents`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Category` | `int` | `integer` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ExpiresOn` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsArchived` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IssuedOn` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `LegalHold` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `RetainUntil` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_employee_lifecycle_tasks`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AssignedToUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CompletionNote` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DueAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Phase` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `Title` | `string` | `character varying(500)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_employee_payrolls`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BaseSalarySnapshot` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Currency` | `string` | `character varying(3)` | `NO` | ✅ Sync |
+| `Deductions` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `EmployeeNameSnapshot` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `EmployeeNumberSnapshot` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `Gross` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Net` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PayrollRunId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_employment_assignments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ChangeReason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `CostCenterId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EffectiveFrom` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `EffectiveTo` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `JobGradeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `JobPositionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ManagerEmployeeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `OrganizationUnitId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WorkLocationId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+
+## Table: `hr_employment_contracts`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BaseSalary` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ContractNumber` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Currency` | `string` | `character varying(3)` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `EndDate` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ProbationEndDate` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `StartDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TermsJson` | `string` | `jsonb` | `YES` | ✅ Sync |
+| `TermsVersion` | `int` | `integer` | `NO` | ✅ Sync |
+| `Type` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_financial_installments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `AppliedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DueDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `FinancialRequestId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PayrollLineItemId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Sequence` | `int` | `integer` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_financial_requests`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ApprovalInstanceId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `AttachmentReference` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OutstandingBalance` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
+| `RequestedInstallments` | `int` | `integer` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `Type` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_idempotency_records`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActorUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `ExpiresAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Key` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `RequestHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `ResponseJson` | `string` | `character varying(8000)` | `YES` | ✅ Sync |
+| `ResultEntityId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Scope` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_job_grades`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `Rank` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_job_positions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_leave_balances`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Carried` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Granted` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LeaveTypeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reserved` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Used` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+| `Year` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_leave_ledger_entries`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActorUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Amount` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EntryType` | `int` | `integer` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LeaveBalanceId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `SourceId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SourceType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_leave_policies`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AllowNegativeBalance` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `AnnualEntitlement` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EffectiveFrom` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `EffectiveTo` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LeaveTypeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `MaximumCarryover` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WorkCalendarId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+
+## Table: `hr_leave_requests`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ApprovalInstanceId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `AttachmentReference` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DayFraction` | `decimal` | `decimal(4,2)` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `EndDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LeaveTypeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
+| `ReservedAmount` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+| `StartDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+| `Workdays` | `decimal` | `decimal(10,2)` | `NO` | ✅ Sync |
+
+## Table: `hr_leave_types`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AllowsHalfDay` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsPaid` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `RequiresAttachment` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_migration_batches`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Module` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `ReconciledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ReportJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `RequestHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `SourceCount` | `int` | `integer` | `NO` | ✅ Sync |
+| `SourceHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `SourceSystem` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `SourceTotal` | `decimal` | `decimal(24,4)` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `TargetCount` | `int` | `integer` | `NO` | ✅ Sync |
+| `TargetHash` | `string` | `character varying(128)` | `YES` | ✅ Sync |
+| `TargetTotal` | `decimal` | `decimal(24,4)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_migration_conflicts`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DetailsJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `MigrationBatchId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ResolutionReason` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `ResolvedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `SourceId` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `SourceType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_migration_record_maps`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal` | `decimal(24,4)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `MigrationBatchId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SourceHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `SourceId` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `SourceType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `TargetId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_module_rollouts`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ChangedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ChangedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Module` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `ReadTarget` | `string` | `character varying(20)` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `ReconciliationBatchId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WriteTarget` | `string` | `character varying(20)` | `NO` | ✅ Sync |
+
+## Table: `hr_offboarding_processes`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BlockersJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `CompletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CompletedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `InitiatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `LastWorkingDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_organization_units`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EffectiveFrom` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `EffectiveTo` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `ManagerEmployeeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `ParentId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Type` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_pay_components`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Classification` | `int` | `integer` | `NO` | ✅ Sync |
+| `Code` | `string` | `character varying(50)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsInsurable` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsTaxable` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_payroll_input_sources`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeePayrollId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PayrollLineItemId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SourceId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SourceType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_payroll_line_items`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeePayrollId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Explanation` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `InputsJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `IsAdjustment` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `PayComponentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `RuleVersionId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `SourceId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SourceType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_payroll_rules`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EffectiveFrom` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `EffectiveTo` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `Expression` | `string` | `character varying(500)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `PayComponentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Priority` | `int` | `integer` | `NO` | ✅ Sync |
+| `Rate` | `decimal` | `decimal(18,4)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_payroll_runs`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ClosedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CutoffAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `FinanceReviewedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `FinanceReviewedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `GmApprovedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `GmApprovedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PaidAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `PaidByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `PeriodEnd` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `PeriodStart` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `PreparedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `PreparedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ReconciliationHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `RunNumber` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `SourceDataVersion` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TotalDeductions` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `TotalGross` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `TotalNet` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_payroll_settlement_adjustments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OriginalPayrollLineItemId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
+| `SettlementPayrollRunId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_payslips`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AssetReference` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `ContentHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeePayrollId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `GeneratedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_performance_cycles`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EndsOn` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `StartsOn` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_performance_goals`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `PerformanceCycleId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Weight` | `decimal` | `decimal(5,2)` | `NO` | ✅ Sync |
+
+## Table: `hr_performance_reviews`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AppealReason` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `AppealResolution` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ManagerUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PerformanceCycleId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PublishedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ScoresJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+| `WeightedScore` | `decimal` | `decimal(5,2)` | `NO` | ✅ Sync |
+
+## Table: `hr_requisitions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Openings` | `int` | `integer` | `NO` | ✅ Sync |
+| `OrganizationUnitId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `RequestedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Requirements` | `string` | `character varying(10000)` | `NO` | ✅ Sync |
+| `RequisitionNumber` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `State` | `int` | `integer` | `NO` | ✅ Sync |
+| `Title` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_shift_assignments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EffectiveFrom` | `DateOnly` | `date` | `NO` | ✅ Sync |
+| `EffectiveTo` | `DateOnly?` | `date` | `YES` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PublishedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `PublishedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `ReplacesAssignmentId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ShiftTemplateId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_shift_segments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DayOfWeek` | `int?` | `integer` | `YES` | ✅ Sync |
+| `EndsAt` | `TimeSpan` | `interval` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Sequence` | `int` | `integer` | `NO` | ✅ Sync |
+| `ShiftTemplateId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StartsAt` | `TimeSpan` | `interval` | `NO` | ✅ Sync |
+| `UnpaidBreakMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WorkDateRule` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_shift_swap_requests`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DecisionReason` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `HrDecisionByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ManagerDecisionByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `RequesterAssignmentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `RequesterEmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TargetAssignmentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetEmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_shift_templates`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `GraceMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `MinimumBreakMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `Mode` | `int` | `integer` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `OvertimeAfterMinutes` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+| `WorkCalendarId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+
+## Table: `hr_trusted_attendance_devices`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ApprovedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `TokenHash` | `string` | `character varying(128)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_work_calendars`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `HolidaysJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `TimeZoneId` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WorkingDaysMask` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `hr_work_locations`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Address` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `Code` | `string` | `character varying(40)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `GeofenceRadiusMeters` | `int?` | `integer` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Latitude` | `decimal?` | `numeric(9,6)` | `YES` | ✅ Sync |
+| `Longitude` | `decimal?` | `numeric(9,6)` | `YES` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `hr_workday_classifications`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `EmployeeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Kind` | `int` | `integer` | `NO` | ✅ Sync |
+| `SourceId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `SourceType` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `int` | `integer` | `NO` | ✅ Sync |
+| `WorkDate` | `DateOnly` | `date` | `NO` | ✅ Sync |
+
+## Table: `incoming_sms_logs`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Body` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DeduplicationHash` | `string` | `character varying(64)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsMatched` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `MatchedRechargeRequestId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ParsedAmount` | `decimal?` | `numeric(18,2)` | `YES` | ✅ Sync |
+| `ParsedSenderPhone` | `string` | `character varying(20)` | `YES` | ✅ Sync |
+| `ReceivedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Sender` | `string` | `character varying(100)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WalletId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
 ## Table: `lesson_comments`
 
@@ -631,6 +1740,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `ExamId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `InternalCode` | `string` | `character varying(40)` | `NO` | ✅ Sync |
 | `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsProcessingAI` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsProcessingMindmaps` | `bool` | `boolean` | `NO` | ✅ Sync |
@@ -643,6 +1753,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Title` | `string` | `character varying(200)` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `VideoTag` | `string` | `text` | `YES` | ✅ Sync |
+| `VideoTypeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
 ## Table: `lessons`
 
@@ -652,6 +1763,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `ExamId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `InternalCode` | `string` | `character varying(40)` | `NO` | ✅ Sync |
 | `Order` | `int` | `integer` | `NO` | ✅ Sync |
 | `Price` | `decimal` | `numeric` | `NO` | ✅ Sync |
 | `Summary` | `string` | `text` | `NO` | ✅ Sync |
@@ -1075,6 +2187,8 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
+| `AcademicScopeOwnerId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `AcademicScopeOwnerType` | `int?` | `integer` | `YES` | ✅ Sync |
 | `Body` | `string` | `text` | `NO` | ✅ Sync |
 | `ChannelType` | `int` | `integer` | `NO` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
@@ -1165,6 +2279,138 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `Year` | `int` | `integer` | `NO` | ✅ Sync |
 
+## Table: `printable_code_batches`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Behavior` | `int` | `integer` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreditAmount` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
+| `DisableReason` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `DiscountType` | `int?` | `integer` | `YES` | ✅ Sync |
+| `DiscountValue` | `decimal?` | `decimal(18,2)` | `YES` | ✅ Sync |
+| `ExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(160)` | `NO` | ✅ Sync |
+| `OwnerType` | `int` | `integer` | `NO` | ✅ Sync |
+| `StackingPolicyId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `StartsAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TargetId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TemplateId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TotalCodes` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UsedCount` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `printable_code_redemptions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AppliedAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PrintableCodeId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PurchaseOperationId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `RequestId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `printable_code_templates`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BackgroundColor` | `string` | `character varying(32)` | `YES` | ✅ Sync |
+| `BackgroundImageUrl` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `HeightMm` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `LayoutJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(160)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `WidthMm` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+
+## Table: `printable_sales_codes`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `BatchId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CodeHash` | `string` | `character varying(256)` | `NO` | ✅ Sync |
+| `CodePlaintext` | `string` | `character varying(80)` | `YES` | ✅ Sync |
+| `ConsumedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ConsumedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `QrPayload` | `string` | `character varying(500)` | `NO` | ✅ Sync |
+| `SerialNumber` | `long` | `bigint` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UsageLimit` | `int` | `integer` | `NO` | ✅ Sync |
+| `UsedCount` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `promotional_balance_allocations`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AvailableAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ConsumedAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `ExpiredAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `GiftRecipientId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `MaxPurchaseCount` | `int?` | `integer` | `YES` | ✅ Sync |
+| `OriginalAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PurchaseCount` | `int` | `integer` | `NO` | ✅ Sync |
+| `RevokedAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `promotional_balance_usages`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AllocationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Amount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ContentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ContentType` | `int` | `integer` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `GiftRecipientId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PurchaseOperationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `public_exam_products`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AvailableFrom` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `AvailableUntil` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `DisableReason` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `DisabledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `DisabledByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ExamId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `GradeLevel` | `string` | `character varying(80)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsPaid` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsPlatformWide` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsPublished` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Price` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Slug` | `string` | `character varying(160)` | `NO` | ✅ Sync |
+| `SubjectId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
 ## Table: `question_bank_items`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
@@ -1194,6 +2440,26 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Text` | `string` | `text` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
+## Table: `recharge_requests`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal` | `numeric(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `MatchedSmsLogId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `RejectionReason` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `ReservationExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ResolvedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ResolvedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `ScreenshotUrl` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `SenderPhoneNumber` | `string` | `character varying(20)` | `NO` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `WalletId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+
 ## Table: `refresh_tokens`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
@@ -1207,6 +2473,20 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
+## Table: `report_definitions`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ConfigurationJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Domain` | `string` | `character varying(64)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(120)` | `NO` | ✅ Sync |
+| `OwnerUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SchemaVersion` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `xmin` | `uint` | `xid` | `NO` | ❌ Missing Column |
+
 ## Table: `roles`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
@@ -1219,6 +2499,134 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `PermissionsJson` | `string` | `character varying(4000)` | `YES` | ✅ Sync |
 | `Type` | `int` | `integer` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `sales_coupon_usages`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CouponId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DiscountAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `GrossAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PurchaseOperationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `sales_coupons`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Code` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `DisableReason` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `DiscountType` | `int` | `integer` | `NO` | ✅ Sync |
+| `DiscountValue` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `GlobalUsageLimit` | `int?` | `integer` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(160)` | `NO` | ✅ Sync |
+| `NormalizedCode` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `OwnerType` | `int` | `integer` | `NO` | ✅ Sync |
+| `PerStudentUsageLimit` | `int?` | `integer` | `YES` | ✅ Sync |
+| `StackingPolicyId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `StartsAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TargetId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UsedCount` | `int` | `integer` | `NO` | ✅ Sync |
+
+## Table: `sales_financial_effects`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CouponDiscountAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DetailsJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `GrossAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PaidAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PlatformShareImpact` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PrintableCodeDiscountAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PromotionalAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PurchaseOperationId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `StudentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TeacherShareImpact` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `sales_rules`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `GradeLevel` | `string` | `character varying(80)` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `SubjectId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TargetId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `VideoTypeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+
+## Table: `shared_teacher_package_items`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ContentId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ContentType` | `int` | `integer` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsIncluded` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Price` | `decimal` | `decimal(18,4)` | `NO` | ✅ Sync |
+| `SharedTeacherPackageId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SubjectId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `shared_teacher_package_teachers`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AllocationMode` | `int` | `integer` | `NO` | ✅ Sync |
+| `AllocationValue` | `decimal` | `decimal(18,4)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DisplayOrder` | `int` | `integer` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SharedTeacherPackageId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SubjectId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `shared_teacher_packages`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AvailableFrom` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `AvailableUntil` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Description` | `string` | `character varying(2000)` | `NO` | ✅ Sync |
+| `DistributionMode` | `int` | `integer` | `NO` | ✅ Sync |
+| `EducationStage` | `int?` | `integer` | `YES` | ✅ Sync |
+| `GradeLevel` | `int?` | `integer` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ImageUrl` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `IsPublished` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(200)` | `NO` | ✅ Sync |
+| `Price` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Slug` | `string` | `character varying(160)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UpdatedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 
 ## Table: `social_media_plans`
 
@@ -1247,16 +2655,21 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `ExamId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `ExpiresAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `GiftRecipientId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `GrantType` | `int` | `integer` | `NO` | ✅ Sync |
 | `GrantedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `LessonId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `LessonVideoId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `MaxUses` | `int?` | `integer` | `YES` | ✅ Sync |
 | `PackageId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `PublicExamProductId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `TermId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UsesConsumed` | `int` | `integer` | `NO` | ✅ Sync |
+| `VideoTypeId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 
 ## Table: `student_answers`
 
@@ -1291,6 +2704,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Version` | `long` | `bigint` | `NO` | ✅ Sync |
 
 ## Table: `student_exam_attempts`
 
@@ -1306,6 +2720,21 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `StartedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+
+## Table: `student_facing_academic_scopes`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `EducationStage` | `int?` | `integer` | `YES` | ✅ Sync |
+| `GradeLevel` | `int?` | `integer` | `YES` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OwnerId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `OwnerType` | `int` | `integer` | `NO` | ✅ Sync |
+| `ScopeLevel` | `int` | `integer` | `NO` | ✅ Sync |
+| `SubjectId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
 ## Table: `student_gamifications`
 
@@ -1343,7 +2772,7 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `MotherPhone` | `string` | `text` | `YES` | ✅ Sync |
 | `Nationality` | `string` | `text` | `YES` | ✅ Sync |
 | `ParentPhone` | `string` | `character varying(20)` | `YES` | ✅ Sync |
-| `ParentTrackingCode` | `string` | `character varying(100)` | `YES` | ✅ Sync |
+| `ParentTrackingCode` | `string` | `character varying(6)` | `YES` | ✅ Sync |
 | `SchoolName` | `string` | `text` | `YES` | ✅ Sync |
 | `SchoolType` | `int?` | `integer` | `YES` | ✅ Sync |
 | `SecondaryParentPhone` | `string` | `character varying(20)` | `YES` | ✅ Sync |
@@ -1413,22 +2842,90 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `CurrentBalance` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `ReservedBalance` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
 | `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `TotalEarnings` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `Version` | `long` | `bigint` | `NO` | ✅ Sync |
+
+## Table: `teacher_financial_allocations`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `AllocationMode` | `int` | `integer` | `NO` | ✅ Sync |
+| `AllocationValue` | `decimal` | `decimal(18,4)` | `NO` | ✅ Sync |
+| `CodeSerialNumber` | `long?` | `bigint` | `YES` | ✅ Sync |
+| `ContentNameSnapshot` | `string` | `character varying(300)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `GrossBasisAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PayoutId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `PayoutStatus` | `int` | `integer` | `NO` | ✅ Sync |
+| `PlatformShareAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ReviewStatus` | `int` | `integer` | `NO` | ✅ Sync |
+| `StudentNameSnapshot` | `string` | `character varying(200)` | `YES` | ✅ Sync |
+| `StudentPhoneSnapshot` | `string` | `character varying(20)` | `YES` | ✅ Sync |
+| `TeacherFinancialEventId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TeacherShareAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `teacher_financial_events`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Currency` | `string` | `character varying(3)` | `NO` | ✅ Sync |
+| `DetailsJson` | `string` | `jsonb` | `NO` | ✅ Sync |
+| `DiscountAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `GrossAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IdempotencyKey` | `string` | `character varying(240)` | `NO` | ✅ Sync |
+| `OccurredAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `PaidAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PayoutStatus` | `int` | `integer` | `NO` | ✅ Sync |
+| `PlatformShareAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `PromotionalAmount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ReviewStatus` | `int` | `integer` | `NO` | ✅ Sync |
+| `SourceId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `SourceType` | `int` | `integer` | `NO` | ✅ Sync |
+| `StudentId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `TargetId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TargetType` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `teacher_payout_adjustments`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `Amount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Reason` | `string` | `character varying(1000)` | `NO` | ✅ Sync |
+| `RelatedFinancialEventId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `RelatedPayoutId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
+| `Status` | `int` | `integer` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
 ## Table: `teacher_payouts`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
+| `AdminNote` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
 | `Amount` | `decimal` | `decimal(18,2)` | `NO` | ✅ Sync |
+| `ApprovedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `ApprovedByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `HandledAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `HandledByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PaidAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `PaidByUserId` | `Guid?` | `uuid` | `YES` | ✅ Sync |
 | `RejectionReason` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
 | `Status` | `int` | `integer` | `NO` | ✅ Sync |
 | `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `TransferReference` | `string` | `character varying(200)` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
 ## Table: `teacher_photos`
@@ -1454,12 +2951,35 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `FacebookUrl` | `string` | `text` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IntroVideoUrl` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `IsContentVisibleToStudents` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsPublicProfileEnabled` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsVisibleToStudents` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `ProfileImageUrl` | `string` | `character varying(1000)` | `YES` | ✅ Sync |
+| `PublicBio` | `string` | `character varying(2000)` | `YES` | ✅ Sync |
+| `PublicSlug` | `string` | `character varying(160)` | `YES` | ✅ Sync |
+| `RatingAverage` | `decimal` | `numeric(5,2)` | `NO` | ✅ Sync |
+| `RatingCount` | `int` | `integer` | `NO` | ✅ Sync |
+| `ShowOnLanding` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `Specialization` | `string` | `character varying(200)` | `NO` | ✅ Sync |
 | `TelegramUrl` | `string` | `text` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `YouTubeUrl` | `string` | `text` | `YES` | ✅ Sync |
+
+## Table: `teacher_staff_members`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `CreatedByTeacherUserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Notes` | `string` | `character varying(500)` | `YES` | ✅ Sync |
+| `PermissionKeys` | `string` | `character varying(500)` | `NO` | ✅ Sync |
+| `TeacherId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+| `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
 ## Table: `teacher_subjects`
 
@@ -1493,13 +3013,16 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `DeletedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `FullName` | `string` | `character varying(200)` | `NO` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `IsDeleted` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `IsProfileComplete` | `bool` | `boolean` | `NO` | ✅ Sync |
 | `PasswordHash` | `string` | `text` | `NO` | ✅ Sync |
 | `PasswordResetVersion` | `int` | `integer` | `NO` | ✅ Sync |
 | `PhoneNumber` | `string` | `character varying(20)` | `NO` | ✅ Sync |
+| `SecurityStampVersion` | `int` | `integer` | `NO` | ✅ Sync |
 | `SuspensionReason` | `string` | `text` | `YES` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 
@@ -1533,15 +3056,30 @@ Auto-generated from EF Core DbContext snapshot. This documents all columns, data
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |
 
-## Table: `video_watch_events`
+## Table: `video_types`
 
 | Column Name | C# Type | Database Type | Nullable? | Status |
 | --- | --- | --- | --- | --- |
 | `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
+| `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `IsActive` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `Name` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `NormalizedName` | `string` | `character varying(80)` | `NO` | ✅ Sync |
+| `SortOrder` | `int` | `integer` | `NO` | ✅ Sync |
+| `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
+
+## Table: `video_watch_events`
+
+| Column Name | C# Type | Database Type | Nullable? | Status |
+| --- | --- | --- | --- | --- |
+| `ActualWatchedSeconds` | `decimal` | `numeric` | `NO` | ✅ Sync |
+| `CreatedAt` | `DateTime` | `timestamp without time zone` | `NO` | ✅ Sync |
 | `CustomMaxWatchCount` | `int?` | `integer` | `YES` | ✅ Sync |
 | `Id` | `Guid` | `uuid` | `NO` | ✅ Sync |
 | `IsLocked` | `bool` | `boolean` | `NO` | ✅ Sync |
+| `LastPlaybackRate` | `decimal` | `numeric` | `NO` | ✅ Sync |
 | `LessonVideoId` | `Guid` | `uuid` | `NO` | ✅ Sync |
+| `PlaybackRateBreakdownJson` | `string` | `text` | `NO` | ✅ Sync |
 | `TimeWatchedInSeconds` | `int` | `integer` | `NO` | ✅ Sync |
 | `UpdatedAt` | `DateTime?` | `timestamp without time zone` | `YES` | ✅ Sync |
 | `UserId` | `Guid` | `uuid` | `NO` | ✅ Sync |

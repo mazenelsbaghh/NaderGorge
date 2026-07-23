@@ -1,8 +1,39 @@
 import { isUnsafeSecret } from '../security.js';
 import type { LiveSupportClaimContext } from './liveSupportAgent.js';
+import { fetchWithTimeout, WorkerExternalError } from './workerFetch.js';
 
 const MAX_RESPONSE_BYTES = 128 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
+
+function isNonEmptyString(value: unknown, maximum: number): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= maximum;
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export function validateLiveSupportClaimContext(value: unknown, expectedTurnId: string): LiveSupportClaimContext {
+  if (!value || typeof value !== 'object') throw new LiveSupportCallbackError('CALLBACK_INVALID_RESPONSE', false);
+  const context = value as Partial<LiveSupportClaimContext>;
+  if (context.schemaVersion !== '1' || context.turnId !== expectedTurnId || !isUuid(context.turnId) || !isUuid(context.conversationId) || !isUuid(context.policyVersionId)) {
+    throw new LiveSupportCallbackError('CALLBACK_INVALID_RESPONSE', false);
+  }
+  const conversationVersion = context.expectedConversationVersion;
+  if (typeof conversationVersion !== 'number' || !Number.isSafeInteger(conversationVersion) || conversationVersion < 0 || !isNonEmptyString(context.callbackIdempotencyKey, 100)) {
+    throw new LiveSupportCallbackError('CALLBACK_INVALID_RESPONSE', false);
+  }
+  if (!isNonEmptyString(context.deadlineAt, 100) || !Number.isFinite(Date.parse(context.deadlineAt)) || Date.parse(context.deadlineAt) <= Date.now()) {
+    throw new LiveSupportCallbackError('CALLBACK_INVALID_RESPONSE', false);
+  }
+  if (!isNonEmptyString(context.systemInstructions, 52_000) || !Array.isArray(context.knowledgeDocuments) || context.studentContext === null || Array.isArray(context.studentContext) || typeof context.studentContext !== 'object' || !Array.isArray(context.messages) || !Array.isArray(context.allowedActions) || !Array.isArray(context.allowedDecisionTypes)) {
+    throw new LiveSupportCallbackError('CALLBACK_INVALID_RESPONSE', false);
+  }
+  if (context.knowledgeDocuments.length > 50 || context.messages.length > 100 || context.allowedActions.length > 100 || context.allowedDecisionTypes.length > 20) {
+    throw new LiveSupportCallbackError('CALLBACK_INVALID_RESPONSE', false);
+  }
+  return context as LiveSupportClaimContext;
+}
 
 export type LiveSupportCallbackErrorCode =
   | 'CALLBACK_TIMEOUT'
@@ -70,17 +101,22 @@ export function createLiveSupportCallbackClient(options: ClientOptions = {}): Li
   const rawBase = options.baseUrl ?? process.env.BACKEND_API_URL ?? 'http://localhost:5245';
   const baseUrl = `${rawBase.replace(/\/$/, '').replace(/\/api\/v1$/, '')}/api/v1`;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const fetchImpl = options.fetchImpl;
 
   async function request(path: string, init: RequestInit): Promise<{ status: number; body: string }> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const url = `${baseUrl}${path}`;
+    const headers = { 'Content-Type': 'application/json', 'X-Internal-Token': token!, ...init.headers };
+    let controller: AbortController | null = null;
+    let timer: NodeJS.Timeout | null = null;
     try {
-      const response = await fetchImpl(`${baseUrl}${path}`, {
-        ...init,
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json', 'X-Internal-Token': token!, ...init.headers },
-      });
+      let response: Response;
+      if (fetchImpl) {
+        controller = new AbortController();
+        timer = setTimeout(() => controller?.abort(), timeoutMs);
+        response = await fetchImpl(url, { ...init, signal: controller.signal, headers });
+      } else {
+        response = await fetchWithTimeout(url, { ...init, headers, timeoutMs, maxResponseBytes: MAX_RESPONSE_BYTES });
+      }
       const body = await boundedBody(response);
       if (!response.ok) {
         if (response.status === 404 && path.endsWith('/claim')) return { status: response.status, body };
@@ -90,10 +126,15 @@ export function createLiveSupportCallbackClient(options: ClientOptions = {}): Li
       return { status: response.status, body };
     } catch (error) {
       if (error instanceof LiveSupportCallbackError) throw error;
-      if (controller.signal.aborted) throw new LiveSupportCallbackError('CALLBACK_TIMEOUT', true);
+      if (error instanceof WorkerExternalError && error.category === 'response-too-large') {
+        throw new LiveSupportCallbackError('CALLBACK_RESPONSE_TOO_LARGE', false);
+      }
+      if ((error instanceof WorkerExternalError && error.category === 'timeout') || controller?.signal.aborted) {
+        throw new LiveSupportCallbackError('CALLBACK_TIMEOUT', true);
+      }
       throw new LiveSupportCallbackError('CALLBACK_UNAVAILABLE', true);
     } finally {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     }
   }
 
@@ -102,8 +143,9 @@ export function createLiveSupportCallbackClient(options: ClientOptions = {}): Li
       const response = await request(`/internal/callbacks/live-support-ai/turns/${encodeURIComponent(turnId)}/claim`, { method: 'POST' });
       if (response.status === 404) return null;
       try {
-        return JSON.parse(response.body) as LiveSupportClaimContext;
-      } catch {
+        return validateLiveSupportClaimContext(JSON.parse(response.body), turnId);
+      } catch (error) {
+        if (error instanceof LiveSupportCallbackError) throw error;
         throw new LiveSupportCallbackError('CALLBACK_INVALID_RESPONSE', false);
       }
     },

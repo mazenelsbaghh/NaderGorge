@@ -24,12 +24,11 @@ import {
   BookMarked,
   ChartNoAxesColumn,
   ChevronLeft,
+  ClipboardList,
   GraduationCap,
   Home,
-  KeyRound,
   LogOut,
   Menu,
-  MessageSquareText,
   Settings,
   User,
   Wallet,
@@ -50,15 +49,16 @@ import { useStudentShellStore } from '@/stores/student-shell-store';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 import { ParentCodePopup } from '@/components/student/ParentCodePopup';
 import { HeaderParentBadge } from '@/components/layout/HeaderParentBadge';
+import { PlatformLogo } from '@/components/shared/PlatformLogo';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
 type StudentShellRoute =
   | '/student'
   | '/student/packages'
-  | '/student/community'
+  | '/student/shared-packages'
+  | '/student/public-exams'
   | '/student/balance'
-  | '/student/code-redemption'
   | '/student/mistakes'
   | '/student/notifications'
   | '/student/profile'
@@ -92,7 +92,8 @@ const primaryNavItems: Array<{
   icon: typeof ChartNoAxesColumn;
 }> = [
     { href: '/student/packages', label: 'باقاتي', icon: BookMarked },
-    { href: '/student/community', label: 'المجتمع', icon: MessageSquareText },
+    { href: '/student/shared-packages', label: 'باكدجات عامة', icon: BookMarked },
+    { href: '/student/public-exams', label: 'امتحانات', icon: ClipboardList },
     { href: '/student/teachers', label: 'المدرسين', icon: GraduationCap },
   ];
 
@@ -103,7 +104,6 @@ const secondaryNavItems: Array<{
   icon: typeof ChartNoAxesColumn;
 }> = [
     { href: '/student/mistakes', label: 'أخطائي', icon: Bug },
-    { href: '/student/code-redemption', label: 'تفعيل كود', icon: KeyRound },
     { href: '/student/notifications', label: 'الإشعارات', icon: Bell },
     { href: '/student/balance', label: 'الرصيد', icon: Wallet },
   ];
@@ -176,6 +176,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const pathname = usePathname();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const {
     isDark,
     toggleTheme,
@@ -212,6 +213,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const fetchBootstrap = useStudentShellStore((state) => state.fetchBootstrap);
 
   useEffect(() => {
+    const isStudent = user?.roles?.some((role) => role.toLowerCase() === 'student');
+    // The shell is also rendered briefly while the route guard redirects a
+    // guest. Do not call the protected bootstrap endpoint in that state.
+    if (!isAuthenticated || !isStudent) return;
     void fetchBootstrap();
 
     const handleNotificationsUpdated = () => {
@@ -224,7 +229,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         window.removeEventListener("notificationsUpdated", handleNotificationsUpdated);
       };
     }
-  }, [fetchBootstrap]);
+  }, [fetchBootstrap, isAuthenticated, user?.roles]);
 
   // Close drawer on route change
   useEffect(() => {
@@ -308,16 +313,16 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const activePath: StudentShellRoute =
     pathname.startsWith('/student/packages')
       ? '/student/packages'
-      : pathname.startsWith('/student/community')
-        ? '/student/community'
+      : pathname.startsWith('/student/shared-packages')
+        ? '/student/shared-packages'
+      : pathname.startsWith('/student/public-exams')
+        ? '/student/public-exams'
       : pathname.startsWith('/student/teachers')
         ? '/student/teachers'
       : pathname.startsWith('/student/balance')
         ? '/student/balance'
       : pathname.startsWith('/student/mistakes')
         ? '/student/mistakes'
-      : pathname.startsWith('/student/code-redemption')
-        ? '/student/code-redemption'
       : pathname.startsWith('/student/notifications')
         ? '/student/notifications'
       : pathname.startsWith('/student/profile')
@@ -329,7 +334,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
     <div
       dir="rtl"
       style={studentShellTokenAliases}
-      className="student-app-background h-dvh overflow-hidden text-[var(--student-text)] relative"
+      className="student-app-background h-dvh max-h-dvh overflow-x-hidden text-[var(--student-text)] relative"
     >
       {showAmbientBackground ? (
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -476,10 +481,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       </AnimatePresence>
 
       <main
-        className={`relative z-10 h-dvh overflow-y-auto overscroll-none ${
+        className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto ${
           isFocusMode
             ? 'px-0 py-0 pb-0 lg:mr-0 lg:px-0 lg:py-0 lg:pb-0'
-            : 'px-4 py-6 pb-20 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10'
+            : 'px-4 py-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:mr-24 lg:px-8 lg:py-10 lg:pb-10'
         }`}
       >
         <AnimatePresence>
@@ -489,18 +494,35 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="mb-8 lg:mb-10"
+              className="mb-8 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-3 shadow-[0_12px_30px_var(--admin-shadow)] backdrop-blur lg:mb-10 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-0"
             >
+              <div className="mb-3 flex min-h-11 items-center justify-between gap-3 lg:hidden">
+                <HeaderParentBadge />
+                <PlatformLogo
+                  variant="full"
+                  size="sm"
+                  tone={isDark ? 'light' : 'dark'}
+                  priority
+                  className="h-9 w-auto max-w-[128px]"
+                />
+                <Link
+                  href="/student/profile"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                  aria-label="الملف الشخصي"
+                >
+                  <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName} size="sm" />
+                </Link>
+              </div>
               <div className="flex items-center justify-between w-full">
-                <nav className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-[var(--admin-muted)]">
-                  <span>المساحة الدراسية</span>
-                  <ChevronLeft className="h-3 w-3" />
-                  <span className="text-[var(--admin-primary-strong)]">بوابة الطالب</span>
+                <nav className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--admin-muted)] lg:gap-2 lg:text-xs lg:tracking-[0.3em]">
+                  <span className="truncate">المساحة الدراسية</span>
+                  <ChevronLeft className="h-3 w-3 shrink-0" />
+                  <span className="truncate text-[var(--admin-primary-strong)]">بوابة الطالب</span>
                 </nav>
                 <div className="flex items-center gap-2 lg:gap-3">
-                  <HeaderParentBadge />
                   {/* Desktop-only header actions */}
                   <div className="hidden lg:flex items-center gap-3">
+                    <HeaderParentBadge />
                     <SidebarBalance />
                     <Link
                       href="/student/notifications"

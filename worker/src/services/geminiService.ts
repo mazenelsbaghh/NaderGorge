@@ -10,10 +10,12 @@ import { classifyAIError } from './aiErrors.js';
 import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
 import { parseLiveSupportDecision, type LiveSupportDecision } from './liveSupportDecisionSchema.js';
 
+const providerTimeoutMs = Number.parseInt(process.env.AI_PROVIDER_TIMEOUT_MS || '600000', 10);
+
 setGlobalDispatcher(new Agent({
-  connectTimeout: 60 * 60 * 1000,
-  headersTimeout: 60 * 60 * 1000,
-  bodyTimeout: 60 * 60 * 1000,
+  connectTimeout: providerTimeoutMs,
+  headersTimeout: providerTimeoutMs,
+  bodyTimeout: providerTimeoutMs,
 }));
 
 type GenAIClient = Pick<GoogleGenAI, 'models' | 'files'>;
@@ -40,7 +42,7 @@ type RuntimeFactory = () => AIRuntime;
 let runtimeFactory: RuntimeFactory | undefined;
 
 function createClient(options: ConstructorParameters<typeof GoogleGenAI>[0]) {
-  return new GoogleGenAI({ ...options, httpOptions: { timeout: 60 * 60 * 1000 } });
+  return new GoogleGenAI({ ...options, httpOptions: { timeout: providerTimeoutMs } });
 }
 
 function createRuntime(): AIRuntime {
@@ -176,7 +178,7 @@ async function generateAudioContent(
     contents: [{ role: 'user', parts: [{ fileData }, { text: generation.prompt }] }],
     config: { responseMimeType: generation.responseMimeType, ...(generation.responseSchema ? { responseSchema: generation.responseSchema } : {}) },
   });
-  return runtime.gateway.execute({
+  const result = await runtime.gateway.execute({
     operation: generation.operation,
     vertex: () => {
       if (!vertexFile) throw new Error('Vertex audio reference is unavailable.');
@@ -184,6 +186,7 @@ async function generateAudioContent(
     },
     developer: async () => runtime.developer.models.generateContent(requestFor(await developerAudio.reference())),
   });
+  return result.value;
 }
 
 async function uploadVertexAudio(runtime: AIRuntime, audioFilePath: string, correlationId: string) {
@@ -224,9 +227,12 @@ export async function analyzeVideoChapters(audioFilePath: string, correlationId 
   }
 }
 
-function essayEvaluationPrompt(answerText: string, expectedAnswer?: string) {
+function essayEvaluationPrompt(answerText: string, expectedAnswer?: string, questionText?: string) {
   return `You are a friendly Egyptian Arabic teacher who speaks in Egyptian colloquial Arabic (العامية المصرية).
 The student has submitted an answer to an essay question.
+
+Question:
+${questionText || 'نص السؤال غير متوفر.'}
 
 Teacher's Expected Answer / Key concepts:
 ${expectedAnswer || 'مفيش إجابة نموذجية متوفرة، قيّم الإجابة على أساس المنطق العام.'}
@@ -235,7 +241,7 @@ Student Answer:
 ${answerText}
 
 Task:
-1. Determine if the student's answer is correct based on the expected answer.
+1. Determine if the student's answer is correct based on the question and expected answer.
 2. Provide a short 1-2 sentence feedback in EGYPTIAN COLLOQUIAL ARABIC (العامية المصرية). Use a warm, encouraging tone like a friend talking.
 IMPORTANT: You MUST NOT write the correct answer in your feedback. Simply tell them if their logic is correct or incorrect and briefly why in general terms.
 
@@ -244,14 +250,14 @@ Return the result STRICTLY as a JSON object with this shape:
 Do not return any markdown code blocks, just raw JSON.`;
 }
 
-export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: string): Promise<EssayAIResult> {
+export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: string, questionText?: string): Promise<EssayAIResult> {
   const runtime = createRuntime();
-  const request = { model: runtime.config.textModel, contents: essayEvaluationPrompt(answerText, expectedAnswer), config: { responseMimeType: 'application/json' } };
-  const response = await runtime.gateway.execute({
+  const request = { model: runtime.config.textModel, contents: essayEvaluationPrompt(answerText, expectedAnswer, questionText), config: { responseMimeType: 'application/json' } };
+  const response = (await runtime.gateway.execute({
     operation: 'essay',
     vertex: () => runtime.vertex.models.generateContent(request),
     developer: () => runtime.developer.models.generateContent(request),
-  });
+  })).value;
   const parsed = JSON.parse(response.text || '{}') as Partial<EssayAIResult>;
   if (typeof parsed.isCorrect !== 'boolean' || typeof parsed.feedback !== 'string' || !parsed.feedback.trim()) {
     throw new Error('AI essay evaluation returned an invalid result.');
@@ -365,11 +371,11 @@ export async function generateChapterMindmap(
       contents: [{ role: 'user', parts: mindmapParts(chapter, photoPaths) }],
       config: { aspectRatio: '16:9' },
     } as any;
-    const response = await runtime.gateway.execute({
+    const response = (await runtime.gateway.execute({
       operation: 'mindmap',
       vertex: () => runtime.vertex.models.generateContent(request),
       developer: () => runtime.developer.models.generateContent(request),
-    });
+    })).value;
     const imagePart = response.candidates?.[0]?.content?.parts?.find((responsePart) => responsePart.inlineData?.data);
     if (!imagePart?.inlineData?.data) {
       throw new Error(`AI image provider returned no image for chapter ${chapter.order}.`);
@@ -462,6 +468,8 @@ export async function generateLiveSupportReply(prompt: LiveSupportAgentPrompt): 
       developer: () => runtime.developer.models.generateContent(request),
     });
   const withDeadline = async () => {
+    const remainingMs = Date.parse(prompt.deadlineAt) - Date.now();
+    if (remainingMs <= 0) throw new Error('AI_PROVIDER_DEADLINE_EXCEEDED');
     let timer: NodeJS.Timeout | undefined;
     try {
       return await Promise.race([
@@ -474,14 +482,8 @@ export async function generateLiveSupportReply(prompt: LiveSupportAgentPrompt): 
       if (timer) clearTimeout(timer);
     }
   };
-  let response: GeneratedContent;
-  try {
-    response = await withDeadline();
-  } catch (error) {
-    const category = error instanceof AIProviderExecutionError ? error.primaryCategory : classifyAIError(error).category;
-    if (category !== 'provider' && category !== 'quota-exhausted') throw error;
-    response = await withDeadline();
-  }
+  const execution = await withDeadline();
+  const response = execution.value;
 
   const rawText = response.text;
   if (!rawText) {
@@ -498,7 +500,7 @@ export async function generateLiveSupportReply(prompt: LiveSupportAgentPrompt): 
 
   return {
     decision,
-    provider: runtime.config.primaryProvider,
+    provider: execution.provider,
     model: runtime.config.textModel,
   };
 }

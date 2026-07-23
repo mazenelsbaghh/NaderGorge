@@ -47,7 +47,7 @@ public class GetTaskDetailsQueryHandler : IRequestHandler<GetTaskDetailsQuery, A
 
         if (!request.IsAdminOrSupervisor && task.AssigneeId != request.UserId && task.CreatedById != request.UserId)
         {
-            throw new UnauthorizedAccessException("You are not authorized to view this task's details.");
+            throw new ForbiddenException("You are not authorized to view this task's details.");
         }
 
         var taskDto = new TaskDto(

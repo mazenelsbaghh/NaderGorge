@@ -88,6 +88,7 @@ WORKER_ADMIN_TOKEN={worker_admin_token}
 # ─── 6. Frontend (Next.js) ──────────────────────────────────────────────────
 NEXT_PUBLIC_API_URL=https://api.massar-academy.net/api
 NEXT_PUBLIC_BACKEND_URL=https://api.massar-academy.net
+NEXT_PUBLIC_WS_URL=https://ws.massar-academy.net
 
 INTERNAL_API_URL=http://backend:5245/api
 INTERNAL_BACKEND_URL=http://backend:5245

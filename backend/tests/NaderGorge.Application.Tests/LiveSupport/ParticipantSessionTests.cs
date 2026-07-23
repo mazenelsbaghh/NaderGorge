@@ -1,5 +1,3 @@
-using NaderGorge.Infrastructure.Services.LiveSupportAI;
-using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,7 +13,6 @@ using NaderGorge.Infrastructure.Services;
 using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using NaderGorge.Application.Features.LiveSupportAI.Interfaces;
 using NaderGorge.Application.Features.LiveSupportAI.Commands;
-using NaderGorge.Infrastructure.Services.LiveSupportAI;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Commands;
 
@@ -317,7 +314,7 @@ public sealed class ParticipantSessionTests
             ["AI_CALLBACK_SECRET"] = "Feature146OnlyStrongCallbackSecretValue123456789"
         }).Build();
         var protector = new LiveSupportAIDataProtector(config);
-        var payloadBytes = System.Text.Encoding.UTF8.GetBytes("{\"arguments\": {}}");
+        var payloadBytes = System.Text.Encoding.UTF8.GetBytes($"{{\"arguments\": {{\"lessonVideoId\": \"{Guid.NewGuid()}\"}}}}");
         var encrypted = protector.Protect(payloadBytes);
         var payloadHash = protector.ComputeKeyedDigest("pending-decision", payloadBytes);
 

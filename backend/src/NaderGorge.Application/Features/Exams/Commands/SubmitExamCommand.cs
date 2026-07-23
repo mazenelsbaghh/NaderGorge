@@ -19,9 +19,10 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
     private readonly IPublisher _publisher;
     private readonly NaderGorge.Application.Interfaces.IJobEnqueuer _jobEnqueuer;
     private readonly ICachedPlatformSettingsReader _cachedPlatformSettingsReader;
+    private readonly WhatsAppExamNotificationService? _whatsAppExamNotificationService;
 
     public SubmitExamCommandHandler(IAppDbContext db, IPublisher publisher, NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer)
-        : this(db, publisher, jobEnqueuer, new DefaultCachedPlatformSettingsReader())
+        : this(db, publisher, jobEnqueuer, new DefaultCachedPlatformSettingsReader(), null)
     {
     }
 
@@ -29,12 +30,14 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
         IAppDbContext db,
         IPublisher publisher,
         NaderGorge.Application.Interfaces.IJobEnqueuer jobEnqueuer,
-        ICachedPlatformSettingsReader cachedPlatformSettingsReader)
+        ICachedPlatformSettingsReader cachedPlatformSettingsReader,
+        WhatsAppExamNotificationService? whatsAppExamNotificationService = null)
     {
         _db = db;
         _publisher = publisher;
         _jobEnqueuer = jobEnqueuer;
         _cachedPlatformSettingsReader = cachedPlatformSettingsReader;
+        _whatsAppExamNotificationService = whatsAppExamNotificationService;
     }
 
     public async Task<ApiResponse<ExamResultDto>> Handle(SubmitExamCommand request, CancellationToken ct)
@@ -191,6 +194,30 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             };
             _db.OutboxEvents.Add(examSubmittedEvent);
 
+            // Persist the AI work alongside the submitted attempt. The outbox worker
+            // dispatches it independently of this HTTP request, so closing the page
+            // cannot cancel or lose essay grading.
+            var submittedEssays = _db.EssaySubmissions.Local
+                .Where(essay => essay.StudentExamAttemptId == attempt.Id)
+                .ToList();
+            foreach (var essay in submittedEssays)
+            {
+                var examQuestion = exam.ExamQuestions.FirstOrDefault(question => question.Question.Id == essay.QuestionId);
+                _db.OutboxEvents.Add(new OutboxEvent
+                {
+                    Type = "EssayEvaluationQueued",
+                    PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        essaySubmissionId = essay.Id,
+                        questionId = essay.QuestionId,
+                        studentId = essay.StudentId,
+                        questionText = examQuestion?.Question.Text ?? string.Empty,
+                        answerText = essay.AnswerText,
+                        expectedAnswer = examQuestion?.Question.WrittenCorrection ?? string.Empty
+                    })
+                });
+            }
+
             if (!hasEssayQuestions)
             {
                 var examGradedEvent = new OutboxEvent
@@ -269,6 +296,11 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
 
             await _db.SaveChangesAsync(ct);
 
+            if (!hasEssayQuestions)
+            {
+                await TrySendWhatsAppExamResultAsync(attempt.Id, ct);
+            }
+
             // Enqueue notification payload for parent push notifications
             await _jobEnqueuer.EnqueueJobAsync("notifications", "parent-push", new
             {
@@ -279,24 +311,6 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
                 ParentPush = true
             });
 
-            var pendingEssays = _db.EssaySubmissions.Local
-                .Where(essay => essay.StudentExamAttemptId == attempt.Id)
-                .ToList();
-
-            foreach (var essay in pendingEssays)
-            {
-                var examQuestion = exam.ExamQuestions.FirstOrDefault(x => x.Question.Id == essay.QuestionId);
-                var expectedAnswer = examQuestion?.Question?.WrittenCorrection ?? string.Empty;
-
-                await _jobEnqueuer.EnqueueJobAsync("bullmq-bridge-ingest", "evaluateEssay", new
-                {
-                    essaySubmissionId = essay.Id,
-                    questionId = essay.QuestionId,
-                    studentId = essay.StudentId,
-                    answerText = essay.AnswerText,
-                    expectedAnswer
-                });
-            }
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -369,6 +383,27 @@ public class SubmitExamCommandHandler : IRequestHandler<SubmitExamCommand, ApiRe
             resultState: hasEssayQuestions ? "Pending" : "Completed");
 
         return ApiResponse<ExamResultDto>.Ok(result, attempt.IsPassed ? "Exam passed!" : "Exam failed.");
+    }
+
+    private async Task TrySendWhatsAppExamResultAsync(Guid attemptId, CancellationToken ct)
+    {
+        if (_whatsAppExamNotificationService is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _whatsAppExamNotificationService.SendExamResultAsync(attemptId, null, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // WhatsApp is a side-effect. Exam submission must remain successful if delivery fails.
+        }
     }
 
     private void HandleEssaySubmission(

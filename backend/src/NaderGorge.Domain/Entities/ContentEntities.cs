@@ -41,6 +41,7 @@ public class ContentSection : BaseEntity
 
 public class Lesson : BaseEntity
 {
+    public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Summary { get; set; } = string.Empty;
     public int Order { get; set; }
@@ -59,6 +60,7 @@ public class Lesson : BaseEntity
 
 public class LessonVideo : BaseEntity
 {
+    public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
 
     // e.g., YouTube, Vimeo, custom
@@ -71,6 +73,9 @@ public class LessonVideo : BaseEntity
 
     /// <summary>Admin-assigned type/tag for the video</summary>
     public string? VideoTag { get; set; }
+
+    public Guid VideoTypeId { get; set; }
+    public VideoType VideoType { get; set; } = null!;
 
     public string? SubtitleUrl { get; set; }
     public bool IsProcessingAI { get; set; } = false;
@@ -86,6 +91,16 @@ public class LessonVideo : BaseEntity
 
     public ICollection<VideoChapter> VideoChapters { get; set; } = new List<VideoChapter>();
     public BunnyVideoAsset? BunnyVideoAsset { get; set; }
+}
+
+public class VideoType : BaseEntity
+{
+    public string Name { get; set; } = string.Empty;
+    public string NormalizedName { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public bool IsActive { get; set; } = true;
+
+    public ICollection<LessonVideo> Videos { get; set; } = new List<LessonVideo>();
 }
 
 public class BunnyVideoAsset : BaseEntity

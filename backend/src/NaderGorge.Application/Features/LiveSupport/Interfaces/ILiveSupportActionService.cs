@@ -9,4 +9,6 @@ public sealed record LiveSupportActionRequest(Guid ActorUserId, bool IsAdmin, Gu
 
 public interface ILiveSupportActionService : ILiveSupportActionExecutor
 {
+    Task<JsonElement> GetDraftAsync(Guid actorUserId, bool isAdmin, Guid conversationId, string actionKey, CancellationToken ct);
+    Task<JsonElement> GetStudentActionContextAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct);
 }

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -17,7 +18,9 @@ namespace NaderGorge.Application.Features.Student.Recharge;
 public record SubmitRechargeCommand(
     Guid RechargeRequestId,
     string SenderPhoneNumber,
-    byte[] ScreenshotBytes) : IRequest<ApiResponse<SubmitRechargeDto>>;
+    byte[] ScreenshotBytes,
+    string ScreenshotFileName,
+    string? ScreenshotContentType) : IRequest<ApiResponse<SubmitRechargeDto>>;
 
 public class SubmitRechargeDto
 {
@@ -28,6 +31,8 @@ public class SubmitRechargeDto
 
 public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeCommand, ApiResponse<SubmitRechargeDto>>
 {
+    private static readonly Regex EgyptianMobileRegex = new(@"^01[0125]\d{8}$", RegexOptions.Compiled);
+
     private readonly IAppDbContext _db;
     private readonly IContentImageStorage _imageStorage;
     private readonly BalanceService _balanceService;
@@ -41,11 +46,31 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
     public async Task<ApiResponse<SubmitRechargeDto>> Handle(SubmitRechargeCommand request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.SenderPhoneNumber))
+        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+
+        var senderPhoneNumber = NormalizePhone(request.SenderPhoneNumber);
+
+        if (string.IsNullOrWhiteSpace(senderPhoneNumber))
             return ApiResponse<SubmitRechargeDto>.Fail("رقم الهاتف المرسل مطلوب");
+
+        if (!EgyptianMobileRegex.IsMatch(senderPhoneNumber))
+            return ApiResponse<SubmitRechargeDto>.Fail("رقم الهاتف المحول منه يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015.");
 
         if (request.ScreenshotBytes == null || request.ScreenshotBytes.Length == 0)
             return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل مطلوبة");
+
+        try
+        {
+            UploadFileSafety.Validate(
+                request.ScreenshotBytes,
+                request.ScreenshotFileName,
+                request.ScreenshotContentType,
+                SafeUploadKind.PublicImage);
+        }
+        catch (InvalidUploadContentException)
+        {
+            return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل يجب أن تكون صورة JPG أو PNG أو WEBP صالحة.");
+        }
 
         var rechargeRequest = await _db.RechargeRequests
             .Include(r => r.Wallet)
@@ -59,7 +84,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
         if (rechargeRequest.ReservationExpiresAt.HasValue && rechargeRequest.ReservationExpiresAt.Value < DateTime.UtcNow)
         {
-            return ApiResponse<SubmitRechargeDto>.Fail("انتهت صلاحية حجز المعاملة (20 دقيقة)، يرجى البدء بطلب جديد.");
+            return ApiResponse<SubmitRechargeDto>.Fail("انتهت صلاحية حجز المعاملة (ساعة واحدة)، يرجى البدء بطلب جديد.");
         }
 
         // Save screenshot as Webp
@@ -76,7 +101,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         }
 
         // Update request details
-        rechargeRequest.SenderPhoneNumber = request.SenderPhoneNumber.Trim();
+        rechargeRequest.SenderPhoneNumber = senderPhoneNumber;
         rechargeRequest.ScreenshotUrl = screenshotUrl;
         rechargeRequest.ReservationExpiresAt = null; // Clear expiration since it is now submitted
 
@@ -99,7 +124,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         if (matchedSms != null)
         {
             var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
-            var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+            var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
             
             try
             {
@@ -117,14 +142,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
                 await _db.SaveChangesAsync(ct);
 
-                // Credit student balance
-                await _balanceService.AddCredit(
-                    rechargeRequest.UserId,
-                    rechargeRequest.Amount,
-                    $"شحن رصيد تلقائي - محفظة {rechargeRequest.Wallet.Label}",
-                    rechargeRequest.Id,
-                    "DigitalRecharge",
-                    ct);
+                await CreditRechargeAsync(rechargeRequest, rechargeRequest.UserId, "تلقائي", ct);
 
                 if (transaction != null)
                 {
@@ -158,4 +176,14 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
         return ApiResponse<SubmitRechargeDto>.Ok(dto, "تم إرسال الطلب بنجاح");
     }
+
+    private static string NormalizePhone(string phone) =>
+        new((phone ?? string.Empty).Where(char.IsDigit).ToArray());
+
+    private Task CreditRechargeAsync(RechargeRequest rechargeRequest, Guid issuedByUserId, string source, CancellationToken ct) =>
+        rechargeRequest.TeacherId.HasValue
+            ? _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value, rechargeRequest.Amount,
+                $"شحن رصيد للمدرس - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", issuedByUserId, ct)
+            : _balanceService.AddCredit(rechargeRequest.UserId, rechargeRequest.Amount,
+                $"شحن رصيد عام - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", rechargeRequest.Id, "DigitalRecharge", ct);
 }

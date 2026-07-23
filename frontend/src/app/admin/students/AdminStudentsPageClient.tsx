@@ -32,6 +32,7 @@ import {
 import { AdminUserListDto, adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { getEducationStageLabel, getGradeLevelLabel, getStudyTrackLabel } from '@/lib/academic-labels';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -158,39 +159,21 @@ export default function AdminStudentsPageClient() {
 
       const mapEducationStage = (s?: string) => {
         if (!s) return '—';
-        const m: Record<string, string> = {
-          Secondary: 'ثانوية',
-          Baccalaureate: 'بكالوريا',
-        };
-        return m[s] || s;
+        return getEducationStageLabel(s);
       };
 
       const mapGradeLevel = (g?: string) => {
         if (!g || g === 'N/A') return '—';
-        const m: Record<string, string> = {
-          FirstSecondary: 'أولى ثانوي',
-          SecondSecondary: 'ثانية ثانوي',
-          FirstBaccalaureate: 'أولى بكالوريا',
-          SecondBaccalaureate: 'ثانية بكالوريا',
-        };
-        return m[g] || g;
+        return getGradeLevelLabel(g);
       };
 
       const mapStudyTrack = (t?: string) => {
         if (!t || t === 'N/A') return '—';
-        const m: Record<string, string> = {
-          Science: 'علمي',
-          Arts: 'أدبي',
-          MedicineAndLifeSciences: 'الطب وعلوم الحياة',
-          EngineeringAndComputerScience: 'الهندسة وعلوم الحاسب',
-          Business: 'قطاع الأعمال',
-          ArtsAndHumanities: 'الآداب والفنون',
-        };
-        return m[t] || t;
+        return getStudyTrackLabel(t);
       };
 
       const headers = [
-        'كود الطالب',
+        'رقم متابعة ولي الأمر',
         'الاسم الكامل',
         'رقم الهاتف',
         'رقم الهاتف الإضافي',
@@ -208,7 +191,7 @@ export default function AdminStudentsPageClient() {
 
       for (const u of itemsToExport) {
         const rowData = [
-          u.studentCode || '—',
+          u.parentTrackingCode || '—',
           u.fullName,
           u.phoneNumber,
           u.secondaryPhone || '—',
@@ -283,21 +266,23 @@ export default function AdminStudentsPageClient() {
       render: (u) => (
         <div className="flex flex-col gap-1">
           <span className="text-sm font-bold text-[var(--admin-text)]">
-            {u.grade !== 'N/A' ? u.grade : '—'}
+            {u.grade && u.grade !== 'N/A' ? getGradeLevelLabel(u.grade) : '—'}
           </span>
-          <span className="text-xs text-[var(--admin-muted)]">
-            {u.educationStage !== 'N/A' ? (u.educationStage === 'Secondary' ? 'ثانوية' : 'بكالوريا') : ''}
-            {u.track !== 'N/A' && ` - ${u.track === 'Science' ? 'علمي' : u.track === 'Arts' ? 'أدبي' : u.track}`}
-          </span>
+          {(u.educationStage && u.educationStage !== 'N/A') || (u.track && u.track !== 'N/A') ? (
+            <span className="text-xs text-[var(--admin-muted)]">
+              {u.educationStage && u.educationStage !== 'N/A' && getEducationStageLabel(u.educationStage)}
+              {u.track && u.track !== 'N/A' && `${u.educationStage && u.educationStage !== 'N/A' ? ' - ' : ''}${getStudyTrackLabel(u.track)}`}
+            </span>
+          ) : null}
         </div>
       ),
     },
     {
-      key: 'studentCode',
-      label: 'كود الطالب',
+      key: 'parentTrackingCode',
+      label: 'رقم متابعة ولي الأمر',
       render: (u) => (
-        <span className="font-mono text-sm text-[var(--admin-text)] font-semibold">
-          {u.studentCode || '—'}
+        <span className="font-mono text-sm font-semibold text-[var(--admin-primary)]">
+          {u.parentTrackingCode || '—'}
         </span>
       ),
     },
@@ -454,7 +439,7 @@ export default function AdminStudentsPageClient() {
           <AdminSearchToolbar
             value={search}
             onChange={setSearch}
-            placeholder="البحث بكود الطالب، الاسم، أو رقم الهاتف..."
+            placeholder="البحث برقم متابعة ولي الأمر، الاسم، أو رقم الهاتف..."
             actions={
               <>
                 <button
@@ -491,8 +476,8 @@ export default function AdminStudentsPageClient() {
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
                   >
                     <option value="">الكل</option>
-                    <option value="Secondary">ثانوية</option>
-                    <option value="Baccalaureate">بكالوريا</option>
+                    <option value="Secondary">{getEducationStageLabel('Secondary')}</option>
+                    <option value="Baccalaureate">{getEducationStageLabel('Baccalaureate')}</option>
                   </select>
                 </div>
                 <div>
@@ -505,10 +490,10 @@ export default function AdminStudentsPageClient() {
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
                   >
                     <option value="">الكل</option>
-                    <option value="FirstSecondary">أولى ثانوي</option>
-                    <option value="SecondSecondary">ثانية ثانوي</option>
-                    <option value="FirstBaccalaureate">أولى بكالوريا</option>
-                    <option value="SecondBaccalaureate">ثانية بكالوريا</option>
+                    <option value="FirstSecondary">{getGradeLevelLabel('FirstSecondary')}</option>
+                    <option value="SecondSecondary">{getGradeLevelLabel('SecondSecondary')}</option>
+                    <option value="FirstBaccalaureate">{getGradeLevelLabel('FirstBaccalaureate')}</option>
+                    <option value="SecondBaccalaureate">{getGradeLevelLabel('SecondBaccalaureate')}</option>
                   </select>
                 </div>
                 <div>
@@ -521,16 +506,16 @@ export default function AdminStudentsPageClient() {
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
                   >
                     <option value="">الكل</option>
-                    <option value="Arts">أدبي</option>
-                    <option value="Science">علمي</option>
+                    <option value="Arts">{getStudyTrackLabel('Arts')}</option>
+                    <option value="Science">{getStudyTrackLabel('Science')}</option>
                     <option value="MedicineAndLifeSciences">
-                      الطب وعلوم الحياة
+                      {getStudyTrackLabel('MedicineAndLifeSciences')}
                     </option>
                     <option value="EngineeringAndComputerScience">
-                      الهندسة وعلوم الحاسب
+                      {getStudyTrackLabel('EngineeringAndComputerScience')}
                     </option>
-                    <option value="Business">قطاع الأعمال</option>
-                    <option value="ArtsAndHumanities">الآداب والفنون</option>
+                    <option value="Business">{getStudyTrackLabel('Business')}</option>
+                    <option value="ArtsAndHumanities">{getStudyTrackLabel('ArtsAndHumanities')}</option>
                   </select>
                 </div>
                 <div>

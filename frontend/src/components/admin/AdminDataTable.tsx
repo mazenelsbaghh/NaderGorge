@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, MoveHorizontal } from 'lucide-react';
 import { formatCompactNumber } from './admin-utils';
 
 export interface AdminColumn<T> {
@@ -9,12 +9,24 @@ export interface AdminColumn<T> {
   label: React.ReactNode;
   render: (row: T) => React.ReactNode;
   align?: 'right' | 'left' | 'center';
+  /**
+   * Controls when a column is hidden as the viewport narrows. Mark the row's
+   * identity and any must-see information as `primary`; row actions are always
+   * retained. Defaults to `primary` to keep existing tables unchanged.
+   */
+  responsivePriority?: 'primary' | 'secondary' | 'optional';
 }
 
 const alignmentClasses = {
   right: 'text-right',
   left: 'text-left',
   center: 'text-center',
+} as const;
+
+const responsivePriorityClasses = {
+  primary: '',
+  secondary: 'hidden md:table-cell',
+  optional: 'hidden lg:table-cell',
 } as const;
 
 /**
@@ -88,6 +100,9 @@ export function AdminDataTable<T>({
   const hasRowAction = Boolean(expandedRowRender || onRowClick);
   const totalColumns = columns.length + (hasRowAction ? 1 : 0);
 
+  const getResponsivePriorityClass = (column: AdminColumn<T>) =>
+    responsivePriorityClasses[column.responsivePriority ?? 'primary'];
+
   const renderSkeleton = () => {
     return Array.from({ length: pageSize / 2 }).map((_, index) => (
       <tr key={`skeleton-${index}`}>
@@ -99,16 +114,26 @@ export function AdminDataTable<T>({
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-[var(--admin-shadow)]">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[780px] border-collapse">
+    <section className="overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]" aria-label="جدول بيانات الإدارة">
+      <div className="flex items-center gap-2 border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-4 py-2 text-xs font-semibold text-[var(--admin-muted)] md:hidden">
+        <MoveHorizontal className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" aria-hidden="true" />
+        <span>اسحب الجدول أفقيًا لرؤية الأعمدة الإضافية.</span>
+      </div>
+      <div
+        className="overflow-x-auto [scrollbar-color:var(--admin-border)_transparent] [scrollbar-width:thin] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]"
+        tabIndex={0}
+        role="region"
+        aria-label="جدول قابل للتمرير أفقيًا"
+      >
+        <table className="w-full min-w-[540px] border-collapse sm:min-w-[680px]">
+          <caption className="sr-only">جدول بيانات الإدارة. اسحب أفقيًا لرؤية الأعمدة الإضافية.</caption>
           <thead>
             <tr className="bg-[var(--admin-card-soft)] text-right">
               {columns.map((col) => (
                 <th
                   key={col.key}
                   scope="col"
-                  className={`px-8 py-5 text-sm font-bold text-[var(--admin-primary)] ${alignmentClasses[col.align ?? 'right']}`}
+                  className={`px-5 py-4 text-sm font-bold text-[var(--admin-primary)] sm:px-8 sm:py-5 ${alignmentClasses[col.align ?? 'right']} ${getResponsivePriorityClass(col)}`}
                 >
                   {col.label}
                 </th>
@@ -153,7 +178,7 @@ export function AdminDataTable<T>({
                       {columns.map((col) => (
                         <td
                           key={col.key}
-                          className={`px-8 py-6 text-sm text-[var(--admin-text)] ${alignmentClasses[col.align ?? 'right']}`}
+                          className={`px-5 py-4 text-sm text-[var(--admin-text)] sm:px-8 sm:py-5 ${alignmentClasses[col.align ?? 'right']} ${getResponsivePriorityClass(col)}`}
                         >
                           {col.render(row)}
                         </td>
@@ -193,8 +218,8 @@ export function AdminDataTable<T>({
       </div>
 
       {pagination && (
-        <div className="flex items-center justify-between border-t border-[var(--admin-border)] p-6">
-          <span className="text-xs font-bold tracking-[0.18em] text-[var(--admin-muted)]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--admin-border)] p-4 sm:p-6">
+          <span className="text-xs font-bold text-[var(--admin-muted)]">
             عرض {formatCompactNumber(data.length === 0 ? 0 : (page - 1) * pageSize + 1)}-
             {formatCompactNumber(Math.min(page * pageSize, data.length))} من أصل {formatCompactNumber(data.length)} عنصر
           </span>
@@ -203,7 +228,7 @@ export function AdminDataTable<T>({
               type="button"
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
-              className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
+              className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:cursor-not-allowed disabled:text-[var(--admin-border)]"
               aria-label="الصفحة السابقة"
               title="الصفحة السابقة"
             >
@@ -214,7 +239,7 @@ export function AdminDataTable<T>({
               type="button"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:opacity-40"
+              className="rounded-full p-2 text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] disabled:cursor-not-allowed disabled:text-[var(--admin-border)]"
               aria-label="الصفحة التالية"
               title="الصفحة التالية"
             >
@@ -223,6 +248,6 @@ export function AdminDataTable<T>({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

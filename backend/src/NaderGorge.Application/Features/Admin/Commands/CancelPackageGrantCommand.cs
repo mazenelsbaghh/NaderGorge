@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
@@ -15,10 +17,12 @@ public record CancelPackageGrantCommand(Guid AccessGrantId, bool RefundBalance, 
 public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGrantCommand, ApiResponse>
 {
     private readonly IAppDbContext _context;
+    private readonly TeacherAccountingService _teacherAccounting;
 
-    public CancelPackageGrantCommandHandler(IAppDbContext context)
+    public CancelPackageGrantCommandHandler(IAppDbContext context, TeacherAccountingService teacherAccounting)
     {
         _context = context;
+        _teacherAccounting = teacherAccounting;
     }
 
     public async Task<ApiResponse> Handle(CancelPackageGrantCommand request, CancellationToken cancellationToken)
@@ -35,50 +39,43 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
         grant.CancelledAt = DateTime.UtcNow;
         grant.CancellationReason = request.Reason;
 
+        var grantContext = await ResolveGrantContextAsync(grant, cancellationToken);
         decimal refundedAmount = 0m;
-        string? packageName = null;
+        string contentName = grantContext?.Name ?? "المحتوى";
 
-        if (grant.PackageId.HasValue)
+        if (request.RefundBalance && grantContext?.Price > 0m)
         {
-            var package = await _context.Packages.FindAsync(new object[] { grant.PackageId.Value }, cancellationToken);
-            if (package != null)
+            refundedAmount = grantContext.Price;
+            var balance = await _context.StudentBalances
+                .FirstOrDefaultAsync(b => b.UserId == grant.UserId, cancellationToken);
+
+            if (balance == null)
             {
-                packageName = package.Name;
-                if (request.RefundBalance && package.Price > 0m)
+                balance = new StudentBalance
                 {
-                    refundedAmount = package.Price;
-                    var balance = await _context.StudentBalances
-                        .FirstOrDefaultAsync(b => b.UserId == grant.UserId, cancellationToken);
-
-                    if (balance == null)
-                    {
-                        balance = new StudentBalance
-                        {
-                            Id = Guid.NewGuid(),
-                            UserId = grant.UserId,
-                            CurrentBalance = 0m
-                        };
-                        _context.StudentBalances.Add(balance);
-                    }
-
-                    balance.CurrentBalance += refundedAmount;
-                    balance.UpdatedAt = DateTime.UtcNow;
-
-                    var transaction = new BalanceTransaction
-                    {
-                        Id = Guid.NewGuid(),
-                        StudentBalanceId = balance.Id,
-                        Amount = refundedAmount,
-                        BalanceAfter = balance.CurrentBalance,
-                        TransactionType = "Refund",
-                        ReferenceId = grant.PackageId.Value,
-                        Description = $"إرجاع رصيد باقة {package.Name} بعد إلغاء الإدارة",
-                        CreatedAt = DateTime.UtcNow,
-                        PerformedByUserId = request.AdminId
-                    };
-                    _context.BalanceTransactions.Add(transaction);
-                }
+                    Id = Guid.NewGuid(),
+                    UserId = grant.UserId,
+                    CurrentBalance = 0m
+                };
+                _context.StudentBalances.Add(balance);
             }
+
+            balance.CurrentBalance += refundedAmount;
+            balance.UpdatedAt = DateTime.UtcNow;
+
+            var transaction = new BalanceTransaction
+            {
+                Id = Guid.NewGuid(),
+                StudentBalanceId = balance.Id,
+                Amount = refundedAmount,
+                BalanceAfter = balance.CurrentBalance,
+                TransactionType = "Refund",
+                ReferenceId = grantContext.TargetId,
+                Description = $"إرجاع رصيد {contentName} بعد إلغاء الإدارة",
+                CreatedAt = DateTime.UtcNow,
+                PerformedByUserId = request.AdminId
+            };
+            _context.BalanceTransactions.Add(transaction);
         }
 
         var audit = new AuditLog
@@ -118,7 +115,7 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
             PayloadJson = JsonSerializer.Serialize(new
             {
                 packageId = grant.PackageId,
-                packageName = packageName,
+                packageName = contentName,
                 userId = grant.UserId
             })
         };
@@ -126,10 +123,86 @@ public class CancelPackageGrantCommandHandler : IRequestHandler<CancelPackageGra
 
         await _context.SaveChangesAsync(cancellationToken);
 
+        if (grantContext != null)
+        {
+            await _teacherAccounting.ReverseTargetAsync(
+                grant.UserId,
+                grantContext.TargetType,
+                grantContext.TargetId,
+                grant.Id,
+                request.Reason ?? $"إلغاء اشتراك {contentName}",
+                cancellationToken);
+        }
+
         var successMessage = refundedAmount > 0m
-            ? $"تم إلغاء باقة {packageName} بنجاح وإرجاع {refundedAmount} ج.م إلى رصيد الطالب."
-            : $"تم إلغاء باقة {packageName} بنجاح دون إرجاع رصيد.";
+            ? $"تم إلغاء اشتراك {contentName} بنجاح وإرجاع {refundedAmount} ج.م إلى رصيد الطالب."
+            : $"تم إلغاء اشتراك {contentName} بنجاح دون إرجاع رصيد.";
 
         return ApiResponse.Ok(successMessage);
     }
+
+    private async Task<GrantCancellationContext?> ResolveGrantContextAsync(StudentAccessGrant grant, CancellationToken ct)
+    {
+        switch (grant.GrantType)
+        {
+            case CodeType.Package when grant.PackageId.HasValue:
+            {
+                var package = await _context.Packages
+                    .FirstOrDefaultAsync(p => p.Id == grant.PackageId.Value, ct);
+                return package == null
+                    ? null
+                    : new GrantCancellationContext(package.Name, package.Price, SalesTargetType.Package, package.Id);
+            }
+            case CodeType.Term when grant.TermId.HasValue:
+            {
+                var term = await _context.Terms
+                    .Include(t => t.Package)
+                    .FirstOrDefaultAsync(t => t.Id == grant.TermId.Value, ct);
+                return term == null
+                    ? null
+                    : new GrantCancellationContext($"{term.Package.Name} — {term.Title}", term.Price, SalesTargetType.Term, term.Id);
+            }
+            case CodeType.Month when grant.ContentSectionId.HasValue:
+            {
+                var section = await _context.ContentSections
+                    .Include(s => s.Term)
+                        .ThenInclude(t => t.Package)
+                    .FirstOrDefaultAsync(s => s.Id == grant.ContentSectionId.Value, ct);
+                return section == null
+                    ? null
+                    : new GrantCancellationContext($"{section.Term.Package.Name} — {section.Title}", section.Price, SalesTargetType.ContentSection, section.Id);
+            }
+            case CodeType.Lesson when grant.LessonId.HasValue:
+            {
+                var lesson = await _context.Lessons
+                    .Include(l => l.ContentSection)
+                        .ThenInclude(s => s.Term)
+                            .ThenInclude(t => t.Package)
+                    .FirstOrDefaultAsync(l => l.Id == grant.LessonId.Value, ct);
+                return lesson == null
+                    ? null
+                    : new GrantCancellationContext($"{lesson.ContentSection.Term.Package.Name} — {lesson.Title}", lesson.Price, SalesTargetType.Lesson, lesson.Id);
+            }
+            case CodeType.Video when grant.LessonVideoId.HasValue:
+            {
+                var video = await _context.LessonVideos
+                    .FirstOrDefaultAsync(v => v.Id == grant.LessonVideoId.Value, ct);
+                return video == null
+                    ? null
+                    : new GrantCancellationContext(video.Title, 0m, SalesTargetType.SpecificVideo, video.Id);
+            }
+            case CodeType.Video when grant.VideoTypeId.HasValue:
+            {
+                return new GrantCancellationContext("مجموعة فيديوهات", 0m, SalesTargetType.VideoType, grant.VideoTypeId.Value);
+            }
+            case CodeType.Exam when grant.ExamId.HasValue:
+            {
+                return new GrantCancellationContext("امتحان", 0m, SalesTargetType.PublicExam, grant.ExamId.Value);
+            }
+            default:
+                return null;
+        }
+    }
+
+    private sealed record GrantCancellationContext(string Name, decimal Price, SalesTargetType TargetType, Guid TargetId);
 }

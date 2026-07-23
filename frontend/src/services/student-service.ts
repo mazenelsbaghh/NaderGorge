@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 export interface ActivePackageDto {
   id: string;
@@ -29,11 +30,18 @@ export interface UpcomingExamDto {
   lessonTitle: string;
 }
 
+export interface UpcomingHomeworkDto {
+  homeworkId: string;
+  homeworkTitle: string;
+  lessonTitle: string;
+}
+
 export interface DashboardDto {
   studentName: string;
   activePackages: ActivePackageDto[];
   resumePoint?: ResumePointDto;
   upcomingExams: UpcomingExamDto[];
+  upcomingHomeworks: UpcomingHomeworkDto[];
   overallProgressPercent: number;
   totalLessonsCompleted: number;
   totalLessons: number;
@@ -70,7 +78,13 @@ export interface QuickAccessItemDto {
   title: string;
   pathBreadcrumb: string;
   url: string;
-  accessType: number; // 1 = Term, 2 = Month, 3 = Lesson
+  accessType: number | 'Term' | 'Month' | 'Lesson' | 'Video'; // API may serialize enums as names.
+  packageId?: string;
+  parentUrl?: string;
+  imageUrl?: string;
+  teacherName?: string;
+  teacherProfileImageUrl?: string;
+  badge?: string;
 }
 
 export interface ExamMistakeItemDto {
@@ -140,11 +154,66 @@ export interface StudentThemePreferencesDto {
 
 export interface PublicTeacherDto {
   id: string;
+  teacherId?: string;
+  slug?: string;
   fullName: string;
+  displayName?: string;
   bio: string;
   specialization: string;
   profileImageUrl?: string;
+  introVideoUrl?: string;
+  contactInfo?: string;
+  assistantPhoneNumbers?: string;
+  facebookUrl?: string;
+  youtubeUrl?: string;
+  telegramUrl?: string;
+  ratingAverage?: number;
+  ratingCount?: number;
   subjectNames: string[];
+}
+
+export interface PublicTeacherContentDto {
+  id: string;
+  name?: string;
+  title?: string;
+  price?: number;
+  imageUrl?: string | null;
+}
+
+export interface PublicTeacherDetailDto extends PublicTeacherDto {
+  subjects: Array<{ id?: string; subjectId?: string; name: string }>;
+  packages: PublicTeacherContentDto[];
+  sharedPackages: PublicTeacherContentDto[];
+  lessons: PublicTeacherContentDto[];
+}
+
+export interface PublicPackageDetailDto {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl?: string | null;
+  subjectName: string;
+  teacherName: string;
+  teacherId: string;
+  terms: Array<{
+    id: string;
+    title: string;
+    price: number;
+    imageUrl?: string | null;
+    sections: Array<{
+      id: string;
+      title: string;
+      lessons: Array<{ id: string; title: string }>;
+    }>;
+  }>;
+}
+
+export interface TeacherCommunityPostDto {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorName: string;
 }
 
 export interface StudentProfileDto {
@@ -218,6 +287,31 @@ export const studentService = {
     return res.data?.data || [];
   },
 
+  getLandingTeachers: async (): Promise<PublicTeacherDto[]> => {
+    const res = await apiClient.get('/public/teachers/landing');
+    return res.data?.data || [];
+  },
+
+  getPublicTeacherDetail: async (teacherIdOrSlug: string): Promise<PublicTeacherDetailDto> => {
+    const res = await apiClient.get(`/public/teachers/${teacherIdOrSlug}`);
+    return res.data?.data;
+  },
+
+  getPublicPackage: async (packageId: string): Promise<PublicPackageDetailDto> => {
+    const res = await apiClient.get(`/public/packages/${packageId}`);
+    return res.data?.data;
+  },
+
+  getTeacherCommunityPosts: async (teacherId: string): Promise<TeacherCommunityPostDto[]> => {
+    const res = await apiClient.get(`/public/teachers/${teacherId}/community-posts`);
+    return res.data?.data || [];
+  },
+
+  createTeacherCommunityPost: async (teacherId: string, body: string): Promise<{ id: string }> => {
+    const res = await apiClient.post(`/public/teachers/${teacherId}/community-posts`, { body });
+    return res.data?.data;
+  },
+
   getQuickAccess: async (): Promise<QuickAccessItemDto[]> => {
     const res = await apiClient.get('/student/dashboard/quick-access');
     return res.data?.data || [];
@@ -265,6 +359,7 @@ export const studentService = {
 
   markNotificationAsRead: async (id: string): Promise<void> => {
     const res = await apiClient.post(`/student/notifications/${id}/read`);
+    invalidateMany(['notifications', 'student:shell']);
     return res.data?.data;
   },
 
@@ -283,4 +378,3 @@ export const studentService = {
     await apiClient.post('/student/acknowledge-tracking-popup');
   }
 };
-

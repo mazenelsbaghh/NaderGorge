@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -21,6 +22,16 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
     {
         try { return Ok(ApiResponse<LiveSupportStaffBootstrapDto>.Ok(await _service.GetStaffBootstrapAsync(UserId(), User.IsInRole("Admin"), ct))); }
         catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("canned-replies")]
+    public async Task<IActionResult> CannedReplies(CancellationToken ct) => Ok(ApiResponse<IReadOnlyList<LiveSupportCannedReplyDto>>.Ok(await _service.GetStaffCannedRepliesAsync(UserId(), ct)));
+
+    [HttpPut("canned-replies")]
+    public async Task<IActionResult> UpdateCannedReplies(UpdateStaffCannedRepliesRequest request, CancellationToken ct)
+    {
+        try { await _service.UpdateStaffCannedRepliesAsync(UserId(), request.Replies, ct); return Ok(ApiResponse.Ok("تم حفظ ردودك الثابتة.")); }
+        catch (LiveSupportException ex) { return BadRequest(ApiResponse<object>.Fail(ex.Message, [ex.Code])); }
     }
 
     [HttpPost("conversations/{conversationId:guid}/messages")]
@@ -86,6 +97,20 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpGet("conversations/{conversationId:guid}/actions/context")]
+    public async Task<IActionResult> StudentActionContext(Guid conversationId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<JsonElement>.Ok(await _actions.GetStudentActionContextAsync(UserId(), User.IsInRole("Admin"), conversationId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpGet("conversations/{conversationId:guid}/actions/{actionKey}/draft")]
+    public async Task<IActionResult> ActionDraft(Guid conversationId, string actionKey, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<JsonElement>.Ok(await _actions.GetDraftAsync(UserId(), User.IsInRole("Admin"), conversationId, actionKey, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     [HttpPost("conversations/{conversationId:guid}/actions/{actionKey}")]
     [EnableRateLimiting("live-support-action")]
     public async Task<IActionResult> ExecuteAction(Guid conversationId, string actionKey, ExecuteLiveSupportActionRequest request, [FromHeader(Name = "Idempotency-Key")] string idempotencyKey, CancellationToken ct)
@@ -97,6 +122,8 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
     private Guid UserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     private IActionResult Error(LiveSupportException ex) => StatusCode(ex.Code == LiveSupportErrorCodes.Forbidden ? 403 : ex.Code == "NOT_FOUND" ? 404 : 409, ApiResponse<object>.Fail(ex.Message, [ex.Code]));
 }
+
+public sealed record UpdateStaffCannedRepliesRequest(IReadOnlyList<LiveSupportCannedReplyDto> Replies);
 
 public sealed record CloseConversationRequest(string Reason);
 public sealed record TransferConversationRequest(Guid? TargetStaffUserId, string Reason);

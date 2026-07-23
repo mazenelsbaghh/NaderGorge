@@ -9,7 +9,6 @@ import {
   hrService,
   type EmployeeDto,
   type AdminAttendanceLogDto,
-  type AdminVacationDto,
 } from '@/services/hr-service';
 import {
   Users,
@@ -22,18 +21,16 @@ import {
   Power,
   Briefcase,
   CalendarClock,
-  FileText,
   ListTodo,
   BookOpenCheck,
   ShieldAlert,
   Building2,
   DollarSign,
-  CheckCircle,
-  XCircle,
   Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
+import { translateRole } from '@/packages/brand';
 
 // ── Types for new endpoints (wrapped in try/catch) ──────────────────────
 interface AssistantStatsDto {
@@ -98,6 +95,7 @@ function translateAction(action: string): string {
     RejectWatchRequest: 'رفض طلب مشاهدة إضافية',
     CreateEmployeeProfile: 'إنشاء ملف موظف',
     UpdateEmployeeProfile: 'تحديث ملف الموظف',
+    UpdateStaffProfile: 'تحديث بيانات المساعد',
   };
   return map[action] || action;
 }
@@ -186,7 +184,6 @@ export default function AssistantProfilePageClient() {
   const [assistant, setAssistant] = useState<AdminUserListDto | null>(null);
   const [employeeProfile, setEmployeeProfile] = useState<EmployeeDto | null>(null);
   const [attendance, setAttendance] = useState<AdminAttendanceLogDto[]>([]);
-  const [vacations, setVacations] = useState<AdminVacationDto[]>([]);
   const [auditLogs, setAuditLogs] = useState<UserAuditLogDto[]>([]);
 
   // New endpoint data (graceful fallback)
@@ -196,7 +193,7 @@ export default function AssistantProfilePageClient() {
   const [warningsResolved, setWarningsResolved] = useState<WarningResolvedDto[]>([]);
 
   // ── Form states ──
-  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [editFields, setEditFields] = useState({ fullName: '', phoneNumber: '' });
   const [passwordInput, setPasswordInput] = useState('');
   const [hrFields, setHrFields] = useState({ salary: '0', startTime: '09:00:00', dailyHours: '8' });
   const [taskFilter, setTaskFilter] = useState<string>('all');
@@ -240,11 +237,7 @@ export default function AssistantProfilePageClient() {
       const attData = await hrService.getAttendance(user.phoneNumber);
       setAttendance(attData.filter((a) => a.employeePhone === user.phoneNumber));
 
-      // 4. Load vacations
-      const vacData = await hrService.getVacations(user.phoneNumber);
-      setVacations(vacData.filter((v) => v.employeePhone === user.phoneNumber));
-
-      // 5. Load audit logs
+      // 4. Load audit logs
       const logs = await adminService.getUserAuditLogs(id);
       setAuditLogs(logs || []);
 
@@ -303,8 +296,7 @@ export default function AssistantProfilePageClient() {
     if (submitting || !assistant) return;
     setSubmitting(true);
     try {
-      // Use the same update endpoint — we update the user profile
-      await adminService.updateStudentProfile(id, editFields);
+      await adminService.updateStaffProfile(id, editFields);
       toast.success('تم تحديث البيانات');
       setModalOpen('none');
       fetchAssistant();
@@ -363,36 +355,6 @@ export default function AssistantProfilePageClient() {
     }
   };
 
-  const handleApproveVacation = async (vacId: string) => {
-    try {
-      const res = await hrService.approveVacation(vacId);
-      if (res.success) {
-        toast.success('تمت الموافقة على الإجازة');
-        if (assistant) {
-          const vacData = await hrService.getVacations(assistant.phoneNumber);
-          setVacations(vacData.filter((v) => v.employeePhone === assistant.phoneNumber));
-        }
-      }
-    } catch {
-      toast.error('فشل في الموافقة على الإجازة');
-    }
-  };
-
-  const handleRejectVacation = async (vacId: string) => {
-    try {
-      const res = await hrService.rejectVacation(vacId);
-      if (res.success) {
-        toast.success('تم رفض الإجازة');
-        if (assistant) {
-          const vacData = await hrService.getVacations(assistant.phoneNumber);
-          setVacations(vacData.filter((v) => v.employeePhone === assistant.phoneNumber));
-        }
-      }
-    } catch {
-      toast.error('فشل في رفض الإجازة');
-    }
-  };
-
   // ── Helpers ────────────────────────────────────────────────────────────
   const formatDate = (d?: string | null) => {
     if (!d) return 'غير متوفر';
@@ -402,12 +364,7 @@ export default function AssistantProfilePageClient() {
   const mapRole = (roles: string[]) => {
     const filtered = roles.filter(r => r !== 'Assistant');
     if (filtered.length === 0) return 'مساعد تعليمي عام';
-    const map: Record<string, string> = {
-      Admin: 'مدير النظام',
-      Teacher: 'مدرس',
-      Moderator: 'مشرف',
-    };
-    return filtered.map(r => map[r] || r).join('، ');
+    return filtered.map(translateRole).join('، ');
   };
 
   const filteredTasks = taskFilter === 'all'
@@ -454,7 +411,7 @@ export default function AssistantProfilePageClient() {
             onClick={() => {
               setEditFields({
                 fullName: assistant.fullName || '',
-                phone: assistant.phoneNumber || '',
+                phoneNumber: assistant.phoneNumber || '',
               });
               setModalOpen('editProfile');
             }}
@@ -874,77 +831,6 @@ export default function AssistantProfilePageClient() {
               />
             </div>
 
-            {/* Vacations Section */}
-            <div className="rounded-3xl bg-[var(--admin-bg)] p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="rounded-2xl bg-[var(--admin-primary-15)] p-2.5 text-[var(--admin-primary)]">
-                  <FileText size={20} />
-                </div>
-                <div>
-                  <h3 className="text-[length:var(--admin-font-title-md)] font-bold text-[var(--admin-text)]">طلبات الإجازات</h3>
-                  <p className="text-[var(--admin-muted)] text-sm">إدارة طلبات الإجازة والموافقة أو الرفض</p>
-                </div>
-              </div>
-
-              {vacations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-[var(--admin-muted)] bg-[var(--admin-card-soft)] rounded-3xl">
-                  <span className="text-5xl mb-4">🏖️</span>
-                  <p className="font-bold text-[var(--admin-text)]">لا توجد طلبات إجازة مقدمة</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {vacations.map((v) => (
-                    <div
-                      key={v.id}
-                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl bg-[var(--admin-card-soft)] border border-[var(--admin-border)]/10 gap-3"
-                    >
-                      <div>
-                        <p className="text-xs text-[var(--admin-muted)] font-bold">فترة الإجازة:</p>
-                        <p className="text-sm font-bold text-[var(--admin-text)] mt-0.5">
-                          من {new Date(v.startDate).toLocaleDateString('ar-EG')}{' '}
-                          إلى {new Date(v.endDate).toLocaleDateString('ar-EG')}
-                        </p>
-                        <p className="text-xs text-[var(--admin-muted)] mt-1">السبب: {v.reason}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {v.status === 'Pending' ? (
-                          <>
-                            <button
-                              onClick={() => handleApproveVacation(v.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500 hover:text-white text-emerald-600 rounded-xl text-xs font-bold transition-all duration-200"
-                            >
-                              <CheckCircle className="h-3.5 w-3.5" />
-                              موافقة
-                            </button>
-                            <button
-                              onClick={() => handleRejectVacation(v.id)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 rounded-xl text-xs font-bold transition-all duration-200"
-                            >
-                              <XCircle className="h-3.5 w-3.5" />
-                              رفض
-                            </button>
-                          </>
-                        ) : (
-                          <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-extrabold ${
-                            v.status === 'Approved'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                              : 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400'
-                          }`}>
-                            {v.status === 'Approved' ? (
-                              <CheckCircle className="h-3.5 w-3.5" />
-                            ) : (
-                              <XCircle className="h-3.5 w-3.5" />
-                            )}
-                            {v.status === 'Approved' ? 'مقبولة' : 'مرفوضة'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -1004,7 +890,7 @@ export default function AssistantProfilePageClient() {
         <form onSubmit={handleEditProfileSubmit} className="flex flex-col gap-4">
           {[
             { key: 'fullName', label: 'الاسم الكامل', type: 'text' },
-            { key: 'phone', label: 'رقم الهاتف', type: 'text' },
+            { key: 'phoneNumber', label: 'رقم الهاتف', type: 'text' },
           ].map(f => (
             <div key={f.key}>
               <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">{f.label}</label>
@@ -1012,7 +898,7 @@ export default function AssistantProfilePageClient() {
                 type={f.type}
                 disabled={submitting}
                 className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
-                value={String(editFields[f.key] ?? '')}
+                value={editFields[f.key as keyof typeof editFields]}
                 onChange={e => setEditFields(p => ({ ...p, [f.key]: e.target.value }))}
               />
             </div>

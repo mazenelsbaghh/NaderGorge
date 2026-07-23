@@ -1,9 +1,9 @@
 "use client"
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminService, ExamDashboardDto, StudentExamResultSummaryDto } from '@/services/admin-service';
 import { useRouter } from 'next/navigation';
-import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus } from 'lucide-react';
+import { FileText, Clock, BookCheck, Users, AlertCircle, Trash2, Plus, Copy, Search, Send } from 'lucide-react';
 import { AdminShellChrome, AdminStatCard, AdminDataTable, AdminBackButton } from '@/components/admin';
 import { ConfirmModal } from '@/components/ui/admin-modal';
 import toast from 'react-hot-toast';
@@ -19,6 +19,14 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
   const [error, setError] = useState(false);
   const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [attemptSearch, setAttemptSearch] = useState('');
+  const [deletingAttemptId, setDeletingAttemptId] = useState<string | null>(null);
+  const [attemptDeleteConfirm, setAttemptDeleteConfirm] = useState<{ open: boolean; id: string | null; studentName: string }>({
+    open: false,
+    id: null,
+    studentName: '',
+  });
+  const [sendingWhatsAppAttemptId, setSendingWhatsAppAttemptId] = useState<string | null>(null);
 
   const loadDashboard = useCallback(() => {
     if (!examId) return;
@@ -47,6 +55,56 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
       toast.error('فشل في حذف السؤال');
     } finally {
       setDeletingQuestionId(null);
+    }
+  };
+
+  const filteredAttempts = useMemo(() => {
+    if (!dashboard) return [];
+    const query = attemptSearch.trim().toLowerCase();
+    if (!query) return dashboard.attempts;
+
+    return dashboard.attempts.filter((attempt) => {
+      return (
+        attempt.studentName.toLowerCase().includes(query) ||
+        attempt.studentPhone.includes(query) ||
+        attempt.attemptId.toLowerCase().includes(query) ||
+        attempt.evaluation.toLowerCase().includes(query)
+      );
+    });
+  }, [attemptSearch, dashboard]);
+
+  const handleSendAttemptWhatsApp = async (attempt: StudentExamResultSummaryDto) => {
+    if (!isAttemptResultReady(attempt)) {
+      toast.error('نتيجة هذه المحاولة لم تجهز بعد');
+      return;
+    }
+
+    setSendingWhatsAppAttemptId(attempt.attemptId);
+    try {
+      await adminService.sendWhatsAppExamResultMessage({ attemptId: attempt.attemptId });
+      toast.success(`تم إرسال نتيجة ${attempt.studentName} على واتساب`);
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'فشل إرسال واتساب لهذه المحاولة';
+      toast.error(message);
+    } finally {
+      setSendingWhatsAppAttemptId(null);
+    }
+  };
+
+  const handleDeleteAttempt = async () => {
+    if (!attemptDeleteConfirm.id) return;
+    const attemptId = attemptDeleteConfirm.id;
+    setAttemptDeleteConfirm({ open: false, id: null, studentName: '' });
+    setDeletingAttemptId(attemptId);
+    try {
+      await adminService.deleteExamAttempt(examId, attemptId);
+      toast.success('تم حذف المحاولة');
+      loadDashboard();
+    } catch (err: any) {
+      const message = err?.response?.data?.message || 'فشل حذف المحاولة';
+      toast.error(message);
+    } finally {
+      setDeletingAttemptId(null);
     }
   };
 
@@ -188,20 +246,32 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
 
         {/* Attempts Table */}
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-[var(--admin-primary-15)] p-3 text-[var(--admin-primary)]">
-              <Users className="h-5 w-5" />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-[var(--admin-primary-15)] p-3 text-[var(--admin-primary)]">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[var(--admin-text)]">محاولات الطلاب</h2>
+                <p className="text-sm text-[var(--admin-muted)] font-mono mt-1">
+                  المعروض: {filteredAttempts.length} / الإجمالي: {dashboard.attempts.length}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-[var(--admin-text)]">محاولات الطلاب</h2>
-              <p className="text-sm text-[var(--admin-muted)] font-mono mt-1">
-                إجمالي المحاولات المسجلة: {dashboard.attempts.length}
-              </p>
+            <div className="relative w-full lg:max-w-sm">
+              <Search className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+              <input
+                type="search"
+                value={attemptSearch}
+                onChange={(event) => setAttemptSearch(event.target.value)}
+                placeholder="ابحث باسم الطالب أو الرقم أو التقييم"
+                className="h-11 w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 pr-10 text-sm font-bold text-[var(--admin-text)] outline-none transition focus:border-[var(--admin-primary)]"
+              />
             </div>
           </div>
           
           <AdminDataTable<StudentExamResultSummaryDto>
-            data={dashboard.attempts}
+            data={filteredAttempts}
             columns={[
               {
                 key: 'student',
@@ -210,6 +280,47 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                   <div>
                     <p className="font-bold text-base text-[var(--admin-text)]">{row.studentName}</p>
                     <p className="text-xs font-mono text-[var(--admin-primary)] mt-1">{row.studentPhone || '---'}</p>
+                  </div>
+                )
+              },
+              {
+                key: 'actions',
+                label: 'إجراءات',
+                render: (row) => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={sendingWhatsAppAttemptId === row.attemptId || !isAttemptResultReady(row)}
+                      onClick={() => handleSendAttemptWhatsApp(row)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300"
+                    >
+                      {sendingWhatsAppAttemptId === row.attemptId ? (
+                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <Send className="h-3.5 w-3.5" />
+                      )}
+                      واتساب
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(row.attemptId);
+                        toast.success('تم نسخ معرف المحاولة');
+                      }}
+                      className="inline-flex items-center gap-2 rounded-xl border border-[var(--admin-border)] px-3 py-2 text-xs font-bold text-[var(--admin-text)] transition hover:border-[var(--admin-primary)] hover:text-[var(--admin-primary)]"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span className="font-mono" dir="ltr">{row.attemptId.slice(0, 8)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingAttemptId === row.attemptId}
+                      onClick={() => setAttemptDeleteConfirm({ open: true, id: row.attemptId, studentName: row.studentName })}
+                      className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف
+                    </button>
                   </div>
                 )
               },
@@ -268,7 +379,7 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
                 )
               }
             ]}
-            rowKey={(r) => r.studentId + (r.startedAt || '')}
+            rowKey={(r) => r.attemptId}
             pageSize={15}
             emptyMessage="لا يوجد محاولات لهذا الامتحان حتى الآن."
           />
@@ -286,6 +397,21 @@ export default function ExamDashboardPageClient(props: { params: { id: string } 
         variant="danger"
         loading={deletingQuestionId !== null}
       />
+      <ConfirmModal
+        open={attemptDeleteConfirm.open}
+        onClose={() => setAttemptDeleteConfirm({ open: false, id: null, studentName: '' })}
+        onConfirm={handleDeleteAttempt}
+        title="حذف محاولة الامتحان"
+        description={`هل أنت متأكد من حذف محاولة ${attemptDeleteConfirm.studentName || 'الطالب'}؟ سيتم حذف الإجابات ونتيجة المحاولة نهائياً.`}
+        confirmLabel="حذف المحاولة"
+        cancelLabel="إلغاء"
+        variant="danger"
+        loading={deletingAttemptId !== null}
+      />
     </AdminShellChrome>
   );
+}
+
+function isAttemptResultReady(attempt: StudentExamResultSummaryDto) {
+  return Boolean(attempt.evaluation && attempt.evaluation !== 'لم يقيّم' && attempt.evaluation !== 'قيد التصحيح');
 }

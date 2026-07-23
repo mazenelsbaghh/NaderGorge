@@ -247,37 +247,25 @@ export const MobileNavToggle = ({
 
 export const NavbarLogo = () => {
   return (
-    <Link href="/" className="relative z-20 flex items-center gap-3 sm:gap-4 ml-4">
-      <div
-        className="flex h-11 w-11 sm:h-14 sm:w-14 items-center justify-center rounded-full border border-[var(--landing-line)] bg-[var(--landing-card-strong)] overflow-hidden"
-      >
-        <Image
-          src="/images/logo-mark.svg"
-          width={44}
-          height={44}
-          className="h-8 w-8 object-contain sm:h-11 sm:w-11 dark:hidden"
-          style={{ width: "auto", height: "auto" }}
-          alt="Massar Platform"
-          priority
-        />
-        <Image
-          src="/images/logo-mark-light.svg"
-          width={44}
-          height={44}
-          className="h-8 w-8 object-contain sm:h-11 sm:w-11 hidden dark:block"
-          style={{ width: "auto", height: "auto" }}
-          alt="Massar Platform"
-          priority
-        />
-      </div>
-      <div>
-        <p className="text-xs sm:text-[13px] font-semibold tracking-[0.25em] sm:tracking-[0.36em] text-[var(--landing-muted)] leading-tight">
-          MASSAR PLATFORM
-        </p>
-        <p className="text-base sm:text-xl font-black text-[var(--landing-ink)] md:text-2xl leading-none mt-0.5 sm:mt-1">
-          منصة مسار
-        </p>
-      </div>
+    <Link href="/" className="relative z-20 ml-4 flex items-center" aria-label="منصة مسار">
+      <Image
+        src="/images/logo-mark.svg"
+        width={1254}
+        height={1254}
+        className="h-12 w-12 object-contain dark:hidden sm:h-14 sm:w-14"
+        alt="منصة مسار"
+        priority
+        unoptimized
+      />
+      <Image
+        src="/images/logo-mark-light.svg"
+        width={1254}
+        height={1254}
+        className="hidden h-12 w-12 object-contain dark:block sm:h-14 sm:w-14"
+        alt="منصة مسار"
+        priority
+        unoptimized
+      />
     </Link>
   );
 };

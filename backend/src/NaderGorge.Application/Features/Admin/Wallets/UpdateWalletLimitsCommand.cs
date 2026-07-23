@@ -45,7 +45,7 @@ public class UpdateWalletLimitsCommandHandler : IRequestHandler<UpdateWalletLimi
         wallet.Label = request.Label;
         wallet.DailyLimit = request.DailyLimit;
         wallet.MonthlyLimit = request.MonthlyLimit;
-        
+
         if (request.SmsSenderFilters != null && request.SmsSenderFilters.Any())
         {
             var filters = request.SmsSenderFilters

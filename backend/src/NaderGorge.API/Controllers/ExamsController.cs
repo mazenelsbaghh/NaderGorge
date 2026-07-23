@@ -61,6 +61,22 @@ public class ExamsController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("{id:guid}/latest-result")]
+    public async Task<IActionResult> GetLatestResult(Guid id)
+    {
+        var response = await _mediator.Send(new GetLatestExamAttemptResultQuery(id, GetUserId()));
+
+        if (!response.Success)
+        {
+            if (response.Errors?.Contains("You do not have access") == true)
+                return StatusCode(403, response);
+
+            return NotFound(response);
+        }
+
+        return Ok(response);
+    }
+
     [HttpPost("{id:guid}/submit/{attemptId:guid}")]
     [Idempotent]
     public async Task<IActionResult> SubmitExam(Guid id, Guid attemptId, [FromBody] List<AnswerSubmissionDto> answers)
@@ -77,6 +93,21 @@ public class ExamsController : ControllerBase
     public async Task<IActionResult> GetGradingStatus(Guid attemptId)
     {
         var response = await _mediator.Send(new GetExamAttemptGradingStatusQuery(attemptId, GetUserId()));
+        if (!response.Success)
+        {
+            if (response.Errors?.Contains("NOT_FOUND") == true)
+                return NotFound(response);
+
+            return BadRequest(response);
+        }
+
+        return Ok(response);
+    }
+
+    [HttpGet("attempts/{attemptId:guid}/result")]
+    public async Task<IActionResult> GetAttemptResult(Guid attemptId)
+    {
+        var response = await _mediator.Send(new GetExamAttemptResultQuery(attemptId, GetUserId()));
         if (!response.Success)
         {
             if (response.Errors?.Contains("NOT_FOUND") == true)

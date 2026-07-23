@@ -49,8 +49,11 @@ public sealed class ContentImageStorage : IContentImageStorage
         });
 
         var randomFileName = $"{Guid.NewGuid():N}.webp";
+        var webRoot = string.IsNullOrWhiteSpace(_environment.WebRootPath)
+            ? Path.Combine(_environment.ContentRootPath, "wwwroot")
+            : _environment.WebRootPath;
         var relativeDirectory = Path.Combine("uploads", "content", contentFolder);
-        var physicalDirectory = Path.Combine(_environment.WebRootPath, relativeDirectory);
+        var physicalDirectory = Path.Combine(webRoot, relativeDirectory);
         Directory.CreateDirectory(physicalDirectory);
 
         var physicalPath = Path.Combine(physicalDirectory, randomFileName);

@@ -96,9 +96,13 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [errorMessage, setErrorMessage] = useState('');
   const [watchInfo, setWatchInfo] = useState<{current: number, max: number, isLocked?: boolean} | null>(null);
   const [extraWatchReqStatus, setExtraWatchReqStatus] = useState<ExtraWatchRequestStatus | null>(null);
+  const [canWatchAfterStatusRefresh, setCanWatchAfterStatusRefresh] = useState(false);
   const [extraWatchRejectionReason, setExtraWatchRejectionReason] = useState<string | null>(null);
   const [extraWatchStatusError, setExtraWatchStatusError] = useState<string | null>(null);
   const [requestingExtra, setRequestingExtra] = useState(false);
+  const [showExtraWatchRequestForm, setShowExtraWatchRequestForm] = useState(false);
+  const [extraWatchRequestReason, setExtraWatchRequestReason] = useState('');
+  const [extraWatchRequestValidationError, setExtraWatchRequestValidationError] = useState('');
   const [isBuyingAgain, setIsBuyingAgain] = useState(false);
   const [showConfirmRepurchase, setShowConfirmRepurchase] = useState(false);
 
@@ -238,6 +242,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const response = await videoSessionService.getExtraWatchStatus(lessonVideoId);
       setExtraWatchReqStatus(response.data?.data?.requestStatus ?? null);
       setExtraWatchRejectionReason(response.data?.data?.rejectionReason ?? null);
+      setCanWatchAfterStatusRefresh(response.data?.data?.canWatch === true);
     } catch (error) {
       devConsole.error(error);
       setExtraWatchStatusError('تعذر التحقق من حالة طلب المشاهدة الإضافية.');
@@ -251,26 +256,39 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [loadExtraWatchStatus, status]);
 
   useEffect(() => {
-    if (extraWatchReqStatus !== 'Approved') {
+    if (extraWatchReqStatus !== 'Approved' && !canWatchAfterStatusRefresh) {
       approvedLoadAttemptedRef.current = false;
     }
 
-    if (status === 'locked' && extraWatchReqStatus === 'Approved' && !approvedLoadAttemptedRef.current) {
+    if (
+      status === 'locked'
+      && (extraWatchReqStatus === 'Approved' || canWatchAfterStatusRefresh)
+      && !approvedLoadAttemptedRef.current
+    ) {
       approvedLoadAttemptedRef.current = true;
       void loadVideo();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extraWatchReqStatus, status]);
+  }, [canWatchAfterStatusRefresh, extraWatchReqStatus, status]);
 
   const handleRequestExtra = async () => {
+    const requestReason = extraWatchRequestReason.trim();
+    if (!requestReason) {
+      setExtraWatchRequestValidationError('اكتب سبب احتياجك لمشاهدة إضافية قبل إرسال الطلب.');
+      return;
+    }
+
     if (requestingExtraRef.current) return;
     requestingExtraRef.current = true;
     setRequestingExtra(true);
     setExtraWatchStatusError(null);
     try {
-      await videoSessionService.requestExtraWatch(lessonVideoId);
+      await videoSessionService.requestExtraWatch(lessonVideoId, requestReason);
       setExtraWatchReqStatus('Pending');
       setExtraWatchRejectionReason(null);
+      setShowExtraWatchRequestForm(false);
+      setExtraWatchRequestReason('');
+      setExtraWatchRequestValidationError('');
     } catch(err: any) {
       devConsole.error(err);
       const errors = err.response?.data?.errors || [];
@@ -313,6 +331,14 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           if (embedReadyTimeoutRef.current) {
             clearTimeout(embedReadyTimeoutRef.current);
             embedReadyTimeoutRef.current = null;
+          }
+          if (activeSessionIdRef.current && consumedSessionIdRef.current !== activeSessionIdRef.current) {
+            const sessionId = activeSessionIdRef.current;
+            consumedSessionIdRef.current = sessionId;
+            void videoSessionService.consumeSession(sessionId).catch((err) => {
+              consumedSessionIdRef.current = null;
+              devConsole.error('Failed to consume video session after player ready:', err);
+            });
           }
           setStatus('ready');
           setDuration(msg.data.duration || 0);
@@ -425,8 +451,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const watchCountRef = useRef(0);
   const [displayedWatched, setDisplayedWatched] = useState(0);
   const pendingTrackedSeconds = useRef(0);
+  const playbackRateRef = useRef(1);
   const flushInFlight = useRef(false);
   const activeSessionIdRef = useRef<string | null>(null);
+  const consumedSessionIdRef = useRef<string | null>(null);
   const nextProgressSequenceRef = useRef(1);
   const activeProgressRequestRef = useRef<{ sequence: number; seconds: number } | null>(null);
   const trackingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -498,6 +526,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         sessionId,
         progressSequence: progressRequest.sequence,
         secondsWatched: progressRequest.seconds,
+        playbackRate: playbackRateRef.current,
         totalDurationSeconds: Math.round(duration || 0),
       });
       activeProgressRequestRef.current = null;
@@ -598,7 +627,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   }, [watchInfo, viewTracked, displayedWatched, thresholdSeconds]);
 
   const normalizedChapters = React.useMemo(() => {
-    if (!chapters || chapters.length === 0 || duration <= 0) return undefined;
+    if (!chapters || chapters.length === 0) return undefined;
+    const timelineDuration = duration > 0
+      ? duration
+      : Math.max(1, ...chapters.map((chapter) => chapter.endTime));
     return chapters.map(ch => ({
       id: ch.id,
       title: ch.title,
@@ -606,8 +638,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       mindmapImageUrl: ch.mindmapImageUrl,
       startTime: ch.startTime,
       endTime: ch.endTime,
-      startPercent: (Math.max(0, ch.startTime) / duration) * 100,
-      endPercent: (Math.min(duration, ch.endTime) / duration) * 100
+      startPercent: (Math.max(0, ch.startTime) / timelineDuration) * 100,
+      endPercent: (Math.min(timelineDuration, ch.endTime) / timelineDuration) * 100
     }));
   }, [chapters, duration]);
 
@@ -621,6 +653,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       const response = await videoSessionService.createSession(lessonVideoId);
       const session = response.data.data;
       activeSessionIdRef.current = session.sessionId;
+      consumedSessionIdRef.current = null;
       nextProgressSequenceRef.current = 1;
       activeProgressRequestRef.current = null;
       pendingTrackedSeconds.current = 0;
@@ -653,12 +686,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         setErrorMessage('تعذر تحميل مشغل الفيديو. تأكد من إعدادات الاتصال الداخلي بين الواجهة والباك اند.');
       }, 12000);
 
-      const consumeAfterIframeLoad = () => {
-        void videoSessionService.consumeSession(session.sessionId).catch((err) => {
-          devConsole.error('Failed to consume video session after iframe load:', err);
-        });
-      };
-
       // 2. Render appropriately based on provider
       const providerName = session.provider?.toLowerCase() || 'youtube';
       setProvider(providerName);
@@ -669,7 +696,6 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         
         const iframe = document.createElement('iframe');
         iframe.src = embedUrl;
-        iframe.onload = consumeAfterIframeLoad;
         iframe.style.position = 'absolute';
         iframe.style.top = '0';
         iframe.style.left = '0';
@@ -679,6 +705,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
         iframe.setAttribute('allowfullscreen', '');
         iframe.setAttribute('playsinline', '');
+        iframe.referrerPolicy = 'strict-origin-when-cross-origin';
         
         iframeRef.current = iframe;
         containerRef.current.appendChild(iframe);
@@ -788,6 +815,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   };
 
   const handlePlaybackRateChange = (rate: number) => {
+    playbackRateRef.current = rate;
     sendCommand('setPlaybackRate', { rate });
   };
 
@@ -802,6 +830,16 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       ? normalizedChapters[0]
       : normalizedChapters[normalizedChapters.length - 1];
   }, [normalizedChapters, currentTime, duration]);
+
+  // A mind map is a lesson aid, not a control that should disappear until the
+  // playback clock reaches one specific chapter. Fall back to the first ready
+  // map so students can always open it from the player.
+  const activeMindmapChapter = React.useMemo(() => {
+    if (!normalizedChapters?.length) return null;
+    return activeChapterDesktop?.mindmapImageUrl
+      ? activeChapterDesktop
+      : normalizedChapters.find((chapter) => Boolean(chapter.mindmapImageUrl)) ?? null;
+  }, [activeChapterDesktop, normalizedChapters]);
 
   // ── Render States ──
   if (isExamLocked) {
@@ -921,7 +959,10 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             ) : (
                <button 
                   type="button"
-                  onClick={handleRequestExtra}
+                  onClick={() => {
+                    setExtraWatchRequestValidationError('');
+                    setShowExtraWatchRequestForm(true);
+                  }}
                   disabled={requestingExtra}
                   className="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold rounded-lg transition-colors flex items-center justify-center min-w-[200px] disabled:opacity-50"
                >
@@ -930,6 +971,73 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             )}
           </div>
         </div>
+
+        <AnimatePresence>
+          {showExtraWatchRequestForm && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              role="presentation"
+              onMouseDown={() => !requestingExtra && setShowExtraWatchRequestForm(false)}
+            >
+              <motion.form
+                dir="rtl"
+                className="w-full max-w-md rounded-2xl bg-white p-6 text-right shadow-xl"
+                initial={{ opacity: 0, scale: 0.98, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98, y: 12 }}
+                transition={{ duration: 0.2 }}
+                onMouseDown={(event) => event.stopPropagation()}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleRequestExtra();
+                }}
+              >
+                <h3 className="text-lg font-bold text-slate-900">سبب طلب المشاهدة الإضافية</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  وضّح سبب احتياجك لمشاهدة إضافية، ليتمكن فريق الدعم من مراجعة طلبك.
+                </p>
+                <label htmlFor="extra-watch-request-reason" className="mt-5 block text-sm font-bold text-slate-800">
+                  السبب <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  id="extra-watch-request-reason"
+                  value={extraWatchRequestReason}
+                  onChange={(event) => {
+                    setExtraWatchRequestReason(event.target.value);
+                    if (event.target.value.trim()) setExtraWatchRequestValidationError('');
+                  }}
+                  maxLength={1000}
+                  rows={4}
+                  required
+                  autoFocus
+                  placeholder="مثال: أحتاج مراجعة هذه الجزئية قبل الامتحان."
+                  className={`mt-2 w-full resize-none rounded-xl border bg-slate-50 p-3 text-sm text-slate-900 outline-none transition focus:ring-2 ${extraWatchRequestValidationError ? 'border-rose-500 focus:ring-rose-200' : 'border-slate-300 focus:border-teal-700 focus:ring-teal-100'}`}
+                />
+                {extraWatchRequestValidationError && <p className="mt-2 text-xs font-semibold text-rose-600">{extraWatchRequestValidationError}</p>}
+                <div className="mt-5 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowExtraWatchRequestForm(false)}
+                    disabled={requestingExtra}
+                    className="min-h-11 rounded-xl px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={requestingExtra}
+                    className="min-h-11 rounded-xl bg-teal-700 px-5 text-sm font-bold text-white transition hover:bg-teal-800 disabled:opacity-50"
+                  >
+                    {requestingExtra ? 'جاري الإرسال...' : 'إرسال الطلب'}
+                  </button>
+                </div>
+              </motion.form>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <ConfirmDialog
           open={showConfirmRepurchase}
@@ -1078,7 +1186,9 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
         )}
 
         {/* Floating Mindmap Overlay */}
-        {activeChapterDesktop && chapters?.some(c => c.mindmapImageUrl) && status === 'ready' && (showControls || isMindmapOpen) && (
+        {/* Keep the lesson aid reachable while the video is playing. Player controls
+            intentionally auto-hide, but that must not hide the mind-map trigger. */}
+        {activeMindmapChapter && status === 'ready' && (
           <div 
             className="pointer-events-none absolute left-3 top-3 z-[90] flex flex-col items-start sm:left-4 sm:top-4"
             onMouseEnter={() => setIsHoveringControls(true)}
@@ -1095,9 +1205,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    onClick={() => setIsMindmapOpen(true)} 
-                   disabled={!activeChapterDesktop.mindmapImageUrl}
                    className="pointer-events-auto flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-black/60 px-3 text-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur transition hover:bg-[var(--admin-primary)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4"
-                   aria-label={activeChapterDesktop.mindmapImageUrl ? 'فتح الخريطة الذهنية للفصل' : 'الخريطة الذهنية غير متاحة لهذا الفصل'}
+                   aria-label="فتح الخريطة الذهنية للفصل"
                  >
                     <Map className="h-5 w-5 sm:mr-2" />
                     <span className="hidden text-sm font-bold sm:inline">الخريطة الذهنية</span>
@@ -1120,8 +1229,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                        <X className="w-4 h-4" />
                     </button>
                     <SplitText 
-                      key={`mindmap-title-${activeChapterDesktop.id}`}
-                      text={`الخريطة الذهنية: ${activeChapterDesktop.title}`} 
+                      key={`mindmap-title-${activeMindmapChapter.id}`}
+                      text={`الخريطة الذهنية: ${activeMindmapChapter.title}`}
                       tag="h4" 
                       className="text-white font-black text-sm mb-4 pr-6 block" 
                       textAlign="right"
@@ -1129,8 +1238,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
                     />
                     <div className="flex-grow w-full relative rounded-lg overflow-hidden border border-white/10 bg-black/50">
                       <Image
-                        src={resolveMediaUrl(activeChapterDesktop.mindmapImageUrl)}
-                        alt={`الخريطة الذهنية: ${activeChapterDesktop.title}`}
+                        src={resolveMediaUrl(activeMindmapChapter.mindmapImageUrl)}
+                        alt={`الخريطة الذهنية: ${activeMindmapChapter.title}`}
                         fill
                         sizes="(max-width: 640px) 280px, 500px"
                         className="object-contain"
@@ -1178,6 +1287,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
             onToggleMute={toggleMute}
             onToggleFullscreen={toggleFullscreen}
             durationFormatted={formatTime(duration)}
+            durationSeconds={duration}
             currentTimeFormatted={formatTime(currentTime)}
             onPlaybackRateChange={handlePlaybackRateChange}
             visible={showControls}

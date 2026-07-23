@@ -1,6 +1,7 @@
 import { Job } from 'bullmq';
 import { throwIfCancellationRequested } from '../cancellation.js';
 import { evaluateEssayWithAI } from '../services/geminiService.js';
+import { fetchWithTimeout } from '../services/workerFetch.js';
 const API_URL = (() => {
   const base = process.env.BACKEND_API_URL || 'http://localhost:5245';
   return base.endsWith('/api/v1') ? base : `${base}/api/v1`;
@@ -11,12 +12,13 @@ export interface EvaluateEssayJobData {
   essaySubmissionId: string;
   questionId: string;
   studentId: string;
+  questionText?: string;
   answerText: string;
   expectedAnswer?: string;
 }
 
 export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
-  const { essaySubmissionId, answerText, expectedAnswer } = job.data;
+  const { essaySubmissionId, questionText, answerText, expectedAnswer } = job.data;
   
   await job.updateProgress({ percentage: 10, stage: 'بنحلل إجابتك...' });
   
@@ -25,7 +27,7 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
   try {
     await throwIfCancellationRequested(job);
 
-    const parsed = await evaluateEssayWithAI(answerText, expectedAnswer);
+    const parsed = await evaluateEssayWithAI(answerText, expectedAnswer, questionText);
     await job.updateProgress({ percentage: 60, stage: 'بنجهّز النتيجة...' });
     await throwIfCancellationRequested(job);
 
@@ -36,8 +38,10 @@ export async function processEvaluateEssayJob(job: Job<EvaluateEssayJobData>) {
     await job.updateProgress({ percentage: 80, stage: 'بنبعت النتيجة...' });
     await throwIfCancellationRequested(job);
     
-    const webhookResponse = await fetch(`${API_URL}/internal/callbacks/essay-graded`, {
+    const webhookResponse = await fetchWithTimeout(`${API_URL}/internal/callbacks/essay-graded`, {
       method: 'POST',
+      timeoutMs: 10_000,
+      operation: 'essay-callback',
       headers: {
         'Content-Type': 'application/json',
         'X-Internal-Token': API_CALLBACK_SECRET || ''

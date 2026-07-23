@@ -27,7 +27,9 @@ public record ContentSubscriberDto(
     string? MotherPhone,
     DateTime EnrolledAt,
     bool IsActive,
-    string? AvatarSlug
+    string? AvatarSlug,
+    string PurchaseType,
+    string PurchaseMethod
 );
 
 public record ContentSubscribersPagedResult(
@@ -57,6 +59,7 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
             "package" => query.Where(sag => sag.PackageId == request.ContentId),
             "term" => query.Where(sag => sag.TermId == request.ContentId),
             "section" => query.Where(sag => sag.ContentSectionId == request.ContentId),
+            "lesson" => query.Where(sag => sag.LessonId == request.ContentId),
             _ => query.Where(sag => false)
         };
 
@@ -87,7 +90,9 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
                 sag.User.StudentProfile != null ? sag.User.StudentProfile.MotherPhone : null,
                 sag.GrantedAt,
                 sag.IsActive,
-                sag.User.StudentProfile != null ? sag.User.StudentProfile.AvatarSlug : null
+                sag.User.StudentProfile != null ? sag.User.StudentProfile.AvatarSlug : null,
+                sag.GrantType.ToString(),
+                sag.AccessCodeId != null ? "Code" : sag.GiftRecipientId != null ? "Gift" : "Balance"
             ))
             .ToListAsync(ct);
 
@@ -102,6 +107,7 @@ public class GetContentSubscribersQueryHandler : IRequestHandler<GetContentSubsc
             "package" => CodeType.Package,
             "term" => CodeType.Term,
             "section" => CodeType.Month,
+            "lesson" => CodeType.Lesson,
             _ => null
         };
     }

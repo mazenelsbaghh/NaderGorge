@@ -26,12 +26,18 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
     private readonly IVideoEncryptionService _encryption;
+    private readonly IGiftUsageService? _giftUsage;
 
-    public CreateVideoSessionCommandHandler(IAppDbContext db, IAccessCheckService access, IVideoEncryptionService encryption)
+    public CreateVideoSessionCommandHandler(
+        IAppDbContext db,
+        IAccessCheckService access,
+        IVideoEncryptionService encryption,
+        IGiftUsageService? giftUsage = null)
     {
         _db = db;
         _access = access;
         _encryption = encryption;
+        _giftUsage = giftUsage;
     }
 
     public async Task<ApiResponse<VideoSessionDto>> Handle(CreateVideoSessionCommand request, CancellationToken ct)
@@ -50,9 +56,56 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
         }
 
         // 1. Verify access to the package
-        var hasAccess = await _access.HasAccessToLessonAsync(request.UserId, video.LessonId, ct);
+        var hasLessonAccess = await _access.HasAccessToLessonAsync(request.UserId, video.LessonId, ct);
+        var hasAccess = hasLessonAccess || await _access.HasAccessToVideoAsync(request.UserId, video.Id, ct);
         if (!hasAccess)
             return ApiResponse<VideoSessionDto>.Fail("You do not have access to this video", new List<string> { "ACCESS_DENIED" });
+
+        var hasNonGiftVideoAccess = false;
+        if (!hasLessonAccess)
+        {
+            var videoAccessContext = await _db.LessonVideos
+                .AsNoTracking()
+                .Where(v => v.Id == request.LessonVideoId)
+                .Select(v => new
+                {
+                    v.LessonId,
+                    v.VideoTypeId,
+                    ContentSectionId = v.Lesson.ContentSectionId,
+                    TermId = v.Lesson.ContentSection.TermId,
+                    PackageId = v.Lesson.ContentSection.Term.PackageId,
+                    TeacherId = v.Lesson.ContentSection.Term.Package.TeacherId
+                })
+                .FirstOrDefaultAsync(ct);
+
+            if (videoAccessContext != null)
+            {
+                var nowForGrantCheck = DateTime.UtcNow;
+                hasNonGiftVideoAccess = await _db.StudentAccessGrants.AnyAsync(g =>
+                    g.UserId == request.UserId &&
+                    g.GiftRecipientId == null &&
+                    g.IsActive &&
+                    g.GrantType == CodeType.Video &&
+                    (g.ExpiresAt == null || g.ExpiresAt > nowForGrantCheck) &&
+                    (g.MaxUses == null || g.UsesConsumed < g.MaxUses) &&
+                    (
+                        g.LessonVideoId == request.LessonVideoId ||
+                        (
+                            g.VideoTypeId != null &&
+                            g.VideoTypeId == videoAccessContext.VideoTypeId &&
+                            (g.LessonId == null || g.LessonId == videoAccessContext.LessonId) &&
+                            (g.ContentSectionId == null || g.ContentSectionId == videoAccessContext.ContentSectionId) &&
+                            (g.TermId == null || g.TermId == videoAccessContext.TermId) &&
+                            (g.PackageId == null || g.PackageId == videoAccessContext.PackageId) &&
+                            (
+                                g.AccessCode == null ||
+                                g.AccessCode.CodeGroup.TeacherId == null ||
+                                g.AccessCode.CodeGroup.TeacherId == videoAccessContext.TeacherId
+                            )
+                        )
+                    ), ct);
+            }
+        }
 
         // 1b. Check if the current video has an unpassed mandatory exam
         var videoExams = await _db.Exams
@@ -166,11 +219,27 @@ public class CreateVideoSessionCommandHandler : IRequestHandler<CreateVideoSessi
             studentPhone);
 
         _db.VideoPlaybackSessions.Add(session);
+        if (!hasLessonAccess && !hasNonGiftVideoAccess && _giftUsage != null)
+        {
+            var consumed = await _giftUsage.TryConsumeAsync(
+                request.UserId,
+                GiftTargetType.Video,
+                request.LessonVideoId,
+                ct);
+            if (!consumed)
+            {
+                await transaction.RollbackAsync(ct);
+                return ApiResponse<VideoSessionDto>.Fail(
+                    "The gifted video access is no longer available.",
+                    new List<string> { "GIFT_LIMIT_REACHED" });
+            }
+        }
         await _db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
 
         // 4. Fetch the global threshold percentage (default 30%)
-        var thresholdSetting = await _db.PlatformSettings.FirstOrDefaultAsync(s => s.Key == "VideoWatchThresholdPercentage", ct);
+        var thresholdKey = VideoProviders.Normalize(video.Provider) == VideoProviders.Bunny ? PlatformSettingKeys.BunnyWatchThresholdPercentage : VideoProviders.Normalize(video.Provider) == VideoProviders.YouTube ? PlatformSettingKeys.YouTubeWatchThresholdPercentage : PlatformSettingKeys.VideoWatchThresholdPercentage;
+        var thresholdSetting = await _db.PlatformSettings.FirstOrDefaultAsync(s => s.Key == thresholdKey, ct);
         int thresholdPercentage = 30; // default
         if (thresholdSetting != null && int.TryParse(thresholdSetting.Value, out int parsed))
         {

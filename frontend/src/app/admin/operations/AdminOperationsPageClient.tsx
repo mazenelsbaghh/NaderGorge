@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import TaskCreateModal from '@/components/assistant/TaskCreateModal';
 import TaskDetailsModal from '@/components/assistant/TaskDetailsModal';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 export default function AdminOperationsPageClient() {
   const { user } = useAuthStore();
@@ -94,6 +95,15 @@ export default function AdminOperationsPageClient() {
 
   useEffect(() => {
     fetchTasks();
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    const cleanupTasksCache = registerCacheStore('operations:tasks', () => {}, () => void fetchTasks());
+    const cleanupDashboardCache = registerCacheStore('operations:dashboard', () => {}, () => void fetchTasks());
+    return () => {
+      cleanupTasksCache();
+      cleanupDashboardCache();
+    };
   }, [fetchTasks]);
 
   const handleResolveDirectly = async (taskId: string, approve: boolean) => {

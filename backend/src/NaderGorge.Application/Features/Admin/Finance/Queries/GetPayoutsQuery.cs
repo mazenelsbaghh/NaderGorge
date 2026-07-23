@@ -15,6 +15,12 @@ public record AdminPayoutDto(
     decimal Amount,
     string Status,
     string? RejectionReason,
+    Guid? ApprovedByUserId,
+    string? ApprovedByName,
+    DateTime? ApprovedAt,
+    Guid? PaidByUserId,
+    string? PaidByName,
+    DateTime? PaidAt,
     Guid? HandledByUserId,
     string? HandledByName,
     DateTime? HandledAt,
@@ -34,6 +40,8 @@ public class GetPayoutsQueryHandler : IRequestHandler<GetPayoutsQuery, ApiRespon
     {
         var query = _db.TeacherPayouts
             .Include(tp => tp.Teacher).ThenInclude(t => t.User)
+            .Include(tp => tp.ApprovedByUser)
+            .Include(tp => tp.PaidByUser)
             .Include(tp => tp.HandledByUser)
             .AsQueryable();
 
@@ -53,6 +61,12 @@ public class GetPayoutsQueryHandler : IRequestHandler<GetPayoutsQuery, ApiRespon
             tp.Amount,
             tp.Status.ToString(),
             tp.RejectionReason,
+            tp.ApprovedByUserId,
+            tp.ApprovedByUser?.FullName,
+            tp.ApprovedAt,
+            tp.PaidByUserId,
+            tp.PaidByUser?.FullName,
+            tp.PaidAt,
             tp.HandledByUserId,
             tp.HandledByUser?.FullName,
             tp.HandledAt,

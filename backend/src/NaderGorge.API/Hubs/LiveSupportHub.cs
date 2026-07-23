@@ -9,7 +9,7 @@ using System.Collections.Concurrent;
 namespace NaderGorge.API.Hubs;
 
 [AllowAnonymous]
-public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPresenceStore presence, ILiveSupportGuestSessionService guestSessions) : Hub
+public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPresenceStore presence, ILiveSupportGuestSessionService guestSessions, ILogger<LiveSupportHub> logger) : Hub
 {
     private static readonly ConcurrentDictionary<string, DateTime> TypingWindows = new();
     private Guid? StaffUserId => Guid.TryParse(Context.User?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) &&
@@ -24,7 +24,14 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
             await Groups.AddToGroupAsync(Context.ConnectionId, $"LiveSupport:Staff:{staffId:N}");
             if (service is ILiveSupportAssignmentCoordinator coordinator)
             {
-                await coordinator.AssignWaitingAsync(Context.ConnectionAborted);
+                try
+                {
+                    await coordinator.AssignWaitingAsync(Context.ConnectionAborted);
+                }
+                catch (Exception exception)
+                {
+                    logger.LogError(exception, "Live support auto-assignment failed when staff {StaffUserId} connected", staffId);
+                }
             }
         }
         else if (await ParticipantAsync() is { } participant)

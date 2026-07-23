@@ -15,20 +15,22 @@ public record ValidateCodeResponseDto(
     CodeType CodeType,
     Guid? TargetId,
     string TargetName,
-    Guid TeacherId,
+    Guid? TeacherId,
     string TeacherName,
     string? TeacherProfileImageUrl
 );
 
-public record ValidateCodeQuery(string Code) : IRequest<ApiResponse<ValidateCodeResponseDto>>;
+public record ValidateCodeQuery(string Code, Guid? UserId = null) : IRequest<ApiResponse<ValidateCodeResponseDto>>;
 
 public class ValidateCodeQueryHandler : IRequestHandler<ValidateCodeQuery, ApiResponse<ValidateCodeResponseDto>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService? _academicScope;
 
-    public ValidateCodeQueryHandler(IAppDbContext db)
+    public ValidateCodeQueryHandler(IAppDbContext db, IAcademicScopeService? academicScope = null)
     {
         _db = db;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<ValidateCodeResponseDto>> Handle(ValidateCodeQuery request, CancellationToken ct)
@@ -37,7 +39,7 @@ public class ValidateCodeQueryHandler : IRequestHandler<ValidateCodeQuery, ApiRe
             .AsNoTracking()
             .Include(c => c.CodeGroup)
                 .ThenInclude(cg => cg.Teacher)
-                    .ThenInclude(t => t.User)
+                    .ThenInclude(t => t!.User)
             .FirstOrDefaultAsync(c => c.CodePlaintext == request.Code, ct);
 
         if (accessCode == null)
@@ -58,16 +60,18 @@ public class ValidateCodeQueryHandler : IRequestHandler<ValidateCodeQuery, ApiRe
 
         Guid? targetId = null;
         string targetName = "شحن رصيد";
-        Guid teacherId = codeGroup.TeacherId;
-        string teacherName = codeGroup.Teacher?.User?.FullName ?? "غير معروف";
+        Guid? teacherId = codeGroup.TeacherId;
+        string teacherName = codeGroup.Teacher?.User?.FullName ?? "المنصة";
         string? teacherProfileImageUrl = codeGroup.Teacher?.ProfileImageUrl;
 
         switch (codeType)
         {
             case CodeType.Package:
                 targetId = codeGroup.PackageId;
-                var pkg = await _db.Packages.AsNoTracking().FirstOrDefaultAsync(p => p.Id == codeGroup.PackageId, ct);
-                targetName = pkg?.Name ?? "كورس دراسي";
+                var pkg = codeGroup.PackageId.HasValue
+                    ? await _db.Packages.AsNoTracking().FirstOrDefaultAsync(p => p.Id == codeGroup.PackageId.Value, ct)
+                    : null;
+                targetName = pkg?.Name ?? (codeGroup.TeacherId.HasValue ? "باكدج عام للمدرس" : "باكدج عام للمنصة");
                 break;
             case CodeType.Term:
                 targetId = codeGroup.TermId;
@@ -85,16 +89,67 @@ public class ValidateCodeQueryHandler : IRequestHandler<ValidateCodeQuery, ApiRe
                 targetName = lesson?.Title ?? "حصة دراسية";
                 break;
             case CodeType.Exam:
-                targetId = codeGroup.ExamId;
-                var exam = await _db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.Id == codeGroup.ExamId, ct);
-                targetName = exam?.Title ?? "امتحان";
+                targetId = codeGroup.PublicExamProductId ?? codeGroup.ExamId;
+                if (codeGroup.PublicExamProductId.HasValue)
+                {
+                    targetName = await _db.PublicExamProducts.AsNoTracking()
+                        .Where(product => product.Id == codeGroup.PublicExamProductId.Value)
+                        .Select(product => product.Exam.Title)
+                        .FirstOrDefaultAsync(ct) ?? "امتحان عام";
+                }
+                else
+                {
+                    var exam = await _db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.Id == codeGroup.ExamId, ct);
+                    targetName = exam?.Title ?? "امتحان";
+                }
                 break;
             case CodeType.Video:
-                targetName = "فيديوهات حصة";
+                targetId = codeGroup.VideoTypeId;
+                if (codeGroup.VideoTypeId.HasValue)
+                {
+                    var videoTypeName = await _db.VideoTypes
+                        .AsNoTracking()
+                        .Where(v => v.Id == codeGroup.VideoTypeId.Value)
+                        .Select(v => v.Name)
+                        .FirstOrDefaultAsync(ct);
+
+                    var scopeName = await ResolveVideoScopeNameAsync(codeGroup, ct);
+                    targetName = scopeName == null
+                        ? $"نوع الفيديو: {videoTypeName ?? "نوع محدد"}"
+                        : $"نوع الفيديو: {videoTypeName ?? "نوع محدد"} داخل {scopeName}";
+                }
+                else
+                {
+                    var selectedVideoNames = await _db.CodeVideoTargets
+                        .AsNoTracking()
+                        .Where(t => t.CodeGroupId == codeGroup.Id)
+                        .OrderBy(t => t.LessonVideo.Order)
+                        .Select(t => t.LessonVideo.Title)
+                        .Take(3)
+                        .ToListAsync(ct);
+
+                    targetName = selectedVideoNames.Count switch
+                    {
+                        0 => "فيديوهات محددة",
+                        1 => $"فيديو محدد: {selectedVideoNames[0]}",
+                        _ => $"فيديوهات محددة: {string.Join("، ", selectedVideoNames)}"
+                    };
+                }
                 break;
             case CodeType.Balance:
                 targetName = $"شحن رصيد بقيمة {codeGroup.BalanceAmount} جنيه";
                 break;
+        }
+
+        if (request.UserId.HasValue && _academicScope != null)
+        {
+            var academicResult = await ValidateCodeAcademicScopeAsync(codeGroup, request.UserId.Value, ct);
+            if (!academicResult.IsEligible)
+            {
+                return ApiResponse<ValidateCodeResponseDto>.Fail(
+                    academicResult.Message ?? "هذا الكود غير متاح لنطاقك الدراسي الحالي.",
+                    new List<string> { academicResult.ErrorCode ?? "ACADEMIC_SCOPE_DENIED" });
+            }
         }
 
         var dto = new ValidateCodeResponseDto(
@@ -108,5 +163,110 @@ public class ValidateCodeQueryHandler : IRequestHandler<ValidateCodeQuery, ApiRe
         );
 
         return ApiResponse<ValidateCodeResponseDto>.Ok(dto);
+    }
+
+    private async Task<string?> ResolveVideoScopeNameAsync(NaderGorge.Domain.Entities.CodeGroup codeGroup, CancellationToken ct)
+    {
+        if (codeGroup.LessonId.HasValue)
+        {
+            return await _db.Lessons
+                .AsNoTracking()
+                .Where(x => x.Id == codeGroup.LessonId.Value)
+                .Select(x => $"حصة {x.Title}")
+                .FirstOrDefaultAsync(ct);
+        }
+
+        if (codeGroup.ContentSectionId.HasValue)
+        {
+            return await _db.ContentSections
+                .AsNoTracking()
+                .Where(x => x.Id == codeGroup.ContentSectionId.Value)
+                .Select(x => $"شهر {x.Title}")
+                .FirstOrDefaultAsync(ct);
+        }
+
+        if (codeGroup.TermId.HasValue)
+        {
+            return await _db.Terms
+                .AsNoTracking()
+                .Where(x => x.Id == codeGroup.TermId.Value)
+                .Select(x => $"ترم {x.Title}")
+                .FirstOrDefaultAsync(ct);
+        }
+
+        if (codeGroup.PackageId.HasValue)
+        {
+            return await _db.Packages
+                .AsNoTracking()
+                .Where(x => x.Id == codeGroup.PackageId.Value)
+                .Select(x => $"باقة {x.Name}")
+                .FirstOrDefaultAsync(ct);
+        }
+
+        return null;
+    }
+
+    private async Task<AcademicScopeCheckResult> ValidateCodeAcademicScopeAsync(NaderGorge.Domain.Entities.CodeGroup codeGroup, Guid userId, CancellationToken ct)
+    {
+        if (_academicScope == null || codeGroup.CodeType == CodeType.Balance)
+            return AcademicScopeCheckResult.Eligible();
+
+        var targets = await ResolveAcademicTargetsAsync(codeGroup, ct);
+        if (targets.Count == 0)
+            targets.Add((StudentFacingScopeOwnerType.CodeGroup, codeGroup.Id));
+
+        foreach (var (ownerType, ownerId) in targets)
+        {
+            var result = await _academicScope.ValidateStudentCanUseTargetAsync(ownerType, ownerId, userId, ct);
+            if (!result.IsEligible)
+                return result;
+        }
+
+        return AcademicScopeCheckResult.Eligible();
+    }
+
+    private async Task<List<(StudentFacingScopeOwnerType OwnerType, Guid OwnerId)>> ResolveAcademicTargetsAsync(NaderGorge.Domain.Entities.CodeGroup codeGroup, CancellationToken ct)
+    {
+        var targets = new List<(StudentFacingScopeOwnerType OwnerType, Guid OwnerId)>();
+        switch (codeGroup.CodeType)
+        {
+            case CodeType.Package when codeGroup.PackageId.HasValue:
+                targets.Add((StudentFacingScopeOwnerType.Package, codeGroup.PackageId.Value));
+                break;
+            case CodeType.Term when codeGroup.TermId.HasValue:
+                targets.Add((StudentFacingScopeOwnerType.Term, codeGroup.TermId.Value));
+                break;
+            case CodeType.Month when codeGroup.ContentSectionId.HasValue:
+                targets.Add((StudentFacingScopeOwnerType.ContentSection, codeGroup.ContentSectionId.Value));
+                break;
+            case CodeType.Lesson when codeGroup.LessonId.HasValue:
+                targets.Add((StudentFacingScopeOwnerType.Lesson, codeGroup.LessonId.Value));
+                break;
+            case CodeType.Exam when codeGroup.PublicExamProductId.HasValue:
+                targets.Add((StudentFacingScopeOwnerType.PublicExamProduct, codeGroup.PublicExamProductId.Value));
+                break;
+            case CodeType.Exam when codeGroup.ExamId.HasValue:
+                targets.Add((StudentFacingScopeOwnerType.Exam, codeGroup.ExamId.Value));
+                break;
+            case CodeType.Video:
+                if (codeGroup.LessonId.HasValue)
+                    targets.Add((StudentFacingScopeOwnerType.Lesson, codeGroup.LessonId.Value));
+                else if (codeGroup.ContentSectionId.HasValue)
+                    targets.Add((StudentFacingScopeOwnerType.ContentSection, codeGroup.ContentSectionId.Value));
+                else if (codeGroup.TermId.HasValue)
+                    targets.Add((StudentFacingScopeOwnerType.Term, codeGroup.TermId.Value));
+                else if (codeGroup.PackageId.HasValue)
+                    targets.Add((StudentFacingScopeOwnerType.Package, codeGroup.PackageId.Value));
+
+                var videoTargets = await _db.CodeVideoTargets
+                    .AsNoTracking()
+                    .Where(x => x.CodeGroupId == codeGroup.Id)
+                    .Select(x => x.LessonVideoId)
+                    .ToListAsync(ct);
+                targets.AddRange(videoTargets.Select(videoId => (StudentFacingScopeOwnerType.LessonVideo, videoId)));
+                break;
+        }
+
+        return targets;
     }
 }

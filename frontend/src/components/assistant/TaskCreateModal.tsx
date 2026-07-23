@@ -7,6 +7,7 @@ import { hrService, EmployeeDto } from '@/services/hr-service';
 import { assistantService } from '@/services/assistant-service';
 import toast from 'react-hot-toast';
 import { Dropdown } from '@/components/ui/dropdown';
+import { translateRole } from '@/packages/brand';
 
 interface TaskCreateModalProps {
   open: boolean;
@@ -129,7 +130,7 @@ export default function TaskCreateModal({ open, onClose, onSuccess }: TaskCreate
               placeholder={loadingEmployees ? 'جاري تحميل الموظفين...' : 'اختر الموظف...'}
               options={employees.map((emp) => ({
                 value: emp.userId,
-                label: `${emp.fullName} (${emp.roles.join(', ')})`,
+                label: `${emp.fullName} (${emp.roles.map(translateRole).join('، ')})`,
               }))}
             />
           </div>

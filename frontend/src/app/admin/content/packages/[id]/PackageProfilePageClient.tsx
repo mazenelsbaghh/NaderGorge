@@ -38,7 +38,7 @@ function formatWatchTime(seconds?: number): string {
 export default function PackageProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('terms');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [pkg, setPkg] = useState<any>(null);
   const [pkgLoading, setPkgLoading] = useState(true);
   const [codeProfileSummary, setCodeProfileSummary] = useState<PackageCodeProfileSummary | null>(null);
@@ -246,6 +246,11 @@ export default function PackageProfilePageClient(props: { params: { id: string }
               toast.success('تمت إضافة الترم.');
               await loadTerms();
             }}
+            onUpdate={async (id, { title, order, price }) => {
+              await adminService.updateTerm(id, { title, order, price });
+              toast.success('تم تحديث الترم.');
+              await loadTerms();
+            }}
             onImageUpload={async (id, file) => {
               await adminService.uploadContentImage('term', id, file);
               await loadTerms();
@@ -312,7 +317,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
           </EntityOverviewDashboard>
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
             <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>
-            <PackageDetailsForm pkg={pkg} />
+            <PackageDetailsForm pkg={pkg} onSuccess={loadPkg} />
           </div>
         </div>
       )}

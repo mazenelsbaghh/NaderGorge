@@ -35,6 +35,10 @@ public sealed class PostgresLiveSupportFixture : IAsyncDisposable
         }
 
         Npgsql.NpgsqlConnection.ClearAllPools();
+
+        // Each integration test seeds its own staff. Disable older configs so
+        // data left in shared reference tables cannot affect routing assertions.
+        await Db.LiveSupportStaffConfigs.ExecuteUpdateAsync(x => x.SetProperty(p => p.IsEnabled, false));
         
         var tables = new[]
         {

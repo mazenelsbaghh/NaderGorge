@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
 import { PlaySquare, Trash2, Edit2, GripVertical, Sparkles, Loader2, AlertTriangle, XCircle, RefreshCw, Copy, BookOpen, BookCheck, ChevronDown, Image as ImageIcon, Play, X, Eye, EyeOff, ZoomIn } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { adminService, type VideoProvider } from '@/services/admin-service';
+import { adminService, type LessonCockpitVideoDto, type VideoProvider } from '@/services/admin-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import SecureVideoPlayer from '@/components/video/SecureVideoPlayer';
@@ -12,11 +12,15 @@ import NeumorphButton from '@/components/ui/neumorph-button';
 import { Dropdown } from '@/components/ui/dropdown';
 import { NumberField } from '@/components/ui/number-field';
 import { ImageZoomModal } from './ImageZoomModal';
+import { ContentInternalCode } from './ContentInternalCode';
+import { VideoTypeSelect } from './VideoTypeSelect';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 
 export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId: string, isMindmap?: boolean, onComplete: () => void }) {
   const [status, setStatus] = useState<WorkerJobStatus | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [cancelConfirmationOpen, setCancelConfirmationOpen] = useState(false);
   const onCompleteRef = useRef(onComplete);
   const isFinishedRef = useRef(false);
 
@@ -79,18 +83,17 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   }, [videoId, isCancelling, isConnected]);
 
   const handleCancel = async () => {
-    if (!confirm('هل أنت متأكد من إلغاء العملية؟')) return;
     setIsCancelling(true);
     try {
       await workerService.cancelWorkerJob(videoId);
       const realId = videoId.replace('_mindmaps', '');
-      
+
       if (isMindmap) {
         await adminService.cancelMindmapGeneration(realId);
       } else {
         await adminService.cancelVideoAiAnalysis(realId);
       }
-      
+
       toast.success('تم إلغاء العملية بنجاح');
       onComplete();
     } catch {
@@ -202,7 +205,7 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
 
         {/* Cancel button — always shown */}
         <button
-          onClick={handleCancel}
+          onClick={() => setCancelConfirmationOpen(true)}
           disabled={isCancelling || isRetrying}
           title="إيقاف وإلغاء التحليل"
           className="flex items-center justify-center h-6 w-6 rounded text-red-500 bg-red-500/10 hover:bg-red-500/20 transition disabled:opacity-40"
@@ -211,13 +214,41 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
         </button>
       </div>
       )}
+      <AdminConfirmationDialog
+        open={cancelConfirmationOpen}
+        onClose={() => setCancelConfirmationOpen(false)}
+        onConfirm={async () => {
+          await handleCancel();
+          setCancelConfirmationOpen(false);
+        }}
+        title="إلغاء التحليل"
+        consequence="سيتم إيقاف التحليل أو إنشاء الخريطة الذهنية الجاري الآن. قد لا تُحفظ أي نتائج لم تكتمل بعد."
+        confirmLabel="إلغاء العملية"
+        variant="danger"
+        isConfirming={isCancelling}
+      />
     </div>
   );
 }
 
 // ── Chapters inline panel ───────────────────────────────────────────────────
-function ChaptersInline({ chapters }: { chapters: any[] }) {
+function ChaptersInline({ chapters, onRefresh }: { chapters: any[]; onRefresh?: () => void }) {
   const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null);
+  const [regeneratingChapterId, setRegeneratingChapterId] = useState<string | null>(null);
+
+  const handleRegenerateMindmap = async (chapter: any) => {
+    if (!chapter?.id) return;
+    setRegeneratingChapterId(chapter.id);
+    try {
+      await adminService.regenerateChapterMindmap(chapter.id);
+      toast.success(chapter.mindmapImageUrl ? 'جاري إعادة تصميم صورة الشابتر' : 'جاري توليد صورة الشابتر');
+      onRefresh?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'تعذر تشغيل توليد صورة الشابتر');
+    } finally {
+      setRegeneratingChapterId(null);
+    }
+  };
 
   if (!chapters || chapters.length === 0) {
     return (
@@ -232,6 +263,18 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
           <div className="flex-1 min-w-0">
             <div className="text-xs font-bold text-[var(--admin-text)] truncate">{ch.title}</div>
             {ch.summaryText && <div className="text-xs text-[var(--admin-muted)] mt-0.5 line-clamp-2">{ch.summaryText}</div>}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleRegenerateMindmap(ch)}
+                disabled={regeneratingChapterId === ch.id}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[var(--admin-primary)]/25 bg-[var(--admin-primary-15)] px-2.5 text-xs font-bold text-[var(--admin-primary)] transition hover:bg-[var(--admin-primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                title={ch.mindmapImageUrl ? 'إعادة تصميم صورة هذا الشابتر فقط' : 'توليد صورة لهذا الشابتر فقط'}
+              >
+                {regeneratingChapterId === ch.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                {ch.mindmapImageUrl ? 'إعادة تصميم' : 'توليد صورة'}
+              </button>
+            </div>
             {ch.mindmapImageUrl && (
               <div className="mt-2 space-y-1">
                 <button
@@ -242,7 +285,7 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
                   <ImageIcon className="w-3.5 h-3.5" />
                   رؤية وتنزيل الخريطة الذهنية
                 </button>
-                <div 
+                <div
                   onClick={() => setZoomImage({ url: ch.mindmapImageUrl, title: ch.title })}
                   className="cursor-zoom-in relative overflow-hidden rounded border border-[var(--admin-border)] hover:border-teal-500 transition-colors w-fit group max-w-[200px]"
                 >
@@ -281,16 +324,19 @@ function ChaptersInline({ chapters }: { chapters: any[] }) {
 }
 
 interface LessonVideoListProps {
-  videos: any[];
+  videos: LessonCockpitVideoDto[];
   onRefresh?: () => void;
   lessonId: string;
+  readOnly?: boolean;
+  showProviderDetails?: boolean;
 }
 
-export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
+export function LessonVideoList({ videos, onRefresh, readOnly = false, showProviderDetails = true }: LessonVideoListProps) {
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
   const [expandedChapters, setExpandedChapters] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [videoPendingDeletion, setVideoPendingDeletion] = useState<LessonCockpitVideoDto | null>(null);
   const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
   const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -298,6 +344,8 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
   const [editUrlOrEmbedCode, setEditUrlOrEmbedCode] = useState('');
   const [editOrder, setEditOrder] = useState(1);
   const [editMaxWatchCount, setEditMaxWatchCount] = useState(3);
+  const [editVideoTypeId, setEditVideoTypeId] = useState('');
+  const [editVideoTypesAvailable, setEditVideoTypesAvailable] = useState(false);
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
 
   const toggleChapters = (videoId: string) =>
@@ -329,20 +377,21 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     }
   };
 
-  const startEditVideo = (video: any) => {
+  const startEditVideo = (video: LessonCockpitVideoDto) => {
     setEditingVideoId(video.id);
     setEditTitle(video.title || '');
     setEditProvider((video.provider || 'YouTube') as VideoProvider);
-    setEditUrlOrEmbedCode(video.url || video.providerVideoId || '');
+    setEditUrlOrEmbedCode(video.url || '');
     setEditOrder(video.order || 1);
     setEditMaxWatchCount(video.maxWatchCount || 3);
+    setEditVideoTypeId(video.videoType.id);
   };
 
   const handleUpdateVideo = async (videoId: string) => {
     const trimmedTitle = editTitle.trim();
     const trimmedUrl = editUrlOrEmbedCode.trim();
 
-    if (!trimmedTitle || !trimmedUrl || editOrder < 1 || editMaxWatchCount < 1) {
+    if (!trimmedTitle || !trimmedUrl || !editVideoTypeId || !editVideoTypesAvailable || editOrder < 1 || editMaxWatchCount < 1) {
       toast.error('بيانات التعديل غير صالحة');
       return;
     }
@@ -355,6 +404,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
         urlOrEmbedCode: trimmedUrl,
         order: editOrder,
         limit: editMaxWatchCount,
+        videoTypeId: editVideoTypeId,
       });
       toast.success('تم تعديل الفيديو بنجاح');
       setEditingVideoId(null);
@@ -366,7 +416,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     }
   };
 
-  const handleToggleActive = async (video: any) => {
+  const handleToggleActive = async (video: LessonCockpitVideoDto) => {
     try {
       setTogglingActiveId(video.id);
       await adminService.toggleVideoActive(video.id);
@@ -379,9 +429,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     }
   };
 
-  const handleDeleteVideo = async (video: any) => {
-    if (!window.confirm(`حذف الفيديو "${video.title}"؟`)) return;
-
+  const handleDeleteVideo = async (video: LessonCockpitVideoDto) => {
     try {
       setDeletingId(video.id);
       await adminService.deleteVideo(video.id);
@@ -402,14 +450,16 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
         </div>
         <h4 className="mb-2 text-lg font-bold text-[var(--admin-text)]">لا يوجد فيديو بعد</h4>
         <p className="max-w-md text-sm text-[var(--admin-muted)] mb-6">
-          أضف الفيديو الأول من النموذج أدناه لتبدأ في بث محتوى هذه الحصة.
+          {readOnly ? 'لم تضف الإدارة فيديوهات لهذه الحصة بعد.' : 'أضف الفيديو الأول من النموذج أدناه لتبدأ في بث محتوى هذه الحصة.'}
         </p>
-        <a
-          href="#add-video-form"
-          className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-        >
-          + أضف فيديو
-        </a>
+        {!readOnly && (
+          <a
+            href="#add-video-form"
+            className="inline-flex items-center gap-2 rounded-full bg-[var(--admin-primary)] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+          >
+            + أضف فيديو
+          </a>
+        )}
       </div>
     );
   }
@@ -418,7 +468,37 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
     <div className="space-y-3">
       {videos.map((video) => {
         const isGoogleDrive = video.provider === 'google_drive';
-        const hasChapters = !isGoogleDrive && video.chapters && video.chapters.length > 0;
+        const chapterCount = video.chapters?.length ?? 0;
+        const hasChapters = !isGoogleDrive && chapterCount > 0;
+
+        if (readOnly) {
+          return (
+            <div
+              key={video.id}
+              className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-primary)]">
+                    <PlaySquare className="h-4 w-4" />
+                  </div>
+                  <h4 className="truncate text-sm font-black text-[var(--admin-text)]">{video.title}</h4>
+                </div>
+
+                <button
+                  type="button"
+                  aria-label={`معاينة الفيديو ${video.title}`}
+                  onClick={() => setPreviewVideoId(video.id)}
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-black text-white transition hover:opacity-90"
+                  title="فتح البلاير"
+                >
+                  <Play className="h-4 w-4" />
+                  البلاير
+                </button>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div
@@ -438,9 +518,15 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                 <div>
                   <h4 className="font-bold text-[var(--admin-text)]">{video.title}</h4>
                   <div className="mt-2 sm:mt-1 flex flex-wrap items-center gap-2 text-xs sm:text-xs font-mono text-[var(--admin-muted)]">
-                    <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
-                      {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'YouTube')}
+                    <ContentInternalCode code={video.internalCode} label="كود الفيديو الداخلي" compact />
+                    <span className="rounded bg-[var(--admin-primary-15)] px-1.5 py-0.5 font-sans font-bold text-[var(--admin-primary)]">
+                      {video.videoType.name}
                     </span>
+                    {showProviderDetails && (
+                      <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
+                        {video.provider === 'google_drive' ? 'Google Drive' : (video.provider || 'YouTube')}
+                      </span>
+                    )}
                     <span className="rounded bg-[var(--admin-bg)] px-1.5 py-0.5 border border-[var(--admin-border)]">
                       مشاهدة: {video.maxWatchCount === 0 ? 'غير محدود' : `${video.maxWatchCount}×`}
                     </span>
@@ -474,15 +560,15 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                         ? 'bg-[var(--admin-primary-15)] text-[var(--admin-primary)] border border-[var(--admin-primary)]/30'
                         : 'text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] border border-transparent'
                       }`}
-                    title={`${video.chapters.length} فصل — انقر للعرض`}
+                    title={`${chapterCount} فصل — انقر للعرض`}
                   >
                     <BookOpen className="h-3.5 w-3.5" />
-                    <span>{video.chapters.length}</span>
+                    <span>{chapterCount}</span>
                     <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${expandedChapters === video.id ? 'rotate-180' : ''}`} />
                   </button>
                 )}
 
-                {!isGoogleDrive && (
+                {!readOnly && !isGoogleDrive && (
                   <div className="relative group/ai">
                     {video.isProcessingAI ? (
                       <AIProgressTracker videoId={video.id} onComplete={() => onRefresh && onRefresh()} />
@@ -518,7 +604,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                               : 'text-[var(--admin-primary)] hover:bg-[var(--admin-primary)]/10'
                             }`}
                           aria-label="استخراج الفصول بالذكاء الاصطناعي"
-                          title={video.chapters?.length > 0 ? 'إعادة توليد الفصول' : 'استخراج فصول الفيديو بالذكاء الاصطناعي'}
+                          title={chapterCount > 0 ? 'إعادة توليد الفصول' : 'استخراج فصول الفيديو بالذكاء الاصطناعي'}
                         >
                           {triggeringId === video.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -543,52 +629,56 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                   </button>
                 </div>
 
-                <div className="relative group/toggle-active">
-                  <button
-                    type="button"
-                    aria-label={video.isActive ? "إخفاء الفيديو" : "تفعيل الفيديو"}
-                    onClick={() => handleToggleActive(video)}
-                    disabled={togglingActiveId === video.id}
-                    className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:opacity-40"
-                    title={video.isActive ? "إخفاء الفيديو عن الطلاب" : "تفعيل الفيديو للطلاب"}
-                  >
-                    {togglingActiveId === video.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : video.isActive ? (
-                      <Eye className="h-4 w-4" />
-                    ) : (
-                      <EyeOff className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                {!readOnly && (
+                  <>
+                    <div className="relative group/toggle-active">
+                      <button
+                        type="button"
+                        aria-label={video.isActive ? "إخفاء الفيديو" : "تفعيل الفيديو"}
+                        onClick={() => handleToggleActive(video)}
+                        disabled={togglingActiveId === video.id}
+                        className="rounded-lg p-2 text-[var(--admin-primary)] hover:bg-[var(--admin-primary-15)] hover:text-[var(--admin-primary-strong)] transition-colors disabled:opacity-40"
+                        title={video.isActive ? "إخفاء الفيديو عن الطلاب" : "تفعيل الفيديو للطلاب"}
+                      >
+                        {togglingActiveId === video.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : video.isActive ? (
+                          <Eye className="h-4 w-4" />
+                        ) : (
+                          <EyeOff className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
 
-                <div className="relative group/edit">
-                  <button
-                    type="button"
-                    aria-label="تعديل الفيديو"
-                    onClick={() => startEditVideo(video)}
-                    disabled={updatingId === video.id || deletingId === video.id}
-                    className="rounded-lg p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-bg)] disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {updatingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="relative group/del">
-                  <button
-                    type="button"
-                    aria-label="حذف الفيديو"
-                    onClick={() => handleDeleteVideo(video)}
-                    disabled={deletingId === video.id || updatingId === video.id}
-                    className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {deletingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  </button>
-                </div>
+                    <div className="relative group/edit">
+                      <button
+                        type="button"
+                        aria-label="تعديل الفيديو"
+                        onClick={() => startEditVideo(video)}
+                        disabled={updatingId === video.id || deletingId === video.id}
+                        className="rounded-lg p-2 text-[var(--admin-muted)] hover:bg-[var(--admin-bg)] disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {updatingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <div className="relative group/del">
+                      <button
+                        type="button"
+                        aria-label="حذف الفيديو"
+                        onClick={() => setVideoPendingDeletion(video)}
+                        disabled={deletingId === video.id || updatingId === video.id}
+                        className="rounded-lg p-2 text-red-500 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {deletingId === video.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
             {/* Inline Edit Form */}
-            {editingVideoId === video.id && (
+            {!readOnly && editingVideoId === video.id && (
               <div className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4 space-y-4" dir="rtl">
                 <div className="text-sm font-bold text-[var(--admin-text)]">تعديل بيانات الفيديو</div>
                 <div className="flex flex-wrap items-end gap-4">
@@ -639,6 +729,14 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-end gap-4">
+                  <div className="w-full md:w-64">
+                    <VideoTypeSelect
+                      value={editVideoTypeId}
+                      onChange={setEditVideoTypeId}
+                      onAvailabilityChange={setEditVideoTypesAvailable}
+                      currentTypeId={video.videoType.id}
+                    />
+                  </div>
                   <div className="w-32">
                     <NumberField value={editOrder} onChange={setEditOrder} minValue={1}>
                       <NumberField.Label className="text-xs font-bold text-[var(--admin-muted)] text-right block w-full mb-2">ترتيب العرض</NumberField.Label>
@@ -672,7 +770,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
                     <NeumorphButton
                       type="button"
                       onClick={() => handleUpdateVideo(video.id)}
-                      disabled={updatingId === video.id || !editTitle.trim() || !editUrlOrEmbedCode.trim()}
+                      disabled={updatingId === video.id || !editTitle.trim() || !editUrlOrEmbedCode.trim() || !editVideoTypeId || !editVideoTypesAvailable}
                       loading={updatingId === video.id}
                       intent="primary"
                       size="md"
@@ -687,7 +785,7 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
 
             {/* Chapters panel */}
             {hasChapters && expandedChapters === video.id && (
-              <ChaptersInline chapters={video.chapters ?? []} />
+              <ChaptersInline chapters={video.chapters ?? []} onRefresh={onRefresh} />
             )}
           </div>
         );
@@ -728,6 +826,20 @@ export function LessonVideoList({ videos, onRefresh }: LessonVideoListProps) {
           </div>
         </div>
       )}
+      <AdminConfirmationDialog
+        open={videoPendingDeletion !== null}
+        onClose={() => setVideoPendingDeletion(null)}
+        onConfirm={async () => {
+          if (!videoPendingDeletion) return;
+          await handleDeleteVideo(videoPendingDeletion);
+          setVideoPendingDeletion(null);
+        }}
+        title="حذف الفيديو"
+        consequence={`سيُحذف الفيديو «${videoPendingDeletion?.title ?? ''}» نهائيًا من الحصة، ولن يعود متاحًا للطلاب.`}
+        confirmLabel="حذف الفيديو نهائيًا"
+        variant="danger"
+        isConfirming={deletingId === videoPendingDeletion?.id}
+      />
     </div>
   );
 }

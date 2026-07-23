@@ -49,7 +49,7 @@ export function TestimonialsSection() {
   };
 
   return (
-    <section id="testimonials" className="landing-section mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16">
+    <section id="testimonials" className="landing-section landing-section--stories mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16">
       <div className="relative z-10 mx-auto max-w-[1180px]">
         <motion.div
           initial="hidden"
@@ -132,4 +132,3 @@ export function TestimonialsSection() {
     </section>
   );
 }
-

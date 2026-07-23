@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -13,7 +14,8 @@ namespace NaderGorge.Application.Features.Student.Recharge;
 
 public record InitiateRechargeCommand(
     Guid UserId,
-    decimal Amount) : IRequest<ApiResponse<InitiateRechargeDto>>;
+    decimal Amount,
+    Guid? TeacherId = null) : IRequest<ApiResponse<InitiateRechargeDto>>;
 
 public class InitiateRechargeDto
 {
@@ -32,8 +34,19 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
 
     public async Task<ApiResponse<InitiateRechargeDto>> Handle(InitiateRechargeCommand request, CancellationToken ct)
     {
+        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+
         if (request.Amount <= 0)
             return ApiResponse<InitiateRechargeDto>.Fail("قيمة الشحن يجب أن تكون أكبر من صفر");
+
+        if (request.TeacherId.HasValue)
+        {
+            var teacherExists = await _db.TeacherProfiles.AnyAsync(
+                teacher => teacher.Id == request.TeacherId.Value && teacher.User.IsActive && !teacher.User.IsDeleted && teacher.IsVisibleToStudents,
+                ct);
+            if (!teacherExists)
+                return ApiResponse<InitiateRechargeDto>.Fail("المدرس المختار غير متاح للشحن حالياً.");
+        }
 
         // Fetch active wallets
         var activeWallets = await _db.DigitalWallets
@@ -44,9 +57,8 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
             return ApiResponse<InitiateRechargeDto>.Fail("عذراً، لا توجد محافظ شحن نشطة حالياً. يرجى المحاولة لاحقاً.");
 
         // Calculate capacities and choose best wallet
-        var egyptTime = DateTime.UtcNow.AddHours(3);
-        var today = egyptTime.Date;
-        var startOfMonth = new DateTime(egyptTime.Year, egyptTime.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var (dayStartUtc, dayEndUtc) = CairoTime.GetCurrentDayRangeUtc();
+        var (monthStartUtc, monthEndUtc) = CairoTime.GetCurrentMonthRangeUtc();
         
         var activeStatus = new[] { RechargeRequestStatus.Matched, RechargeRequestStatus.Approved };
 
@@ -59,17 +71,16 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
             var walletRequests = await _db.RechargeRequests
                 .Where(r => r.WalletId == wallet.Id && 
                     (activeStatus.Contains(r.Status) || (r.Status == RechargeRequestStatus.Pending && r.ReservationExpiresAt > DateTime.UtcNow)) &&
-                    r.CreatedAt >= startOfMonth.AddHours(-3))
+                    r.CreatedAt >= monthStartUtc && r.CreatedAt < monthEndUtc)
                 .ToListAsync(ct);
 
             // Daily Received/Reserved today (Egypt Local Time)
             var dailyUsed = walletRequests
-                .Where(r => r.CreatedAt.AddHours(3).Date == today)
+                .Where(r => r.CreatedAt >= dayStartUtc && r.CreatedAt < dayEndUtc)
                 .Sum(r => r.Amount);
 
             // Monthly Received/Reserved this month (Egypt Local Time)
             var monthlyUsed = walletRequests
-                .Where(r => r.CreatedAt.AddHours(3) >= new DateTime(egyptTime.Year, egyptTime.Month, 1))
                 .Sum(r => r.Amount);
 
             var remainingDaily = wallet.DailyLimit - dailyUsed;
@@ -89,13 +100,14 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         if (selectedWallet == null)
             return ApiResponse<InitiateRechargeDto>.Fail("عذراً، تم الوصول للحد الأقصى لجميع محافظ الاستقبال اليوم. يرجى المحاولة لاحقاً.");
 
-        var expiration = DateTime.UtcNow.AddMinutes(20);
+        var expiration = DateTime.UtcNow.AddHours(1);
 
         var rechargeRequest = new RechargeRequest
         {
             UserId = request.UserId,
             WalletId = selectedWallet.Id,
             Amount = request.Amount,
+            TeacherId = request.TeacherId,
             Status = RechargeRequestStatus.Pending,
             ReservationExpiresAt = expiration
         };
@@ -112,6 +124,6 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
             ExpirationTime = expiration
         };
 
-        return ApiResponse<InitiateRechargeDto>.Ok(dto, "تم حجز المحفظة بنجاح، يرجى إتمام التحويل ورفع الإثبات خلال 20 دقيقة.");
+        return ApiResponse<InitiateRechargeDto>.Ok(dto, "تم حجز المحفظة بنجاح، يرجى إتمام التحويل ورفع الإثبات خلال ساعة واحدة.");
     }
 }

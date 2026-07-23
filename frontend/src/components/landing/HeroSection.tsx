@@ -40,16 +40,18 @@ export function HeroSection({
   }, []);
   return (
     <section
-      className="landing-hero relative min-h-screen overflow-hidden px-5 pb-9 pt-28 text-[var(--landing-ink)] md:px-12 md:pb-12 md:pt-32 lg:px-16"
+      className="landing-hero relative min-h-[100svh] overflow-hidden px-4 pb-0 pt-24 text-[var(--landing-ink)] sm:px-5 md:px-12 md:pb-12 md:pt-32 lg:min-h-screen lg:px-16"
     >
-      {/* Background Image */}
+      {/* The desktop composition is intentionally a full-bleed background.
+          On phones, it becomes an in-flow illustration below so a landscape
+          image is never cropped behind the primary content. */}
       <Image
         src={isDark ? '/images/landing-hero-dark.webp' : '/images/landing-hero.webp'}
         alt="خلفية الصفحة الرئيسية"
         fill
         priority
         sizes="100vw"
-        className="object-cover -z-10"
+        className="-z-10 hidden object-cover object-[center_68%] md:block lg:object-center"
       />
       {/* Gradient Overlay */}
       <div
@@ -58,22 +60,25 @@ export function HeroSection({
           backgroundImage: 'linear-gradient(90deg, var(--hero-overlay-start) 0%, var(--hero-overlay-mid) 32%, var(--hero-overlay-subtle) 58%, var(--hero-overlay-end) 100%)'
         }}
       />
-      <div className="relative z-10 mx-auto grid min-h-[calc(100vh-9rem)] w-full max-w-[1440px] items-center lg:grid-cols-[0.72fr_1fr] lg:[direction:ltr]">
-        <div className="max-w-xl text-right lg:[direction:rtl]">
-          <h1 className="text-balance text-[clamp(2.3rem,4vw,4.2rem)] font-black leading-[1.22] tracking-normal text-[var(--landing-ink)]">
-            <span className="block py-1">ابدأ رحلتك التعليمية</span>
-            <span className="block py-1 text-[#0E8F8F]">
+      <div className="relative z-10 mx-auto grid min-h-0 w-full max-w-[1440px] items-start py-6 lg:min-h-[calc(100vh-9rem)] lg:items-center lg:py-0 lg:grid-cols-[0.72fr_1fr] lg:[direction:ltr]">
+        <div className="mx-auto w-full max-w-xl text-center lg:mx-0 lg:text-right lg:[direction:rtl]">
+          <span className="landing-journey-marker">
+            مسارك واضح من أول درس إلى هدفك
+          </span>
+          <h1 className="text-balance text-[clamp(2.05rem,9vw,4.2rem)] font-black leading-[1.18] tracking-normal text-[var(--landing-ink)]">
+            <span className="mt-3 block py-1">ابدأ رحلتك التعليمية</span>
+            <span className="block py-1 text-[var(--landing-accent)]">
               خطوتك الأولى نحو التفوق
             </span>
           </h1>
 
-          <p className="mt-5 max-w-[38rem] text-pretty text-base font-semibold leading-8 text-[var(--landing-muted)] md:text-lg">
+          <p className="mx-auto mt-5 max-w-[22rem] text-pretty text-base font-semibold leading-7 text-[var(--landing-muted)] sm:max-w-[38rem] md:text-lg md:leading-8 lg:mx-0">
             منصة تعليمية متكاملة تساعدك على تعلم كل مهارة، في أي وقت ومن أي
             مكان.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <Link href="/register" className="landing-primary-button">
+          <div className="mx-auto mt-7 flex w-full max-w-sm flex-col gap-3 sm:mt-8 sm:max-w-none sm:flex-row sm:items-center sm:justify-center lg:justify-end">
+            <Link href="/register" className="landing-primary-button w-full sm:w-auto">
               <GraduationCap className="h-5 w-5" />
               ابدأ التعلم الآن
             </Link>
@@ -82,13 +87,13 @@ export function HeroSection({
             </span>
           </div>
 
-          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mx-auto mt-8 grid max-w-sm grid-cols-2 gap-x-4 gap-y-5 sm:mt-10 sm:max-w-none sm:grid-cols-4 sm:gap-4">
             {heroHighlights.map(({ label, icon: Icon }) => (
               <div
                 key={label}
                 className="flex flex-col items-center gap-2 text-center"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#E7F6F6] dark:bg-teal-950/40 text-[#0E8F8F] hover:scale-105 transition-transform duration-200">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--landing-teal-soft)] text-[var(--landing-accent)] hover:scale-105 transition-transform duration-200">
                   <Icon className="h-5 w-5" />
                 </span>
                 <span className="text-xs font-extrabold text-[var(--landing-ink)] md:text-sm">
@@ -96,6 +101,17 @@ export function HeroSection({
                 </span>
               </div>
             ))}
+          </div>
+
+          <div className="relative -mx-4 mt-7 aspect-[1.4/1] md:hidden">
+            <Image
+              src={isDark ? '/images/landing-hero-dark.webp' : '/images/landing-hero.webp'}
+              alt="رحلة التعلم في منصة مسار"
+              fill
+              priority
+              sizes="100vw"
+              className="object-contain object-bottom"
+            />
           </div>
         </div>
 

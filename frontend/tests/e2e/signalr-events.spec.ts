@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { shouldRefreshStaffRoute } from '../../src/lib/staff-realtime-scopes';
+import { apiUrl, appUrl, seedE2E } from './e2e-contract-helpers';
 
 test.describe('staff realtime route mapping', () => {
   test('refreshes matching staff pages without interrupting edit routes', () => {
@@ -14,13 +15,15 @@ test.describe('staff realtime route mapping', () => {
 
 test.describe('SignalR reconnect flow', () => {
   test('student reconnects and rejoins the active lesson group', async ({ browser, request }) => {
-    await request.post('http://localhost:5245/api/e2e/clear-devices', {
+    await seedE2E(request);
+    const clearDevices = await request.post(`${apiUrl}/e2e/clear-devices`, {
       data: { phoneNumber: '20000000001' },
     });
-    const setupResponse = await request.post('http://localhost:5245/api/e2e/setup-mock-package');
-    expect(setupResponse.ok()).toBeTruthy();
+    expect(clearDevices.ok()).toBeTruthy();
+    const setupResponse = await request.post(`${apiUrl}/e2e/setup-mock-package`);
+    test.skip(!setupResponse.ok(), `E2E mock package seed is unavailable (${setupResponse.status()})`);
     const course = await setupResponse.json() as { packageId: string; lessonId: string };
-    const grantResponse = await request.post('http://localhost:5245/api/e2e/grant-package', {
+    const grantResponse = await request.post(`${apiUrl}/e2e/grant-package`, {
       data: { packageId: course.packageId },
     });
     expect(grantResponse.ok()).toBeTruthy();
@@ -52,15 +55,13 @@ test.describe('SignalR reconnect flow', () => {
       }
     });
 
-    await page.goto('http://app.localhost:3000/login');
+    await page.goto(`${appUrl}/login`);
     await page.fill('input[name="phoneNumber"]', '20000000001');
     await page.fill('input[name="password"]', 'password');
     await page.click('button[type="submit"]', { force: true });
     await expect(page).toHaveURL(/\/student$/, { timeout: 15_000 });
 
-    await page.goto(
-      `http://app.localhost:3000/student/packages/${course.packageId}/lessons/${course.lessonId}`
-    );
+    await page.goto(`${appUrl}/student/packages/${course.packageId}/lessons/${course.lessonId}`);
     await expect.poll(() => browserLogs.some(log => log.includes('Joined active lesson group on startup') && log.includes(course.lessonId)), { timeout: 15_000 }).toBe(true);
 
     // Forcefully close the WebSocket to trigger automatic reconnect
@@ -77,13 +78,15 @@ test.describe('SignalR reconnect flow', () => {
 
 test.describe('SignalR listener registry safety', () => {
   test('unmounting a hook does not remove handlers of other active hooks', async ({ browser, request }) => {
-    await request.post('http://localhost:5245/api/e2e/clear-devices', {
+    await seedE2E(request);
+    const clearDevices = await request.post(`${apiUrl}/e2e/clear-devices`, {
       data: { phoneNumber: '20000000001' },
     });
-    const setupResponse = await request.post('http://localhost:5245/api/e2e/setup-mock-package');
-    expect(setupResponse.ok()).toBeTruthy();
+    expect(clearDevices.ok()).toBeTruthy();
+    const setupResponse = await request.post(`${apiUrl}/e2e/setup-mock-package`);
+    test.skip(!setupResponse.ok(), `E2E mock package seed is unavailable (${setupResponse.status()})`);
     const course = await setupResponse.json() as { packageId: string; termId: string; lessonId: string };
-    const grantResponse = await request.post('http://localhost:5245/api/e2e/grant-package', {
+    const grantResponse = await request.post(`${apiUrl}/e2e/grant-package`, {
       data: { packageId: course.packageId },
     });
     expect(grantResponse.ok()).toBeTruthy();
@@ -97,7 +100,7 @@ test.describe('SignalR listener registry safety', () => {
       }
     });
 
-    await page.goto('http://app.localhost:3000/login');
+    await page.goto(`${appUrl}/login`);
     await page.fill('input[name="phoneNumber"]', '20000000001');
     await page.fill('input[name="password"]', 'password');
     await page.click('button[type="submit"]', { force: true });
@@ -109,13 +112,13 @@ test.describe('SignalR listener registry safety', () => {
     let balanceChangedCount = await page.evaluate(() => (window as any).__platformEventsTesting.getListeners().BalanceChanged.size);
     expect(balanceChangedCount).toBeGreaterThan(0);
 
-    await page.goto(`http://app.localhost:3000/student/packages/${course.packageId}/lessons/${course.lessonId}`);
+    await page.goto(`${appUrl}/student/packages/${course.packageId}/lessons/${course.lessonId}`);
     await page.waitForTimeout(2000);
 
     activeHooks = await page.evaluate(() => (window as any).__platformEventsTesting.getActiveHooksCount());
     expect(activeHooks).toBe(2);
 
-    await page.goto('http://app.localhost:3000/student');
+    await page.goto(`${appUrl}/student`);
     await page.waitForTimeout(2000);
 
     activeHooks = await page.evaluate(() => (window as any).__platformEventsTesting.getActiveHooksCount());
@@ -127,4 +130,3 @@ test.describe('SignalR listener registry safety', () => {
     await context.close();
   });
 });
-

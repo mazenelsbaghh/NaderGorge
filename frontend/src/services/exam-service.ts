@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 export interface QuestionOptionDto {
   id: string;
@@ -88,11 +89,22 @@ export const examService = {
     apiClient.get<{ data: string[] }>(`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/fifty-fifty`),
   swapQuestion: (examId: string, attemptId: string, questionId: string) =>
     apiClient.post<{ data: ExamQuestionDto; message?: string }>(`/exams/${examId}/attempts/${attemptId}/questions/${questionId}/swap`),
-  startExam: (examId: string) => apiClient.post<{ data: ActiveExamAttemptDto }>(`/exams/${examId}/start`),
+  startExam: async (examId: string) => {
+    const response = await apiClient.post<{ data: ActiveExamAttemptDto }>(`/exams/${examId}/start`);
+    invalidateMany(['student:exams', 'assessments']);
+    return response;
+  },
   getLatestPassedResult: (examId: string) =>
     apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-passed-result`),
+  getLatestResult: (examId: string) =>
+    apiClient.get<{ data: ExamResultDto }>(`/exams/${examId}/latest-result`),
   getGradingStatus: (attemptId: string) =>
     apiClient.get<{ data: ExamAttemptGradingStatusDto }>(`/exams/attempts/${attemptId}/grading-status`),
-  submitExam: (examId: string, attemptId: string, answers: AnswerSubmissionDto[]) => 
-    apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers),
+  getAttemptResult: (attemptId: string) =>
+    apiClient.get<{ data: ExamResultDto }>(`/exams/attempts/${attemptId}/result`),
+  submitExam: async (examId: string, attemptId: string, answers: AnswerSubmissionDto[]) => {
+    const response = await apiClient.post<{ data: ExamResultDto }>(`/exams/${examId}/submit/${attemptId}`, answers);
+    invalidateMany(['student:exams', 'assessments']);
+    return response;
+  },
 };

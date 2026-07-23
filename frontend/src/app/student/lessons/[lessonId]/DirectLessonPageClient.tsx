@@ -48,10 +48,6 @@ export default function DirectLessonPageClient() {
 
   const resolvedPackageId = searchParams.get("packageId") || lesson?.packageId;
 
-  const backUrl = resolvedPackageId
-    ? `/student/packages/${resolvedPackageId}`
-    : "/student";
-
   const backLabel = "العودة إلى الباقة";
 
   if (loading) {

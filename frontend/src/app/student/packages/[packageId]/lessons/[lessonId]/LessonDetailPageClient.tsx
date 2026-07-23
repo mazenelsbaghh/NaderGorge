@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import { LessonViewer } from "@/components/content/LessonViewer";
 import { contentService, type LessonDetailDto } from "@/services/content-service";
 import { usePlatformEvents } from "@/hooks/usePlatformEvents";
-import { registerCacheStore, unregisterCacheStore } from "@/lib/cache-invalidation";
+import { registerCacheStore } from "@/lib/cache-invalidation";
 import { PurchaseContentModal } from "@/components/balance/PurchaseContentModal";
 import { CodeType } from "@/services/balance-service";
 import { Lock, ShoppingCart, Sparkles } from "lucide-react";
@@ -49,10 +49,8 @@ export default function LessonDetailPageClient() {
   useEffect(() => {
     fetchLessonDetail();
     if (lessonId) {
-      registerCacheStore(`content:lesson:${lessonId}`, () => {}, fetchLessonDetail);
-      return () => {
-        unregisterCacheStore(`content:lesson:${lessonId}`);
-      };
+      const cleanupCacheStore = registerCacheStore(`content:lesson:${lessonId}`, () => {}, fetchLessonDetail);
+      return cleanupCacheStore;
     }
   }, [fetchLessonDetail, lessonId]);
 
@@ -78,7 +76,6 @@ export default function LessonDetailPageClient() {
     };
   }, [lessonId, joinLesson, leaveLesson]);
 
-  const backUrl = `/student/packages/${packageId}`;
   const backLabel = "العودة إلى محتوى الباقة";
 
   if (loading) {

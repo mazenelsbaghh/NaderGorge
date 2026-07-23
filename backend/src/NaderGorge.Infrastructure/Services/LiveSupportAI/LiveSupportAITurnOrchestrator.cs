@@ -64,15 +64,23 @@ public sealed class LiveSupportAITurnOrchestrator(
 
     public async Task<LiveSupportAIWorkerClaimDto?> ClaimAsync(Guid turnId, CancellationToken cancellationToken)
     {
-        var turn = await db.LiveSupportAITurns.SingleOrDefaultAsync(item => item.Id == turnId, cancellationToken);
-        if (turn is null) return null;
-        if (turn.Status is LiveSupportAITurnStatus.Completed or LiveSupportAITurnStatus.Failed or LiveSupportAITurnStatus.DiscardedAfterHandoff or LiveSupportAITurnStatus.DiscardedAfterDisable or LiveSupportAITurnStatus.Cancelled)
-            return null;
-        if (turn.Status == LiveSupportAITurnStatus.Queued)
-            turn.Status = LiveSupportAITurnStatus.Processing;
-        turn.StartedAt ??= DateTime.UtcNow;
-        turn.Version++;
-        await db.SaveChangesAsync(cancellationToken);
+        var startedAt = DateTime.UtcNow;
+        var staleProcessingCutoff = startedAt.AddMinutes(-2);
+        var claimed = await db.LiveSupportAITurns
+            .Where(item => item.Id == turnId &&
+                (item.Status == LiveSupportAITurnStatus.Queued ||
+                 (item.Status == LiveSupportAITurnStatus.Processing && item.StartedAt != null && item.StartedAt < staleProcessingCutoff)))
+            .ExecuteUpdateAsync(updates => updates
+                .SetProperty(item => item.Status, LiveSupportAITurnStatus.Processing)
+                .SetProperty(item => item.StartedAt, startedAt)
+                .SetProperty(item => item.Version, item => item.Version + 1), cancellationToken);
+
+        if (claimed == 0) return null;
+
+        var turn = await db.LiveSupportAITurns
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == turnId, cancellationToken);
+        if (turn is null || turn.Status != LiveSupportAITurnStatus.Processing) return null;
         return await contextBuilder.BuildAsync(turnId, cancellationToken);
     }
 
@@ -259,6 +267,15 @@ public sealed class LiveSupportAITurnOrchestrator(
         if (!correctBranch) throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
         if (decision.Type == "handoff" && decision.Handoff!.Value.TryGetProperty("forced", out var forced) && forced.ValueKind == JsonValueKind.True)
             throw new InvalidOperationException("DECISION_SCHEMA_INVALID");
+        if (decision.Type == "propose_action") ValidateActionProposal(decision.Action!.Value);
+    }
+
+    private static void ValidateActionProposal(JsonElement action)
+    {
+        if (action.ValueKind != JsonValueKind.Object || !action.TryGetProperty("key", out var key) || key.ValueKind != JsonValueKind.String ||
+            !action.TryGetProperty("arguments", out var arguments))
+            throw new InvalidOperationException("ACTION_ARGUMENTS_INVALID");
+        LiveSupportAICatalog.ValidateActionArguments(key.GetString()!, arguments);
     }
 
     public static string ComputeDecisionHash(LiveSupportAIWorkerDecisionDto decision)
@@ -345,6 +362,7 @@ public sealed class LiveSupportAITurnOrchestrator(
             if (!conversation.LinkedStudentUserId.HasValue) throw new InvalidOperationException("ACTION_REQUIRES_LINKED_STUDENT");
             var allowed = JsonSerializer.Deserialize<string[]>((await db.LiveSupportAIPolicyVersions.SingleAsync(item => item.Id == turn.PolicyVersionId, cancellationToken)).ActionKeysJson) ?? [];
             if (!allowed.Contains(actionKey, StringComparer.Ordinal)) throw new InvalidOperationException("ACTION_NOT_ALLOWED");
+            LiveSupportAICatalog.ValidateActionArguments(actionKey, branch.GetProperty("arguments"));
         }
         var protectedJson = branch.GetRawText();
         var protectedBytes = Encoding.UTF8.GetBytes(protectedJson);

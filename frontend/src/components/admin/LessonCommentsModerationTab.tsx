@@ -14,7 +14,10 @@ type LessonCommentsModerationTabProps = {
   lessonId: string;
   pendingCount?: number;
   onRefresh?: () => Promise<void> | void;
+  moderationApi?: LessonCommentsModerationApi;
 };
+
+export type LessonCommentsModerationApi = Pick<typeof adminService, 'getLessonCommentsForModeration' | 'approveLessonComment' | 'rejectLessonComment'>;
 
 const FILTER_OPTIONS: FilterStatus[] = ['All', 'Pending', 'Approved', 'Rejected'];
 
@@ -50,6 +53,7 @@ export function LessonCommentsModerationTab({
   lessonId,
   pendingCount = 0,
   onRefresh,
+  moderationApi = adminService,
 }: LessonCommentsModerationTabProps) {
   const [comments, setComments] = useState<ModerationLessonCommentDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +68,7 @@ export function LessonCommentsModerationTab({
     setLoading(true);
     setError(null);
     try {
-      const rows = await adminService.getLessonCommentsForModeration(lessonId, filter);
+      const rows = await moderationApi.getLessonCommentsForModeration(lessonId, filter);
       setComments(rows);
       setSelectedIds(new Set());
     } catch {
@@ -72,7 +76,7 @@ export function LessonCommentsModerationTab({
     } finally {
       setLoading(false);
     }
-  }, [lessonId]);
+  }, [lessonId, moderationApi]);
 
   useEffect(() => {
     loadComments(activeFilter);
@@ -92,8 +96,8 @@ export function LessonCommentsModerationTab({
       const results = await Promise.allSettled(
         commentIds.map((commentId) =>
           action === 'approve'
-            ? adminService.approveLessonComment(commentId)
-            : adminService.rejectLessonComment(commentId),
+            ? moderationApi.approveLessonComment(commentId)
+            : moderationApi.rejectLessonComment(commentId),
         ),
       );
       const succeeded = results.filter((result) => result.status === 'fulfilled').length;
@@ -124,7 +128,7 @@ export function LessonCommentsModerationTab({
       setActingId(null);
       setBulkAction(null);
     }
-  }, [activeFilter, loadComments, onRefresh]);
+  }, [activeFilter, loadComments, moderationApi, onRefresh]);
 
   const toggleSelection = useCallback((commentId: string) => {
     setSelectedIds((current) => {
@@ -183,6 +187,17 @@ export function LessonCommentsModerationTab({
               آخر مراجعة: {row.reviewedByName} في {formatDate(row.reviewedAt)}
             </p>
           )}
+        </div>
+      ),
+    },
+    {
+      key: 'content',
+      label: 'المحتوى',
+      render: (row) => (
+        <div className="min-w-48 space-y-1 text-xs font-medium text-[var(--admin-muted)]">
+          <p><span className="font-black text-[var(--admin-text)]">المدرس:</span> {row.teacherName}</p>
+          <p><span className="font-black text-[var(--admin-text)]">الباقة:</span> {row.packageName}</p>
+          <p>{row.termTitle} ← {row.sectionTitle} ← {row.lessonTitle}</p>
         </div>
       ),
     },

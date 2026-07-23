@@ -21,6 +21,28 @@ public class TestAuditRepository : IAuditRepository
 public class EmployeeProfileTests
 {
     [Fact]
+    public async Task GetEmployees_ReturnsOnlyUsersWithExplicitEmployeeProfiles()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var employee = await TestAppDbContextFactory.SeedUserAsync(db, "Explicit Employee", "01234567884");
+        var teacherOnly = await TestAppDbContextFactory.SeedUserAsync(db, "Teacher Only", "01234567885");
+        var role = new Role { Id = Guid.NewGuid(), Name = "Teacher" };
+        db.Roles.Add(role);
+        db.UserRoles.Add(new UserRole { UserId = teacherOnly.Id, RoleId = role.Id });
+        var profile = new EmployeeProfile { UserId = employee.Id, BasicSalary = 5000 };
+        profile.EmployeeNumber = EmployeeProfile.GenerateEmployeeNumber(profile.Id);
+        db.EmployeeProfiles.Add(profile);
+        await db.SaveChangesAsync();
+
+        var result = await new AdminGetEmployeesQueryHandler(db)
+            .Handle(new AdminGetEmployeesQuery(), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Single(result.Data!);
+        Assert.Equal(employee.Id, result.Data![0].UserId);
+    }
+
+    [Fact]
     public async Task SaveProfile_CreatesProfileForNonStudentUser()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
@@ -37,11 +59,11 @@ public class EmployeeProfileTests
         var handler = new AdminSaveEmployeeProfileCommandHandler(db, audit);
 
         var result = await handler.Handle(
-            new AdminSaveEmployeeProfileCommand(user.Id, 6000, "08:30:00", 9),
+            new AdminSaveEmployeeProfileCommand(user.Id, 6000, "08:30:00", 9, ActorUserId: user.Id),
             CancellationToken.None);
 
         Assert.True(result.Success);
-        Assert.NotEqual(Guid.Empty, result.Data);
+        Assert.NotEqual(Guid.Empty, result.Data!.Id);
 
         var profile = await db.EmployeeProfiles.FirstOrDefaultAsync(ep => ep.UserId == user.Id);
         Assert.NotNull(profile);
@@ -51,6 +73,7 @@ public class EmployeeProfileTests
 
         Assert.Single(audit.Logs);
         Assert.Equal("CreateEmployeeProfile", audit.Logs[0].Action);
+        Assert.Equal(user.Id, audit.Logs[0].PerformedByUserId);
     }
 
     [Fact]
@@ -71,12 +94,12 @@ public class EmployeeProfileTests
 
         // First Save (Create)
         await handler.Handle(
-            new AdminSaveEmployeeProfileCommand(user.Id, 7000, "09:00:00", 8),
+            new AdminSaveEmployeeProfileCommand(user.Id, 7000, "09:00:00", 8, ActorUserId: user.Id),
             CancellationToken.None);
 
         // Second Save (Update)
         var result = await handler.Handle(
-            new AdminSaveEmployeeProfileCommand(user.Id, 8500, "10:00:00", 7),
+            new AdminSaveEmployeeProfileCommand(user.Id, 8500, "10:00:00", 7, ActorUserId: user.Id),
             CancellationToken.None);
 
         Assert.True(result.Success);
@@ -112,8 +135,39 @@ public class EmployeeProfileTests
         await Assert.ThrowsAsync<InvalidOperationException>(async () =>
         {
             await handler.Handle(
-                new AdminSaveEmployeeProfileCommand(user.Id, 5000, "09:00:00", 8),
+                new AdminSaveEmployeeProfileCommand(user.Id, 5000, "09:00:00", 8, ActorUserId: user.Id),
                 CancellationToken.None);
         });
+    }
+
+    [Fact]
+    public async Task SaveProfile_ReturnsConflictWithoutOverwritingWhenExpectedVersionIsStale()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Concurrent Staff", "01234567893");
+        var role = new Role { Id = Guid.NewGuid(), Name = "Supervisor" };
+        db.Roles.Add(role);
+        db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
+        var profile = new EmployeeProfile
+        {
+            UserId = user.Id,
+            BasicSalary = 7000,
+            StandardStartTime = new TimeSpan(9, 0, 0),
+            TargetDailyHours = 8,
+            UpdatedAt = DateTime.UtcNow.AddMinutes(-1)
+        };
+        db.EmployeeProfiles.Add(profile);
+        await db.SaveChangesAsync();
+
+        var staleVersion = profile.UpdatedAt!.Value.AddTicks(-1);
+        var result = await new AdminSaveEmployeeProfileCommandHandler(db, new TestAuditRepository())
+            .Handle(new AdminSaveEmployeeProfileCommand(user.Id, 9000, "10:00:00", 7, staleVersion, user.Id), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("EMPLOYEE_PROFILE_CONFLICT", result.Errors!);
+        var unchanged = await db.EmployeeProfiles.SingleAsync(item => item.UserId == user.Id);
+        Assert.Equal(7000, unchanged.BasicSalary);
+        Assert.Equal(new TimeSpan(9, 0, 0), unchanged.StandardStartTime);
+        Assert.Equal(8, unchanged.TargetDailyHours);
     }
 }

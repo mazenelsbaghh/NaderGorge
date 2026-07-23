@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { LoaderCircle, Save } from 'lucide-react';
 import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
+import { AdminConfirmationDialog } from '@/components/admin/AdminConfirmationDialog';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   liveSupportAIService,
@@ -23,6 +24,7 @@ import { AIDataActionSelector } from '@/components/live-support/ai-admin/AIDataA
 import { AIVerificationPolicyEditor } from '@/components/live-support/ai-admin/AIVerificationPolicyEditor';
 import { AIPreview } from '@/components/live-support/ai-admin/AIPreview';
 import { AIActivityEvidence } from '@/components/live-support/ai-admin/AIActivityEvidence';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 export const DEFAULT_SYSTEM_INSTRUCTIONS = `أنت مساعد الدعم الذكي لمنصة مسار، وهي منصة تعليمية عربية تساعد الطلاب على مشاهدة الدروس، حل الامتحانات والواجبات، متابعة التقدم، وإدارة الباقات وطلبات المشاهدة.
 
@@ -63,8 +65,14 @@ export default function AdminAISupportPageClient() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [activeConversations, setActiveConversations] = useState<LiveSupportAdminConversation[]>([]);
   const [loadingActiveConversations, setLoadingActiveConversations] = useState(false);
+  const [disableConfirmationOpen, setDisableConfirmationOpen] = useState(false);
   const [timeline, setTimeline] = useState<LiveSupportConversationTimeline>();
   const isBuiltInAdmin = user?.roles.includes('Admin') === true;
+
+  useEffect(() => {
+    if (!isBuiltInAdmin) return;
+    return registerCacheStore('support:ai', () => {}, () => void liveSupportAIService.getConfig().then(setConfig));
+  }, [isBuiltInAdmin]);
 
   useEffect(() => {
     if (!isBuiltInAdmin) return;
@@ -164,7 +172,6 @@ export default function AdminAISupportPageClient() {
   }
 
   async function disable() {
-    if (!window.confirm('هل تريد إيقاف المساعد وتحويل المحادثات النشطة إلى الدعم البشري؟')) return;
     setBusy(true);
     try {
       if (!config?.published) return;
@@ -194,7 +201,7 @@ export default function AdminAISupportPageClient() {
   }
 
   return <AdminShellChrome activePath="/admin/live-support/ai" sectionLabel="خدمة العملاء" pageTitle="المساعد الذكي للدعم" subtitle="حدّد ما يستطيع المساعد قراءته واقتراحه. كل إجراء مؤثر يحتاج إلى تأكيد صاحب المحادثة.">
-    {!config ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin" aria-label="جارٍ التحميل" /></div> : <div dir="rtl" className="space-y-5">
+    {!config ? <div className="grid min-h-80 place-items-center"><LoaderCircle className="animate-spin" aria-label="جارٍ التحميل" /></div> : <div dir="rtl" className="live-support-theme space-y-5">
       {notice && <div role="status" aria-live="polite" className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800">{notice}</div>}
       
       <div className="flex overflow-x-auto border-b border-slate-200" role="tablist" aria-label="إدارة المساعد الذكي">
@@ -237,7 +244,7 @@ export default function AdminAISupportPageClient() {
 
       {activeTab === 'settings' ? (
         <>
-          <AIDisableControl policy={config.published} busy={busy} onDisable={() => void disable()} onEnable={() => void enable()} />
+          <AIDisableControl policy={config.published} busy={busy} onDisable={() => setDisableConfirmationOpen(true)} onEnable={() => void enable()} />
           <AIPolicyEditor draft={draft} onChange={setDraft} onRestore={() => setDraft(current => ({ ...current, systemInstructions: DEFAULT_SYSTEM_INSTRUCTIONS }))} />
           <AIDataActionSelector title="البيانات التي يمكن قراءتها" items={config.catalogs.readableData} selected={draft.readableDataKeys} onChange={keys => setDraft({ ...draft, readableDataKeys: keys })}/>
           <AIDataActionSelector title="الإجراءات التي يمكن اقتراحها" note="لا يُنفّذ أي إجراء إلا بعد تأكيد صريح." items={config.catalogs.actions} selected={draft.actionKeys} onChange={keys => setDraft({ ...draft, actionKeys: keys })}/>
@@ -333,7 +340,20 @@ export default function AdminAISupportPageClient() {
         </div>
       )}
     </div>}
-    {timeline && <ConversationInvestigation timeline={timeline} close={() => setTimeline(undefined)}/>}
+    {timeline && <div className="live-support-theme"><ConversationInvestigation timeline={timeline} close={() => setTimeline(undefined)}/></div>}
+    <AdminConfirmationDialog
+      open={disableConfirmationOpen}
+      onClose={() => setDisableConfirmationOpen(false)}
+      onConfirm={async () => {
+        await disable();
+        setDisableConfirmationOpen(false);
+      }}
+      title="إيقاف المساعد الذكي"
+      consequence="سيُوقَف المساعد فورًا وتُحوَّل المحادثات النشطة إلى فريق الدعم البشري. لن يرد المساعد على محادثات جديدة حتى يُفعَّل مرة أخرى."
+      confirmLabel="إيقاف المساعد وتحويل المحادثات"
+      variant="danger"
+      isConfirming={busy}
+    />
   </AdminShellChrome>;
 }
 

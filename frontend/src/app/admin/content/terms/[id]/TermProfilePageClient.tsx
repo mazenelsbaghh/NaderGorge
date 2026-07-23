@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Folder, ChevronRight, BookOpenText, Video, Clock3, Layers, Users } from 'lucide-react';
-import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab } from '@/components/admin';
+import { AdminShellChrome, AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard, ContentSubscribersTab, ContentBasicDetailsForm } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { ContentHierarchyPanel, HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
 import { adminService } from '@/services/admin-service';
@@ -165,6 +165,16 @@ export default function TermProfilePageClient(props: { params: { id: string } })
               setTerm((c: any) => ({ ...c, price: newPrice }));
             }}
           />
+          <ContentBasicDetailsForm
+            title={term.title}
+            order={term.order}
+            price={term.price ?? 0}
+            onSave={async ({ title, order, price }) => {
+              await adminService.updateTerm(params.id, { title, order, price });
+              setTerm((current: any) => ({ ...current, title, order, price }));
+              await loadTerm();
+            }}
+          />
         </div>
       )}
 
@@ -185,6 +195,11 @@ export default function TermProfilePageClient(props: { params: { id: string } })
                 await adminService.uploadContentImage('section', sectionId.id, imageFile);
               }
               toast.success('تمت إضافة القسم.');
+              await loadSections();
+            }}
+            onUpdate={async (id, { title, order, price }) => {
+              await adminService.updateSection(id, { title, order, price });
+              toast.success('تم تحديث القسم.');
               await loadSections();
             }}
             onImageUpload={async (id, file) => {

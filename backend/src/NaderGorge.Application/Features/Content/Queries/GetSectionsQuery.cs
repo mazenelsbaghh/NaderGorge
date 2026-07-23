@@ -13,8 +13,13 @@ public record ContentSectionDto(Guid Id, string Title, int Order, decimal Price,
 public class GetSectionsQueryHandler : IRequestHandler<GetSectionsQuery, ApiResponse<List<ContentSectionDto>>>
 {
     private readonly IAppDbContext _db;
+    private readonly IAcademicScopeService _academicScope;
 
-    public GetSectionsQueryHandler(IAppDbContext db) => _db = db;
+    public GetSectionsQueryHandler(IAppDbContext db, IAcademicScopeService academicScope)
+    {
+        _db = db;
+        _academicScope = academicScope;
+    }
 
     public async Task<ApiResponse<List<ContentSectionDto>>> Handle(GetSectionsQuery request, CancellationToken ct)
     {
@@ -23,6 +28,24 @@ public class GetSectionsQueryHandler : IRequestHandler<GetSectionsQuery, ApiResp
             .OrderBy(cs => cs.Order)
             .Select(cs => new { cs.Id, cs.Title, cs.Order, cs.Price, cs.ImageUrl })
             .ToListAsync(ct);
+
+        if (request.UserId.HasValue && !await IsPrivilegedUserAsync(request.UserId.Value, ct))
+        {
+            var eligibleSections = new List<Guid>();
+            foreach (var section in sections)
+            {
+                if (await _academicScope.IsOwnerEligibleForStudentAsync(
+                        StudentFacingScopeOwnerType.ContentSection,
+                        section.Id,
+                        request.UserId.Value,
+                        ct))
+                {
+                    eligibleSections.Add(section.Id);
+                }
+            }
+
+            sections = sections.Where(s => eligibleSections.Contains(s.Id)).ToList();
+        }
 
         // Determine which sections the student has already purchased (or has parent-level access)
         var purchasedSectionIds = new HashSet<Guid>();
@@ -81,5 +104,21 @@ public class GetSectionsQueryHandler : IRequestHandler<GetSectionsQuery, ApiResp
         )).ToList();
 
         return ApiResponse<List<ContentSectionDto>>.Ok(result);
+    }
+
+    private async Task<bool> IsPrivilegedUserAsync(Guid userId, CancellationToken ct)
+    {
+        return await _db.UserRoles
+            .Include(ur => ur.Role)
+            .Where(ur => ur.UserId == userId)
+            .AnyAsync(ur =>
+                ur.Role.Type == RoleType.Admin ||
+                ur.Role.Type == RoleType.Assistant ||
+                ur.Role.Type == RoleType.AssistantReviewer ||
+                ur.Role.Type == RoleType.AssistantAcademic ||
+                ur.Role.Type == RoleType.Supervisor ||
+                ur.Role.Type == RoleType.Staff ||
+                ur.Role.Type == RoleType.Teacher,
+                ct);
     }
 }

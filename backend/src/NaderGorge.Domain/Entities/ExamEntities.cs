@@ -11,6 +11,7 @@ public enum QuestionType
 
 public class Exam : BaseEntity
 {
+    public string InternalCode { get; private set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
 
@@ -25,6 +26,7 @@ public class Exam : BaseEntity
 
     // Config properties
     public bool IsMandatory { get; set; } = true;
+    public bool IsActive { get; set; } = true;
     public bool IsRandomized { get; set; } = false;
     public int? DisplayQuestionCount { get; set; }
 
@@ -33,6 +35,7 @@ public class Exam : BaseEntity
 
     public Guid? LessonVideoId { get; set; }
     public LessonVideo? LessonVideo { get; set; }
+    public PublicExamProduct? PublicExamProduct { get; set; }
 
     public ICollection<ExamQuestion> ExamQuestions { get; set; } = new List<ExamQuestion>();
     public ICollection<StudentExamAttempt> Attempts { get; set; } = new List<StudentExamAttempt>();

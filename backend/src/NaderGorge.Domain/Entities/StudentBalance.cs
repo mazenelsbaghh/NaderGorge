@@ -8,6 +8,7 @@ public class StudentBalance : BaseEntity
     public User User { get; set; } = null!;
 
     public decimal CurrentBalance { get; set; } = 0m;
+    public long Version { get; set; }
 
     // Navigation
     public ICollection<BalanceTransaction> Transactions { get; set; } = new List<BalanceTransaction>();

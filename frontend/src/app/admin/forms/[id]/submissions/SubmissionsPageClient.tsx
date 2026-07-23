@@ -22,6 +22,7 @@ import {
   FormFieldConfig,
   FormSubmissionStatus,
 } from '@/services/forms-service';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 interface SubmissionsPageProps {
   params: { id: string };
@@ -61,6 +62,8 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
 
   useEffect(() => {
     loadData();
+    const cleanupCacheStore = registerCacheStore('forms:submissions', () => setSubmissions([]), loadData);
+    return cleanupCacheStore;
   }, [loadData]);
 
   const openDetailsModal = (sub: FormSubmissionDto) => {

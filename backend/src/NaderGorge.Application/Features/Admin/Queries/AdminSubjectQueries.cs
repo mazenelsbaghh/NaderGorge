@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Queries;
@@ -8,6 +9,36 @@ namespace NaderGorge.Application.Features.Admin.Queries;
 public record GetSubjectsQuery(Guid? TeacherId = null) : IRequest<ApiResponse<List<SubjectDto>>>;
 
 public record SubjectDto(Guid Id, string Name, string Description);
+
+public record AcademicSubjectEligibilityDto(
+    EducationStage EducationStage,
+    GradeLevel GradeLevel,
+    Guid SubjectId,
+    string SubjectName);
+
+public record GetAcademicSubjectEligibilitiesQuery : IRequest<ApiResponse<List<AcademicSubjectEligibilityDto>>>;
+
+public sealed class GetAcademicSubjectEligibilitiesQueryHandler(IAppDbContext db)
+    : IRequestHandler<GetAcademicSubjectEligibilitiesQuery, ApiResponse<List<AcademicSubjectEligibilityDto>>>
+{
+    public async Task<ApiResponse<List<AcademicSubjectEligibilityDto>>> Handle(GetAcademicSubjectEligibilitiesQuery request, CancellationToken ct)
+    {
+        var eligibilities = await db.AcademicSubjectEligibilities
+            .AsNoTracking()
+            .Where(eligibility => eligibility.IsActive)
+            .OrderBy(eligibility => eligibility.EducationStage)
+            .ThenBy(eligibility => eligibility.GradeLevel)
+            .ThenBy(eligibility => eligibility.Subject.Name)
+            .Select(eligibility => new AcademicSubjectEligibilityDto(
+                eligibility.EducationStage,
+                eligibility.GradeLevel,
+                eligibility.SubjectId,
+                eligibility.Subject.Name))
+            .ToListAsync(ct);
+
+        return ApiResponse<List<AcademicSubjectEligibilityDto>>.Ok(eligibilities);
+    }
+}
 
 public class GetSubjectsQueryHandler : IRequestHandler<GetSubjectsQuery, ApiResponse<List<SubjectDto>>>
 {

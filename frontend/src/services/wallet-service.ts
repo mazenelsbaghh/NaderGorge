@@ -41,6 +41,8 @@ export interface AdminRechargeRequestDto {
   walletLabel: string;
   walletPhoneNumber: string;
   amount: number;
+  teacherId?: string;
+  teacherName?: string;
   senderPhoneNumber: string;
   screenshotUrl?: string;
   status: number | string; // RechargeRequestStatus
@@ -95,8 +97,8 @@ export const walletService = {
   },
 
   getRechargeRequests: async (status?: number) => {
-    const url = status !== undefined 
-      ? `/admin/wallets/recharge-requests?status=${status}` 
+    const url = status !== undefined
+      ? `/admin/wallets/recharge-requests?status=${status}`
       : '/admin/wallets/recharge-requests';
     const { data } = await apiClient.get<{ success: boolean; data: AdminRechargeRequestDto[] }>(url);
     return data.data;
@@ -108,13 +110,13 @@ export const walletService = {
   },
 
   resolveRechargeRequest: async (
-    id: string, 
-    approve: boolean, 
-    rejectionReason?: string, 
+    id: string,
+    approve: boolean,
+    rejectionReason?: string,
     smsLogId?: string
   ) => {
     const { data } = await apiClient.post<{ success: boolean; message: string }>(
-      `/admin/wallets/recharge-requests/${id}/resolve`, 
+      `/admin/wallets/recharge-requests/${id}/resolve`,
       { approve, rejectionReason, smsLogId }
     );
     return data;

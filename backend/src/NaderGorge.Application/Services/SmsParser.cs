@@ -14,7 +14,7 @@ public class SmsParserResult
 public static class SmsParser
 {
     private static readonly Regex PhoneRegex = new(@"\b01[0125]\d{8}\b", RegexOptions.Compiled);
-    
+
     // Patterns to match transfer amounts
     private static readonly Regex[] AmountRegexes = new[]
     {

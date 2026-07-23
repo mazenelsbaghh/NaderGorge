@@ -1,25 +1,32 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Wallet, 
-  ArrowRight, 
-  Copy, 
-  Upload, 
-  CheckCircle, 
-  Clock, 
+import {
+  Wallet,
+  ArrowRight,
+  Copy,
+  Upload,
+  CheckCircle,
+  Clock,
   ChevronLeft
 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { rechargeService, type InitiateRechargeResponse } from '@/services/recharge-service';
 import type { StudentRechargeRequestDto } from '@/services/recharge-service';
+import { studentService, type PublicTeacherDto } from '@/services/student-service';
 import toast from 'react-hot-toast';
+import { compressImage, getExtensionFromBase64, renameFileToMatchBase64 } from '@/utils/image-compressor';
 
 const isApprovedRechargeStatus = (status: StudentRechargeRequestDto['status']) =>
   status === 1 || status === 2 || status === 'Matched' || status === 'Approved';
 
 const isRejectedRechargeStatus = (status: StudentRechargeRequestDto['status']) =>
   status === 3 || status === 'Rejected';
+
+const normalizePhoneInput = (value: string) => value.replace(/\D/g, '').slice(0, 11);
+
+const isValidEgyptianMobile = (value: string) => /^01[0125]\d{8}$/.test(value);
 
 const getRechargeStatusLabel = (status: StudentRechargeRequestDto['status']) => {
   if (status === 0 || status === 'Pending') return 'قيد المراجعة';
@@ -40,17 +47,24 @@ const refreshStudentBalance = () => {
 };
 
 export default function StudentRechargePageClient() {
+  const searchParams = useSearchParams();
+  const requestedAmount = Number(searchParams.get('amount'));
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [amount, setAmount] = useState<number>(100);
+  const [amount, setAmount] = useState<number>(() => (
+    Number.isFinite(requestedAmount) && requestedAmount > 0 ? Number(requestedAmount.toFixed(2)) : 100
+  ));
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<StudentRechargeRequestDto[]>([]);
+  const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
+  const [balanceScope, setBalanceScope] = useState<'general' | 'teacher'>('general');
+  const [teacherId, setTeacherId] = useState('');
 
   // Step 2 state
   const [rechargeData, setRechargeData] = useState<InitiateRechargeResponse | null>(null);
   const [senderPhone, setSenderPhone] = useState('');
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number>(1200); // 20 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState<number>(3600); // one hour in seconds
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Step 3 state
@@ -70,6 +84,7 @@ export default function StudentRechargePageClient() {
 
   useEffect(() => {
     void fetchRequests();
+    void studentService.getPublicTeachers().then(setTeachers).catch(() => setTeachers([]));
   }, []);
 
   useEffect(() => {
@@ -133,7 +148,7 @@ export default function StudentRechargePageClient() {
           return;
         }
       } catch {
-        // Keep checking until the one-minute window ends.
+        // Keep the waiting state; the request will fall back to manual review after the timeout.
       }
 
       if (remainingSeconds === 0) {
@@ -160,10 +175,14 @@ export default function StudentRechargePageClient() {
       toast.error('قيمة الشحن يجب أن تكون أكبر من صفر.');
       return;
     }
+    if (balanceScope === 'teacher' && !teacherId) {
+      toast.error('اختر المدرس الذي تريد شحن رصيده.');
+      return;
+    }
 
     try {
       setLoading(true);
-      const response = await rechargeService.initiate(amount);
+      const response = await rechargeService.initiate(amount, balanceScope === 'teacher' ? teacherId : undefined);
       if (response.success && response.data) {
         setRechargeData(response.data);
         setReviewCode(response.data.reviewCode);
@@ -180,15 +199,35 @@ export default function StudentRechargePageClient() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('اختر صورة صحيحة لإثبات التحويل.');
+        e.target.value = '';
+        return;
+      }
       if (file.size > 10 * 1024 * 1024) {
         toast.error('حجم الصورة يجب أن لا يتجاوز 10 ميجابايت.');
         return;
       }
-      setScreenshot(file);
-      setScreenshotPreview(URL.createObjectURL(file));
+      try {
+        // Normalize browser-supported images to a real WebP file. This prevents files
+        // with misleading extensions or MIME types from reaching the server.
+        const dataUrl = await compressImage(file, 1920, 1920, 0.9);
+        const normalizedFile = new File(
+          [await (await fetch(dataUrl)).blob()],
+          renameFileToMatchBase64(file.name, dataUrl),
+          { type: `image/${getExtensionFromBase64(dataUrl) === 'jpg' ? 'jpeg' : getExtensionFromBase64(dataUrl)}` }
+        );
+        setScreenshot(normalizedFile);
+        setScreenshotPreview(dataUrl);
+      } catch {
+        setScreenshot(null);
+        setScreenshotPreview(null);
+        e.target.value = '';
+        toast.error('تعذر قراءة هذه الصورة. إذا كانت من iPhone بصيغة HEIC، التقط Screenshot أو حوّلها إلى JPG.');
+      }
     }
   };
 
@@ -196,8 +235,15 @@ export default function StudentRechargePageClient() {
     e.preventDefault();
     if (!rechargeData) return;
 
-    if (!senderPhone.trim()) {
+    const normalizedSenderPhone = normalizePhoneInput(senderPhone);
+
+    if (!normalizedSenderPhone) {
       toast.error('يرجى كتابة رقم الهاتف الذي قمت بالتحويل منه.');
+      return;
+    }
+
+    if (!isValidEgyptianMobile(normalizedSenderPhone)) {
+      toast.error('رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015.');
       return;
     }
 
@@ -210,7 +256,7 @@ export default function StudentRechargePageClient() {
       setLoading(true);
       const response = await rechargeService.submit(
         rechargeData.rechargeRequestId,
-        senderPhone.trim(),
+        normalizedSenderPhone,
         screenshot
       );
 
@@ -233,9 +279,8 @@ export default function StudentRechargePageClient() {
       } else {
         toast.error(response.message || 'تعذر تقديم طلب الشحن.');
       }
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'فشل في رفع إثبات الشحن.');
+    } catch {
+      // The shared API client already displays server errors; avoid duplicate toasts.
     } finally {
       setLoading(false);
     }
@@ -252,16 +297,18 @@ export default function StudentRechargePageClient() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const canSubmitProof = Boolean(screenshot) && isValidEgyptianMobile(normalizePhoneInput(senderPhone));
+
   return (
     <div className="space-y-8 pb-10">
-      
+
       {/* Hero Section */}
       <div className="group relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all sm:p-8">
         <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-[var(--admin-primary-15)] blur-[48px] transition-all duration-700 pointer-events-none" />
         <div className="relative z-10 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-3">
-            <Link 
-              href="/student/balance" 
+            <Link
+              href="/student/balance"
               className="inline-flex items-center gap-1.5 text-xs font-bold text-[var(--admin-primary-strong)] hover:underline"
             >
               <ArrowRight className="h-3.5 w-3.5" />
@@ -304,7 +351,7 @@ export default function StudentRechargePageClient() {
 
       {/* Main Content */}
       <div className="max-w-xl mx-auto rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm sm:p-8">
-        
+
         {/* STEP 1: INITIATE RECHARGE */}
         {step === 1 && (
           <form onSubmit={handleInitiate} className="space-y-6">
@@ -317,8 +364,8 @@ export default function StudentRechargePageClient() {
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-[var(--admin-text)]">المبلغ المطلوب شحنه (ج.م) *</label>
                 <div className="relative">
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     required
                     min="1"
                     step="1"
@@ -339,8 +386,8 @@ export default function StudentRechargePageClient() {
                     type="button"
                     onClick={() => setAmount(val)}
                     className={`rounded-xl border py-2.5 font-mono text-sm font-bold transition-all ${
-                      amount === val 
-                        ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary-strong)]' 
+                      amount === val
+                        ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary-strong)]'
                         : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
                     }`}
                   >
@@ -351,6 +398,23 @@ export default function StudentRechargePageClient() {
               <p className="text-[11px] font-semibold text-[var(--admin-muted)]">
                 الأزرار اختصارات فقط. يمكنك كتابة أي رقم في خانة المبلغ.
               </p>
+              <fieldset className="space-y-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                <legend className="px-1 text-sm font-black text-[var(--admin-text)]">نوع الرصيد</legend>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setBalanceScope('general')} className={`rounded-xl border p-3 text-right transition-all ${balanceScope === 'general' ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary-strong)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'}`}>
+                    <span className="block text-sm font-black">رصيد عام</span><span className="mt-1 block text-[11px] font-semibold">يُستخدم مع أي مدرس</span>
+                  </button>
+                  <button type="button" onClick={() => setBalanceScope('teacher')} className={`rounded-xl border p-3 text-right transition-all ${balanceScope === 'teacher' ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary-strong)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'}`}>
+                    <span className="block text-sm font-black">رصيد مدرس</span><span className="mt-1 block text-[11px] font-semibold">لشراء محتوى مدرس واحد</span>
+                  </button>
+                </div>
+                {balanceScope === 'teacher' && (
+                  <select required value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3 text-sm font-bold text-[var(--admin-text)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]">
+                    <option value="">اختر المدرس</option>
+                    {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>)}
+                  </select>
+                )}
+              </fieldset>
             </div>
 
             <button
@@ -417,32 +481,35 @@ export default function StudentRechargePageClient() {
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-[var(--admin-text)]">رقم الهاتف الذي قمت بالتحويل منه *</label>
-                <input 
-                  type="text" 
+                <input
+                  type="tel"
                   required
+                  inputMode="numeric"
+                  pattern="01[0125][0-9]{8}"
+                  maxLength={11}
                   placeholder="مثال: 01098765432"
                   value={senderPhone}
-                  onChange={(e) => setSenderPhone(e.target.value)}
+                  onChange={(e) => setSenderPhone(normalizePhoneInput(e.target.value))}
                   className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3 font-mono text-sm font-bold text-[var(--admin-text)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]"
                 />
                 <span className="text-[11px] text-[var(--admin-muted)] font-semibold">
-                  ملاحظة: يجب كتابة الرقم بدقة لمطابقة الرسائل الواردة منه على السيرفر.
+                  اكتب رقم المحفظة المحول منها كامل 11 رقم. الرقم الناقص لن تتم مطابقته.
                 </span>
               </div>
 
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-[var(--admin-text)]">صورة إثبات التحويل (لقطة الشاشة) *</label>
-                
+
                 {screenshotPreview ? (
                   <div className="relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] overflow-hidden aspect-video flex items-center justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={screenshotPreview} 
-                      alt="Screenshot Preview" 
+                    <img
+                      src={screenshotPreview}
+                      alt="Screenshot Preview"
                       className="max-h-full object-contain"
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => {
                         setScreenshot(null);
                         setScreenshotPreview(null);
@@ -456,10 +523,10 @@ export default function StudentRechargePageClient() {
                   <label className="border-2 border-dashed border-[var(--admin-border)] hover:border-[var(--admin-primary)] rounded-2xl p-8 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)]">
                     <Upload className="h-8 w-8 text-[var(--admin-muted)]" />
                     <span className="font-bold text-sm text-[var(--admin-text)]">اضغط لرفع لقطة الشاشة</span>
-                    <span className="text-xs text-[var(--admin-muted)]">صورة صالحة لا تتعدى 10 ميجابايت</span>
-                    <input 
-                      type="file" 
-                      accept="image/*"
+                    <span className="text-xs text-[var(--admin-muted)]">JPG أو PNG أو WEBP، بحد أقصى 10 ميجابايت</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                       required
                       onChange={handleFileChange}
                       className="hidden"
@@ -486,7 +553,7 @@ export default function StudentRechargePageClient() {
               </button>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !canSubmitProof}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3 text-sm font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
               >
                 {loading ? (
@@ -496,6 +563,11 @@ export default function StudentRechargePageClient() {
                 )}
               </button>
             </div>
+            {!canSubmitProof && (
+              <p className="text-center text-xs font-bold text-amber-700 dark:text-amber-300">
+                لن يتم إرسال الطلب للأدمن قبل كتابة رقم المُحوِّل الصحيح ورفع صورة إثبات التحويل.
+              </p>
+            )}
           </form>
         )}
 
@@ -550,7 +622,7 @@ export default function StudentRechargePageClient() {
             </div>
 
             <div className="pt-4 border-t border-[var(--admin-border)] flex flex-col gap-2">
-              <Link 
+              <Link
                 href="/student/balance"
                 className="w-full py-3 rounded-xl bg-[var(--admin-primary)] text-sm font-bold text-[var(--admin-primary-contrast)] hover:brightness-110 active:scale-95 transition-all block text-center"
               >
@@ -597,6 +669,7 @@ export default function StudentRechargePageClient() {
                   <div className="mt-3 grid gap-1 text-xs font-semibold text-[var(--admin-muted)]">
                     <span>من: <span className="font-mono">{request.senderPhoneNumber || 'لم يرسل بعد'}</span></span>
                     <span>إلى: {request.walletLabel} <span className="font-mono">{request.walletPhoneNumber}</span></span>
+                    <span>نوع الرصيد: {request.teacherName ? `للأستاذ ${request.teacherName}` : 'عام'}</span>
                     {request.rejectionReason ? <span className="text-rose-600">سبب الرفض: {request.rejectionReason}</span> : null}
                   </div>
                 </div>

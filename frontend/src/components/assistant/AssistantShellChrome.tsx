@@ -173,7 +173,7 @@ export function AssistantShellChrome({
   return (
     <div
       dir="rtl"
-      className="h-dvh overflow-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
+      className="h-dvh max-h-dvh overflow-x-hidden bg-[var(--admin-bg)] text-[var(--admin-text)] relative"
       style={themeVars}
     >
 
@@ -203,6 +203,7 @@ export function AssistantShellChrome({
                   key={item.href}
                   href={item.href}
                   prefetch={false}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 ${
                     isActive
                       ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
@@ -245,7 +246,7 @@ export function AssistantShellChrome({
       </aside>
 
       {/* Main Workspace Frame */}
-      <div className="flex h-full flex-col lg:mr-24">
+      <div className="flex h-full min-h-0 flex-col lg:mr-24">
         {/* Header */}
         <header className="flex h-16 items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-bg-overlay)] px-6 backdrop-blur-md z-40">
           <div className="flex items-center gap-4">
@@ -278,7 +279,7 @@ export function AssistantShellChrome({
         </header>
 
         {/* Main Scrolling Body */}
-        <main className="flex-1 overflow-y-auto px-6 py-8 relative z-10 [scrollbar-width:thin] scrollbar-color-[var(--admin-border)]-transparent">
+        <main className="app-shell-scroll min-h-0 flex-1 overflow-y-auto px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 relative z-10 [scrollbar-width:thin] scrollbar-color-[var(--admin-border)]-transparent">
           {subtitle && (
             <div className="mb-6 max-w-3xl">
               <p className="text-sm text-[var(--admin-muted)] leading-relaxed">
@@ -330,6 +331,7 @@ export function AssistantShellChrome({
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
                     className={`flex h-11 items-center rounded-full pr-4 pl-3 gap-3 transition-all ${
                       isActive
                         ? 'bg-[var(--admin-primary)] text-white shadow-md'

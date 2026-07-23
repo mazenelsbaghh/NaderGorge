@@ -32,11 +32,13 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
 {
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
+    private readonly IAcademicScopeService _academicScope;
 
-    public GetPackagesQueryHandler(IAppDbContext db, IAccessCheckService access)
+    public GetPackagesQueryHandler(IAppDbContext db, IAccessCheckService access, IAcademicScopeService academicScope)
     {
         _db = db;
         _access = access;
+        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<List<PackageDto>>> Handle(GetPackagesQuery request, CancellationToken ct)
@@ -60,23 +62,53 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
             ur.Role.Type == RoleType.Staff);
 
         bool isTeacher = user != null && user.UserRoles.Any(ur => ur.Role.Type == RoleType.Teacher);
+        Guid? teacherId = user?.TeacherProfile?.Id;
+        if (teacherId == null && isTeacher)
+        {
+            teacherId = await _db.TeacherStaffMembers
+                .Where(member => member.UserId == request.UserId && member.IsActive && member.User.IsActive)
+                .Select(member => (Guid?)member.TeacherId)
+                .FirstOrDefaultAsync(ct);
+        }
 
         if (isAdminOrStaff)
         {
             // Admins/Staff see ALL packages in the system regardless of IsActive
         }
-        else if (isTeacher && user!.TeacherProfile != null)
+        else if (isTeacher && teacherId.HasValue)
         {
             // Teachers see their own packages (both active & inactive)
-            query = query.Where(p => p.TeacherId == user.TeacherProfile.Id);
+            query = query.Where(p => p.TeacherId == teacherId.Value);
+        }
+        else if (isTeacher)
+        {
+            query = query.Where(p => false);
         }
         else
         {
             // Students only see active packages
-            query = query.Where(p => p.IsActive);
+            query = query.Where(p => p.IsActive && p.Teacher.IsContentVisibleToStudents);
         }
 
         var packages = await query.ToListAsync(ct);
+
+        if (!isAdminOrStaff && !isTeacher)
+        {
+            var eligiblePackages = new List<Package>();
+            foreach (var package in packages)
+            {
+                if (await _academicScope.IsOwnerEligibleForStudentAsync(
+                        StudentFacingScopeOwnerType.Package,
+                        package.Id,
+                        request.UserId,
+                        ct))
+                {
+                    eligiblePackages.Add(package);
+                }
+            }
+
+            packages = eligiblePackages;
+        }
 
         var userRoles = await _db.UserRoles
             .Include(ur => ur.Role)

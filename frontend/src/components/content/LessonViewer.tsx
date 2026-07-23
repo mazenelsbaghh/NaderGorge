@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { FileText, FlaskConical, Maximize, Minimize, ClipboardCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLessonFocusStore } from "@/stores/lesson-focus-store";
 import apiClient from "@/services/api-client";
 import toast from 'react-hot-toast';
@@ -21,6 +21,7 @@ export function LessonViewer({
   packageId?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isFocusMode, setFocusMode, toggleFocusMode } = useLessonFocusStore();
   
   useEffect(() => {
@@ -30,12 +31,31 @@ export function LessonViewer({
 
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
 
+  useEffect(() => {
+    if (!lesson.videos.length) return;
+
+    const requestedVideoId = searchParams.get("videoId");
+    const requestedIndex = requestedVideoId
+      ? lesson.videos.findIndex((video) => video.id === requestedVideoId)
+      : -1;
+    const firstPlayableIndex = lesson.videos.findIndex((video) => video.hasAccess !== false);
+    const nextIndex = requestedIndex >= 0 ? requestedIndex : firstPlayableIndex >= 0 ? firstPlayableIndex : 0;
+
+    setActiveVideoIndex(nextIndex);
+  }, [lesson.videos, searchParams]);
+
   const [downloadingResourceId, setDownloadingResourceId] = useState<string | null>(null);
   const [resources, setResources] = useState<ResourceDto[]>([]);
   const [loadingResources, setLoadingResources] = useState(true);
 
   useEffect(() => {
     if (lesson.id) {
+      if (lesson.isVideoOnlyAccess) {
+        setResources([]);
+        setLoadingResources(false);
+        return;
+      }
+
       setLoadingResources(true);
       contentService.getLessonResources(lesson.id)
         .then((res) => {

@@ -10,3 +10,9 @@ public enum CodeType
     Exam = 5,       // Specific exam access
     Balance = 6     // Credit added to student balance
 }
+
+public enum CodeAccountingTiming
+{
+    OnActivation = 0,
+    Immediate = 1
+}

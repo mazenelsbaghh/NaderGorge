@@ -53,6 +53,9 @@ internal static class ExamResultBuilder
             .Select(eq =>
             {
                 questionSnapshotsByQuestionId.TryGetValue(eq.Id, out var snapshot);
+                var resultIsCompleted = string.Equals(resultState ?? "Completed", "Completed", StringComparison.Ordinal);
+                var canRevealCorrectAnswer = revealCorrectAnswers
+                    && (resultIsCompleted || eq.Question.Type != QuestionType.Essay);
                 var correctText = GetCorrectReviewText(eq.Question);
 
                 return new ExamQuestionReviewDto(
@@ -63,10 +66,10 @@ internal static class ExamResultBuilder
                     snapshot?.IsAnswered ?? false,
                     snapshot?.IsCorrect ?? false,
                     snapshot?.PointsAwarded ?? 0,
-                    revealCorrectAnswers ? correctText : null,
-                    revealCorrectAnswers ? eq.Question.AudioUrl : null,
+                    canRevealCorrectAnswer ? correctText : null,
+                    canRevealCorrectAnswer ? eq.Question.AudioUrl : null,
                     eq.Question.ImageUrl,
-                    string.Equals(resultState ?? "Completed", "Completed", StringComparison.Ordinal)
+                    resultIsCompleted
                         ? eq.Question.WrittenCorrection
                         : null,
                     snapshot?.StudentAudioUrl

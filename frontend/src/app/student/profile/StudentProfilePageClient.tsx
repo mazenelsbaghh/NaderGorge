@@ -10,6 +10,7 @@ import { fadeSlideUp } from "@/lib/motion";
 import { AVATAR_LIST } from "@/data/avatars";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
+import { getEducationStageLabel, getGradeLevelLabel, getStudyTrackLabel } from "@/lib/academic-labels";
 
 export default function StudentProfilePageClient() {
   const {
@@ -102,95 +103,6 @@ export default function StudentProfilePageClient() {
     );
   }
 
-  // Helper translations for stages/grades
-  const translateStage = (stage: string) => {
-    if (!stage) return "";
-    const key = stage.toLowerCase().trim();
-    const stageMap: Record<string, string> = {
-      secondary: "المرحلة الثانوية",
-      baccalaureate: "بكالوريا",
-      primary: "المرحلة الابتدائية",
-      preparatory: "المرحلة الإعدادية",
-      azhari: "أزهري",
-      american: "أمريكي",
-    };
-    return stageMap[key] || stage;
-  };
-
-  const translateGrade = (grade: string) => {
-    if (!grade) return "";
-    const key = grade.toLowerCase().trim();
-    const gradeMap: Record<string, string> = {
-      // Secondary
-      firstsecondary: "الصف الأول الثانوي",
-      secondsecondary: "الصف الثاني الثانوي",
-      secondarygrade3: "الصف الثالث الثانوي",
-      // Baccalaureate
-      firstbaccalaureate: "الأول بكالوريا",
-      secondbaccalaureate: "الثاني بكالوريا",
-      // Primary
-      primarygrade1: "الصف الأول الابتدائي",
-      primarygrade2: "الصف الثاني الابتدائي",
-      primarygrade3: "الصف الثالث الابتدائي",
-      primarygrade4: "الصف الرابع الابتدائي",
-      primarygrade5: "الصف الخامس الابتدائي",
-      primarygrade6: "الصف السادس الابتدائي",
-      // Preparatory
-      prepgrade1: "الصف الأول الإعدادي",
-      prepgrade2: "الصف الثاني الإعدادي",
-      prepgrade3: "الصف الثالث الإعدادي",
-      // Azhari
-      azhariprimary1: "الصف الأول الابتدائي الأزهري",
-      azhariprimary2: "الصف الثاني الابتدائي الأزهري",
-      azhariprimary3: "الصف الثالث الابتدائي الأزهري",
-      azhariprimary4: "الصف الرابع الابتدائي الأزهري",
-      azhariprimary5: "الصف الخامس الابتدائي الأزهري",
-      azhariprimary6: "الصف السادس الابتدائي الأزهري",
-      azhariprep1: "الصف الأول الإعدادي الأزهري",
-      azhariprep2: "الصف الثاني الإعدادي الأزهري",
-      azhariprep3: "الصف الثالث الإعدادي الأزهري",
-      azharisecondary1: "الصف الأول الثانوي الأزهري",
-      azharisecondary2: "الصف الثاني الثانوي الأزهري",
-      azharisecondary3: "الصف الثالث الثانوي الأزهري",
-      // American
-      americangrade1: "Grade 1",
-      americangrade2: "Grade 2",
-      americangrade3: "Grade 3",
-      americangrade4: "Grade 4",
-      americangrade5: "Grade 5",
-      americangrade6: "Grade 6",
-      americangrade7: "Grade 7",
-      americangrade8: "Grade 8",
-      americangrade9: "Grade 9",
-      americangrade10: "Grade 10",
-      americangrade11: "Grade 11",
-      americangrade12: "Grade 12",
-      // Old compatibility values
-      first: "الصف الأول",
-      second: "الصف الثاني",
-      third: "الصف الثالث",
-    };
-    return gradeMap[key] || grade;
-  };
-
-  const translateTrack = (track: string | null) => {
-    if (!track) return "";
-    const key = track.toLowerCase().trim();
-    const trackMap: Record<string, string> = {
-      arts: "أدبي",
-      science: "علمي",
-      medicineandlifesciences: "الطب وعلوم الحياة",
-      engineeringandcomputerscience: "الهندسة وعلوم الحاسب",
-      business: "قطاع الأعمال",
-      artsandhumanities: "الآداب والفنون",
-      general: "عام",
-      literary: "أدبي",
-      scientificmath: "علمي رياضة",
-      scientificscience: "علمي علوم",
-    };
-    return trackMap[key] || track;
-  };
-
   return (
     <motion.div
       className="space-y-8 max-w-5xl mx-auto"
@@ -280,16 +192,16 @@ export default function StudentProfilePageClient() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
                   <span className="text-[var(--admin-muted)]">المرحلة الدراسية:</span>
-                  <span className="font-semibold text-[var(--admin-text)]">{translateStage(profile.educationStage)}</span>
+                  <span className="font-semibold text-[var(--admin-text)]">{getEducationStageLabel(profile.educationStage)}</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
                   <span className="text-[var(--admin-muted)]">الصف الدراسي:</span>
-                  <span className="font-semibold text-[var(--admin-text)]">{translateGrade(profile.gradeLevel)}</span>
+                  <span className="font-semibold text-[var(--admin-text)]">{getGradeLevelLabel(profile.gradeLevel)}</span>
                 </div>
                 {profile.studyTrack && (
                   <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
                     <span className="text-[var(--admin-muted)]">التخصص/الشعبة:</span>
-                    <span className="font-semibold text-[var(--admin-text)]">{translateTrack(profile.studyTrack)}</span>
+                    <span className="font-semibold text-[var(--admin-text)]">{getStudyTrackLabel(profile.studyTrack)}</span>
                   </div>
                 )}
                 <div className="flex justify-between py-1 border-b border-[var(--admin-border)]/50">
@@ -462,7 +374,7 @@ export default function StudentProfilePageClient() {
             {/* Avatar Selection Section */}
             <section className="space-y-4">
               <h4 className="text-xs font-black tracking-[0.2em] text-[var(--admin-muted)] uppercase">
-                شخصيتك الكارتونية (علماء ومفكرون)
+                شخصيتك الكارتونية (كورة وعلوم وفن)
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {AVATAR_LIST.map((avatar) => {

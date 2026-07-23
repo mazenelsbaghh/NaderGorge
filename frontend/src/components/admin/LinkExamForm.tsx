@@ -9,6 +9,7 @@ import { AdminStatCard } from './AdminStatCard';
 import { AdminDataTable } from './AdminDataTable';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { AdminConfirmationDialog } from './AdminConfirmationDialog';
 
 interface LinkExamFormProps {
   lessonId: string;
@@ -22,6 +23,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
   const [saving, setSaving] = useState(false);
   const [examData, setExamData] = useState<ExamDashboardDto | null>(null);
   const [loadingData, setLoadingData] = useState(false);
+  const [unlinkConfirmationOpen, setUnlinkConfirmationOpen] = useState(false);
 
   useEffect(() => {
     if (!currentExamId) {
@@ -69,7 +71,6 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
   }
 
   async function handleUnlink() {
-    if (!confirm('هل أنت متأكد من إلغاء ربط هذا الامتحان؟')) return;
     try {
       setSaving(true);
       await adminService.linkLessonExam(lessonId, null);
@@ -118,7 +119,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
               </button>
               <button
                 type="button"
-                onClick={handleUnlink}
+                onClick={() => setUnlinkConfirmationOpen(true)}
                 disabled={saving}
                 className="flex items-center gap-2 rounded-xl bg-[var(--admin-danger-10)] px-4 py-2 font-bold text-[var(--admin-danger)] hover:bg-[var(--admin-danger-10)]/80 transition-colors"
                 title="إلغاء ربط الامتحان بالحصة"
@@ -237,6 +238,19 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
           </p>
         </form>
       )}
+      <AdminConfirmationDialog
+        open={unlinkConfirmationOpen}
+        onClose={() => setUnlinkConfirmationOpen(false)}
+        onConfirm={async () => {
+          await handleUnlink();
+          setUnlinkConfirmationOpen(false);
+        }}
+        title="إلغاء ربط الامتحان"
+        consequence="سيُزال الامتحان من هذه الحصة. لن تُحذف أسئلة الامتحان أو نتائج الطلاب، ويمكن ربطه بحصة أخرى لاحقًا."
+        confirmLabel="إلغاء ربط الامتحان"
+        variant="danger"
+        isConfirming={saving}
+      />
     </div>
   );
 }

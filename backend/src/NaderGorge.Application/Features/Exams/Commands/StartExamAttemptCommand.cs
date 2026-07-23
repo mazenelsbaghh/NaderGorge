@@ -28,15 +28,20 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
 {
     private readonly IAppDbContext _db;
     private readonly IAccessCheckService _access;
+    private readonly IGiftUsageService? _giftUsage;
 
-    public StartExamAttemptCommandHandler(IAppDbContext db, IAccessCheckService access)
+    public StartExamAttemptCommandHandler(IAppDbContext db, IAccessCheckService access, IGiftUsageService? giftUsage = null)
     {
         _db = db;
         _access = access;
+        _giftUsage = giftUsage;
     }
 
     public async Task<ApiResponse<ActiveExamAttemptDto>> Handle(StartExamAttemptCommand request, CancellationToken ct)
     {
+        var examStatus = await _db.Exams.Where(exam => exam.Id == request.ExamId).Select(exam => (bool?)exam.IsActive).FirstOrDefaultAsync(ct);
+        if (examStatus == false)
+            return ApiResponse<ActiveExamAttemptDto>.Fail("هذا الامتحان معطل حالياً.");
         var hasAccess = await _access.HasAccessToExamAsync(request.UserId, request.ExamId, ct);
         if (!hasAccess)
         {
@@ -111,8 +116,8 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                         .OrderByDescending(s => s.SubmittedAt)
                         .FirstOrDefaultAsync(ct);
 
-                    bool prevHwPassed = prevHwSubmission != null 
-                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded 
+                    bool prevHwPassed = prevHwSubmission != null
+                                      && prevHwSubmission.Status == NaderGorge.Domain.Entities.Homework.SubmissionStatus.Graded
                                       && prevHwSubmission.OverallScore >= (prevHomework.PassingScoreThreshold ?? 0);
 
                     if (!prevHwPassed)
@@ -182,6 +187,7 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
         }
         else
         {
+            await using var transaction = await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
             // Pick subset
             var allQuestions = exam.ExamQuestions.AsEnumerable();
             if (exam.IsRandomized)
@@ -228,7 +234,12 @@ public class StartExamAttemptCommandHandler : IRequestHandler<StartExamAttemptCo
                 .ToList();
 
             _db.StudentAnswers.AddRange(answerPlaceholders);
+            if (_giftUsage != null)
+            {
+                await _giftUsage.TryConsumeAsync(request.UserId, Domain.Enums.GiftTargetType.Exam, request.ExamId, ct);
+            }
             await _db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
         }
 
         // Return the active subset

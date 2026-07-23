@@ -1,25 +1,26 @@
-import "@/lib/timezone-bootstrap";
 import type { Metadata } from "next";
-import { Tajawal, Montserrat } from "next/font/google";
+import { Montserrat, Tajawal } from "next/font/google";
 import "./globals.css";
 import { AuthBootstrap } from "@/components/layout/AuthBootstrap";
 import { GlobalNav } from "@/components/layout/GlobalNav";
 import { Toaster } from "react-hot-toast";
 
 const tajawal = Tajawal({
-  variable: "--font-tajawal",
   subsets: ["arabic"],
-  weight: ["400", "500", "700", "800"],
+  weight: ["400", "500", "700", "800", "900"],
+  display: "swap",
+  variable: "--font-tajawal",
 });
 
 const montserrat = Montserrat({
-  variable: "--font-montserrat",
   subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  display: "swap",
+  variable: "--font-montserrat",
 });
 
 export const metadata: Metadata = {
-  title: "منصة مسار | Massar Platform",
+  title: "منصة مسار | Massar Academy",
   description: "المنصة المتكاملة للتعليم الثانوي - منصة مسار",
 };
 
@@ -100,4 +101,3 @@ export default function RootLayout({
     </html>
   );
 }
-

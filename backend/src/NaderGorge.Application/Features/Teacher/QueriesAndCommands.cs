@@ -23,7 +23,22 @@ public record TeacherStudentDto(
     string FullName,
     string PhoneNumber,
     string ActivatedPackageName,
-    DateTime ActivatedAt
+    DateTime ActivatedAt,
+    string? StudentCode,
+    string? SecondaryPhone,
+    string? ParentPhone,
+    string? MotherPhone,
+    string? Governorate,
+    string? District,
+    string? Address,
+    string EducationStage,
+    string GradeLevel,
+    string? StudyTrack,
+    string? SchoolName,
+    string? SchoolType,
+    int ActivePackageCount,
+    int ActiveGrantCount,
+    DateTime? LastActivationAt
 );
 
 public record GetPendingTeacherEssaysQuery(Guid TeacherUserId) : IRequest<ApiResponse<List<PendingEssayDto>>>;
@@ -54,7 +69,8 @@ public record TeacherProfileDto(
     string? AssistantPhoneNumbers,
     string? FacebookUrl,
     string? YouTubeUrl,
-    string? TelegramUrl
+    string? TelegramUrl,
+    string? IntroVideoUrl
 );
 
 public record UpdateTeacherProfileCommand(
@@ -127,19 +143,50 @@ public class GetTeacherStudentsQueryHandler : IRequestHandler<GetTeacherStudents
             return ApiResponse<List<TeacherStudentDto>>.Fail("حساب المعلم غير موجود");
         }
 
+        var teacherPackageIds = await _db.Packages
+            .Where(p => p.TeacherId == teacherProfile.Id)
+            .Select(p => p.Id)
+            .ToListAsync(ct);
+
         var students = await _db.StudentAccessGrants
             .AsNoTracking()
-            .Include(s => s.User)
-            .Where(s => s.GrantType == CodeType.Package && s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
-            .Where(s => _db.Packages.Any(p => p.Id == s.PackageId && p.TeacherId == teacherProfile.Id))
-            .Select(s => new TeacherStudentDto(
-                s.User.Id,
-                s.User.FullName,
-                s.User.PhoneNumber,
-                _db.Packages.Where(p => p.Id == s.PackageId).Select(p => p.Name).FirstOrDefault() ?? string.Empty,
-                s.GrantedAt
+            .Where(s => s.PackageId != null && s.IsActive && (s.ExpiresAt == null || s.ExpiresAt > DateTime.UtcNow))
+            .Where(s => teacherPackageIds.Contains(s.PackageId!.Value))
+            .GroupBy(s => s.UserId)
+            .Select(g => new
+            {
+                UserId = g.Key,
+                FirstActivationAt = g.Min(x => x.GrantedAt),
+                LastActivationAt = g.Max(x => x.GrantedAt),
+                ActiveGrantCount = g.Count(),
+                ActivePackageCount = g.Select(x => x.PackageId).Distinct().Count(),
+                PackageName = _db.Packages
+                    .Where(p => p.Id == g.OrderByDescending(x => x.GrantedAt).Select(x => x.PackageId).FirstOrDefault())
+                    .Select(p => p.Name)
+                    .FirstOrDefault() ?? string.Empty
+            })
+            .Join(_db.Users.Include(u => u.StudentProfile).AsNoTracking(), g => g.UserId, u => u.Id, (g, u) => new TeacherStudentDto(
+                u.Id,
+                u.FullName,
+                u.PhoneNumber,
+                g.PackageName,
+                g.FirstActivationAt,
+                u.StudentProfile != null ? u.StudentProfile.StudentCode : null,
+                u.StudentProfile != null ? u.StudentProfile.SecondaryPhone : null,
+                u.StudentProfile != null ? u.StudentProfile.ParentPhone : null,
+                u.StudentProfile != null ? u.StudentProfile.MotherPhone : null,
+                u.StudentProfile != null ? u.StudentProfile.Governorate : null,
+                u.StudentProfile != null ? u.StudentProfile.District : null,
+                u.StudentProfile != null ? u.StudentProfile.Address : null,
+                u.StudentProfile != null ? u.StudentProfile.EducationStage.ToString() : string.Empty,
+                u.StudentProfile != null ? u.StudentProfile.GradeLevel.ToString() : string.Empty,
+                u.StudentProfile != null && u.StudentProfile.StudyTrack.HasValue ? u.StudentProfile.StudyTrack.Value.ToString() : null,
+                u.StudentProfile != null ? u.StudentProfile.SchoolName : null,
+                u.StudentProfile != null && u.StudentProfile.SchoolType.HasValue ? u.StudentProfile.SchoolType.Value.ToString() : null,
+                g.ActivePackageCount,
+                g.ActiveGrantCount,
+                g.LastActivationAt
             ))
-            .Distinct()
             .ToListAsync(ct);
 
         return ApiResponse<List<TeacherStudentDto>>.Ok(students);
@@ -221,7 +268,8 @@ public class GetTeacherProfileQueryHandler : IRequestHandler<GetTeacherProfileQu
             teacherProfile.AssistantPhoneNumbers,
             teacherProfile.FacebookUrl,
             teacherProfile.YouTubeUrl,
-            teacherProfile.TelegramUrl
+            teacherProfile.TelegramUrl,
+            teacherProfile.IntroVideoUrl
         );
 
         return ApiResponse<TeacherProfileDto>.Ok(dto);

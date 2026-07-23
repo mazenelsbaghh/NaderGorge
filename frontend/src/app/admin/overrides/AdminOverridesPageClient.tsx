@@ -1,7 +1,7 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useId, useState } from 'react';
 import { motion } from 'framer-motion';
 import { LockOpen, RefreshCcw, ShieldAlert } from 'lucide-react';
 
@@ -17,6 +17,66 @@ interface UserItem {
   id: string;
   fullName: string;
   phoneNumber: string;
+}
+
+interface SearchOption {
+  id: string;
+  label: string;
+}
+
+function SearchablePicker({
+  label,
+  placeholder,
+  value,
+  options,
+  onChange,
+  disabled = false,
+  loading = false,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  options: SearchOption[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  const listId = useId();
+  const [query, setQuery] = useState('');
+  const selected = options.find((option) => option.id === value);
+
+  useEffect(() => {
+    setQuery(selected?.label ?? '');
+  }, [selected?.label]);
+
+  function handleChange(nextQuery: string) {
+    setQuery(nextQuery);
+    onChange(options.find((option) => option.label === nextQuery)?.id ?? '');
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <label className="block text-sm font-semibold text-[var(--admin-text)]">{label}</label>
+      <input
+        list={listId}
+        value={query}
+        onChange={(event) => handleChange(event.target.value)}
+        disabled={disabled || loading}
+        placeholder={loading ? 'جارٍ التحميل…' : placeholder}
+        className="admin-input min-h-11 disabled:cursor-not-allowed disabled:opacity-55"
+        aria-label={label}
+      />
+      <datalist id={listId}>
+        {options.map((option) => <option key={option.id} value={option.label} />)}
+      </datalist>
+      {!disabled && !loading && query && !value && (
+        <p className="text-xs text-amber-700">اختر نتيجة من القائمة لإكمال الاختيار.</p>
+      )}
+      {!disabled && !loading && !options.length && (
+        <p className="text-xs text-[var(--admin-muted)]">لا توجد نتائج متاحة الآن.</p>
+      )}
+    </div>
+  );
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -39,6 +99,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 export default function AdminOverridesPageClient() {
   const [packages, setPackages] = useState<PackageDto[]>([]);
   const [students, setStudents] = useState<UserItem[]>([]);
+  const [sharedLoading, setSharedLoading] = useState(true);
+  const [sharedError, setSharedError] = useState<string | null>(null);
 
   const [wPkgId, setWPkgId] = useState('');
   const [wSecId, setWSecId] = useState('');
@@ -49,6 +111,7 @@ export default function AdminOverridesPageClient() {
   const [wLessons, setWLessons] = useState<LessonSummaryDto[]>([]);
   const [wVideos, setWVideos] = useState<VideoDto[]>([]);
   const [wLoading, setWLoading] = useState(false);
+  const [wOptionsLoading, setWOptionsLoading] = useState(false);
   const [wResult, setWResult] = useState<string | null>(null);
 
   const [uPkgId, setUPkgId] = useState('');
@@ -58,6 +121,7 @@ export default function AdminOverridesPageClient() {
   const [uSections, setUSections] = useState<ContentSectionDto[]>([]);
   const [uLessons, setULessons] = useState<LessonSummaryDto[]>([]);
   const [uLoading, setULoading] = useState(false);
+  const [uOptionsLoading, setUOptionsLoading] = useState(false);
   const [uResult, setUResult] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,6 +129,8 @@ export default function AdminOverridesPageClient() {
   }, []);
 
   async function loadSharedData() {
+    setSharedLoading(true);
+    setSharedError(null);
     try {
       const [packagesResponse, usersResponse] = await Promise.all([
         contentService.getPackages(),
@@ -74,6 +140,9 @@ export default function AdminOverridesPageClient() {
       setStudents((usersResponse?.items || []) as UserItem[]);
     } catch (error) {
       devConsole.error(error);
+      setSharedError(getErrorMessage(error, 'تعذر تحميل الباقات أو قائمة الطلاب.'));
+    } finally {
+      setSharedLoading(false);
     }
   }
 
@@ -86,11 +155,16 @@ export default function AdminOverridesPageClient() {
     setWVideos([]);
     if (!pkgId) return setWSections([]);
 
+    setWOptionsLoading(true);
+    setWResult(null);
     try {
       const response = await contentService.getSections(pkgId);
       setWSections((response.data?.data || []) as ContentSectionDto[]);
-    } catch {
+    } catch (error) {
       setWSections([]);
+      setWResult(getErrorMessage(error, 'تعذر تحميل أقسام الباقة.'));
+    } finally {
+      setWOptionsLoading(false);
     }
   }
 
@@ -101,11 +175,16 @@ export default function AdminOverridesPageClient() {
     setWVideos([]);
     if (!secId) return setWLessons([]);
 
+    setWOptionsLoading(true);
+    setWResult(null);
     try {
       const response = await contentService.getLessons(secId);
       setWLessons((response.data?.data || []) as LessonSummaryDto[]);
-    } catch {
+    } catch (error) {
       setWLessons([]);
+      setWResult(getErrorMessage(error, 'تعذر تحميل دروس القسم.'));
+    } finally {
+      setWOptionsLoading(false);
     }
   }
 
@@ -114,11 +193,16 @@ export default function AdminOverridesPageClient() {
     setWVideoId('');
     if (!lessonId) return setWVideos([]);
 
+    setWOptionsLoading(true);
+    setWResult(null);
     try {
       const response = await contentService.getLessonDetail(lessonId);
       setWVideos((response.data?.data?.videos || []) as VideoDto[]);
-    } catch {
+    } catch (error) {
       setWVideos([]);
+      setWResult(getErrorMessage(error, 'تعذر تحميل فيديوهات الدرس.'));
+    } finally {
+      setWOptionsLoading(false);
     }
   }
 
@@ -129,11 +213,16 @@ export default function AdminOverridesPageClient() {
     setULessons([]);
     if (!pkgId) return setUSections([]);
 
+    setUOptionsLoading(true);
+    setUResult(null);
     try {
       const response = await contentService.getSections(pkgId);
       setUSections((response.data?.data || []) as ContentSectionDto[]);
-    } catch {
+    } catch (error) {
       setUSections([]);
+      setUResult(getErrorMessage(error, 'تعذر تحميل أقسام الباقة.'));
+    } finally {
+      setUOptionsLoading(false);
     }
   }
 
@@ -142,11 +231,16 @@ export default function AdminOverridesPageClient() {
     setULessonId('');
     if (!secId) return setULessons([]);
 
+    setUOptionsLoading(true);
+    setUResult(null);
     try {
       const response = await contentService.getLessons(secId);
       setULessons((response.data?.data || []) as LessonSummaryDto[]);
-    } catch {
+    } catch (error) {
       setULessons([]);
+      setUResult(getErrorMessage(error, 'تعذر تحميل دروس القسم.'));
+    } finally {
+      setUOptionsLoading(false);
     }
   }
 
@@ -213,6 +307,15 @@ export default function AdminOverridesPageClient() {
         </AdminStatCard>
       </section>
 
+      {sharedError && (
+        <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <span>{sharedError}</span>
+          <button type="button" onClick={() => void loadSharedData()} className="rounded-lg border border-rose-300 px-3 py-2 font-bold hover:bg-rose-100">
+            إعادة تحميل البيانات
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="admin-panel">
           <div className="mb-6 flex items-center gap-3">
@@ -226,39 +329,14 @@ export default function AdminOverridesPageClient() {
           </div>
 
           <form onSubmit={handleResetWatch} className="space-y-4">
-            <select value={wPkgId} onChange={(event) => handleWPkgChange(event.target.value)} className="admin-input">
-              <option value="">اختر الباقة</option>
-              {packages.map((pkg) => (
-                <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
-              ))}
-            </select>
-            <select value={wSecId} onChange={(event) => handleWSecChange(event.target.value)} disabled={!wPkgId} className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:ring-2 focus:ring-[var(--admin-primary)] disabled:opacity-50">
-              <option value="">اختر القسم</option>
-              {wSections.map((section) => (
-                <option key={section.id} value={section.id}>{section.order}. {section.title}</option>
-              ))}
-            </select>
-            <select value={wLesId} onChange={(event) => handleWLesChange(event.target.value)} disabled={!wSecId} className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:ring-2 focus:ring-[var(--admin-primary)] disabled:opacity-50">
-              <option value="">اختر الدرس</option>
-              {wLessons.map((lesson) => (
-                <option key={lesson.id} value={lesson.id}>{lesson.order}. {lesson.title}</option>
-              ))}
-            </select>
-            <select value={wVideoId} onChange={(event) => setWVideoId(event.target.value)} disabled={!wLesId} required className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:ring-2 focus:ring-[var(--admin-primary)] disabled:opacity-50">
-              <option value="">اختر الفيديو</option>
-              {wVideos.map((video) => (
-                <option key={video.id} value={video.id}>{video.title}</option>
-              ))}
-            </select>
-            <select value={wStudentId} onChange={(event) => setWStudentId(event.target.value)} required className="admin-input">
-              <option value="">اختر الطالب</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>{student.fullName} ({student.phoneNumber})</option>
-              ))}
-            </select>
+            <SearchablePicker label="الباقة" placeholder="ابحث باسم الباقة" value={wPkgId} onChange={(value) => void handleWPkgChange(value)} options={packages.map((pkg) => ({ id: pkg.id, label: pkg.name }))} loading={sharedLoading} />
+            <SearchablePicker label="القسم" placeholder="ابحث باسم القسم" value={wSecId} onChange={(value) => void handleWSecChange(value)} options={wSections.map((section) => ({ id: section.id, label: `${section.order}. ${section.title}` }))} disabled={!wPkgId} loading={wOptionsLoading} />
+            <SearchablePicker label="الدرس" placeholder="ابحث باسم الدرس" value={wLesId} onChange={(value) => void handleWLesChange(value)} options={wLessons.map((lesson) => ({ id: lesson.id, label: `${lesson.order}. ${lesson.title}` }))} disabled={!wSecId} loading={wOptionsLoading} />
+            <SearchablePicker label="الفيديو" placeholder="ابحث باسم الفيديو" value={wVideoId} onChange={setWVideoId} options={wVideos.map((video) => ({ id: video.id, label: video.title }))} disabled={!wLesId} loading={wOptionsLoading} />
+            <SearchablePicker label="الطالب" placeholder="ابحث بالاسم أو رقم الهاتف" value={wStudentId} onChange={setWStudentId} options={students.map((student) => ({ id: student.id, label: `${student.fullName} (${student.phoneNumber})` }))} loading={sharedLoading} />
 
             <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--admin-border)]">
-              <NeumorphButton type="submit" disabled={wLoading} loading={wLoading} intent="primary" size="lg" pill>
+              <NeumorphButton type="submit" disabled={wLoading || !wVideoId || !wStudentId} loading={wLoading} intent="primary" size="lg" pill>
                 تصفير الحد
               </NeumorphButton>
               {wResult ? <span className="text-sm font-semibold text-[var(--admin-primary)]">{wResult}</span> : null}
@@ -278,33 +356,13 @@ export default function AdminOverridesPageClient() {
           </div>
 
           <form onSubmit={handleUnlockLesson} className="space-y-4">
-            <select value={uPkgId} onChange={(event) => handleUPkgChange(event.target.value)} className="admin-input">
-              <option value="">اختر الباقة</option>
-              {packages.map((pkg) => (
-                <option key={pkg.id} value={pkg.id}>{pkg.name}</option>
-              ))}
-            </select>
-            <select value={uSecId} onChange={(event) => handleUSecChange(event.target.value)} disabled={!uPkgId} className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:ring-2 focus:ring-[var(--admin-primary)] disabled:opacity-50">
-              <option value="">اختر القسم</option>
-              {uSections.map((section) => (
-                <option key={section.id} value={section.id}>{section.order}. {section.title}</option>
-              ))}
-            </select>
-            <select value={uLessonId} onChange={(event) => setULessonId(event.target.value)} disabled={!uSecId} required className="w-full rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-[var(--admin-text)] outline-none placeholder:text-[var(--admin-muted)] focus:ring-2 focus:ring-[var(--admin-primary)] disabled:opacity-50">
-              <option value="">اختر الدرس</option>
-              {uLessons.map((lesson) => (
-                <option key={lesson.id} value={lesson.id}>{lesson.order}. {lesson.title}</option>
-              ))}
-            </select>
-            <select value={uStudentId} onChange={(event) => setUStudentId(event.target.value)} required className="admin-input">
-              <option value="">اختر الطالب</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>{student.fullName} ({student.phoneNumber})</option>
-              ))}
-            </select>
+            <SearchablePicker label="الباقة" placeholder="ابحث باسم الباقة" value={uPkgId} onChange={(value) => void handleUPkgChange(value)} options={packages.map((pkg) => ({ id: pkg.id, label: pkg.name }))} loading={sharedLoading} />
+            <SearchablePicker label="القسم" placeholder="ابحث باسم القسم" value={uSecId} onChange={(value) => void handleUSecChange(value)} options={uSections.map((section) => ({ id: section.id, label: `${section.order}. ${section.title}` }))} disabled={!uPkgId} loading={uOptionsLoading} />
+            <SearchablePicker label="الدرس" placeholder="ابحث باسم الدرس" value={uLessonId} onChange={setULessonId} options={uLessons.map((lesson) => ({ id: lesson.id, label: `${lesson.order}. ${lesson.title}` }))} disabled={!uSecId} loading={uOptionsLoading} />
+            <SearchablePicker label="الطالب" placeholder="ابحث بالاسم أو رقم الهاتف" value={uStudentId} onChange={setUStudentId} options={students.map((student) => ({ id: student.id, label: `${student.fullName} (${student.phoneNumber})` }))} loading={sharedLoading} />
 
             <div className="flex items-center justify-between gap-3 pt-4 border-t border-[var(--admin-border)]">
-              <NeumorphButton type="submit" disabled={uLoading} loading={uLoading} intent="primary" size="lg" pill>
+              <NeumorphButton type="submit" disabled={uLoading || !uLessonId || !uStudentId} loading={uLoading} intent="primary" size="lg" pill>
                 فتح الدرس
               </NeumorphButton>
               {uResult ? <span className="text-sm font-semibold text-[var(--admin-primary)]">{uResult}</span> : null}

@@ -1,5 +1,3 @@
-import child_process from 'child_process';
-import util from 'util';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,17 +5,10 @@ import ytDlp from 'youtube-dl-exec';
 import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions/index.js';
 import { NewMessage } from 'telegram/events/index.js';
+import { execFileWithTimeout, fetchWithTimeout } from '../services/workerFetch.js';
 
 const execFileAsync = (file: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
-    return new Promise((resolve, reject) => {
-        child_process.execFile(file, args, (err, stdout, stderr) => {
-            if (err) {
-                reject(Object.assign(err, { stdout, stderr }));
-            } else {
-                resolve({ stdout, stderr });
-            }
-        });
-    });
+    return execFileWithTimeout(file, args, Number.parseInt(process.env.WORKER_DOWNLOAD_TIMEOUT_MS || '600000', 10));
 };
 const ytDlpPath = (ytDlp as any).constants.YOUTUBE_DL_PATH;
 
@@ -250,8 +241,10 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
         // ── Try Cobalt API First (Bypasses YouTube bot block without cookies/local binaries) ──
         try {
             console.log(`[Youtube-DL] Attempting extraction via Cobalt API for: ${url}`);
-            const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+            const cobaltRes = await fetchWithTimeout('https://api.cobalt.tools/api/json', {
                 method: 'POST',
+                timeoutMs: Number.parseInt(process.env.WORKER_DOWNLOAD_TIMEOUT_MS || '120000', 10),
+                operation: 'cobalt',
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
@@ -273,7 +266,10 @@ export async function extractAudioFromVideo(sourceUrl: string, outputFileName: s
             }
 
             console.log(`[Youtube-DL] Cobalt returned direct audio URL. Downloading...`);
-            const fileResponse = await fetch(data.url);
+            const fileResponse = await fetchWithTimeout(data.url, {
+                timeoutMs: Number.parseInt(process.env.WORKER_DOWNLOAD_TIMEOUT_MS || '120000', 10),
+                operation: 'download',
+            });
             if (!fileResponse.ok) {
                 throw new Error(`Failed to download audio file: ${fileResponse.statusText}`);
             }

@@ -2,6 +2,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Common.HR;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Interfaces;
@@ -13,7 +14,12 @@ public record ClockInCommand(
     Guid UserId,
     string IpAddress,
     string UserAgent
-) : IRequest<ApiResponse<Guid>>;
+) : IRequest<ApiResponse<Guid>>, IHrAuthorizedRequest
+{
+    public string RequiredPermission => HrPermissions.AttendanceSelf;
+    public HrAccessScope RequiredScope => HrAccessScope.Self;
+    public Guid? ResourceUserId => UserId;
+}
 
 public class ClockInCommandValidator : AbstractValidator<ClockInCommand>
 {
@@ -27,11 +33,13 @@ public class ClockInCommandHandler : IRequestHandler<ClockInCommand, ApiResponse
 {
     private readonly IAppDbContext _db;
     private readonly ILiveSupportAssignmentCoordinator? _assignmentCoordinator;
+    private readonly IHrAuditWriter _audit;
 
-    public ClockInCommandHandler(IAppDbContext db, ILiveSupportAssignmentCoordinator? assignmentCoordinator = null)
+    public ClockInCommandHandler(IAppDbContext db, ILiveSupportAssignmentCoordinator? assignmentCoordinator = null, IHrAuditWriter? audit = null)
     {
         _db = db;
         _assignmentCoordinator = assignmentCoordinator;
+        _audit = audit ?? new HrAuditWriter(db, DetachedHrRequestContext.Instance);
     }
 
     public async Task<ApiResponse<Guid>> Handle(ClockInCommand request, CancellationToken ct)
@@ -96,6 +104,9 @@ public class ClockInCommandHandler : IRequestHandler<ClockInCommand, ApiResponse
         };
 
         _db.AttendanceLogs.Add(attendanceLog);
+        await _audit.WriteMutationAsync("ClockIn", nameof(AttendanceLog), attendanceLog.Id, null,
+            new { attendanceLog.Date, attendanceLog.ClockIn, attendanceLog.Status, attendanceLog.LateMinutes },
+            "Employee clock-in", ct, request.UserId);
         if (await _db.LiveSupportStaffConfigs.AnyAsync(x => x.UserId == request.UserId && x.IsEnabled, ct))
         {
             _db.OutboxEvents.Add(new OutboxEvent

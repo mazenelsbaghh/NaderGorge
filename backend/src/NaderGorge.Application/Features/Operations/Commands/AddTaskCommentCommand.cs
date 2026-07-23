@@ -57,7 +57,7 @@ public class AddTaskCommentCommandHandler : IRequestHandler<AddTaskCommentComman
 
         if (!isManager && task.AssigneeId != request.UserId && task.CreatedById != request.UserId)
         {
-            throw new UnauthorizedAccessException("You are not authorized to comment on this task.");
+            throw new ForbiddenException("You are not authorized to comment on this task.");
         }
 
         var comment = new TaskComment

@@ -61,7 +61,7 @@ public class AdminResolveApprovalCommandHandler : IRequestHandler<AdminResolveAp
         var isManager = user.UserRoles.Any(ur => ur.Role.Type == RoleType.Admin || ur.Role.Type == RoleType.Supervisor);
         if (!isManager)
         {
-            throw new UnauthorizedAccessException("Only managers (Admin or Supervisor) can approve or reject tasks.");
+            throw new ForbiddenException("Only managers (Admin or Supervisor) can approve or reject tasks.");
         }
 
         if (request.Approve)

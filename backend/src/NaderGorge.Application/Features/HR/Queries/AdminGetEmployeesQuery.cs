@@ -7,7 +7,22 @@ namespace NaderGorge.Application.Features.HR.Queries;
 
 public record AdminGetEmployeesQuery(string? Search = null) : IRequest<ApiResponse<List<EmployeeDto>>>;
 
+public record EmployeeProfileDto(
+    Guid Id,
+    string EmployeeNumber,
+    string EmploymentStatus,
+    DateOnly HireDate,
+    DateOnly? TerminationDate,
+    string WorkMode,
+    decimal BasicSalary,
+    string StandardStartTime,
+    int TargetDailyHours,
+    DateTime? UpdatedAt,
+    string? RowVersion
+);
+
 public record EmployeeDto(
+    Guid Id,
     Guid UserId,
     string FullName,
     string PhoneNumber,
@@ -15,7 +30,9 @@ public record EmployeeDto(
     decimal? BasicSalary,
     string? StandardStartTime,
     int? TargetDailyHours,
-    bool HasProfile
+    bool HasProfile,
+    EmployeeProfileDto? EmployeeProfile,
+    string? RowVersion
 );
 
 public class AdminGetEmployeesQueryHandler : IRequestHandler<AdminGetEmployeesQuery, ApiResponse<List<EmployeeDto>>>
@@ -29,29 +46,49 @@ public class AdminGetEmployeesQueryHandler : IRequestHandler<AdminGetEmployeesQu
 
     public async Task<ApiResponse<List<EmployeeDto>>> Handle(AdminGetEmployeesQuery request, CancellationToken ct)
     {
-        var usersQuery = _db.Users
-            .Include(u => u.UserRoles).ThenInclude(ur => ur.Role)
-            .Include(u => u.EmployeeProfile)
-            .Where(u => u.UserRoles.Any(ur => ur.Role.Name != "Student")); // Non-students
+        var profilesQuery = _db.EmployeeProfiles
+            .Include(profile => profile.User)!
+                .ThenInclude(user => user!.UserRoles)
+                    .ThenInclude(userRole => userRole.Role)
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var searchLower = request.Search.ToLower();
-            usersQuery = usersQuery.Where(u => u.FullName.ToLower().Contains(searchLower) || u.PhoneNumber.Contains(searchLower));
+            profilesQuery = profilesQuery.Where(profile =>
+                profile.User != null &&
+                (profile.User.FullName.ToLower().Contains(searchLower) ||
+                 profile.User.PhoneNumber.Contains(searchLower)));
         }
 
-        var users = await usersQuery.ToListAsync(ct);
+        var profiles = await profilesQuery.ToListAsync(ct);
 
-        var dtos = users.Select(u => new EmployeeDto(
-            u.Id,
-            u.FullName,
-            u.PhoneNumber,
-            u.UserRoles.Select(ur => ur.Role.Name).ToArray(),
-            u.EmployeeProfile?.BasicSalary,
-            u.EmployeeProfile?.StandardStartTime.ToString(@"hh\:mm\:ss"),
-            u.EmployeeProfile?.TargetDailyHours,
-            u.EmployeeProfile != null
-        )).ToList();
+        var dtos = profiles
+            .Where(profile => profile.User != null)
+            .Select(profile => new EmployeeDto(
+                profile.UserId,
+                profile.UserId,
+                profile.User!.FullName,
+                profile.User.PhoneNumber,
+                profile.User.UserRoles.Select(userRole => userRole.Role.Name).ToArray(),
+                profile.BasicSalary,
+                profile.StandardStartTime.ToString(@"hh\:mm\:ss"),
+                profile.TargetDailyHours,
+                true,
+                new EmployeeProfileDto(
+                    profile.Id,
+                    profile.EmployeeNumber,
+                    profile.EmploymentStatus.ToString(),
+                    profile.HireDate,
+                    profile.TerminationDate,
+                    profile.WorkMode.ToString(),
+                    profile.BasicSalary,
+                    profile.StandardStartTime.ToString(@"hh\:mm\:ss"),
+                    profile.TargetDailyHours,
+                    profile.UpdatedAt,
+                    profile.UpdatedAt?.ToString("O")),
+                profile.UpdatedAt?.ToString("O")))
+            .ToList();
 
         return ApiResponse<List<EmployeeDto>>.Ok(dtos);
     }

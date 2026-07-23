@@ -114,5 +114,5 @@ public sealed record LiveSupportAIRecoveryBatchResultDto(
     int StaleTurns,
     int ExpiredDecisions,
     int ExpiredVerifications,
-    int InactivityWarnings,
+    int AutoClosedConversations,
     int ReconciledConversations);

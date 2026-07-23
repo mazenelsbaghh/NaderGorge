@@ -38,6 +38,8 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
 
     public async Task<ApiResponse<AndroidSmsUploadDto>> Handle(AndroidUploadSmsCommand request, CancellationToken ct)
     {
+        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+
         if (string.IsNullOrWhiteSpace(request.PairingToken))
             return ApiResponse<AndroidSmsUploadDto>.Fail("pairing token invalid");
 
@@ -102,6 +104,7 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
                     r.WalletId == wallet.Id &&
                     r.Amount == amount &&
                     r.SenderPhoneNumber == senderPhone &&
+                    r.ScreenshotUrl != null && r.ScreenshotUrl != "" &&
                     r.Status == RechargeRequestStatus.Pending &&
                     r.CreatedAt >= startTime &&
                     r.CreatedAt <= endTime, ct);
@@ -110,7 +113,7 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
             {
                 // Run in transaction to ensure atomicity
                 var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
-                var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+                var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
                 
                 try
                 {
@@ -190,4 +193,5 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         }
         return sb.ToString();
     }
+
 }

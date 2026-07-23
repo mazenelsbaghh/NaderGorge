@@ -4,6 +4,9 @@ import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { getApps, initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
+import fs from 'node:fs';
+import { fetchWithTimeout } from '../services/workerFetch.js';
+import { randomUUID } from 'node:crypto';
 
 dotenv.config();
 
@@ -31,6 +34,15 @@ if (getApps().length === 0) {
         credential: applicationDefault()
       });
     }
+  } else if (process.env.FIREBASE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.FIREBASE_APPLICATION_CREDENTIALS)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(process.env.FIREBASE_APPLICATION_CREDENTIALS, 'utf8'));
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+    initializeApp({
+      credential: applicationDefault()
+    });
   } else {
     // For testing/CI without credentials, use a dummy project ID so it won't throw
     initializeApp({
@@ -61,8 +73,10 @@ async function sendWhatsAppMessage(phone: string, text: string) {
     }
 
     const url = `${baseUrl}/message/sendText/${instance}`;
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
         method: 'POST',
+        timeoutMs: 10_000,
+        operation: 'evolution-whatsapp',
         headers: {
             'apikey': apiKey,
             'Content-Type': 'application/json'
@@ -85,10 +99,29 @@ async function sendWhatsAppMessage(phone: string, text: string) {
     }
 }
 
-export async function processParentPushNotification(studentId: string, title: string, body: string, category: string) {
+async function persistParentPushNotification(studentId: string, title: string, body: string) {
+  await pool.query(
+    `INSERT INTO "notification_events" ("Id", "UserId", "ChannelType", "Title", "Body", "Status", "CreatedAt")
+     SELECT $1, $2, 0, $3, $4, 1, NOW()
+     WHERE NOT EXISTS (
+       SELECT 1
+       FROM "notification_events"
+       WHERE "UserId" = $2
+         AND "Title" = $3
+         AND "Body" = $4
+         AND "CreatedAt" > NOW() - INTERVAL '30 minutes'
+     )`,
+    [randomUUID(), studentId, title, body]
+  );
+}
+
+export async function processParentPushNotification(studentId: string, title: string, body: string, category: string, persistInApp = true) {
   // Load FCM tokens from ParentDeviceTokens linked to StudentId.
   const res = await pool.query(
-    'SELECT "DeviceToken" FROM "ParentDeviceTokens" WHERE "StudentId" = $1',
+    `SELECT DISTINCT pdt."DeviceToken"
+     FROM "ParentDeviceTokens" pdt
+     LEFT JOIN student_profiles sp ON sp."Id" = pdt."StudentId"
+     WHERE pdt."StudentId" = $1 OR sp."UserId" = $1`,
     [studentId]
   );
   
@@ -97,6 +130,10 @@ export async function processParentPushNotification(studentId: string, title: st
   if (tokens.length === 0) {
     console.log(`[NotificationSender] No parent device tokens found for studentId ${studentId}`);
     return { success: true, reason: 'no_tokens', tokensCount: 0 };
+  }
+
+  if (persistInApp) {
+    await persistParentPushNotification(studentId, title, body);
   }
 
   const message = {
@@ -161,11 +198,11 @@ export async function processNotificationJob(job: Job) {
     }
 
     if (job.name === 'parent-push') {
-        const { StudentId, studentId, Title, title, Body, body, Category, category } = data;
+        const { StudentId, studentId, Title, title, Body, body, Category, category, HomeworkTitle, homeworkTitle } = data;
         const actualStudentId = StudentId || studentId;
-        const actualTitle = Title || title;
-        const actualBody = Body || body;
         const actualCategory = Category || category || 'General';
+        const actualTitle = Title || title || defaultParentPushTitle(actualCategory);
+        const actualBody = Body || body || defaultParentPushBody(actualCategory, HomeworkTitle || homeworkTitle);
 
         if (!actualStudentId || !actualTitle || !actualBody) {
             throw new Error('StudentId, Title, and Body are required for parent-push notification jobs.');
@@ -207,7 +244,7 @@ export async function processNotificationJob(job: Job) {
             const title = `تنبيه أكاديمي جديد`;
             const body = `تم تسجيل تنبيه جديد لولدكم: ${Message || 'غير محدد'}`;
             const actualCategory = Category || 'Warning';
-            parentPushResult = await processParentPushNotification(StudentId, title, body, actualCategory);
+            parentPushResult = await processParentPushNotification(StudentId, title, body, actualCategory, false);
             parentPushSent = true;
         }
 
@@ -221,4 +258,31 @@ export async function processNotificationJob(job: Job) {
     }
 
     throw new Error('Unsupported notification job payload.');
+}
+
+function defaultParentPushTitle(category: string) {
+    switch ((category || '').toLowerCase()) {
+        case 'homework':
+            return 'تسليم واجب جديد';
+        case 'exam':
+            return 'حل اختبار جديد';
+        case 'purchase':
+            return 'شراء جديد للطالب';
+        default:
+            return 'تنبيه جديد لولي الأمر';
+    }
+}
+
+function defaultParentPushBody(category: string, itemTitle?: string) {
+    const safeTitle = itemTitle ? `: ${itemTitle}` : '';
+    switch ((category || '').toLowerCase()) {
+        case 'homework':
+            return `تم تسليم واجب جديد${safeTitle}.`;
+        case 'exam':
+            return `تم حل اختبار جديد${safeTitle}.`;
+        case 'purchase':
+            return `تم تفعيل محتوى جديد للطالب${safeTitle}.`;
+        default:
+            return 'يوجد تحديث جديد في متابعة الطالب.';
+    }
 }

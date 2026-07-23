@@ -1,8 +1,13 @@
 import apiClient from './api-client';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
+import type { AcademicScopePayload, EducationStage, GradeLevel } from '@/lib/academic-labels';
 
 // ── Code Types ───────────────────────────────────────────────────────────────
 export type CodeType = 'Package' | 'Term' | 'Month' | 'Lesson' | 'Video' | 'Exam' | 'Balance';
+export type CodeRevenueOwner = 'Platform' | 'Teacher';
+export type CodeRevenueAllocationMode = 'Percentage' | 'FixedAmount';
+export type CodeAccountingTiming = 'OnActivation' | 'Immediate';
+export type { AcademicScopePayload };
 
 export interface CreateCodeGroupData {
   groupName: string;
@@ -14,10 +19,27 @@ export interface CreateCodeGroupData {
   contentSectionId?: string;
   lessonId?: string;
   examId?: string;
+  publicExamProductId?: string;
+  videoTypeId?: string;
+  includeFutureVideos?: boolean;
   videoTargetIds?: string[];
   balanceAmount?: number;
+  teacherId?: string;
   discountPercentage?: number;
+  revenueOwner?: CodeRevenueOwner;
+  revenueAllocationMode?: CodeRevenueAllocationMode;
+  revenueAllocationValue?: number;
+  accountingTiming?: CodeAccountingTiming;
   expiresAt?: string;
+  expireActivatedAccess?: boolean;
+  academicScopes?: AcademicScopePayload[];
+}
+
+export interface AcademicSubjectEligibility {
+  educationStage: EducationStage;
+  gradeLevel: GradeLevel;
+  subjectId: string;
+  subjectName: string;
 }
 
 export interface CodeGroupResponse {
@@ -43,6 +65,10 @@ export interface ApiResponse<T = any> {
 
 // ── Code Service ─────────────────────────────────────────────────────────────
 export const codeService = {
+  getAcademicSubjectEligibilities: () =>
+    apiClient.get<ApiResponse<AcademicSubjectEligibility[]>>('/admin/codes/academic-subject-eligibilities')
+      .then((response) => response.data.data ?? []),
+
   /** Create a new code group with the specified type and targets */
   createCodeGroup: (data: CreateCodeGroupData) => {
     const isTeacher = getSurfaceName() === 'teacher';

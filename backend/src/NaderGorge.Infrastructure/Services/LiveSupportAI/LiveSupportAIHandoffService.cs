@@ -22,6 +22,11 @@ public sealed class LiveSupportAIHandoffService(IAppDbContext db, ILiveSupportAs
             await relational.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(hashtextextended({0}, 146))", [conversationId.ToString("N")], cancellationToken);
         var conversation = await db.LiveSupportConversations.SingleOrDefaultAsync(item => item.Id == conversationId, cancellationToken)
             ?? throw new LiveSupportException("NOT_FOUND", "المحادثة غير موجودة.");
+        if (conversation.Status is LiveSupportConversationStatus.Closed or LiveSupportConversationStatus.Abandoned)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return "REPLAYED";
+        }
         if (participant is not null &&
             ((participant.StudentUserId.HasValue && participant.StudentUserId != conversation.StudentUserId) ||
              (participant.GuestSessionId.HasValue && participant.GuestSessionId != conversation.GuestSessionId)))
@@ -81,10 +86,27 @@ public sealed class LiveSupportAIHandoffService(IAppDbContext db, ILiveSupportAs
         var eventId = Guid.NewGuid();
         db.LiveSupportEvents.Add(new LiveSupportEvent { Id = eventId, ConversationId = conversationId, Type = LiveSupportEventType.AIHandoffCompleted, ActorUserId = actorUserId, ActorGuestSessionId = participant?.GuestSessionId, OccurredAt = now, Sequence = now.Ticks, SafeMetadataJson = JsonSerializer.Serialize(new { reasonCode, forced }) });
         db.OutboxEvents.Add(new OutboxEvent { Type = "LiveSupportEvent", TargetGroup = $"LiveSupport:Conversation:{conversationId:N}", PayloadJson = JsonSerializer.Serialize(new { eventId, conversationId, sequence = now.Ticks, occurredAt = now, type = "AIHandoffCompleted", payload = new { reasonCode, forced } }) });
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsOpenConversationConflict(exception))
+        {
+            // A concurrent or previously recovered conversation is already open for this
+            // participant. The partial unique index is the source of truth, so do not let
+            // the recovery loop fail repeatedly trying to create another handoff.
+            return "REPLAYED";
+        }
         await transaction.CommitAsync(cancellationToken);
         await assignmentCoordinator.AssignWaitingAsync(cancellationToken);
         LiveSupportAITelemetry.Handoffs.Add(1, new KeyValuePair<string, object?>("reason_code", reasonCode), new KeyValuePair<string, object?>("forced", forced));
         return "HANDED_OFF";
     }
+
+    private static bool IsOpenConversationConflict(DbUpdateException exception) =>
+        exception.InnerException is Npgsql.PostgresException
+        {
+            SqlState: Npgsql.PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "IX_live_support_conversations_StudentUserId" or "IX_live_support_conversations_GuestSessionId"
+        };
 }

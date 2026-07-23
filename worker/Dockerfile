@@ -33,9 +33,10 @@ ENV NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_PROGRESS=false \
     NPM_CONFIG_UPDATE_NOTIFIER=false
 
-# Install ffmpeg and python3 in the runtime image too, and curl for healthchecks
+# Install ffmpeg and python3 in the runtime image too, curl for healthchecks,
+# and gosu so the entrypoint can prepare root-owned secrets before dropping privileges.
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg python3 curl \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ffmpeg python3 curl gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install only production dependencies
@@ -49,6 +50,15 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
+RUN groupadd --system --gid 10001 worker \
+    && useradd --system --uid 10001 --gid worker --home-dir /app --shell /usr/sbin/nologin worker \
+    && mkdir -p /app/.tmp /app/.secrets \
+    && chown -R worker:worker /app
+
+COPY docker-entrypoint.sh /usr/local/bin/worker-entrypoint.sh
+RUN chmod +x /usr/local/bin/worker-entrypoint.sh
+
 EXPOSE 3001
 
+ENTRYPOINT ["worker-entrypoint.sh"]
 CMD ["node", "dist/index.js"]

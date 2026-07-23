@@ -40,3 +40,21 @@ export function logQueueEvent(queueName: string, message: string, details: Recor
   );
   console.log(`[${queueName}] ${message}`, safeDetails);
 }
+
+export function logInfo(scope: string, message: string, details: Record<string, unknown> = {}) {
+  logQueueEvent(scope, message, details);
+}
+
+export function logWarn(scope: string, message: string, details: Record<string, unknown> = {}) {
+  const safeDetails = Object.fromEntries(
+    Object.entries(details).map(([key, value]) => [key, redactValue(key, value)])
+  );
+  console.warn(`[${scope}] ${message}`, safeDetails);
+}
+
+export function logError(scope: string, message: string, details: Record<string, unknown> = {}) {
+  const safeDetails = Object.fromEntries(
+    Object.entries(details).map(([key, value]) => [key, redactValue(key, value)])
+  );
+  console.error(`[${scope}] ${message}`, safeDetails);
+}

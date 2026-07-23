@@ -62,15 +62,18 @@ public class CommissionTests
         Assert.True(result.Success);
         Assert.Equal(200.00m, result.Data!.Amount);
         Assert.Equal("Pending", result.Data.Status);
+        Assert.Equal(200.00m, result.Data.ReservedBalance);
+        Assert.Equal(300.00m, result.Data.AvailableBalance);
 
         var payout = await db.TeacherPayouts.FirstOrDefaultAsync(p => p.TeacherId == teacherProfile.Id);
         Assert.NotNull(payout);
         Assert.Equal(200.00m, payout!.Amount);
         Assert.Equal(PayoutStatus.Pending, payout.Status);
 
-        // Verify balance not deducted yet
+        // Verify balance is reserved, not deducted yet.
         var updatedAccount = await db.TeacherAccounts.FindAsync(account.Id);
         Assert.Equal(500.00m, updatedAccount!.CurrentBalance);
+        Assert.Equal(200.00m, updatedAccount.ReservedBalance);
     }
 
     [Fact]
@@ -107,12 +110,12 @@ public class CommissionTests
             CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains("رصيدك الحالي لا يكفي", result.Message);
+        Assert.Contains("رصيدك المتاح لا يكفي", result.Message);
     }
 
     [Fact]
     [Trait("Category", "Finance")]
-    public async Task ResolvePayout_Approve_DeductsBalance()
+    public async Task ResolvePayout_ApproveThenPaid_DeductsBalanceOnlyWhenPaid()
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
 
@@ -131,6 +134,7 @@ public class CommissionTests
             TeacherId = teacherProfile.Id,
             TotalEarnings = 500.00m,
             CurrentBalance = 500.00m,
+            ReservedBalance = 200.00m,
             CommissionRate = 0.15m
         };
         db.TeacherAccounts.Add(account);
@@ -149,18 +153,34 @@ public class CommissionTests
         var audit = new TestAuditRepository();
         var handler = new ResolvePayoutCommandHandler(db, audit);
 
-        var result = await handler.Handle(
-            new ResolvePayoutCommand(payout.Id, PayoutStatus.Paid, null, adminUser.Id),
+        var approveResult = await handler.Handle(
+            new ResolvePayoutCommand(payout.Id, PayoutStatus.Approved, null, adminUser.Id),
             CancellationToken.None);
 
-        Assert.True(result.Success);
+        Assert.True(approveResult.Success);
 
         var updatedPayout = await db.TeacherPayouts.FindAsync(payout.Id);
-        Assert.Equal(PayoutStatus.Paid, updatedPayout!.Status);
+        Assert.Equal(PayoutStatus.Approved, updatedPayout!.Status);
+        Assert.Equal(adminUser.Id, updatedPayout.ApprovedByUserId);
         Assert.Equal(adminUser.Id, updatedPayout.HandledByUserId);
 
         var updatedAccount = await db.TeacherAccounts.FindAsync(account.Id);
+        Assert.Equal(500.00m, updatedAccount!.CurrentBalance);
+        Assert.Equal(200.00m, updatedAccount.ReservedBalance);
+
+        var paidResult = await handler.Handle(
+            new ResolvePayoutCommand(payout.Id, PayoutStatus.Paid, null, adminUser.Id),
+            CancellationToken.None);
+
+        Assert.True(paidResult.Success);
+
+        updatedPayout = await db.TeacherPayouts.FindAsync(payout.Id);
+        Assert.Equal(PayoutStatus.Paid, updatedPayout!.Status);
+        Assert.Equal(adminUser.Id, updatedPayout.PaidByUserId);
+
+        updatedAccount = await db.TeacherAccounts.FindAsync(account.Id);
         Assert.Equal(300.00m, updatedAccount!.CurrentBalance);
+        Assert.Equal(0.00m, updatedAccount.ReservedBalance);
     }
 
     [Fact]
@@ -184,6 +204,7 @@ public class CommissionTests
             TeacherId = teacherProfile.Id,
             TotalEarnings = 500.00m,
             CurrentBalance = 500.00m,
+            ReservedBalance = 200.00m,
             CommissionRate = 0.15m
         };
         db.TeacherAccounts.Add(account);
@@ -214,6 +235,7 @@ public class CommissionTests
 
         var updatedAccount = await db.TeacherAccounts.FindAsync(account.Id);
         Assert.Equal(500.00m, updatedAccount!.CurrentBalance);
+        Assert.Equal(0.00m, updatedAccount.ReservedBalance);
     }
 
     [Fact]
@@ -242,6 +264,45 @@ public class CommissionTests
         Assert.Equal(teacherProfile.Id, result.Data!.TeacherId);
         Assert.Equal("Test Teacher 6", result.Data.TeacherName);
         Assert.Equal(0m, result.Data.CurrentBalance);
+        Assert.Equal(0m, result.Data.ReservedBalance);
+        Assert.Equal(0m, result.Data.AvailableBalance);
         Assert.Equal(0.10m, result.Data.CommissionRate);
+    }
+
+    [Fact]
+    [Trait("Category", "Finance")]
+    public async Task RequestPayout_WhenPendingReserveExists_UsesAvailableBalance()
+    {
+        await using AppDbContext db = TestAppDbContextFactory.Create();
+
+        var teacherUser = await TestAppDbContextFactory.SeedUserAsync(db, "Test Teacher Reserve", "01014141414");
+        var teacherProfile = new TeacherProfile
+        {
+            Id = Guid.NewGuid(),
+            UserId = teacherUser.Id,
+            CommissionRate = 0.15m
+        };
+        db.TeacherProfiles.Add(teacherProfile);
+
+        db.TeacherAccounts.Add(new TeacherAccount
+        {
+            Id = Guid.NewGuid(),
+            TeacherId = teacherProfile.Id,
+            TotalEarnings = 500.00m,
+            CurrentBalance = 500.00m,
+            ReservedBalance = 200.00m,
+            CommissionRate = 0.15m
+        });
+        await db.SaveChangesAsync();
+
+        var handler = new RequestPayoutCommandHandler(db, new TestAuditRepository());
+
+        var result = await handler.Handle(
+            new RequestPayoutCommand(teacherUser.Id, 350.00m),
+            CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("رصيدك المتاح لا يكفي", result.Message);
+        Assert.Empty(db.TeacherPayouts);
     }
 }

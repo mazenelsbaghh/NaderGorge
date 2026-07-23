@@ -1,4 +1,5 @@
 import apiClient from './api-client';
+import { invalidateMany } from '@/lib/cache-invalidation';
 
 export type MediaStage = 'Preparation' | 'Filming' | 'Editing' | 'Uploading' | 'Review' | 'Approved' | 'Published';
 
@@ -101,11 +102,17 @@ export const mediaService = {
 
   createPipeline: (payload: CreateMediaPipelinePayload) =>
     apiClient.post<ApiResponse<MediaPipelineDto>>('/admin/media/pipelines', payload)
-      .then(r => r.data),
+      .then(r => {
+        invalidateMany(['media:pipelines', 'media:kpis', 'reports']);
+        return r.data;
+      }),
 
   updatePipeline: (id: string, payload: UpdateMediaPipelinePayload) =>
     apiClient.put<ApiResponse<void>>(`/admin/media/pipelines/${id}`, payload)
-      .then(r => r.data),
+      .then(r => {
+        invalidateMany(['media:pipelines', `media:pipeline:${id}`, 'media:kpis', 'reports']);
+        return r.data;
+      }),
 
   getSocialPlans: (params?: { startDate?: string; endDate?: string }) => {
     const query = new URLSearchParams();
@@ -117,7 +124,10 @@ export const mediaService = {
 
   createSocialPlan: (payload: CreateSocialPlanPayload) =>
     apiClient.post<ApiResponse<SocialMediaPlanDto>>('/admin/media/social-plans', payload)
-      .then(r => r.data),
+      .then(r => {
+        invalidateMany(['media:social-plans', 'reports']);
+        return r.data;
+      }),
 
   getMediaKpis: () =>
     apiClient.get<ApiResponse<MediaKpisDto>>('/admin/media/reports/kpis')

@@ -59,6 +59,104 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         return definitions;
     }
 
+    public async Task<JsonElement> GetDraftAsync(Guid actorUserId, bool isAdmin, Guid conversationId, string actionKey, CancellationToken ct)
+    {
+        var conversation = await RequireConversationAsync(actorUserId, isAdmin, conversationId, actionKey == "student.create-and-link", ct);
+        if (!Catalog.Any(item => item.Key == actionKey)) throw new LiveSupportException("ACTION_NOT_SUPPORTED", "الإجراء غير مدعوم.");
+        return JsonSerializer.SerializeToElement(conversation.LinkedStudentUserId.HasValue
+            ? await BuildActionDraftAsync(conversation.LinkedStudentUserId.Value, actionKey, ct)
+            : new Dictionary<string, object?>());
+    }
+
+    public async Task<JsonElement> GetStudentActionContextAsync(Guid actorUserId, bool isAdmin, Guid conversationId, CancellationToken ct)
+    {
+        var conversation = await RequireConversationAsync(actorUserId, isAdmin, conversationId, false, ct);
+        var studentId = conversation.LinkedStudentUserId ?? throw new LiveSupportException("STUDENT_NOT_LINKED", "اربط المحادثة بطالب أولًا.");
+        var now = DateTime.UtcNow;
+        var grants = await _db.StudentAccessGrants.AsNoTracking().Where(grant => grant.UserId == studentId && grant.IsActive && (grant.ExpiresAt == null || grant.ExpiresAt > now) && (grant.MaxUses == null || grant.UsesConsumed < grant.MaxUses)).ToListAsync(ct);
+        var videos = await _db.LessonVideos.AsNoTracking().Where(video => video.IsActive).Select(video => new
+        {
+            video.Id, video.VideoTypeId, video.Title, video.MaxWatchCount,
+            LessonId = video.LessonId, SectionId = video.Lesson.ContentSectionId, TermId = video.Lesson.ContentSection.TermId, PackageId = video.Lesson.ContentSection.Term.PackageId,
+            Teacher = video.Lesson.ContentSection.Term.Package.Teacher.User.FullName, Subject = video.Lesson.ContentSection.Term.Package.Subject.Name, Package = video.Lesson.ContentSection.Term.Package.Name,
+            Term = video.Lesson.ContentSection.Term.Title, Course = video.Lesson.ContentSection.Title, Lesson = video.Lesson.Title
+        }).ToListAsync(ct);
+        var subscribed = videos.Where(video => grants.Any(grant =>
+            grant.PackageId == video.PackageId || grant.TermId == video.TermId || grant.ContentSectionId == video.SectionId || grant.LessonId == video.LessonId || grant.LessonVideoId == video.Id ||
+            (grant.VideoTypeId == video.VideoTypeId && (grant.PackageId == null || grant.PackageId == video.PackageId) && (grant.TermId == null || grant.TermId == video.TermId) && (grant.ContentSectionId == null || grant.ContentSectionId == video.SectionId) && (grant.LessonId == null || grant.LessonId == video.LessonId)))).ToList();
+        var watched = await _db.VideoWatchEvents.AsNoTracking().Where(item => item.UserId == studentId).Select(item => new { item.LessonVideoId, item.WatchCount }).ToDictionaryAsync(item => item.LessonVideoId, item => item.WatchCount, ct);
+        var devices = await _db.Devices.AsNoTracking()
+            .Where(item => item.UserId == studentId && item.IsActive)
+            .OrderByDescending(item => item.LastUsedAt)
+            .Select(item => new { item.Id, item.DeviceType, item.OsName, item.BrowserName })
+            .ToListAsync(ct);
+        var notes = await _db.StudentNotes.AsNoTracking().Where(item => item.StudentId == studentId).OrderByDescending(item => item.IsPinned).ThenByDescending(item => item.CreatedAt).Select(item => new { id = item.Id, label = item.Content }).ToListAsync(ct);
+        var displayGrants = await _db.StudentAccessGrants.AsNoTracking().Where(item => item.UserId == studentId && item.IsActive).OrderByDescending(item => item.GrantedAt).Select(item => new { item.Id, item.GrantType, item.PackageId, item.TermId, item.ContentSectionId, item.LessonId, item.LessonVideoId }).ToListAsync(ct);
+        var grantedPackageIds = displayGrants.Where(grant => grant.PackageId.HasValue).Select(grant => grant.PackageId!.Value).Distinct().ToList();
+        var packageNames = await _db.Packages.AsNoTracking().Where(item => grantedPackageIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.Name, ct);
+        var requests = await _db.ExtraWatchRequests.AsNoTracking().Where(item => item.UserId == studentId && item.Status == RequestStatus.Pending).OrderByDescending(item => item.CreatedAt).Select(item => new { id = item.Id, label = item.LessonVideo.Lesson.Title + " · " + item.LessonVideo.Title }).ToListAsync(ct);
+        var staff = await _db.EmployeeProfiles.AsNoTracking().Where(item => item.User != null).OrderBy(item => item.User!.FullName).Select(item => new { id = item.UserId, label = item.User!.FullName }).ToListAsync(ct);
+        var balance = await _db.StudentBalances.AsNoTracking().Where(item => item.UserId == studentId).Select(item => (decimal?)item.CurrentBalance).SingleOrDefaultAsync(ct) ?? 0;
+        var points = await _db.StudentGamifications.AsNoTracking().Where(item => item.StudentId == studentId).Select(item => (int?)item.TotalPoints).SingleOrDefaultAsync(ct) ?? 0;
+        return JsonSerializer.SerializeToElement(new {
+            balance,
+            points,
+            videos = subscribed.Select(video => new { id = video.Id, lessonId = video.LessonId, teacher = video.Teacher, subject = video.Subject, packageName = video.Package, term = video.Term, course = video.Course, lesson = video.Lesson, title = video.Title, watchCount = watched.GetValueOrDefault(video.Id), maxWatchCount = video.MaxWatchCount }),
+            devices = devices.Select(item => new
+            {
+                id = item.Id,
+                label = BuildDeviceLabel(item.DeviceType, item.OsName, item.BrowserName)
+            }),
+            notes = notes.Select(item => new { item.id, label = item.label.Length > 90 ? item.label[..90] + "…" : item.label }),
+            grants = displayGrants.Select(item => new { id = item.Id, label = item.PackageId.HasValue && packageNames.TryGetValue(item.PackageId.Value, out var packageName) ? packageName : item.GrantType.ToString() }),
+            watchRequests = requests,
+            staff
+        });
+    }
+
+    private static string BuildDeviceLabel(params string?[] parts)
+    {
+        var label = string.Join(" · ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+        return string.IsNullOrWhiteSpace(label) ? "جهاز مسجل" : label;
+    }
+
+    private Task<Dictionary<string, object?>> BuildActionDraftAsync(Guid studentId, string actionKey, CancellationToken ct) => actionKey switch
+    {
+        "student.profile.update" => BuildProfileDraftAsync(studentId, ct),
+        "student.account.status.set" => BuildAccountStatusDraftAsync(studentId, ct),
+        "student.note.delete" => BuildSingleIdDraftAsync(_db.StudentNotes.Where(x => x.StudentId == studentId).OrderByDescending(x => x.IsPinned).ThenByDescending(x => x.CreatedAt).Select(x => (Guid?)x.Id), "noteId", ct),
+        "student.device.disconnect" => BuildSingleIdDraftAsync(_db.Devices.Where(x => x.UserId == studentId && x.IsActive).OrderByDescending(x => x.LastUsedAt).Select(x => (Guid?)x.Id), "deviceId", ct),
+        "student.package.cancel" => BuildPackageDraftAsync(studentId, ct),
+        "student.video.override.add" or "student.watch.reset" or "student.watch.count.set" => BuildWatchDraftAsync(studentId, actionKey, ct),
+        "student.watch-request.approve" or "student.watch-request.reject" => BuildWatchRequestDraftAsync(studentId, actionKey, ct),
+        "student.lesson.unlock" => BuildSingleIdDraftAsync(_db.StudentAccessGrants.Where(x => x.UserId == studentId && x.LessonId.HasValue).OrderByDescending(x => x.GrantedAt).Select(x => x.LessonId), "lessonId", ct),
+        "student.crm.assign" => BuildCrmDraftAsync(studentId, ct),
+        _ => Task.FromResult(new Dictionary<string, object?>())
+    };
+
+    private async Task<Dictionary<string, object?>> BuildProfileDraftAsync(Guid studentId, CancellationToken ct)
+    {
+        var profile = await _db.Users.AsNoTracking().Where(x => x.Id == studentId).Select(x => new { x.FullName, x.PhoneNumber, Governorate = x.StudentProfile!.Governorate, SchoolName = x.StudentProfile!.SchoolName }).SingleAsync(ct);
+        return new() { ["fullName"] = profile.FullName, ["phone"] = profile.PhoneNumber, ["governorate"] = profile.Governorate, ["schoolName"] = profile.SchoolName ?? string.Empty };
+    }
+
+    private async Task<Dictionary<string, object?>> BuildAccountStatusDraftAsync(Guid studentId, CancellationToken ct) => new() { ["isActive"] = await _db.Users.AsNoTracking().Where(x => x.Id == studentId).Select(x => x.IsActive).SingleAsync(ct) };
+
+    private static async Task<Dictionary<string, object?>> BuildSingleIdDraftAsync(IQueryable<Guid?> query, string fieldName, CancellationToken ct) => new() { [fieldName] = await query.FirstOrDefaultAsync(ct) };
+
+    private async Task<Dictionary<string, object?>> BuildPackageDraftAsync(Guid studentId, CancellationToken ct) => new() { ["accessGrantId"] = await _db.StudentAccessGrants.AsNoTracking().Where(x => x.UserId == studentId && x.IsActive).OrderByDescending(x => x.GrantedAt).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct), ["refundBalance"] = false };
+
+    private async Task<Dictionary<string, object?>> BuildWatchDraftAsync(Guid studentId, string actionKey, CancellationToken ct)
+    {
+        var watch = await _db.VideoWatchEvents.AsNoTracking().Where(x => x.UserId == studentId).OrderByDescending(x => x.CreatedAt).Select(x => new { x.LessonVideoId, x.WatchCount }).FirstOrDefaultAsync(ct);
+        var videoId = watch?.LessonVideoId ?? await _db.StudentAccessGrants.AsNoTracking().Where(x => x.UserId == studentId && x.LessonVideoId.HasValue).OrderByDescending(x => x.GrantedAt).Select(x => x.LessonVideoId).FirstOrDefaultAsync(ct);
+        return actionKey == "student.video.override.add" ? new() { ["videoId"] = videoId, ["addedViews"] = 1 } : new() { ["lessonVideoId"] = videoId, ["newWatchCount"] = actionKey == "student.watch.count.set" ? watch?.WatchCount ?? 0 : null };
+    }
+
+    private async Task<Dictionary<string, object?>> BuildWatchRequestDraftAsync(Guid studentId, string actionKey, CancellationToken ct) => new() { ["requestId"] = await _db.ExtraWatchRequests.AsNoTracking().Where(x => x.UserId == studentId).OrderByDescending(x => x.CreatedAt).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct), ["addedViews"] = actionKey == "student.watch-request.approve" ? 1 : null };
+
+    private async Task<Dictionary<string, object?>> BuildCrmDraftAsync(Guid studentId, CancellationToken ct) => new() { ["priority"] = await _db.CrmStudentStatuses.AsNoTracking().Where(x => x.StudentId == studentId).Select(x => x.Priority.ToString()).FirstOrDefaultAsync(ct) ?? "Medium" };
+
     public async Task<LiveSupportActionResultDto> ExecuteAsync(LiveSupportActionRequest request, CancellationToken ct)
     {
         var metadata = Catalog.FirstOrDefault(x => x.Key == request.ActionKey) ?? throw new LiveSupportException("ACTION_NOT_FOUND", "الإجراء غير مدعوم.");
@@ -115,7 +213,7 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
         var target = studentId ?? throw new LiveSupportException("STUDENT_NOT_LINKED", "اربط المحادثة بطالب أولًا.");
         ApiResponse result = key switch
         {
-            "student.profile.update" => await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.UpdateStudentProfileCommand(target, OptionalText(p,"fullName"), OptionalText(p,"phone"), OptionalText(p,"parentPhone"), OptionalText(p,"secondaryPhone"), OptionalText(p,"motherPhone"), OptionalText(p,"governorate"), OptionalText(p,"district"), OptionalText(p,"address"), OptionalText(p,"schoolName"), OptionalText(p,"dateOfBirth"), OptionalText(p,"gender"), OptionalText(p,"educationStage"), OptionalText(p,"gradeLevel"), OptionalText(p,"studyTrack"), OptionalText(p,"schoolType"), OptionalBool(p,"isFatherAlive"), OptionalBool(p,"isMotherAlive"), actor), ct),
+            "student.profile.update" => await _mediator.Send(new NaderGorge.Application.Features.Admin.Commands.UpdateStudentProfileCommand(target, OptionalText(p,"fullName"), OptionalText(p,"phone"), OptionalText(p,"parentPhone"), OptionalText(p,"secondaryPhone"), OptionalText(p,"motherPhone"), OptionalText(p,"secondaryParentPhone"), OptionalText(p,"nationality"), OptionalText(p,"governorate"), OptionalText(p,"district"), OptionalText(p,"address"), OptionalText(p,"schoolName"), OptionalText(p,"dateOfBirth"), OptionalText(p,"fatherDateOfBirth"), OptionalText(p,"motherDateOfBirth"), OptionalText(p,"gender"), OptionalText(p,"educationStage"), OptionalText(p,"gradeLevel"), OptionalText(p,"studyTrack"), OptionalText(p,"schoolType"), OptionalText(p,"studentCode"), OptionalBool(p,"isFatherAlive"), OptionalBool(p,"isMotherAlive"), actor), ct),
             "student.password.reset" => await _mediator.Send(new AdminResetPasswordCommand(target, Text(p,"newPassword"), actor), ct),
             "student.account.status.set" => await _mediator.Send(new UpdateUserStatusCommand(target, Bool(p,"isActive") ? "Active" : "Disabled", actor), ct),
             "student.note.add" => await _mediator.Send(new AddStudentNoteCommand(target, Text(p,"content"), OptionalBool(p,"isPinned") ?? false, actor), ct),

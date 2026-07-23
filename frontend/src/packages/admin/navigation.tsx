@@ -16,6 +16,12 @@ import {
   Briefcase,
   Headphones,
   Wallet,
+  Gift,
+  BadgePercent,
+  BarChart3,
+  Tags,
+  Settings,
+  MessageSquarePlus,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,6 +42,10 @@ export const adminMenuItems = [
   { label: 'المجتمع', href: '/admin/community', icon: <MessageSquareText className="h-4 w-4" />, permission: 'community.manage' },
   { label: 'تحليل AI', href: '/admin/ai-monitor', icon: <Sparkles className="h-4 w-4" />, permission: 'reports.manage' },
   { label: 'أكواد الوصول', href: '/admin/codes', icon: <KeyRound className="h-4 w-4" />, permission: 'codes.manage' },
+  { label: 'الهدايا', href: '/admin/gifts', icon: <Gift className="h-4 w-4" />, permission: 'gifts.manage' },
+  { label: 'الخصومات', href: '/admin/sales', icon: <BadgePercent className="h-4 w-4" />, permission: 'sales.manage' },
+  { label: 'الامتحانات العامة', href: '/admin/public-exams', icon: <Shield className="h-4 w-4" />, permission: 'public_exams.manage' },
+  { label: 'أنواع الفيديو', href: '/admin/content/video-types', icon: <Tags className="h-4 w-4" />, permission: 'content.manage', adminOnly: true },
   { label: 'بنك الأسئلة', href: '/admin/questions', icon: <Shield className="h-4 w-4" />, permission: 'exams.manage' },
   { label: 'التعديلات', href: '/admin/overrides', icon: <Wrench className="h-4 w-4" />, permission: 'users.manage' },
   { label: 'المالية والرواتب', href: '/admin/finance', icon: <Coins className="h-4 w-4" />, permission: 'users.manage' },
@@ -44,7 +54,16 @@ export const adminMenuItems = [
   { label: 'التواصل الداخلي', href: '/admin/chat', icon: <MessageSquareText className="h-4 w-4" /> },
   { label: 'الدعم المباشر', href: '/admin/live-support', icon: <Headphones className="h-4 w-4" />, permission: 'live_support.manage' },
   { label: 'مساعد الدعم الذكي', href: '/admin/live-support/ai', icon: <Sparkles className="h-4 w-4" />, permission: 'live_support.manage' },
+  { label: 'مركز التقارير', href: '/admin/reports', icon: <BarChart3 className="h-4 w-4" />, permission: 'reports.manage' },
+  { label: 'الإعدادات', href: '/admin/settings', icon: <Settings className="h-4 w-4" />, permission: 'settings.manage' },
+  { label: 'Popup المنصة', href: '/admin/popup', icon: <MessageSquarePlus className="h-4 w-4" />, permission: 'settings.manage' },
 ];
+
+export const adminNavigationRoutePermissions = adminMenuItems.map(({ href, permission, adminOnly }) => ({
+  pattern: href,
+  permission,
+  adminOnly,
+}));
 
 export const adminRootLinks: AdminRootLink[] = [
   {
@@ -90,6 +109,18 @@ export const adminRootLinks: AdminRootLink[] = [
     icon: KeyRound,
   },
   {
+    href: '/admin/sales',
+    title: 'الخصومات',
+    body: 'الكوبونات وسياسات دمج الخصومات واستهدافها.',
+    icon: BadgePercent,
+  },
+  {
+    href: '/admin/public-exams',
+    title: 'الامتحانات العامة',
+    body: 'إنشاء امتحانات مستقلة، إضافة الأسئلة، نشرها، ومراجعة النتائج.',
+    icon: Shield,
+  },
+  {
     href: '/admin/questions',
     title: 'بنك الأسئلة',
     body: 'الأسئلة والاختيارات والنقاط والتصنيفات.',
@@ -130,6 +161,18 @@ export const adminRootLinks: AdminRootLink[] = [
     title: 'مساعد الدعم الذكي',
     body: 'تخصيص سياسة وتدريب وإشراف وكيل الدعم الذكي (AI).',
     icon: Sparkles,
+  },
+  {
+    href: '/admin/settings',
+    title: 'الإعدادات',
+    body: 'إعدادات المنصة والصلاحيات وتجارب رسائل WhatsApp الرسمية.',
+    icon: Settings,
+  },
+  {
+    href: '/admin/popup',
+    title: 'Popup المنصة',
+    body: 'إنشاء رسالة تظهر لزوار اللاندنج وللطلاب عند فتح المنصة.',
+    icon: MessageSquarePlus,
   },
 ];
 

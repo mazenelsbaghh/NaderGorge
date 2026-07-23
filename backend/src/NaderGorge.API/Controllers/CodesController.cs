@@ -31,7 +31,8 @@ public class CodesController : ControllerBase
     [HttpGet("validate/{code}")]
     public async Task<IActionResult> Validate(string code)
     {
-        var result = await _mediator.Send(new NaderGorge.Application.Features.Codes.Queries.ValidateCodeQuery(code));
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _mediator.Send(new NaderGorge.Application.Features.Codes.Queries.ValidateCodeQuery(code, userId));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 }
