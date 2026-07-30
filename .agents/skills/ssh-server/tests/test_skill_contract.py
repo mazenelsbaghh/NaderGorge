@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import stat
@@ -416,6 +417,38 @@ def test_make_db_fast_preview_and_apply_confirmation_boundary() -> None:
         "CONFIRM=DB-ONLY",
     )
     assert "--yes" in applied
+
+
+def test_db_repair_gate_requires_target_to_still_be_current(
+    tmp_path: Path,
+) -> None:
+    module_spec = importlib.util.spec_from_file_location(
+        "verify_database_repair_gate",
+        ROOT
+        / ".agents/skills/ssh-server/scripts/verify_database_repair_gate.py",
+    )
+    assert module_spec and module_spec.loader
+    module = importlib.util.module_from_spec(module_spec)
+    sys.modules[module_spec.name] = module
+    module_spec.loader.exec_module(module)
+    release = "git-" + "a" * 40
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"releaseId": release}))
+    digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+    gate = tmp_path / "gate.json"
+    value = {
+        "status": "success",
+        "releaseId": release,
+        "currentReleaseId": release,
+        "manifestSha256": digest,
+        "currentManifestSha256": digest,
+    }
+    gate.write_text(json.dumps(value))
+    module.verify(gate, manifest, release)
+    value["currentReleaseId"] = "git-" + "b" * 40
+    gate.write_text(json.dumps(value))
+    with pytest.raises(module.RepairGateError, match="concurrent rollout"):
+        module.verify(gate, manifest, release)
 
 
 @pytest.mark.parametrize(

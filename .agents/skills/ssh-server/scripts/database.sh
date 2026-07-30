@@ -9,6 +9,7 @@ readonly REPAIR_PLAN="$ROOT/.agents/skills/ssh-server/scripts/database_repair_pl
 readonly COLLECT="$ROOT/deploy/production/scripts/collect_current_release_manifest.py"
 readonly GATE="$ROOT/deploy/production/scripts/prepare_release_migration_gate.py"
 readonly MIGRATE="$ROOT/deploy/production/scripts/migrate_release.py"
+readonly VERIFY_GATE="$ROOT/.agents/skills/ssh-server/scripts/verify_database_repair_gate.py"
 readonly EVIDENCE_ROOT="$ROOT/artifacts/production/schema-inventory"
 
 step() { printf '\n\033[1;33m[%s] %s\033[0m\n' "$(date -u +%H:%M:%S)" "$*"; }
@@ -116,6 +117,8 @@ case "$command_name" in
     run_live python3 "$GATE" "${gate_args[@]}" --dry-run
     if [[ "$confirmed" == true ]]; then
       run_live python3 "$GATE" "${gate_args[@]}" --yes
+      run python3 "$VERIFY_GATE" --gate "$gate" \
+        --manifest "$current_manifest" --release "$release"
       run_live python3 "$MIGRATE" \
         --inventory "$INVENTORY" \
         --known-hosts "$MASSAR_KNOWN_HOSTS_FILE" \
