@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Headphones, LoaderCircle, MessageCircle, Paperclip, Send, X } from 'lucide-react';
 import { liveSupportService, type LiveSupportAIPendingDecision, type LiveSupportAITurnState, type LiveSupportAIVerificationSession, type LiveSupportAvailability, type LiveSupportConversation, type LiveSupportMessage, type LiveSupportMessageType } from '@/services/live-support-service';
 import { LiveSupportWidget } from './LiveSupportWidget';
@@ -30,6 +31,7 @@ type SupportVisibilitySettings = {
 };
 
 export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSupportLauncherProps) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [availability, setAvailability] = useState<LiveSupportAvailability>();
@@ -264,9 +266,10 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
   if (!isAuthenticated) {
     const whatsappNumber = supportVisibility.guestSupportWhatsAppNumber.replace(/\D/g, '');
     if (!supportVisibility.showSupportOutsideAccount || !whatsappNumber) return null;
+    const compactOnRegistration = pathname === '/register';
 
-    return <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" dir="rtl" aria-label="التواصل عبر واتساب" className={`fixed ${launcherPositionClass} left-4 z-[90] inline-flex items-center gap-2 rounded-2xl bg-[#25D366] px-4 py-3 text-sm font-black text-white shadow-xl transition-colors hover:bg-[#1fb75a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:left-6`}>
-      <MessageCircle size={22}/><span>واتساب الدعم</span>
+    return <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noopener noreferrer" dir="rtl" aria-label="التواصل عبر واتساب" className={`fixed ${launcherPositionClass} left-4 z-[90] inline-flex items-center justify-center gap-2 bg-[#25D366] text-sm font-black text-white shadow-xl transition-colors hover:bg-[#1fb75a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:left-6 ${compactOnRegistration ? 'size-12 rounded-full p-0 sm:h-auto sm:w-auto sm:rounded-2xl sm:px-4 sm:py-3' : 'rounded-2xl px-4 py-3'}`}>
+      <MessageCircle size={22}/><span className={compactOnRegistration ? 'sr-only sm:not-sr-only' : undefined}>واتساب الدعم</span>
     </a>;
   }
 

@@ -1018,7 +1018,7 @@ export function RegistrationForm() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32 }}
-      className="relative flex min-h-[560px] w-full lg:min-h-[650px]"
+      className="relative flex min-h-[560px] min-w-0 w-full lg:min-h-[650px]"
     >
       <FeatureCarousel
         title={currentStep.title}
@@ -1102,14 +1102,14 @@ export function RegistrationForm() {
 
             {/* Left Side: Live Preview Panel */}
             <aside
-              className="relative order-1 min-w-0 w-full min-[1100px]:order-2 min-[1100px]:w-[46%]"
+              className="relative order-2 hidden min-w-0 min-[1100px]:block min-[1100px]:w-[46%]"
               aria-label="معاينة بيانات التسجيل"
             >
-               <AnimatePresence mode="wait">
-                 <motion.div key={`preview-${activeStep}`} {...PANEL_ANIMATION} className="min-[1100px]:sticky min-[1100px]:top-10">
-                   {renderPreviewPanel()}
-                 </motion.div>
-               </AnimatePresence>
+              <AnimatePresence mode="wait">
+                <motion.div key={`preview-${activeStep}`} {...PANEL_ANIMATION} className="sticky top-10">
+                  {renderPreviewPanel()}
+                </motion.div>
+              </AnimatePresence>
             </aside>
           </div>
         </div>

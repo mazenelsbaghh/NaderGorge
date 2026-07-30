@@ -94,6 +94,22 @@ def test_skill_requires_dry_run_confirmation_and_non_root_operation() -> None:
     assert "restore against the production DB" in skill
 
 
+def test_skill_keeps_small_read_only_requests_on_the_quick_lane() -> None:
+    skill = (ROOT / ".agents/skills/ssh-server/SKILL.md").read_text(encoding="utf-8")
+    assert "## Choose the smallest safe lane first" in skill
+    assert "**Quick read-only**" in skill
+    assert "Do not run `make ops-plan`, `make ops-check`, Docker builds" in skill
+    assert "Stop after a healthy result." in skill
+
+
+def test_skill_requires_an_explicit_compatible_build_scope() -> None:
+    skill = (ROOT / ".agents/skills/ssh-server/SKILL.md").read_text(encoding="utf-8")
+    assert "### Required build-scope decision" in skill
+    assert "frontend`, `backend`, `worker`, or `all`" in skill
+    assert "Refuse an\nincompatible choice" in skill
+    assert "partial Production deployment" in skill
+
+
 def test_release_plan_selects_affected_images() -> None:
     plan = release_plan.classify(
         "HEAD^",

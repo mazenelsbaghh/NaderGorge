@@ -10,14 +10,78 @@ Use this skill for every Production operation. The cluster is exactly
 `deploy/production/inventory/production.yml`. Never paste a server address in
 an operational command.
 
-## Start here — simple workflow
+## Choose the smallest safe lane first
 
-For any change, start with:
+Classify the request before running any command:
+
+| Request | Lane | Required action |
+|---|---|---|
+| Read status, audit, backups, Cloudflare health, or bounded/redacted logs | **Quick read-only** | Run the matching `massar.sh` command directly. Do not run `make ops-plan`, `make ops-check`, Docker builds, or a release plan. |
+| Preview a restore or failover drill | **Quick preview** | Run the matching `massar.sh` `*-dry` command directly. |
+| Change code, configuration, schema, images, database state, or Production services | **Change/release** | Follow the full workflow below. |
+
+Never broaden a small request into a cluster-wide investigation unless the
+first focused command reports an unhealthy result. For a node-specific log
+request, query only that node and exact service; expand to all nodes only when
+the result indicates a distributed problem. The quick lanes are read-only and
+retain strict host-key verification, inventory-only targeting, redaction, and
+timestamped evidence.
+
+### Quick read-only and preview workflow
+
+For small operational questions, set the SSH environment and run just one
+focused command:
+
+```bash
+export MASSAR_KNOWN_HOSTS_FILE="/Users/mazenelsbagh/.ssh/massar_prod_known_hosts"
+export MASSAR_SSH_IDENTITY_FILE="/Users/mazenelsbagh/.ssh/massar_prod_cluster_ed25519"
+
+# Examples — use only the command that answers the request.
+bash .agents/skills/ssh-server/scripts/massar.sh status
+bash .agents/skills/ssh-server/scripts/massar.sh logs node-2 backend 20
+bash .agents/skills/ssh-server/scripts/massar.sh backups
+bash .agents/skills/ssh-server/scripts/massar.sh failover-dry
+```
+
+Report the focused result and evidence path. Stop after a healthy result.
+Escalate to the change/release workflow only for an unhealthy result, a request
+to diagnose beyond the returned evidence, or any requested state change.
+
+## Change/release workflow
+
+For a code, configuration, database, image, or Production-service change,
+start with:
 
 ```bash
 make ops-plan
 make ops-check
 ```
+
+### Required build-scope decision
+
+Before running any build command, ask the operator to explicitly choose the
+build scope. Do not assume it from a request such as “a small change” or “one
+word changed.” Use exactly one of: `frontend`, `backend`, `worker`, or `all`.
+
+State the detected affected components from `make ops-plan`, then ask: “Which
+component should be built first: frontend, backend, worker, or all?” Record
+the chosen scope in the release/change note before continuing. Refuse an
+incompatible choice:
+
+| Detected change | Allowed choice |
+|---|---|
+| Only `frontend/` | `frontend` or `all` |
+| Only backend/API without EF model change | `backend` or `all` |
+| Only `worker/` | `worker` or `all` |
+| More than one affected component | `all` |
+| EF entities, context, migrations, Compose/Production tooling, or an unknown affected area | `all` |
+
+The scope is an explicit intent and a focused local-verification/build choice.
+The current immutable Production release contract still assembles all four
+images into one digest-parity manifest; never claim that selecting one scope
+alone permits a partial Production deployment. For a genuine faster
+Production lane, first implement and test selective artifact reuse in the
+release tooling, then update this rule and its tests.
 
 `ops-plan` reads the Git delta and prints:
 
@@ -199,7 +263,7 @@ release remains unchanged.
 
 ## Urgent safe path
 
-For a time-sensitive fix:
+For a time-sensitive fix, obtain the required build-scope decision first. Then:
 
 ```bash
 make ops-fast

@@ -667,13 +667,19 @@
 
 @media (max-width: 640px) {
   .auth-avatar {
-    width: 12rem;
-    height: 12rem;
+    width: 7rem;
+    height: 7rem;
+    margin-bottom: 0.25rem;
   }
 
   .auth-avatar img {
-    width: 12rem !important;
-    height: 12rem !important;
+    width: 7rem !important;
+    height: 7rem !important;
+  }
+
+  .auth-theme-bar {
+    top: max(0.75rem, env(safe-area-inset-top));
+    left: 0.75rem;
   }
 }
 

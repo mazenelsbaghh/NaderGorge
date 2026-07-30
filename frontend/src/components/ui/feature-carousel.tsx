@@ -758,6 +758,7 @@ export function FeatureCarousel({
 
   return (
     <div
+      className="min-w-0 w-full"
       role="region"
       aria-roledescription="carousel"
       aria-label="مراحل العرض"

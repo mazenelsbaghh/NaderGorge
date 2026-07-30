@@ -88,7 +88,7 @@ export default function RegisterPageClient() {
       </div>
 
       {/* ── Main content ── */}
-      <main className="relative z-10 w-full max-w-7xl px-4 py-10 sm:px-5 sm:py-16 m-auto">
+      <main className="relative z-10 w-full max-w-7xl px-2.5 pb-6 pt-3 sm:px-5 sm:py-16 m-auto">
 
         {/* Logo Avatar */}
         <div className="auth-avatar">
@@ -96,22 +96,22 @@ export default function RegisterPageClient() {
         </div>
 
         {/* Heading */}
-        <div className="mx-auto mb-8 max-w-3xl text-center flex flex-col items-center">
+        <div className="mx-auto mb-4 flex max-w-3xl flex-col items-center text-center sm:mb-8">
           <h1
-            className="text-3xl font-extrabold tracking-tight sm:text-4xl"
+            className="text-2xl font-extrabold tracking-tight sm:text-4xl"
             style={{ color: 'var(--admin-text)' }}
           >
             افتح حسابك خطوة بخطوة
           </h1>
           <p
-            className="mt-2 text-sm font-light"
+            className="mt-1 max-w-[22rem] text-sm font-light leading-6 sm:mt-2"
             style={{ color: 'var(--admin-muted)' }}
           >
             اكتب البيانات المطلوبة فقط ليظهر لك المسار الدراسي الصحيح.
           </p>
           <button
             onClick={() => setShowInstructions(true)}
-            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-xs font-black text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-hover)] active:scale-[0.98] cursor-pointer shadow-sm"
+            className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-[var(--admin-primary-15)] px-4 py-2 text-xs font-black text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-hover)] active:scale-[0.98] cursor-pointer shadow-sm sm:mt-4"
           >
             <Info className="h-3.5 w-3.5 shrink-0" />
             <span>تعليمات التسجيل</span>
@@ -119,7 +119,7 @@ export default function RegisterPageClient() {
         </div>
 
         {/* ── Glass Card ── */}
-        <div className="auth-card p-3 sm:p-4 lg:p-5">
+        <div className="auth-card p-2 sm:p-4 lg:p-5">
           <RegistrationForm />
 
           {/* Divider + Login link */}
