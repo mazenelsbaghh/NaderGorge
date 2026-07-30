@@ -31,6 +31,70 @@ public class AdminFinanceController : ControllerBase
 
     private Guid GetUserId() => User.RequireUserId();
 
+    // The admin finance client uses this legacy payroll surface. Keeping these
+    // routes here makes the UI contract explicit while delegating all business
+    // rules and audit logging to the existing MediatR commands.
+    [HttpGet("payroll")]
+    public async Task<IActionResult> GetPayroll(
+        [FromQuery] int month,
+        [FromQuery] int year,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetPayrollQuery(month, year), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("payroll/generate")]
+    public async Task<IActionResult> GeneratePayroll(
+        [FromBody] GeneratePayrollDto dto,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new GeneratePayrollCommand(dto.Month, dto.Year, GetUserId()),
+            ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("payroll/{payrollId:guid}/adjustments")]
+    public async Task<IActionResult> AddPayrollAdjustment(
+        [FromRoute] Guid payrollId,
+        [FromBody] AddAdjustmentDto dto,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new AddPayrollAdjustmentCommand(
+                payrollId,
+                dto.Type,
+                dto.Amount,
+                dto.Reason,
+                GetUserId()),
+            ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("payroll/{payrollId:guid}/adjustments/{adjustmentId:guid}")]
+    public async Task<IActionResult> DeletePayrollAdjustment(
+        [FromRoute] Guid payrollId,
+        [FromRoute] Guid adjustmentId,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new DeletePayrollAdjustmentCommand(payrollId, adjustmentId, GetUserId()),
+            ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPost("payroll/{payrollId:guid}/approve")]
+    public async Task<IActionResult> ApprovePayroll(
+        [FromRoute] Guid payrollId,
+        CancellationToken ct)
+    {
+        var result = await _mediator.Send(
+            new ApprovePayrollCommand(payrollId, GetUserId()),
+            ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpGet("payouts")]
     public async Task<IActionResult> GetPayouts([FromQuery] PayoutStatus? status = null)
     {
