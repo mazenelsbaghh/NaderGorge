@@ -555,43 +555,54 @@ export function RegistrationForm() {
           <div className="space-y-4">
             <div>
               <label className="auth-label">اختر الأفاتار الخاص بك (مطلوب)</label>
-              <div className="flex gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[var(--admin-border)] scrollbar-track-transparent">
-                {AVATAR_LIST.map((avatar, index) => {
-                  const isSelected = formData.avatarSlug === avatar.slug;
-                  return (
-                    <button
-                      key={avatar.slug}
-                      type="button"
-                      onClick={() => updateFieldValue('avatarSlug', avatar.slug)}
-                      className={`relative flex flex-col items-center gap-2 p-2 rounded-2xl border transition-all duration-300 flex-shrink-0 w-24 hover:scale-105 ${
-                        isSelected
-                          ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 ring-2 ring-[var(--admin-primary)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                          : 'border-[var(--admin-border)] bg-[var(--admin-bg)] hover:border-[var(--admin-text)]'
-                      }`}
-                    >
-                      <div className="relative w-16 h-16 rounded-full overflow-hidden border border-[var(--admin-border)]">
-                        <Image
-                          src={avatar.imageUrl}
-                          alt={avatar.name}
-                          fill
-                          sizes="64px"
-                          className="object-cover"
-                          loading={index < 4 ? 'eager' : 'lazy'}
-                          priority={index === 0}
-                          unoptimized
-                        />
-                      </div>
-                      <span className="text-xs font-black text-[var(--admin-text)] text-center truncate w-full">
-                        {avatar.name}
-                      </span>
-                      {isSelected && (
-                        <span className="absolute top-1 left-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md">
-                          <Check className="h-3 w-3" />
+              <div className="relative min-w-0 max-w-full">
+                <div
+                  className="flex min-w-0 max-w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-3 pt-1 [scrollbar-width:none] touch-pan-x [&::-webkit-scrollbar]:hidden"
+                  role="radiogroup"
+                  aria-label="اختر الأفاتار الخاص بك"
+                >
+                  {AVATAR_LIST.map((avatar, index) => {
+                    const isSelected = formData.avatarSlug === avatar.slug;
+                    return (
+                      <button
+                        key={avatar.slug}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => updateFieldValue('avatarSlug', avatar.slug)}
+                        className={`relative flex w-[5.75rem] shrink-0 snap-start flex-col items-center gap-2 rounded-2xl border p-2 transition-[transform,border-color,background-color,box-shadow] duration-200 active:scale-[0.98] sm:w-24 sm:hover:-translate-y-0.5 ${
+                          isSelected
+                            ? 'border-[var(--admin-primary)] bg-[var(--admin-primary)]/5 ring-2 ring-[var(--admin-primary)] shadow-[0_8px_20px_var(--admin-shadow)]'
+                            : 'border-[var(--admin-border)] bg-[var(--admin-bg)] hover:border-[var(--admin-text)]'
+                        }`}
+                      >
+                        <div className="relative h-16 w-16 overflow-hidden rounded-full border border-[var(--admin-border)]">
+                          <Image
+                            src={avatar.imageUrl}
+                            alt={avatar.name}
+                            fill
+                            sizes="64px"
+                            className="object-cover"
+                            loading={index < 4 ? 'eager' : 'lazy'}
+                            priority={index === 0}
+                            unoptimized
+                          />
+                        </div>
+                        <span className="w-full truncate text-center text-xs font-black text-[var(--admin-text)]">
+                          {avatar.name}
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
+                        {isSelected && (
+                          <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-md">
+                            <Check className="h-3 w-3" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-xs font-bold text-[var(--admin-muted)] sm:hidden">
+                  اسحب يمينًا أو يسارًا لرؤية باقي الأفاتارات
+                </p>
               </div>
               {fieldError('avatarSlug') ? <p className="mt-2 text-sm font-bold text-red-600" role="alert">{fieldError('avatarSlug')}</p> : null}
               
@@ -1035,9 +1046,9 @@ export function RegistrationForm() {
         }}
       >
         <div className="relative z-10 mt-4 w-full md:mt-10 md:pr-0">
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 lg:items-start w-full">
+          <div className="flex min-w-0 w-full flex-col gap-6 min-[1100px]:flex-row min-[1100px]:items-start min-[1100px]:gap-10">
             {/* Right Side: Form Inputs */}
-            <div className="w-full lg:w-[50%] xl:w-[50%] flex flex-col gap-5">
+            <div className="order-2 flex min-w-0 w-full flex-col gap-5 min-[1100px]:order-1 min-[1100px]:w-[54%]">
               <AnimatePresence>
                 {errors.filter((e) => !e.field).map((err, index) => (
                   <motion.div
@@ -1090,13 +1101,16 @@ export function RegistrationForm() {
             </div>
 
             {/* Left Side: Live Preview Panel */}
-            <div className="hidden lg:block lg:w-[50%] xl:w-[45%] relative">
+            <aside
+              className="relative order-1 min-w-0 w-full min-[1100px]:order-2 min-[1100px]:w-[46%]"
+              aria-label="معاينة بيانات التسجيل"
+            >
                <AnimatePresence mode="wait">
-                 <motion.div key={`preview-${activeStep}`} {...PANEL_ANIMATION} className="sticky top-10">
+                 <motion.div key={`preview-${activeStep}`} {...PANEL_ANIMATION} className="min-[1100px]:sticky min-[1100px]:top-10">
                    {renderPreviewPanel()}
                  </motion.div>
                </AnimatePresence>
-            </div>
+            </aside>
           </div>
         </div>
       </FeatureCarousel>

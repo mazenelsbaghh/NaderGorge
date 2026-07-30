@@ -22,6 +22,8 @@ import { fetchWithTimeout } from './services/workerFetch.js';
 import { createRedisConnection, redisConnectionOptions } from './config/redis.js';
 import { scheduleClusterCron } from './scheduling/clusterCron.js';
 import { databaseUrl } from './config/database.js';
+import { runBirthdaySweep } from './scripts/birthday-congratulator.js';
+import { delayUntilNextCairoMidnight } from './scheduling/cairoTime.js';
 
 dotenv.config();
 validateWorkerSecurityConfig();
@@ -244,6 +246,18 @@ async function startCronJobs() {
       leaseLifetimeMs: 3 * 60 * 60 * 1000,
       delayUntilNextRun: runAtNextCairoDay,
       task: runNightlySweep,
+    });
+
+    console.log('[Worker] Birthday celebration sweep scheduled for 00:00 Africa/Cairo.');
+    scheduleClusterCron(pool, {
+      leaseName: 'student-birthday-midnight',
+      ownerToken: crypto.randomUUID(),
+      leaseLifetimeMs: 30 * 60 * 1000,
+      delayUntilNextRun: delayUntilNextCairoMidnight,
+      task: async ({ signal }) => {
+        if (signal.aborted) return;
+        await runBirthdaySweep(pool);
+      },
     });
 }
 
