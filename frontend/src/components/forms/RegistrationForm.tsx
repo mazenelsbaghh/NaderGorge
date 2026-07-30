@@ -93,7 +93,7 @@ const schema = z
     studyTrack: z.string().optional(),
     password: z.string().min(8, 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل'),
     confirmPassword: z.string(),
-    avatarSlug: z.string().optional(),
+    avatarSlug: z.string().min(1, 'يرجى اختيار الأفاتار الخاص بك'),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'كلمتا المرور غير متطابقتين',
@@ -388,7 +388,7 @@ export function RegistrationForm() {
         educationStage: formData.educationStage as 'Secondary' | 'Baccalaureate' | 'Primary' | 'Preparatory' | 'Azhari' | 'American',
         gradeLevel: formData.gradeLevel,
         studyTrack: formData.studyTrack || undefined,
-        avatarSlug: formData.avatarSlug || undefined,
+        avatarSlug: formData.avatarSlug,
       });
 
       // Auto login after successful registration
@@ -553,7 +553,7 @@ export function RegistrationForm() {
         return (
           <div className="space-y-4">
             <div>
-              <label className="auth-label">اختر الأفاتار الخاص بك (شخصيات تاريخية وعلماء)</label>
+              <label className="auth-label">اختر الأفاتار الخاص بك (مطلوب)</label>
               <div className="flex gap-4 overflow-x-auto pb-3 pt-1 scrollbar-thin scrollbar-thumb-[var(--admin-border)] scrollbar-track-transparent">
                 {AVATAR_LIST.map((avatar, index) => {
                   const isSelected = formData.avatarSlug === avatar.slug;
@@ -592,6 +592,7 @@ export function RegistrationForm() {
                   );
                 })}
               </div>
+              {fieldError('avatarSlug') ? <p className="mt-2 text-sm font-bold text-red-600" role="alert">{fieldError('avatarSlug')}</p> : null}
               
               {/* Selected Avatar Detailed Info Box */}
               {formData.avatarSlug && (

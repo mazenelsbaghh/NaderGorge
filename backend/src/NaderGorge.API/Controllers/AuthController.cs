@@ -59,6 +59,11 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterCommand command)
     {
+        if (string.IsNullOrWhiteSpace(command.AvatarSlug))
+        {
+            return BadRequest(ApiResponse<RegisterResponse>.Fail("يرجى اختيار الأفاتار الخاص بك."));
+        }
+
         var result = await _mediator.Send(command);
         return result.Success ? StatusCode(201, result) : BadRequest(result);
     }

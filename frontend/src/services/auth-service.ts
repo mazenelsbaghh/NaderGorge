@@ -31,7 +31,7 @@ export interface RegisterData {
   educationStage: 'Secondary' | 'Baccalaureate' | 'Primary' | 'Preparatory' | 'Azhari' | 'American';
   gradeLevel: string;
   studyTrack?: string;
-  avatarSlug?: string;
+  avatarSlug: string;
 }
 
 export interface LoginData {
