@@ -1,0 +1,19 @@
+{
+  "acknowledgedLossCount": 0,
+  "formerNode": "node-1",
+  "newNode": null,
+  "quorumEvidence": {
+    "arbiterIsolated": false,
+    "dryRun": true,
+    "fault": "single-data-brick-gluster-ports-only",
+    "isolatedNodeCount": 0,
+    "maximumOutageSeconds": 180,
+    "plannedIsolatedNodeCount": 1
+  },
+  "recoveredAt": "2026-07-28T11:23:14.078703Z",
+  "result": "safe-refusal",
+  "schemaVersion": 1,
+  "service": "files",
+  "splitBrainDetected": false,
+  "startedAt": "2026-07-28T11:23:14.078703Z"
+}

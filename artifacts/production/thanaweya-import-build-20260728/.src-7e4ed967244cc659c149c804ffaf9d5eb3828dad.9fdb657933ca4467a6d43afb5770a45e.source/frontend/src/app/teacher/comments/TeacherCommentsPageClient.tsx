@@ -1,0 +1,18 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { Check, MessageSquareText, Send, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
+import { usePlatformEvents } from '@/hooks/usePlatformEvents';
+import { teacherService } from '@/services/teacher-service';
+import type { ModerationLessonCommentDto } from '@/services/admin-service';
+
+export default function TeacherCommentsPageClient() {
+  const [comments, setComments] = useState<ModerationLessonCommentDto[]>([]); const [loading, setLoading] = useState(true); const [replying, setReplying] = useState<string | null>(null); const [body, setBody] = useState('');
+  const load = async () => { try { setLoading(true); setComments(await teacherService.getAllLessonComments()); } catch { toast.error('تعذر تحميل التعليقات'); } finally { setLoading(false); } };
+  useEffect(() => { void load(); }, []);
+  usePlatformEvents({ onLessonCommentCreated: () => void load() });
+  const moderate = async (id: string, approve: boolean) => { try { await (approve ? teacherService.approveLessonComment(id) : teacherService.rejectLessonComment(id)); await load(); } catch { toast.error('تعذر تحديث التعليق'); } };
+  const reply = async (id: string) => { if (!body.trim()) return; try { await teacherService.replyToLessonComment(id, body); setBody(''); setReplying(null); await load(); toast.success('تم نشر رد المدرس'); } catch { toast.error('تعذر إرسال الرد'); } };
+  return <TeacherShellChrome activePath="/teacher/comments" sectionLabel="المتابعة والتفاعل" pageTitle="تعليقات الطلاب" subtitle="راجع كل تعليقات الحصص ورد عليها باسم المدرس."><div className="space-y-4">{loading ? <p className="text-sm font-bold text-[var(--admin-muted)]">جاري التحميل...</p> : comments.length === 0 ? <div className="admin-panel py-16 text-center"><MessageSquareText className="mx-auto h-10 w-10 text-[var(--admin-muted)]" /><p className="mt-3 font-black">لا توجد تعليقات حالياً</p></div> : comments.map(comment => <article key={comment.id} className="admin-panel"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-black text-[var(--admin-text)]">{comment.studentName}</p><p className="mt-1 text-xs font-bold text-[var(--admin-muted)]">{comment.lessonTitle} · {new Date(comment.createdAt).toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'medium', timeStyle: 'short' })}</p></div><span className="rounded-lg bg-[var(--admin-card-soft)] px-2.5 py-1 text-xs font-bold">{comment.status === 'Pending' ? 'بانتظار المراجعة' : comment.status === 'Approved' ? 'منشور' : 'مرفوض'}</span></div><p className="mt-4 whitespace-pre-wrap text-sm font-semibold leading-7 text-[var(--admin-text)]">{comment.body}</p><div className="mt-5 flex flex-wrap gap-2">{comment.status === 'Pending' && <><button onClick={() => void moderate(comment.id, true)} className="admin-btn-primary inline-flex items-center gap-2"><Check className="h-4 w-4" />نشر</button><button onClick={() => void moderate(comment.id, false)} className="admin-btn-secondary inline-flex items-center gap-2"><X className="h-4 w-4" />رفض</button></>}<button onClick={() => setReplying(replying === comment.id ? null : comment.id)} className="admin-btn-secondary inline-flex items-center gap-2"><MessageSquareText className="h-4 w-4" />رد باسم المدرس</button></div>{replying === comment.id && <div className="mt-4 flex gap-2"><input value={body} onChange={event => setBody(event.target.value)} maxLength={2000} placeholder="اكتب رد المدرس..." className="admin-input flex-1" /><button onClick={() => void reply(comment.id)} className="admin-btn-primary"><Send className="h-4 w-4" /></button></div>}</article>)}</div></TeacherShellChrome>;
+}

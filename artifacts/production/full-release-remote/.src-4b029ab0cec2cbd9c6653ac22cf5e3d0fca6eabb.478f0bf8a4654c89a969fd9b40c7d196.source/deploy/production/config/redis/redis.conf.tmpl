@@ -1,0 +1,27 @@
+bind 127.0.0.1 __OVERLAY_ADDRESS__
+protected-mode yes
+port 6379
+tcp-backlog 511
+timeout 0
+tcp-keepalive 300
+daemonize no
+supervised systemd
+pidfile /run/redis/redis-server.pid
+loglevel notice
+databases 16
+maxmemory 4gb
+maxmemory-policy noeviction
+dir /var/lib/redis
+dbfilename dump.rdb
+appendonly yes
+appendfilename "appendonly.aof"
+appendfsync everysec
+no-appendfsync-on-rewrite no
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+requirepass __REDIS_PASSWORD__
+masterauth __REDIS_PASSWORD__
+replica-read-only yes
+min-replicas-to-write 1
+min-replicas-max-lag 5
+__REPLICAOF_DIRECTIVE__

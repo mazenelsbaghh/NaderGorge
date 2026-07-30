@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "df30b347-eb04-417e-932d-4ee591cecfaf",
+  "command": "collect-current-manifest",
+  "startedAt": "2026-07-29T23:18:14.091024Z",
+  "completedAt": "2026-07-29T23:18:14.091234Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Traceback (most recent call last):\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/collect_current_release_manifest.py\", line 653, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/collect_current_release_manifest.py\", line 627, in main\n    evidence = collect(\n        inventory=inventory,\n    ...<2 lines>...\n        evidence_output=evidence_destination,\n    )\n  Fil"
+}

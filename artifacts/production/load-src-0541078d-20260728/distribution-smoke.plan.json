@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "src-0541078-distribution-smoke",
+  "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+  "baselineRps": 10,
+  "profile": "steady",
+  "excludedNode": null,
+  "expectedNodes": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "stages": [
+    {
+      "sequence": 1,
+      "requestedRps": 10,
+      "duration": "30s",
+      "runId": "src-0541078-dist-010"
+    }
+  ]
+}

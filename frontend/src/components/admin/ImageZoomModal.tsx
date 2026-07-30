@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { X, Download } from 'lucide-react';
 import NextImage from 'next/image';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
 
 interface ImageZoomModalProps {
   isOpen: boolean;
@@ -14,25 +15,6 @@ interface ImageZoomModalProps {
 }
 
 export function ImageZoomModal({ isOpen, imageUrl, title, onClose }: ImageZoomModalProps) {
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [isOpen, onClose]);
-
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -59,16 +41,13 @@ export function ImageZoomModal({ isOpen, imageUrl, title, onClose }: ImageZoomMo
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={onClose}
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 backdrop-blur-md"
-        >
+    <AccessibleOverlay
+      open={isOpen}
+      onClose={onClose}
+      label={`عرض الصورة: ${title}`}
+      backdropClassName="bg-black/90 backdrop-blur-md"
+      className="inset-4 flex flex-col items-center justify-center"
+    >
           {/* Top Actions Bar */}
           <div 
             className="absolute top-4 left-4 right-4 flex items-center justify-between z-[101]" 
@@ -104,7 +83,6 @@ export function ImageZoomModal({ isOpen, imageUrl, title, onClose }: ImageZoomMo
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 10 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            onClick={e => e.stopPropagation()}
             className="relative max-w-full max-h-[80vh] w-fit h-fit flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border border-white/10"
           >
             <NextImage
@@ -116,8 +94,6 @@ export function ImageZoomModal({ isOpen, imageUrl, title, onClose }: ImageZoomMo
               className="object-contain max-w-full max-h-[80vh] w-auto h-auto select-none"
             />
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </AccessibleOverlay>
   );
 }

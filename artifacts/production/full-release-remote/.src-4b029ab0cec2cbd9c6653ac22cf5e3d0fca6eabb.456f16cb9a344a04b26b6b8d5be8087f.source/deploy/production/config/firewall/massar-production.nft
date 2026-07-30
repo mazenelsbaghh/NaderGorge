@@ -1,0 +1,44 @@
+#!/usr/sbin/nft -f
+
+table inet massar {
+  set cluster_overlay_peers {
+    type ipv4_addr
+    elements = { 10.77.0.11, 10.77.0.12, 10.77.0.13 }
+  }
+
+  chain input {
+    type filter hook input priority 0; policy drop;
+    ct state established,related accept
+    iifname "lo" accept
+    ip protocol icmp accept
+    udp dport 51820 accept
+
+    # Temporary pre-Cloudflare operator path: keys only, rate-limited. Replace
+    # with the approved Access/WARP source set at cutover.
+    tcp dport 22 ct state new limit rate 10/minute burst 20 packets accept
+
+    # Cluster services are reachable only over the authenticated overlay.
+    iifname "wg0" ip saddr @cluster_overlay_peers tcp dport {
+      2379, 2380, 5432, 6432, 8008, 6379, 26379,
+      24007, 24008, 49152-49251, 5245, 8738-8742, 9000, 8404
+    } accept
+    iifname "wg0" ip saddr @cluster_overlay_peers accept
+
+    # App containers may reach only the local stable database writer proxy and
+    # Redis/Sentinel listeners. Remote member traffic is still forced over wg0.
+    ip saddr 172.29.0.0/24 tcp dport { 6379, 6432, 26379 } accept
+  }
+
+  chain forward {
+    type filter hook forward priority 0; policy drop;
+    ct state established,related accept
+    iifname "docker0" accept
+    iifname "br-*" accept
+    iifname "massar-app0" accept
+    iifname "wg0" ip saddr @cluster_overlay_peers oifname "massar-app0" tcp dport 8080 accept
+  }
+
+  chain output {
+    type filter hook output priority 0; policy accept;
+  }
+}

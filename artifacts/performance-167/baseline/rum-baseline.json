@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "capturedFrom": {
+    "type": "cloudflare-dashboard-pdf",
+    "path": "/Users/mazenelsbagh/Downloads/Cloudflare Dashboard _ Manage Your Account.pdf",
+    "observationStart": "2026-07-28",
+    "observationEnd": "2026-07-29",
+    "botsExcluded": true
+  },
+  "metrics": {
+    "LCP": {
+      "goodRate": 0.77,
+      "needsImprovementRate": 0.14,
+      "poorRate": 0.08,
+      "percentilesMs": {
+        "p50": 1572,
+        "p75": 2380,
+        "p90": 3668,
+        "p99": 14828
+      }
+    },
+    "INP": {
+      "goodRate": 0.66,
+      "needsImprovementRate": 0.25,
+      "poorRate": 0.09
+    },
+    "CLS": {
+      "goodRate": 0.98,
+      "needsImprovementRate": 0.01,
+      "poorRate": 0.0
+    }
+  },
+  "interpretation": {
+    "priority": "INP is the weakest aggregate indicator; LCP p75 is close to the 2.5 second boundary; aggregate CLS is healthy.",
+    "excludedFromPrioritization": [
+      "secondary-results page"
+    ],
+    "sampleBias": "The secondary-results page supplied most report views, so these aggregate rates are not treated as route-balanced evidence for student, admin, teacher, assistant, employee, or support surfaces.",
+    "requiredFollowUpDimensions": [
+      "routeTemplate",
+      "surface",
+      "deviceClass",
+      "connectionClass",
+      "releaseId"
+    ],
+    "deploymentPolicy": "No fixed RUM duration or sample count blocks deployment. Immediate synthetic, workflow, resource, health, and error gates block; post-release RUM always reports its sample count."
+  },
+  "existingLoadEvidence": {
+    "path": "artifacts/production/load-src-0541078d-20rps-30m-20260728/evidence/src-0541078-steady-020-30m.load.json",
+    "durationMinutes": 30,
+    "requestsPerSecond": 20,
+    "errorRate": 0.0,
+    "p95Ms": 13.33,
+    "nodeShare": {
+      "node-1": 0.333,
+      "node-2": 0.333,
+      "node-3": 0.333
+    },
+    "limitations": {
+      "workflowRps": 0,
+      "websocketVus": 0,
+      "p99Usable": false,
+      "conclusion": "Ingress and landing/live health were healthy, but authenticated, database-heavy, write, and websocket workflows were not exercised."
+    }
+  }
+}

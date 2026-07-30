@@ -7,7 +7,7 @@ import { Clipboard, ClipboardList, Edit2, ExternalLink, Eye, Inbox, Plus, Trash2
 import toast from 'react-hot-toast';
 
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminStatCard,
   AdminModal,
@@ -15,6 +15,7 @@ import {
 } from '@/components/admin';
 import { getAdminForms, deleteAdminForm, CustomFormDto, getAdminFormDetails, updateAdminForm } from '@/services/forms-service';
 import { getAbsoluteLandingUrl } from '@/utils/url-utils';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 export default function AdminFormsPageClient() {
   const [forms, setForms] = useState<CustomFormDto[]>([]);
@@ -36,6 +37,8 @@ export default function AdminFormsPageClient() {
 
   useEffect(() => {
     fetchForms();
+    const cleanupCacheStore = registerCacheStore('forms', () => setForms([]), fetchForms);
+    return cleanupCacheStore;
   }, []);
 
   const getPublicFormUrl = (slug: string) => {
@@ -225,7 +228,7 @@ export default function AdminFormsPageClient() {
   const activeForms = forms.filter((f) => f.isActive).length;
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/forms"
       sectionLabel="أدوات الإدارة"
       pageTitle="النماذج المخصصة"
@@ -304,6 +307,6 @@ export default function AdminFormsPageClient() {
           </div>
         </div>
       </AdminModal>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

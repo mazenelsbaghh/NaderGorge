@@ -34,9 +34,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nadergorge.parent.data.api.ExamInfo
 import com.nadergorge.parent.data.api.HomeworkInfo
+import com.nadergorge.parent.data.api.AttendanceInfo
+import com.nadergorge.parent.data.api.BalanceInfo
+import com.nadergorge.parent.data.api.CourseInfo
+import com.nadergorge.parent.data.api.CourseTermInfo
+import com.nadergorge.parent.data.api.ParentNotificationResponse
+import com.nadergorge.parent.data.api.TeacherInfo
+import com.nadergorge.parent.data.api.WatchLessonInfo
 import com.nadergorge.parent.data.api.StudentDetailsResponse
 import com.nadergorge.parent.data.api.WarningInfo
+import com.nadergorge.parent.ui.AcademicLabels
 import com.nadergorge.parent.ui.theme.*
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+private val ParentBottomSafeSpace = 112.dp
 
 // --- Custom Massar Logo Component ---
 @Composable
@@ -146,7 +162,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                InfoRow(label = "الصف الدراسي", value = grade, icon = Icons.Default.Home)
+                InfoRow(label = "الصف الدراسي", value = AcademicLabels.grade(grade), icon = Icons.Default.Home)
                 InfoRow(label = "المجموعة الدراسية", value = "مجموعة A", icon = Icons.Default.Star)
                 InfoRow(label = "تاريخ الميلاد", value = "15/05/2009", icon = Icons.Default.DateRange)
                 InfoRow(label = "عدد المدرسين والمشرفين", value = "6 مدرسين", icon = Icons.Default.Person)
@@ -165,17 +181,65 @@ fun ProfileScreen(
     }
 }
 
-// --- Screen 5: Attendance Screen ---
+// --- Screen 5: Watch Log Screen ---
 @Composable
-fun AttendanceScreen(
-    watchedLessons: Int,
-    totalLessons: Int,
-    completionRate: Double,
+fun WatchLogScreen(
+    teachers: List<TeacherInfo>,
+    watchLessons: List<WatchLessonInfo>,
+    courses: List<CourseInfo> = emptyList(),
+    attendance: AttendanceInfo? = null,
     onBack: () -> Unit
 ) {
+    var selectedTeacherId by remember { mutableStateOf<String?>(null) }
+    var selectedPackageId by remember { mutableStateOf<String?>(null) }
+    var selectedTermId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(teachers.map { it.teacherId }) {
+        val teacherIds = teachers.map { it.teacherId }
+        selectedTeacherId = when {
+            teacherIds.isEmpty() -> null
+            selectedTeacherId in teacherIds -> selectedTeacherId
+            else -> teacherIds.first()
+        }
+    }
+    val teacherCourses = courses.filter { it.teacherId == selectedTeacherId }
+    LaunchedEffect(selectedTeacherId, teacherCourses.map { it.packageId }) {
+        val packageIds = teacherCourses.map { it.packageId }
+        selectedPackageId = when {
+            packageIds.isEmpty() -> null
+            selectedPackageId in packageIds -> selectedPackageId
+            else -> packageIds.first()
+        }
+    }
+    val selectedCourse = teacherCourses.firstOrNull { it.packageId == selectedPackageId }
+    val selectedTerms = selectedCourse?.terms.orEmpty()
+    LaunchedEffect(selectedPackageId, selectedTerms.map { it.termId }) {
+        val termIds = selectedTerms.map { it.termId }
+        selectedTermId = when {
+            termIds.isEmpty() -> null
+            selectedTermId in termIds -> selectedTermId
+            else -> termIds.first()
+        }
+    }
+    val canFilterByTeacher = teachers.isNotEmpty() && selectedTeacherId != null
+    val canFilterByCourse = courses.isNotEmpty() && selectedPackageId != null
+    val canFilterByTerm = selectedTerms.isNotEmpty() && selectedTermId != null
+    val filteredLessons = watchLessons.filter {
+        (!canFilterByTeacher || it.teacherId == selectedTeacherId) &&
+            (!canFilterByCourse || it.packageId == selectedPackageId) &&
+            (!canFilterByTerm || it.termId == selectedTermId)
+    }
+    val hasDetailedLessons = filteredLessons.isNotEmpty()
+    val completedCount = if (hasDetailedLessons) filteredLessons.count { it.isCompleted } else attendance?.watchedLessons ?: 0
+    val totalLessons = if (hasDetailedLessons) filteredLessons.size else attendance?.totalLessons ?: 0
+    val completionRate = if (hasDetailedLessons) {
+        completedCount * 100.0 / filteredLessons.size
+    } else {
+        attendance?.completionRate ?: 0.0
+    }
+
     Scaffold(
         topBar = {
-            ProfileTopBar(title = "الحضور والغياب", onBack = onBack)
+            ProfileTopBar(title = "سجل المشاهدات", onBack = onBack)
         }
     ) { padding ->
         LazyColumn(
@@ -184,33 +248,26 @@ fun AttendanceScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp),
+            contentPadding = PaddingValues(bottom = ParentBottomSafeSpace),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Calendar Picker Placeholder View
-            item {
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.AutoMirrored.Default.KeyboardArrowRight, contentDescription = null)
-                            Text("مايو 2026", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Icon(Icons.AutoMirrored.Default.KeyboardArrowLeft, contentDescription = null)
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        // Draw a simple calendar grid representation
-                        CalendarGrid()
-                    }
-                }
+            if (teachers.isNotEmpty()) item {
+                TeacherPicker(
+                    teachers = teachers,
+                    selectedTeacherId = selectedTeacherId,
+                    onSelect = { selectedTeacherId = it }
+                )
+            }
+            if (teacherCourses.isNotEmpty()) item {
+                CourseTermPicker(
+                    courses = teacherCourses,
+                    selectedPackageId = selectedPackageId,
+                    selectedTermId = selectedTermId,
+                    onCourseSelect = { selectedPackageId = it },
+                    onTermSelect = { selectedTermId = it }
+                )
             }
 
-            // Stats Gauge Widget
             item {
                 Card(
                     shape = RoundedCornerShape(16.dp),
@@ -219,7 +276,7 @@ fun AttendanceScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "نسبة الالتزام الإجمالية",
+                            text = if (teachers.isNotEmpty()) "ملخص مشاهدة الحصص المختارة" else "ملخص المشاهدات",
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             modifier = Modifier.padding(bottom = 12.dp)
@@ -230,7 +287,7 @@ fun AttendanceScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(80.dp)) {
                                 CircularProgressIndicator(
-                                    progress = (completionRate / 100).toFloat(),
+                                    progress = (completionRate / 100).toFloat().coerceIn(0f, 1f),
                                     color = BrandTeal,
                                     strokeWidth = 8.dp,
                                     modifier = Modifier.fillMaxSize()
@@ -238,80 +295,196 @@ fun AttendanceScreen(
                                 Text("${completionRate.toInt()}%", fontWeight = FontWeight.Black, fontSize = 16.sp)
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                StatusCountRow(label = "حاضر ومكتمل", count = watchedLessons, color = PassGreen)
-                                StatusCountRow(label = "غائب ومتأخر", count = totalLessons - watchedLessons, color = FailRed)
-                                StatusCountRow(label = "إجازة رسمية", count = 2, color = Color.Gray)
+                                StatusCountRow(label = "حصص مكتملة", count = completedCount, color = PassGreen)
+                                StatusCountRow(label = "حصص تحتاج مشاهدة", count = (totalLessons - completedCount).coerceAtLeast(0), color = FailRed)
+                                StatusCountRow(label = "إجمالي الحصص", count = totalLessons, color = BrandTeal)
                             }
                         }
                     }
+                }
+            }
+
+            if (filteredLessons.isEmpty()) {
+                item {
+                    EmptyStateCard(
+                        title = if (totalLessons > 0) "تفاصيل الحصص غير متاحة حالياً" else "لا توجد مشاهدات مسجلة",
+                        text = if (totalLessons > 0) "يعرض التطبيق الملخص العام للمشاهدات الآن: $completedCount من $totalLessons حصة." else "عند بدء مشاهدة الحصص ستظهر تفاصيلها هنا."
+                    )
+                }
+            } else {
+                items(filteredLessons) { lesson ->
+                    WatchLessonItem(lesson)
                 }
             }
         }
     }
 }
 
-// --- Screen 6: Grades Screen ---
+// --- Screen 6: Exams Screen ---
 @Composable
 fun GradesScreen(
+    teachers: List<TeacherInfo>,
     exams: List<ExamInfo>,
+    courses: List<CourseInfo> = emptyList(),
     onBack: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTeacherId by remember { mutableStateOf<String?>(null) }
+    var selectedPackageId by remember { mutableStateOf<String?>(null) }
+    var selectedTermId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(teachers.map { it.teacherId }) {
+        val teacherIds = teachers.map { it.teacherId }
+        selectedTeacherId = when {
+            teacherIds.isEmpty() -> null
+            selectedTeacherId in teacherIds -> selectedTeacherId
+            else -> teacherIds.first()
+        }
+    }
+    val teacherCourses = courses.filter { it.teacherId == selectedTeacherId }
+    LaunchedEffect(selectedTeacherId, teacherCourses.map { it.packageId }) {
+        val packageIds = teacherCourses.map { it.packageId }
+        selectedPackageId = when {
+            packageIds.isEmpty() -> null
+            selectedPackageId in packageIds -> selectedPackageId
+            else -> packageIds.first()
+        }
+    }
+    val selectedCourse = teacherCourses.firstOrNull { it.packageId == selectedPackageId }
+    val selectedTerms = selectedCourse?.terms.orEmpty()
+    LaunchedEffect(selectedPackageId, selectedTerms.map { it.termId }) {
+        val termIds = selectedTerms.map { it.termId }
+        selectedTermId = when {
+            termIds.isEmpty() -> null
+            selectedTermId in termIds -> selectedTermId
+            else -> termIds.first()
+        }
+    }
+    val canFilterByTeacher = teachers.isNotEmpty() && selectedTeacherId != null
+    val canFilterByCourse = courses.isNotEmpty() && selectedPackageId != null
+    val canFilterByTerm = selectedTerms.isNotEmpty() && selectedTermId != null
+    val filteredExams = exams.filter {
+        (!canFilterByTeacher || it.teacherId == selectedTeacherId) &&
+            (!canFilterByCourse || it.packageId == selectedPackageId) &&
+            (!canFilterByTerm || it.termId == selectedTermId)
+    }
+    val average = filteredExams.takeIf { it.isNotEmpty() }?.map { it.percentage }?.average() ?: 0.0
 
     Scaffold(
         topBar = {
-            ProfileTopBar(title = "الدرجات والتقييمات", onBack = onBack)
+            ProfileTopBar(title = "الامتحانات", onBack = onBack)
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp),
+            contentPadding = PaddingValues(bottom = ParentBottomSafeSpace),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Tab Switcher
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                TabButton(text = "الاختبارات", selected = selectedTab == 0, modifier = Modifier.weight(1f)) { selectedTab = 0 }
-                TabButton(text = "المواد الدراسية", selected = selectedTab == 1, modifier = Modifier.weight(1f)) { selectedTab = 1 }
+            if (teachers.isNotEmpty()) item {
+                TeacherPicker(
+                    teachers = teachers,
+                    selectedTeacherId = selectedTeacherId,
+                    onSelect = { selectedTeacherId = it }
+                )
+            }
+            if (teacherCourses.isNotEmpty()) item {
+                CourseTermPicker(
+                    courses = teacherCourses,
+                    selectedPackageId = selectedPackageId,
+                    selectedTermId = selectedTermId,
+                    onCourseSelect = { selectedPackageId = it },
+                    onTermSelect = { selectedTermId = it }
+                )
+            }
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("متوسط امتحانات الاختيار الحالي", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("${average.toInt()}%", color = BrandTeal, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LineChartVisual()
+                    }
+                }
             }
 
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (selectedTab == 0) {
-                    // Line Chart Representation Card
-                    item {
-                        Card(
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("متوسط درجات الطالب", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("88% (ممتاز)", color = BrandTeal, fontWeight = FontWeight.Black, fontSize = 20.sp)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                LineChartVisual()
-                            }
-                        }
-                    }
+            if (filteredExams.isEmpty()) {
+                item {
+                    EmptyStateCard(
+                        title = "لا توجد امتحانات لهذا الاختيار",
+                        text = "لا يوجد امتحان ظاهر للطالب حسب المدرس والكورس والترم الحالي، أو لم يتم حل أي امتحان بعد."
+                    )
+                }
+            } else {
+                items(filteredExams) { exam ->
+                    ExamItem(exam)
+                }
+            }
+        }
+    }
+}
 
-                    items(exams) { exam ->
-                        ExamItem(exam)
-                    }
-                } else {
-                    item {
-                        SubjectGradesList()
-                    }
+@Composable
+fun CoursesScreen(
+    teachers: List<TeacherInfo>,
+    courses: List<CourseInfo>,
+    watchLessons: List<WatchLessonInfo>,
+    exams: List<ExamInfo>,
+    onBack: () -> Unit
+) {
+    var selectedTeacherId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(teachers.map { it.teacherId }) {
+        val teacherIds = teachers.map { it.teacherId }
+        selectedTeacherId = when {
+            teacherIds.isEmpty() -> null
+            selectedTeacherId in teacherIds -> selectedTeacherId
+            else -> teacherIds.first()
+        }
+    }
+    val teacherCourses = courses.filter { it.teacherId == selectedTeacherId }
+
+    Scaffold(
+        topBar = {
+            ProfileTopBar(title = "الكورسات والترمات", onBack = onBack)
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp),
+            contentPadding = PaddingValues(bottom = ParentBottomSafeSpace),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                TeacherPicker(
+                    teachers = teachers,
+                    selectedTeacherId = selectedTeacherId,
+                    onSelect = { selectedTeacherId = it }
+                )
+            }
+
+            if (teacherCourses.isEmpty()) {
+                item {
+                    EmptyStateCard(
+                        title = "لا توجد كورسات مشتراة لهذا المدرس",
+                        text = "الكورسات والترمات تظهر هنا حسب الباقات أو الحصص التي اشتراها الطالب."
+                    )
+                }
+            } else {
+                items(teacherCourses) { course ->
+                    CourseSummaryCard(
+                        course = course,
+                        watchLessons = watchLessons.filter { it.packageId == course.packageId },
+                        exams = exams.filter { it.packageId == course.packageId }
+                    )
                 }
             }
         }
@@ -321,10 +494,57 @@ fun GradesScreen(
 // --- Screen 7: Homework Screen ---
 @Composable
 fun HomeworkScreen(
+    teachers: List<TeacherInfo>,
     homeworks: List<HomeworkInfo>,
+    courses: List<CourseInfo> = emptyList(),
     onBack: () -> Unit
 ) {
     var filterTab by remember { mutableStateOf(0) } // 0: All, 1: Pending, 2: Submitted
+    var selectedTeacherId by remember { mutableStateOf<String?>(null) }
+    var selectedPackageId by remember { mutableStateOf<String?>(null) }
+    var selectedTermId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(teachers.map { it.teacherId }) {
+        val teacherIds = teachers.map { it.teacherId }
+        selectedTeacherId = when {
+            teacherIds.isEmpty() -> null
+            selectedTeacherId in teacherIds -> selectedTeacherId
+            else -> teacherIds.first()
+        }
+    }
+    val teacherCourses = courses.filter { it.teacherId == selectedTeacherId }
+    LaunchedEffect(selectedTeacherId, teacherCourses.map { it.packageId }) {
+        val packageIds = teacherCourses.map { it.packageId }
+        selectedPackageId = when {
+            packageIds.isEmpty() -> null
+            selectedPackageId in packageIds -> selectedPackageId
+            else -> packageIds.first()
+        }
+    }
+    val selectedCourse = teacherCourses.firstOrNull { it.packageId == selectedPackageId }
+    val selectedTerms = selectedCourse?.terms.orEmpty()
+    LaunchedEffect(selectedPackageId, selectedTerms.map { it.termId }) {
+        val termIds = selectedTerms.map { it.termId }
+        selectedTermId = when {
+            termIds.isEmpty() -> null
+            selectedTermId in termIds -> selectedTermId
+            else -> termIds.first()
+        }
+    }
+    val canFilterByTeacher = teachers.isNotEmpty() && selectedTeacherId != null
+    val canFilterByCourse = courses.isNotEmpty() && selectedPackageId != null
+    val canFilterByTerm = selectedTerms.isNotEmpty() && selectedTermId != null
+    val scopedHomeworks = homeworks.filter {
+        (!canFilterByTeacher || it.teacherId == selectedTeacherId) &&
+            (!canFilterByCourse || it.packageId == selectedPackageId) &&
+            (!canFilterByTerm || it.termId == selectedTermId)
+    }
+    val filteredList = when (filterTab) {
+        1 -> scopedHomeworks.filter { !it.isSubmitted }
+        2 -> scopedHomeworks.filter { it.isSubmitted }
+        else -> scopedHomeworks
+    }
+    val submittedCount = scopedHomeworks.count { it.isSubmitted }
+    val pendingCount = scopedHomeworks.size - submittedCount
 
     Scaffold(
         topBar = {
@@ -350,82 +570,48 @@ fun HomeworkScreen(
                 TabButton(text = "تم تسليمه", selected = filterTab == 2, modifier = Modifier.weight(1f)) { filterTab = 2 }
             }
 
-            val filteredList = when (filterTab) {
-                1 -> homeworks.filter { !it.isSubmitted }
-                2 -> homeworks.filter { it.isSubmitted }
-                else -> homeworks
-            }
-
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(bottom = ParentBottomSafeSpace),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                if (teachers.isNotEmpty()) item {
+                    TeacherPicker(
+                        teachers = teachers,
+                        selectedTeacherId = selectedTeacherId,
+                        onSelect = { selectedTeacherId = it }
+                    )
+                }
+                if (teacherCourses.isNotEmpty()) item {
+                    CourseTermPicker(
+                        courses = teacherCourses,
+                        selectedPackageId = selectedPackageId,
+                        selectedTermId = selectedTermId,
+                        onCourseSelect = { selectedPackageId = it },
+                        onTermSelect = { selectedTermId = it }
+                    )
+                }
+                item {
+                    HomeworkSummaryCard(
+                        totalCount = scopedHomeworks.size,
+                        submittedCount = submittedCount,
+                        pendingCount = pendingCount
+                    )
+                }
                 if (filteredList.isEmpty()) {
                     item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                            Text("لا يوجد واجبات في هذا التبويب", color = TextSecondary)
-                        }
+                        EmptyStateCard(
+                            title = "لا توجد واجبات هنا",
+                            text = "لا يوجد واجب مطابق للاختيار الحالي. جرّب تبويب الكل أو اختر مدرساً/كورسا آخر."
+                        )
                     }
                 } else {
                     items(filteredList) { hw ->
                         HomeworkItem(hw)
                     }
                 }
-            }
-        }
-    }
-}
-
-// --- Screen 8: Class Schedule Screen ---
-@Composable
-fun ScheduleScreen(
-    onBack: () -> Unit
-) {
-    val days = listOf("السبت", "الأحد", "الأثنين", "الثلاثاء", "الأربعاء")
-    var selectedDay by remember { mutableStateOf(0) }
-
-    Scaffold(
-        topBar = {
-            ProfileTopBar(title = "الجدول الدراسي", onBack = onBack)
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            // Day selector tabs
-            ScrollableTabRow(
-                selectedTabIndex = selectedDay,
-                edgePadding = 16.dp,
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = BrandTeal
-            ) {
-                days.forEachIndexed { index, day ->
-                    Tab(
-                        selected = selectedDay == index,
-                        onClick = { selectedDay = index },
-                        text = { Text(day, fontWeight = FontWeight.Bold) }
-                    )
-                }
-            }
-
-            // Timeline schedule list
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item { ScheduleTimelineItem(time = "08:00 ص", subject = "اللغة العربية", teacher = "أ. أحمد سعيد") }
-                item { ScheduleTimelineItem(time = "09:00 ص", subject = "الرياضيات التطبيقية", teacher = "أ. محمد خالد") }
-                item { ScheduleTimelineItem(time = "10:00 ص", subject = "العلوم الفيزيائية", teacher = "أ. سارة جمال") }
-                item { BreakTimelineItem() }
-                item { ScheduleTimelineItem(time = "11:30 ص", subject = "اللغة الإنجليزية", teacher = "أ. ندى محمود") }
-                item { ScheduleTimelineItem(time = "12:30 م", subject = "الدراسات الاجتماعية", teacher = "أ. عمرو عبد الله") }
             }
         }
     }
@@ -476,17 +662,21 @@ fun NotesScreen(
     }
 }
 
-// --- Screen 10: Fees / Payments Screen ---
+// --- Screen 10: Balance Screen ---
 @Composable
-fun FeesScreen(
+fun BalanceScreen(
+    balance: BalanceInfo?,
     onBack: () -> Unit
 ) {
+    val currentBalance = balance?.currentBalance ?: 0.0
+    val transactions = balance?.transactions.orEmpty()
+
     Scaffold(
         topBar = {
-            ProfileTopBar(title = "المصاريف والمدفوعات", onBack = onBack)
+            ProfileTopBar(title = "الرصيد وتفاصيل الرصيد", onBack = onBack)
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
@@ -494,51 +684,36 @@ fun FeesScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Total Fees Card
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("إجمالي المصاريف الدراسية", fontSize = 13.sp, color = TextSecondary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("12,000 ج.م", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
-
-            // Pay breakdowns
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PaymentDetailRow(label = "المدفوع", value = "8,000 ج.م", isCompleted = true)
-                PaymentDetailRow(label = "المتبقي", value = "4,000 ج.م", isCompleted = false)
-            }
-
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("آخر عملية دفع", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    Text("1 مايو 2026", color = TextSecondary, fontSize = 13.sp)
+                    Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("الرصيد الحالي", fontSize = 13.sp, color = TextSecondary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("${currentBalance.toInt()} ج.م", fontSize = 28.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onSurface)
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            item {
+                Text("آخر حركات الرصيد", fontWeight = FontWeight.Black, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurface)
+            }
 
-            Button(
-                onClick = {},
-                colors = ButtonDefaults.buttonColors(containerColor = BrandTeal),
-                modifier = Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(12.dp))
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Share, contentDescription = null, tint = Color.White)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("عرض وتحميل إيصال الدفع", color = Color.White)
+            if (transactions.isEmpty()) {
+                item {
+                    EmptyStateCard("لا توجد حركات رصيد مسجلة حتى الآن.")
+                }
+            } else {
+                items(transactions) { transaction ->
+                    BalanceTransactionItem(
+                        amount = transaction.amount,
+                        balanceAfter = transaction.balanceAfter,
+                        title = transaction.description.ifBlank { transaction.transactionType },
+                        date = transaction.createdAt
+                    )
                 }
             }
         }
@@ -549,6 +724,8 @@ fun FeesScreen(
 @Composable
 fun NotificationsScreen(
     warnings: List<WarningInfo>,
+    notifications: List<ParentNotificationResponse>,
+    onNotificationClick: (ParentNotificationResponse) -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -564,32 +741,30 @@ fun NotificationsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                NotificationListItem(
-                    title = "تنبيه غياب",
-                    desc = "غياب الطالب يوم الأحد 5 مايو في مادة الرياضيات الشاملة.",
-                    date = "منذ ساعة",
-                    icon = Icons.Default.Warning,
-                    iconColor = WarningHigh
-                )
-            }
-            item {
-                NotificationListItem(
-                    title = "موعد امتحان قادم",
-                    desc = "تم جدولة اختبار مادة العلوم العامة يوم الثلاثاء 14 مايو.",
-                    date = "منذ ساعتين",
-                    icon = Icons.Default.DateRange,
-                    iconColor = BrandTeal
-                )
-            }
-            item {
-                NotificationListItem(
-                    title = "رسالة من الإدارة الأكاديمية",
-                    desc = "يرجى سداد القسط المتبقي من المصاريف الدراسية قبل نهاية الأسبوع.",
-                    date = "أمس",
-                    icon = Icons.Default.Email,
-                    iconColor = BrandWarmGold
-                )
+            if (warnings.isEmpty() && notifications.isEmpty()) {
+                item {
+                    EmptyStateCard("لا توجد تنبيهات مسجلة حتى الآن.")
+                }
+            } else {
+                items(notifications.sortedByDescending { it.createdAt }) { notification ->
+                    NotificationListItem(
+                        title = notification.title,
+                        desc = notification.body,
+                        date = formatDisplayDateTime(notification.createdAt),
+                        icon = Icons.Default.Notifications,
+                        iconColor = if (notification.isRead) TextSecondary else BrandTeal,
+                        modifier = Modifier.clickable { onNotificationClick(notification) }
+                    )
+                }
+                items(warnings.sortedByDescending { it.createdAt }) { warning ->
+                    NotificationListItem(
+                        title = "تنبيه ${warning.severity}",
+                        desc = warning.reason,
+                        date = formatDisplayDateTime(warning.createdAt),
+                        icon = Icons.Default.Warning,
+                        iconColor = WarningHigh
+                    )
+                }
             }
         }
     }
@@ -599,6 +774,8 @@ fun NotificationsScreen(
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    notificationsEnabled: Boolean,
+    onTestNotification: () -> Unit,
     onLogout: () -> Unit
 ) {
     Scaffold(
@@ -620,6 +797,17 @@ fun SettingsScreen(
                 SettingsRow(title = "تغيير رقم موبايل ولي الأمر", icon = Icons.Default.Phone) {}
                 SettingsRow(title = "الدعم الفني والشكاوى", icon = Icons.Default.Build) {}
                 SettingsRow(title = "الأسئلة الشائعة FAQ", icon = Icons.Default.Info) {}
+                SettingsRow(
+                    title = if (notificationsEnabled) "الإشعارات مفعلة" else "الإشعارات غير مفعلة",
+                    icon = Icons.Default.Notifications,
+                    tint = if (notificationsEnabled) PassGreen else FailRed
+                ) {}
+                SettingsRow(
+                    title = "اختبار إشعار داخل التطبيق",
+                    icon = Icons.Default.Notifications,
+                    tint = BrandWarmGold,
+                    onClick = onTestNotification
+                )
                 SettingsRow(title = "عن منصة مسار", icon = Icons.Default.Face) {}
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -702,52 +890,322 @@ fun InfoRow(label: String, value: String, icon: ImageVector) {
 }
 
 @Composable
-fun CalendarGrid() {
+fun TeacherPicker(
+    teachers: List<TeacherInfo>,
+    selectedTeacherId: String?,
+    onSelect: (String?) -> Unit
+) {
+    if (teachers.isEmpty()) {
+        EmptyStateCard("لا يوجد مدرسين مرتبطين بمشتريات الطالب حتى الآن.")
+        return
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Mock Calendar Header Days
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            val days = listOf("س", "ح", "ن", "ث", "ر", "خ", "ج")
-            days.forEach { day ->
-                Text(day, modifier = Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Text("اختار المدرس", fontWeight = FontWeight.Black, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+        LazyColumn(
+            modifier = Modifier.heightIn(max = 156.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(teachers) { teacher ->
+                val selected = teacher.teacherId == selectedTeacherId
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) BrandTeal.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface)
+                        .clickable { onSelect(teacher.teacherId) }
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(teacher.teacherName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                        teacher.specialization?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, fontSize = 11.sp, color = TextSecondary)
+                        }
+                    }
+                    if (selected) Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(18.dp))
+                }
             }
         }
-        HorizontalDivider(color = if (isSystemInDarkTheme()) Color.White.copy(alpha = 0.1f) else BrandOffWhite)
-        // Mock Calendar Dates
-        for (row in 0..4) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                for (col in 1..7) {
-                    val dateNum = row * 7 + col
-                    val isPresent = dateNum in listOf(5, 6, 7, 12, 13, 14, 19, 20)
-                    val isAbsent = dateNum in listOf(11, 21)
-                    val displayNum = if (dateNum <= 30) dateNum.toString() else ""
-                    
-                    Box(
+    }
+}
+
+@Composable
+fun CourseTermPicker(
+    courses: List<CourseInfo>,
+    selectedPackageId: String?,
+    selectedTermId: String?,
+    onCourseSelect: (String?) -> Unit,
+    onTermSelect: (String?) -> Unit
+) {
+    if (courses.isEmpty()) {
+        EmptyStateCard(
+            title = "لا توجد كورسات لهذا المدرس",
+            text = "سيظهر هنا الكورس والترم بعد شراء الطالب حصة أو باقة من هذا المدرس."
+        )
+        return
+    }
+
+    val selectedCourse = courses.firstOrNull { it.packageId == selectedPackageId } ?: courses.first()
+    val terms = selectedCourse.terms.orEmpty()
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("اختار الكورس", fontWeight = FontWeight.Black, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            courses.forEach { course ->
+                val selected = course.packageId == selectedCourse.packageId
+                SelectableRow(
+                    title = course.packageName,
+                    subtitle = course.teacherName,
+                    icon = Icons.Default.List,
+                    selected = selected,
+                    onClick = { onCourseSelect(course.packageId) }
+                )
+            }
+        }
+
+        Text("اختار الترم", fontWeight = FontWeight.Black, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+        if (terms.isEmpty()) {
+            EmptyStateCard(
+                title = "لا توجد ترمات داخل الكورس",
+                text = "لا توجد دروس أو امتحانات مفعلة لهذا الكورس حالياً."
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                terms.forEach { term ->
+                    val selected = term.termId == selectedTermId
+                    SelectableRow(
+                        title = term.termTitle,
+                        subtitle = "${term.lessonCount} حصة • ${term.examCount} امتحان",
+                        icon = Icons.Default.DateRange,
+                        selected = selected,
+                        onClick = { onTermSelect(term.termId) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SelectableRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) BrandTeal.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface)
+            .clickable { onClick() }
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(subtitle, fontSize = 11.sp, color = TextSecondary)
+        }
+        if (selected) Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+fun CourseSummaryCard(
+    course: CourseInfo,
+    watchLessons: List<WatchLessonInfo>,
+    exams: List<ExamInfo>
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val completedLessons = watchLessons.count { it.isCompleted }
+    Card(
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.List, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(22.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(course.packageName, fontWeight = FontWeight.Black, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(course.teacherName, fontSize = 12.sp, color = TextSecondary)
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = TextSecondary
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                MiniStat("الترمات", course.terms.orEmpty().size.toString(), BrandTeal, Modifier.weight(1f))
+                MiniStat("الحصص", "${completedLessons}/${watchLessons.size}", PassGreen, Modifier.weight(1f))
+                MiniStat("الامتحانات", exams.size.toString(), BrandWarmGold, Modifier.weight(1f))
+            }
+
+            if (expanded) {
+                course.terms.orEmpty().forEach { term ->
+                    val termLessons = watchLessons.filter { it.termId == term.termId }
+                    val termExams = exams.filter { it.termId == term.termId }
+                    Column(
                         modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f)
-                            .clip(CircleShape)
-                            .background(
-                                when {
-                                    isPresent -> PassGreen.copy(alpha = 0.15f)
-                                    isAbsent -> FailRed.copy(alpha = 0.15f)
-                                    else -> Color.Transparent
-                                }
-                            ),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        Text(term.termTitle, fontWeight = FontWeight.Black, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
                         Text(
-                            text = displayNum,
+                            "الحصص: ${termLessons.count { it.isCompleted }} مكتملة من ${termLessons.size} • الامتحانات: ${termExams.size}",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = when {
-                                isPresent -> PassGreen
-                                isAbsent -> FailRed
-                                else -> MaterialTheme.colorScheme.onSurface
-                            }
+                            color = TextSecondary
                         )
+                        termLessons.take(4).forEach { lesson ->
+                            Text(
+                                "• ${lesson.lessonTitle} - ${if (lesson.isCompleted) "مكتملة" else "لم تكتمل"}",
+                                fontSize = 11.sp,
+                                color = if (lesson.isCompleted) PassGreen else TextSecondary
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun MiniStat(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(color.copy(alpha = 0.08f))
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(value, fontWeight = FontWeight.Black, fontSize = 15.sp, color = color)
+        Text(label, fontSize = 10.sp, color = TextSecondary)
+    }
+}
+
+@Composable
+fun HomeworkSummaryCard(
+    totalCount: Int,
+    submittedCount: Int,
+    pendingCount: Int
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("ملخص الواجبات", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                MiniStat("الإجمالي", totalCount.toString(), BrandTeal, Modifier.weight(1f))
+                MiniStat("تم التسليم", submittedCount.toString(), PassGreen, Modifier.weight(1f))
+                MiniStat("متبقي", pendingCount.coerceAtLeast(0).toString(), FailRed, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyStateCard(
+    text: String,
+    title: String = "لا توجد بيانات"
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(22.dp))
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = text,
+                color = TextSecondary,
+                fontSize = 12.sp,
+                lineHeight = 18.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun WatchLessonItem(lesson: WatchLessonInfo) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, tint = BrandTeal, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(lesson.lessonTitle, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                Text(if (lesson.isCompleted) "مكتملة" else "قيد المشاهدة", color = if (lesson.isCompleted) PassGreen else BrandWarmGold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            if (lesson.packageName.isNotBlank() || lesson.termTitle.isNotBlank()) {
+                Text(
+                    listOf(lesson.packageName, lesson.termTitle).filter { it.isNotBlank() }.joinToString(" • "),
+                    color = BrandTeal,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text("الفيديوهات: ${lesson.watchedVideos} / ${lesson.totalVideos}", color = TextSecondary, fontSize = 12.sp)
+            Text("عدد المشاهدات: ${lesson.watchCount} • الوقت: ${formatDuration(lesson.watchedSeconds)}", color = TextSecondary, fontSize = 12.sp)
+            lesson.lastWatchedAt?.let { Text("آخر مشاهدة: ${formatDisplayDateTime(it)}", color = TextSecondary.copy(alpha = 0.7f), fontSize = 11.sp) }
+        }
+    }
+}
+
+@Composable
+fun BalanceTransactionItem(amount: Double, balanceAfter: Double, title: String, date: String) {
+    val isCredit = amount >= 0
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (isCredit) Icons.Default.AddCircle else Icons.Default.ShoppingCart,
+            contentDescription = null,
+            tint = if (isCredit) PassGreen else BrandWarmGold,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+            Text(formatDisplayDateTime(date), fontSize = 11.sp, color = TextSecondary)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text("${amount.toInt()} ج.م", fontWeight = FontWeight.Black, color = if (isCredit) PassGreen else FailRed)
+            Text("بعدها ${balanceAfter.toInt()} ج.م", fontSize = 11.sp, color = TextSecondary)
         }
     }
 }
@@ -806,99 +1264,16 @@ fun LineChartVisual() {
 }
 
 @Composable
-fun SubjectGradesList() {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-        SubjectGradeRow(subject = "اللغة العربية", grade = "94% (ممتاز)")
-        SubjectGradeRow(subject = "الرياضيات", grade = "88% (جيد جداً)")
-        SubjectGradeRow(subject = "العلوم العامة", grade = "90% (ممتاز)")
-        SubjectGradeRow(subject = "اللغة الإنجليزية", grade = "82% (جيد جداً)")
-    }
-}
-
-@Composable
-fun SubjectGradeRow(subject: String, grade: String) {
+fun NotificationListItem(
+    title: String,
+    desc: String,
+    date: String,
+    icon: ImageVector,
+    iconColor: Color,
+    modifier: Modifier = Modifier
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(subject, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        Text(grade, color = BrandTeal, fontWeight = FontWeight.Black, fontSize = 13.sp)
-    }
-}
-
-@Composable
-fun ScheduleTimelineItem(time: String, subject: String, teacher: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(time, fontWeight = FontWeight.Black, fontSize = 13.sp, color = BrandTeal, modifier = Modifier.width(70.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column {
-            Text(subject, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            Text(teacher, fontSize = 12.sp, color = TextSecondary)
-        }
-    }
-}
-
-@Composable
-fun BreakTimelineItem() {
-    val isDark = isSystemInDarkTheme()
-    val bgColor = if (isDark) SurfaceCard else BrandSoftGray
-    val contentColor = if (isDark) Color.White else BrandDeepNavy
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(bgColor)
-            .padding(12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.Face, contentDescription = null, tint = contentColor, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("استراحة غداء ونشاط حر", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = contentColor)
-    }
-}
-
-@Composable
-fun PaymentDetailRow(label: String, value: String, isCompleted: Boolean) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.Warning,
-                contentDescription = null,
-                tint = if (isCompleted) PassGreen else WarningHigh,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(label, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-        }
-        Text(value, fontWeight = FontWeight.Black, fontSize = 14.sp, color = if (isCompleted) PassGreen else WarningHigh)
-    }
-}
-
-@Composable
-fun NotificationListItem(title: String, desc: String, date: String, icon: ImageVector, iconColor: Color) {
-    Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surface)
@@ -956,92 +1331,247 @@ fun SettingsRow(
 
 @Composable
 fun ExamItem(exam: ExamInfo) {
+    var expanded by remember { mutableStateOf(false) }
+    val mistakes = exam.mistakes.orEmpty()
+    val status = exam.status ?: "Unknown"
+    val teacherName = exam.teacherName?.takeIf { it.isNotBlank() } ?: "مدرس المادة"
+    val packageName = exam.packageName.orEmpty()
+    val termTitle = exam.termTitle.orEmpty()
+    val statusLabel = when (status) {
+        "NotStarted" -> "غير محلول"
+        "Passed" -> "ناجح"
+        "Failed" -> "راسب"
+        else -> status
+    }
+    val statusColor = when (status) {
+        "NotStarted" -> TextSecondary
+        "Passed" -> PassGreen
+        "Failed" -> FailRed
+        else -> BrandWarmGold
+    }
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = exam.examTitle,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$teacherName • الدرجة: ${exam.score.toInt()} / ${exam.totalScore.toInt()} (${exam.percentage.toInt()}%)",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = if (status == "NotStarted") "لم يتم الحل بعد" else "غلطات: ${mistakes.size}",
+                        fontSize = 11.sp,
+                        color = BrandWarmGold,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (packageName.isNotBlank() || termTitle.isNotBlank() || exam.submittedAt != null) {
+                        Text(
+                            text = listOfNotNull(
+                                packageName.takeIf { it.isNotBlank() },
+                                termTitle.takeIf { it.isNotBlank() },
+                                exam.submittedAt?.let { formatDisplayDateTime(it) }
+                            ).joinToString(" • "),
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
                 Text(
-                    text = exam.examTitle,
+                    text = statusLabel,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "الدرجة: ${exam.score} / ${exam.totalScore} (${exam.percentage.toInt()}%)",
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = statusColor
                 )
             }
-            Text(
-                text = if (exam.status == "Passed") "ناجح" else "راسب",
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                color = if (exam.status == "Passed") PassGreen else FailRed
-            )
+            if (expanded) {
+                if (status == "NotStarted") {
+                    Text("الامتحان لم يتم حله بعد.", color = TextSecondary, fontSize = 12.sp)
+                } else if (mistakes.isEmpty()) {
+                    Text("لا توجد أخطاء في هذا الامتحان.", color = PassGreen, fontSize = 12.sp)
+                } else {
+                    mistakes.forEachIndexed { index, mistake ->
+                        ReviewMistakeBlock(
+                            title = "سؤال ${index + 1}",
+                            question = mistake.questionText,
+                            studentAnswer = mistake.studentAnswer ?: "بدون إجابة",
+                            correctAnswer = mistake.correctAnswer,
+                            correction = mistake.writtenCorrection,
+                            score = "${mistake.pointsAwarded.toInt()} / ${mistake.points.toInt()}"
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 fun HomeworkItem(hw: HomeworkInfo) {
+    var expanded by remember { mutableStateOf(false) }
+    val mistakes = hw.mistakes.orEmpty()
+    val submissionState = hw.submissionState ?: if (hw.isSubmitted) "Graded" else "NotSubmitted"
+    val teacherName = hw.teacherName?.takeIf { it.isNotBlank() } ?: "مدرس المادة"
+    val packageName = hw.packageName.orEmpty()
+    val termTitle = hw.termTitle.orEmpty()
+    val stateLabel = when (submissionState) {
+        "NotSubmitted" -> "متبقي"
+        "InProgress" -> "قيد الحل"
+        "PendingReview" -> "قيد التصحيح"
+        "Graded" -> "مصحح"
+        "Missed" -> "فائت"
+        else -> if (hw.isSubmitted) "مسلم" else "متبقي"
+    }
+    val stateColor = when (submissionState) {
+        "Graded" -> BrandTeal
+        "PendingReview", "InProgress" -> BrandWarmGold
+        "Missed", "NotSubmitted" -> FailRed
+        else -> if (hw.isSubmitted) BrandTeal else FailRed
+    }
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = hw.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                if (hw.isSubmitted) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "التقييم: ${hw.grade ?: "A"}",
-                        fontSize = 11.sp,
-                        color = BrandTeal
+                        text = hw.title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                } else {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    if (hw.isSubmitted) {
+                        Text(
+                            text = "$teacherName • التقييم: ${hw.grade ?: "تم التسليم"}",
+                            fontSize = 11.sp,
+                            color = BrandTeal
+                        )
+                    } else {
+                        Text(
+                            text = "$teacherName • لم يتم التسليم",
+                            fontSize = 11.sp,
+                            color = FailRed
+                        )
+                    }
+                    if (packageName.isNotBlank() || termTitle.isNotBlank() || hw.submittedAt != null) {
+                        Text(
+                            text = listOfNotNull(
+                                packageName.takeIf { it.isNotBlank() },
+                                termTitle.takeIf { it.isNotBlank() },
+                                hw.submittedAt?.let { formatDisplayDateTime(it) }
+                            ).joinToString(" • "),
+                            fontSize = 11.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(stateColor.copy(alpha = 0.1f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "متأخر عن التسليم",
-                        fontSize = 11.sp,
-                        color = FailRed
+                        text = stateLabel,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = stateColor
                     )
                 }
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (hw.isSubmitted) BrandTeal.copy(alpha = 0.1f) else FailRed.copy(alpha = 0.1f))
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = if (hw.isSubmitted) "مسلم" else "متبقي",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = if (hw.isSubmitted) BrandTeal else FailRed
-                )
+            if (expanded) {
+                if (mistakes.isEmpty()) {
+                    Text(if (hw.isSubmitted) "لا توجد أخطاء مسجلة في هذا الواجب." else "الواجب لم يتم حله بعد.", color = TextSecondary, fontSize = 12.sp)
+                } else {
+                    mistakes.forEachIndexed { index, mistake ->
+                        ReviewMistakeBlock(
+                            title = "سؤال ${index + 1}",
+                            question = mistake.questionText,
+                            studentAnswer = mistake.studentAnswer,
+                            correctAnswer = mistake.correctAnswer,
+                            correction = mistake.writtenCorrection,
+                            score = "${mistake.scoreReceived ?: 0} / ${mistake.points}"
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+@Composable
+fun ReviewMistakeBlock(
+    title: String,
+    question: String,
+    studentAnswer: String,
+    correctAnswer: String?,
+    correction: String?,
+    score: String
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.background)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text("$title • $score", fontWeight = FontWeight.Black, fontSize = 12.sp, color = BrandTeal)
+        Text(question, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        Text("إجابة الطالب: $studentAnswer", fontSize = 12.sp, color = FailRed)
+        correctAnswer?.takeIf { it.isNotBlank() }?.let {
+            Text("الإجابة الصحيحة: $it", fontSize = 12.sp, color = PassGreen)
+        }
+        correction?.takeIf { it.isNotBlank() }?.let {
+            Text("التصحيح: $it", fontSize = 12.sp, color = TextSecondary, lineHeight = 18.sp)
+        }
+    }
+}
+
+private fun formatDuration(seconds: Int): String {
+    if (seconds <= 0) return "لم يبدأ بعد"
+    val minutes = seconds / 60
+    if (minutes <= 0) return "أقل من دقيقة"
+    val hours = minutes / 60
+    val remainingMinutes = minutes % 60
+    return when {
+        hours <= 0 -> "$minutes دقيقة"
+        remainingMinutes == 0 -> "$hours ساعة"
+        else -> "$hours ساعة و $remainingMinutes دقيقة"
+    }
+}
+
+private fun formatDisplayDateTime(raw: String?): String {
+    if (raw.isNullOrBlank()) return "غير محدد"
+    val cairoZone = ZoneId.of("Africa/Cairo")
+    val dateTime = runCatching { OffsetDateTime.parse(raw).atZoneSameInstant(cairoZone).toLocalDateTime() }
+        .recoverCatching { LocalDateTime.parse(raw).atZone(cairoZone).toLocalDateTime() }
+        .getOrNull()
+        ?: return raw.take(16).replace('T', ' ')
+
+    val date = dateTime.toLocalDate()
+    val today = LocalDate.now(cairoZone)
+    val time = dateTime.format(DateTimeFormatter.ofPattern("h:mm a", Locale("ar")))
+    return when (date) {
+        today -> "اليوم $time"
+        today.minusDays(1) -> "أمس $time"
+        else -> dateTime.format(DateTimeFormatter.ofPattern("d MMM yyyy - h:mm a", Locale("ar")))
+    }
+}
 
 // Extension to allow custom opacity on Color variables
 private fun Modifier.opacity(value: Float): Modifier = this

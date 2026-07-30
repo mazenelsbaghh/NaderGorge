@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "237626f3-d1fa-4883-afe3-cdea1641b999",
+  "command": "seal-legacy-release",
+  "startedAt": "2026-07-27T07:16:42.558762Z",
+  "completedAt": "2026-07-27T07:16:42.558948Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

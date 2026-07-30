@@ -1,0 +1,12 @@
+{
+  "excludedNode": null,
+  "seriesId": "src-0541078-distribution-smoke",
+  "stages": [
+    {
+      "capacityEvidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/load-src-0541078d-20260728/evidence/src-0541078-dist-010.capacity.json",
+      "evidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/load-src-0541078d-20260728/evidence/src-0541078-dist-010.load.json",
+      "requestedRps": 10,
+      "sequence": 1
+    }
+  ]
+}

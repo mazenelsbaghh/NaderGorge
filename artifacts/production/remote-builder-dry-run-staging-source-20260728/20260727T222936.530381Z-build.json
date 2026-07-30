@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "e1185a2b-c2a5-499f-a561-d979f7843188",
+  "command": "build",
+  "startedAt": "2026-07-27T22:29:36.530381Z",
+  "completedAt": "2026-07-27T22:29:36.530547Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

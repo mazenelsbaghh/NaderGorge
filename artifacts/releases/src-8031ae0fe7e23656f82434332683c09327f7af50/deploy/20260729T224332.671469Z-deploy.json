@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "7c6bd191-3b66-45a9-86bb-c4eb518f8d27",
+  "command": "deploy",
+  "startedAt": "2026-07-29T22:43:32.671469Z",
+  "completedAt": "2026-07-29T22:43:32.671923Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: rollout failed on node-3; application rollback order node-3 restored node-3 against retained schema; MASSAR_DEPLOY_FAILURE stage=switch-current-pointer line=1 status=7"
+}

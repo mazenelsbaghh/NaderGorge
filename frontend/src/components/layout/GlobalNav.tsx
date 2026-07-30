@@ -22,11 +22,11 @@ import { ShinyButton } from '@/components/ui/shiny-button';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 
-function LoginNavButtonContent() {
+function LoginNavButtonContent({ tone }: { tone: 'dark' | 'light' }) {
   return (
     <span className="inline-flex items-center gap-2.5 whitespace-nowrap">
       <span className="inline-flex h-4 w-4 shrink-0">
-        <PlatformLogo variant="mark" size="sm" />
+        <PlatformLogo variant="mark" size="sm" tone={tone} />
       </span>
       <span>تسجيل الدخول</span>
     </span>
@@ -35,30 +35,24 @@ function LoginNavButtonContent() {
 
 export function GlobalNav() {
   const pathname = usePathname();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
   const { isDark, toggleTheme } = useAdminTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isLanding = pathname === '/';
-  const isStudentArea = pathname.startsWith('/student');
-  const isAdminArea = pathname.startsWith('/admin');
-  const isTeacherArea = pathname.startsWith('/teacher');
-  const isAssistantArea = pathname.startsWith('/assistant');
+  const isPublicTeachersPage =
+    pathname === '/teachers' || pathname.startsWith('/teachers/');
+  const isPublicPackagePage = pathname.startsWith('/packages/');
+  const isSecondaryResultsPage = pathname.startsWith('/thanaweya-results');
   const isAuthRoute =
     pathname === '/login' ||
     pathname === '/register' ||
     pathname === '/forgot-password';
-  const isFormsPage = pathname.startsWith('/forms');
 
-  if (
-    isStudentArea ||
-    isAdminArea ||
-    isTeacherArea ||
-    isAssistantArea ||
-    isAuthRoute ||
-    isFormsPage
-  ) {
+  if (isAuthRoute) {
     return null;
   }
 
@@ -68,13 +62,18 @@ export function GlobalNav() {
     });
   };
 
-  const isStaffUser = user?.roles?.some(r =>
-    r.toLowerCase().includes('admin') ||
-    r.toLowerCase().includes('supervisor') ||
-    r.toLowerCase().includes('teacher') ||
-    r.toLowerCase().includes('assistant') ||
-    r.toLowerCase().includes('staff')
-  ) || user?.allowedDomains?.some(d => d === 'admin' || d === 'teacher' || d === 'assistant');
+  const isStaffUser =
+    user?.roles?.some(
+      (r) =>
+        r.toLowerCase().includes('admin') ||
+        r.toLowerCase().includes('supervisor') ||
+        r.toLowerCase().includes('teacher') ||
+        r.toLowerCase().includes('assistant') ||
+        r.toLowerCase().includes('staff')
+    ) ||
+    user?.allowedDomains?.some(
+      (d) => d === 'admin' || d === 'teacher' || d === 'assistant'
+    );
 
   const navLinks = isAuthenticated
     ? isStaffUser
@@ -87,15 +86,19 @@ export function GlobalNav() {
       : [
           { href: '/student', label: 'لوحة التحكم' },
           { href: '/student/packages', label: 'باقاتي' },
-          { href: '/student/code-redemption', label: 'تفعيل كود' },
         ]
-    : isLanding
+    : isLanding ||
+        isPublicTeachersPage ||
+        isPublicPackagePage ||
+        isSecondaryResultsPage
       ? [
           { href: '/', label: 'الرئيسية' },
-          { href: '#courses', label: 'الدورات' },
-          { href: '#teachers', label: 'المعلمون' },
-          { href: '#about-platform', label: 'عن المنصة' },
-          { href: '#testimonials', label: 'آراء الطلبة' },
+          { href: '/#courses', label: 'الدورات' },
+          { href: '/#teachers', label: 'المعلمون' },
+          { href: '/thanaweya-results', label: 'نتيجة الثانوية العامة' },
+          { href: '/#about-platform', label: 'عن المنصة' },
+          { href: '/#testimonials', label: 'آراء الطلبة' },
+          { href: '/parent', label: 'متابعة ولي الأمر' },
         ]
       : [];
 
@@ -107,7 +110,7 @@ export function GlobalNav() {
         {/* Desktop Navigation */}
         <NavBody isLanding={isLanding}>
           <div className="flex items-center gap-3">
-            <NavbarLogo />
+            <NavbarLogo tone={isDark ? 'light' : 'dark'} />
           </div>
 
           <NavItems
@@ -137,13 +140,13 @@ export function GlobalNav() {
                   href="/login"
                   className="hidden md:inline-flex text-[15px] h-[46px] items-center px-8"
                 >
-                  <LoginNavButtonContent />
+                  <LoginNavButtonContent tone={isDark ? 'light' : 'dark'} />
                 </ShinyButton>
                 <InteractiveHoverButton
                   href="/register"
                   className="hidden md:inline-flex text-[15px] h-[46px] items-center px-6"
                 >
-                  احجز مكانك
+                  إنشاء حساب
                 </InteractiveHoverButton>
               </>
             )}
@@ -168,7 +171,7 @@ export function GlobalNav() {
         {/* Mobile Navigation */}
         <MobileNav>
           <MobileNavHeader>
-            <NavbarLogo />
+            <NavbarLogo tone={isDark ? 'light' : 'dark'} />
             <div className="flex items-center gap-1 sm:gap-2">
               {!isAuthenticated && (
                 <Link
@@ -244,7 +247,7 @@ export function GlobalNav() {
                     }}
                     className="w-full text-base h-12 flex items-center justify-center"
                   >
-                    <LoginNavButtonContent />
+                    <LoginNavButtonContent tone={isDark ? 'light' : 'dark'} />
                   </ShinyButton>
                   <InteractiveHoverButton
                     href="/register"
@@ -253,7 +256,7 @@ export function GlobalNav() {
                     }}
                     className="w-full text-base h-12 flex items-center justify-center"
                   >
-                    احجز مكانك
+                    إنشاء حساب
                   </InteractiveHoverButton>
                 </>
               )}

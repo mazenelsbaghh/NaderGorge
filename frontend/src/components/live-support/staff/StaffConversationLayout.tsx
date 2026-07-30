@@ -15,11 +15,11 @@ export function StaffConversationLayout({ queue, workspace, context }: { queue: 
   }, [context, mobileView]);
 
   return (
-    <div className="min-h-[620px] min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+    <div className="h-[min(700px,calc(100dvh-12rem))] min-h-[500px] min-w-0 overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)]">
       {/* Mobile/Tablet Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-3 lg:hidden">
+      <div className="flex items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-3 lg:hidden">
         {mobileView === 'queue' && (
-          <span className="flex items-center gap-2 text-sm font-bold text-slate-800">
+          <span className="flex items-center gap-2 text-sm font-bold text-[var(--admin-text)]">
             <Users size={16} />
             المحادثات الواردة
           </span>
@@ -28,7 +28,7 @@ export function StaffConversationLayout({ queue, workspace, context }: { queue: 
           <div className="flex w-full items-center justify-between gap-2">
             <button
               onClick={() => setMobileView('queue')}
-              className="flex items-center gap-1 text-xs font-bold text-cyan-700"
+              className="flex min-h-11 items-center gap-1 text-xs font-bold text-[var(--admin-primary)]"
             >
               <ChevronRight size={16} />
               قائمة المحادثات
@@ -36,7 +36,7 @@ export function StaffConversationLayout({ queue, workspace, context }: { queue: 
             {context && (
               <button
                 onClick={() => setMobileView('context')}
-                className="flex items-center gap-1 text-xs font-bold text-slate-700 bg-slate-200 px-2 py-1 rounded-lg"
+                className="flex min-h-11 items-center gap-1 rounded-lg bg-[var(--admin-card-strong)] px-2 py-1 text-xs font-bold text-[var(--admin-text)]"
               >
                 <Info size={14} />
                 ملف الطالب
@@ -47,7 +47,7 @@ export function StaffConversationLayout({ queue, workspace, context }: { queue: 
         {mobileView === 'context' && (
           <button
             onClick={() => setMobileView('workspace')}
-            className="flex items-center gap-1 text-xs font-bold text-cyan-700"
+            className="flex min-h-11 items-center gap-1 text-xs font-bold text-[var(--admin-primary)]"
           >
             <ChevronRight size={16} />
             العودة للمحادثة
@@ -56,20 +56,20 @@ export function StaffConversationLayout({ queue, workspace, context }: { queue: 
       </div>
 
       {/* Main Grid View */}
-      <div className="grid min-h-[620px] min-w-0 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(360px,1fr)_320px]">
+      <div className="grid h-[calc(100%_-_3.0625rem)] min-w-0 lg:h-full lg:grid-cols-[300px_minmax(0,680px)] xl:grid-cols-[300px_minmax(0,680px)_minmax(260px,320px)] xl:justify-start">
         {/* Queue Pane */}
-        <div className={`min-w-0 ${mobileView === 'queue' ? 'block' : 'hidden lg:block'}`}>
+        <div className={`h-full min-h-0 min-w-0 overflow-hidden ${mobileView === 'queue' ? 'block' : 'hidden lg:block'}`}>
           {queue}
         </div>
 
         {/* Workspace Pane */}
-        <div className={`min-w-0 ${mobileView === 'workspace' ? 'block' : 'hidden lg:block'}`}>
+        <div className={`h-full min-h-0 min-w-0 overflow-hidden ${mobileView === 'workspace' ? 'block' : 'hidden lg:block'}`}>
           {workspace}
         </div>
 
         {/* Context Pane */}
         {context && (
-          <div className={`min-w-0 lg:col-span-2 xl:col-span-1 ${mobileView === 'context' ? 'block' : 'hidden xl:block'}`}>
+          <div className={`h-full min-h-0 min-w-0 overflow-hidden xl:col-span-1 ${mobileView === 'context' ? 'block' : 'hidden xl:block'}`}>
             {context}
           </div>
         )}

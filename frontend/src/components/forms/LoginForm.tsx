@@ -11,7 +11,8 @@
  */
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Eye, EyeOff, Phone } from 'lucide-react';
@@ -20,10 +21,12 @@ import { useAuthStore } from '@/stores/auth-store';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 import { Checkbox, Label } from '@/components/ui/checkbox';
 import { ShinyButton } from '@/components/ui/shiny-button';
-import { getSurfaceOrigins, getSurfaceName, isValidRedirectUrl } from '@/packages/surface-runtime/config';
+import { getSurfaceOrigins, getSurfaceName } from '@/packages/surface-runtime/config';
+import { resolveReturnNavigation } from '@/lib/safe-return-url';
 
 export function LoginForm() {
   const { setAuth } = useAuthStore();
+  const router = useRouter();
   const reduceMotion = useReducedMotion();
 
   const [formData, setFormData] = useState({ phoneNumber: '', password: '' });
@@ -31,6 +34,24 @@ export function LoginForm() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!error) return;
+
+    // The login page has its own scroll container. When an error is inserted
+    // above the fields, keep the feedback in view without jumping the document
+    // to an arbitrary position or hiding the submit action.
+    const frame = window.requestAnimationFrame(() => {
+      errorRef.current?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [error, reduceMotion]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,11 +101,14 @@ export function LoginForm() {
       const hasAdmin = allowedDomains.includes('admin') || roles.some((r: string) => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
       const hasTeacher = allowedDomains.includes('teacher') || roles.some((r: string) => r.toLowerCase().includes('teacher'));
       const hasAssistant = allowedDomains.includes('assistant') || roles.some((r: string) => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
+      const isEmployee = roles.some((r: string) => r.toLowerCase() === 'employee');
 
       if (hasAdmin) {
         redirectDestination = `${origins.admin}/admin`;
       } else if (hasTeacher) {
         redirectDestination = `${origins.teacher}/teacher`;
+      } else if (isEmployee) {
+        redirectDestination = `${origins.assistant}/employee`;
       } else if (hasAssistant) {
         redirectDestination = `${origins.assistant}/assistant`;
       }
@@ -95,10 +119,16 @@ export function LoginForm() {
         targetUrl = params.get('returnUrl') || '';
       }
 
-      if (targetUrl && isValidRedirectUrl(targetUrl, getSurfaceName())) {
-        window.location.replace(targetUrl);
+      const navigation = resolveReturnNavigation({
+        returnUrl: targetUrl,
+        defaultDestination: redirectDestination,
+        surface: getSurfaceName(),
+        currentOrigin: window.location.origin,
+      });
+      if (navigation.sameOrigin) {
+        router.replace(navigation.href);
       } else {
-        window.location.replace(redirectDestination);
+        window.location.replace(navigation.href);
       }
     } catch (error: unknown) {
       const message = isAxiosError<{ message?: string }>(error)
@@ -122,6 +152,7 @@ export function LoginForm() {
       {/* ── Error Banner ── */}
       {error && (
         <motion.div
+          ref={errorRef}
           role="alert"
           aria-live="assertive"
           className="auth-error-banner"

@@ -1,0 +1,59 @@
+{
+  "byteParity": true,
+  "capturedAt": "2026-07-27T07:17:24.643023Z",
+  "clusterId": "massar-production",
+  "images": {
+    "backend": "sha256:f7d6dd2d7a9574b3e7b8c35dc8b5edcd97a76fa7b50662e8dbd6effd30c8160b",
+    "frontend": "sha256:138eaa27ca5cd3231e2eec1f7a540470d628b365eec3c3905452c7e971f6a5a5",
+    "worker": "sha256:2639d43980e382facb96ad2fe3045e56a294ccb92edbff4707ae5f5da8156672"
+  },
+  "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+  "nodeCount": 3,
+  "nodes": {
+    "node-1": {
+      "actualImages": {
+        "backend": "sha256:f7d6dd2d7a9574b3e7b8c35dc8b5edcd97a76fa7b50662e8dbd6effd30c8160b",
+        "frontend": "sha256:138eaa27ca5cd3231e2eec1f7a540470d628b365eec3c3905452c7e971f6a5a5",
+        "worker": "sha256:2639d43980e382facb96ad2fe3045e56a294ccb92edbff4707ae5f5da8156672"
+      },
+      "manifestPath": "/opt/massar/releases/prod-20260726-166-r1/manifest.json",
+      "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+      "nodeLabel": "node-1",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "0e41b67896337db0d94153090e5ab269de9ee858b423fe64b229ed7532a96cd5",
+      "releaseRoot": "/opt/massar/releases/prod-20260726-166-r1",
+      "resolutionMode": "docker-label-fallback"
+    },
+    "node-2": {
+      "actualImages": {
+        "backend": "sha256:f7d6dd2d7a9574b3e7b8c35dc8b5edcd97a76fa7b50662e8dbd6effd30c8160b",
+        "frontend": "sha256:138eaa27ca5cd3231e2eec1f7a540470d628b365eec3c3905452c7e971f6a5a5",
+        "worker": "sha256:2639d43980e382facb96ad2fe3045e56a294ccb92edbff4707ae5f5da8156672"
+      },
+      "manifestPath": "/opt/massar/releases/prod-20260726-166-r1/manifest.json",
+      "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+      "nodeLabel": "node-2",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "0e41b67896337db0d94153090e5ab269de9ee858b423fe64b229ed7532a96cd5",
+      "releaseRoot": "/opt/massar/releases/prod-20260726-166-r1",
+      "resolutionMode": "docker-label-fallback"
+    },
+    "node-3": {
+      "actualImages": {
+        "backend": "sha256:f7d6dd2d7a9574b3e7b8c35dc8b5edcd97a76fa7b50662e8dbd6effd30c8160b",
+        "frontend": "sha256:138eaa27ca5cd3231e2eec1f7a540470d628b365eec3c3905452c7e971f6a5a5",
+        "worker": "sha256:2639d43980e382facb96ad2fe3045e56a294ccb92edbff4707ae5f5da8156672"
+      },
+      "manifestPath": "/opt/massar/releases/prod-20260726-166-r1/manifest.json",
+      "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+      "nodeLabel": "node-3",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "0e41b67896337db0d94153090e5ab269de9ee858b423fe64b229ed7532a96cd5",
+      "releaseRoot": "/opt/massar/releases/prod-20260726-166-r1",
+      "resolutionMode": "docker-label-fallback"
+    }
+  },
+  "releaseId": "prod-20260726-166-r1",
+  "schemaVersion": 1,
+  "status": "success"
+}

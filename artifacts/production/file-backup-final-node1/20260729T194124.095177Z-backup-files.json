@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "7dce8e8f-23c1-4c1f-9b6b-08a670d05e1d",
+  "command": "backup-files",
+  "startedAt": "2026-07-29T19:41:24.095177Z",
+  "completedAt": "2026-07-29T19:41:24.095426Z",
+  "status": "success",
+  "targets": [
+    "node-1"
+  ],
+  "reason": null
+}

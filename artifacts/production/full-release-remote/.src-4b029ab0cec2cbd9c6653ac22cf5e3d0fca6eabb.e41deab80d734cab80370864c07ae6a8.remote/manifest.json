@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "src-4b029ab0cec2cbd9c6653ac22cf5e3d0fca6eabb",
+  "gitCommit": "29757adee071ec635c0311c9382675fda8341255",
+  "sourceStateSha256": "4b029ab0cec2cbd9c6653ac22cf5e3d0fca6eabb24259e77b4b12647ce4cfee5",
+  "dirtySourceSnapshot": true,
+  "createdAt": "2026-07-28T23:39:29.006821Z",
+  "platform": "linux/amd64",
+  "images": {
+    "backend": "sha256:41b7725c23a205b9038741a6129f9be43d1cc3205a2638e1d7798a727039b6e2",
+    "frontend": "sha256:ba4106d36e2ce3dd33f72f79a0992f24840ad7534b461e0205406bbd7f476f75",
+    "migrator": "sha256:73f6b0df82ed789830d9d650f1cdd8b9a3ebac1d181335e34183d6a329089a9c",
+    "worker": "sha256:414e6fa94501c9827a9229799cd3058a586e64eaff6f1b856004b7aed929d451"
+  },
+  "status": "success",
+  "nodeCount": 3,
+  "digestParity": false
+}

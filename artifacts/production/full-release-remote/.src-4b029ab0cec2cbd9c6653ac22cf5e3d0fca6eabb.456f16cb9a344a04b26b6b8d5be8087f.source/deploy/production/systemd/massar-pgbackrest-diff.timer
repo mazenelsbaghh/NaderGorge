@@ -1,0 +1,10 @@
+[Unit]
+Description=Schedule Massar daily differential database backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Africa/Cairo
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

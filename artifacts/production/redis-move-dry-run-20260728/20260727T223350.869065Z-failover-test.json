@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "4b7db8a0-c088-4801-83c0-bd140c0e159c",
+  "command": "failover-test",
+  "startedAt": "2026-07-27T22:33:50.869065Z",
+  "completedAt": "2026-07-27T22:33:50.869221Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

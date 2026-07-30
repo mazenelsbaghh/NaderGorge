@@ -1,0 +1,8 @@
+import type { AICatalogItem, SaveAIDraft } from '@/services/live-support-ai-service';
+import { AIDataActionSelector } from './AIDataActionSelector';
+
+export function AIVerificationPolicyEditor({ draft, questions, lookupKeys, onChange }: { draft: SaveAIDraft; questions: AICatalogItem[]; lookupKeys: AICatalogItem[]; onChange: (draft: SaveAIDraft) => void }) {
+  return <section className="space-y-4"><AIDataActionSelector title="طرق البحث الآمنة" note="القيمة الكاملة فقط دون اقتراحات." items={lookupKeys} selected={draft.lookupKeys} onChange={keys => onChange({ ...draft, lookupKeys: keys })}/><AIDataActionSelector title="أسئلة التحقق" note="لا تُحفظ الإجابات الخام." items={questions} selected={draft.verificationQuestionKeys} onChange={keys => onChange({ ...draft, verificationQuestionKeys: keys })}/><div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-2"><NumberInput label="الإجابات الصحيحة المطلوبة" value={draft.verificationRequiredCorrect} min={1} max={Math.max(1, draft.verificationQuestionKeys.length)} onChange={value => onChange({ ...draft, verificationRequiredCorrect: value })}/><NumberInput label="الحد الأقصى للمحاولات" value={draft.verificationMaxAttempts} min={1} max={10} onChange={value => onChange({ ...draft, verificationMaxAttempts: value })}/></div></section>;
+}
+
+function NumberInput({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (value: number) => void }) { return <label className="text-sm font-semibold text-slate-700">{label}<input type="number" value={value} min={min} max={max} onChange={event => onChange(Number(event.target.value))} className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3"/></label>; }

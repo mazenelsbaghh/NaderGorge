@@ -1,25 +1,17 @@
-import "@/lib/timezone-bootstrap";
 import type { Metadata } from "next";
-import { Tajawal, Montserrat } from "next/font/google";
+import { Tajawal } from "next/font/google";
 import "./globals.css";
-import { AuthBootstrap } from "@/components/layout/AuthBootstrap";
-import { GlobalNav } from "@/components/layout/GlobalNav";
-import { Toaster } from "react-hot-toast";
+import { AppProviders } from "./providers";
 
 const tajawal = Tajawal({
-  variable: "--font-tajawal",
   subsets: ["arabic"],
-  weight: ["400", "500", "700", "800"],
-});
-
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-  weight: ["500", "700"],
+  weight: ["400", "500", "700", "800", "900"],
+  display: "swap",
+  variable: "--font-tajawal",
 });
 
 export const metadata: Metadata = {
-  title: "منصة مسار | Massar Platform",
+  title: "منصة مسار | Massar Academy",
   description: "المنصة المتكاملة للتعليم الثانوي - منصة مسار",
 };
 
@@ -69,6 +61,23 @@ const themeInitScript = `
   })();
 `;
 
+const cairoTimeInitScript = `
+  (function () {
+    try {
+      var cairo = 'Africa/Cairo';
+      var methods = ['toLocaleString', 'toLocaleDateString', 'toLocaleTimeString'];
+      methods.forEach(function (method) {
+        var nativeMethod = Date.prototype[method];
+        Date.prototype[method] = function (locales, options) {
+          if (options && options.timeZone) return nativeMethod.call(this, locales, options);
+          var cairoOptions = Object.assign({}, options || {}, { timeZone: cairo });
+          return nativeMethod.call(this, locales, cairoOptions);
+        };
+      });
+    } catch (_) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -81,23 +90,22 @@ export default function RootLayout({
       lang="ar"
       dir="rtl"
       data-massar-surface={surface}
-      className={`${tajawal.variable} ${montserrat.variable} h-full antialiased`}
+      className={`${tajawal.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: surfaceInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: cairoTimeInitScript }} />
       </head>
       <body
         className="min-h-full flex flex-col font-[family-name:var(--font-tajawal)]"
         suppressHydrationWarning
       >
-        <AuthBootstrap />
-        <GlobalNav />
-        {children}
-        <Toaster position="bottom-left" />
+        <AppProviders>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );
 }
-

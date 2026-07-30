@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "46ee043f-4eb3-44c5-9472-4462131933c4",
+  "command": "build",
+  "startedAt": "2026-07-27T08:28:15.863997Z",
+  "completedAt": "2026-07-27T08:28:15.864177Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-1: sudo: I'm sorry massar-ops. I'm afraid I can't do that"
+}

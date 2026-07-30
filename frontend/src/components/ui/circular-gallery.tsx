@@ -460,8 +460,17 @@ class App {
   boundOnTouchDown!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchMove!: (e: MouseEvent | TouchEvent) => void;
   boundOnTouchUp!: () => void;
+  boundOnMouseEnter!: () => void;
+  boundOnMouseLeave!: () => void;
+  boundOnFocusIn!: () => void;
+  boundOnFocusOut!: (event: FocusEvent) => void;
+  boundOnKeyDown!: (event: KeyboardEvent) => void;
+  boundOnVisibilityChange!: () => void;
 
   isDown: boolean = false;
+  isHovered: boolean = false;
+  isFocused: boolean = false;
+  isDocumentHidden: boolean = document.hidden;
   start: number = 0;
   isVisible: boolean = true;
   observer!: IntersectionObserver;
@@ -651,6 +660,22 @@ class App {
     this.onCheckDebounce();
   }
 
+  onKeyDown(event: KeyboardEvent) {
+    const itemWidth = this.medias?.[0]?.width;
+    if (!itemWidth || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+
+    event.preventDefault();
+    if (event.key === 'Home') {
+      this.scroll.target = 0;
+    } else if (event.key === 'End') {
+      this.scroll.target = -itemWidth * Math.max(this.medias.length - 1, 0);
+    } else {
+      const direction = event.key === 'ArrowLeft' ? -1 : 1;
+      this.scroll.target += direction * itemWidth;
+    }
+    this.onCheck();
+  }
+
   onCheck() {
     if (!this.medias || !this.medias[0]) return;
     const width = this.medias[0].width;
@@ -680,7 +705,13 @@ class App {
   update() {
     if (!this.isVisible) return;
 
-    if (this.autoPlay && !this.isDown) {
+    if (
+      this.autoPlay
+      && !this.isDown
+      && !this.isHovered
+      && !this.isFocused
+      && !this.isDocumentHidden
+    ) {
       // Auto move continuously
       this.scroll.target += this.autoPlaySpeed;
     }
@@ -701,6 +732,22 @@ class App {
     this.boundOnTouchDown = this.onTouchDown.bind(this);
     this.boundOnTouchMove = this.onTouchMove.bind(this);
     this.boundOnTouchUp = this.onTouchUp.bind(this);
+    this.boundOnMouseEnter = () => {
+      this.isHovered = true;
+    };
+    this.boundOnMouseLeave = () => {
+      this.isHovered = false;
+    };
+    this.boundOnFocusIn = () => {
+      this.isFocused = true;
+    };
+    this.boundOnFocusOut = (event) => {
+      this.isFocused = this.container.contains(event.relatedTarget as Node | null);
+    };
+    this.boundOnKeyDown = this.onKeyDown.bind(this);
+    this.boundOnVisibilityChange = () => {
+      this.isDocumentHidden = document.hidden;
+    };
     window.addEventListener('resize', this.boundOnResize);
     // Removed mousewheel events to stop manual scroll override as requested
     this.container.addEventListener('mousedown', this.boundOnTouchDown);
@@ -709,6 +756,12 @@ class App {
     this.container.addEventListener('touchstart', this.boundOnTouchDown, { passive: true });
     this.container.addEventListener('touchmove', this.boundOnTouchMove, { passive: true });
     window.addEventListener('touchend', this.boundOnTouchUp);
+    this.container.addEventListener('mouseenter', this.boundOnMouseEnter);
+    this.container.addEventListener('mouseleave', this.boundOnMouseLeave);
+    this.container.addEventListener('focusin', this.boundOnFocusIn);
+    this.container.addEventListener('focusout', this.boundOnFocusOut);
+    this.container.addEventListener('keydown', this.boundOnKeyDown);
+    document.addEventListener('visibilitychange', this.boundOnVisibilityChange);
   }
 
   destroy() {
@@ -720,6 +773,12 @@ class App {
     this.container.removeEventListener('touchstart', this.boundOnTouchDown);
     this.container.removeEventListener('touchmove', this.boundOnTouchMove);
     window.removeEventListener('touchend', this.boundOnTouchUp);
+    this.container.removeEventListener('mouseenter', this.boundOnMouseEnter);
+    this.container.removeEventListener('mouseleave', this.boundOnMouseLeave);
+    this.container.removeEventListener('focusin', this.boundOnFocusIn);
+    this.container.removeEventListener('focusout', this.boundOnFocusOut);
+    this.container.removeEventListener('keydown', this.boundOnKeyDown);
+    document.removeEventListener('visibilitychange', this.boundOnVisibilityChange);
     if (this.renderer && this.renderer.gl && this.renderer.gl.canvas.parentNode) {
       this.renderer.gl.canvas.parentNode.removeChild(this.renderer.gl.canvas as HTMLCanvasElement);
     }
@@ -773,7 +832,7 @@ export default function CircularGallery({
         font,
         scrollSpeed,
         scrollEase,
-        autoPlay,
+        autoPlay: autoPlay && !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
         autoPlaySpeed,
       });
     } catch {
@@ -814,5 +873,14 @@ export default function CircularGallery({
     );
   }
 
-  return <div className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing" ref={containerRef} />;
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="معرض دائري"
+      tabIndex={0}
+    />
+  );
 }

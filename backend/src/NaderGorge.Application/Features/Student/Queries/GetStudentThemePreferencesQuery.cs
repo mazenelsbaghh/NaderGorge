@@ -26,7 +26,8 @@ public class GetStudentThemePreferencesQueryHandler : IRequestHandler<GetStudent
         var dto = StudentThemeCatalog.BuildPreferences(
             profile?.LightThemePaletteId,
             profile?.DarkThemePaletteId,
-            profile?.CurrentMode
+            profile?.CurrentMode,
+            profile?.AvatarSlug
         );
 
         return ApiResponse<StudentThemePreferencesDto>.Ok(dto);

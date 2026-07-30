@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "1a7b72dc-48ad-4ce1-9e0c-e0db4a544159",
+  "command": "migrate",
+  "startedAt": "2026-07-27T15:40:11.892424Z",
+  "completedAt": "2026-07-27T15:40:11.892878Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "migration blocked: clean audit or production migration gate failed: MASSAR_MIGRATION_FAILURE stage=validate-clean-audit-database line=52 status=127"
+}

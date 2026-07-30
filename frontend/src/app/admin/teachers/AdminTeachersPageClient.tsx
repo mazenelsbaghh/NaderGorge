@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
-import { 
-  Plus, 
-  Edit, 
-  GraduationCap, 
-  X, 
-  Check, 
-  User, 
-  Phone, 
+import {
+  Plus,
+  Edit,
+  GraduationCap,
+  X,
+  Check,
+  User,
+  Phone,
   Image as ImageIcon,
   BookOpen,
   Eye,
@@ -18,21 +18,20 @@ import {
   Activity,
   Database,
   Loader2,
-  Lock,
   Send,
   Sparkles,
 } from 'lucide-react';
-import { 
-  AdminShellChrome, 
-  AdminDataTable, 
-  AdminColumn, 
-  AdminStatCard, 
-  AdminSearchToolbar, 
+import {
+  AdminPage,
+  AdminDataTable,
+  AdminColumn,
+  AdminStatCard,
+  AdminSearchToolbar,
   AdminPageSkeleton,
 } from '@/components/admin';
-import { 
-  formatRelativeDate, 
-  getInitials 
+import {
+  formatRelativeDate,
+  getInitials
 } from '@/components/admin/admin-utils';
 import { teacherService, type TeacherDto, type SubjectDto } from '@/services/teacher-service';
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
@@ -40,6 +39,7 @@ import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { compressImage, renameFileToMatchBase64 } from '@/utils/image-compressor';
+import { GRADE_LEVEL_LABELS, TEACHER_GRADE_GROUPS } from '@/lib/academic-labels';
 
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -61,83 +61,8 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: 'الأول الثانوي',
-  SecondSecondary: 'الثاني الثانوي',
-  SecondaryGrade3: 'الثالث الثانوي',
-  FirstBaccalaureate: 'الأول بكالوريا',
-  SecondBaccalaureate: 'الثاني بكالوريا',
-  PrimaryGrade1: 'الأول الابتدائي',
-  PrimaryGrade2: 'الثاني الابتدائي',
-  PrimaryGrade3: 'الثالث الابتدائي',
-  PrimaryGrade4: 'الرابع الابتدائي',
-  PrimaryGrade5: 'الخامس الابتدائي',
-  PrimaryGrade6: 'السادس الابتدائي',
-  PrepGrade1: 'الأول الإعدادي',
-  PrepGrade2: 'الثاني الإعدادي',
-  PrepGrade3: 'الثالث الإعدادي',
-  AzhariPrimary1: 'الأول الابتدائي الأزهري',
-  AzhariPrep1: 'الأول الإعدادي الأزهري',
-  AzhariSecondary1: 'الأول الثانوي الأزهري',
-  AmericanGrade9: 'Grade 9',
-  AmericanGrade10: 'Grade 10',
-  AmericanGrade11: 'Grade 11',
-  AmericanGrade12: 'Grade 12',
-};
-
-const GRADE_GROUPS = [
-  {
-    label: 'المرحلة الثانوية العامة',
-    grades: [
-      { value: 'FirstSecondary', label: 'الأول الثانوي' },
-      { value: 'SecondSecondary', label: 'الثاني الثانوي' },
-      { value: 'SecondaryGrade3', label: 'الثالث الثانوي' },
-    ]
-  },
-  {
-    label: 'بكالوريا',
-    grades: [
-      { value: 'FirstBaccalaureate', label: 'الأول بكالوريا' },
-      { value: 'SecondBaccalaureate', label: 'الثاني بكالوريا' },
-    ]
-  },
-  {
-    label: 'المرحلة الإعدادية',
-    grades: [
-      { value: 'PrepGrade1', label: 'الأول الإعدادي' },
-      { value: 'PrepGrade2', label: 'الثاني الإعدادي' },
-      { value: 'PrepGrade3', label: 'الثالث الإعدادي' },
-    ]
-  },
-  {
-    label: 'المرحلة الابتدائية',
-    grades: [
-      { value: 'PrimaryGrade1', label: 'الأول الابتدائي' },
-      { value: 'PrimaryGrade2', label: 'الثاني الابتدائي' },
-      { value: 'PrimaryGrade3', label: 'الثالث الابتدائي' },
-      { value: 'PrimaryGrade4', label: 'الرابع الابتدائي' },
-      { value: 'PrimaryGrade5', label: 'الخامس الابتدائي' },
-      { value: 'PrimaryGrade6', label: 'السادس الابتدائي' },
-    ]
-  },
-  {
-    label: 'التعليم الأزهري',
-    grades: [
-      { value: 'AzhariPrimary1', label: 'الأول الابتدائي الأزهري' },
-      { value: 'AzhariPrep1', label: 'الأول الإعدادي الأزهري' },
-      { value: 'AzhariSecondary1', label: 'الأول الثانوي الأزهري' },
-    ]
-  },
-  {
-    label: 'التعليم الأمريكي (American)',
-    grades: [
-      { value: 'AmericanGrade9', label: 'Grade 9' },
-      { value: 'AmericanGrade10', label: 'Grade 10' },
-      { value: 'AmericanGrade11', label: 'Grade 11' },
-      { value: 'AmericanGrade12', label: 'Grade 12' },
-    ]
-  }
-];
+const GRADE_NAMES = GRADE_LEVEL_LABELS;
+const GRADE_GROUPS = TEACHER_GRADE_GROUPS;
 
 // Helper for rendering audit action translations
 function translateAction(action: string): string {
@@ -249,7 +174,7 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
             aria-labelledby="teacher-profile-title"
           >
             <div className="flex max-h-[min(880px,calc(100dvh-2rem))] w-full max-w-4xl flex-col overflow-hidden rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-bg)] shadow-2xl">
-              
+
               {/* Header */}
               <div className="flex shrink-0 items-center justify-between border-b border-[var(--admin-border)] bg-[var(--admin-card)] px-6 py-5">
                 <div className="flex items-center gap-4">
@@ -287,7 +212,7 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
 
               {/* Scrollable Content */}
               <div className="min-h-0 flex-1 overflow-y-auto p-6 space-y-6">
-                
+
                 {/* Info Block */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 bg-[var(--admin-card)] p-5 rounded-3xl">
                   <div className="flex items-center gap-3">
@@ -439,7 +364,7 @@ function TeacherProfileModal({ open, onClose, teacher }: TeacherProfileModalProp
                         <div key={log.id} className="relative group">
                           {/* Timeline node */}
                           <div className="absolute right-[-31px] top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 border-[var(--admin-bg)] bg-[var(--admin-primary)] ring-4 ring-[var(--admin-primary-15)]" />
-                          
+
                           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5">
                             <div>
                               <p className="text-sm font-bold text-[var(--admin-text)]">
@@ -503,7 +428,11 @@ export default function AdminTeachersPageClient() {
   // Form states
   const [bio, setBio] = useState('');
   const [contactInfo, setContactInfo] = useState('');
+  const [commissionRate, setCommissionRate] = useState('0');
   const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [showOnLanding, setShowOnLanding] = useState(true);
+  const [isVisibleToStudents, setIsVisibleToStudents] = useState(true);
+  const [isContentVisibleToStudents, setIsContentVisibleToStudents] = useState(true);
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -513,6 +442,7 @@ export default function AdminTeachersPageClient() {
   const [facebookUrl, setFacebookUrl] = useState('');
   const [youtubeUrl, setYouTubeUrl] = useState('');
   const [telegramUrl, setTelegramUrl] = useState('');
+  const [introVideoUrl, setIntroVideoUrl] = useState('');
 
   // Upload previews and loading states
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -558,13 +488,18 @@ export default function AdminTeachersPageClient() {
       setPassword('');
       setBio(teacher.bio || '');
       setContactInfo(teacher.contactInfo || '');
+      setCommissionRate(String(teacher.commissionRate ?? 0));
       setProfileImageUrl(teacher.profileImageUrl || '');
+      setShowOnLanding(teacher.showOnLanding);
+      setIsVisibleToStudents(teacher.isVisibleToStudents);
+      setIsContentVisibleToStudents(teacher.isContentVisibleToStudents);
       setSelectedSubjectIds(teacher.subjectIds || []);
       setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
       setAssistantPhoneNumbers(teacher.assistantPhoneNumbers || '');
       setFacebookUrl(teacher.facebookUrl || '');
       setYouTubeUrl(teacher.youtubeUrl || '');
       setTelegramUrl(teacher.telegramUrl || '');
+      setIntroVideoUrl(teacher.introVideoUrl || '');
       setProfileImagePreview(teacher.profileImageUrl || null);
       setAiPhotoPreview(null);
       adminService.getActiveTeacherPhoto(teacher.userId)
@@ -583,13 +518,18 @@ export default function AdminTeachersPageClient() {
       setPassword('');
       setBio('');
       setContactInfo('');
+      setCommissionRate('0');
       setProfileImageUrl('');
+      setShowOnLanding(true);
+      setIsVisibleToStudents(true);
+      setIsContentVisibleToStudents(true);
       setSelectedSubjectIds([]);
       setSelectedGrades([]);
       setAssistantPhoneNumbers('');
       setFacebookUrl('');
       setYouTubeUrl('');
       setTelegramUrl('');
+      setIntroVideoUrl('');
       setProfileImagePreview(null);
       setAiPhotoPreview(null);
       setPendingProfileImage(null);
@@ -606,13 +546,18 @@ export default function AdminTeachersPageClient() {
     setPassword('');
     setBio('');
     setContactInfo('');
+    setCommissionRate('0');
     setProfileImageUrl('');
+    setShowOnLanding(true);
+    setIsVisibleToStudents(true);
+    setIsContentVisibleToStudents(true);
     setSelectedSubjectIds([]);
     setSelectedGrades([]);
     setAssistantPhoneNumbers('');
     setFacebookUrl('');
     setYouTubeUrl('');
     setTelegramUrl('');
+    setIntroVideoUrl('');
     setProfileImagePreview(null);
     setAiPhotoPreview(null);
     setPendingProfileImage(null);
@@ -674,9 +619,12 @@ export default function AdminTeachersPageClient() {
       if (editingTeacher) {
         // 1. Edit existing teacher profile (User edits are read-only here)
         const res = await teacherService.updateTeacher(editingTeacher.id, {
+          fullName: fullName.trim(),
+          phoneNumber: phoneNumber.trim(),
+          newPassword: password.trim() || undefined,
           bio: bio.trim(),
           specialization: gradesString, // Store selected grades as specialization
-          commissionRate: 0, 
+          commissionRate: Number(commissionRate) || 0,
           contactInfo: contactInfo.trim(),
           profileImageUrl: profileImageUrl.trim() || undefined,
           subjectIds: selectedSubjectIds,
@@ -684,6 +632,10 @@ export default function AdminTeachersPageClient() {
           facebookUrl: facebookUrl.trim() || undefined,
           youtubeUrl: youtubeUrl.trim() || undefined,
           telegramUrl: telegramUrl.trim() || undefined,
+          introVideoUrl: introVideoUrl.trim() || undefined,
+          showOnLanding,
+          isVisibleToStudents,
+          isContentVisibleToStudents,
         });
 
         if (res.success) {
@@ -705,12 +657,12 @@ export default function AdminTeachersPageClient() {
         const userRes = await adminService.createUser(userPayload);
         if (userRes && userRes.success && userRes.data?.id) {
           const userId = userRes.data.id;
-          
+
           const teacherRes = await teacherService.createTeacher({
             userId,
             bio: bio.trim(),
             specialization: gradesString, // Store selected grades as specialization
-            commissionRate: 0, 
+            commissionRate: Number(commissionRate) || 0,
             contactInfo: contactInfo.trim(),
             profileImageUrl: profileImageUrl.trim() || undefined,
             subjectIds: selectedSubjectIds,
@@ -718,6 +670,8 @@ export default function AdminTeachersPageClient() {
             facebookUrl: facebookUrl.trim() || undefined,
             youtubeUrl: youtubeUrl.trim() || undefined,
             telegramUrl: telegramUrl.trim() || undefined,
+            introVideoUrl: introVideoUrl.trim() || undefined,
+            showOnLanding,
           });
 
           if (teacherRes.success) {
@@ -842,6 +796,22 @@ export default function AdminTeachersPageClient() {
       ),
     },
     {
+      key: 'landingVisibility',
+      label: 'الصفحة الرئيسية',
+      render: (t) => (
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
+            t.showOnLanding
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+              : 'bg-[var(--admin-hover)] text-[var(--admin-muted)]'
+          }`}
+        >
+          {t.showOnLanding ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+          {t.showOnLanding ? 'ظاهر' : 'مخفي'}
+        </span>
+      ),
+    },
+    {
       key: 'actions',
       label: 'الإجراءات',
       align: 'left',
@@ -877,7 +847,7 @@ export default function AdminTeachersPageClient() {
   ];
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/teachers"
       sectionLabel="المستخدمين"
       pageTitle="المعلمين"
@@ -960,14 +930,14 @@ export default function AdminTeachersPageClient() {
                 {editingTeacher ? 'تعديل ملف المعلم' : 'إضافة معلم جديد'}
               </h2>
               <p className="mt-1 text-sm text-[var(--admin-muted)]">
-                {editingTeacher 
-                  ? 'قم بتعديل تخصص المعلم ومعلومات التواصل والمواد الدراسية المرتبطة بملفه.' 
+                {editingTeacher
+                  ? 'قم بتعديل تخصص المعلم ومعلومات التواصل والمواد الدراسية المرتبطة بملفه.'
                   : 'أدخل بيانات المعلم لإنشاء حساب مستخدم وتهيئة ملفه الأكاديمي مباشرة.'}
               </p>
 
               <form onSubmit={handleSave} className="mt-6 space-y-6">
-                
-                {/* Account Details (Create Mode: Input, Edit Mode: Readonly) */}
+
+                {/* Account details */}
                 <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-4">
                   <h4 className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
                     <User className="h-4 w-4 text-[var(--admin-primary)]" />
@@ -980,7 +950,7 @@ export default function AdminTeachersPageClient() {
                       <input
                         type="text"
                         required
-                        disabled={!!editingTeacher || isSaving}
+                        disabled={isSaving}
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="أحمد محمد علي"
@@ -995,7 +965,7 @@ export default function AdminTeachersPageClient() {
                           type="tel"
                           required
                           maxLength={11}
-                          disabled={!!editingTeacher || isSaving}
+                          disabled={isSaving}
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                           placeholder="01xxxxxxxxx"
@@ -1031,10 +1001,10 @@ export default function AdminTeachersPageClient() {
                     </div>
                   )}
                   {editingTeacher && (
-                    <p className="text-xs text-[var(--admin-muted)] flex items-center gap-1.5 mt-1.5">
-                      <Lock className="h-3 w-3" />
-                      بيانات تسجيل الدخول مدارة من قبل قسم شؤون المستخدمين ولا يمكن تعديلها من هنا.
-                    </p>
+                    <div>
+                      <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">كلمة سر جديدة (اختياري)</label>
+                      <input type="password" minLength={8} disabled={isSaving} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="اتركها فارغة بدون تغيير" className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition" />
+                    </div>
                   )}
                 </div>
 
@@ -1054,6 +1024,10 @@ export default function AdminTeachersPageClient() {
                       />
                       <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">نسبة عمولة المدرس (%)</label>
+                    <input type="number" min="0" max="100" step="0.01" disabled={isSaving} value={commissionRate} onChange={(e) => setCommissionRate(e.target.value)} className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition" />
                   </div>
 
                   <div>
@@ -1113,6 +1087,66 @@ export default function AdminTeachersPageClient() {
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
+                  <label className="mb-2 block text-xs font-bold text-[var(--admin-text)]">رابط الفيديو التعريفي للمدرس (اختياري)</label>
+                  <p className="mb-3 text-xs leading-6 text-[var(--admin-muted)]">يظهر في البروفايل العام للمدرس داخل مشغل المنصة.</p>
+                  <input
+                    type="url"
+                    dir="ltr"
+                    disabled={isSaving}
+                    value={introVideoUrl}
+                    onChange={(e) => setIntroVideoUrl(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=... أو رابط ملف الفيديو"
+                    className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none transition focus:border-[var(--admin-primary)] disabled:opacity-60"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
+                  <div className="min-w-0">
+                    <h4 className="flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
+                      <Eye className="h-4 w-4 text-[var(--admin-primary)]" />
+                      إظهار في الصفحة الرئيسية
+                    </h4>
+                    <p className="mt-1 text-xs leading-6 text-[var(--admin-muted)]">
+                      عند التفعيل سيظهر المعلم في شريط المدرسين المتحرك في صفحة الهبوط.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showOnLanding}
+                    aria-label="إظهار المعلم في الصفحة الرئيسية"
+                    disabled={isSaving}
+                    onClick={() => setShowOnLanding((value) => !value)}
+                    className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                      showOnLanding ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)]'
+                    }`}
+                  >
+                    <span
+                      className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${
+                        showOnLanding ? '-translate-x-1' : '-translate-x-7'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  {[
+                    { label: 'ظهور المدرس للطلاب والزوار', description: 'إخفاء المدرس بالكامل من القوائم والملف العام.', value: isVisibleToStudents, setValue: setIsVisibleToStudents },
+                    { label: 'ظهور محتوى المدرس', description: 'إخفاء المحتوى حتى عن المشترين السابقين مع بقاء الشراء محفوظاً.', value: isContentVisibleToStudents, setValue: setIsContentVisibleToStudents },
+                  ].map((control) => (
+                    <div key={control.label} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
+                      <div>
+                        <h4 className="text-sm font-black text-[var(--admin-text)]">{control.label}</h4>
+                        <p className="mt-1 text-xs leading-5 text-[var(--admin-muted)]">{control.description}</p>
+                      </div>
+                      <button type="button" role="switch" aria-checked={control.value} disabled={isSaving} onClick={() => control.setValue((value) => !value)} className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${control.value ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)]'}`}>
+                        <span className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${control.value ? '-translate-x-1' : '-translate-x-7'}`} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Images Upload Area */}
@@ -1257,7 +1291,7 @@ export default function AdminTeachersPageClient() {
                           {group.grades.map((grade) => {
                             const isChecked = selectedGrades.includes(grade.value);
                             const toggleGrade = () => {
-                              setSelectedGrades(prev => 
+                              setSelectedGrades(prev =>
                                 prev.includes(grade.value)
                                   ? prev.filter(v => v !== grade.value)
                                   : [...prev, grade.value]
@@ -1364,6 +1398,6 @@ export default function AdminTeachersPageClient() {
         onClose={() => setSelectedTeacherProfile(null)}
         teacher={selectedTeacherProfile}
       />
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

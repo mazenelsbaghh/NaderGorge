@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-27T03:59:27.421749Z",
+  "status": "success",
+  "isolated": true,
+  "repair": "block-missing-live-support-attachments",
+  "affectedRows": 3,
+  "affectedPathSetSha256": "b5245ee39f2037b75ba4e44eae876ecd46e880fc97b617b680488101844ee0c2",
+  "contentDeleted": false
+}

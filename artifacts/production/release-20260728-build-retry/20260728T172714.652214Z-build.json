@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "16b5a91c-a956-4a91-9cf5-f2c5e3039010",
+  "command": "build",
+  "startedAt": "2026-07-28T17:27:14.652214Z",
+  "completedAt": "2026-07-28T17:27:14.652278Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-1 file receiver: Read from remote host 191.218.161.76: Operation timed out\r\nclient_loop: send disconnect: Broken pipe"
+}

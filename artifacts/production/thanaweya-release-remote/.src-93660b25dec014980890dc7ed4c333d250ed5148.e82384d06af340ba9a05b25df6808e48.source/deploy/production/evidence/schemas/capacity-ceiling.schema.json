@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "status",
+    "releaseId",
+    "capturedAt",
+    "baselineRps",
+    "series",
+    "firstFailingNMinusOneRps",
+    "worstPassingNMinusOneRps",
+    "bottleneckExcludedNodes",
+    "safeOperatingCeilingFactor",
+    "safeOperatingCeilingRps"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "status": { "const": "success" },
+    "releaseId": {
+      "type": "string",
+      "pattern": "^(?:git-[0-9a-f]{7,40}|src-[0-9a-f]{40})$"
+    },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "baselineRps": { "type": "number", "exclusiveMinimum": 0 },
+    "series": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "seriesId",
+          "excludedNode",
+          "expectedNodes",
+          "stages",
+          "maximumPassingRps",
+          "firstFailingRps"
+        ],
+        "properties": {
+          "seriesId": { "type": "string", "minLength": 1 },
+          "excludedNode": { "enum": ["node-1", "node-2", "node-3"] },
+          "expectedNodes": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": { "enum": ["node-1", "node-2", "node-3"] }
+          },
+          "stages": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sequence",
+                "requestedRps",
+                "baselineMultiplier",
+                "status",
+                "loadStatus",
+                "capacityStatus",
+                "runId",
+                "capturedAt",
+                "evidenceSha256",
+                "capacityEvidenceSha256"
+              ],
+              "properties": {
+                "sequence": { "type": "integer", "minimum": 1 },
+                "requestedRps": { "type": "number", "exclusiveMinimum": 0 },
+                "baselineMultiplier": { "type": "number", "exclusiveMinimum": 0 },
+                "status": { "enum": ["success", "failed"] },
+                "loadStatus": { "enum": ["success", "failed"] },
+                "capacityStatus": { "enum": ["success", "failed"] },
+                "runId": { "type": "string", "minLength": 1 },
+                "capturedAt": { "type": "string", "format": "date-time" },
+                "evidenceSha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "capacityEvidenceSha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          },
+          "maximumPassingRps": { "type": "number", "exclusiveMinimum": 0 },
+          "firstFailingRps": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "firstFailingNMinusOneRps": { "type": "number", "exclusiveMinimum": 0 },
+    "worstPassingNMinusOneRps": { "type": "number", "exclusiveMinimum": 0 },
+    "bottleneckExcludedNodes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["node-1", "node-2", "node-3"] }
+    },
+    "safeOperatingCeilingFactor": { "const": 0.6 },
+    "safeOperatingCeilingRps": { "type": "number", "exclusiveMinimum": 0 }
+  }
+}

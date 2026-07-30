@@ -1,5 +1,5 @@
 # ─── Stage 1: Build ──────────────────────────────────────────────────────────
-FROM node:20.18.3-alpine AS builder
+FROM node:22.13.0-alpine AS builder
 
 WORKDIR /app
 ENV NPM_CONFIG_AUDIT=false \
@@ -18,14 +18,22 @@ COPY . .
 # Accept build arguments shared by all Massar frontend runtime surfaces.
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_WS_URL
+ARG NEXT_PUBLIC_APP_DOMAIN
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_RELEASE_ID
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_APP_DOMAIN=$NEXT_PUBLIC_APP_DOMAIN
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_RELEASE_ID=$NEXT_PUBLIC_RELEASE_ID
 
 # next.config.ts has output: 'standalone' — this produces .next/standalone/
 RUN npm run build
 
 # ─── Stage 2: Runtime shared by landing, student, and admin surfaces ─────────
-FROM node:20.18.3-alpine AS runner
+FROM node:22.13.0-alpine AS runner
 
 WORKDIR /app
 
@@ -33,8 +41,9 @@ ENV NODE_ENV=production
 ENV PORT=8738
 ENV HOSTNAME=0.0.0.0
 
-# Install curl for docker-compose healthchecks
-RUN apk add --no-cache curl
+# Install timezone data as well as curl for docker-compose healthchecks. TZ alone is ignored by Alpine
+# when the IANA zoneinfo database is absent.
+RUN apk add --no-cache curl tzdata
 
 # Copy only the standalone server bundle (no full node_modules)
 COPY --from=builder /app/.next/standalone ./

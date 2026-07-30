@@ -6,8 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Add
@@ -31,12 +33,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nadergorge.parent.data.storage.LinkedStudent
 import com.nadergorge.parent.data.api.StudentDetailsResponse
+import com.nadergorge.parent.ui.AcademicLabels
 import com.nadergorge.parent.ui.theme.*
 
 @Composable
 fun LinkingScreen(
     viewModel: LinkingViewModel,
+    deviceToken: String,
     onSuccess: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -73,6 +78,20 @@ fun LinkingScreen(
                         .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
                         .background(BrandTeal)
                 ) {
+                    if (onBack != null) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "الرجوع",
+                                tint = Color.White
+                            )
+                        }
+                    }
                     // Background Dot Pattern Mockup
                     Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                         Row(
@@ -220,16 +239,19 @@ fun LinkingScreen(
                                     if (uiState is LinkingUiState.Error) {
                                         viewModel.resetState()
                                     } else {
-                                        viewModel.linkStudent("mock_device_token")
+                                        viewModel.linkStudent(deviceToken)
                                     }
                                 },
+                                shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (uiState is LinkingUiState.Error) MaterialTheme.colorScheme.error else BrandTeal
+                                    containerColor = if (uiState is LinkingUiState.Error) MaterialTheme.colorScheme.error else BrandTeal,
+                                    contentColor = Color.White,
+                                    disabledContainerColor = if (uiState is LinkingUiState.Error) MaterialTheme.colorScheme.error.copy(alpha = 0.5f) else BrandTeal.copy(alpha = 0.5f),
+                                    disabledContentColor = Color.White.copy(alpha = 0.6f)
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
+                                    .height(50.dp),
                                 enabled = (code.length == 6 || uiState is LinkingUiState.Error) && uiState !is LinkingUiState.Loading
                             ) {
                                 if (uiState is LinkingUiState.Loading) {
@@ -243,16 +265,16 @@ fun LinkingScreen(
                                         horizontalArrangement = Arrangement.Center
                                     ) {
                                         Text(
-                                            text = if (uiState is LinkingUiState.Error) "إعادة المحاولة" else "تأكيد المتابعة",
+                                            text = if (uiState is LinkingUiState.Error) "إعادة المحاولة" else "ربط الطالب",
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                            color = LocalContentColor.current
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Icon(
                                             imageVector = if (uiState is LinkingUiState.Error) Icons.Default.ArrowBack else Icons.Default.ExitToApp,
                                             contentDescription = null,
-                                            tint = Color.White,
+                                            tint = LocalContentColor.current,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -329,11 +351,8 @@ fun StudentConfirmationScreen(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val stageName = when {
-        details.grade.contains("Baccalaureate", true) || details.grade.contains("ثانوي", true) -> "المرحلة الثانوية"
-        details.grade.contains("Medium", true) || details.grade.contains("متوسط", true) -> "المرحلة المتوسطة"
-        else -> "المرحلة الدراسية"
-    }
+    val stageName = AcademicLabels.stage(details.grade)
+    val gradeName = AcademicLabels.grade(details.grade)
 
     Column(
         modifier = modifier
@@ -379,144 +398,151 @@ fun StudentConfirmationScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(24.dp),
+                .padding(horizontal = 24.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
             Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(bottom = 12.dp)
-            ) {
-                Text(
-                    text = "تأكيد الربط - مراجعة البيانات",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "يرجى التأكد من هوية الطالب المعروض أدناه لإتمام عملية الربط التعليمي.",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(0.95f)
-                )
-            }
-
-            // Student profile card
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    Text(
+                        text = "تأكيد الربط - مراجعة البيانات",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "يرجى التأكد من هوية الطالب المعروض أدناه لإتمام عملية الربط التعليمي.",
+                        fontSize = 13.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(0.95f)
+                    )
+                }
+
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // Accent banner
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp)
-                            .background(BrandTeal)
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                            CornerDotsLight()
-                        }
-                    }
-
-                    // Avatar & Details
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 16.dp)
-                            .offset(y = (-40).dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Profile Avatar
+                        // Accent banner
                         Box(
-                            contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(80.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                                .fillMaxWidth()
+                                .height(80.dp)
+                                .background(BrandTeal)
                         ) {
+                            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                                CornerDotsLight()
+                            }
+                        }
+
+                        // Avatar & Details
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 16.dp)
+                                .offset(y = (-40).dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Profile Avatar
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                            ) {
+                                Text(
+                                    text = details.studentName.firstOrNull()?.toString() ?: "ط",
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandTeal
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Student name & Code
                             Text(
-                                text = details.studentName.firstOrNull()?.toString() ?: "ط",
-                                fontSize = 32.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BrandTeal
+                                text = details.studentName,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Black,
+                                color = BrandDeepNavy,
+                                textAlign = TextAlign.Center
                             )
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(top = 4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = BrandTeal,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "رقم المتابعة: ${student.studentId}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = BrandTeal
+                                )
+                            }
 
-                        // Student name & Code
-                        Text(
-                            text = details.studentName,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = BrandDeepNavy,
-                            textAlign = TextAlign.Center
-                        )
+                            Spacer(modifier = Modifier.height(24.dp))
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(top = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = BrandTeal,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "رقم المتابعة: ${student.studentId}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = BrandTeal
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Details Grid
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            DetailCard(
-                                label = "المرحلة الدراسية",
-                                value = stageName,
-                                modifier = Modifier.weight(1f)
-                            )
-                            DetailCard(
-                                label = "الصف الدراسي",
-                                value = details.grade,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            DetailCard(
-                                label = "الفصل الدراسي",
-                                value = "1 / أ", // Mock as not in api response
-                                modifier = Modifier.weight(1f)
-                            )
-                            DetailCard(
-                                label = "المدرسة",
-                                value = details.school,
-                                modifier = Modifier.weight(1f)
-                            )
+                            // Details Grid
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                DetailCard(
+                                    label = "المرحلة الدراسية",
+                                    value = stageName,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                DetailCard(
+                                    label = "الصف الدراسي",
+                                    value = gradeName,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                DetailCard(
+                                    label = "الفصل الدراسي",
+                                    value = "1 / أ", // Mock as not in api response
+                                    modifier = Modifier.weight(1f)
+                                )
+                                DetailCard(
+                                    label = "المدرسة",
+                                    value = details.school,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -526,7 +552,7 @@ fun StudentConfirmationScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp),
+                    .padding(top = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Warning
@@ -561,17 +587,20 @@ fun StudentConfirmationScreen(
                 ) {
                     Button(
                         onClick = onConfirm,
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandTeal),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BrandTeal,
+                            contentColor = Color.White
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(54.dp)
-                            .clip(RoundedCornerShape(12.dp))
                     ) {
                         Text(
-                            text = "نعم، هذا طفلي",
+                            text = "تأكيد البيانات والدخول للرئيسية",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = LocalContentColor.current
                         )
                     }
 
@@ -745,4 +774,3 @@ fun CornerDotsLight(modifier: Modifier = Modifier) {
         }
     }
 }
-

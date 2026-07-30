@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "f57c653a-b201-4611-a47c-6852032b305d",
+  "command": "prepare-pitr-probe",
+  "startedAt": "2026-07-26T20:11:53.220229Z",
+  "completedAt": "2026-07-26T20:11:53.220801Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

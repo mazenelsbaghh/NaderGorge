@@ -69,7 +69,8 @@ public class GetShellBootstrapQueryHandler : IRequestHandler<GetShellBootstrapQu
         var themePreferencesDto = StudentThemeCatalog.BuildPreferences(
             profile?.LightThemePaletteId,
             profile?.DarkThemePaletteId,
-            profile?.CurrentMode
+            profile?.CurrentMode,
+            profile?.AvatarSlug
         );
 
         var dto = new ShellBootstrapDto(

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "40c857ce-e366-4410-88f4-29ef0db81310",
+  "command": "build",
+  "startedAt": "2026-07-27T14:11:12.572020Z",
+  "completedAt": "2026-07-27T14:11:12.572232Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Command '['docker', 'save', '--output', 'artifacts/production/release-20260727-final-v7/.src-d7642250932e6a765c0a8222f4c2b9ff66d7702f.e0786c2c8a874f6781f180915f1b8190.building/worker.tar', 'massar/worker:src-d7642250932e6a765c0a8222f4c2b9ff66d7702f']' returned non-zero exit status 1."
+}

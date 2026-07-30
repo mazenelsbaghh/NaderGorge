@@ -1,0 +1,27 @@
+[Unit]
+Description=Massar three-node internal encrypted backup bucket
+After=network-online.target docker.service wg-quick@wg0.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+TimeoutStartSec=180
+ExecStartPre=-/usr/bin/docker rm -f massar-backup-bucket
+ExecStart=/usr/bin/docker run --rm --name massar-backup-bucket --network host \
+  --mount type=bind,src=/etc/massar/garage.toml,dst=/etc/garage.toml,readonly \
+  --mount type=bind,src=/etc/massar/secrets/backup-rpc,dst=/run/secrets/garage-rpc,readonly \
+  --mount type=bind,src=/etc/massar/secrets/backup-admin,dst=/run/secrets/garage-admin,readonly \
+  --mount type=bind,src=/etc/massar/secrets/backup-metrics,dst=/run/secrets/garage-metrics,readonly \
+  --mount type=bind,src=/var/lib/massar-backup/meta,dst=/var/lib/garage/meta \
+  --mount type=bind,src=/var/lib/massar-backup/data,dst=/var/lib/garage/data \
+  dxflrs/garage@sha256:dac0c92add4f1a0b41035e94b41036a270ffbe88a37c7ac9c3f19e6dc5bdccf2 \
+  /garage --rpc-secret-file /run/secrets/garage-rpc \
+  --admin-token-file /run/secrets/garage-admin \
+  --metrics-token-file /run/secrets/garage-metrics server
+ExecStop=/usr/bin/docker stop -t 30 massar-backup-bucket
+
+[Install]
+WantedBy=multi-user.target

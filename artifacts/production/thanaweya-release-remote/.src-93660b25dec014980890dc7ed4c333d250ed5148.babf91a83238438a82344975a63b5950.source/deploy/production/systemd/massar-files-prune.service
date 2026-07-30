@@ -1,0 +1,11 @@
+[Unit]
+Description=Massar shared-file backup retention and prune
+After=network-online.target
+ConditionPathIsMountPoint=/srv/massar-shared
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/massar/backup/files.env
+ExecStart=/usr/local/sbin/massar-prune-file-backups
+Nice=15
+IOSchedulingClass=idle

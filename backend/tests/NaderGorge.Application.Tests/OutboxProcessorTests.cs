@@ -10,6 +10,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NaderGorge.API.BackgroundServices;
@@ -42,16 +43,47 @@ public class SqliteOutboxCommandInterceptor : DbCommandInterceptor
         return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
     }
 
+    public override InterceptionResult<int> NonQueryExecuting(
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult<int> result)
+    {
+        ReplacePostgresSql(command);
+        return base.NonQueryExecuting(command, eventData, result);
+    }
+
+    public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+        DbCommand command,
+        CommandEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        ReplacePostgresSql(command);
+        return base.NonQueryExecutingAsync(
+            command,
+            eventData,
+            result,
+            cancellationToken);
+    }
+
     private void ReplacePostgresSql(DbCommand command)
     {
+        command.CommandText = command.CommandText.Replace(
+            "NOW()",
+            "CURRENT_TIMESTAMP",
+            StringComparison.OrdinalIgnoreCase);
+
         if (command.CommandText.Contains("FOR UPDATE SKIP LOCKED", StringComparison.OrdinalIgnoreCase))
         {
-            // Modify postgres-specific SQL for SQLite compatibility
             command.CommandText = command.CommandText
-                .Replace("FOR UPDATE SKIP LOCKED", "")
-                .Replace("\"IsDeadLetter\" = FALSE", "\"IsDeadLetter\" = 0")
-                .Replace("\"IsDeadLetter\" = false", "\"IsDeadLetter\" = 0")
-                .Replace("\"IsDeadLetter\" = False", "\"IsDeadLetter\" = 0");
+                .Replace(
+                    "FOR UPDATE SKIP LOCKED",
+                    "",
+                    StringComparison.OrdinalIgnoreCase)
+                .Replace(
+                    "\"IsDeadLetter\" = FALSE",
+                    "\"IsDeadLetter\" = 0",
+                    StringComparison.OrdinalIgnoreCase);
         }
     }
 }
@@ -158,7 +190,8 @@ public class OutboxProcessorTests : IDisposable
         _processor = new OutboxProcessorBackgroundService(
             _scopeFactory,
             _hubContext,
-            NullLogger<OutboxProcessorBackgroundService>.Instance);
+            NullLogger<OutboxProcessorBackgroundService>.Instance,
+            new ConfigurationBuilder().Build());
     }
 
     public void Dispose()
@@ -182,6 +215,13 @@ public class OutboxProcessorTests : IDisposable
         await task;
     }
 
+    private async Task<OutboxEvent> ReloadOutboxAsync(Guid eventId)
+    {
+        _db.ChangeTracker.Clear();
+        return await _db.OutboxEvents.SingleAsync(
+            outboxEvent => outboxEvent.Id == eventId);
+    }
+
     [Fact]
     public async Task ProcessEvents_SuccessPath_ShouldDispatchAndMarkProcessed()
     {
@@ -202,7 +242,7 @@ public class OutboxProcessorTests : IDisposable
         await InvokeProcessOutboxEventsAsync();
 
         // Assert
-        var updatedEvent = await _db.OutboxEvents.FindAsync(@event.Id);
+        var updatedEvent = await ReloadOutboxAsync(@event.Id);
         Assert.NotNull(updatedEvent);
         Assert.NotNull(updatedEvent.ProcessedAt);
         Assert.False(updatedEvent.IsDeadLetter);
@@ -234,7 +274,7 @@ public class OutboxProcessorTests : IDisposable
         await InvokeProcessOutboxEventsAsync();
 
         // Assert
-        var updatedEvent = await _db.OutboxEvents.FindAsync(@event.Id);
+        var updatedEvent = await ReloadOutboxAsync(@event.Id);
         Assert.NotNull(updatedEvent);
         Assert.NotNull(updatedEvent.ProcessedAt); // Marked processed to avoid blocking outbox
         Assert.False(updatedEvent.IsDeadLetter);
@@ -268,12 +308,48 @@ public class OutboxProcessorTests : IDisposable
         await InvokeProcessOutboxEventsAsync();
 
         // Assert
-        var updatedEvent = await _db.OutboxEvents.FindAsync(@event.Id);
+        var updatedEvent = await ReloadOutboxAsync(@event.Id);
         Assert.NotNull(updatedEvent);
         Assert.Null(updatedEvent.ProcessedAt);
         Assert.Equal(1, updatedEvent.RetryCount);
         Assert.False(updatedEvent.IsDeadLetter);
         Assert.Contains("OUTBOX_DISPATCH_FAILED", updatedEvent.LastError);
+    }
+
+    [Fact]
+    public async Task ProcessStaffEventWithoutId_PersistsOneStableIdBeforeRetry()
+    {
+        var userId = Guid.NewGuid();
+        var outboxId = Guid.NewGuid();
+        var @event = new OutboxEvent
+        {
+            Id = outboxId,
+            Type = "StaffDataChanged",
+            TargetUserId = userId.ToString(),
+            PayloadJson = "{\"schemaVersion\":\"2\",\"scopes\":[\"hr\"]}",
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.OutboxEvents.Add(@event);
+        await _db.SaveChangesAsync();
+        ((FakeClientProxy)_hubContext.FakeClients.Group($"User_{userId}")).ShouldThrow = true;
+
+        await InvokeProcessOutboxEventsAsync();
+
+        var updatedEvent = await ReloadOutboxAsync(outboxId);
+        using var payload = System.Text.Json.JsonDocument.Parse(updatedEvent.PayloadJson);
+        Assert.Equal(outboxId.ToString(), payload.RootElement.GetProperty("eventId").GetString());
+        Assert.Equal(1, updatedEvent.RetryCount);
+    }
+
+    [Theory]
+    [InlineData("{\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MessageSent\",\"sequence\":7}", true)]
+    [InlineData("{\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MessageSent\",\"sequence\":99}", true)]
+    [InlineData("{\"type\":\"MessageSent\",\"sequence\":7}", false)]
+    [InlineData("{\"eventId\":\"00000000-0000-0000-0000-000000000001\",\"type\":\"MessageSent\",\"sequence\":0}", false)]
+    [InlineData("not-json", false)]
+    public void LiveSupportPayloadContract_ValidatesIdentityAndSequence(string payload, bool expected)
+    {
+        Assert.Equal(expected, OutboxProcessorBackgroundService.IsValidLiveSupportPayload(payload));
     }
 
     [Fact]
@@ -302,7 +378,7 @@ public class OutboxProcessorTests : IDisposable
         await InvokeProcessOutboxEventsAsync();
 
         // Assert
-        var updatedEvent = await _db.OutboxEvents.FindAsync(@event.Id);
+        var updatedEvent = await ReloadOutboxAsync(@event.Id);
         Assert.NotNull(updatedEvent);
         Assert.Null(updatedEvent.ProcessedAt);
         Assert.Equal(5, updatedEvent.RetryCount);
@@ -310,13 +386,10 @@ public class OutboxProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task ProcessEvents_ExponentialBackoff_ShouldSkipRecentRetries()
+    public async Task ProcessEvents_FutureNextAttempt_ShouldSkipRetry()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        
-        // RetryCount = 1 requires delay = 2^1 * 5 = 10 seconds.
-        // If we set UpdatedAt to 2 seconds ago, it should be skipped.
         var @event = new OutboxEvent
         {
             Id = Guid.NewGuid(),
@@ -325,7 +398,8 @@ public class OutboxProcessorTests : IDisposable
             PayloadJson = "{\"message\":\"hello\"}",
             CreatedAt = DateTime.UtcNow.AddMinutes(-5),
             RetryCount = 1,
-            UpdatedAt = DateTime.UtcNow.AddSeconds(-2)
+            UpdatedAt = DateTime.UtcNow.AddSeconds(-2),
+            NextAttemptAt = DateTime.UtcNow.AddSeconds(8)
         };
         _db.OutboxEvents.Add(@event);
         await _db.SaveChangesAsync();
@@ -334,9 +408,9 @@ public class OutboxProcessorTests : IDisposable
         await InvokeProcessOutboxEventsAsync();
 
         // Assert
-        var updatedEvent = await _db.OutboxEvents.FindAsync(@event.Id);
+        var updatedEvent = await ReloadOutboxAsync(@event.Id);
         Assert.NotNull(updatedEvent);
         Assert.Null(updatedEvent.ProcessedAt);
-        Assert.Equal(1, updatedEvent.RetryCount); // Not incremented, skipped processing
+        Assert.Equal(1, updatedEvent.RetryCount);
     }
 }

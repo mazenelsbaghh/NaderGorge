@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "6d90ebb7-2624-4d2a-902d-e1648f02aa46",
+  "command": "build",
+  "startedAt": "2026-07-27T08:02:01.283093Z",
+  "completedAt": "2026-07-27T08:02:01.283481Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-1: sha256sum: backend.tar.sha256: no properly formatted checksum lines found"
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "cpuBusyPercentMaximum": 85,
+  "cpuIowaitPercentMaximum": 10,
+  "cpuStealPercentMaximum": 5,
+  "memoryAvailablePercentMinimum": 20,
+  "diskFreePercentMinimum": 15,
+  "postgresConnectionUtilizationPercentMaximum": 70,
+  "postgresWaitingLocksMaximum": 0,
+  "postgresReplicationLagBytesMaximum": 16777216,
+  "redisMemoryUtilizationPercentMaximum": 70,
+  "redisBlockedClientsClusterTotalAbsoluteMaximum": 24,
+  "redisBlockedClientsClusterTotalIncreaseMaximum": 5,
+  "redisAofDelayedFsyncMaximum": 0,
+  "queueWaitingMaximum": 100,
+  "queueFailedMaximum": 0,
+  "queueStalledMaximum": 0,
+  "minimumDuringSamples": 1,
+  "maximumSampleAgeSeconds": 120
+}

@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { spawnSync } from 'node:child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const runBrowserMatrix =
+  process.argv.includes('--browser') ||
+  process.env.ACCESSIBILITY_BROWSER_MATRIX === '1';
 
 const components = [
   {
@@ -60,6 +64,25 @@ const components = [
   }
 ];
 
+const browserMatrix = [
+  {
+    path: '../tests/e2e/platform-accessibility.spec.ts',
+    rules: [/axe\.source/, /publicRoutes/, /authenticatedRoutes/],
+  },
+  {
+    path: '../tests/e2e/accessible-overlays.spec.ts',
+    rules: [/Escape/, /inert/, /toBeFocused/],
+  },
+  {
+    path: '../tests/e2e/accessible-carousels.spec.ts',
+    rules: [/reducedMotion/, /ArrowRight|ArrowLeft/, /pause|إيقاف/],
+  },
+  {
+    path: '../tests/e2e/resilient-ui-states.spec.ts',
+    rules: [/320/, /200%|zoom/, /SENSITIVE_INTERNAL_ERROR_MESSAGE/],
+  },
+];
+
 let failed = false;
 
 for (const comp of components) {
@@ -78,8 +101,45 @@ for (const comp of components) {
   }
 }
 
+for (const entry of browserMatrix) {
+  const fullPath = path.resolve(__dirname, entry.path);
+  if (!fs.existsSync(fullPath)) {
+    console.error(`Accessibility browser matrix is missing: ${fullPath}`);
+    failed = true;
+    continue;
+  }
+  const content = fs.readFileSync(fullPath, 'utf8');
+  for (const rule of entry.rules) {
+    if (!rule.test(content)) {
+      console.error(
+        `Accessibility browser matrix contract failed in ${path.basename(fullPath)}: ${rule}`,
+      );
+      failed = true;
+    }
+  }
+}
+
+if (!failed && runBrowserMatrix) {
+  const result = spawnSync(
+    path.resolve(__dirname, '../node_modules/.bin/playwright'),
+    [
+      'test',
+      'tests/e2e/platform-accessibility.spec.ts',
+      'tests/e2e/accessible-overlays.spec.ts',
+      'tests/e2e/accessible-carousels.spec.ts',
+      'tests/e2e/resilient-ui-states.spec.ts',
+    ],
+    { cwd: path.resolve(__dirname, '..'), stdio: 'inherit' },
+  );
+  if (result.status !== 0) failed = true;
+}
+
 if (failed) {
   process.exit(1);
 } else {
-  console.log('All frontend components passed accessibility checks successfully!');
+  console.log(
+    runBrowserMatrix
+      ? 'Static accessibility contracts and browser matrix passed.'
+      : 'Static accessibility contracts and browser-matrix definition passed; browser execution is a separate release gate.',
+  );
 }

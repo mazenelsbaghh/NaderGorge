@@ -1,0 +1,157 @@
+name: massar_production
+
+x-app-defaults: &app-defaults
+  restart: unless-stopped
+  init: true
+  env_file:
+    - /etc/massar/app.env
+  extra_hosts:
+    - host.docker.internal:host-gateway
+  networks:
+    - massar_app
+  logging:
+    driver: json-file
+    options:
+      max-size: 20m
+      max-file: "5"
+  security_opt:
+    - no-new-privileges:true
+  labels:
+    net.massar.node: ${MASSAR_NODE_ID:?MASSAR_NODE_ID is required}
+    net.massar.release: ${MASSAR_RELEASE_ID:?MASSAR_RELEASE_ID is required}
+
+x-frontend-defaults: &frontend-defaults
+  <<: *app-defaults
+  image: ${MASSAR_FRONTEND_IMAGE:?MASSAR_FRONTEND_IMAGE is required}
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  depends_on:
+    backend:
+      condition: service_healthy
+  healthcheck:
+    test: [CMD-SHELL, "curl --fail --silent http://127.0.0.1:8738/ >/dev/null"]
+    interval: 15s
+    timeout: 5s
+    retries: 4
+    start_period: 45s
+
+services:
+  backend:
+    <<: *app-defaults
+    image: ${MASSAR_BACKEND_IMAGE:?MASSAR_BACKEND_IMAGE is required}
+    environment:
+      Cluster__NodeId: ${MASSAR_NODE_ID}
+      Cluster__ReleaseId: ${MASSAR_RELEASE_ID}
+    volumes:
+      - /srv/massar-shared/public:/app/wwwroot
+      - /srv/massar-shared/protected:/app/App_Data/protected
+      - /srv/massar-shared/private:/app/App_Data/private
+      - /srv/massar-shared/live-support:/app/App_Data/live-support
+    healthcheck:
+      test: [CMD-SHELL, "curl --fail --silent http://127.0.0.1:5245/api/health/ready >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 45s
+
+  worker:
+    <<: *app-defaults
+    image: ${MASSAR_WORKER_IMAGE:?MASSAR_WORKER_IMAGE is required}
+    group_add:
+      - ${MASSAR_SHARED_GID:?MASSAR_SHARED_GID is required}
+    environment:
+      MASSAR_NODE_ID: ${MASSAR_NODE_ID}
+      MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
+      NODE_ENV: production
+      BACKEND_API_URL: http://backend:5245
+      SHARED_STORAGE_ROOT: /shared
+      SHARED_PUBLIC_ROOT: /shared/public
+      SUBTITLE_STORAGE_PATH: /shared/public/subtitles
+      MINDMAP_STORAGE_PATH: /shared/public/mindmaps
+    volumes:
+      - /srv/massar-shared:/shared
+      - /srv/massar-shared/public:/backend/src/NaderGorge.API/wwwroot
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD-SHELL, "curl --fail --silent http://127.0.0.1:3001/ready >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  landing:
+    <<: *frontend-defaults
+    environment:
+      APP_SURFACE: landing
+      NEXT_PUBLIC_APP_SURFACE: landing
+
+  student:
+    <<: *frontend-defaults
+    environment:
+      APP_SURFACE: student
+      NEXT_PUBLIC_APP_SURFACE: student
+
+  admin:
+    <<: *frontend-defaults
+    environment:
+      APP_SURFACE: admin
+      NEXT_PUBLIC_APP_SURFACE: admin
+
+  teacher:
+    <<: *frontend-defaults
+    environment:
+      APP_SURFACE: teacher
+      NEXT_PUBLIC_APP_SURFACE: teacher
+
+  staff:
+    <<: *frontend-defaults
+    environment:
+      APP_SURFACE: assistant
+      NEXT_PUBLIC_APP_SURFACE: assistant
+
+  gateway:
+    <<: *app-defaults
+    image: nginx:1.27.5-alpine
+    environment:
+      MASSAR_NODE_ID: ${MASSAR_NODE_ID}
+      MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
+    ports:
+      - ${MASSAR_OVERLAY_IP:?MASSAR_OVERLAY_IP is required}:8080:8080
+    volumes:
+      - ${MASSAR_RELEASE_ROOT:?MASSAR_RELEASE_ROOT is required}/deploy/production/config/nginx/massar-node.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /srv/massar-shared/public:/var/www/assets:ro
+    depends_on:
+      landing:
+        condition: service_healthy
+      student:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      teacher:
+        condition: service_healthy
+      staff:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      massar_app:
+        ipv4_address: 172.29.0.10
+    healthcheck:
+      test: [CMD-SHELL, "curl --fail --silent -H 'Host: massar-academy.net' http://127.0.0.1:8080/__node_ready >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 4
+      start_period: 15s
+
+networks:
+  massar_app:
+    name: massar_app
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: massar-app0
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24

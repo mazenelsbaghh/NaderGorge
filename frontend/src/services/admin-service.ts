@@ -1,7 +1,30 @@
 import apiClient from './api-client';
 import { getSurfaceName } from '@/packages/surface-runtime/config';
+import type { CodeAccountingTiming, CodeRevenueAllocationMode, CodeRevenueOwner, CodeType } from './code-service';
+import type { AcademicScopePayload, AcademicScopeSummary } from '@/lib/academic-labels';
 
 export type VideoProvider = 'YouTube' | 'youtube' | 'vk' | 'bunny';
+
+export interface VideoTypeDto {
+  id: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+  assignedVideoCount: number;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface CreateVideoTypePayload {
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface UpdateVideoTypePayload {
+  name: string;
+  sortOrder: number;
+}
 
 export type CreateVideoPayload = {
   lessonId: string;
@@ -10,6 +33,7 @@ export type CreateVideoPayload = {
   urlOrEmbedCode: string;
   order: number;
   limit: number;
+  videoTypeId: string;
   isActive?: boolean;
 };
 
@@ -22,6 +46,7 @@ export type BunnyTusUploadRequest = {
   title: string;
   order: number;
   maxWatchCount: number;
+  videoTypeId: string;
   fileName?: string;
   fileSizeBytes?: number;
 };
@@ -45,6 +70,7 @@ export type BunnyFetchVideoRequest = {
   title: string;
   order: number;
   maxWatchCount: number;
+  videoTypeId: string;
   sourceUrl: string;
 };
 
@@ -75,6 +101,7 @@ export type BunnyCostReport = {
     bandwidthCostUsd: number;
     totalCostUsd: number;
     isBandwidthEstimated: boolean;
+    bandwidthSource: string;
   }>;
   teachers: Array<{ id: string; name: string; storageBytes: number; bandwidthBytes: number; totalCostUsd: number }>;
   packages: Array<{ id: string; name: string; storageBytes: number; bandwidthBytes: number; totalCostUsd: number }>;
@@ -84,6 +111,50 @@ export interface ApiResponse<T = any> {
   data: T;
   success: boolean;
   message: string;
+}
+
+export interface WhatsAppTestMessagePayload {
+  recipientPhoneNumber: string;
+  messageType: 'template' | 'text';
+  textBody?: string;
+  templateName?: string;
+  templateLanguage?: string;
+  parentName?: string;
+  studentName?: string;
+  score?: string;
+  totalScore?: string;
+  subject?: string;
+  lecture?: string;
+}
+
+export interface WhatsAppTestMessageResult {
+  success: boolean;
+  message: string;
+  recipientPhoneNumber: string;
+  metaMessageId?: string | null;
+  statusCode: number;
+  errorCode?: string | null;
+}
+
+export interface WhatsAppExamResultMessagePayload {
+  attemptId: string;
+  recipientPhoneNumber?: string;
+}
+
+export interface WhatsAppExamResultPreview {
+  attemptId: string;
+  recipientPhoneNumber: string;
+  parentName: string;
+  studentName: string;
+  score: string;
+  totalScore: string;
+  subject: string;
+  lecture: string;
+  isResultReady: boolean;
+}
+
+export interface WhatsAppExamResultMessageResult extends WhatsAppTestMessageResult {
+  preview?: WhatsAppExamResultPreview | null;
 }
 
 export type ContentImageType = 'package' | 'term' | 'section';
@@ -98,6 +169,7 @@ export interface AdminUserListDto {
   createdAt: string;
   roles: string[];
   studentCode?: string;
+  parentTrackingCode?: string;
   dateOfBirth?: string;
   gender?: string;
   educationStage?: string;
@@ -116,6 +188,7 @@ export interface AdminUserListDto {
   fatherDateOfBirth?: string;
   motherDateOfBirth?: string;
   suspensionReason?: string;
+  avatarSlug?: string | null;
   currentBalance?: number;
 }
 
@@ -150,11 +223,44 @@ export interface CodeGroupDto {
   id: string;
   name: string;
   createdAt: string;
+  codeType: CodeType;
   packageId?: string;
+  termId?: string;
+  contentSectionId?: string;
   lessonId?: string;
+  examId?: string;
+  publicExamProductId?: string;
+  videoTypeId?: string;
+  includeFutureVideos: boolean;
+  balanceAmount?: number | null;
+  expiresAt?: string | null;
+  expireActivatedAccess: boolean;
+  discountPercentage?: number | null;
+  revenueOwner?: CodeRevenueOwner | null;
+  revenueAllocationMode?: CodeRevenueAllocationMode | 'CommissionRate' | null;
+  revenueAllocationValue?: number | null;
+  accountingTiming: CodeAccountingTiming;
+  accountingRecordedAt?: string | null;
   codeCount: number;
   usedCount: number;
-  teacherId: string;
+  teacherId?: string | null;
+  academicScopes?: AcademicScopeSummary[] | null;
+}
+
+export interface UpdateCodeGroupSettingsPayload {
+  name?: string;
+  teacherId?: string | null;
+  expiresAt?: string | null;
+  revenueOwner?: CodeRevenueOwner | null;
+  revenueAllocationMode?: CodeRevenueAllocationMode | null;
+  revenueAllocationValue?: number | null;
+  accountingTiming?: CodeAccountingTiming;
+}
+
+export interface RemoveUnusedCodesResponse {
+  removedCount: number;
+  keptUsedCount: number;
+  groupDeleted: boolean;
 }
 
 export interface CodeDetailDto {
@@ -165,12 +271,8 @@ export interface CodeDetailDto {
   usedByUserId?: string;
   usedByStudentName?: string | null;
   usedByStudentPhone?: string | null;
+  redemptionSummary: string;
 }
-
-const CODE_GROUPS_CACHE_TTL_MS = 10_000;
-let codeGroupsInFlight: Promise<CodeGroupDto[] | undefined> | null = null;
-let codeGroupsCache: CodeGroupDto[] | undefined;
-let codeGroupsCacheAt = 0;
 
 export interface QuestionOptionDto {
   id: string;
@@ -262,6 +364,12 @@ export interface AdminWatchRequestDto {
   studentPhone: string;
   lessonVideoId: string;
   videoTitle: string;
+  teacherName: string;
+  packageName: string;
+  termTitle: string;
+  sectionTitle: string;
+  lessonTitle: string;
+  studentReason: string;
   status: number;
   createdAt: string;
   resolvedAt?: string | null;
@@ -269,6 +377,9 @@ export interface AdminWatchRequestDto {
   currentWatchCount: number;
   maxWatchCount: number;
   reachedLimit: boolean;
+  baseWatchCount: number;
+  videoDurationSeconds?: number | null;
+  hasPreviousRequest: boolean;
 }
 
 
@@ -291,6 +402,7 @@ export interface StudentProfileExtendedDto {
   governorate?: string;
   address?: string;
   studentCode?: string;
+  parentTrackingCode?: string;
   isProfileComplete?: boolean;
 
   // Academic fields
@@ -318,6 +430,8 @@ export interface StudentProfileExtendedDto {
   overrides: StudentVideoOverrideDto[];
   watchTracking: {
     totalWatchedSeconds: number;
+    totalActualWatchedSeconds: number;
+    averagePlaybackRate: number;
     watchedVideosCount: number;
     activities: Array<{
       lessonVideoId: string;
@@ -329,11 +443,23 @@ export interface StudentProfileExtendedDto {
       watchCount: number;
       maxWatchCount: number;
       watchedSeconds: number;
+      actualWatchedSeconds: number;
+      lastPlaybackRate: number;
+      averagePlaybackRate: number;
+      playbackRateSeconds?: Record<string, number>;
       isLocked: boolean;
       lastWatchedAt: string;
     }>;
   };
   currentBalance: number;
+  promotionalBalances: Array<{
+    teacherId?: string | null;
+    teacherName: string;
+    availableAmount: number;
+    originalAmount: number;
+    consumedAmount: number;
+    nearestExpiresAt?: string | null;
+  }>;
   balanceTransactions: BalanceTransactionDto[];
   auditTrail: StudentAuditLogDto[];
   notes: Array<{
@@ -345,7 +471,15 @@ export interface StudentProfileExtendedDto {
   }>;
 }
 
+export interface AdminTeacherOptionDto {
+  id: string;
+  userId: string;
+  fullName: string;
+  phoneNumber: string;
+}
+
 export interface StudentExamResultSummaryDto {
+  attemptId: string;
   studentId: string;
   studentName: string;
   studentPhone: string;
@@ -379,12 +513,14 @@ export interface ExamQuestionSummaryDto {
 
 export interface ExamDashboardDto {
   examId: string;
+  internalCode: string;
   title: string;
   description: string;
   questionCount: number;
   totalScore: number;
   passingScore: number;
   durationMinutes?: number;
+  isActive: boolean;
   timePerQuestionSeconds?: number;
   attempts: StudentExamResultSummaryDto[];
   questions: ExamQuestionSummaryDto[];
@@ -426,6 +562,7 @@ export interface HomeworkDashboardDto {
   totalScore: number;
   passingScore: number;
   isMandatory: boolean;
+  isActive: boolean;
   isRandomized: boolean;
   submissions: StudentHomeworkResultSummaryDto[];
   questions: HomeworkQuestionSummaryDto[];
@@ -435,6 +572,10 @@ export interface ModerationLessonCommentDto {
   id: string;
   lessonId: string;
   lessonTitle: string;
+  teacherName: string;
+  packageName: string;
+  termTitle: string;
+  sectionTitle: string;
   studentId: string;
   studentName: string;
   body: string;
@@ -508,15 +649,64 @@ export interface LessonCockpitCommentSummaryDto {
   rejected: number;
 }
 
+export interface LessonCockpitVideoTypeDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
+export interface LessonCockpitVideoChapterDto {
+  id: string;
+  title: string;
+  startTime: number;
+  endTime: number;
+  summaryText: string;
+  mindmapImageUrl?: string | null;
+  order: number;
+}
+
+export interface LessonCockpitVideoDto {
+  id: string;
+  internalCode: string;
+  title: string;
+  provider: string;
+  url: string;
+  order: number;
+  maxWatchCount: number;
+  isProcessingAI: boolean;
+  isProcessingMindmaps: boolean;
+  isActive: boolean;
+  videoType: LessonCockpitVideoTypeDto;
+  examId?: string | null;
+  exams?: { examId: string; title: string }[] | null;
+  chapters?: LessonCockpitVideoChapterDto[] | null;
+}
+
+export interface LessonCockpitResourceDto {
+  id: string;
+  title: string;
+  fileUrl: string;
+  resourceType: string;
+}
+
+export interface LessonCockpitHomeworkDto {
+  id: string;
+  title: string;
+  isMandatory: boolean;
+  passingScoreThreshold?: number | null;
+}
+
 export interface LessonCockpitDto {
   lessonId: string;
+  internalCode: string;
   title: string;
   summary: string;
   examId?: string | null;
   price: number;
-  videos: any[];
-  resources: any[];
-  homework: any[];
+  order: number;
+  videos: LessonCockpitVideoDto[];
+  resources: LessonCockpitResourceDto[];
+  homework: LessonCockpitHomeworkDto[];
   commentsSummary: LessonCockpitCommentSummaryDto;
 }
 
@@ -569,6 +759,8 @@ export interface AdminCreateUserResult {
   fullName: string;
   phoneNumber: string;
   role: string;
+  authorizationVersion?: number;
+  employeeUpdatedAt?: string | null;
 }
 
 export interface AdminPackageListItemDto {
@@ -579,6 +771,15 @@ export interface AdminPackageListItemDto {
 }
 
 export const adminService = {
+  sendWhatsAppTestMessage: async (payload: WhatsAppTestMessagePayload) => {
+    const res = await apiClient.post<WhatsAppTestMessageResult>('/whatsapp/admin/test-message', payload);
+    return res.data;
+  },
+  sendWhatsAppExamResultMessage: async (payload: WhatsAppExamResultMessagePayload) => {
+    const res = await apiClient.post<WhatsAppExamResultMessageResult>('/whatsapp/admin/exam-result-message', payload);
+    return res.data;
+  },
+
   // Users
   listUsers: async (
     page = 1,
@@ -588,9 +789,12 @@ export const adminService = {
     gradeLevel?: string,
     studyTrack?: string,
     gender?: string,
-    governorate?: string
+    governorate?: string,
+    role?: string,
+    signal?: AbortSignal,
   ) => {
     const res = await apiClient.get<ApiResponse<PagedResult<AdminUserListDto>>>('/admin/users', {
+      signal,
       params: {
         page,
         pageSize,
@@ -599,10 +803,51 @@ export const adminService = {
         ...(gradeLevel ? { gradeLevel } : {}),
         ...(studyTrack ? { studyTrack } : {}),
         ...(gender ? { gender } : {}),
-        ...(governorate ? { governorate } : {})
+        ...(governorate ? { governorate } : {}),
+        ...(role ? { role } : {}),
       }
     });
     return res.data?.data;
+  },
+
+  exportUsers: async (
+    filters: {
+      search?: string;
+      educationStage?: string;
+      gradeLevel?: string;
+      studyTrack?: string;
+      gender?: string;
+      governorate?: string;
+      role?: string;
+    },
+    signal?: AbortSignal,
+  ) => {
+    const pageSize = 100;
+    const items: AdminUserListDto[] = [];
+    let page = 1;
+    let totalCount = Number.POSITIVE_INFINITY;
+
+    while (items.length < totalCount) {
+      const result = await adminService.listUsers(
+        page,
+        pageSize,
+        filters.search ?? '',
+        filters.educationStage,
+        filters.gradeLevel,
+        filters.studyTrack,
+        filters.gender,
+        filters.governorate,
+        filters.role,
+        signal,
+      );
+      if (!result) break;
+      totalCount = result.totalCount;
+      items.push(...result.items);
+      if (result.items.length < pageSize) break;
+      page += 1;
+    }
+
+    return items;
   },
 
   createUser: async (payload: AdminCreateUserPayload) => {
@@ -641,6 +886,11 @@ export const adminService = {
   getActiveTeacherPhoto: async (teacherId: string) => {
     const res = await apiClient.get<ApiResponse<{ url: string | null }>>(`/admin/teachers/${teacherId}/active-photo`);
     return res;
+  },
+
+  getTeachers: async (): Promise<AdminTeacherOptionDto[]> => {
+    const res = await apiClient.get<ApiResponse<AdminTeacherOptionDto[]>>('/admin/teachers');
+    return res.data?.data ?? [];
   },
 
   getTeacherPhotos: async (teacherId: string) => {
@@ -728,36 +978,12 @@ export const adminService = {
     return res.data?.data;
   },
 
-  listCodeGroups: async (options?: { force?: boolean }) => {
-    const force = options?.force ?? false;
-    const isCacheFresh =
-      !force &&
-      codeGroupsCache !== undefined &&
-      Date.now() - codeGroupsCacheAt < CODE_GROUPS_CACHE_TTL_MS;
-
-    if (isCacheFresh) {
-      return codeGroupsCache;
-    }
-
-    if (!force && codeGroupsInFlight) {
-      return codeGroupsInFlight;
-    }
-
+  listCodeGroups: async (...options: [{ force?: boolean }?]) => {
+    void options;
     const isTeacher = getSurfaceName() === 'teacher';
     const path = isTeacher ? '/teacher/codes/groups' : '/admin/codes/groups';
-
-    codeGroupsInFlight = apiClient
-      .get<ApiResponse<CodeGroupDto[]>>(path)
-      .then((res) => {
-        codeGroupsCache = res.data?.data;
-        codeGroupsCacheAt = Date.now();
-        return codeGroupsCache;
-      })
-      .finally(() => {
-        codeGroupsInFlight = null;
-      });
-
-    return codeGroupsInFlight;
+    const res = await apiClient.get<ApiResponse<CodeGroupDto[]>>(path);
+    return res.data?.data;
   },
 
   getCodeGroupDetails: async (id: string) => {
@@ -765,6 +991,18 @@ export const adminService = {
     const path = isTeacher ? `/teacher/codes/groups/${id}/details` : `/admin/codes/groups/${id}/details`;
     const res = await apiClient.get<ApiResponse<CodeDetailDto[]>>(path);
     return res.data?.data;
+  },
+
+  updateCodeGroupSettings: async (id: string, payload: UpdateCodeGroupSettingsPayload) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/codes/groups/${id}/settings`, payload);
+    return res.data;
+  },
+
+  removeUnusedCodes: async (id: string, keepEmptyGroup = true) => {
+    const res = await apiClient.delete<ApiResponse<RemoveUnusedCodesResponse>>(`/admin/codes/groups/${id}/unused`, {
+      data: { keepEmptyGroup },
+    });
+    return res.data;
   },
 
   // Questions
@@ -830,6 +1068,7 @@ export const adminService = {
     subjectId: string;
     targetGrade: string;
     teacherId?: string;
+    academicScopes?: AcademicScopePayload[];
   }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);
     return res.data?.data;
@@ -917,6 +1156,27 @@ export const adminService = {
     const res = await apiClient.get<ApiResponse<LessonCockpitDto>>(`/admin/lessons/${id}/cockpit`);
     return res;
   },
+  listVideoTypes: async (includeInactive = false) => {
+    const res = await apiClient.get<ApiResponse<VideoTypeDto[]>>('/admin/video-types', {
+      params: { includeInactive },
+    });
+    return res.data?.data ?? [];
+  },
+  createVideoType: async (payload: CreateVideoTypePayload) => {
+    const res = await apiClient.post<ApiResponse<VideoTypeDto>>('/admin/video-types', payload);
+    return res.data?.data;
+  },
+  updateVideoType: async (id: string, payload: UpdateVideoTypePayload) => {
+    const res = await apiClient.put<ApiResponse<VideoTypeDto>>(`/admin/video-types/${id}`, payload);
+    return res.data?.data;
+  },
+  setVideoTypeStatus: async (id: string, isActive: boolean) => {
+    const res = await apiClient.patch<ApiResponse<VideoTypeDto>>(`/admin/video-types/${id}/status`, { isActive });
+    return res.data?.data;
+  },
+  deleteVideoType: async (id: string) => {
+    await apiClient.delete(`/admin/video-types/${id}`);
+  },
   getCommunityPostsForModeration: async (status?: string) => {
     const res = await apiClient.get<ApiResponse<ModerationCommunityPostDto[]>>('/admin/community/posts', {
       params: status && status !== 'All' ? { status } : undefined,
@@ -947,6 +1207,10 @@ export const adminService = {
     const res = await apiClient.get<ApiResponse<ModerationLessonCommentDto[]>>(`/admin/lessons/${lessonId}/comments`, {
       params: status && status !== 'All' ? { status } : undefined,
     });
+    return res.data?.data ?? [];
+  },
+  getAllLessonComments: async (teacherId?: string, status?: string) => {
+    const res = await apiClient.get<ApiResponse<ModerationLessonCommentDto[]>>('/admin/comments', { params: { ...(teacherId ? { teacherId } : {}), ...(status && status !== 'All' ? { status } : {}) } });
     return res.data?.data ?? [];
   },
   approveLessonComment: async (commentId: string) => {
@@ -1035,28 +1299,28 @@ export const adminService = {
     return res.data?.data;
   },
   attachHomework: async (
-    lessonId: string, 
-    payload: { 
-      title: string; 
-      instructions: string; 
-      isMandatory: boolean; 
+    lessonId: string,
+    payload: {
+      title: string;
+      instructions: string;
+      isMandatory: boolean;
       isRandomized: boolean;
-      totalScore: number; 
-      requiredPointsToPass: number; 
-      questions: { 
-        text: string; 
-        type: string; 
-        points: number; 
-        order: number; 
-        options: { text: string; isCorrect: boolean }[]; 
-        audioUrl?: string; 
+      totalScore: number;
+      requiredPointsToPass: number;
+      questions: {
+        text: string;
+        type: string;
+        points: number;
+        order: number;
+        options: { text: string; isCorrect: boolean }[];
+        audioUrl?: string;
         imageUrl?: string;
-        writtenCorrection?: string; 
-        hintText?: string; 
-        baseText?: string; 
-        mistakeStartIndex?: number | null; 
+        writtenCorrection?: string;
+        hintText?: string;
+        baseText?: string;
+        mistakeStartIndex?: number | null;
         mistakeEndIndex?: number | null;
-      }[] 
+      }[]
     }
   ) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>(`/admin/content/lessons/${lessonId}/homework`, payload);
@@ -1079,6 +1343,19 @@ export const adminService = {
     });
     return res.data.data;
   },
+  uploadPlatformPopupImage: async (image: File, onProgress?: (percent: number) => void) => {
+    const formData = new FormData();
+    formData.append('image', image);
+    const res = await apiClient.post<ApiResponse<string>>('/admin/popup/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && onProgress) {
+          onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+        }
+      },
+    });
+    return res.data.data;
+  },
   linkLessonExam: async (lessonId: string, examId: string | null) => {
     const res = await apiClient.put<ApiResponse>(`/admin/lessons/${lessonId}/exam`, { examId });
     return res.data;
@@ -1089,6 +1366,14 @@ export const adminService = {
   },
   unlinkVideoExam: async (videoId: string, examId: string) => {
     const res = await apiClient.delete<ApiResponse>(`/admin/videos/${videoId}/exams/${examId}`);
+    return res.data;
+  },
+  setExamStatus: async (examId: string, isActive: boolean) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/exams/${examId}/status`, { isActive });
+    return res.data;
+  },
+  setHomeworkStatus: async (homeworkId: string, isActive: boolean) => {
+    const res = await apiClient.put<ApiResponse>(`/admin/homework/${homeworkId}/status`, { isActive });
     return res.data;
   },
   createInlineExam: async (payload: { title: string; description: string; passingScore: number; totalScore: number; isMandatory?: boolean; isRandomized?: boolean; durationMinutes?: number; timePerQuestionSeconds?: number; displayQuestionCount?: number; target: { type: string; id: string }; questions: { text: string; type: string; points: number; order: number; options: { text: string; isCorrect: boolean }[]; audioUrl?: string; imageUrl?: string; writtenCorrection?: string; hintText?: string; baseText?: string; mistakeStartIndex?: number | null; mistakeEndIndex?: number | null }[] }) => {
@@ -1113,6 +1398,10 @@ export const adminService = {
     const res = await apiClient.delete<ApiResponse>(`/admin/exams/${examId}/questions/${examQuestionId}`);
     return res.data;
   },
+  deleteExamAttempt: async (examId: string, attemptId: string) => {
+    const res = await apiClient.delete<ApiResponse>(`/admin/exams/${examId}/attempts/${attemptId}`);
+    return res.data;
+  },
 
   updateExamQuestion: async (examId: string, examQuestionId: string, payload: any) => {
     const res = await apiClient.put<ApiResponse>(`/admin/exams/${examId}/questions/${examQuestionId}`, payload);
@@ -1135,13 +1424,21 @@ export const adminService = {
     return res.data?.data;
   },
 
-  adjustBalance: async (studentId: string, amount: number, reason: string) => {
-    const res = await apiClient.post(`/admin/users/students/${studentId}/balance/adjust`, { amount, reason });
+  adjustBalance: async (
+    studentId: string,
+    payload: { amount: number; reason: string; scope?: 'general' | 'teacher'; operation?: 'credit' | 'debit'; teacherId?: string | null }
+  ) => {
+    const res = await apiClient.post(`/admin/users/students/${studentId}/balance/adjust`, payload);
     return res.data?.data;
   },
 
   updateStudentProfile: async (studentId: string, data: Record<string, unknown>) => {
     const res = await apiClient.put(`/admin/users/students/${studentId}/profile`, data);
+    return res.data?.data;
+  },
+
+  updateStaffProfile: async (staffId: string, data: { fullName: string; phoneNumber: string }) => {
+    const res = await apiClient.put(`/admin/users/staff/${staffId}/profile`, data);
     return res.data?.data;
   },
 
@@ -1301,7 +1598,7 @@ export const adminService = {
 
   // ── Content Subscribers ────────────────────────────────────────────
   getContentSubscribers: async (
-    contentType: 'package' | 'term' | 'section',
+    contentType: 'package' | 'term' | 'section' | 'lesson',
     id: string,
     page = 1,
     pageSize = 20,
@@ -1315,7 +1612,7 @@ export const adminService = {
   },
 
   exportContentSubscribersCsv: async (
-    contentType: 'package' | 'term' | 'section',
+    contentType: 'package' | 'term' | 'section' | 'lesson',
     id: string,
     contentName: string
   ) => {
@@ -1350,6 +1647,8 @@ export interface ContentSubscriberDto {
   enrolledAt: string;
   isActive: boolean;
   avatarSlug?: string;
+  purchaseType: string;
+  purchaseMethod: 'Code' | 'Gift' | 'Balance';
 }
 
 export interface ContentSubscribersPagedResult {

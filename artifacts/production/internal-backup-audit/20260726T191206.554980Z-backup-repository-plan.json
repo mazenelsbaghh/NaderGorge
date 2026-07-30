@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "695cd043-4a77-4452-a8b3-0a2214310a58",
+  "command": "backup-repository-plan",
+  "startedAt": "2026-07-26T19:12:06.554980Z",
+  "completedAt": "2026-07-26T19:12:06.555310Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "ERROR: node-1 returned incomplete capacity data"
+}

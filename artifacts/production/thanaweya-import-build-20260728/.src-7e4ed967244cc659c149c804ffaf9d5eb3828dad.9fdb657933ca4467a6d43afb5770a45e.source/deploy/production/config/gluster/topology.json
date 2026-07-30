@@ -1,0 +1,16 @@
+{
+  "volume": "massar-shared",
+  "transport": "tcp",
+  "replica_count": 3,
+  "arbiter_count": 1,
+  "bricks": [
+    "node-1.cluster.internal:/srv/gluster/massar/brick",
+    "node-2.cluster.internal:/srv/gluster/massar/brick",
+    "node-3.cluster.internal:/srv/gluster/massar/brick"
+  ],
+  "mountpoint": "/srv/massar-shared",
+  "mount_options": [
+    "_netdev",
+    "backup-volfile-servers=node-2.cluster.internal:node-3.cluster.internal"
+  ]
+}

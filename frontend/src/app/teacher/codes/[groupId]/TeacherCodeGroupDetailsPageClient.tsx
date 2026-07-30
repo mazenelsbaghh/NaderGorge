@@ -3,7 +3,7 @@
 import { devConsole } from "@/utils/dev-console";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowRight, Download, KeyRound, Printer, Search, Sparkles, User as UserIcon, Link as LinkIcon } from "lucide-react";
+import { ArrowRight, Download, KeyRound, Printer, Sparkles, User as UserIcon, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -11,8 +11,9 @@ import {
   AdminColumn,
   AdminStatCard,
   AdminPageSkeleton,
+  AdminSearchToolbar,
 } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { formatDate } from "@/components/admin/admin-utils";
 import { adminService, CodeDetailDto, CodeGroupDto } from "@/services/admin-service";
 import { PackageDto, contentService } from "@/services/content-service";
@@ -171,23 +172,23 @@ export default function TeacherCodeGroupDetailsPageClient() {
 
   if (loading) {
     return (
-      <TeacherShellChrome
-        activePath="/teacher/codes"
-        sectionLabel="إدارة الأكواد"
-        pageTitle="تفاصيل مجموعة الأكواد"
-        subtitle="جاري تحميل البيانات..."
+      <TeacherPage
+      activePath="/teacher/codes"
+      sectionLabel="إدارة الأكواد"
+      pageTitle="تفاصيل أكواد المدرس"
+      subtitle="جاري تحميل البيانات..."
       >
         <AdminPageSkeleton />
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/codes"
       sectionLabel="إدارة الأكواد"
       pageTitle={group ? `تفاصيل: ${group.name || "دفعة أكواد"}` : "تفاصيل المجموعة"}
-      subtitle="استعراض الأكواد، سجل الشحن، الربط، وطباعة كود الـ QR."
+      subtitle="استعراض أكواد المدرس، سجل الاستخدام، الربط، وطباعة كود الـ QR."
       action={
         <Link href="/teacher/codes" passHref legacyBehavior>
           <NeumorphButton intent="ghost" size="md">
@@ -203,7 +204,7 @@ export default function TeacherCodeGroupDetailsPageClient() {
           <AdminStatCard
             variant="light"
             icon={KeyRound}
-            label="إجمالي الأكواد"
+            label="إجمالي أكواد المدرس"
             value={group.codeCount}
             subtitle={`تاريخ التوليد: ${formatDate(group.createdAt)}`}
           />
@@ -218,30 +219,18 @@ export default function TeacherCodeGroupDetailsPageClient() {
             variant="muted"
             icon={LinkIcon}
             label="الربط"
-            value={group.packageId ? "باقة تعليمية" : "عام"}
-            subtitle={group.packageId ? packageNameMap[group.packageId] || group.packageId : "وصول عام للمنصة"}
+            value={group.packageId ? "باقة تعليمية" : "خاص بالمدرس"}
+            subtitle={group.packageId ? packageNameMap[group.packageId] || group.packageId : "أكواد مملوكة للمدرس فقط"}
           />
         </section>
       )}
 
-      {/* Toolbar / Search & Actions */}
-      <div className="mb-8 flex flex-col md:flex-row gap-4 justify-between items-center bg-[var(--admin-card)] p-4 rounded-3xl border border-[var(--admin-border)] shadow-sm">
-        
-        {/* Search Input */}
-        <div className="flex items-center bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)] px-4 py-2.5 w-full md:max-w-md">
-          <Search className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
-          <input
-            type="text"
-            placeholder="ابحث عن كود، اسم طالب، أو رقم هاتف..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border-none outline-none text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] w-full text-right"
-            dir="rtl"
-          />
-        </div>
-
-        {/* Action Tabs & Buttons */}
-        <div className="flex flex-wrap gap-3 items-center justify-end w-full md:w-auto">
+      <AdminSearchToolbar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="ابحث عن كود، اسم طالب، أو رقم هاتف..."
+        actions={
+          <>
           <div className="flex gap-1.5 p-1 bg-[var(--admin-surface)] rounded-2xl border border-[var(--admin-border)]">
             <button
               onClick={() => setShowQrPrint(false)}
@@ -270,8 +259,9 @@ export default function TeacherCodeGroupDetailsPageClient() {
             <Download className="h-4 w-4 ml-1.5" />
             تصدير CSV
           </NeumorphButton>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Content Area */}
       <div className="admin-panel mt-6">
@@ -290,6 +280,6 @@ export default function TeacherCodeGroupDetailsPageClient() {
           />
         )}
       </div>
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

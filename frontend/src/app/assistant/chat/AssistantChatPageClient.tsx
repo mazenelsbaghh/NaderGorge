@@ -1,13 +1,13 @@
 'use client';
 
-import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import { AssistantPage } from '@/components/assistant/AssistantShellChrome';
 import { ChatContainer } from '@/components/chat/ChatContainer';
 import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 
 export default function AssistantChatPageClient() {
   return (
     <NavRouteGuard routePath="/assistant/chat" permission="chat.manage">
-      <AssistantShellChrome
+      <AssistantPage
         activePath="/assistant/chat"
         sectionLabel="التواصل الداخلي"
         pageTitle="غرف المحادثات المشتركة"
@@ -16,8 +16,7 @@ export default function AssistantChatPageClient() {
         <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]">
           <ChatContainer />
         </div>
-      </AssistantShellChrome>
+      </AssistantPage>
     </NavRouteGuard>
   );
 }
-

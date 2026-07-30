@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "f740b6e2-38dc-45c2-accf-3c2662c82738",
+  "command": "build",
+  "startedAt": "2026-07-27T23:48:16.968061Z",
+  "completedAt": "2026-07-27T23:48:16.968102Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-3: remote builder failed: immutable workspace source already exists"
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "20be0b66-62d9-4a50-8ef8-e39b4442f4d5",
+  "command": "rollback",
+  "startedAt": "2026-07-28T12:05:57.641477Z",
+  "completedAt": "2026-07-28T12:05:57.641612Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

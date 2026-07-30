@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "d7a1f479-61d7-4260-983f-147a709f2215",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T20:03:04.178711Z",
+  "completedAt": "2026-07-26T20:03:04.179220Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: server started\n2026-07-26 20:03:03.054 UTC [191876] FATAL:  recovery ended before configured recovery target was reached\n2026-07-26 20:03:03.058 UTC [191873] LOG:  terminating any other active server processes\npsql: error: connection to server on socket \"/var/lib/massar-restore-tests/database.JAeVPN/.s.PGSQL.6543\" failed: server closed the connection unexpectedly\n\tThis probably means the server terminated abnormally\nmassar-db-restore-test.service: Failed with result 'exit-co"
+}

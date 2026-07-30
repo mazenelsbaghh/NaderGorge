@@ -5,7 +5,7 @@ import {
   Calendar, 
   BarChart3
 } from 'lucide-react';
-import { AdminShellChrome } from '@/components/admin';
+import { AdminPage } from '@/components/admin';
 import MediaPipelineBoard from '@/components/media/MediaPipelineBoard';
 import SocialPlannerView from '@/components/media/SocialPlannerView';
 import MediaKpiDashboard from '@/components/media/MediaKpiDashboard';
@@ -30,7 +30,7 @@ export default function AdminMediaPageClient() {
   ];
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/media"
       sectionLabel="إنتاج المحتوى والمنشورات"
       pageTitle="إدارة مسار الإنتاج والمنشورات"
@@ -67,6 +67,6 @@ export default function AdminMediaPageClient() {
           {activeTab === 'kpis' && <MediaKpiDashboard />}
         </div>
       </div>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

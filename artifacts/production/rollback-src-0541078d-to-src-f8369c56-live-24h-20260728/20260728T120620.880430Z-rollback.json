@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "176a89ec-1b72-42d6-9d9c-ca6fc138fd42",
+  "command": "rollback",
+  "startedAt": "2026-07-28T12:06:20.880430Z",
+  "completedAt": "2026-07-28T12:06:20.880958Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Traceback (most recent call last):\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/deploy_release.py\", line 849, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/deploy_release.py\", line 731, in main\n    verify_rollback_prestate(\n    ~~~~~~~~~~~~~~~~~~~~~~~~^\n        inventory=inventory,\n        ^^^^^^^^^^^^^^^^^^^^\n    ...<2 lines>...\n        gate=rollback_gate,\n"
+}

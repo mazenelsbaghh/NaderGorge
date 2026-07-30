@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "4405fc95-45b9-4832-b72f-4b0efed6cdeb",
+  "command": "failover-test",
+  "startedAt": "2026-07-29T02:52:31.170028Z",
+  "completedAt": "2026-07-29T02:52:31.170224Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "run_postgres_failover_drill.sh failed"
+}

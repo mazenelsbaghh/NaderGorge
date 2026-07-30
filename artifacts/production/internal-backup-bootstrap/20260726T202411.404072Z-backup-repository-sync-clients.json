@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "fc523896-54ba-416c-a5f3-8d3153fb9f2d",
+  "command": "backup-repository-sync-clients",
+  "startedAt": "2026-07-26T20:24:11.404072Z",
+  "completedAt": "2026-07-26T20:24:11.404614Z",
+  "status": "failed",
+  "targets": [
+    "node-2"
+  ],
+  "reason": "Traceback (most recent call last):\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/manage_backup_bucket.py\", line 725, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/manage_backup_bucket.py\", line 674, in main\n    install_backup_clients(\n    ~~~~~~~~~~~~~~~~~~~~~~^\n        transport,\n        ^^^^^^^^^^\n    ...<6 lines>...\n        ),\n        ^^\n    )\n    ^\n  File"
+}

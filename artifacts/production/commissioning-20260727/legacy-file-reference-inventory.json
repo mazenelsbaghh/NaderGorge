@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "evidenceScope": "local-legacy-staging-clone",
+  "generatedAt": "2026-07-27T06:18:22.595405Z",
+  "inventoryPolicy": "all-public-text-url-uri-path-columns",
+  "discoveredColumnCount": 30,
+  "columns": [
+    {
+      "source": "access_codes.QrCodeUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "chat_messages.MediaUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "code_group_delivery_confirmations.AttachmentUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "content_sections.ImageUrl",
+      "policy": "value-classified",
+      "total": 22,
+      "externalProvider": 1,
+      "localExisting": 21,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "custom_forms.CoverImageUrl",
+      "policy": "value-classified",
+      "total": 1,
+      "externalProvider": 0,
+      "localExisting": 1,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "essay_submissions.AudioUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "financial_invoices.AttachmentUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "homework_questions.AudioUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "homework_questions.ImageUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "lesson_resources.FileUrl",
+      "policy": "value-classified",
+      "total": 4,
+      "externalProvider": 3,
+      "localExisting": 1,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "lesson_videos.SubtitleUrl",
+      "policy": "value-classified",
+      "total": 22,
+      "externalProvider": 0,
+      "localExisting": 22,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "live_support_attachments.StoragePath",
+      "policy": "value-classified",
+      "total": 3,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 3,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "media_production_pipelines.AssetFolderUrl",
+      "policy": "external/provider",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "packages.ImageUrl",
+      "policy": "value-classified",
+      "total": 13,
+      "externalProvider": 1,
+      "localExisting": 12,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "printable_code_templates.BackgroundImageUrl",
+      "policy": "value-classified",
+      "total": 3,
+      "externalProvider": 0,
+      "localExisting": 3,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "question_bank_items.AudioUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "question_bank_items.ImageUrl",
+      "policy": "value-classified",
+      "total": 5,
+      "externalProvider": 0,
+      "localExisting": 5,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "recharge_requests.ScreenshotUrl",
+      "policy": "value-classified",
+      "total": 13,
+      "externalProvider": 0,
+      "localExisting": 13,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "shared_teacher_packages.ImageUrl",
+      "policy": "value-classified",
+      "total": 2,
+      "externalProvider": 1,
+      "localExisting": 1,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "task_comments.AttachmentUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "teacher_photos.FileUrl",
+      "policy": "value-classified",
+      "total": 15,
+      "externalProvider": 0,
+      "localExisting": 15,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "teacher_profiles.FacebookUrl",
+      "policy": "external/provider",
+      "total": 7,
+      "externalProvider": 7,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "teacher_profiles.IntroVideoUrl",
+      "policy": "external/provider",
+      "total": 8,
+      "externalProvider": 8,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "teacher_profiles.ProfileImageUrl",
+      "policy": "value-classified",
+      "total": 15,
+      "externalProvider": 1,
+      "localExisting": 14,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "teacher_profiles.TelegramUrl",
+      "policy": "external/provider",
+      "total": 5,
+      "externalProvider": 5,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "teacher_profiles.YouTubeUrl",
+      "policy": "external/provider",
+      "total": 1,
+      "externalProvider": 1,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "teacher_settlement_payments.AttachmentUrl",
+      "policy": "value-classified",
+      "total": 0,
+      "externalProvider": 0,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "terms.ImageUrl",
+      "policy": "value-classified",
+      "total": 21,
+      "externalProvider": 1,
+      "localExisting": 20,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "video_chapters.MindmapImageUrl",
+      "policy": "value-classified",
+      "total": 130,
+      "externalProvider": 0,
+      "localExisting": 130,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    },
+    {
+      "source": "web_vitals_metrics.PageUrl",
+      "policy": "external/provider",
+      "total": 5127,
+      "externalProvider": 5127,
+      "localExisting": 0,
+      "localMissingBlocked": 0,
+      "localMissingUnblocked": 0
+    }
+  ],
+  "totalReferences": 5417,
+  "externalProviderReferences": 5156,
+  "existingLocalReferences": 258,
+  "missingLocalReferences": 3,
+  "missingReferenceSha256": "ba05ac601bfdcaef886717817376925ae841db2cbf5e23f59435a7d317168c74",
+  "missingBySource": {
+    "live_support_attachments.StoragePath": 3
+  },
+  "missingBasenameMatches": 0,
+  "missingBlockedReferences": 3,
+  "missingUnblockedReferences": 0,
+  "status": "success"
+}

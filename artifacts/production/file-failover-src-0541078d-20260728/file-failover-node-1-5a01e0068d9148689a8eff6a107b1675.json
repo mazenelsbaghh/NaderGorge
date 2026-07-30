@@ -1,0 +1,22 @@
+{
+  "acknowledgedLossCount": 0,
+  "formerNode": "node-1",
+  "newNode": null,
+  "quorumEvidence": {
+    "arbiterIsolated": false,
+    "failureType": "SshTransportError",
+    "fault": "single-data-brick-gluster-ports-only",
+    "isolatedNodeCount": 1,
+    "maximumOutageSeconds": 120,
+    "observedOutageSeconds": null,
+    "operationId": "0d9d6cd8-0ee7-47bf-9ae6-c71af4f612e4",
+    "precondition": "all-three-bricks-online",
+    "recoveryRequired": false
+  },
+  "recoveredAt": "2026-07-28T04:25:36.877459Z",
+  "result": "fail",
+  "schemaVersion": 1,
+  "service": "files",
+  "splitBrainDetected": false,
+  "startedAt": "2026-07-28T04:25:32.907280Z"
+}

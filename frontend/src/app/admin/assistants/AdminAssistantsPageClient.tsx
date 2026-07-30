@@ -18,7 +18,7 @@ import { AssistantProfileModal } from '../users/components/AssistantProfileModal
 
 import { useRouter } from 'next/navigation';
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
@@ -35,6 +35,7 @@ import { AdminUserListDto, adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { translateRole } from '@/packages/brand';
+import { useDisableEmployee } from '@/features/employee';
 
 function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
   if (user.roles.includes('Admin')) return 'Admin';
@@ -65,6 +66,7 @@ export default function AdminAssistantsPageClient() {
   const [selectedAssistant, setSelectedAssistant] = useState<AdminUserListDto | null>(null);
   const [profileUser, setProfileUser] = useState<AdminUserListDto | null>(null);
   const [exporting, setExporting] = useState(false);
+  const disableEmployee = useDisableEmployee();
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -92,7 +94,7 @@ export default function AdminAssistantsPageClient() {
   async function handleToggleStatus(user: AdminUserListDto) {
     const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
     try {
-      await adminService.updateUserStatus(user.id, nextStatus);
+      await disableEmployee.mutateAsync({ userId: user.id, status: nextStatus });
       setUsers((currentUsers) =>
         currentUsers.map((entry) =>
           entry.id === user.id ? { ...entry, status: nextStatus } : entry
@@ -100,11 +102,11 @@ export default function AdminAssistantsPageClient() {
       );
       setConfirmUser(null);
       toast.success(
-        nextStatus === 'Active' ? 'تم تنشيط المساعد' : 'تم تعليق المساعد'
+        nextStatus === 'Active' ? 'تم تنشيط الموظف' : 'تم تعليق الموظف'
       );
     } catch (error) {
       devConsole.error(error);
-      toast.error('حدث خطأ أثناء تحديث حالة المساعد، أعد المحاولة.');
+      toast.error('حدث خطأ أثناء تحديث حالة الموظف، أعد المحاولة.');
     }
   }
 
@@ -112,7 +114,7 @@ export default function AdminAssistantsPageClient() {
     if (exporting) return;
 
     setExporting(true);
-    const toastId = toast.loading('جاري تصدير بيانات المساعدين...');
+    const toastId = toast.loading('جاري تصدير بيانات الموظفين والمساعدين...');
 
     try {
       const data = await adminService.listUsers(1, 100000, search);
@@ -139,7 +141,7 @@ export default function AdminAssistantsPageClient() {
         const rowData = [
           u.fullName,
           u.phoneNumber,
-          u.roles.join(' | '),
+          u.roles.map(translateRole).join(' | '),
           statusLabel(u.status),
           new Date(u.createdAt).toLocaleDateString('ar-EG'),
         ];
@@ -159,7 +161,7 @@ export default function AdminAssistantsPageClient() {
       link.setAttribute('href', url);
       link.setAttribute(
         'download',
-        `قائمة_المساعدين_${new Date().toISOString().split('T')[0]}.csv`
+        `قائمة_الموظفين_والمساعدين_${new Date().toISOString().split('T')[0]}.csv`
       );
       document.body.appendChild(link);
       link.click();
@@ -182,7 +184,7 @@ export default function AdminAssistantsPageClient() {
   const columns: AdminColumn<AdminUserListDto>[] = [
     {
       key: 'assistant',
-      label: 'المساعد',
+      label: 'الموظف',
       render: (u) => (
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-primary-15)] font-bold text-[var(--admin-primary)] shadow-sm">
@@ -271,11 +273,11 @@ export default function AdminAssistantsPageClient() {
   ];
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/assistants"
-      sectionLabel="المساعدين"
-      pageTitle="إدارة المساعدين"
-      subtitle="إدارة الحسابات الوظيفية المخصصة للمساعدين، تعيين الأدوار والصلاحيات، ومراقبة الحالات."
+      sectionLabel="الموظفون والمساعدون"
+      pageTitle="إدارة الموظفين والمساعدين"
+      subtitle="إنشاء حسابات Staff والموظفين، تعيين الأدوار، وربط شيفت الحضور وجدول الدعم المباشر عند الحاجة."
       action={
         <NeumorphButton
           intent="primary"
@@ -284,7 +286,7 @@ export default function AdminAssistantsPageClient() {
           onClick={() => setShowAddUser(true)}
         >
           <UserPlus className="h-4 w-4" />
-          إضافة مساعد جديد
+          إضافة موظف جديد
         </NeumorphButton>
       }
     >
@@ -305,10 +307,10 @@ export default function AdminAssistantsPageClient() {
         open={!!confirmUser}
         title={
           confirmUser?.status === 'Active'
-            ? 'تعليق حساب مساعد؟'
-            : 'تنشيط حساب مساعد؟'
+            ? 'تعليق حساب موظف؟'
+            : 'تنشيط حساب موظف؟'
         }
-        description={`هل أنت متأكد من تغيير حالة حساب المساعد "${confirmUser?.fullName}"؟`}
+        description={`هل أنت متأكد من تغيير حالة حساب الموظف "${confirmUser?.fullName}"؟`}
         confirmLabel={
           confirmUser?.status === 'Active'
             ? 'نعم، تعليق الحساب'
@@ -323,7 +325,7 @@ export default function AdminAssistantsPageClient() {
       {loadError ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--admin-border)] p-16 text-center gap-6 bg-[var(--admin-card-soft)]">
           <RefreshCw className="h-10 w-10 text-[var(--admin-muted)]" />
-          <h4 className="text-xl font-black text-[var(--admin-text)]">تعذّر تحميل قائمة المساعدين</h4>
+          <h4 className="text-xl font-black text-[var(--admin-text)]">تعذّر تحميل قائمة الموظفين والمساعدين</h4>
           <NeumorphButton onClick={() => fetchUsers()} intent="primary" size="lg" pill>
             إعادة المحاولة
           </NeumorphButton>
@@ -336,9 +338,9 @@ export default function AdminAssistantsPageClient() {
             <AdminStatCard
               variant="light"
               icon={Users}
-              label="إجمالي المساعدين"
+              label="إجمالي الموظفين"
               value={filteredAssistants.length}
-              subtitle="إجمالي المساعدين المسجلين"
+              subtitle="إجمالي حسابات Staff والمساعدين"
             />
             <AdminStatCard
               variant="accent"
@@ -377,7 +379,7 @@ export default function AdminAssistantsPageClient() {
             columns={columns}
             loading={loading}
             rowKey={(u) => u.id}
-            emptyMessage="لا توجد نتائج مطابقة لفلترة المساعدين."
+            emptyMessage="لا توجد نتائج مطابقة لفلترة الموظفين والمساعدين."
             onRowClick={(u) => {
               router.push(`/admin/assistants/${u.id}`);
             }}
@@ -390,6 +392,6 @@ export default function AdminAssistantsPageClient() {
           />
         </>
       )}
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

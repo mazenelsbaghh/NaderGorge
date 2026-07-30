@@ -1,0 +1,1 @@
+'use client'; import { AdminPage } from '@/components/admin'; import { CaseWorkspace } from '@/features/hr/performance'; export default function HrCasesPageClient() { return <AdminPage activePath="/admin/hr/cases" sectionLabel="الموارد البشرية" pageTitle="قضايا الموظفين" subtitle="مساحة مقيدة للأدلة والردود والقرارات والجزاءات."><CaseWorkspace /></AdminPage>; }

@@ -24,12 +24,10 @@ import {
   BookMarked,
   ChartNoAxesColumn,
   ChevronLeft,
+  ClipboardList,
   GraduationCap,
   Home,
-  KeyRound,
   LogOut,
-  Menu,
-  MessageSquareText,
   Settings,
   User,
   Wallet,
@@ -50,15 +48,24 @@ import { useStudentShellStore } from '@/stores/student-shell-store';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
 import { ParentCodePopup } from '@/components/student/ParentCodePopup';
 import { HeaderParentBadge } from '@/components/layout/HeaderParentBadge';
+import { PlatformLogo } from '@/components/shared/PlatformLogo';
+import { IntentLink } from '@/components/navigation/IntentLink';
+import {
+  NavigationFocusManager,
+  SkipToContentLink,
+} from '@/components/navigation/NavigationFocusManager';
+import { useShellNavigationState } from '@/hooks/useShellNavigationState';
+import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
+import { StudentBottomNav } from '@/components/layout/StudentBottomNav';
 
 /* ── Route type safety ──────────────────────────────────────────────── */
 
 type StudentShellRoute =
   | '/student'
   | '/student/packages'
-  | '/student/community'
+  | '/student/shared-packages'
+  | '/student/public-exams'
   | '/student/balance'
-  | '/student/code-redemption'
   | '/student/mistakes'
   | '/student/notifications'
   | '/student/profile'
@@ -92,7 +99,7 @@ const primaryNavItems: Array<{
   icon: typeof ChartNoAxesColumn;
 }> = [
     { href: '/student/packages', label: 'باقاتي', icon: BookMarked },
-    { href: '/student/community', label: 'المجتمع', icon: MessageSquareText },
+    { href: '/student/public-exams', label: 'امتحانات', icon: ClipboardList },
     { href: '/student/teachers', label: 'المدرسين', icon: GraduationCap },
   ];
 
@@ -102,72 +109,14 @@ const secondaryNavItems: Array<{
   label: string;
   icon: typeof ChartNoAxesColumn;
 }> = [
+    { href: '/student/shared-packages', label: 'باكدجات عامة', icon: BookMarked },
     { href: '/student/mistakes', label: 'أخطائي', icon: Bug },
-    { href: '/student/code-redemption', label: 'تفعيل كود', icon: KeyRound },
     { href: '/student/notifications', label: 'الإشعارات', icon: Bell },
     { href: '/student/balance', label: 'الرصيد', icon: Wallet },
   ];
 
 /** All items combined — used by the desktop sidebar */
 const allNavItems = [...primaryNavItems, ...secondaryNavItems.filter(i => i.href !== '/student/balance')];
-
-const drawerFocusableSelector = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled]):not([type="hidden"])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[contenteditable="true"]',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-function getDrawerFocusableElements(container: HTMLElement) {
-  return Array.from(container.querySelectorAll<HTMLElement>(drawerFocusableSelector)).filter(
-    (element) => element.getClientRects().length > 0 && element.getAttribute('aria-hidden') !== 'true'
-  );
-}
-
-function isTopmostDialog(dialog: HTMLElement) {
-  const openDialogs = Array.from(
-    document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')
-  ).filter((candidate) => candidate.getClientRects().length > 0);
-  return openDialogs[openDialogs.length - 1] === dialog;
-}
-
-function makeOutsideContentInert(drawerLayer: HTMLElement) {
-  const snapshots: Array<{
-    element: HTMLElement;
-    inert: boolean;
-    ariaHidden: string | null;
-  }> = [];
-  let current: HTMLElement | null = drawerLayer;
-
-  while (current && current !== document.body) {
-    const parent: HTMLElement | null = current.parentElement;
-    if (!parent) break;
-
-    Array.from(parent.children).forEach((sibling) => {
-      if (sibling === current || !(sibling instanceof HTMLElement)) return;
-      snapshots.push({
-        element: sibling,
-        inert: sibling.inert,
-        ariaHidden: sibling.getAttribute('aria-hidden'),
-      });
-      sibling.inert = true;
-      sibling.setAttribute('aria-hidden', 'true');
-    });
-
-    current = parent;
-  }
-
-  return () => {
-    snapshots.reverse().forEach(({ element, inert, ariaHidden }) => {
-      element.inert = inert;
-      if (ariaHidden === null) element.removeAttribute('aria-hidden');
-      else element.setAttribute('aria-hidden', ariaHidden);
-    });
-  };
-}
 
 /* ── Component ──────────────────────────────────────────────────────── */
 
@@ -176,6 +125,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const pathname = usePathname();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const {
     isDark,
     toggleTheme,
@@ -185,9 +135,15 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   // isThemeSettingsOpen state removed
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const drawerId = useId();
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const drawerLayerRef = useRef<HTMLDivElement>(null);
-  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const shellInstanceId = useId();
+  const drawerTriggerRef = useRef<HTMLButtonElement>(null);
+  const mainScrollRef = useRef<HTMLElement>(null);
+
+  useShellNavigationState({
+    surface: 'student',
+    pathname,
+    scrollRef: mainScrollRef,
+  });
 
   useRootOverscrollBackground();
 
@@ -212,6 +168,10 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
   const fetchBootstrap = useStudentShellStore((state) => state.fetchBootstrap);
 
   useEffect(() => {
+    const isStudent = user?.roles?.some((role) => role.toLowerCase() === 'student');
+    // The shell is also rendered briefly while the route guard redirects a
+    // guest. Do not call the protected bootstrap endpoint in that state.
+    if (!isAuthenticated || !isStudent) return;
     void fetchBootstrap();
 
     const handleNotificationsUpdated = () => {
@@ -224,7 +184,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
         window.removeEventListener("notificationsUpdated", handleNotificationsUpdated);
       };
     }
-  }, [fetchBootstrap]);
+  }, [fetchBootstrap, isAuthenticated, user?.roles]);
 
   // Close drawer on route change
   useEffect(() => {
@@ -239,98 +199,38 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
 
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
-  useEffect(() => {
-    if (!isDrawerOpen) return;
-    if (window.matchMedia('(min-width: 1024px)').matches) {
-      closeDrawer();
-      return;
-    }
-
-    const drawer = drawerRef.current;
-    const drawerLayer = drawerLayerRef.current;
-    if (!drawer || !drawerLayer) return;
-
-    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-    const restoreOutsideContent = makeOutsideContentInert(drawerLayer);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isTopmostDialog(drawer)) return;
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closeDrawer();
-        return;
-      }
-
-      if (event.key !== 'Tab') return;
-
-      const focusableElements = getDrawerFocusableElements(drawer);
-      if (focusableElements.length === 0) {
-        event.preventDefault();
-        drawer.focus();
-        return;
-      }
-
-      const firstFocusable = focusableElements[0];
-      const lastFocusable = focusableElements[focusableElements.length - 1];
-      const activeElement = document.activeElement;
-
-      if (event.shiftKey && (activeElement === firstFocusable || !drawer.contains(activeElement))) {
-        event.preventDefault();
-        lastFocusable.focus();
-      } else if (!event.shiftKey && activeElement === lastFocusable) {
-        event.preventDefault();
-        firstFocusable.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    const frameId = requestAnimationFrame(() => {
-      const [firstFocusable] = getDrawerFocusableElements(drawer);
-      (firstFocusable ?? drawer).focus();
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-      document.removeEventListener('keydown', handleKeyDown);
-      restoreOutsideContent();
-      document.body.style.overflow = previousOverflow;
-      const previouslyFocused = previouslyFocusedRef.current;
-      if (previouslyFocused?.isConnected) previouslyFocused.focus();
-    };
-  }, [closeDrawer, isDrawerOpen]);
-
   /* Which top-level route is active? */
   const activePath: StudentShellRoute =
     pathname.startsWith('/student/packages')
       ? '/student/packages'
-      : pathname.startsWith('/student/community')
-        ? '/student/community'
+      : pathname.startsWith('/student/shared-packages')
+        ? '/student/shared-packages'
+      : pathname.startsWith('/student/public-exams')
+        ? '/student/public-exams'
       : pathname.startsWith('/student/teachers')
         ? '/student/teachers'
       : pathname.startsWith('/student/balance')
         ? '/student/balance'
       : pathname.startsWith('/student/mistakes')
         ? '/student/mistakes'
-      : pathname.startsWith('/student/code-redemption')
-        ? '/student/code-redemption'
       : pathname.startsWith('/student/notifications')
         ? '/student/notifications'
       : pathname.startsWith('/student/profile')
         ? '/student/profile'
         : '/student';
+  const drawerHasCurrentPage = secondaryNavItems.some((item) => item.href === activePath);
   const showAmbientBackground = !isFocusMode;
 
   return (
     <div
       dir="rtl"
+      data-testid="student-shell"
+      data-shell-instance={shellInstanceId}
       style={studentShellTokenAliases}
-      className="student-app-background h-dvh overflow-hidden text-[var(--student-text)] relative"
+      className="student-app-background h-dvh max-h-dvh overflow-x-hidden text-[var(--student-text)] relative"
     >
+      <SkipToContentLink />
+      <NavigationFocusManager />
       {showAmbientBackground ? (
         <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,var(--admin-primary-15),transparent_38%),radial-gradient(circle_at_16%_86%,var(--admin-primary-10),transparent_34%),linear-gradient(135deg,transparent_0_44%,var(--admin-primary-10)_44%_45%,transparent_45%_100%)]" />
@@ -344,11 +244,11 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       <AnimatePresence>
         {!isFocusMode && (
           <motion.aside
-            initial={{ x: '100%' }}
+            initial={shouldReduceMotion ? false : { x: '100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] lg:flex group/sidebar transition-all duration-300 ease-in-out hover:w-64"
+            exit={shouldReduceMotion ? { opacity: 0 } : { x: '100%' }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            className="group/sidebar fixed right-0 top-0 z-50 hidden h-full w-20 flex-col justify-between bg-[var(--admin-sidebar)] py-6 shadow-[-12px_0_40px_var(--admin-shadow)] transition-all duration-300 ease-in-out hover:w-64 focus-within:w-64 lg:flex"
             role="navigation"
             aria-label="القائمة الرئيسية"
           >
@@ -364,15 +264,14 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   size="sm"
                   className="ring-offset-2 ring-offset-[var(--admin-sidebar)] hover:scale-105 transition duration-300 flex-shrink-0"
                 />
-                <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-text)] truncate whitespace-nowrap">
+                <span className="hidden truncate whitespace-nowrap text-sm font-bold text-[var(--admin-text)] group-hover/sidebar:block group-focus-within/sidebar:block">
                   {user?.fullName || 'طالب'}
                 </span>
               </Link>
 
               <nav className="space-y-3 px-3">
-                <Link
+                <IntentLink
                   href="/student"
-                  prefetch={false}
                   aria-label="لوحة التحكم"
                   aria-current={activePath === '/student' ? 'page' : undefined}
                   className={`flex h-12 items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${activePath === '/student'
@@ -381,20 +280,19 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                     }`}
                 >
                   <Home className="h-5 w-5 flex-shrink-0" />
-                  <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                  <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
                     لوحة التحكم
                   </span>
-                </Link>
+                </IntentLink>
 
                 {allNavItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = item.href === activePath;
 
                   return (
-                    <Link
+                    <IntentLink
                       key={item.href}
                       href={item.href}
-                      prefetch={false}
                       className={`flex h-12 items-center justify-between pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${isActive
                         ? 'bg-[var(--admin-card-strong)] text-[var(--admin-primary)]'
                         : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'
@@ -410,16 +308,16 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                             <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
                           )}
                         </div>
-                        <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                        <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
                           {item.label}
                         </span>
                       </div>
                       {item.href === '/student/notifications' && unreadCount > 0 && (
-                        <span className="hidden group-hover/sidebar:flex mr-2 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-xs font-black h-5 px-1.5 rounded-full items-center justify-center">
+                        <span className="mr-2 hidden h-5 items-center justify-center rounded-full bg-[var(--admin-primary)] px-1.5 text-xs font-black text-[var(--admin-primary-contrast)] group-hover/sidebar:flex group-focus-within/sidebar:flex">
                           {unreadCount}
                         </span>
                       )}
-                    </Link>
+                    </IntentLink>
                   );
                 })}
               </nav>
@@ -438,13 +336,12 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'}
                   className="flex h-12 w-12 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] flex-shrink-0"
                 />
-                <span className="hidden group-hover/sidebar:block text-sm font-bold text-[var(--admin-muted)] self-center mr-3 truncate whitespace-nowrap">
+                <span className="mr-3 hidden self-center truncate whitespace-nowrap text-sm font-bold text-[var(--admin-muted)] group-hover/sidebar:block group-focus-within/sidebar:block">
                   {isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}
                 </span>
               </div>
-              <Link
+              <IntentLink
                 href="/student/profile"
-                prefetch={false}
                 className={`flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)] ${
                   pathname === '/student/profile'
                     ? 'bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
@@ -454,11 +351,12 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 title="الملف الشخصي"
               >
                 <Settings className="h-5 w-5 flex-shrink-0" />
-                <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
                   الملف الشخصي
                 </span>
-              </Link>
+              </IntentLink>
               <button
+                ref={drawerTriggerRef}
                 type="button"
                 onClick={handleLogout}
                 className="flex h-12 w-full items-center justify-start pr-[18px] pl-4 rounded-full text-[var(--admin-danger)] transition-all duration-300 gap-3 focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-sidebar)]"
@@ -466,7 +364,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                 aria-label="تسجيل الخروج"
               >
                 <LogOut className="h-5 w-5 flex-shrink-0" />
-                <span className="hidden group-hover/sidebar:block text-sm font-bold truncate whitespace-nowrap">
+                <span className="hidden truncate whitespace-nowrap text-sm font-bold group-hover/sidebar:block group-focus-within/sidebar:block">
                   تسجيل الخروج
                 </span>
               </button>
@@ -476,10 +374,12 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       </AnimatePresence>
 
       <main
-        className={`relative z-10 h-dvh overflow-y-auto overscroll-none ${
+        ref={mainScrollRef}
+        id="main-content"
+        className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto ${
           isFocusMode
             ? 'px-0 py-0 pb-0 lg:mr-0 lg:px-0 lg:py-0 lg:pb-0'
-            : 'px-4 py-6 pb-20 lg:mr-24 lg:px-8 lg:py-10 lg:pb-10'
+            : 'px-4 py-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:mr-24 lg:px-8 lg:py-10 lg:pb-10'
         }`}
       >
         <AnimatePresence>
@@ -489,27 +389,52 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
-              className="mb-8 lg:mb-10"
+              className="mb-8 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-3 shadow-[0_12px_30px_var(--admin-shadow)] backdrop-blur lg:mb-10 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-0"
             >
+              <div className="mb-3 flex min-h-11 items-center justify-between gap-3 lg:hidden">
+                <HeaderParentBadge />
+                <PlatformLogo
+                  variant="full"
+                  size="sm"
+                  tone={isDark ? 'light' : 'dark'}
+                  priority
+                  className="h-9 w-auto max-w-[128px]"
+                />
+                <Link
+                  href="/student/profile"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                  aria-label="الملف الشخصي"
+                >
+                  <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName} size="sm" />
+                </Link>
+              </div>
               <div className="flex items-center justify-between w-full">
-                <nav className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.3em] text-[var(--admin-muted)]">
-                  <span>المساحة الدراسية</span>
-                  <ChevronLeft className="h-3 w-3" />
-                  <span className="text-[var(--admin-primary-strong)]">بوابة الطالب</span>
+                <nav className="flex min-w-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--admin-muted)] lg:gap-2 lg:text-xs lg:tracking-[0.3em]">
+                  <span className="truncate">المساحة الدراسية</span>
+                  <ChevronLeft className="h-3 w-3 shrink-0" />
+                  <span className="truncate text-[var(--admin-primary-strong)]">بوابة الطالب</span>
                 </nav>
                 <div className="flex items-center gap-2 lg:gap-3">
-                  <HeaderParentBadge />
                   {/* Desktop-only header actions */}
                   <div className="hidden lg:flex items-center gap-3">
+                    <HeaderParentBadge />
                     <SidebarBalance />
                     <Link
                       href="/student/notifications"
                       className="relative flex h-10 w-10 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)]"
                       title="الإشعارات"
+                      aria-label={
+                        unreadCount > 0
+                          ? `الإشعارات، ${unreadCount} غير مقروءة`
+                          : 'الإشعارات، لا توجد إشعارات غير مقروءة'
+                      }
                     >
                       <Bell className="h-5 w-5" />
                       {unreadCount > 0 && (
-                        <span className="absolute top-1 left-1 h-4.5 w-4.5 bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] text-xs font-black rounded-full flex items-center justify-center">
+                        <span
+                          aria-hidden="true"
+                          className="absolute left-1 top-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-[var(--admin-primary)] text-xs font-black text-[var(--admin-primary-contrast)]"
+                        >
                           {unreadCount}
                         </span>
                       )}
@@ -560,108 +485,31 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       {/* ── Mobile Bottom Nav (compact: 3 primary + menu) ─────────────── */}
       <AnimatePresence>
         {!isFocusMode && (
-          <motion.nav
-            initial={shouldReduceMotion ? false : { y: '100%' }}
-            animate={{ y: 0 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { y: '100%' }}
-            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed inset-x-0 bottom-0 z-40 bg-[var(--admin-sidebar)]/95 backdrop-blur-xl px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 lg:hidden"
-            role="navigation"
-            aria-label="القائمة السفلية"
-          >
-            <div className="mx-auto flex w-full max-w-md items-center justify-around gap-1">
-              {/* Home */}
-              <Link
-                href="/student"
-                aria-current={activePath === '/student' ? 'page' : undefined}
-                className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${activePath === '/student'
-                  ? 'text-[var(--admin-primary)]'
-                  : 'text-[var(--admin-muted)]'
-                  }`}
-              >
-                <Home className="h-[22px] w-[22px]" />
-                <span className="text-xs font-bold leading-none">الرئيسية</span>
-              </Link>
-
-              {/* Primary nav items */}
-              {primaryNavItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.href === activePath;
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={`flex flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isActive
-                      ? 'text-[var(--admin-primary)]'
-                      : 'text-[var(--admin-muted)]'
-                      }`}
-                  >
-                    <Icon className="h-[22px] w-[22px]" />
-                    <span className="text-xs font-bold leading-none">{item.label}</span>
-                  </Link>
-                );
-              })}
-
-               {/* Menu button — opens drawer */}
-              <button
-                type="button"
-                onClick={() => setIsDrawerOpen(true)}
-                className={`relative flex min-h-11 flex-col items-center justify-center gap-0.5 rounded-2xl px-3 py-1.5 text-center transition-all focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] ${isDrawerOpen
-                  ? 'text-[var(--admin-primary)]'
-                  : 'text-[var(--admin-muted)]'
-                  }`}
-                aria-label="القائمة"
-                aria-expanded={isDrawerOpen}
-                aria-controls={drawerId}
-              >
-                <div className="relative">
-                  <Menu className="h-[22px] w-[22px]" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -left-0.5 h-2 w-2 rounded-full bg-[var(--admin-primary)]" />
-                  )}
-                </div>
-                <span className="text-xs font-bold leading-none">القائمة</span>
-              </button>
-            </div>
-          </motion.nav>
+          <StudentBottomNav
+            activePath={activePath}
+            primaryItems={primaryNavItems}
+            drawerHasCurrentPage={drawerHasCurrentPage}
+            drawerId={drawerId}
+            isDrawerOpen={isDrawerOpen}
+            onOpenDrawer={() => setIsDrawerOpen(true)}
+            unreadCount={unreadCount}
+          />
         )}
       </AnimatePresence>
 
       {/* ── Mobile Drawer (slide from left for RTL) ────────────────────── */}
-      <AnimatePresence>
-        {isDrawerOpen && (
-          <motion.div
-            ref={drawerLayerRef}
-            className="fixed inset-0 z-[60] lg:hidden"
-          >
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-              onClick={closeDrawer}
-              aria-hidden="true"
-            />
-
-            {/* Drawer panel — slides from the right (RTL) */}
-            <motion.div
-              ref={drawerRef}
-              id={drawerId}
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-              className="absolute right-0 top-0 z-10 h-full w-72 bg-[var(--admin-sidebar)] shadow-[-20px_0_60px_var(--admin-shadow)]"
-              role="dialog"
-              aria-modal="true"
-              aria-label="القائمة الجانبية"
-              tabIndex={-1}
-            >
-              <div className="flex h-full flex-col py-6 px-5">
+      <AccessibleOverlay
+        open={isDrawerOpen}
+        onClose={closeDrawer}
+        label="القائمة الجانبية"
+        triggerRef={drawerTriggerRef}
+        backdropClassName="backdrop-blur-sm"
+        layerClassName="lg:hidden"
+        className="right-0 top-0 h-full w-72 max-w-[88vw] overflow-y-auto overscroll-contain bg-[var(--admin-sidebar)] shadow-[-20px_0_60px_var(--admin-shadow)]"
+        testId="student-mobile-drawer"
+      >
+            <div id={drawerId} className="min-h-full">
+              <div className="flex min-h-full flex-col px-5 py-6">
                 {/* Drawer header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
@@ -763,10 +611,8 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+      </AccessibleOverlay>
       <ParentCodePopup />
     </div>
   );

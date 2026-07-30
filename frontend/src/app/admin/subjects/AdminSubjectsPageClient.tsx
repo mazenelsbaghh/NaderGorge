@@ -11,7 +11,7 @@ import {
   X, 
   Check 
 } from 'lucide-react';
-import { AdminShellChrome } from '@/components/admin';
+import { AdminPage } from '@/components/admin';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { teacherService, type SubjectDto } from '@/services/teacher-service';
 import toast from 'react-hot-toast';
@@ -138,7 +138,7 @@ export default function AdminSubjectsPageClient() {
   );
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/subjects"
       sectionLabel="المحتوى والمواد"
       pageTitle="المواد الدراسية"
@@ -321,6 +321,6 @@ export default function AdminSubjectsPageClient() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setSubjectToDelete(null)}
       />
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

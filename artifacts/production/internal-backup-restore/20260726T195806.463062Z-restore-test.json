@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "18a892a1-b29c-44d1-99ee-d3103bdbb1da",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T19:58:06.463062Z",
+  "completedAt": "2026-07-26T19:58:06.463483Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: Starting massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test...\npam_unix(runuser:session): session opened for user postgres(uid=105) by (uid=0)\n2026-07-26 19:57:43.458 P00   INFO: restore command begin 2.58.0: --exec-id=186285-b31c00fa --log-level-console=info --pg1-path=/var/lib/massar-restore-tests/database.stqpof/data --process-max=2 --repo1-cipher-pass=<redacted> --repo1-cipher-type=aes-256-cbc --repo1-path=/massar/postgresql --repo1-s3-bucket=m"
+}

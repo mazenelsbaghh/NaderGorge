@@ -1,0 +1,23 @@
+[Unit]
+Description=Massar Cloudflare Tunnel connector (token-managed)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStartPre=-/usr/bin/docker rm -f massar-cloudflared-token
+ExecStart=/usr/bin/docker run --rm --name massar-cloudflared-token --user 0:0 --network host --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m -v /etc/massar-cloudflared-token:/etc/massar-cloudflared-token:ro cloudflare/cloudflared:latest tunnel --no-autoupdate --metrics 127.0.0.1:2010 run --token-file /etc/massar-cloudflared-token/token
+ExecStop=/usr/bin/docker stop -t 15 massar-cloudflared-token
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/etc/massar-cloudflared-token
+
+[Install]
+WantedBy=multi-user.target

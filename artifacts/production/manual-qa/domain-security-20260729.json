@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "src-bdf19804cf29d19634b131a16d3e519d26f0d425",
+  "status": "passed",
+  "domains": {
+    "massar-academy.net": 200,
+    "app.massar-academy.net": 200,
+    "admin.massar-academy.net": 200,
+    "teacher.massar-academy.net": 200,
+    "staff.massar-academy.net": 200,
+    "api.massar-academy.net": 200,
+    "ws.massar-academy.net": 404,
+    "assets.massar-academy.net": 404
+  },
+  "distributionSample": {
+    "requests": 90,
+    "node-1": 35,
+    "node-2": 39,
+    "node-3": 16
+  },
+  "authorizationDenials": {
+    "studentToAdminUsers": 403,
+    "teacherToAdminUsers": 403,
+    "staffWithoutContentManage": 403,
+    "anonymousProtectedAsset": 404,
+    "anonymousPrivateAsset": 404
+  },
+  "externalPorts": {
+    "expectedOpen": [
+      22
+    ],
+    "confirmedClosedOnAllNodes": [
+      80,
+      443,
+      5432,
+      6379,
+      2379,
+      2380,
+      8080,
+      8088,
+      9000,
+      9241
+    ]
+  }
+}

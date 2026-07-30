@@ -1,0 +1,17 @@
+{
+  "excludedNode": null,
+  "failedStageRunId": "steady-30m-001",
+  "seriesId": "steady-30m-20260729",
+  "stages": [
+    {
+      "capacityEvidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/steady-30m-20260729/evidence/steady-30m-001.capacity.json",
+      "capacityStatus": "failed",
+      "evidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/steady-30m-20260729/evidence/steady-30m-001.load.json",
+      "loadStatus": "success",
+      "requestedRps": 2,
+      "runId": "steady-30m-001",
+      "sequence": 1
+    }
+  ],
+  "status": "failed"
+}

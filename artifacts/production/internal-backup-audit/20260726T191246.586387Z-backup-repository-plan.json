@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "d6dab222-82dc-4bef-8098-1346055a1ca2",
+  "command": "backup-repository-plan",
+  "startedAt": "2026-07-26T19:12:46.586387Z",
+  "completedAt": "2026-07-26T19:12:46.586893Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

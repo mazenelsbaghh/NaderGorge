@@ -1,0 +1,19 @@
+[Interface]
+Address = 10.77.0.12/24
+ListenPort = 51820
+PrivateKey = __MASSAR_PRIVATE_KEY__
+SaveConfig = false
+
+[Peer]
+# node-1
+PublicKey = R+MVw0rmlkJ4cxLVMnXDElPzsMGcQFoM+HXQq7Lwc1M=
+AllowedIPs = 10.77.0.11/32
+Endpoint = 191.218.161.76:51820
+PersistentKeepalive = 25
+
+[Peer]
+# node-3
+PublicKey = PMxPVUcBL0MSm0cpwTUsr/V4ZzoHxWyczUwrgjEOrlM=
+AllowedIPs = 10.77.0.13/32
+Endpoint = 168.231.106.230:51820
+PersistentKeepalive = 25

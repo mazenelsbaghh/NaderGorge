@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, LayoutGrid } from 'lucide-react';
 
 import {
-  AdminShellChrome,
+  AdminPage,
   ClockInOutWidget,
 } from '@/components/admin';
 import { adminRootLinks } from '@/packages/admin';
@@ -23,9 +23,13 @@ export default function AdminRootPageClient() {
     if (href.startsWith('/admin/admins')) return 'users.manage';
     if (href.startsWith('/admin/content')) return hasPermission('content.manage') || hasPermission('comments.manage');
     if (href.startsWith('/admin/codes')) return 'codes.manage';
+    if (href.startsWith('/admin/sales') || href.startsWith('/admin/discounts')) return 'sales.manage';
+    if (href.startsWith('/admin/public-exams')) return 'public_exams.manage';
     if (href.startsWith('/admin/questions')) return 'exams.manage';
     if (href.startsWith('/admin/overrides')) return 'users.manage';
-    if (href.startsWith('/admin/finance')) return 'users.manage';
+    if (href.startsWith('/admin/hr')) return 'hr.manage';
+    if (href.startsWith('/admin/finance')) return 'finance.manage';
+    if (href.startsWith('/admin/settings')) return 'settings.manage';
     return null;
   };
 
@@ -45,7 +49,7 @@ export default function AdminRootPageClient() {
   }
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin"
       sectionLabel="لوحة الإدارة"
       pageTitle="الرئيسية"
@@ -96,6 +100,6 @@ export default function AdminRootPageClient() {
           );
         })}
       </section>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

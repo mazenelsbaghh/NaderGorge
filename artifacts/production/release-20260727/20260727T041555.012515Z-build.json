@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "f43e63b0-cdef-4bcc-aa6f-651e0a722237",
+  "command": "build",
+  "startedAt": "2026-07-27T04:15:55.012515Z",
+  "completedAt": "2026-07-27T04:15:55.013127Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Command '['docker', 'build', '--pull', '--platform', 'linux/amd64', '--tag', 'massar/worker:src-061aef7b3dd0a565d4f06b66b77187d7a2e1d0c7', '--file', '/Users/mazenelsbagh/mazen mac/apps/nader gorge/worker/Dockerfile', '/Users/mazenelsbagh/mazen mac/apps/nader gorge/worker']' returned non-zero exit status 100."
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "0827b354-5c00-4326-8c7e-3a2d59d50da2",
+  "command": "deploy",
+  "startedAt": "2026-07-27T15:51:40.743098Z",
+  "completedAt": "2026-07-27T15:51:40.743627Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: rollout stopped with node-3 drained; recovery marker: /var/lib/massar/deploy-recovery/src-d7642250932e6a765c0a8222f4c2b9ff66d7702f-node-3.json"
+}

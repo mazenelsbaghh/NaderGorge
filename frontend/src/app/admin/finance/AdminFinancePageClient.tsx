@@ -20,9 +20,10 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminColumn,
+  AdminConfirmationDialog,
   AdminModal,
 } from '@/components/admin';
 import {
@@ -30,12 +31,29 @@ import {
   PayrollRecordDto,
   AdminPayoutDto,
   AdminCodeAccountingDto,
+  AdminTeacherFinancialEventDto,
 } from '@/services/finance-service';
 import { teacherService, TeacherDto } from '@/services/teacher-service';
+import { invalidateMany } from '@/lib/cache-invalidation';
 import { contentService, PackageDto } from '@/services/content-service';
 import toast from 'react-hot-toast';
 
-type ActiveTab = 'payroll' | 'payouts' | 'codes';
+type ActiveTab = 'payroll' | 'payouts' | 'codes' | 'review';
+type ConfirmationAction =
+  | { type: 'approve-payroll'; payrollId: string }
+  | { type: 'delete-adjustment'; payrollId: string; adjustmentId: string };
+
+const financeTabs: Array<{
+  id: ActiveTab;
+  label: string;
+  compactLabel: string;
+  Icon: typeof Calendar;
+}> = [
+  { id: 'payroll', label: 'مسيرات الرواتب الشهرية', compactLabel: 'الرواتب', Icon: Calendar },
+  { id: 'payouts', label: 'طلبات سحب المعلمين', compactLabel: 'السحوبات', Icon: Coins },
+  { id: 'codes', label: 'حركة تفعيل الأكواد وعمولات المعلمين', compactLabel: 'الأكواد', Icon: TrendingUp },
+  { id: 'review', label: 'مراجعة البنود المالية', compactLabel: 'المراجعة', Icon: AlertCircle },
+];
 
 const monthsList = [
   { value: 1, label: 'يناير (1)' },
@@ -67,6 +85,8 @@ export default function AdminFinancePageClient() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecordDto[]>([]);
   const [payrollLoading, setPayrollLoading] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
+  const [confirmationAction, setConfirmationAction] = useState<ConfirmationAction | null>(null);
+  const [isConfirmingAction, setIsConfirmingAction] = useState<boolean>(false);
 
   // Adjustment Modal state
   const [selectedPayrollForAdjustment, setSelectedPayrollForAdjustment] = useState<PayrollRecordDto | null>(null);
@@ -79,9 +99,10 @@ export default function AdminFinancePageClient() {
   const [selectedPayrollForDetails, setSelectedPayrollForDetails] = useState<PayrollRecordDto | null>(null);
 
   // Payouts states
-  const [payoutStatusFilter, setPayoutStatusFilter] = useState<string>('All'); // 'All', 'Pending', 'Paid', 'Rejected'
+  const [payoutStatusFilter, setPayoutStatusFilter] = useState<string>('All'); // 'All', 'Pending', 'Approved', 'Paid', 'Rejected'
   const [payoutRecords, setPayoutRecords] = useState<AdminPayoutDto[]>([]);
   const [payoutLoading, setPayoutLoading] = useState<boolean>(false);
+  const [resolvingPayoutId, setResolvingPayoutId] = useState<string | null>(null);
 
   // Payout Rejection Modal state
   const [selectedPayoutForRejection, setSelectedPayoutForRejection] = useState<AdminPayoutDto | null>(null);
@@ -98,6 +119,19 @@ export default function AdminFinancePageClient() {
   const [codesTotalCount, setCodesTotalCount] = useState<number>(0);
   const [codesData, setCodesData] = useState<AdminCodeAccountingDto[]>([]);
   const [codesLoading, setCodesLoading] = useState<boolean>(false);
+
+  // Teacher financial review states
+  const [reviewStatusFilter, setReviewStatusFilter] = useState<string>('PendingReview');
+  const [reviewTeacherId, setReviewTeacherId] = useState<string>('');
+  const [reviewPage, setReviewPage] = useState<number>(1);
+  const [reviewPageSize] = useState<number>(50);
+  const [reviewTotalCount, setReviewTotalCount] = useState<number>(0);
+  const [reviewData, setReviewData] = useState<AdminTeacherFinancialEventDto[]>([]);
+  const [reviewLoading, setReviewLoading] = useState<boolean>(false);
+  const [compensationTeacherId, setCompensationTeacherId] = useState<string>('');
+  const [compensationAmount, setCompensationAmount] = useState<string>('');
+  const [compensationReason, setCompensationReason] = useState<string>('');
+  const [compensationSubmitting, setCompensationSubmitting] = useState<boolean>(false);
 
   // Fetch helpers
   const fetchTeachersAndPackages = useCallback(async () => {
@@ -130,6 +164,7 @@ export default function AdminFinancePageClient() {
     try {
       const res = await financeService.generatePayroll(payrollMonth, payrollYear);
       if (res.success) {
+        invalidateMany(['finance:payroll', 'finance:teacher', 'reports']);
         toast.success(`تم إنشاء مسودة كشوف المرتبات لعدد ${res.data} موظف بنجاح ✅`);
         fetchPayroll();
       } else {
@@ -142,20 +177,59 @@ export default function AdminFinancePageClient() {
     }
   };
 
-  const handleApprovePayroll = async (payrollId: string) => {
-    if (!confirm('هل أنت متأكد من رغبتك في الموافقة على كشف المرتب هذا؟ سيؤدي ذلك إلى قفل التعديل عليه نهائياً.')) {
-      return;
-    }
+  const handleApprovePayroll = (payrollId: string) => {
+    setConfirmationAction({ type: 'approve-payroll', payrollId });
+  };
+
+  const handleDeleteAdjustment = (payrollId: string, adjustmentId: string) => {
+    setConfirmationAction({ type: 'delete-adjustment', payrollId, adjustmentId });
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmationAction) return;
+
+    setIsConfirmingAction(true);
     try {
-      const res = await financeService.approvePayroll(payrollId);
+      const res = confirmationAction.type === 'approve-payroll'
+        ? await financeService.approvePayroll(confirmationAction.payrollId)
+        : await financeService.deletePayrollAdjustment(
+          confirmationAction.payrollId,
+          confirmationAction.adjustmentId,
+        );
+
       if (res.success) {
-        toast.success('تم اعتماد وقفل كشف المرتب بنجاح ✅');
+        invalidateMany(['finance:payroll', 'finance:teacher', 'reports']);
+        toast.success(
+          confirmationAction.type === 'approve-payroll'
+            ? 'تم اعتماد وقفل كشف المرتب بنجاح ✅'
+            : 'تم حذف التسوية بنجاح',
+        );
         fetchPayroll();
+
+        if (confirmationAction.type === 'delete-adjustment' && selectedPayrollForDetails) {
+          setPayrollRecords((prev) => {
+            const updated = prev.find((item) => item.id === confirmationAction.payrollId);
+            if (updated) setSelectedPayrollForDetails(updated);
+            return prev;
+          });
+        }
+
+        setConfirmationAction(null);
       } else {
-        toast.error(res.message || 'تعذر اعتماد كشف المرتب');
+        toast.error(
+          res.message || (confirmationAction.type === 'approve-payroll'
+            ? 'تعذر اعتماد كشف المرتب'
+            : 'تعذر حذف التسوية'),
+        );
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء اعتماد المرتب');
+      toast.error(
+        err?.response?.data?.message || (confirmationAction.type === 'approve-payroll'
+          ? 'حدث خطأ أثناء اعتماد المرتب'
+          : 'حدث خطأ أثناء حذف التسوية'),
+      );
+    } finally {
+      setIsConfirmingAction(false);
     }
   };
 
@@ -181,6 +255,7 @@ export default function AdminFinancePageClient() {
       });
 
       if (res.success) {
+        invalidateMany(['finance:payroll', 'finance:teacher', 'reports']);
         toast.success('تمت إضافة التسوية بنجاح ✅');
         setSelectedPayrollForAdjustment(null);
         setAdjAmount('');
@@ -196,31 +271,6 @@ export default function AdminFinancePageClient() {
     }
   };
 
-  const handleDeleteAdjustment = async (payrollId: string, adjustmentId: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذه التسوية؟')) return;
-    try {
-      const res = await financeService.deletePayrollAdjustment(payrollId, adjustmentId);
-      if (res.success) {
-        toast.success('تم حذف التسوية بنجاح');
-        fetchPayroll();
-        if (selectedPayrollForDetails) {
-          // Refresh details view state
-          setPayrollRecords((prev) => {
-            const updated = prev.find((x) => x.id === payrollId);
-            if (updated) {
-              setSelectedPayrollForDetails(updated);
-            }
-            return prev;
-          });
-        }
-      } else {
-        toast.error(res.message || 'تعذر حذف التسوية');
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'حدث خطأ أثناء حذف التسوية');
-    }
-  };
-
   // Payouts fetch
   const fetchPayouts = useCallback(async () => {
     setPayoutLoading(true);
@@ -229,6 +279,7 @@ export default function AdminFinancePageClient() {
       if (payoutStatusFilter === 'Pending') status = 0;
       else if (payoutStatusFilter === 'Paid') status = 1;
       else if (payoutStatusFilter === 'Rejected') status = 2;
+      else if (payoutStatusFilter === 'Approved') status = 3;
 
       const data = await financeService.getPayouts(status);
       setPayoutRecords(data);
@@ -241,19 +292,23 @@ export default function AdminFinancePageClient() {
 
   const handleResolvePayout = async (payoutId: string, status: number, reason?: string) => {
     try {
+      setResolvingPayoutId(payoutId);
       const res = await financeService.resolvePayout(payoutId, {
         status,
         rejectionReason: reason,
       });
 
       if (res.success) {
-        toast.success(status === 1 ? 'تم اعتماد صرف المستحقات بنجاح 💵' : 'تم رفض طلب السحب ❌');
+        invalidateMany(['finance:teacher', 'student:balance', 'reports']);
+        toast.success(status === 3 ? 'تم قبول طلب السحب وأصبح جاهزاً للصرف' : status === 1 ? 'تم تسجيل الصرف الفعلي بنجاح' : 'تم رفض طلب السحب');
         fetchPayouts();
       } else {
         toast.error(res.message || 'تعذر تحديث حالة طلب السحب');
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'حدث خطأ أثناء تحديث الطلب');
+    } finally {
+      setResolvingPayoutId(null);
     }
   };
 
@@ -293,25 +348,92 @@ export default function AdminFinancePageClient() {
     }
   }, [filterTeacherId, filterPackageId, filterStartDate, filterEndDate, codesPage, codesPageSize]);
 
-  // Handle tab routing
-  useEffect(() => {
-    fetchTeachersAndPackages();
-  }, [fetchTeachersAndPackages]);
+  const fetchTeacherFinancialEvents = useCallback(async () => {
+    setReviewLoading(true);
+    try {
+      const res = await financeService.getTeacherFinancialEvents({
+        status: reviewStatusFilter || undefined,
+        teacherId: reviewTeacherId || undefined,
+        page: reviewPage,
+        pageSize: reviewPageSize,
+      });
+      setReviewData(res.items);
+      setReviewTotalCount(res.totalCount);
+    } catch {
+      toast.error('تعذر تحميل مراجعة البنود المالية');
+    } finally {
+      setReviewLoading(false);
+    }
+  }, [reviewStatusFilter, reviewTeacherId, reviewPage, reviewPageSize]);
 
+  const handleReviewTeacherEvent = async (allocationId: string, status: 'Approved' | 'Rejected') => {
+    try {
+      const res = await financeService.reviewTeacherFinancialEvent(allocationId, { status });
+      if (!res.success) {
+        toast.error(res.message || 'تعذر تحديث المراجعة');
+        return;
+      }
+      invalidateMany(['finance:teacher', 'reports']);
+      toast.success(status === 'Approved' ? 'تم اعتماد البند المالي' : 'تم رفض البند المالي');
+      fetchTeacherFinancialEvents();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'تعذر تحديث المراجعة');
+    }
+  };
+
+  const handleManualCompensation = async () => {
+    const amount = Number(compensationAmount);
+    if (!compensationTeacherId || amount <= 0) {
+      toast.error('حدد المدرس وقيمة تعويض أكبر من صفر');
+      return;
+    }
+
+    setCompensationSubmitting(true);
+    try {
+      const res = await financeService.createManualTeacherCompensation({
+        teacherId: compensationTeacherId,
+        amount,
+        reason: compensationReason || 'تعويض يدوي صريح',
+      });
+      if (!res.success) {
+        toast.error(res.message || 'تعذر تسجيل التعويض');
+        return;
+      }
+      invalidateMany(['finance:teacher', 'reports']);
+      toast.success('تم تسجيل التعويض اليدوي');
+      setCompensationAmount('');
+      setCompensationReason('');
+      fetchTeacherFinancialEvents();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'تعذر تسجيل التعويض');
+    } finally {
+      setCompensationSubmitting(false);
+    }
+  };
+
+  // Handle tab routing
   useEffect(() => {
     if (activeTab === 'payroll') {
       fetchPayroll();
     } else if (activeTab === 'payouts') {
       fetchPayouts();
     } else if (activeTab === 'codes') {
+      fetchTeachersAndPackages();
       fetchCodesAccounting();
+    } else if (activeTab === 'review') {
+      fetchTeachersAndPackages();
+      fetchTeacherFinancialEvents();
     }
-  }, [activeTab, fetchPayroll, fetchPayouts, fetchCodesAccounting, codesPage]);
+  }, [activeTab, fetchPayroll, fetchPayouts, fetchCodesAccounting, fetchTeacherFinancialEvents, fetchTeachersAndPackages, codesPage]);
 
   // Reset pagination on filter change
   useEffect(() => {
     setCodesPage(1);
   }, [filterTeacherId, filterPackageId, filterStartDate, filterEndDate]);
+
+  useEffect(() => {
+    setReviewPage(1);
+  }, [reviewStatusFilter, reviewTeacherId]);
 
   // Formatter helpers
   const formatEGP = (amount: number) => {
@@ -354,11 +476,17 @@ export default function AdminFinancePageClient() {
 
   const getPayoutStatusBadge = (status: string | number) => {
     const statusStr = typeof status === 'number'
-      ? (status === 0 ? 'Pending' : status === 1 ? 'Paid' : status === 2 ? 'Rejected' : 'Unknown')
+      ? (status === 0 ? 'Pending' : status === 1 ? 'Paid' : status === 2 ? 'Rejected' : status === 3 ? 'Approved' : 'Unknown')
       : status;
 
     switch (statusStr) {
       case 'Approved':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+            <CheckCircle2 className="h-3 w-3" />
+            جاهز للصرف
+          </span>
+        );
       case 'Paid':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
@@ -378,7 +506,7 @@ export default function AdminFinancePageClient() {
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 animate-pulse">
             <Clock className="h-3 w-3" />
-            انتظار الصرف
+            بانتظار قبول السحب
           </span>
         );
     }
@@ -401,11 +529,13 @@ export default function AdminFinancePageClient() {
     {
       key: 'basicSalary',
       label: 'الراتب الأساسي',
+      responsivePriority: 'secondary',
       render: (item) => <span className="font-bold font-mono">{formatEGP(item.basicSalary)}</span>,
     },
     {
       key: 'additions',
       label: 'إضافات',
+      responsivePriority: 'optional',
       render: (item) => (
         <span className="font-bold font-mono text-emerald-600 dark:text-emerald-400">
           +{formatEGP(item.additions)}
@@ -415,6 +545,7 @@ export default function AdminFinancePageClient() {
     {
       key: 'deductions',
       label: 'خصومات',
+      responsivePriority: 'optional',
       render: (item) => (
         <span className="font-bold font-mono text-rose-600 dark:text-rose-400">
           -{formatEGP(item.deductions)}
@@ -502,6 +633,7 @@ export default function AdminFinancePageClient() {
     {
       key: 'createdAt',
       label: 'تاريخ الطلب',
+      responsivePriority: 'secondary',
       render: (item) => <span className="font-mono text-sm">{formatDate(item.createdAt)}</span>,
     },
     {
@@ -521,6 +653,7 @@ export default function AdminFinancePageClient() {
     {
       key: 'handledBy',
       label: 'المسؤول المعالج',
+      responsivePriority: 'optional',
       render: (item) =>
         item.handledByName ? (
           <div>
@@ -538,23 +671,43 @@ export default function AdminFinancePageClient() {
       label: 'الإجراءات',
       align: 'left',
       render: (item) => {
-        if (item.status !== 'Pending' && item.status !== 0) return null;
+        const statusStr = typeof item.status === 'number'
+          ? (item.status === 0 ? 'Pending' : item.status === 1 ? 'Paid' : item.status === 2 ? 'Rejected' : item.status === 3 ? 'Approved' : 'Unknown')
+          : item.status;
+        if (statusStr !== 'Pending' && statusStr !== 'Approved') return null;
+        const isResolving = resolvingPayoutId === item.id;
         return (
           <div className="flex items-center justify-end gap-2">
-            <button
-              onClick={() => handleResolvePayout(item.id, 1)}
-              className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 flex items-center gap-1"
-            >
-              <Check className="h-3.5 w-3.5" />
-              تأكيد الدفع والصرف
-            </button>
-            <button
-              onClick={() => setSelectedPayoutForRejection(item)}
-              className="rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 flex items-center gap-1"
-            >
-              <CloseIcon className="h-3.5 w-3.5" />
-              رفض الطلب
-            </button>
+            {statusStr === 'Pending' && (
+              <button
+                onClick={() => handleResolvePayout(item.id, 3)}
+                disabled={isResolving}
+                className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-1"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {isResolving ? 'جاري القبول...' : 'قبول السحب'}
+              </button>
+            )}
+            {statusStr === 'Approved' && (
+              <button
+                onClick={() => handleResolvePayout(item.id, 1)}
+                disabled={isResolving}
+                className="rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-1"
+              >
+                <Check className="h-3.5 w-3.5" />
+                {isResolving ? 'جاري التسجيل...' : 'تسجيل تم الصرف'}
+              </button>
+            )}
+            {statusStr === 'Pending' && (
+              <button
+                onClick={() => setSelectedPayoutForRejection(item)}
+                disabled={isResolving}
+                className="rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-1"
+              >
+                <CloseIcon className="h-3.5 w-3.5" />
+                رفض الطلب
+              </button>
+            )}
           </div>
         );
       },
@@ -565,6 +718,7 @@ export default function AdminFinancePageClient() {
     {
       key: 'activationDate',
       label: 'تاريخ التفعيل',
+      responsivePriority: 'secondary',
       render: (item) => <span className="font-mono text-xs text-[var(--admin-muted)]">{formatDate(item.activatedAt)}</span>,
     },
     {
@@ -580,6 +734,7 @@ export default function AdminFinancePageClient() {
     {
       key: 'teacherName',
       label: 'المعلم صاحب الباقة',
+      responsivePriority: 'optional',
       render: (item) => <span className="font-semibold text-xs text-[var(--admin-muted)]">{item.teacherName}</span>,
     },
     {
@@ -594,16 +749,19 @@ export default function AdminFinancePageClient() {
     {
       key: 'serialNumber',
       label: 'الرقم التسلسلي للكود',
+      responsivePriority: 'optional',
       render: (item) => <span className="font-mono text-xs font-bold text-[var(--admin-primary)]">{item.serialNumber}</span>,
     },
     {
       key: 'price',
       label: 'سعر تفعيل الباقة',
+      responsivePriority: 'secondary',
       render: (item) => <span className="font-mono text-xs text-[var(--admin-text)]">{formatEGP(item.price)}</span>,
     },
     {
       key: 'commissionRate',
       label: 'نسبة عمولة المعلم',
+      responsivePriority: 'optional',
       render: (item) => <span className="font-mono text-xs font-bold text-emerald-600">%{item.commissionRate}</span>,
     },
     {
@@ -613,57 +771,137 @@ export default function AdminFinancePageClient() {
     },
   ];
 
+  const reviewColumns: AdminColumn<AdminTeacherFinancialEventDto>[] = [
+    {
+      key: 'occurredAt',
+      label: 'التاريخ',
+      responsivePriority: 'optional',
+      render: (item) => <span className="font-mono text-xs text-[var(--admin-muted)]">{formatDate(item.occurredAt)}</span>,
+    },
+    {
+      key: 'teacherName',
+      label: 'المدرس',
+      render: (item) => <span className="font-bold text-[var(--admin-text)]">{item.teacherName}</span>,
+    },
+    {
+      key: 'contentNameSnapshot',
+      label: 'المحتوى',
+      render: (item) => (
+        <div>
+          <div className="font-bold text-[var(--admin-text)]">{item.contentNameSnapshot}</div>
+          <div className="text-xs text-[var(--admin-muted)]">{item.sourceType} • {item.targetType}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'studentName',
+      label: 'الطالب',
+      responsivePriority: 'secondary',
+      render: (item) => (
+        <div>
+          <div className="font-bold text-[var(--admin-text)]">{item.studentName || '—'}</div>
+          <div className="font-mono text-xs text-[var(--admin-muted)]">{item.studentPhone || ''}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'paidAmount',
+      label: 'القيمة',
+      responsivePriority: 'secondary',
+      render: (item) => (
+        <div className="font-mono text-xs">
+          <div className="font-black text-[var(--admin-text)]">{formatEGP(item.paidAmount)}</div>
+          {item.promotionalAmount > 0 && <div className="text-[var(--admin-muted)]">خصم/مجاني: {formatEGP(item.promotionalAmount)}</div>}
+        </div>
+      ),
+    },
+    {
+      key: 'teacherShareAmount',
+      label: 'مستحق المدرس',
+      render: (item) => <span className="font-mono text-sm font-black text-emerald-600">{formatEGP(item.teacherShareAmount)}</span>,
+    },
+    {
+      key: 'reviewStatus',
+      label: 'الحالة',
+      render: (item) => <span className="rounded-full bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-black text-[var(--admin-text)]">{item.reviewStatus}</span>,
+    },
+    {
+      key: 'actions',
+      label: 'الإجراء',
+      align: 'left',
+      render: (item) => item.reviewStatus === 'PendingReview' ? (
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={() => void handleReviewTeacherEvent(item.allocationId, 'Approved')} className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700">
+            اعتماد
+          </button>
+          <button type="button" onClick={() => void handleReviewTeacherEvent(item.allocationId, 'Rejected')} className="rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-700">
+            رفض
+          </button>
+        </div>
+      ) : null,
+    },
+  ];
+
   const currentYearOptions = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/finance"
       sectionLabel="المالية والأرباح"
       pageTitle="لوحة التحكم والعمليات المالية"
       subtitle="إدارة رواتب الموظفين الشهرية، مراجعة طلبات سحب مستحقات المعلمين، وتتبع حركة تفعيل الأكواد وتحصيل النسب."
     >
       {/* Tabs Menu */}
-      <div className="mb-8 flex justify-center">
-        <div className="inline-flex gap-1 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card)]/90 p-1.5 shadow-sm backdrop-blur-xl">
-          <button
-            onClick={() => setActiveTab('payroll')}
-            className={`rounded-full px-6 py-2.5 text-sm font-bold transition flex items-center gap-2 ${
-              activeTab === 'payroll'
-                ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
-            }`}
-          >
-            <Calendar className="h-4 w-4" />
-            مسيرات الرواتب الشهرية
-          </button>
-          <button
-            onClick={() => setActiveTab('payouts')}
-            className={`rounded-full px-6 py-2.5 text-sm font-bold transition flex items-center gap-2 ${
-              activeTab === 'payouts'
-                ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
-            }`}
-          >
-            <Coins className="h-4 w-4" />
-            طلبات سحب المعلمين
-          </button>
-          <button
-            onClick={() => setActiveTab('codes')}
-            className={`rounded-full px-6 py-2.5 text-sm font-bold transition flex items-center gap-2 ${
-              activeTab === 'codes'
-                ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)] shadow-[0_8px_20px_var(--admin-shadow)]'
-                : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
-            }`}
-          >
-            <TrendingUp className="h-4 w-4" />
-            حركة تفعيل الأكواد وعمولات المعلمين
-          </button>
+      <div className="mb-6 -mx-4 overflow-x-auto px-4 pb-1 [scrollbar-width:thin] sm:mx-0 sm:px-0">
+        <div
+          className="inline-flex min-w-max border-b border-[var(--admin-border)]"
+          role="tablist"
+          aria-label="أقسام العمليات المالية"
+          onKeyDown={(event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const currentIndex = financeTabs.findIndex((tab) => tab.id === activeTab);
+            const nextIndex = event.key === 'Home'
+              ? 0
+              : event.key === 'End'
+                ? financeTabs.length - 1
+                : (currentIndex + (event.key === 'ArrowLeft' ? 1 : -1) + financeTabs.length) % financeTabs.length;
+            const nextTab = financeTabs[nextIndex];
+            setActiveTab(nextTab.id);
+            document.getElementById(`finance-tab-${nextTab.id}`)?.focus();
+          }}
+        >
+          {financeTabs.map(({ id, label, compactLabel, Icon }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                id={`finance-tab-${id}`}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`finance-panel-${id}`}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(id)}
+                className={`inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 py-2 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 sm:px-5 ${
+                  isActive
+                    ? 'border-[var(--admin-primary)] text-[var(--admin-primary)]'
+                    : 'border-transparent text-[var(--admin-muted)] hover:border-[var(--admin-border-strong)] hover:text-[var(--admin-text)]'
+                }`}
+                aria-label={label}
+              >
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                <span className="sm:hidden">{compactLabel}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Tab Contents: Payroll */}
       {activeTab === 'payroll' && (
-        <div>
+        <div id="finance-panel-payroll" role="tabpanel" aria-labelledby="finance-tab-payroll">
           {/* Filters Bar */}
           <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex flex-wrap gap-4 items-center justify-between">
             <div className="flex flex-wrap items-center gap-4">
@@ -728,7 +966,7 @@ export default function AdminFinancePageClient() {
 
       {/* Tab Contents: Payouts */}
       {activeTab === 'payouts' && (
-        <div>
+        <div id="finance-panel-payouts" role="tabpanel" aria-labelledby="finance-tab-payouts">
           {/* Status filter bar */}
           <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -739,7 +977,8 @@ export default function AdminFinancePageClient() {
                 className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-2 text-sm text-[var(--admin-text)] outline-none"
               >
                 <option value="All">كل طلبات السحب</option>
-                <option value="Pending">قيد انتظار الصرف</option>
+                <option value="Pending">بانتظار قبول السحب</option>
+                <option value="Approved">جاهزة للصرف</option>
                 <option value="Paid">تم الصرف والاعتماد</option>
                 <option value="Rejected">مرفوضة</option>
               </select>
@@ -766,7 +1005,7 @@ export default function AdminFinancePageClient() {
 
       {/* Tab Contents: Codes */}
       {activeTab === 'codes' && (
-        <div>
+        <div id="finance-panel-codes" role="tabpanel" aria-labelledby="finance-tab-codes">
           {/* Detailed Filters ledger */}
           <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
             <h4 className="text-sm font-black mb-3 text-[var(--admin-text)]">فلاتر البحث والمطابقة</h4>
@@ -884,6 +1123,141 @@ export default function AdminFinancePageClient() {
           )}
         </div>
       )}
+
+      {activeTab === 'review' && (
+        <div id="finance-panel-review" role="tabpanel" aria-labelledby="finance-tab-review">
+          <div className="mb-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <h4 className="mb-3 text-sm font-black text-[var(--admin-text)]">مراجعة مستحقات المدرسين</h4>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-[var(--admin-muted)]">حالة المراجعة</label>
+                <select
+                  value={reviewStatusFilter}
+                  onChange={(e) => setReviewStatusFilter(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] outline-none"
+                >
+                  <option value="PendingReview">معلقة</option>
+                  <option value="Approved">معتمدة يدوياً</option>
+                  <option value="AutoApproved">معتمدة تلقائياً</option>
+                  <option value="Rejected">مرفوضة</option>
+                  <option value="">كل الحالات</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-[var(--admin-muted)]">المدرس</label>
+                <select
+                  value={reviewTeacherId}
+                  onChange={(e) => setReviewTeacherId(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] outline-none"
+                >
+                  <option value="">كل المدرسين</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end justify-end">
+                <button
+                  onClick={() => void fetchTeacherFinancialEvents()}
+                  disabled={reviewLoading}
+                  className="rounded-xl bg-[var(--admin-primary)] px-5 py-2 text-xs font-bold text-[var(--admin-primary-contrast)] hover:opacity-90 flex items-center gap-1"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${reviewLoading ? 'animate-spin' : ''}`} />
+                  تحديث
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <AdminDataTable
+            data={reviewData}
+            columns={reviewColumns}
+            loading={reviewLoading}
+            rowKey={(item) => item.allocationId}
+            emptyMessage="لا توجد بنود مالية مطابقة للفلاتر الحالية."
+          />
+
+          <div className="mt-6 rounded-[24px] border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+            <h4 className="mb-3 text-sm font-black text-[var(--admin-text)]">تعويض يدوي صريح</h4>
+            <p className="mb-4 text-xs font-bold text-[var(--admin-muted)]">
+              يستخدم فقط لتعويض مدرس عن عملية مجانية/خصم كامل أو حالة خاصة. بدون هذا التسجيل لا تضاف مستحقات على العمليات ذات القيمة صفر.
+            </p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_160px_1fr_auto]">
+              <select
+                value={compensationTeacherId}
+                onChange={(e) => setCompensationTeacherId(e.target.value)}
+                className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] outline-none"
+              >
+                <option value="">اختر المدرس</option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>
+                ))}
+              </select>
+              <input
+                value={compensationAmount}
+                onChange={(e) => setCompensationAmount(e.target.value)}
+                inputMode="decimal"
+                placeholder="المبلغ"
+                className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] outline-none"
+              />
+              <input
+                value={compensationReason}
+                onChange={(e) => setCompensationReason(e.target.value)}
+                placeholder="سبب التعويض"
+                className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2 text-sm text-[var(--admin-text)] outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => void handleManualCompensation()}
+                disabled={compensationSubmitting}
+                className="rounded-xl bg-[var(--admin-primary)] px-5 py-2 text-xs font-bold text-[var(--admin-primary-contrast)] hover:opacity-90 disabled:opacity-60"
+              >
+                تسجيل
+              </button>
+            </div>
+          </div>
+
+          {reviewTotalCount > reviewPageSize && (
+            <div className="mt-6 flex items-center justify-between border-t border-[var(--admin-border)] pt-4">
+              <span className="text-xs font-semibold text-[var(--admin-muted)]">
+                عرض {reviewData.length} من أصل {reviewTotalCount} بند
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={reviewPage === 1 || reviewLoading}
+                  onClick={() => setReviewPage((prev) => prev - 1)}
+                  className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2 text-[var(--admin-text)] hover:bg-[var(--admin-hover)] disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+                <span className="px-3 font-mono text-sm font-bold">
+                  صفحة {reviewPage} من {Math.ceil(reviewTotalCount / reviewPageSize)}
+                </span>
+                <button
+                  disabled={reviewPage * reviewPageSize >= reviewTotalCount || reviewLoading}
+                  onClick={() => setReviewPage((prev) => prev + 1)}
+                  className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2 text-[var(--admin-text)] hover:bg-[var(--admin-hover)] disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <AdminConfirmationDialog
+        open={confirmationAction !== null}
+        onClose={() => setConfirmationAction(null)}
+        onConfirm={() => handleConfirmAction()}
+        title={confirmationAction?.type === 'approve-payroll' ? 'تأكيد اعتماد كشف المرتب' : 'تأكيد حذف التسوية'}
+        consequence={confirmationAction?.type === 'approve-payroll'
+          ? 'سيُعتمد كشف المرتب ويُقفل نهائياً، ولن تتمكن من إضافة تسويات أو تعديل بياناته بعد ذلك.'
+          : 'سيُحذف هذا التعديل من كشف المرتب نهائياً، وقد يتغير صافي المبلغ المستحق للموظف.'}
+        confirmLabel={confirmationAction?.type === 'approve-payroll' ? 'اعتماد وقفل الكشف' : 'حذف التسوية'}
+        variant={confirmationAction?.type === 'delete-adjustment' ? 'danger' : 'primary'}
+        isConfirming={isConfirmingAction}
+      />
 
       {/* MODAL 1: Add Payroll Adjustment */}
       <AdminModal
@@ -1071,6 +1445,6 @@ export default function AdminFinancePageClient() {
           </div>
         </form>
       </AdminModal>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

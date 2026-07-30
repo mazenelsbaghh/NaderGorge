@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "f363333f-f7d3-4c46-81e9-172981572013",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T20:15:57.563840Z",
+  "completedAt": "2026-07-26T20:15:57.564414Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: restore verification failed: PITR probe mismatch\n2026-07-26 20:15:56.406 UTC [205855] FATAL:  could not restore file \"00000006000000000000000E\" from archive: child process was terminated by signal 3: Quit\nmassar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test."
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Initialize and verify the Massar internal encrypted backup repository
+After=network-online.target massar-backup-bucket.service
+Requires=massar-backup-bucket.service
+ConditionPathIsMountPoint=/srv/massar-shared
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/massar/backup/files.env
+ExecStart=/usr/local/sbin/massar-initialize-backup-repository
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

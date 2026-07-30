@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "3eb7de2f-c77a-40f7-a90e-2e18b81f051c",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T21:00:57.554181Z",
+  "completedAt": "2026-07-26T21:00:57.554575Z",
+  "status": "failed",
+  "targets": [
+    "node-1"
+  ],
+  "reason": "restore test failed: 2026-07-26 20:58:32.319 UTC [282175] LOG:  restored log file \"00000006000000000000000C\" from archive\n2026-07-26 20:58:32.462 UTC [282175] LOG:  restored log file \"00000006000000000000000D\" from archive\n2026-07-26 20:58:32.570 UTC [282175] LOG:  restored log file \"00000006000000000000000E\" from archive\n2026-07-26 20:58:32.633 UTC [282175] LOG:  restored log file \"00000006000000000000000F\" from archive\nrestore verification failed: PITR probe mismatch expected=7dda608247f16ccee"
+}

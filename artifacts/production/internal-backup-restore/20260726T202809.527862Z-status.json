@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "2ce97419-89b3-4c5a-9014-11f6cd6bce0a",
+  "command": "status",
+  "startedAt": "2026-07-26T20:28:09.527862Z",
+  "completedAt": "2026-07-26T20:28:09.528391Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-2 health command failed"
+}

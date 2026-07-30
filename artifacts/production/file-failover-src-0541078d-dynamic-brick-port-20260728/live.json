@@ -1,0 +1,25 @@
+{
+  "acknowledgedLossCount": 0,
+  "formerNode": "node-1",
+  "newNode": null,
+  "quorumEvidence": {
+    "arbiterIsolated": false,
+    "failureType": null,
+    "fault": "single-data-brick-gluster-ports-only",
+    "isolatedNodeCount": 1,
+    "isolationObservedSeconds": 2.252095124917105,
+    "maximumOutageSeconds": 180,
+    "observedOutageSeconds": 0.0,
+    "observedRecoverySeconds": 2.179824082995765,
+    "operationId": "0fcb9f4b-a76f-4c61-a977-b5eb7e1beb49",
+    "precondition": "all-three-bricks-online",
+    "recoveryRequired": false,
+    "resolvedBrickPort": 56193
+  },
+  "recoveredAt": "2026-07-28T12:23:12.202035Z",
+  "result": "pass",
+  "schemaVersion": 1,
+  "service": "files",
+  "splitBrainDetected": false,
+  "startedAt": "2026-07-28T12:22:40.319205Z"
+}

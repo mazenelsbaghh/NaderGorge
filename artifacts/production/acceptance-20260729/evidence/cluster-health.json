@@ -1,0 +1,11 @@
+{
+  "capturedAt": "2026-07-29T19:41:59.096445Z",
+  "glusterSplitBrainCount": 0,
+  "healthyNodeCount": 3,
+  "postgresWriterCount": 1,
+  "redisMasterCount": 1,
+  "releaseId": "src-bdf19804cf29d19634b131a16d3e519d26f0d425",
+  "schemaVersion": 1,
+  "sourceEvidenceSha256": "1cc2a0a19221b8663b38e15ebb14eccb8d6a3a5179f6f04f4260942d61b3f8f8",
+  "status": "success"
+}

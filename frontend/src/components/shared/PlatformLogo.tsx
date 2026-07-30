@@ -48,43 +48,23 @@ export function PlatformLogo({
   priority = false,
   alt = PLATFORM_IDENTITY.logo.alt,
 }: PlatformLogoProps) {
-  const imageSize = intrinsicSizes[variant][size];
-  const markSize = intrinsicSizes['mark'][size];
-  
-  const lightSrc = variant === 'mark' ? PLATFORM_IDENTITY.logo.mark : PLATFORM_IDENTITY.logo.full;
-  const darkSrc = PLATFORM_IDENTITY.logo.markLight;
-
-  if (tone === 'light') {
-    return (
-      <Image
-        src={darkSrc}
-        width={markSize.width}
-        height={markSize.height}
-        alt={alt}
-        priority={priority}
-        className={`${sizeClasses['mark'][size]} object-contain ${className}`.trim()}
-      />
-    );
-  }
+  const renderedVariant = tone === 'light' ? 'mark' : variant;
+  const renderedSize = intrinsicSizes[renderedVariant][size];
+  const src =
+    tone === 'light'
+      ? PLATFORM_IDENTITY.logo.markLight
+      : variant === 'mark'
+        ? PLATFORM_IDENTITY.logo.mark
+        : PLATFORM_IDENTITY.logo.full;
 
   return (
-    <>
-      <Image
-        src={lightSrc}
-        width={imageSize.width}
-        height={imageSize.height}
-        alt={alt}
-        priority={priority}
-        className={`${sizeClasses[variant][size]} object-contain dark:hidden ${className}`.trim()}
-      />
-      <Image
-        src={darkSrc}
-        width={markSize.width}
-        height={markSize.height}
-        alt={alt}
-        priority={priority}
-        className={`${sizeClasses['mark'][size]} object-contain hidden dark:block ${className}`.trim()}
-      />
-    </>
+    <Image
+      src={src}
+      width={renderedSize.width}
+      height={renderedSize.height}
+      alt={alt}
+      priority={priority}
+      className={`${sizeClasses[renderedVariant][size]} object-contain ${className}`.trim()}
+    />
   );
 }

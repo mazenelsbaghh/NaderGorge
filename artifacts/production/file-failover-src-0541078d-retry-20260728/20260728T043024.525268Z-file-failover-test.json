@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "5cf21dfe-06c4-45e2-885f-eb7601f6d1b7",
+  "command": "file-failover-test",
+  "startedAt": "2026-07-28T04:30:24.525268Z",
+  "completedAt": "2026-07-28T04:30:24.525704Z",
+  "status": "failed",
+  "targets": [
+    "node-1"
+  ],
+  "reason": "file failover drill failed safely: FileFailoverError"
+}

@@ -1,271 +1,422 @@
 'use client';
 
-import { ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUpLeft,
+  BookOpenCheck,
+  ChevronLeft,
+  ChevronRight,
+  Star,
+} from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import {
-  platformStats,
-  teachers as hardcodedTeachers,
-  topStudents,
-} from './data';
+import { platformStats, teachers as hardcodedTeachers } from './data';
 import { studentService } from '@/services/student-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
-
-const medalStyles: Record<number, string> = {
-  1: 'bg-[#D4A017] text-white',
-  2: 'bg-[#9AA6B2] text-white',
-  3: 'bg-[#B87333] text-white',
-};
+import {
+  EDUCATION_STAGE_LABELS,
+  GRADE_LEVEL_LABELS,
+  STUDY_TRACK_LABELS,
+} from '@/lib/academic-labels';
 
 type TeacherCard = {
+  id?: string;
   name: string;
   subject: string;
   rating: string;
   avatar: string;
 };
 
+const revealEase = [0.22, 1, 0.36, 1] as const;
+const carouselEase = [0.16, 1, 0.3, 1] as const;
+
+const SUBJECT_LABELS: Record<string, string> = {
+  Arabic: 'اللغة العربية',
+  Biology: 'الأحياء',
+  Chemistry: 'الكيمياء',
+  English: 'اللغة الإنجليزية',
+  French: 'اللغة الفرنسية',
+  Geography: 'الجغرافيا',
+  History: 'التاريخ',
+  Mathematics: 'الرياضيات',
+  Physics: 'الفيزياء',
+  Science: 'العلوم',
+};
+
+function localizeTeacherFocus(value: string) {
+  const labels = {
+    ...EDUCATION_STAGE_LABELS,
+    ...GRADE_LEVEL_LABELS,
+    ...STUDY_TRACK_LABELS,
+    ...SUBJECT_LABELS,
+  };
+  const localized = value
+    .split(/\s*[,/\\-|]\s*/)
+    .map((item) => labels[item] ?? item)
+    .filter(Boolean);
+  return localized.some((item) => /[A-Za-z]/.test(item))
+    ? 'شرح ومراجعة منظمة'
+    : localized.join(' • ') || 'شرح ومراجعة منظمة';
+}
+
+function circularOffset(index: number, activeIndex: number, length: number) {
+  let offset = index - activeIndex;
+  if (offset > length / 2) offset -= length;
+  if (offset < -length / 2) offset += length;
+  return offset;
+}
+
 export function CircularGallerySection() {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [activeTeachers, setActiveTeachers] = useState<TeacherCard[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isInteractionPaused, setIsInteractionPaused] = useState(false);
+  const [isDocumentHidden, setIsDocumentHidden] = useState(false);
+  const touchStart = useRef<number | null>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     async function loadTeachers() {
       try {
-        const list = await studentService.getPublicTeachers();
-        if (list.length > 0) {
-          setActiveTeachers(
-            list.map((teacher) => ({
-              name: teacher.fullName,
-              subject:
-                teacher.specialization ||
-                teacher.subjectNames.join(' - ') ||
-                'معلم المنصة',
-              rating: '4.9',
-              avatar: teacher.profileImageUrl
-                ? resolveMediaUrl(teacher.profileImageUrl)
-                : `https://avatar.vercel.sh/${encodeURIComponent(teacher.fullName)}`,
-            }))
-          );
-        } else {
-          setActiveTeachers([...hardcodedTeachers]);
-        }
+        const landingTeachers = await studentService.getLandingTeachers();
+        const list =
+          landingTeachers.length > 0
+            ? landingTeachers
+            : await studentService.getPublicTeachers();
+        setActiveTeachers(
+          list.length > 0
+            ? list.map((teacher) => ({
+                name: teacher.fullName,
+                id: teacher.slug || teacher.teacherId || teacher.id,
+                subject: localizeTeacherFocus(
+                  teacher.specialization || teacher.subjectNames.join(',')
+                ),
+                rating: '4.9',
+                avatar: teacher.profileImageUrl
+                  ? resolveMediaUrl(teacher.profileImageUrl)
+                  : `https://avatar.vercel.sh/${encodeURIComponent(teacher.fullName)}`,
+              }))
+            : [...hardcodedTeachers]
+        );
       } catch {
         setActiveTeachers([...hardcodedTeachers]);
       }
     }
-
     void loadTeachers();
   }, []);
 
-  const teachers =
-    activeTeachers.length > 0 ? activeTeachers : hardcodedTeachers;
-  const currentStudent = topStudents[currentIndex];
+  const teachers = useMemo<TeacherCard[]>(
+    () => (activeTeachers.length > 0 ? activeTeachers : [...hardcodedTeachers]),
+    [activeTeachers]
+  );
+  const paginate = useCallback(
+    (direction: number) => {
+      setCurrentIndex(
+        (index) => (index + direction + teachers.length) % teachers.length
+      );
+    },
+    [teachers.length]
+  );
 
-  const showPreviousStudent = () => {
-    setCurrentIndex(
-      (index) => (index - 1 + topStudents.length) % topStudents.length
+  useEffect(() => {
+    if (
+      prefersReducedMotion ||
+      isInteractionPaused ||
+      isDocumentHidden ||
+      teachers.length < 2
+    )
+      return;
+    const timer = window.setInterval(() => paginate(1), 2600);
+    return () => window.clearInterval(timer);
+  }, [
+    isDocumentHidden,
+    isInteractionPaused,
+    paginate,
+    prefersReducedMotion,
+    teachers.length,
+  ]);
+
+  useEffect(() => {
+    const updateVisibility = () => setIsDocumentHidden(document.hidden);
+    updateVisibility();
+    document.addEventListener('visibilitychange', updateVisibility);
+    return () =>
+      document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
+
+  useEffect(() => {
+    setCurrentIndex((index) =>
+      Math.min(index, Math.max(teachers.length - 1, 0))
     );
-  };
+  }, [teachers.length]);
 
-  const showNextStudent = () => {
-    setCurrentIndex((index) => (index + 1) % topStudents.length);
-  };
+  const activeTeacher = teachers[currentIndex];
 
   return (
-    <>
-      <section
-        id="about-platform"
-        className="landing-section mt-3 px-5 py-14 md:px-12 md:py-18 lg:px-16"
-      >
-        <div className="relative z-10 mx-auto max-w-[1180px] text-center">
-          <div>
-            <h2
-              id="top-students-heading"
-              className="text-balance text-3xl font-black leading-tight text-[var(--landing-ink)] md:text-5xl"
-            >
-              الأوائل مع مسار
-            </h2>
-            <p className="mt-3 text-base font-bold text-[var(--landing-muted)] md:text-lg">
-              نفتخر بنجاح طلابنا المتفوقين
-            </p>
-          </div>
-
-          <div
-            className="mt-10 flex flex-col items-center"
-            role="region"
-            aria-roledescription="carousel"
-            aria-labelledby="top-students-heading"
-          >
-            <div
-              className="w-full max-w-[340px]"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              <article
-                className="landing-panel flex min-h-[320px] flex-col items-center border border-[var(--landing-line-strong)] px-5 py-7 text-center"
-                role="group"
-                aria-roledescription="slide"
-                aria-label={`${currentIndex + 1} من ${topStudents.length}: ${currentStudent.name}`}
-              >
-                <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-black ${
-                    medalStyles[currentStudent.rank] ??
-                    'bg-[#0E8F8F] text-white'
-                  }`}
-                >
-                  {currentStudent.rank}
-                </span>
-                <Image
-                  src={currentStudent.avatar}
-                  alt={currentStudent.name}
-                  width={84}
-                  height={84}
-                  unoptimized
-                  className="mt-4 h-[84px] w-[84px] rounded-full object-cover"
-                />
-                <h3 className="mt-4 text-xl font-black text-[var(--landing-ink)]">
-                  {currentStudent.name}
-                </h3>
-                <p className="mt-1 text-sm font-bold text-[var(--landing-muted)]">
-                  {currentStudent.stage}
-                </p>
-                <strong className="mt-4 text-3xl font-black text-[var(--landing-ink)]">
-                  {currentStudent.score}
-                </strong>
-                <span className="mt-1 text-xs font-extrabold text-[var(--landing-muted)]">
-                  النسبة النهائية
-                </span>
-              </article>
-            </div>
-
-            <div className="mt-5 flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={showPreviousStudent}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card)] text-[var(--landing-ink)] transition-colors hover:bg-[var(--landing-card-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E8F8F] focus-visible:ring-offset-2"
-                aria-label="عرض الطالب السابق"
-              >
-                <ArrowRight className="h-5 w-5" aria-hidden="true" />
-              </button>
-
-              <div
-                className="flex justify-center gap-2"
-                aria-label="اختيار طالب من الأوائل"
-              >
-                {topStudents.map((student, index) => (
-                  <button
-                    key={student.name}
-                    type="button"
-                    onClick={() => setCurrentIndex(index)}
-                    className={`h-3 w-3 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E8F8F] focus-visible:ring-offset-2 ${
-                      index === currentIndex
-                        ? 'bg-[#0E8F8F]'
-                        : 'bg-[var(--landing-line)]'
-                    }`}
-                    aria-label={`عرض ${student.name}`}
-                    aria-current={index === currentIndex ? 'true' : undefined}
-                  />
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={showNextStudent}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card)] text-[var(--landing-ink)] transition-colors hover:bg-[var(--landing-card-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E8F8F] focus-visible:ring-offset-2"
-                aria-label="عرض الطالب التالي"
-              >
-                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-
-          <Link
-            href="/register"
-            className="landing-primary-button mx-auto mt-8"
-          >
-            عرض المزيد من الأوائل
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </div>
-      </section>
-
-      <section
-        id="teachers"
-        className="landing-section mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16"
-      >
-        <div className="relative z-10 flex flex-col gap-10">
+    <section
+      id="teachers"
+      className="landing-section landing-section--teachers mt-3 overflow-hidden px-5 py-14 md:px-12 md:py-18 lg:px-16"
+    >
+      <div className="relative z-10 mx-auto max-w-[1240px]">
+        <motion.div
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ duration: 0.55, ease: revealEase }}
+          className="flex flex-col"
+        >
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-3xl font-black leading-tight text-[var(--landing-ink)] md:text-5xl">
-              تعلم على يد نخبة من أفضل المعلمين
+            <span className="inline-flex items-center gap-2 text-sm font-black text-[var(--landing-accent)]">
+              <span className="h-2 w-2 rounded-full bg-[#D4A017]" /> اختَر من
+              فريقك التعليمي
+            </span>
+            <h2 className="mt-3 text-3xl font-black leading-tight text-[var(--landing-ink)] md:text-4xl">
+              معلم يشرح لك بالطريقة التي تناسبك
             </h2>
             <p className="mt-4 text-base font-semibold leading-8 text-[var(--landing-muted)] md:text-lg">
-              خبرة عالية، شغف بالتعليم، دعم مستمر، وخطة واضحة تناسب مستوى كل
-              طالب.
+              تعرّف على المعلمين، موادهم، وتقييمات الطلاب، ثم ابدأ مع الشخص
+              المناسب لخطتك الدراسية.
             </p>
-            <Link
-              href="/register"
-              className="landing-primary-button mx-auto mt-5"
-            >
-              استكشف جميع المعلمين
-            </Link>
           </div>
 
           <div
-            className="mx-auto grid w-full max-w-[1080px] gap-5 sm:grid-cols-2 lg:grid-cols-4"
+            ref={carouselRef}
+            role="region"
+            aria-roledescription="carousel"
             aria-label="معلمو منصة مسار"
+            tabIndex={0}
+            onMouseEnter={() => setIsInteractionPaused(true)}
+            onMouseLeave={() => setIsInteractionPaused(false)}
+            onFocusCapture={() => setIsInteractionPaused(true)}
+            onBlurCapture={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setIsInteractionPaused(false);
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                paginate(1);
+              }
+              if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                paginate(-1);
+              }
+              if (event.key === 'Home') {
+                event.preventDefault();
+                setCurrentIndex(0);
+              }
+              if (event.key === 'End') {
+                event.preventDefault();
+                setCurrentIndex(Math.max(teachers.length - 1, 0));
+              }
+            }}
+            onTouchStart={(event) => {
+              touchStart.current = event.touches[0]?.clientX ?? null;
+            }}
+            onTouchEnd={(event) => {
+              const start = touchStart.current;
+              const end = event.changedTouches[0]?.clientX;
+              touchStart.current = null;
+              if (
+                start === null ||
+                end === undefined ||
+                Math.abs(start - end) < 48
+              )
+                return;
+              paginate(start > end ? 1 : -1);
+            }}
+            className="relative isolate mt-8 h-[45rem] outline-none sm:h-[48rem] lg:mt-10 lg:h-[51rem]"
           >
-            {teachers.map((teacher) => (
-              <article
-                key={`${teacher.name}-${teacher.subject}`}
-                className="landing-panel overflow-hidden border border-[var(--landing-line-strong)] text-center"
-              >
-                <Image
-                  src={teacher.avatar}
-                  alt={teacher.name}
-                  width={260}
-                  height={280}
-                  unoptimized
-                  className="h-44 w-full object-cover"
-                />
-                <div className="px-4 py-4">
-                  <h3 className="truncate text-base font-black text-[var(--landing-ink)]">
-                    {teacher.name}
+            <p className="sr-only" aria-live="polite" aria-atomic="true">
+              {activeTeacher
+                ? `${activeTeacher.name}، العنصر ${currentIndex + 1} من ${teachers.length}`
+                : 'جاري تحميل المعلمين'}
+            </p>
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-8 top-[47%] h-px bg-[linear-gradient(90deg,transparent,rgba(14,143,143,.32),transparent)]"
+            />
+            <div className="absolute inset-x-0 top-4 h-[34rem] [perspective:1600px] sm:top-6 sm:h-[38rem] lg:h-[40rem]">
+              {teachers.map((teacher, index) => {
+                const offset = circularOffset(
+                  index,
+                  currentIndex,
+                  teachers.length
+                );
+                const distance = Math.abs(offset);
+                const hidden = distance > 2;
+                const x =
+                  offset === 0
+                    ? 0
+                    : Math.sign(offset) * (distance === 2 ? 590 : 320);
+                const href = teacher.id
+                  ? `/teachers/${teacher.id}`
+                  : '/teachers';
+                return (
+                  <motion.div
+                    key={`${teacher.id ?? teacher.name}-${index}`}
+                    aria-hidden={distance !== 0}
+                    className="absolute left-1/2 top-1/2 w-[min(21rem,88vw)] -translate-x-1/2 -translate-y-1/2 lg:w-[28rem]"
+                    initial={false}
+                    animate={{
+                      x: hidden ? Math.sign(offset || 1) * 900 : x,
+                      z: hidden ? -400 : -distance * 150,
+                      rotateY: offset * -14,
+                      scale: distance === 0 ? 1 : distance === 1 ? 0.78 : 0.56,
+                      opacity: hidden
+                        ? 0
+                        : distance === 0
+                          ? 1
+                          : distance === 1
+                            ? 0.68
+                            : 0.28,
+                    }}
+                    transition={
+                      prefersReducedMotion
+                        ? { duration: 0 }
+                        : { duration: 0.85, ease: carouselEase }
+                    }
+                    style={{
+                      zIndex: 10 - distance,
+                      pointerEvents: distance === 0 ? 'auto' : 'none',
+                    }}
+                  >
+                    <Link
+                      href={href}
+                      tabIndex={distance === 0 ? 0 : -1}
+                      aria-label={
+                        teacher.id
+                          ? `عرض بروفايل ${teacher.name}`
+                          : 'عرض قائمة المعلمين'
+                      }
+                      className="group block overflow-hidden rounded-[1.4rem] bg-[var(--landing-card-strong)] shadow-[0_20px_42px_rgba(10,29,61,.18)] ring-1 ring-[var(--landing-line)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--landing-accent)]"
+                    >
+                      <div className="relative h-[26rem] lg:h-[34rem]">
+                        <Image
+                          src={teacher.avatar}
+                          alt={distance === 0 ? teacher.name : ''}
+                          width={384}
+                          height={400}
+                          unoptimized
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <div className="absolute inset-x-0 bottom-8 translate-y-10 text-center sm:bottom-5">
+              {activeTeacher && (
+                <motion.div
+                  key={activeTeacher.name}
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, ease: carouselEase }}
+                >
+                  <h3 className="text-2xl font-black text-[var(--landing-ink)]">
+                    {activeTeacher.name}
                   </h3>
-                  <p className="mt-1 text-xs font-bold text-[var(--landing-muted)]">
-                    {teacher.subject}
-                  </p>
-                  <div className="mt-3 flex items-center justify-center gap-1 text-sm font-black text-[var(--landing-ink)]">
-                    {teacher.rating}
+                  <span className="mx-auto mt-2 flex w-fit items-center rounded-full bg-[var(--landing-gold-soft)] px-2.5 py-1 text-xs font-black text-[var(--public-achievement)]">
+                    معلم مميز
+                  </span>
+                  <span className="mx-auto mt-2 flex w-fit items-center gap-1 rounded-md bg-[var(--primary)] px-2.5 py-1.5 text-xs font-black text-[var(--primary-foreground)]">
                     <Star
-                      className="h-4 w-4 fill-[#D4A017] text-[#D4A017]"
+                      className="h-3.5 w-3.5 fill-[#D4A017] text-[#D4A017]"
                       aria-hidden="true"
                     />
-                  </div>
+                    {activeTeacher.rating}
+                  </span>
+                  <p className="mt-2 inline-flex items-center gap-2 text-sm font-bold text-[var(--landing-muted)]">
+                    <BookOpenCheck
+                      className="h-4 w-4 text-[var(--landing-accent)]"
+                      aria-hidden="true"
+                    />
+                    {activeTeacher.subject}
+                  </p>
+                </motion.div>
+              )}
+              <div className="mt-4 flex items-center justify-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => paginate(-1)}
+                  aria-label="المعلم السابق"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card-strong)] text-[var(--landing-ink)] transition-colors hover:border-[var(--landing-accent)] hover:text-[var(--landing-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)]"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <div
+                  className="flex items-center gap-1.5"
+                  aria-label={`المعلم ${currentIndex + 1} من ${teachers.length}`}
+                >
+                  {teachers.map((teacher, index) => (
+                    <button
+                      type="button"
+                      key={teacher.id ?? teacher.name}
+                      onClick={() => setCurrentIndex(index)}
+                      aria-label={`عرض ${teacher.name}`}
+                      aria-current={index === currentIndex ? 'true' : undefined}
+                      className={`min-h-11 min-w-11 rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)] before:mx-auto before:block before:h-2 before:rounded-full before:content-[''] ${index === currentIndex ? 'before:w-6 before:bg-[var(--landing-accent)]' : 'before:w-2 before:bg-[color-mix(in_srgb,var(--landing-ink)_20%,transparent)] hover:before:bg-[color-mix(in_srgb,var(--landing-ink)_45%,transparent)]'}`}
+                    />
+                  ))}
                 </div>
-              </article>
-            ))}
+                <button
+                  type="button"
+                  onClick={() => paginate(1)}
+                  aria-label="المعلم التالي"
+                  className="grid h-10 w-10 place-items-center rounded-full border border-[var(--landing-line-strong)] bg-[var(--landing-card-strong)] text-[var(--landing-ink)] transition-colors hover:border-[var(--landing-accent)] hover:text-[var(--landing-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)]"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="mx-auto mt-6 grid w-full max-w-4xl grid-cols-2 gap-6 sm:grid-cols-4">
-            {platformStats.map(({ value, label, icon: Icon }) => (
-              <div
-                key={label}
-                className="rounded-xl border border-[var(--landing-line-strong)] bg-[var(--landing-card)] p-4 text-center"
-              >
-                <Icon className="mx-auto h-6 w-6 text-[#0E8F8F]" />
-                <strong className="mt-2 block text-xl font-black text-[var(--landing-ink)]">
-                  {value}
-                </strong>
-                <span className="text-xs font-extrabold text-[var(--landing-muted)]">
-                  {label}
-                </span>
-              </div>
-            ))}
+          <div className="mt-2 text-center sm:mt-4">
+            <Link href="/teachers" className="landing-primary-button">
+              تصفّح جميع المعلمين <ArrowLeft className="h-4 w-4" />
+            </Link>
           </div>
-        </div>
-      </section>
-    </>
+        </motion.div>
+
+        <motion.div
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-70px' }}
+          transition={{
+            delay: prefersReducedMotion ? 0 : 0.12,
+            duration: 0.5,
+            ease: revealEase,
+          }}
+          className="mt-10 grid grid-cols-2 border-y border-[var(--landing-line-strong)] sm:grid-cols-4"
+        >
+          {platformStats.map(({ value, label, icon: Icon }) => (
+            <div
+              key={label}
+              className="flex min-h-28 flex-col items-center justify-center px-3 text-center not-last:border-l not-last:border-[var(--landing-line-strong)]"
+            >
+              <Icon className="h-5 w-5 text-[var(--landing-accent)]" aria-hidden="true" />
+              <strong className="mt-2 text-xl font-black text-[var(--landing-ink)]">
+                {value}
+              </strong>
+              <span className="mt-1 text-xs font-extrabold text-[var(--landing-muted)]">
+                {label}
+              </span>
+            </div>
+          ))}
+        </motion.div>
+        <Link
+          href="/register"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-black text-[var(--landing-accent)] transition-colors hover:text-[var(--landing-ink)]"
+        >
+          ابدأ رحلتك التعليمية <ArrowUpLeft className="h-4 w-4" />
+        </Link>
+      </div>
+    </section>
   );
 }

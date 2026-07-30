@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "2b302499-e70e-4ff8-b092-acf48967a2e9",
+  "command": "normalize-current-manifest",
+  "startedAt": "2026-07-27T07:17:51.382326Z",
+  "completedAt": "2026-07-27T07:17:51.382726Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

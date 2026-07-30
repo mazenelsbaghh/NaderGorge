@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "99a6df19-e7b9-4a72-969d-36cadc4d721e",
+  "command": "deploy",
+  "startedAt": "2026-07-27T15:49:48.352512Z",
+  "completedAt": "2026-07-27T15:49:48.353047Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: traffic operation failed: HAProxy convergence timed out: {'node-1': 'DRAIN', 'node-2': 'DRAIN', 'node-3': 'DRAIN'}"
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "12b5e729-ee54-4a20-92be-b0fc83c487c9",
+  "command": "deploy",
+  "startedAt": "2026-07-29T16:12:04.951991Z",
+  "completedAt": "2026-07-29T16:12:04.952472Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: rollout quorum failed: node-1 is not UP on every ingress"
+}

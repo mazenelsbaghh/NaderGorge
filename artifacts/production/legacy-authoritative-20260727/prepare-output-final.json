@@ -1,0 +1,14 @@
+{
+  "action": "prepare",
+  "backupId": "legacy-candidate-20260727T175858Z-35131d14c137",
+  "candidateDatabase": "massar_platform_candidate_20260727T175858Z",
+  "cleanupVerified": true,
+  "completedAt": "2026-07-27T17:59:53.319185Z",
+  "operationId": "44787420-af24-4ec2-8ebb-2bd77ca932ee",
+  "reason": "node-1: sudo: I'm sorry massar-ops. I'm afraid I can't do that",
+  "result": "safe-refusal",
+  "schemaVersion": 1,
+  "startedAt": "2026-07-27T17:59:52.183720Z",
+  "state": null,
+  "writesOpened": false
+}

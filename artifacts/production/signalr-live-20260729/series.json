@@ -1,0 +1,17 @@
+{
+  "excludedNode": null,
+  "failedStageRunId": "signalr-live-001",
+  "seriesId": "signalr-live-20260729",
+  "stages": [
+    {
+      "capacityEvidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/signalr-live-20260729/evidence/signalr-live-001.capacity.json",
+      "capacityStatus": "failed",
+      "evidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/signalr-live-20260729/evidence/signalr-live-001.load.json",
+      "loadStatus": "success",
+      "requestedRps": 1,
+      "runId": "signalr-live-001",
+      "sequence": 1
+    }
+  ],
+  "status": "failed"
+}

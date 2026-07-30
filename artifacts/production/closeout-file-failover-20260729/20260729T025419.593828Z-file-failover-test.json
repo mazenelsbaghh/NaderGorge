@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "321da69f-fa9b-4efd-8d30-0702f9099d71",
+  "command": "file-failover-test",
+  "startedAt": "2026-07-29T02:54:19.593828Z",
+  "completedAt": "2026-07-29T02:54:19.594301Z",
+  "status": "success",
+  "targets": [
+    "node-1"
+  ],
+  "reason": null
+}

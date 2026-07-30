@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "2bac8596-0a9a-49c6-ae3c-f9515b7888b9",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T20:01:52.875496Z",
+  "completedAt": "2026-07-26T20:01:52.875988Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: psql: error: connection to server on socket \"/var/lib/massar-restore-tests/database.OnUSsv/.s.PGSQL.6543\" failed: server closed the connection unexpectedly\nmassar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test."
+}

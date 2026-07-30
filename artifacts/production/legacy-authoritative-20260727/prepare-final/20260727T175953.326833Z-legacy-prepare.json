@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "b335ef55-d495-4b6a-952d-24e74970141f",
+  "command": "legacy-prepare",
+  "startedAt": "2026-07-27T17:59:53.326833Z",
+  "completedAt": "2026-07-27T17:59:53.327010Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "legacy-prepare failed"
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "a1f1139e-53be-4cce-bb79-b79b73e750c9",
+  "command": "deploy",
+  "startedAt": "2026-07-28T23:18:23.913194Z",
+  "completedAt": "2026-07-28T23:18:23.913387Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: invalid immutable release ID"
+}

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-27T04:56:50.855010Z",
+  "status": "success",
+  "isolated": true,
+  "latestModelMigration": "20260726182136_EnsureSystemRoles",
+  "latestDatabaseMigration": "20260726182136_EnsureSystemRoles",
+  "migrationModelMatch": true,
+  "orphanForeignKeyRowCount": 0,
+  "duplicateConstrainedKeyRowCount": 0,
+  "invalidIndexCount": 0,
+  "unvalidatedConstraintCount": 0,
+  "userCount": 63,
+  "userWithoutRoleCount": 0,
+  "duplicatePhoneCount": 0,
+  "invalidPasswordHashCount": 0,
+  "roleAssignments": {
+    "Admin": 2,
+    "Staff": 14,
+    "Student": 26,
+    "Supervisor": 1,
+    "Teacher": 17,
+    "\u062a\u0628\u0645 \u062f\u0639\u0645 \u0641\u0646\u064a": 2,
+    "\u062f\u0639\u0645 \u0641\u0646\u064a assistant": 1
+  },
+  "providerCounts": {
+    "bunny": 6,
+    "youtube": 68
+  },
+  "resetTableCounts": {
+    "VideoPlaybackSessions": 0,
+    "cluster_leases": 0
+  },
+  "replayRiskCounts": {
+    "pendingOutboxEvents": 0,
+    "activePlaybackSessions": 0,
+    "clusterLeases": 0
+  },
+  "fileReferences": {
+    "totalReferences": 174,
+    "externalReferences": 3,
+    "existingLocalReferences": 168,
+    "missingLocalReferences": 3,
+    "missingReferenceSha256": "b5245ee39f2037b75ba4e44eae876ecd46e880fc97b617b680488101844ee0c2",
+    "missingBySource": {
+      "live_support_attachments": 3
+    },
+    "missingBasenameMatches": 0,
+    "missingBlockedReferences": 3,
+    "missingUnblockedReferences": 0
+  },
+  "criticalFindingCount": 0
+}

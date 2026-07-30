@@ -3,15 +3,16 @@
 import { devConsole } from "@/utils/dev-console";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
-import { Eye, KeyRound, Sparkles, Search } from "lucide-react";
+import { Eye, KeyRound, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import {
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
+  AdminSearchToolbar,
 } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { formatCompactNumber, formatDate } from "@/components/admin/admin-utils";
 import { adminService, CodeGroupDto } from "@/services/admin-service";
 import { PackageDto, contentService } from "@/services/content-service";
@@ -38,7 +39,7 @@ export default function TeacherCodesPageClient() {
       try {
         setLoading(true);
         const [groupsData, packagesResponse] = await Promise.all([
-          adminService.listCodeGroups({ force: options?.force }),
+          adminService.listCodeGroups(),
           contentService.getPackages({ force: options?.force }),
         ]);
         setGroups(groupsData || []);
@@ -104,7 +105,7 @@ export default function TeacherCodesPageClient() {
       label: "الربط",
       render: (g: CodeGroupDto) => (
         <div className="font-semibold text-[var(--admin-text)]">
-          <div>{g.packageId ? "Package" : g.lessonId ? "Lesson" : "عام"}</div>
+          <div>{g.packageId ? "باقة" : g.lessonId ? "حصة" : "خاص بالمدرس"}</div>
           {g.packageId ? (
             <div className="mt-1 text-xs text-[var(--admin-muted)] font-normal">{packageNameMap[g.packageId] || g.packageId}</div>
           ) : null}
@@ -150,18 +151,18 @@ export default function TeacherCodesPageClient() {
   ];
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/codes"
       sectionLabel="إدارة الأكواد"
-      pageTitle="مجموعات أكواد الوصول"
-      subtitle="عرض وتفاصيل مجموعات أكواد الوصول والطباعة."
+      pageTitle="مجموعات أكواد المدرس"
+      subtitle="عرض دفعات الأكواد الخاصة بك، استخدام الطلاب، وتفاصيل الطباعة."
     >
       {/* Stats */}
       <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
         <AdminStatCard
           variant="light"
           icon={KeyRound}
-          label="إجمالي الأكواد"
+          label="إجمالي أكواد المدرس"
           value={totalCodes}
         />
         <AdminStatCard
@@ -178,18 +179,11 @@ export default function TeacherCodesPageClient() {
         />
       </section>
 
-      {/* Search and Filters */}
-      <div className="mb-6 flex items-center bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] px-4 py-3 shadow-sm max-w-md mr-auto">
-        <Search className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
-        <input
-          type="text"
-          placeholder="ابحث عن اسم دفعة، ID، أو باقة مربوطة..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-transparent border-none outline-none text-sm text-[var(--admin-text)] placeholder:text-[var(--admin-muted)] w-full text-right"
-          dir="rtl"
-        />
-      </div>
+      <AdminSearchToolbar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="ابحث عن اسم دفعة، ID، أو باقة مربوطة..."
+      />
 
       {/* Code Groups Table */}
       <AdminDataTable
@@ -197,8 +191,8 @@ export default function TeacherCodesPageClient() {
         columns={groupColumns}
         loading={loading}
         rowKey={(g) => g.id}
-        emptyMessage="لا توجد مجموعات أكواد بعد."
+        emptyMessage="لا توجد مجموعات أكواد للمدرس بعد."
       />
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "47723fd1-c991-48f9-b407-0e48953d6d5b",
+  "command": "backup-database-initialize",
+  "startedAt": "2026-07-26T19:40:02.161376Z",
+  "completedAt": "2026-07-26T19:40:02.161921Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "pgBackRest stanza initialization failed on: node-2; node-2: Starting massar-pgbackrest-init.service - Initialize the Massar pgBackRest stanza on the Patroni primary...\npam_unix(runuser:session): session opened for user postgres(uid=105) by (uid=0)\n2026-07-26 19:37:16.021 P00   INFO: stanza-create command begin 2.58.0: --exec-id=170359-fab617c3 --log-level-console=info --pg1-path=/var/lib/postgresql/16/massar --pg1-port=5432 --repo1-cipher-pass=<redacted> --repo1-cipher-type=aes-256-cbc --repo1-path=/massar/postgresql --repo1-s3-bucket=massar-backups --repo1-s3-endpoint=127.0.0.1:9000 --repo1-s3-key=[REDACTED] --repo1-s3-key-secret=[REDACTED] --repo1-s3-region=massar-internal --repo1-s3-uri-style=path --no-repo1-storage-verify-tls --repo1-type=s3 --stanza=massar\n2026-07-26 19:37:16.059 P00   INFO: stanza-create for stanza 'massar' on repo1\n2026-07-26 19:38:16.067 P00  ERROR: [101]: TLS error [1:167772358] packet length too long\n2026-07-26 19:38:16.067 P00   INFO: stanza-create command end: aborted with exception [101]\npam_unix(runuser:session): session closed for user postgres\nmassar-pgbackrest-init.service: Main process exited, code=exited, status=101/n/a\nmassar-pgbackrest-init.service: Failed with result 'exit-code'.\nFailed to start massar-pgbackrest-init.service - Initialize the Massar pgBackRest stanza on the Patroni primary.\nStarting massar-pgbackrest-init.service - Initialize the Massar pgBackRest stanza on the Patroni primary...\npam_unix(runuser:session): session opened for user postgres(uid=105) by (uid=0)\n2026-07-26 19:38:59.324 P00   INFO: stanza-create command begin 2.58.0: --exec-id=171564-9fea18fa --log-level-console=info --pg1-path=/var/lib/postgresql/16/massar --pg1-port=5432 --repo1-cipher-pass=<redacted> --repo1-cipher-type=aes-256-cbc --repo1-path=/massar/postgresql --repo1-s3-bucket=massar-backups --repo1-s3-endpoint=127.0.0.1:9000 --repo1-s3-key=[REDACTED] --repo1-s3-key-secret=[REDACTED] --repo1-s3-region=massar-internal --repo1-s3-uri-style=path"
+}

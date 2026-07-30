@@ -1,0 +1,30 @@
+{
+  "ubuntu": "26.04",
+  "architecture": "amd64",
+  "packages": {
+    "docker-ce": "vendor-repository-pinned",
+    "docker-compose-plugin": "vendor-repository-pinned",
+    "wireguard-tools": "distribution",
+    "haproxy": "distribution",
+    "chrony": "distribution",
+    "etcd-server": "3.5.16-10",
+    "etcd-client": "3.5.16-10",
+    "patroni": "4.1.3-2.pgdg26.04+1",
+    "python3-etcd": "0.4.5-7",
+    "postgresql-16": "16.14-1.pgdg26.04+1",
+    "postgresql-client-16": "pgdg-pinned",
+    "redis-server": "5:8.0.5-1",
+    "redis-sentinel": "5:8.0.5-1",
+    "glusterfs-client": "11.2-2",
+    "glusterfs-server": "11.2-2",
+    "pgbackrest": "distribution",
+    "restic": "distribution",
+    "nftables": "distribution",
+    "cloudflared": "vendor-checksum-required"
+  },
+  "policy": {
+    "allowFloatingLatest": false,
+    "requireSignedRepositories": true,
+    "requireCloudflaredSha256": true
+  }
+}

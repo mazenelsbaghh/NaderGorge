@@ -1,0 +1,6 @@
+@NaderGorge.API_HostAddress = http://localhost:5245
+
+GET {{NaderGorge.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

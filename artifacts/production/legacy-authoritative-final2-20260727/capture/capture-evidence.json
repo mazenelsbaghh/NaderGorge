@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "backupId": "legacy-20260727T195014Z-ae80acbf",
+  "capturedAt": "2026-07-27T19:52:01.344443Z",
+  "status": "success",
+  "sourceHost": "72.62.27.189",
+  "sourceUser": "root",
+  "freezeRequested": true,
+  "leaveWritersFrozenRequested": true,
+  "writersRunningBeforeFreeze": [
+    "massar_backend",
+    "massar_worker"
+  ],
+  "writersRestarted": [],
+  "writersFrozenAtCompletion": true,
+  "writerRecoveryComplete": false,
+  "temporarySnapshotRemoved": true,
+  "reason": null
+}

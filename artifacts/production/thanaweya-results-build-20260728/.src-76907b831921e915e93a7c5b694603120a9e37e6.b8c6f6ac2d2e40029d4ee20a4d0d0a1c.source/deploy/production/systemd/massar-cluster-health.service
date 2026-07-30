@@ -1,0 +1,16 @@
+[Unit]
+Description=Massar production cluster health evidence
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/lib/massar/collect_cluster_health.py --output /var/lib/massar/evidence/health/latest.json
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/massar/evidence

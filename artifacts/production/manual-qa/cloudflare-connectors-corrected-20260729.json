@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "service": "massar-cloudflared-token",
+  "connectors": {
+    "node-1": {
+      "readyStatus": 200,
+      "haConnections": 4
+    },
+    "node-2": {
+      "readyStatus": 200,
+      "haConnections": 4
+    },
+    "node-3": {
+      "readyStatus": 200,
+      "haConnections": 4
+    }
+  }
+}

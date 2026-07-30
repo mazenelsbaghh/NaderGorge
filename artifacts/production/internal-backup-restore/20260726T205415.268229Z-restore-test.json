@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "6d0b98cc-f123-438b-b12c-5f71caa4d28a",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T20:54:15.268229Z",
+  "completedAt": "2026-07-26T20:54:15.268665Z",
+  "status": "failed",
+  "targets": [
+    "node-1"
+  ],
+  "reason": "restore test failed: 2026-07-26 20:54:14.197 P00  ERROR: [032]: PostgreSQL working directory '/var/lib/massar-restore-tests/database.zJFnZG/data' is not the same as option pg1-path '/var/lib/postgresql/16/massar'\n2026-07-26 20:54:14.212 P00  ERROR: [032]: PostgreSQL working directory '/var/lib/massar-restore-tests/database.zJFnZG/data' is not the same as option pg1-path '/var/lib/postgresql/16/massar'\n2026-07-26 20:54:14.214 UTC [277173] FATAL:  could not locate required checkpoint record\n2026-0"
+}

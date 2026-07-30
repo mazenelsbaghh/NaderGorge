@@ -1,0 +1,1 @@
+massar-ops ALL=(root) NOPASSWD: /usr/local/sbin/massar-produce-release-migration-gate --root-produce *

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "8f8b0e81-960d-4362-80e8-e67d21284111",
+  "command": "status",
+  "startedAt": "2026-07-26T19:02:37.071279Z",
+  "completedAt": "2026-07-26T19:02:37.071953Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "8ba3c1d5-29ff-4334-9dbe-ee18d313a39c",
+  "command": "cloudflare-status",
+  "startedAt": "2026-07-27T17:52:45.108107Z",
+  "completedAt": "2026-07-27T17:52:45.108385Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

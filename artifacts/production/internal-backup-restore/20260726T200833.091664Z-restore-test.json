@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "7132c4b4-1fb7-4011-b38a-2a75b19f9337",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T20:08:33.091664Z",
+  "completedAt": "2026-07-26T20:08:33.092221Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: 2026-07-26 20:08:31.912 UTC [197308] ERROR:  syntax error at or near \":\" at character 72\nERROR:  syntax error at or near \":\"\n2026-07-26 20:08:31.926 UTC [197270] FATAL:  could not restore file \"000000060000000000000009\" from archive: child process was terminated by signal 3: Quit\nmassar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test."
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "accountsTemporary": true,
+  "roles": {
+    "Student": {
+      "id": "09860c1c-3229-4ccc-a429-198adb44893d",
+      "status": 201,
+      "loginStatus": 200,
+      "roles": [
+        "Student"
+      ]
+    },
+    "Teacher": {
+      "id": "c00f590e-2407-49ed-b8e2-18f97abf6e06",
+      "status": 201,
+      "profileId": "24004d2e-9618-44ab-9c4d-ba484a490801",
+      "profileStatus": 201,
+      "loginStatus": 200,
+      "roles": [
+        "Teacher"
+      ]
+    },
+    "Staff": {
+      "id": "5663eb09-5218-411e-8478-2d90a639893b",
+      "status": 201,
+      "loginStatus": 200,
+      "roles": [
+        "Staff"
+      ]
+    }
+  }
+}

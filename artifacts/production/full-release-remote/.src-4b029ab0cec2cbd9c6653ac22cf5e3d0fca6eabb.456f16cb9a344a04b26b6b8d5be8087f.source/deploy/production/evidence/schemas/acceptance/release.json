@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "releaseId", "createdAt", "digestParity", "nodeCount", "sourceEvidenceSha256"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "status": {"enum": ["success", "failed"]},
+    "releaseId": {"type": "string", "pattern": "^(?:git-[0-9a-f]{7,40}|src-[0-9a-f]{40})$"},
+    "createdAt": {"type": "string", "format": "date-time"},
+    "digestParity": {"type": "boolean"},
+    "nodeCount": {"type": "integer", "minimum": 0, "maximum": 3},
+    "sourceEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

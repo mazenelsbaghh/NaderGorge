@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "status": "success",
+  "runId": "steady-30m-001",
+  "releaseId": "src-bdf19804cf29d19634b131a16d3e519d26f0d425",
+  "startedAt": "2026-07-29T19:05:07.583Z",
+  "completedAt": "2026-07-29T19:35:09.696Z",
+  "capturedAt": "2026-07-29T19:35:09.696Z",
+  "requestedRps": 2,
+  "achievedRps": 1.997780244173141,
+  "durationSeconds": 1802,
+  "requestedDuration": "30m",
+  "baselineRps": 1,
+  "baselineMultiplier": 2,
+  "profile": "steady",
+  "excludedNode": null,
+  "capacityStages": [],
+  "websocketVus": 10,
+  "websocketHoldSuccessRate": 1,
+  "workflowRps": 0,
+  "workflowProbes": [],
+  "workflowSuccessRate": 1,
+  "expectedNodes": [
+        "node-1",
+        "node-2",
+        "node-3"
+      ],
+  "observedNodes": [
+        "node-1",
+        "node-2",
+        "node-3"
+      ],
+  "nodeRequestCounts": {
+        "node-1": 1197,
+        "node-2": 1191,
+        "node-3": 1212
+      },
+  "nodeTrafficShares": {
+        "node-1": 0.3325,
+        "node-2": 0.3308333333333333,
+        "node-3": 0.33666666666666667
+      },
+  "nodeImbalanceRatio": 0.01,
+  "unexpectedNodeRate": 0,
+  "healthyNodeCount": 3,
+  "errorRate": 0,
+  "checkRate": 1,
+  "p95Milliseconds": 20.1170835,
+  "p99Milliseconds": 0,
+  "surfaceP95Milliseconds": {
+        "landing": 22.786242049999988,
+        "apiLive": 9.824348549999995
+      },
+  "surfaceP99Milliseconds": {
+        "landing": 0,
+        "apiLive": 0
+      },
+  "droppedIterations": 0,
+  "droppedIterationRate": 0,
+  "thresholdFailures": []
+}

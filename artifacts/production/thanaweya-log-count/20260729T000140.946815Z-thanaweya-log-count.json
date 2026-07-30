@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "7190c842-33c5-442e-aa61-e49a5ec2ddaf",
+  "command": "thanaweya-log-count",
+  "startedAt": "2026-07-29T00:01:40.946815Z",
+  "completedAt": "2026-07-29T00:01:40.946991Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-1 could not count thanaweya requests"
+}

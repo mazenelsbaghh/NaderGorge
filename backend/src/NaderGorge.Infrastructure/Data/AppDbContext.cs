@@ -10,33 +10,62 @@ using NaderGorge.Domain.Entities.Notifications;
 using NaderGorge.Domain.Entities.Student;
 using NaderGorge.Domain.Entities.LiveSupport;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Application.Interfaces;
 
 namespace NaderGorge.Infrastructure.Data;
 
 public class AppDbContext : DbContext, IAppDbContext
 {
+    private readonly IUserSecurityStateCache? _userSecurityStateCache;
+
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    public AppDbContext(
+        DbContextOptions<AppDbContext> options,
+        IUserSecurityStateCache userSecurityStateCache) : base(options)
+    {
+        _userSecurityStateCache = userSecurityStateCache;
+    }
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<ReportDefinition> ReportDefinitions => Set<ReportDefinition>();
     public DbSet<StudentProfile> StudentProfiles => Set<StudentProfile>();
+    public DbSet<AcademicSubjectEligibility> AcademicSubjectEligibilities => Set<AcademicSubjectEligibility>();
+    public DbSet<StudentFacingAcademicScope> StudentFacingAcademicScopes => Set<StudentFacingAcademicScope>();
     public DbSet<Device> Devices => Set<Device>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<CodeGroup> CodeGroups => Set<CodeGroup>();
     public DbSet<AccessCode> AccessCodes => Set<AccessCode>();
     public DbSet<StudentAccessGrant> StudentAccessGrants => Set<StudentAccessGrant>();
+    public DbSet<GiftIssuance> GiftIssuances => Set<GiftIssuance>();
+    public DbSet<GiftRecipient> GiftRecipients => Set<GiftRecipient>();
+    public DbSet<PromotionalBalanceAllocation> PromotionalBalanceAllocations => Set<PromotionalBalanceAllocation>();
+    public DbSet<PromotionalBalanceUsage> PromotionalBalanceUsages => Set<PromotionalBalanceUsage>();
+    public DbSet<SalesRule> SalesRules => Set<SalesRule>();
+    public DbSet<DiscountStackingPolicy> DiscountStackingPolicies => Set<DiscountStackingPolicy>();
+    public DbSet<SalesCoupon> SalesCoupons => Set<SalesCoupon>();
+    public DbSet<SalesCouponUsage> SalesCouponUsages => Set<SalesCouponUsage>();
+    public DbSet<PrintableCodeBatch> PrintableCodeBatches => Set<PrintableCodeBatch>();
+    public DbSet<PrintableSalesCode> PrintableSalesCodes => Set<PrintableSalesCode>();
+    public DbSet<PrintableCodeRedemption> PrintableCodeRedemptions => Set<PrintableCodeRedemption>();
+    public DbSet<PrintableCodeTemplate> PrintableCodeTemplates => Set<PrintableCodeTemplate>();
+    public DbSet<PublicExamProduct> PublicExamProducts => Set<PublicExamProduct>();
+    public DbSet<SalesFinancialEffect> SalesFinancialEffects => Set<SalesFinancialEffect>();
 
     // Content
     public DbSet<Subject> Subjects => Set<Subject>();
     public DbSet<TeacherProfile> TeacherProfiles => Set<TeacherProfile>();
+    public DbSet<TeacherStaffMember> TeacherStaffMembers => Set<TeacherStaffMember>();
     public DbSet<TeacherSubject> TeacherSubjects => Set<TeacherSubject>();
     public DbSet<Package> Packages => Set<Package>();
     public DbSet<PackageCodePageProfile> PackageCodePageProfiles => Set<PackageCodePageProfile>();
     public DbSet<ContentSection> ContentSections => Set<ContentSection>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<LessonVideo> LessonVideos => Set<LessonVideo>();
+    public DbSet<VideoType> VideoTypes => Set<VideoType>();
     public DbSet<BunnyVideoAsset> BunnyVideoAssets => Set<BunnyVideoAsset>();
     public DbSet<BunnyUsageSnapshot> BunnyUsageSnapshots => Set<BunnyUsageSnapshot>();
     public DbSet<VideoChapter> VideoChapters => Set<VideoChapter>();
@@ -99,9 +128,71 @@ public class AppDbContext : DbContext, IAppDbContext
 
     // Phase 2: HR Core
     public DbSet<EmployeeProfile> EmployeeProfiles => Set<EmployeeProfile>();
+    public DbSet<HrIdempotencyRecord> HrIdempotencyRecords => Set<HrIdempotencyRecord>();
+    public DbSet<HrModuleRollout> HrModuleRollouts => Set<HrModuleRollout>();
+    public DbSet<OrganizationUnit> OrganizationUnits => Set<OrganizationUnit>();
+    public DbSet<JobPosition> JobPositions => Set<JobPosition>();
+    public DbSet<JobGrade> JobGrades => Set<JobGrade>();
+    public DbSet<WorkLocation> WorkLocations => Set<WorkLocation>();
+    public DbSet<CostCenter> CostCenters => Set<CostCenter>();
+    public DbSet<EmploymentAssignment> EmploymentAssignments => Set<EmploymentAssignment>();
+    public DbSet<EmploymentContract> EmploymentContracts => Set<EmploymentContract>();
+    public DbSet<WorkCalendar> WorkCalendars => Set<WorkCalendar>();
+    public DbSet<ShiftTemplate> ShiftTemplates => Set<ShiftTemplate>();
+    public DbSet<ShiftSegment> ShiftSegments => Set<ShiftSegment>();
+    public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
+    public DbSet<ShiftSwapRequest> ShiftSwapRequests => Set<ShiftSwapRequest>();
+    public DbSet<AttendancePolicy> AttendancePolicies => Set<AttendancePolicy>();
+    public DbSet<AttendancePolicyAssignment> AttendancePolicyAssignments => Set<AttendancePolicyAssignment>();
+    public DbSet<TrustedAttendanceDevice> TrustedAttendanceDevices => Set<TrustedAttendanceDevice>();
+    public DbSet<AttendancePolicyException> AttendancePolicyExceptions => Set<AttendancePolicyException>();
+    public DbSet<AttendanceAttempt> AttendanceAttempts => Set<AttendanceAttempt>();
+    public DbSet<AttendanceSession> AttendanceSessions => Set<AttendanceSession>();
+    public DbSet<AttendanceBreak> AttendanceBreaks => Set<AttendanceBreak>();
+    public DbSet<WorkdayClassification> WorkdayClassifications => Set<WorkdayClassification>();
+    public DbSet<AttendanceCorrection> AttendanceCorrections => Set<AttendanceCorrection>();
+    public DbSet<LeaveType> LeaveTypes => Set<LeaveType>();
+    public DbSet<LeavePolicy> LeavePolicies => Set<LeavePolicy>();
+    public DbSet<LeaveBalance> LeaveBalances => Set<LeaveBalance>();
+    public DbSet<LeaveLedgerEntry> LeaveLedgerEntries => Set<LeaveLedgerEntry>();
+    public DbSet<HrLeaveRequest> HrLeaveRequests => Set<HrLeaveRequest>();
+    public DbSet<ApprovalDefinition> ApprovalDefinitions => Set<ApprovalDefinition>();
+    public DbSet<ApprovalDefinitionStep> ApprovalDefinitionSteps => Set<ApprovalDefinitionStep>();
+    public DbSet<ApprovalInstance> ApprovalInstances => Set<ApprovalInstance>();
+    public DbSet<ApprovalStepInstance> ApprovalStepInstances => Set<ApprovalStepInstance>();
+    public DbSet<ApprovalDelegation> ApprovalDelegations => Set<ApprovalDelegation>();
+    public DbSet<PayComponent> PayComponents => Set<PayComponent>();
+    public DbSet<PayrollRule> PayrollRules => Set<PayrollRule>();
+    public DbSet<EmployeeCompensation> EmployeeCompensations => Set<EmployeeCompensation>();
+    public DbSet<HrPayrollRun> HrPayrollRuns => Set<HrPayrollRun>();
+    public DbSet<EmployeePayroll> EmployeePayrolls => Set<EmployeePayroll>();
+    public DbSet<PayrollLineItem> PayrollLineItems => Set<PayrollLineItem>();
+    public DbSet<Payslip> Payslips => Set<Payslip>();
+    public DbSet<PayrollSettlementAdjustment> PayrollSettlementAdjustments => Set<PayrollSettlementAdjustment>();
+    public DbSet<HrFinancialRequest> HrFinancialRequests => Set<HrFinancialRequest>();
+    public DbSet<HrFinancialInstallment> HrFinancialInstallments => Set<HrFinancialInstallment>();
+    public DbSet<HrPayrollInputSource> HrPayrollInputSources => Set<HrPayrollInputSource>();
+    public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<EmployeeDocumentVersion> EmployeeDocumentVersions => Set<EmployeeDocumentVersion>();
+    public DbSet<HrAsset> HrAssets => Set<HrAsset>();
+    public DbSet<AssetCustody> AssetCustodies => Set<AssetCustody>();
+    public DbSet<PerformanceCycle> PerformanceCycles => Set<PerformanceCycle>();
+    public DbSet<PerformanceGoal> PerformanceGoals => Set<PerformanceGoal>();
+    public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
+    public DbSet<EmployeeCase> EmployeeCases => Set<EmployeeCase>();
+    public DbSet<CaseEvidence> CaseEvidence => Set<CaseEvidence>();
+    public DbSet<CaseResponse> CaseResponses => Set<CaseResponse>();
+    public DbSet<DisciplinaryAction> DisciplinaryActions => Set<DisciplinaryAction>();
+    public DbSet<Requisition> Requisitions => Set<Requisition>();
+    public DbSet<Candidate> Candidates => Set<Candidate>();
+    public DbSet<CandidateInterview> CandidateInterviews => Set<CandidateInterview>();
+    public DbSet<CandidateOffer> CandidateOffers => Set<CandidateOffer>();
+    public DbSet<EmployeeLifecycleTask> EmployeeLifecycleTasks => Set<EmployeeLifecycleTask>();
+    public DbSet<OffboardingProcess> OffboardingProcesses => Set<OffboardingProcess>();
+    public DbSet<HrMigrationBatch> HrMigrationBatches => Set<HrMigrationBatch>();
+    public DbSet<HrMigrationRecordMap> HrMigrationRecordMaps => Set<HrMigrationRecordMap>();
+    public DbSet<HrMigrationConflict> HrMigrationConflicts => Set<HrMigrationConflict>();
     public DbSet<AttendanceLog> AttendanceLogs => Set<AttendanceLog>();
-    public DbSet<EmployeeVacation> EmployeeVacations => Set<EmployeeVacation>();
-
     public DbSet<TaskItem> TaskItems => Set<TaskItem>();
     public DbSet<TaskComment> TaskComments => Set<TaskComment>();
 
@@ -148,8 +239,22 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<PayrollAdjustment> PayrollAdjustments => Set<PayrollAdjustment>();
     public DbSet<TeacherAccount> TeacherAccounts => Set<TeacherAccount>();
     public DbSet<TeacherPayout> TeacherPayouts => Set<TeacherPayout>();
+    public DbSet<TeacherFinancialEvent> TeacherFinancialEvents => Set<TeacherFinancialEvent>();
+    public DbSet<TeacherFinancialAllocation> TeacherFinancialAllocations => Set<TeacherFinancialAllocation>();
+    public DbSet<TeacherPayoutAdjustment> TeacherPayoutAdjustments => Set<TeacherPayoutAdjustment>();
+    public DbSet<TeacherFinancialAgreement> TeacherFinancialAgreements => Set<TeacherFinancialAgreement>();
+    public DbSet<CodeGroupFinancialTerms> CodeGroupFinancialTerms => Set<CodeGroupFinancialTerms>();
+    public DbSet<CodeGroupDeliveryConfirmation> CodeGroupDeliveryConfirmations => Set<CodeGroupDeliveryConfirmation>();
+    public DbSet<TeacherSettlement> TeacherSettlements => Set<TeacherSettlement>();
+    public DbSet<TeacherSettlementLine> TeacherSettlementLines => Set<TeacherSettlementLine>();
+    public DbSet<TeacherSettlementPayment> TeacherSettlementPayments => Set<TeacherSettlementPayment>();
+    public DbSet<FinancialInvoice> FinancialInvoices => Set<FinancialInvoice>();
+    public DbSet<SharedTeacherPackage> SharedTeacherPackages => Set<SharedTeacherPackage>();
+    public DbSet<SharedTeacherPackageTeacher> SharedTeacherPackageTeachers => Set<SharedTeacherPackageTeacher>();
+    public DbSet<SharedTeacherPackageItem> SharedTeacherPackageItems => Set<SharedTeacherPackageItem>();
     public DbSet<AccessCodeActivationLog> AccessCodeActivationLogs => Set<AccessCodeActivationLog>();
     public DbSet<OutboxEvent> OutboxEvents => Set<OutboxEvent>();
+    public DbSet<ClusterLease> ClusterLeases => Set<ClusterLease>();
     public DbSet<WebVitalsMetric> WebVitalsMetrics => Set<WebVitalsMetric>();
 
     // SMS Payment Auto-Matcher
@@ -187,6 +292,17 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(u => u.FullName).HasMaxLength(200).IsRequired();
             e.Property(u => u.PhoneNumber).HasMaxLength(20).IsRequired();
             e.Property(u => u.PasswordHash).IsRequired();
+            e.Property(u => u.IsDeleted).HasDefaultValue(false);
+            e.Property(u => u.SecurityStampVersion).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<ClusterLease>(e =>
+        {
+            e.ToTable("cluster_leases");
+            e.HasKey(lease => lease.Name);
+            e.Property(lease => lease.Name).HasMaxLength(160);
+            e.Property(lease => lease.LastOutcome).HasMaxLength(64);
+            e.HasIndex(lease => lease.ExpiresAt);
         });
 
         // Subject
@@ -210,6 +326,13 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(tp => tp.ProfileImageUrl).HasMaxLength(1000);
             e.Property(tp => tp.ContactInfo).HasMaxLength(500).IsRequired();
             e.Property(tp => tp.CommissionRate).HasPrecision(18, 2);
+            e.Property(tp => tp.PublicSlug).HasMaxLength(160);
+            e.HasIndex(tp => tp.PublicSlug).IsUnique().HasFilter("\"PublicSlug\" IS NOT NULL");
+            e.Property(tp => tp.PublicBio).HasMaxLength(2000);
+            e.Property(tp => tp.IntroVideoUrl).HasMaxLength(1000);
+            e.Property(tp => tp.IsVisibleToStudents).HasDefaultValue(true);
+            e.Property(tp => tp.IsContentVisibleToStudents).HasDefaultValue(true);
+            e.Property(tp => tp.RatingAverage).HasPrecision(5, 2);
         });
 
         // TeacherSubject
@@ -219,6 +342,19 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(ts => new { ts.TeacherId, ts.SubjectId });
             e.HasOne(ts => ts.Teacher).WithMany(t => t.TeacherSubjects).HasForeignKey(ts => ts.TeacherId);
             e.HasOne(ts => ts.Subject).WithMany(s => s.TeacherSubjects).HasForeignKey(ts => ts.SubjectId);
+        });
+
+        modelBuilder.Entity<TeacherStaffMember>(e =>
+        {
+            e.ToTable("teacher_staff_members");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.TeacherId, x.UserId }).IsUnique();
+            e.HasIndex(x => x.UserId).IsUnique();
+            e.HasOne(x => x.Teacher).WithMany(t => t.StaffMembers).HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User).WithMany(u => u.TeacherStaffMemberships).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CreatedByTeacherUser).WithMany(u => u.CreatedTeacherStaffMembers).HasForeignKey(x => x.CreatedByTeacherUserId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.PermissionKeys).HasMaxLength(500).HasDefaultValue(string.Empty);
         });
 
         // Role
@@ -255,7 +391,22 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(a => a.EntityType).HasMaxLength(100).IsRequired();
             e.Property(a => a.IpAddress).HasMaxLength(45);
             e.Property(a => a.CorrelationId).HasMaxLength(64);
+            e.Property(a => a.RequestId).HasMaxLength(100);
+            e.Property(a => a.ActorType).HasMaxLength(20).IsRequired();
+            e.Property(a => a.Reason).HasMaxLength(1000);
             e.HasOne(a => a.PerformedByUser).WithMany().HasForeignKey(a => a.PerformedByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ReportDefinition>(e =>
+        {
+            e.ToTable("report_definitions");
+            e.HasKey(report => report.Id);
+            e.HasIndex(report => new { report.OwnerUserId, report.Domain, report.CreatedAt });
+            e.Property(report => report.Name).HasMaxLength(120).IsRequired();
+            e.Property(report => report.Domain).HasMaxLength(64).IsRequired();
+            e.Property(report => report.ConfigurationJson).HasColumnType("jsonb").IsRequired();
+            e.Property(report => report.Version).IsRowVersion();
+            e.HasOne(report => report.OwnerUser).WithMany().HasForeignKey(report => report.OwnerUserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         // StudentProfile
@@ -281,7 +432,46 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(s => s.CurrentMode).HasMaxLength(10).HasDefaultValue("light");
             e.Property(s => s.ParentTrackingCode).HasMaxLength(6);
             e.HasIndex(s => s.ParentTrackingCode).IsUnique();
+            e.HasIndex(s => new { s.EducationStage, s.GradeLevel, s.UserId });
             e.Property(s => s.HasSeenTrackingCodePopup).HasDefaultValue(false);
+        });
+
+        modelBuilder.Entity<AcademicSubjectEligibility>(e =>
+        {
+            e.ToTable("academic_subject_eligibilities");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.EducationStage, x.GradeLevel, x.SubjectId }).IsUnique();
+            e.HasIndex(x => new { x.EducationStage, x.GradeLevel, x.IsActive });
+            e.HasIndex(x => new { x.SubjectId, x.IsActive, x.EducationStage, x.GradeLevel });
+            e.HasIndex(x => x.SubjectId);
+            e.Property(x => x.EducationStage).HasConversion<int>();
+            e.Property(x => x.GradeLevel).HasConversion<int>();
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.HasOne(x => x.Subject).WithMany().HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StudentFacingAcademicScope>(e =>
+        {
+            e.ToTable("student_facing_academic_scopes", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_student_facing_scopes_shape",
+                    "(\"ScopeLevel\" = 1 AND \"EducationStage\" IS NULL AND \"GradeLevel\" IS NULL AND \"SubjectId\" IS NULL) OR " +
+                    "(\"ScopeLevel\" = 2 AND \"EducationStage\" IS NOT NULL AND \"GradeLevel\" IS NULL AND \"SubjectId\" IS NULL) OR " +
+                    "(\"ScopeLevel\" = 3 AND \"EducationStage\" IS NOT NULL AND \"GradeLevel\" IS NOT NULL AND \"SubjectId\" IS NULL) OR " +
+                    "(\"ScopeLevel\" = 0 AND \"EducationStage\" IS NOT NULL AND \"GradeLevel\" IS NOT NULL AND \"SubjectId\" IS NOT NULL)");
+            });
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.OwnerType, x.OwnerId });
+            e.HasIndex(x => new { x.OwnerType, x.OwnerId, x.ScopeLevel, x.EducationStage, x.GradeLevel, x.SubjectId });
+            e.HasIndex(x => new { x.ScopeLevel, x.EducationStage, x.GradeLevel, x.SubjectId });
+            e.HasIndex(x => x.SubjectId);
+            e.Property(x => x.OwnerType).HasConversion<int>();
+            e.Property(x => x.ScopeLevel).HasConversion<int>();
+            e.Property(x => x.EducationStage).HasConversion<int?>();
+            e.Property(x => x.GradeLevel).HasConversion<int?>();
+            e.HasOne(x => x.Subject).WithMany().HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // Device
@@ -311,8 +501,16 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(c => c.CodeType).HasConversion<int>();
             e.Property(c => c.DiscountPercentage).HasColumnType("decimal(18,2)");
             e.Property(c => c.BalanceAmount).HasColumnType("decimal(18,2)");
+            e.Property(c => c.RevenueOwner).HasConversion<int>();
+            e.Property(c => c.RevenueAllocationMode).HasConversion<int>();
+            e.Property(c => c.RevenueAllocationValue).HasColumnType("decimal(18,2)");
+            e.Property(c => c.AccountingTiming).HasConversion<int>();
+            e.Property(c => c.IncludeFutureVideos).HasDefaultValue(true);
+            e.Property(c => c.ExpireActivatedAccess).HasDefaultValue(true);
+            e.HasIndex(c => c.PublicExamProductId);
+            e.HasIndex(c => c.VideoTypeId);
             e.HasOne(c => c.CreatedByUser).WithMany().HasForeignKey(c => c.CreatedByUserId);
-            e.HasOne(c => c.Teacher).WithMany(t => t.CodeGroups).HasForeignKey(c => c.TeacherId);
+            e.HasOne(c => c.Teacher).WithMany(t => t.CodeGroups).HasForeignKey(c => c.TeacherId).OnDelete(DeleteBehavior.SetNull);
         });
 
         // AccessCode
@@ -328,14 +526,319 @@ public class AppDbContext : DbContext, IAppDbContext
         // StudentAccessGrant
         modelBuilder.Entity<StudentAccessGrant>(e =>
         {
-            e.ToTable("student_access_grants");
+            e.ToTable("student_access_grants", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_student_access_grants_gift_uses",
+                    "\"UsesConsumed\" >= 0 AND (\"MaxUses\" IS NULL OR (\"MaxUses\" > 0 AND \"UsesConsumed\" <= \"MaxUses\"))");
+                table.HasCheckConstraint(
+                    "CK_student_access_grants_target_shape",
+                    "(\"GrantType\" = 0 AND \"PackageId\" IS NOT NULL AND \"TermId\" IS NULL AND \"ContentSectionId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR " +
+                    "(\"GrantType\" = 1 AND \"TermId\" IS NOT NULL AND \"ContentSectionId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR " +
+                    "(\"GrantType\" = 2 AND \"ContentSectionId\" IS NOT NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR " +
+                    "(\"GrantType\" = 3 AND \"LessonId\" IS NOT NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR " +
+                    "(\"GrantType\" = 4 AND (\"LessonVideoId\" IS NOT NULL OR \"VideoTypeId\" IS NOT NULL) AND \"ExamId\" IS NULL) OR " +
+                    "(\"GrantType\" = 5 AND \"ExamId\" IS NOT NULL AND \"LessonVideoId\" IS NULL)");
+            });
             e.HasKey(s => s.Id);
-            e.HasIndex(s => new { s.UserId, s.PackageId });
+            e.HasIndex(s => new { s.UserId, s.PackageId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"PackageId\" IS NOT NULL AND \"GrantType\" = 0");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.TermId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 1 AND \"TermId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.ContentSectionId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 2 AND \"ContentSectionId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.LessonId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 3 AND \"LessonId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.LessonVideoId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 4 AND \"LessonVideoId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.VideoTypeId, s.PackageId, s.TermId, s.ContentSectionId, s.LessonId })
+                .HasDatabaseName("IX_student_access_grants_video_type_scope")
+                .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 4 AND \"VideoTypeId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.ExamId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 5 AND \"ExamId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.AccessCodeId, s.PackageId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"PackageId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.AccessCodeId, s.TermId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"TermId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.AccessCodeId, s.ContentSectionId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"ContentSectionId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.AccessCodeId, s.LessonId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"LessonId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.AccessCodeId, s.LessonVideoId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"LessonVideoId\" IS NOT NULL");
+            e.HasIndex(s => new { s.UserId, s.GrantType, s.AccessCodeId, s.ExamId })
+                .IsUnique()
+                .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"ExamId\" IS NOT NULL");
             e.Property(s => s.GrantType).HasConversion<int>();
             e.Property(s => s.CancellationReason).HasMaxLength(1000);
             e.HasOne(s => s.User).WithMany().HasForeignKey(s => s.UserId);
             e.HasOne(s => s.AccessCode).WithMany().HasForeignKey(s => s.AccessCodeId);
+            e.HasIndex(s => s.GiftRecipientId).IsUnique();
+            e.HasIndex(s => s.PublicExamProductId);
+            e.Property(s => s.UsesConsumed).HasDefaultValue(0);
+            e.HasOne(s => s.GiftRecipient).WithOne(r => r.AccessGrant).HasForeignKey<StudentAccessGrant>(s => s.GiftRecipientId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(s => s.PublicExamProduct).WithMany().HasForeignKey(s => s.PublicExamProductId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(s => s.CancelledByUser).WithMany().HasForeignKey(s => s.CancelledByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<GiftIssuance>(e =>
+        {
+            e.ToTable("gift_issuances", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_gift_issuances_target",
+                    "(\"TargetType\" = 0 AND \"PackageId\" IS NOT NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR " +
+                    "(\"TargetType\" = 1 AND \"PackageId\" IS NULL AND \"LessonId\" IS NOT NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR " +
+                    "(\"TargetType\" = 2 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NOT NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR " +
+                    "(\"TargetType\" = 3 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NOT NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR " +
+                    "(\"TargetType\" = 4 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" > 0) OR " +
+                    "(\"TargetType\" = 5 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NOT NULL AND \"Amount\" > 0)");
+                table.HasCheckConstraint("CK_gift_issuances_max_uses", "\"MaxUses\" IS NULL OR \"MaxUses\" > 0");
+            });
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.RequestId).IsUnique();
+            e.HasIndex(x => new { x.CreatedAt, x.Status });
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+            e.HasOne(x => x.IssuedByUser).WithMany().HasForeignKey(x => x.IssuedByUserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Package).WithMany().HasForeignKey(x => x.PackageId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Lesson).WithMany().HasForeignKey(x => x.LessonId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.LessonVideo).WithMany().HasForeignKey(x => x.LessonVideoId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Exam).WithMany().HasForeignKey(x => x.ExamId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<GiftRecipient>(e =>
+        {
+            e.ToTable("gift_recipients", table => table.HasCheckConstraint("CK_gift_recipients_uses", "\"UsesConsumed\" >= 0"));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.GiftIssuanceId, x.StudentId }).IsUnique();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.OutcomeCode).HasMaxLength(80).IsRequired();
+            e.Property(x => x.OutcomeMessage).HasMaxLength(500);
+            e.Property(x => x.RevocationReason).HasMaxLength(500);
+            e.HasOne(x => x.GiftIssuance).WithMany(x => x.Recipients).HasForeignKey(x => x.GiftIssuanceId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.RevokedByUser).WithMany().HasForeignKey(x => x.RevokedByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PromotionalBalanceAllocation>(e =>
+        {
+            e.ToTable("promotional_balance_allocations", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_promotional_balance_conservation",
+                    "\"OriginalAmount\" > 0 AND \"AvailableAmount\" >= 0 AND \"ConsumedAmount\" >= 0 AND \"ExpiredAmount\" >= 0 AND \"RevokedAmount\" >= 0 AND \"OriginalAmount\" = \"AvailableAmount\" + \"ConsumedAmount\" + \"ExpiredAmount\" + \"RevokedAmount\"");
+                table.HasCheckConstraint("CK_promotional_balance_purchase_count", "\"PurchaseCount\" >= 0 AND (\"MaxPurchaseCount\" IS NULL OR (\"MaxPurchaseCount\" > 0 AND \"PurchaseCount\" <= \"MaxPurchaseCount\"))");
+            });
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.GiftRecipientId).IsUnique();
+            e.HasIndex(x => new { x.StudentId, x.TeacherId, x.Status, x.ExpiresAt });
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.OriginalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.AvailableAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ConsumedAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ExpiredAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.RevokedAmount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.GiftRecipient).WithOne(x => x.PromotionalBalanceAllocation).HasForeignKey<PromotionalBalanceAllocation>(x => x.GiftRecipientId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PromotionalBalanceUsage>(e =>
+        {
+            e.ToTable("promotional_balance_usages", table => table.HasCheckConstraint("CK_promotional_balance_usage_amount", "\"Amount\" > 0"));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.PurchaseOperationId, x.AllocationId }).IsUnique();
+            e.Property(x => x.ContentType).HasConversion<int>();
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.Allocation).WithMany(x => x.Usages).HasForeignKey(x => x.AllocationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.GiftRecipient).WithMany().HasForeignKey(x => x.GiftRecipientId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesRule>(e =>
+        {
+            e.ToTable("sales_rules");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.TargetType, x.TargetId, x.TeacherId, x.VideoTypeId, x.IsActive });
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.GradeLevel).HasMaxLength(80);
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Subject).WithMany().HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.VideoType).WithMany().HasForeignKey(x => x.VideoTypeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DiscountStackingPolicy>(e =>
+        {
+            e.ToTable("discount_stacking_policies", table =>
+            {
+                table.HasCheckConstraint("CK_discount_policy_percentage", "\"MaxDiscountPercentage\" IS NULL OR (\"MaxDiscountPercentage\" >= 0 AND \"MaxDiscountPercentage\" <= 100)");
+                table.HasCheckConstraint("CK_discount_policy_amount", "\"MaxDiscountAmount\" IS NULL OR \"MaxDiscountAmount\" > 0");
+            });
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.NormalizedName).IsUnique();
+            e.HasIndex(x => x.IsDefault);
+            e.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            e.Property(x => x.NormalizedName).HasMaxLength(120).IsRequired();
+            e.Property(x => x.Mode).HasConversion<int>();
+            e.Property(x => x.MaxDiscountPercentage).HasColumnType("decimal(18,2)");
+            e.Property(x => x.MaxDiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PriorityJson).HasColumnType("jsonb");
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesCoupon>(e =>
+        {
+            e.ToTable("sales_coupons", table =>
+            {
+                table.HasCheckConstraint("CK_sales_coupons_discount_value", "\"DiscountValue\" > 0 AND (\"DiscountType\" <> 0 OR \"DiscountValue\" <= 100)");
+                table.HasCheckConstraint("CK_sales_coupons_limits", "(\"GlobalUsageLimit\" IS NULL OR \"GlobalUsageLimit\" > 0) AND (\"PerStudentUsageLimit\" IS NULL OR \"PerStudentUsageLimit\" > 0) AND \"UsedCount\" >= 0");
+            });
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.NormalizedCode).IsUnique();
+            e.HasIndex(x => new { x.TargetType, x.TargetId, x.Status });
+            e.Property(x => x.Code).HasMaxLength(80).IsRequired();
+            e.Property(x => x.NormalizedCode).HasMaxLength(80).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.DiscountType).HasConversion<int>();
+            e.Property(x => x.DiscountValue).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.OwnerType).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.DisableReason).HasMaxLength(500);
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.StackingPolicy).WithMany().HasForeignKey(x => x.StackingPolicyId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesCouponUsage>(e =>
+        {
+            e.ToTable("sales_coupon_usages", table => table.HasCheckConstraint("CK_sales_coupon_usage_amounts", "\"GrossAmount\" >= 0 AND \"DiscountAmount\" > 0"));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.CouponId, x.PurchaseOperationId }).IsUnique();
+            e.HasIndex(x => new { x.CouponId, x.StudentId, x.PurchaseOperationId }).IsUnique();
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.GrossAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DiscountAmount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.Coupon).WithMany(x => x.Usages).HasForeignKey(x => x.CouponId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PrintableCodeTemplate>(e =>
+        {
+            e.ToTable("printable_code_templates", table => table.HasCheckConstraint("CK_printable_templates_size", "\"WidthMm\" > 0 AND \"HeightMm\" > 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.WidthMm).HasColumnType("decimal(18,2)");
+            e.Property(x => x.HeightMm).HasColumnType("decimal(18,2)");
+            e.Property(x => x.BackgroundColor).HasMaxLength(32);
+            e.Property(x => x.BackgroundImageUrl).HasMaxLength(1000);
+            e.Property(x => x.LayoutJson).HasColumnType("jsonb");
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PrintableCodeBatch>(e =>
+        {
+            e.ToTable("printable_code_batches", table =>
+            {
+                table.HasCheckConstraint("CK_printable_batches_total", "\"TotalCodes\" > 0 AND \"TotalCodes\" <= 10000 AND \"UsedCount\" >= 0");
+                table.HasCheckConstraint("CK_printable_batches_values", "(\"Behavior\" = 0 AND \"DiscountType\" IS NOT NULL AND \"DiscountValue\" > 0) OR (\"Behavior\" = 1) OR (\"Behavior\" = 2 AND \"CreditAmount\" > 0)");
+            });
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.TargetType, x.TargetId, x.Status });
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.Behavior).HasConversion<int>();
+            e.Property(x => x.DiscountType).HasConversion<int>();
+            e.Property(x => x.DiscountValue).HasColumnType("decimal(18,2)");
+            e.Property(x => x.CreditAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.OwnerType).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.DisableReason).HasMaxLength(500);
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Template).WithMany(x => x.Batches).HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.StackingPolicy).WithMany().HasForeignKey(x => x.StackingPolicyId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PrintableSalesCode>(e =>
+        {
+            e.ToTable("printable_sales_codes", table => table.HasCheckConstraint("CK_printable_sales_codes_usage", "\"UsageLimit\" > 0 AND \"UsedCount\" >= 0 AND \"UsedCount\" <= \"UsageLimit\""));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.CodeHash).IsUnique();
+            e.HasIndex(x => x.SerialNumber).IsUnique();
+            e.Property(x => x.CodeHash).HasMaxLength(256).IsRequired();
+            e.Property(x => x.CodePlaintext).HasMaxLength(80);
+            e.Property(x => x.QrPayload).HasMaxLength(500).IsRequired();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.HasOne(x => x.Batch).WithMany(x => x.Codes).HasForeignKey(x => x.BatchId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.ConsumedByUser).WithMany().HasForeignKey(x => x.ConsumedByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PrintableCodeRedemption>(e =>
+        {
+            e.ToTable("printable_code_redemptions", table => table.HasCheckConstraint("CK_printable_redemption_amount", "\"AppliedAmount\" >= 0"));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.PrintableCodeId, x.RequestId }).IsUnique();
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.AppliedAmount).HasColumnType("decimal(18,2)");
+            e.HasOne(x => x.PrintableCode).WithMany(x => x.Redemptions).HasForeignKey(x => x.PrintableCodeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PublicExamProduct>(e =>
+        {
+            e.ToTable("public_exam_products", table => table.HasCheckConstraint("CK_public_exam_price", "(\"IsPaid\" = FALSE AND \"Price\" = 0) OR (\"IsPaid\" = TRUE AND \"Price\" > 0)"));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.ExamId).IsUnique();
+            e.HasIndex(x => x.Slug).IsUnique();
+            e.HasIndex(x => new { x.IsPublished, x.DisabledAt, x.AvailableFrom, x.AvailableUntil });
+            e.Property(x => x.Slug).HasMaxLength(160).IsRequired();
+            e.Property(x => x.Price).HasColumnType("decimal(18,2)");
+            e.Property(x => x.GradeLevel).HasMaxLength(80);
+            e.Property(x => x.DisableReason).HasMaxLength(500);
+            e.HasOne(x => x.Exam).WithOne(x => x.PublicExamProduct).HasForeignKey<PublicExamProduct>(x => x.ExamId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Subject).WithMany().HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.DisabledByUser).WithMany().HasForeignKey(x => x.DisabledByUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.CreatedByUser).WithMany().HasForeignKey(x => x.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SalesFinancialEffect>(e =>
+        {
+            e.ToTable("sales_financial_effects", table =>
+            {
+                table.HasCheckConstraint("CK_sales_financial_effect_amounts", "\"GrossAmount\" >= 0 AND \"CouponDiscountAmount\" >= 0 AND \"PrintableCodeDiscountAmount\" >= 0 AND \"PromotionalAmount\" >= 0 AND \"PaidAmount\" >= 0 AND \"TeacherShareImpact\" >= 0 AND \"PlatformShareImpact\" >= 0");
+                table.HasCheckConstraint("CK_sales_financial_effect_conservation", "\"GrossAmount\" = \"CouponDiscountAmount\" + \"PrintableCodeDiscountAmount\" + \"PromotionalAmount\" + \"PaidAmount\"");
+            });
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.PurchaseOperationId).IsUnique();
+            e.HasIndex(x => new { x.StudentId, x.TargetType, x.TargetId });
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.GrossAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.CouponDiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PrintableCodeDiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PromotionalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PaidAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TeacherShareImpact).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PlatformShareImpact).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DetailsJson).HasColumnType("jsonb");
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // Package
@@ -391,6 +894,8 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("lessons");
             e.HasKey(l => l.Id);
+            e.Property(l => l.InternalCode).HasMaxLength(40).IsRequired();
+            e.HasIndex(l => l.InternalCode).IsUnique();
             e.Property(l => l.Title).HasMaxLength(200).IsRequired();
             e.HasOne(l => l.ContentSection).WithMany(cs => cs.Lessons).HasForeignKey(l => l.ContentSectionId);
         });
@@ -400,12 +905,28 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("lesson_videos");
             e.HasKey(l => l.Id);
+            e.Property(l => l.InternalCode).HasMaxLength(40).IsRequired();
+            e.HasIndex(l => l.InternalCode).IsUnique();
             e.Property(l => l.Title).HasMaxLength(200).IsRequired();
             e.HasOne(l => l.Lesson).WithMany(le => le.Videos).HasForeignKey(l => l.LessonId);
+            e.HasOne(l => l.VideoType)
+                .WithMany(type => type.Videos)
+                .HasForeignKey(l => l.VideoTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
             e.HasOne(l => l.Exam)
              .WithMany()
              .HasForeignKey(l => l.ExamId)
              .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<VideoType>(e =>
+        {
+            e.ToTable("video_types");
+            e.HasKey(type => type.Id);
+            e.Property(type => type.Name).HasMaxLength(80).IsRequired();
+            e.Property(type => type.NormalizedName).HasMaxLength(80).IsRequired();
+            e.HasIndex(type => type.NormalizedName).IsUnique();
+            e.HasIndex(type => new { type.SortOrder, type.Name });
         });
 
         modelBuilder.Entity<BunnyVideoAsset>(e =>
@@ -512,12 +1033,17 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(cp => cp.Body).HasMaxLength(4000).IsRequired();
             e.Property(cp => cp.Status).HasConversion<int>();
             e.HasIndex(cp => cp.AuthorUserId);
+            e.HasIndex(cp => cp.TeacherId);
             e.HasIndex(cp => cp.Status);
             e.HasIndex(cp => cp.CreatedAt);
             e.HasOne(cp => cp.AuthorUser)
                 .WithMany()
                 .HasForeignKey(cp => cp.AuthorUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(cp => cp.Teacher)
+                .WithMany(t => t.CommunityPosts)
+                .HasForeignKey(cp => cp.TeacherId)
+                .OnDelete(DeleteBehavior.SetNull);
             e.HasOne(cp => cp.ReviewedByUser)
                 .WithMany()
                 .HasForeignKey(cp => cp.ReviewedByUserId)
@@ -533,12 +1059,17 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(c => c.Status).HasConversion<int>();
             e.Property(c => c.RejectionReason).HasMaxLength(1000);
             e.HasIndex(c => c.PostId);
+            e.HasIndex(c => c.ParentCommentId);
             e.HasIndex(c => c.Status);
             e.HasIndex(c => c.CreatedAt);
             e.HasOne(c => c.Post)
                 .WithMany(p => p.Comments)
                 .HasForeignKey(c => c.PostId)
                 .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.ParentComment)
+                .WithMany(c => c.Replies)
+                .HasForeignKey(c => c.ParentCommentId)
+                .OnDelete(DeleteBehavior.Restrict);
             e.HasOne(c => c.AuthorUser)
                 .WithMany()
                 .HasForeignKey(c => c.AuthorUserId)
@@ -621,6 +1152,7 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("ExtraWatchRequests");
             e.HasKey(x => x.Id);
+            e.Property(x => x.RequestReason).HasMaxLength(1000).IsRequired();
             e.Property(x => x.RejectionReason).HasMaxLength(1000);
             e.HasIndex(x => x.UserId);
             e.HasIndex(x => x.LessonVideoId);
@@ -654,9 +1186,12 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("exams");
             e.HasKey(x => x.Id);
+            e.Property(x => x.InternalCode).HasMaxLength(40).IsRequired();
+            e.HasIndex(x => x.InternalCode).IsUnique();
             e.Property(x => x.Title).HasMaxLength(200).IsRequired();
             e.Property(x => x.PassingScore).HasColumnType("decimal(18,2)");
             e.Property(x => x.TotalScore).HasColumnType("decimal(18,2)");
+            e.Property(x => x.IsActive).HasDefaultValue(true);
             e.HasOne(x => x.CreatedByTeacher).WithMany(t => t.Exams).HasForeignKey(x => x.CreatedByTeacherId);
             e.HasOne(x => x.LessonVideo)
              .WithMany()
@@ -752,6 +1287,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(h => h.Id);
             e.Property(h => h.Title).HasMaxLength(255).IsRequired();
             e.Property(h => h.PassingScoreThreshold).HasColumnType("decimal(18,2)");
+            e.Property(h => h.IsActive).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<HomeworkQuestion>(e =>
@@ -831,6 +1367,7 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("notification_events");
             e.HasKey(n => n.Id);
+            e.HasIndex(n => new { n.AcademicScopeOwnerType, n.AcademicScopeOwnerId });
             e.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId);
         });
 
@@ -861,11 +1398,13 @@ public class AppDbContext : DbContext, IAppDbContext
         // Phase 3: StudentBalance
         modelBuilder.Entity<StudentBalance>(e =>
         {
-            e.ToTable("student_balances");
+            e.ToTable("student_balances", table =>
+                table.HasCheckConstraint("CK_student_balances_non_negative", "\"CurrentBalance\" >= 0"));
             e.HasKey(s => s.Id);
             e.HasIndex(s => s.UserId).IsUnique();
             e.Property(s => s.CurrentBalance).HasColumnType("decimal(18,2)");
-            e.HasOne(s => s.User).WithOne(u => u.StudentBalance).HasForeignKey<StudentBalance>(s => s.UserId);
+            e.Property(s => s.Version).IsConcurrencyToken().HasDefaultValue(0L);
+            e.HasOne(s => s.User).WithOne(u => u.StudentBalance).HasForeignKey<StudentBalance>(s => s.UserId).OnDelete(DeleteBehavior.NoAction);
         });
 
         // Phase 3: BalanceTransaction
@@ -877,7 +1416,10 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(b => b.BalanceAfter).HasColumnType("decimal(18,2)");
             e.Property(b => b.TransactionType).HasMaxLength(50).IsRequired();
             e.Property(b => b.Description).HasMaxLength(500).IsRequired();
-            e.HasOne(b => b.StudentBalance).WithMany(s => s.Transactions).HasForeignKey(b => b.StudentBalanceId);
+            e.HasIndex(b => new { b.TransactionType, b.ReferenceId })
+                .IsUnique()
+                .HasFilter("\"ReferenceId\" IS NOT NULL AND \"TransactionType\" IN ('DigitalRecharge', 'CodeRedemption')");
+            e.HasOne(b => b.StudentBalance).WithMany(s => s.Transactions).HasForeignKey(b => b.StudentBalanceId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(b => b.PerformedByUser).WithMany().HasForeignKey(b => b.PerformedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -923,13 +1465,547 @@ public class AppDbContext : DbContext, IAppDbContext
             e.ToTable("employee_profiles");
             e.HasKey(ep => ep.Id);
             e.HasIndex(ep => ep.UserId).IsUnique();
+            e.HasIndex(ep => ep.EmployeeNumber).IsUnique();
+            e.HasIndex(ep => new { ep.EmploymentStatus, ep.HireDate, ep.TerminationDate });
             e.HasOne(ep => ep.User)
              .WithOne(u => u.EmployeeProfile)
              .HasForeignKey<EmployeeProfile>(ep => ep.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Restrict);
+            e.Property(ep => ep.EmployeeNumber).HasMaxLength(40).IsRequired();
+            e.Property(ep => ep.EmploymentStatus).HasConversion<int>().IsRequired();
+            e.Property(ep => ep.HireDate).HasColumnType("date").IsRequired();
+            e.Property(ep => ep.TerminationDate).HasColumnType("date");
+            e.Property(ep => ep.WorkMode).HasConversion<int>().IsRequired();
             e.Property(ep => ep.BasicSalary).HasColumnType("decimal(18,2)").IsRequired();
             e.Property(ep => ep.StandardStartTime).IsRequired();
             e.Property(ep => ep.TargetDailyHours).IsRequired();
+        });
+
+        modelBuilder.Entity<HrIdempotencyRecord>(e =>
+        {
+            e.ToTable("hr_idempotency_records");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.Scope).HasMaxLength(100).IsRequired();
+            e.Property(item => item.Key).HasMaxLength(200).IsRequired();
+            e.Property(item => item.RequestHash).HasMaxLength(128).IsRequired();
+            e.Property(item => item.ResponseJson).HasMaxLength(8000);
+            e.HasIndex(item => new { item.Scope, item.ActorUserId, item.Key }).IsUnique();
+            e.HasIndex(item => item.ExpiresAt);
+        });
+
+        modelBuilder.Entity<HrModuleRollout>(e =>
+        {
+            e.ToTable("hr_module_rollouts");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.Module).HasMaxLength(100).IsRequired();
+            e.Property(item => item.ReadTarget).HasMaxLength(20).IsRequired();
+            e.Property(item => item.WriteTarget).HasMaxLength(20).IsRequired();
+            e.Property(item => item.Reason).HasMaxLength(2000);
+            e.Property(item => item.State).HasConversion<int>().IsRequired();
+            e.HasIndex(item => item.Module).IsUnique();
+        });
+
+        modelBuilder.Entity<OrganizationUnit>(e =>
+        {
+            e.ToTable("hr_organization_units");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.Code).HasMaxLength(40).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.Property(item => item.Type).HasConversion<int>().IsRequired();
+            e.Property(item => item.EffectiveFrom).HasColumnType("date");
+            e.Property(item => item.EffectiveTo).HasColumnType("date");
+            e.HasIndex(item => item.Code).IsUnique();
+            e.HasIndex(item => item.ParentId);
+            e.HasOne(item => item.Parent).WithMany().HasForeignKey(item => item.ParentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.ManagerEmployee).WithMany().HasForeignKey(item => item.ManagerEmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        ConfigureHrLookup<JobPosition>(modelBuilder, "hr_job_positions");
+        ConfigureHrLookup<JobGrade>(modelBuilder, "hr_job_grades");
+        ConfigureHrLookup<CostCenter>(modelBuilder, "hr_cost_centers");
+        modelBuilder.Entity<WorkLocation>(e =>
+        {
+            e.ToTable("hr_work_locations");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.Code).HasMaxLength(40).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.Property(item => item.Address).HasMaxLength(500);
+            e.Property(item => item.Latitude).HasPrecision(9, 6);
+            e.Property(item => item.Longitude).HasPrecision(9, 6);
+            e.HasIndex(item => item.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<EmploymentAssignment>(e =>
+        {
+            e.ToTable("hr_employment_assignments");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.EffectiveFrom).HasColumnType("date");
+            e.Property(item => item.EffectiveTo).HasColumnType("date");
+            e.Property(item => item.ChangeReason).HasMaxLength(1000).IsRequired();
+            e.HasIndex(item => new { item.EmployeeId, item.EffectiveFrom });
+            e.HasIndex(item => new { item.OrganizationUnitId, item.EffectiveFrom, item.EffectiveTo, item.EmployeeId });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.OrganizationUnit).WithMany().HasForeignKey(item => item.OrganizationUnitId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.JobPosition).WithMany().HasForeignKey(item => item.JobPositionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.JobGrade).WithMany().HasForeignKey(item => item.JobGradeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.ManagerEmployee).WithMany().HasForeignKey(item => item.ManagerEmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.WorkLocation).WithMany().HasForeignKey(item => item.WorkLocationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.CostCenter).WithMany().HasForeignKey(item => item.CostCenterId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EmploymentContract>(e =>
+        {
+            e.ToTable("hr_employment_contracts");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.ContractNumber).HasMaxLength(80).IsRequired();
+            e.Property(item => item.Type).HasConversion<int>().IsRequired();
+            e.Property(item => item.Status).HasConversion<int>().IsRequired();
+            e.Property(item => item.StartDate).HasColumnType("date");
+            e.Property(item => item.EndDate).HasColumnType("date");
+            e.Property(item => item.ProbationEndDate).HasColumnType("date");
+            e.Property(item => item.BaseSalary).HasColumnType("decimal(18,2)");
+            e.Property(item => item.Currency).HasMaxLength(3).IsRequired();
+            e.Property(item => item.TermsJson).HasColumnType("jsonb");
+            e.HasIndex(item => item.ContractNumber).IsUnique();
+            e.HasIndex(item => new { item.EmployeeId, item.StartDate });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WorkCalendar>(e =>
+        {
+            e.ToTable("hr_work_calendars");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.Code).HasMaxLength(40).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.Property(item => item.TimeZoneId).HasMaxLength(100).IsRequired();
+            e.Property(item => item.HolidaysJson).HasColumnType("jsonb").IsRequired();
+            e.HasIndex(item => item.Code).IsUnique();
+        });
+
+        modelBuilder.Entity<ShiftTemplate>(e =>
+        {
+            e.ToTable("hr_shift_templates");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.Code).HasMaxLength(40).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.Property(item => item.Mode).HasConversion<int>().IsRequired();
+            e.HasIndex(item => item.Code).IsUnique();
+            e.HasOne(item => item.WorkCalendar).WithMany(item => item.ShiftTemplates).HasForeignKey(item => item.WorkCalendarId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShiftSegment>(e =>
+        {
+            e.ToTable("hr_shift_segments", table => table.HasCheckConstraint("CK_hr_shift_segments_nonzero", "\"StartsAt\" <> \"EndsAt\""));
+            e.HasKey(item => item.Id);
+            e.Property(item => item.WorkDateRule).HasConversion<int>().IsRequired();
+            e.HasIndex(item => new { item.ShiftTemplateId, item.Sequence }).IsUnique();
+            e.HasOne(item => item.ShiftTemplate).WithMany(item => item.Segments).HasForeignKey(item => item.ShiftTemplateId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShiftAssignment>(e =>
+        {
+            e.ToTable("hr_shift_assignments", table => table.HasCheckConstraint("CK_hr_shift_assignments_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" > \"EffectiveFrom\""));
+            e.HasKey(item => item.Id);
+            e.Property(item => item.EffectiveFrom).HasColumnType("date");
+            e.Property(item => item.EffectiveTo).HasColumnType("date");
+            e.Property(item => item.Status).HasConversion<int>().IsRequired();
+            e.Property(item => item.Reason).HasMaxLength(1000).IsRequired();
+            e.HasIndex(item => new { item.EmployeeId, item.EffectiveFrom, item.EffectiveTo });
+            e.HasIndex(item => item.ReplacesAssignmentId).IsUnique().HasFilter("\"ReplacesAssignmentId\" IS NOT NULL");
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.ShiftTemplate).WithMany().HasForeignKey(item => item.ShiftTemplateId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.ReplacesAssignment).WithMany().HasForeignKey(item => item.ReplacesAssignmentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(item => item.PublishedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShiftSwapRequest>(e =>
+        {
+            e.ToTable("hr_shift_swap_requests");
+            e.HasKey(item => item.Id);
+            e.Property(item => item.Status).HasConversion<int>().IsRequired();
+            e.Property(item => item.Reason).HasMaxLength(1000).IsRequired();
+            e.Property(item => item.DecisionReason).HasMaxLength(1000);
+            e.HasIndex(item => new { item.RequesterEmployeeId, item.Status });
+            e.HasOne(item => item.RequesterEmployee).WithMany().HasForeignKey(item => item.RequesterEmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.TargetEmployee).WithMany().HasForeignKey(item => item.TargetEmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.RequesterAssignment).WithMany().HasForeignKey(item => item.RequesterAssignmentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.TargetAssignment).WithMany().HasForeignKey(item => item.TargetAssignmentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AttendancePolicy>(e =>
+        {
+            e.ToTable("hr_attendance_policies"); e.HasKey(item => item.Id);
+            e.Property(item => item.Code).HasMaxLength(40).IsRequired(); e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.Property(item => item.Kind).HasConversion<int>().IsRequired(); e.Property(item => item.Latitude).HasPrecision(9, 6); e.Property(item => item.Longitude).HasPrecision(9, 6);
+            e.HasIndex(item => item.Code).IsUnique();
+        });
+        modelBuilder.Entity<AttendancePolicyAssignment>(e =>
+        {
+            e.ToTable("hr_attendance_policy_assignments", table => table.HasCheckConstraint("CK_hr_attendance_policy_assignment_target", "(CASE WHEN \"EmployeeId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"ShiftTemplateId\" IS NOT NULL THEN 1 ELSE 0 END) = 1"));
+            e.HasKey(item => item.Id); e.Property(item => item.EffectiveFrom).HasColumnType("date"); e.Property(item => item.EffectiveTo).HasColumnType("date");
+            e.HasIndex(item => new { item.EmployeeId, item.EffectiveFrom }); e.HasIndex(item => new { item.ShiftTemplateId, item.EffectiveFrom });
+            e.HasOne(item => item.AttendancePolicy).WithMany().HasForeignKey(item => item.AttendancePolicyId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.ShiftTemplate).WithMany().HasForeignKey(item => item.ShiftTemplateId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<TrustedAttendanceDevice>(e =>
+        {
+            e.ToTable("hr_trusted_attendance_devices"); e.HasKey(item => item.Id);
+            e.Property(item => item.TokenHash).HasMaxLength(128).IsRequired(); e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.HasIndex(item => new { item.EmployeeId, item.TokenHash }).IsUnique();
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AttendancePolicyException>(e =>
+        {
+            e.ToTable("hr_attendance_policy_exceptions", table => table.HasCheckConstraint("CK_hr_attendance_policy_exception_dates", "\"EndsAt\" > \"StartsAt\"")); e.HasKey(item => item.Id);
+            e.Property(item => item.Reason).HasMaxLength(1000).IsRequired(); e.HasIndex(item => new { item.EmployeeId, item.StartsAt, item.EndsAt });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.OverridePolicy).WithMany().HasForeignKey(item => item.OverridePolicyId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<User>().WithMany().HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AttendanceSession>(e =>
+        {
+            e.ToTable("hr_attendance_sessions", table => table.HasCheckConstraint("CK_hr_attendance_session_times", "\"ClockedOutAt\" IS NULL OR \"ClockedOutAt\" > \"ClockedInAt\"")); e.HasKey(item => item.Id);
+            e.Property(item => item.WorkDate).HasColumnType("date"); e.Property(item => item.State).HasConversion<int>().IsRequired();
+            e.HasIndex(item => new { item.EmployeeId, item.WorkDate });
+            e.HasIndex(item => item.EmployeeId).IsUnique().HasFilter("\"State\" = 0");
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.ShiftAssignment).WithMany().HasForeignKey(item => item.ShiftAssignmentId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AttendanceBreak>(e =>
+        {
+            e.ToTable("hr_attendance_breaks", table => table.HasCheckConstraint("CK_hr_attendance_break_times", "\"EndedAt\" IS NULL OR \"EndedAt\" > \"StartedAt\"")); e.HasKey(item => item.Id);
+            e.Property(item => item.Kind).HasConversion<int>().IsRequired();
+            e.HasIndex(item => item.AttendanceSessionId).IsUnique().HasFilter("\"EndedAt\" IS NULL");
+            e.HasOne(item => item.AttendanceSession).WithMany(item => item.Breaks).HasForeignKey(item => item.AttendanceSessionId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AttendanceAttempt>(e =>
+        {
+            e.ToTable("hr_attendance_attempts"); e.HasKey(item => item.Id);
+            e.Property(item => item.EventType).HasConversion<int>().IsRequired(); e.Property(item => item.DecisionCode).HasMaxLength(100).IsRequired();
+            e.Property(item => item.IdempotencyKey).HasMaxLength(200).IsRequired(); e.Property(item => item.EvidenceJson).HasColumnType("jsonb").IsRequired();
+            e.HasIndex(item => new { item.EmployeeId, item.EventType, item.IdempotencyKey }).IsUnique(); e.HasIndex(item => new { item.EmployeeId, item.OccurredAt });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.AttendancePolicy).WithMany().HasForeignKey(item => item.AttendancePolicyId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.AttendanceSession).WithMany().HasForeignKey(item => item.AttendanceSessionId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<WorkdayClassification>(e =>
+        {
+            e.ToTable("hr_workday_classifications"); e.HasKey(item => item.Id);
+            e.Property(item => item.WorkDate).HasColumnType("date"); e.Property(item => item.Kind).HasConversion<int>().IsRequired();
+            e.Property(item => item.SourceType).HasMaxLength(100).IsRequired(); e.HasIndex(item => new { item.EmployeeId, item.WorkDate }).IsUnique();
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<AttendanceCorrection>(e =>
+        {
+            e.ToTable("hr_attendance_corrections"); e.HasKey(item => item.Id);
+            e.Property(item => item.Reason).HasMaxLength(1000).IsRequired(); e.Property(item => item.EvidenceReference).HasMaxLength(1000);
+            e.Property(item => item.State).HasConversion<int>().IsRequired(); e.Property(item => item.BeforeJson).HasColumnType("jsonb").IsRequired(); e.Property(item => item.AppliedJson).HasColumnType("jsonb");
+            e.Property(item => item.DecisionReason).HasMaxLength(1000); e.HasIndex(item => new { item.EmployeeId, item.State }); e.HasIndex(item => item.AttendanceSessionId);
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.AttendanceSession).WithMany().HasForeignKey(item => item.AttendanceSessionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LeaveType>(e =>
+        {
+            e.ToTable("hr_leave_types"); e.HasKey(item => item.Id);
+            e.Property(item => item.Code).HasMaxLength(40).IsRequired(); e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.HasIndex(item => item.Code).IsUnique();
+        });
+        modelBuilder.Entity<LeavePolicy>(e =>
+        {
+            e.ToTable("hr_leave_policies", table => table.HasCheckConstraint("CK_hr_leave_policy_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\""));
+            e.HasKey(item => item.Id); e.Property(item => item.Name).HasMaxLength(200).IsRequired();
+            e.Property(item => item.AnnualEntitlement).HasColumnType("decimal(10,2)"); e.Property(item => item.MaximumCarryover).HasColumnType("decimal(10,2)");
+            e.Property(item => item.EffectiveFrom).HasColumnType("date"); e.Property(item => item.EffectiveTo).HasColumnType("date");
+            e.HasIndex(item => new { item.LeaveTypeId, item.EffectiveFrom });
+            e.HasOne(item => item.LeaveType).WithMany().HasForeignKey(item => item.LeaveTypeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.WorkCalendar).WithMany().HasForeignKey(item => item.WorkCalendarId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<LeaveBalance>(e =>
+        {
+            e.ToTable("hr_leave_balances", table => table.HasCheckConstraint("CK_hr_leave_balance_nonnegative", "\"Reserved\" >= 0 AND \"Used\" >= 0")); e.HasKey(item => item.Id);
+            e.Property(item => item.Granted).HasColumnType("decimal(10,2)"); e.Property(item => item.Carried).HasColumnType("decimal(10,2)");
+            e.Property(item => item.Reserved).HasColumnType("decimal(10,2)"); e.Property(item => item.Used).HasColumnType("decimal(10,2)");
+            e.HasIndex(item => new { item.EmployeeId, item.LeaveTypeId, item.Year }).IsUnique();
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.LeaveType).WithMany().HasForeignKey(item => item.LeaveTypeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<LeaveLedgerEntry>(e =>
+        {
+            e.ToTable("hr_leave_ledger_entries"); e.HasKey(item => item.Id); e.Property(item => item.EntryType).HasConversion<int>();
+            e.Property(item => item.Amount).HasColumnType("decimal(10,2)"); e.Property(item => item.SourceType).HasMaxLength(100).IsRequired();
+            e.Property(item => item.Reason).HasMaxLength(1000).IsRequired();
+            e.HasIndex(item => new { item.SourceType, item.SourceId, item.EntryType }).IsUnique();
+            e.HasOne(item => item.LeaveBalance).WithMany().HasForeignKey(item => item.LeaveBalanceId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrLeaveRequest>(e =>
+        {
+            e.ToTable("hr_leave_requests", table =>
+            {
+                table.HasCheckConstraint("CK_hr_leave_request_dates", "\"EndDate\" >= \"StartDate\"");
+                table.HasCheckConstraint("CK_hr_leave_request_fraction", "\"DayFraction\" > 0 AND \"DayFraction\" <= 1");
+            });
+            e.HasKey(item => item.Id); e.Property(item => item.StartDate).HasColumnType("date"); e.Property(item => item.EndDate).HasColumnType("date");
+            e.Property(item => item.DayFraction).HasColumnType("decimal(4,2)"); e.Property(item => item.Workdays).HasColumnType("decimal(10,2)");
+            e.Property(item => item.ReservedAmount).HasColumnType("decimal(10,2)"); e.Property(item => item.Reason).HasMaxLength(2000).IsRequired();
+            e.Property(item => item.AttachmentReference).HasMaxLength(1000); e.Property(item => item.State).HasConversion<int>();
+            e.Property(item => item.Version).IsConcurrencyToken();
+            e.HasIndex(item => new { item.EmployeeId, item.StartDate, item.EndDate });
+            e.HasIndex(item => new { item.State, item.StartDate, item.EndDate, item.EmployeeId });
+            e.HasIndex(item => item.ApprovalInstanceId).IsUnique().HasFilter("\"ApprovalInstanceId\" IS NOT NULL");
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.LeaveType).WithMany().HasForeignKey(item => item.LeaveTypeId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.ApprovalInstance).WithMany().HasForeignKey(item => item.ApprovalInstanceId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ApprovalDefinition>(e =>
+        {
+            e.ToTable("hr_approval_definitions"); e.HasKey(item => item.Id); e.Property(item => item.RequestType).HasMaxLength(100).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired(); e.HasIndex(item => new { item.RequestType, item.Version }).IsUnique();
+        });
+        modelBuilder.Entity<ApprovalDefinitionStep>(e =>
+        {
+            e.ToTable("hr_approval_definition_steps", table => table.HasCheckConstraint("CK_hr_approval_step_sla", "\"SlaMinutes\" > 0")); e.HasKey(item => item.Id);
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired(); e.Property(item => item.ApproverKind).HasConversion<int>();
+            e.Property(item => item.Permission).HasMaxLength(200); e.Property(item => item.EscalationPermission).HasMaxLength(200);
+            e.HasIndex(item => new { item.ApprovalDefinitionId, item.Order }).IsUnique();
+            e.HasOne(item => item.ApprovalDefinition).WithMany(item => item.Steps).HasForeignKey(item => item.ApprovalDefinitionId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ApprovalInstance>(e =>
+        {
+            e.ToTable("hr_approval_instances"); e.HasKey(item => item.Id); e.Property(item => item.RequestType).HasMaxLength(100).IsRequired(); e.Property(item => item.State).HasConversion<int>();
+            e.Property(item => item.Version).IsConcurrencyToken();
+            e.HasIndex(item => new { item.RequestType, item.RequestId }).IsUnique(); e.HasIndex(item => new { item.State, item.CurrentStepOrder });
+            e.HasOne(item => item.ApprovalDefinition).WithMany().HasForeignKey(item => item.ApprovalDefinitionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.RequesterEmployee).WithMany().HasForeignKey(item => item.RequesterEmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ApprovalStepInstance>(e =>
+        {
+            e.ToTable("hr_approval_step_instances"); e.HasKey(item => item.Id); e.Property(item => item.State).HasConversion<int>();
+            e.Property(item => item.DecisionReason).HasMaxLength(2000); e.HasIndex(item => new { item.ApprovalInstanceId, item.Order }).IsUnique();
+            e.HasIndex(item => new { item.State, item.DueAt });
+            e.HasOne(item => item.ApprovalInstance).WithMany(item => item.Steps).HasForeignKey(item => item.ApprovalInstanceId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.DefinitionStep).WithMany().HasForeignKey(item => item.ApprovalDefinitionStepId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ApprovalDelegation>(e =>
+        {
+            e.ToTable("hr_approval_delegations", table => table.HasCheckConstraint("CK_hr_approval_delegation_dates", "\"EndsAt\" > \"StartsAt\"")); e.HasKey(item => item.Id);
+            e.Property(item => item.Scope).HasMaxLength(100).IsRequired(); e.Property(item => item.Reason).HasMaxLength(1000).IsRequired();
+            e.HasIndex(item => new { item.PrincipalUserId, item.DelegateUserId, item.Scope, item.StartsAt, item.EndsAt });
+        });
+        modelBuilder.Entity<PayComponent>(e =>
+        {
+            e.ToTable("hr_pay_components"); e.HasKey(item => item.Id); e.Property(item => item.Code).HasMaxLength(50).IsRequired();
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired(); e.Property(item => item.Classification).HasConversion<int>(); e.HasIndex(item => item.Code).IsUnique();
+        });
+        modelBuilder.Entity<PayrollRule>(e =>
+        {
+            e.ToTable("hr_payroll_rules", table =>
+            {
+                table.HasCheckConstraint("CK_hr_payroll_rule_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+                table.HasCheckConstraint("CK_hr_payroll_rule_version", "\"Version\" > 0");
+            });
+            e.HasKey(item => item.Id); e.Property(item => item.Name).HasMaxLength(200).IsRequired(); e.Property(item => item.Expression).HasMaxLength(500).IsRequired();
+            e.Property(item => item.Rate).HasColumnType("decimal(18,4)"); e.Property(item => item.EffectiveFrom).HasColumnType("date"); e.Property(item => item.EffectiveTo).HasColumnType("date");
+            e.HasIndex(item => new { item.PayComponentId, item.EffectiveFrom, item.Version }).IsUnique();
+            e.HasOne(item => item.PayComponent).WithMany().HasForeignKey(item => item.PayComponentId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<EmployeeCompensation>(e =>
+        {
+            e.ToTable("hr_employee_compensations", table => table.HasCheckConstraint("CK_hr_compensation_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\""));
+            e.HasKey(item => item.Id); e.Property(item => item.BaseSalary).HasColumnType("decimal(18,2)"); e.Property(item => item.Currency).HasMaxLength(3).IsRequired();
+            e.Property(item => item.EffectiveFrom).HasColumnType("date"); e.Property(item => item.EffectiveTo).HasColumnType("date"); e.Property(item => item.Reason).HasMaxLength(1000).IsRequired();
+            e.HasIndex(item => new { item.EmployeeId, item.EffectiveFrom }).IsUnique(); e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrPayrollRun>(e =>
+        {
+            e.ToTable("hr_payroll_runs", table => table.HasCheckConstraint("CK_hr_payroll_run_period", "\"PeriodEnd\" >= \"PeriodStart\"")); e.HasKey(item => item.Id);
+            e.Property(item => item.RunNumber).HasMaxLength(40).IsRequired(); e.Property(item => item.PeriodStart).HasColumnType("date"); e.Property(item => item.PeriodEnd).HasColumnType("date");
+            e.Property(item => item.Status).HasConversion<int>(); e.Property(item => item.TotalGross).HasColumnType("decimal(18,2)"); e.Property(item => item.TotalDeductions).HasColumnType("decimal(18,2)"); e.Property(item => item.TotalNet).HasColumnType("decimal(18,2)");
+            e.Property(item => item.SourceDataVersion).HasMaxLength(100).IsRequired(); e.Property(item => item.ReconciliationHash).HasMaxLength(128).IsRequired();
+            e.HasIndex(item => item.RunNumber).IsUnique(); e.HasIndex(item => new { item.PeriodStart, item.PeriodEnd }).IsUnique();
+            e.HasIndex(item => new { item.Status, item.PeriodEnd });
+        });
+        modelBuilder.Entity<EmployeePayroll>(e =>
+        {
+            e.ToTable("hr_employee_payrolls"); e.HasKey(item => item.Id); e.Property(item => item.EmployeeNumberSnapshot).HasMaxLength(80).IsRequired();
+            e.Property(item => item.EmployeeNameSnapshot).HasMaxLength(300).IsRequired(); e.Property(item => item.BaseSalarySnapshot).HasColumnType("decimal(18,2)");
+            e.Property(item => item.Currency).HasMaxLength(3).IsRequired(); e.Property(item => item.Gross).HasColumnType("decimal(18,2)"); e.Property(item => item.Deductions).HasColumnType("decimal(18,2)"); e.Property(item => item.Net).HasColumnType("decimal(18,2)"); e.Property(item => item.Status).HasConversion<int>();
+            e.HasIndex(item => new { item.PayrollRunId, item.EmployeeId }).IsUnique(); e.HasOne(item => item.PayrollRun).WithMany(item => item.Employees).HasForeignKey(item => item.PayrollRunId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(item => new { item.EmployeeId, item.Status, item.PayrollRunId });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PayrollLineItem>(e =>
+        {
+            e.ToTable("hr_payroll_line_items"); e.HasKey(item => item.Id); e.Property(item => item.Amount).HasColumnType("decimal(18,2)");
+            e.Property(item => item.InputsJson).HasColumnType("jsonb").IsRequired(); e.Property(item => item.Explanation).HasMaxLength(2000).IsRequired();
+            e.Property(item => item.SourceType).HasMaxLength(100).IsRequired(); e.HasIndex(item => new { item.EmployeePayrollId, item.SourceType, item.SourceId, item.PayComponentId }).IsUnique();
+            e.HasOne(item => item.EmployeePayroll).WithMany(item => item.Lines).HasForeignKey(item => item.EmployeePayrollId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.PayComponent).WithMany().HasForeignKey(item => item.PayComponentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.RuleVersion).WithMany().HasForeignKey(item => item.RuleVersionId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<Payslip>(e =>
+        {
+            e.ToTable("hr_payslips"); e.HasKey(item => item.Id); e.Property(item => item.AssetReference).HasMaxLength(1000).IsRequired(); e.Property(item => item.ContentHash).HasMaxLength(128).IsRequired();
+            e.HasIndex(item => new { item.EmployeePayrollId, item.Version }).IsUnique(); e.HasOne(item => item.EmployeePayroll).WithMany().HasForeignKey(item => item.EmployeePayrollId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PayrollSettlementAdjustment>(e =>
+        {
+            e.ToTable("hr_payroll_settlement_adjustments"); e.HasKey(item => item.Id); e.Property(item => item.Amount).HasColumnType("decimal(18,2)"); e.Property(item => item.Reason).HasMaxLength(2000).IsRequired();
+            e.HasIndex(item => new { item.OriginalPayrollLineItemId, item.SettlementPayrollRunId }).IsUnique();
+            e.HasOne(item => item.OriginalPayrollLineItem).WithMany().HasForeignKey(item => item.OriginalPayrollLineItemId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.SettlementPayrollRun).WithMany().HasForeignKey(item => item.SettlementPayrollRunId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrFinancialRequest>(e =>
+        {
+            e.ToTable("hr_financial_requests", table =>
+            {
+                table.HasCheckConstraint("CK_hr_financial_request_amount", "\"Amount\" > 0 AND \"OutstandingBalance\" >= 0");
+                table.HasCheckConstraint("CK_hr_financial_request_installments", "\"RequestedInstallments\" BETWEEN 1 AND 60");
+            });
+            e.HasKey(item => item.Id); e.Property(item => item.Type).HasConversion<int>(); e.Property(item => item.State).HasConversion<int>();
+            e.Property(item => item.Amount).HasColumnType("decimal(18,2)"); e.Property(item => item.OutstandingBalance).HasColumnType("decimal(18,2)");
+            e.Property(item => item.Reason).HasMaxLength(2000).IsRequired(); e.Property(item => item.AttachmentReference).HasMaxLength(1000).IsRequired();
+            e.HasIndex(item => new { item.EmployeeId, item.State, item.CreatedAt });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrFinancialInstallment>(e =>
+        {
+            e.ToTable("hr_financial_installments", table => table.HasCheckConstraint("CK_hr_financial_installment_amount", "\"Amount\" > 0"));
+            e.HasKey(item => item.Id); e.Property(item => item.DueDate).HasColumnType("date"); e.Property(item => item.Amount).HasColumnType("decimal(18,2)"); e.Property(item => item.State).HasConversion<int>();
+            e.HasIndex(item => new { item.FinancialRequestId, item.Sequence }).IsUnique(); e.HasIndex(item => item.PayrollLineItemId).IsUnique().HasFilter("\"PayrollLineItemId\" IS NOT NULL");
+            e.HasIndex(item => new { item.State, item.DueDate });
+            e.HasOne(item => item.FinancialRequest).WithMany(item => item.Installments).HasForeignKey(item => item.FinancialRequestId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.PayrollLineItem).WithMany().HasForeignKey(item => item.PayrollLineItemId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrPayrollInputSource>(e =>
+        {
+            e.ToTable("hr_payroll_input_sources"); e.HasKey(item => item.Id); e.Property(item => item.SourceType).HasMaxLength(100).IsRequired();
+            e.HasIndex(item => new { item.SourceType, item.SourceId }).IsUnique(); e.HasIndex(item => item.PayrollLineItemId).IsUnique();
+            e.HasOne(item => item.EmployeePayroll).WithMany().HasForeignKey(item => item.EmployeePayrollId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.PayrollLineItem).WithMany().HasForeignKey(item => item.PayrollLineItemId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<EmployeeDocument>(e =>
+        {
+            e.ToTable("hr_employee_documents"); e.HasKey(item => item.Id); e.Property(item => item.Category).HasConversion<int>(); e.Property(item => item.Name).HasMaxLength(300).IsRequired();
+            e.Property(item => item.IssuedOn).HasColumnType("date"); e.Property(item => item.ExpiresOn).HasColumnType("date"); e.Property(item => item.RetainUntil).HasColumnType("date");
+            e.HasIndex(item => new { item.EmployeeId, item.Category, item.Name }); e.HasIndex(item => new { item.ExpiresOn, item.IsArchived }); e.HasIndex(item => new { item.RetainUntil, item.LegalHold, item.IsArchived });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<EmployeeDocumentVersion>(e =>
+        {
+            e.ToTable("hr_employee_document_versions", table => table.HasCheckConstraint("CK_hr_document_version_size", "\"SizeBytes\" >= 0 AND \"Version\" > 0")); e.HasKey(item => item.Id);
+            e.Property(item => item.AssetReference).HasMaxLength(1000).IsRequired(); e.Property(item => item.ContentHash).HasMaxLength(128).IsRequired(); e.Property(item => item.MimeType).HasMaxLength(200).IsRequired();
+            e.HasIndex(item => new { item.EmployeeDocumentId, item.Version }).IsUnique(); e.HasOne(item => item.EmployeeDocument).WithMany(item => item.Versions).HasForeignKey(item => item.EmployeeDocumentId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrAsset>(e =>
+        {
+            e.ToTable("hr_assets", table => table.HasCheckConstraint("CK_hr_asset_value", "\"Value\" >= 0")); e.HasKey(item => item.Id);
+            e.Property(item => item.Code).HasMaxLength(80).IsRequired(); e.Property(item => item.Name).HasMaxLength(300).IsRequired(); e.Property(item => item.SerialNumber).HasMaxLength(200);
+            e.Property(item => item.Value).HasColumnType("decimal(18,2)"); e.Property(item => item.Status).HasConversion<int>(); e.HasIndex(item => item.Code).IsUnique(); e.HasIndex(item => item.SerialNumber).IsUnique().HasFilter("\"SerialNumber\" IS NOT NULL");
+        });
+        modelBuilder.Entity<AssetCustody>(e =>
+        {
+            e.ToTable("hr_asset_custodies"); e.HasKey(item => item.Id); e.Property(item => item.State).HasConversion<int>(); e.Property(item => item.AssignedCondition).HasMaxLength(1000).IsRequired();
+            e.Property(item => item.ReturnCondition).HasMaxLength(1000); e.Property(item => item.ExceptionReason).HasMaxLength(2000);
+            e.HasIndex(item => item.AssetId).IsUnique().HasFilter("\"State\" = 0"); e.HasIndex(item => new { item.EmployeeId, item.State });
+            e.HasOne(item => item.Asset).WithMany(item => item.Custodies).HasForeignKey(item => item.AssetId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PerformanceCycle>(e =>
+        {
+            e.ToTable("hr_performance_cycles", table => table.HasCheckConstraint("CK_hr_performance_cycle_dates", "\"EndsOn\" >= \"StartsOn\"")); e.HasKey(item => item.Id);
+            e.Property(item => item.Name).HasMaxLength(200).IsRequired(); e.Property(item => item.StartsOn).HasColumnType("date"); e.Property(item => item.EndsOn).HasColumnType("date"); e.Property(item => item.State).HasConversion<int>();
+            e.HasIndex(item => new { item.StartsOn, item.EndsOn });
+        });
+        modelBuilder.Entity<PerformanceGoal>(e =>
+        {
+            e.ToTable("hr_performance_goals", table => table.HasCheckConstraint("CK_hr_performance_goal_weight", "\"Weight\" > 0 AND \"Weight\" <= 100")); e.HasKey(item => item.Id);
+            e.Property(item => item.Name).HasMaxLength(300).IsRequired(); e.Property(item => item.Weight).HasColumnType("decimal(5,2)"); e.HasIndex(item => new { item.PerformanceCycleId, item.Name }).IsUnique();
+            e.HasOne(item => item.PerformanceCycle).WithMany(item => item.Goals).HasForeignKey(item => item.PerformanceCycleId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PerformanceReview>(e =>
+        {
+            e.ToTable("hr_performance_reviews", table => table.HasCheckConstraint("CK_hr_performance_review_score", "\"WeightedScore\" >= 0 AND \"WeightedScore\" <= 100")); e.HasKey(item => item.Id);
+            e.Property(item => item.ScoresJson).HasColumnType("jsonb").IsRequired(); e.Property(item => item.WeightedScore).HasColumnType("decimal(5,2)"); e.Property(item => item.State).HasConversion<int>();
+            e.Property(item => item.AppealReason).HasMaxLength(2000); e.Property(item => item.AppealResolution).HasMaxLength(2000); e.HasIndex(item => new { item.PerformanceCycleId, item.EmployeeId }).IsUnique();
+            e.HasOne(item => item.PerformanceCycle).WithMany().HasForeignKey(item => item.PerformanceCycleId).OnDelete(DeleteBehavior.Restrict); e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<EmployeeCase>(e =>
+        {
+            e.ToTable("hr_employee_cases"); e.HasKey(item => item.Id); e.Property(item => item.CaseNumber).HasMaxLength(80).IsRequired(); e.Property(item => item.Title).HasMaxLength(300).IsRequired();
+            e.Property(item => item.Description).HasMaxLength(10000).IsRequired(); e.Property(item => item.State).HasConversion<int>(); e.HasIndex(item => item.CaseNumber).IsUnique(); e.HasIndex(item => new { item.EmployeeId, item.State, item.IsConfidential });
+            e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<CaseEvidence>(e =>
+        {
+            e.ToTable("hr_case_evidence"); e.HasKey(item => item.Id); e.Property(item => item.AssetReference).HasMaxLength(1000).IsRequired(); e.Property(item => item.ContentHash).HasMaxLength(128).IsRequired();
+            e.HasIndex(item => new { item.EmployeeCaseId, item.ContentHash }).IsUnique(); e.HasOne(item => item.EmployeeCase).WithMany(item => item.Evidence).HasForeignKey(item => item.EmployeeCaseId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<CaseResponse>(e =>
+        {
+            e.ToTable("hr_case_responses"); e.HasKey(item => item.Id); e.Property(item => item.Response).HasMaxLength(10000).IsRequired(); e.Property(item => item.AttachmentReference).HasMaxLength(1000);
+            e.HasOne(item => item.EmployeeCase).WithMany(item => item.Responses).HasForeignKey(item => item.EmployeeCaseId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<DisciplinaryAction>(e =>
+        {
+            e.ToTable("hr_disciplinary_actions", table => table.HasCheckConstraint("CK_hr_disciplinary_financial", "\"Type\" <> 2 OR \"FinancialAmount\" > 0")); e.HasKey(item => item.Id);
+            e.Property(item => item.Type).HasConversion<int>(); e.Property(item => item.FinancialAmount).HasColumnType("decimal(18,2)"); e.Property(item => item.Reason).HasMaxLength(2000).IsRequired();
+            e.HasIndex(item => item.PayrollLineItemId).IsUnique().HasFilter("\"PayrollLineItemId\" IS NOT NULL"); e.HasOne(item => item.EmployeeCase).WithMany(item => item.Actions).HasForeignKey(item => item.EmployeeCaseId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(item => item.PayrollLineItem).WithMany().HasForeignKey(item => item.PayrollLineItemId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<Requisition>(e =>
+        {
+            e.ToTable("hr_requisitions", table => table.HasCheckConstraint("CK_hr_requisition_openings", "\"Openings\" > 0")); e.HasKey(item => item.Id);
+            e.Property(item => item.RequisitionNumber).HasMaxLength(80).IsRequired(); e.Property(item => item.Title).HasMaxLength(300).IsRequired(); e.Property(item => item.Requirements).HasMaxLength(10000).IsRequired(); e.Property(item => item.State).HasConversion<int>();
+            e.HasIndex(item => item.RequisitionNumber).IsUnique(); e.HasIndex(item => new { item.State, item.CreatedAt }); e.HasOne(item => item.OrganizationUnit).WithMany().HasForeignKey(item => item.OrganizationUnitId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<Candidate>(e =>
+        {
+            e.ToTable("hr_candidates"); e.HasKey(item => item.Id); e.Property(item => item.FullName).HasMaxLength(300).IsRequired(); e.Property(item => item.PhoneNumber).HasMaxLength(30).IsRequired();
+            e.Property(item => item.Email).HasMaxLength(320); e.Property(item => item.CvAssetReference).HasMaxLength(1000); e.Property(item => item.Stage).HasConversion<int>();
+            e.HasIndex(item => new { item.RequisitionId, item.PhoneNumber }).IsUnique(); e.HasIndex(item => item.EmployeeProfileId).IsUnique().HasFilter("\"EmployeeProfileId\" IS NOT NULL");
+            e.HasOne(item => item.Requisition).WithMany(item => item.Candidates).HasForeignKey(item => item.RequisitionId).OnDelete(DeleteBehavior.Restrict); e.HasOne(item => item.EmployeeProfile).WithMany().HasForeignKey(item => item.EmployeeProfileId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<CandidateInterview>(e =>
+        {
+            e.ToTable("hr_candidate_interviews", table => table.HasCheckConstraint("CK_hr_interview_score", "\"Score\" IS NULL OR (\"Score\" >= 0 AND \"Score\" <= 100)")); e.HasKey(item => item.Id); e.Property(item => item.Score).HasColumnType("decimal(5,2)"); e.Property(item => item.Feedback).HasMaxLength(5000);
+            e.HasIndex(item => new { item.InterviewerUserId, item.ScheduledAt }); e.HasOne(item => item.Candidate).WithMany(item => item.Interviews).HasForeignKey(item => item.CandidateId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<CandidateOffer>(e =>
+        {
+            e.ToTable("hr_candidate_offers", table => table.HasCheckConstraint("CK_hr_offer_salary", "\"BaseSalary\" >= 0")); e.HasKey(item => item.Id); e.Property(item => item.OfferNumber).HasMaxLength(80).IsRequired();
+            e.Property(item => item.BaseSalary).HasColumnType("decimal(18,2)"); e.Property(item => item.Currency).HasMaxLength(3).IsRequired(); e.Property(item => item.ProposedStartDate).HasColumnType("date"); e.Property(item => item.State).HasConversion<int>();
+            e.HasIndex(item => item.OfferNumber).IsUnique(); e.HasOne(item => item.Candidate).WithMany(item => item.Offers).HasForeignKey(item => item.CandidateId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<EmployeeLifecycleTask>(e =>
+        {
+            e.ToTable("hr_employee_lifecycle_tasks"); e.HasKey(item => item.Id); e.Property(item => item.Phase).HasMaxLength(80).IsRequired(); e.Property(item => item.Title).HasMaxLength(500).IsRequired(); e.Property(item => item.State).HasConversion<int>(); e.Property(item => item.CompletionNote).HasMaxLength(2000);
+            e.HasIndex(item => new { item.State, item.DueAt }); e.HasIndex(item => new { item.EmployeeId, item.Phase }); e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<OffboardingProcess>(e =>
+        {
+            e.ToTable("hr_offboarding_processes"); e.HasKey(item => item.Id); e.Property(item => item.LastWorkingDate).HasColumnType("date"); e.Property(item => item.Reason).HasMaxLength(2000).IsRequired(); e.Property(item => item.State).HasConversion<int>(); e.Property(item => item.BlockersJson).HasColumnType("jsonb").IsRequired();
+            e.HasIndex(item => item.EmployeeId).IsUnique().HasFilter("\"State\" <> 3 AND \"State\" <> 4"); e.HasOne(item => item.Employee).WithMany().HasForeignKey(item => item.EmployeeId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrMigrationBatch>(e =>
+        {
+            e.ToTable("hr_migration_batches"); e.HasKey(item => item.Id); e.Property(item => item.Module).HasMaxLength(80).IsRequired(); e.Property(item => item.SourceSystem).HasMaxLength(200).IsRequired();
+            e.Property(item => item.RequestHash).HasMaxLength(128).IsRequired(); e.Property(item => item.State).HasConversion<int>(); e.Property(item => item.SourceTotal).HasColumnType("decimal(24,4)"); e.Property(item => item.TargetTotal).HasColumnType("decimal(24,4)");
+            e.Property(item => item.SourceHash).HasMaxLength(128).IsRequired(); e.Property(item => item.TargetHash).HasMaxLength(128); e.Property(item => item.ReportJson).HasColumnType("jsonb").IsRequired(); e.HasIndex(item => new { item.Module, item.RequestHash }).IsUnique(); e.HasIndex(item => new { item.Module, item.State, item.CreatedAt });
+        });
+        modelBuilder.Entity<HrMigrationRecordMap>(e =>
+        {
+            e.ToTable("hr_migration_record_maps"); e.HasKey(item => item.Id); e.Property(item => item.SourceType).HasMaxLength(100).IsRequired(); e.Property(item => item.SourceId).HasMaxLength(300).IsRequired();
+            e.Property(item => item.SourceHash).HasMaxLength(128).IsRequired(); e.Property(item => item.TargetType).HasMaxLength(100).IsRequired(); e.Property(item => item.Amount).HasColumnType("decimal(24,4)");
+            e.HasIndex(item => new { item.SourceType, item.SourceId }).IsUnique(); e.HasIndex(item => new { item.MigrationBatchId, item.TargetType, item.TargetId }).IsUnique(); e.HasOne(item => item.MigrationBatch).WithMany(item => item.RecordMaps).HasForeignKey(item => item.MigrationBatchId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<HrMigrationConflict>(e =>
+        {
+            e.ToTable("hr_migration_conflicts"); e.HasKey(item => item.Id); e.Property(item => item.SourceType).HasMaxLength(100).IsRequired(); e.Property(item => item.SourceId).HasMaxLength(300).IsRequired(); e.Property(item => item.Code).HasMaxLength(100).IsRequired();
+            e.Property(item => item.DetailsJson).HasColumnType("jsonb").IsRequired(); e.Property(item => item.State).HasConversion<int>(); e.Property(item => item.ResolutionReason).HasMaxLength(2000);
+            e.HasIndex(item => new { item.MigrationBatchId, item.SourceType, item.SourceId, item.Code }).IsUnique(); e.HasIndex(item => new { item.MigrationBatchId, item.State }); e.HasOne(item => item.MigrationBatch).WithMany(item => item.Conflicts).HasForeignKey(item => item.MigrationBatchId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // AttendanceLog
@@ -942,28 +2018,10 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(al => al.Employee)
              .WithMany()
              .HasForeignKey(al => al.EmployeeId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Restrict);
             e.Property(al => al.Status).HasConversion<int>();
             e.Property(al => al.IpAddress).HasMaxLength(45);
             e.Property(al => al.UserAgent).HasMaxLength(500);
-        });
-
-        // EmployeeVacation
-        modelBuilder.Entity<EmployeeVacation>(e =>
-        {
-            e.ToTable("employee_vacations");
-            e.HasKey(ev => ev.Id);
-            e.HasIndex(ev => ev.EmployeeId);
-            e.HasOne(ev => ev.Employee)
-             .WithMany()
-             .HasForeignKey(ev => ev.EmployeeId)
-             .OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(ev => ev.HandledByUser)
-             .WithMany()
-             .HasForeignKey(ev => ev.HandledBy)
-             .OnDelete(DeleteBehavior.SetNull);
-            e.Property(ev => ev.Status).HasConversion<int>();
-            e.Property(ev => ev.Reason).HasMaxLength(2000).IsRequired();
         });
 
         // TaskItem
@@ -1093,7 +2151,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(s => s.Status).HasConversion<int>();
             e.Property(s => s.Priority).HasConversion<int>();
             e.Property(s => s.Notes).HasMaxLength(4000);
-            
+
             e.HasOne(s => s.Student)
              .WithOne()
              .HasForeignKey<CrmStudentStatus>(s => s.StudentId)
@@ -1115,7 +2173,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(l => l.Id);
             e.Property(l => l.Notes).HasMaxLength(4000);
             e.Property(l => l.Outcome).HasConversion<int>();
-            
+
             e.HasOne(l => l.Student)
              .WithMany()
              .HasForeignKey(l => l.StudentId)
@@ -1175,7 +2233,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(pr => pr.EmployeeProfile)
              .WithMany()
              .HasForeignKey(pr => pr.EmployeeProfileId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Restrict);
             e.HasOne(pr => pr.ApprovedByUser)
              .WithMany()
              .HasForeignKey(pr => pr.ApprovedByUserId)
@@ -1194,21 +2252,27 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(pa => pa.PayrollRecord)
              .WithMany(pr => pr.Adjustments)
              .HasForeignKey(pa => pa.PayrollRecordId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Restrict);
         });
 
         // TeacherAccount
         modelBuilder.Entity<TeacherAccount>(e =>
         {
-            e.ToTable("teacher_accounts");
+            e.ToTable("teacher_accounts", table =>
+            {
+                table.HasCheckConstraint("CK_teacher_accounts_balances_non_negative", "\"TotalEarnings\" >= 0 AND \"CurrentBalance\" >= 0 AND \"ReservedBalance\" >= 0");
+                table.HasCheckConstraint("CK_teacher_accounts_reserved_available", "\"ReservedBalance\" <= \"CurrentBalance\"");
+            });
             e.HasKey(ta => ta.Id);
             e.Property(ta => ta.TotalEarnings).HasColumnType("decimal(18,2)").IsRequired();
             e.Property(ta => ta.CurrentBalance).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(ta => ta.ReservedBalance).HasColumnType("decimal(18,2)").HasDefaultValue(0m).IsRequired();
             e.Property(ta => ta.CommissionRate).HasColumnType("decimal(18,2)").IsRequired();
+            e.Property(ta => ta.Version).IsConcurrencyToken().HasDefaultValue(0L);
             e.HasOne(ta => ta.Teacher)
              .WithOne()
              .HasForeignKey<TeacherAccount>(ta => ta.TeacherId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Restrict);
             e.HasIndex(ta => ta.TeacherId).IsUnique();
         });
 
@@ -1220,16 +2284,281 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(tp => tp.Amount).HasColumnType("decimal(18,2)").IsRequired();
             e.Property(tp => tp.Status).HasConversion<int>();
             e.Property(tp => tp.RejectionReason).HasMaxLength(2000);
+            e.Property(tp => tp.TransferReference).HasMaxLength(200);
+            e.Property(tp => tp.AdminNote).HasMaxLength(2000);
             e.HasOne(tp => tp.Teacher)
              .WithMany()
              .HasForeignKey(tp => tp.TeacherId)
-             .OnDelete(DeleteBehavior.Cascade);
+             .OnDelete(DeleteBehavior.Restrict);
             e.HasOne(tp => tp.HandledByUser)
              .WithMany()
              .HasForeignKey(tp => tp.HandledByUserId)
              .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(tp => tp.ApprovedByUser)
+             .WithMany()
+             .HasForeignKey(tp => tp.ApprovedByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(tp => tp.PaidByUser)
+             .WithMany()
+             .HasForeignKey(tp => tp.PaidByUserId)
+             .OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(tp => tp.TeacherId);
             e.HasIndex(tp => tp.Status);
+        });
+
+        modelBuilder.Entity<TeacherFinancialEvent>(e =>
+        {
+            e.ToTable("teacher_financial_events", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_teacher_financial_events_amounts",
+                    "\"DiscountAmount\" >= 0 AND \"PlatformDiscountAmount\" >= 0 AND \"TeacherDiscountAmount\" >= 0");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SourceType).HasConversion<int>();
+            e.Property(x => x.TargetType).HasConversion<int>();
+            e.Property(x => x.ReviewStatus).HasConversion<int>();
+            e.Property(x => x.PayoutStatus).HasConversion<int>();
+            e.Property(x => x.GrossAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PlatformDiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TeacherDiscountAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PaidAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PromotionalAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PlatformShareAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("EGP");
+            e.Property(x => x.IdempotencyKey).HasMaxLength(240).IsRequired();
+            e.Property(x => x.DetailsJson).HasColumnType("jsonb");
+            e.HasIndex(x => x.IdempotencyKey).IsUnique();
+            e.HasIndex(x => new { x.TargetType, x.TargetId });
+            e.HasIndex(x => new { x.ReviewStatus, x.PayoutStatus, x.OccurredAt });
+            e.HasOne(x => x.Student)
+                .WithMany()
+                .HasForeignKey(x => x.StudentId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TeacherFinancialAllocation>(e =>
+        {
+            e.ToTable("teacher_financial_allocations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AllocationMode).HasConversion<int>();
+            e.Property(x => x.ReviewStatus).HasConversion<int>();
+            e.Property(x => x.PayoutStatus).HasConversion<int>();
+            e.Property(x => x.AllocationValue).HasColumnType("decimal(18,4)");
+            e.Property(x => x.GrossBasisAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TeacherShareAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PlatformShareAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.AgreementScopeType).HasConversion<int>();
+            e.Property(x => x.AgreementAllocationMode).HasConversion<int>();
+            e.Property(x => x.PriceBasis).HasConversion<int>();
+            e.Property(x => x.DiscountBearer).HasConversion<int>();
+            e.Property(x => x.ReversedAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.StudentNameSnapshot).HasMaxLength(200);
+            e.Property(x => x.StudentPhoneSnapshot).HasMaxLength(20);
+            e.Property(x => x.ContentNameSnapshot).HasMaxLength(300).IsRequired();
+            e.HasIndex(x => new { x.TeacherId, x.ReviewStatus, x.PayoutStatus });
+            e.HasIndex(x => new { x.TeacherId, x.CreatedAt });
+            e.HasIndex(x => x.PayoutId);
+            e.HasOne(x => x.TeacherFinancialEvent)
+                .WithMany(x => x.Allocations)
+                .HasForeignKey(x => x.TeacherFinancialEventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Teacher)
+                .WithMany(x => x.FinancialAllocations)
+                .HasForeignKey(x => x.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Payout)
+                .WithMany(x => x.Allocations)
+                .HasForeignKey(x => x.PayoutId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TeacherPayoutAdjustment>(e =>
+        {
+            e.ToTable("teacher_payout_adjustments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.HasIndex(x => new { x.TeacherId, x.Status });
+            e.HasOne(x => x.Teacher)
+                .WithMany()
+                .HasForeignKey(x => x.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.RelatedFinancialEvent)
+                .WithMany()
+                .HasForeignKey(x => x.RelatedFinancialEventId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.RelatedPayout)
+                .WithMany(x => x.Adjustments)
+                .HasForeignKey(x => x.RelatedPayoutId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TeacherFinancialAgreement>(e =>
+        {
+            e.ToTable("teacher_financial_agreements", table =>
+            {
+                table.HasCheckConstraint("CK_teacher_financial_agreements_value", "\"AllocationValue\" >= 0 AND (\"AllocationMode\" <> 0 OR \"AllocationValue\" <= 100)");
+                table.HasCheckConstraint("CK_teacher_financial_agreements_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ScopeType).HasConversion<int>();
+            e.Property(x => x.Trigger).HasConversion<int>();
+            e.Property(x => x.AllocationMode).HasConversion<int>();
+            e.Property(x => x.PriceBasis).HasConversion<int>();
+            e.Property(x => x.AllocationValue).HasColumnType("decimal(18,4)");
+            e.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            e.HasIndex(x => new { x.TeacherId, x.ScopeType, x.ScopeId, x.Trigger, x.EffectiveFrom });
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CodeGroupFinancialTerms>(e =>
+        {
+            e.ToTable("code_group_financial_terms");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Trigger).HasConversion<int>();
+            e.Property(x => x.Recipient).HasMaxLength(300);
+            e.HasIndex(x => x.CodeGroupId).IsUnique();
+            e.HasOne(x => x.CodeGroup).WithMany().HasForeignKey(x => x.CodeGroupId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Agreement).WithMany().HasForeignKey(x => x.AgreementId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CodeGroupDeliveryConfirmation>(e =>
+        {
+            e.ToTable("code_group_delivery_confirmations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Recipient).HasMaxLength(300).IsRequired();
+            e.Property(x => x.AttachmentUrl).HasMaxLength(1000);
+            e.Property(x => x.IdempotencyKey).HasMaxLength(240).IsRequired();
+            e.HasIndex(x => x.CodeGroupId).IsUnique();
+            e.HasIndex(x => x.IdempotencyKey).IsUnique();
+            e.HasOne(x => x.CodeGroup).WithMany().HasForeignKey(x => x.CodeGroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TeacherSettlement>(e =>
+        {
+            e.ToTable("teacher_settlements");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("EGP");
+            e.Property(x => x.GrossDueAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DebtDeductionAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.NetPayableAmount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.Note).HasMaxLength(2000);
+            e.HasIndex(x => new { x.TeacherId, x.Status, x.PeriodFrom, x.PeriodTo });
+            e.HasOne(x => x.Teacher).WithMany().HasForeignKey(x => x.TeacherId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TeacherSettlementLine>(e =>
+        {
+            e.ToTable("teacher_settlement_lines");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DescriptionSnapshot).HasMaxLength(500).IsRequired();
+            e.HasIndex(x => x.AllocationId).IsUnique().HasFilter("\"AllocationId\" IS NOT NULL");
+            e.HasIndex(x => x.AdjustmentId).IsUnique().HasFilter("\"AdjustmentId\" IS NOT NULL");
+            e.HasOne(x => x.TeacherSettlement).WithMany(x => x.Lines).HasForeignKey(x => x.TeacherSettlementId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Allocation).WithMany().HasForeignKey(x => x.AllocationId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Adjustment).WithMany().HasForeignKey(x => x.AdjustmentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TeacherSettlementPayment>(e =>
+        {
+            e.ToTable("teacher_settlement_payments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PaymentMethod).HasMaxLength(100).IsRequired();
+            e.Property(x => x.TransferReference).HasMaxLength(200).IsRequired();
+            e.Property(x => x.AttachmentUrl).HasMaxLength(1000);
+            e.HasOne(x => x.TeacherSettlement).WithMany(x => x.Payments).HasForeignKey(x => x.TeacherSettlementId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FinancialInvoice>(e =>
+        {
+            e.ToTable("financial_invoices");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Type).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.DocumentNumber).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Currency).HasMaxLength(3).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.AttachmentUrl).HasMaxLength(1000);
+            e.Property(x => x.PaymentReference).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(2000).IsRequired();
+            e.HasIndex(x => x.DocumentNumber).IsUnique();
+            e.HasIndex(x => new { x.TeacherId, x.Status });
+        });
+
+        modelBuilder.Entity<SharedTeacherPackage>(e =>
+        {
+            e.ToTable("shared_teacher_packages", table =>
+            {
+                table.HasCheckConstraint("CK_shared_teacher_packages_price", "\"Price\" > 0");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Slug).HasMaxLength(160).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.ImageUrl).HasMaxLength(1000);
+            e.Property(x => x.Price).HasColumnType("decimal(18,2)");
+            e.Property(x => x.DistributionMode).HasConversion<int>();
+            e.Property(x => x.EducationStage).HasConversion<int>();
+            e.Property(x => x.GradeLevel).HasConversion<int>();
+            e.HasIndex(x => x.Slug).IsUnique();
+            e.HasIndex(x => new { x.IsPublished, x.AvailableFrom, x.AvailableUntil });
+            e.HasIndex(x => new { x.EducationStage, x.GradeLevel, x.IsPublished });
+            e.HasOne(x => x.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.UpdatedByUser)
+                .WithMany()
+                .HasForeignKey(x => x.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SharedTeacherPackageTeacher>(e =>
+        {
+            e.ToTable("shared_teacher_package_teachers");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AllocationMode).HasConversion<int>();
+            e.Property(x => x.AllocationValue).HasColumnType("decimal(18,4)");
+            e.HasIndex(x => new { x.SharedTeacherPackageId, x.TeacherId, x.SubjectId }).IsUnique();
+            e.HasOne(x => x.SharedTeacherPackage)
+                .WithMany(x => x.Teachers)
+                .HasForeignKey(x => x.SharedTeacherPackageId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Teacher)
+                .WithMany(x => x.SharedPackageTeachers)
+                .HasForeignKey(x => x.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Subject)
+                .WithMany()
+                .HasForeignKey(x => x.SubjectId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SharedTeacherPackageItem>(e =>
+        {
+            e.ToTable("shared_teacher_package_items");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.ContentType).HasConversion<int>();
+            e.Property(x => x.Price).HasColumnType("decimal(18,4)");
+            e.HasIndex(x => new { x.SharedTeacherPackageId, x.ContentType, x.ContentId });
+            e.HasOne(x => x.SharedTeacherPackage)
+                .WithMany(x => x.Items)
+                .HasForeignKey(x => x.SharedTeacherPackageId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Teacher)
+                .WithMany(x => x.SharedPackageItems)
+                .HasForeignKey(x => x.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.Subject)
+                .WithMany()
+                .HasForeignKey(x => x.SubjectId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // AccessCodeActivationLog
@@ -1270,10 +2599,19 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(o => o.PayloadJson).IsRequired();
             e.Property(o => o.TargetGroup).HasMaxLength(150);
             e.Property(o => o.TargetUserId).HasMaxLength(150);
+            e.Property(o => o.ClaimedBy).HasMaxLength(120);
             e.Property(o => o.LastError).HasMaxLength(4000);
             e.Property(o => o.IsDeadLetter).HasDefaultValue(false);
-            
+
             e.HasIndex(o => new { o.ProcessedAt, o.CreatedAt });
+            e.HasIndex(o => new
+            {
+                o.ProcessedAt,
+                o.IsDeadLetter,
+                o.NextAttemptAt,
+                o.LeaseExpiresAt,
+                o.CreatedAt
+            });
         });
 
         // WebVitalsMetric
@@ -1281,13 +2619,30 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("web_vitals_metrics");
             e.HasKey(m => m.Id);
+            e.Property(m => m.MetricId).HasMaxLength(64).IsRequired();
             e.Property(m => m.MetricName).HasMaxLength(32).IsRequired();
             e.Property(m => m.Rating).HasMaxLength(32).IsRequired();
+            e.Property(m => m.RouteTemplate).HasMaxLength(180).IsRequired();
+            e.Property(m => m.Surface).HasMaxLength(24).IsRequired();
+            e.Property(m => m.DeviceClass).HasMaxLength(16).IsRequired();
+            e.Property(m => m.ConnectionClass).HasMaxLength(24).IsRequired();
+            e.Property(m => m.NavigationType).HasMaxLength(24).IsRequired();
+            e.Property(m => m.ReleaseId).HasMaxLength(96).IsRequired();
+            e.Property(m => m.CorrelationId).HasMaxLength(64);
             e.Property(m => m.PageUrl).HasMaxLength(512).IsRequired();
             e.Property(m => m.UserAgent).HasMaxLength(512).IsRequired();
 
             e.HasIndex(m => m.MetricName);
             e.HasIndex(m => m.CreatedAt);
+            e.HasIndex(m => new
+            {
+                m.ReleaseId,
+                m.RouteTemplate,
+                m.Surface,
+                m.DeviceClass,
+                m.MetricName,
+                m.CreatedAt
+            });
         });
     }
 
@@ -1628,7 +2983,8 @@ public class AppDbContext : DbContext, IAppDbContext
         // DigitalWallet mapping
         modelBuilder.Entity<DigitalWallet>(e =>
         {
-            e.ToTable("digital_wallets");
+            e.ToTable("digital_wallets", table =>
+                table.HasCheckConstraint("CK_digital_wallets_current_balance_non_negative", "\"CurrentBalance\" >= 0"));
             e.HasKey(dw => dw.Id);
             e.HasIndex(dw => dw.PhoneNumber).IsUnique();
             e.HasIndex(dw => dw.PairingToken).IsUnique();
@@ -1645,28 +3001,36 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("recharge_requests");
             e.HasKey(rr => rr.Id);
-            
+            e.HasIndex(rr => new { rr.WalletId, rr.Status, rr.Amount, rr.SenderPhoneNumber, rr.CreatedAt })
+                .HasFilter("\"Status\" = 0");
+
             e.HasOne(rr => rr.User)
                 .WithMany()
                 .HasForeignKey(rr => rr.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-                
+
             e.HasOne(rr => rr.Wallet)
                 .WithMany(w => w.RechargeRequests)
                 .HasForeignKey(rr => rr.WalletId)
                 .OnDelete(DeleteBehavior.Restrict);
-                
+
+            e.HasOne(rr => rr.Teacher)
+                .WithMany()
+                .HasForeignKey(rr => rr.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             e.HasOne(rr => rr.ResolvedByUser)
                 .WithMany()
                 .HasForeignKey(rr => rr.ResolvedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
-                
+
             e.HasOne(rr => rr.MatchedSmsLog)
                 .WithOne(sms => sms.MatchedRechargeRequest)
                 .HasForeignKey<RechargeRequest>(rr => rr.MatchedSmsLogId)
                 .OnDelete(DeleteBehavior.Restrict);
-                
+
             e.Property(rr => rr.Amount).HasPrecision(18, 2);
+            e.HasIndex(rr => rr.TeacherId);
             e.Property(rr => rr.SenderPhoneNumber).HasMaxLength(20).IsRequired();
             e.Property(rr => rr.ScreenshotUrl).HasMaxLength(1000);
             e.Property(rr => rr.RejectionReason).HasMaxLength(500);
@@ -1675,15 +3039,21 @@ public class AppDbContext : DbContext, IAppDbContext
         // IncomingSmsLog mapping
         modelBuilder.Entity<IncomingSmsLog>(e =>
         {
-            e.ToTable("incoming_sms_logs");
+            e.ToTable("incoming_sms_logs", table =>
+                table.HasCheckConstraint(
+                    "CK_incoming_sms_logs_match_consistency",
+                    "(\"IsMatched\" = FALSE AND \"MatchedRechargeRequestId\" IS NULL) OR (\"IsMatched\" = TRUE AND \"MatchedRechargeRequestId\" IS NOT NULL)"));
             e.HasKey(sms => sms.Id);
-            
+
             e.HasOne(sms => sms.Wallet)
                 .WithMany(w => w.IncomingSmsLogs)
                 .HasForeignKey(sms => sms.WalletId)
                 .OnDelete(DeleteBehavior.Restrict);
-                
+
             e.HasIndex(sms => sms.DeduplicationHash).IsUnique();
+            e.HasIndex(sms => sms.MatchedRechargeRequestId)
+                .IsUnique()
+                .HasFilter("\"MatchedRechargeRequestId\" IS NOT NULL");
             e.Property(sms => sms.Sender).HasMaxLength(100).IsRequired();
             e.Property(sms => sms.Body).HasMaxLength(1000).IsRequired();
             e.Property(sms => sms.DeduplicationHash).HasMaxLength(64).IsRequired();
@@ -1692,8 +3062,25 @@ public class AppDbContext : DbContext, IAppDbContext
         });
     }
 
-    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    private static void ConfigureHrLookup<TEntity>(ModelBuilder modelBuilder, string tableName)
+        where TEntity : Domain.Common.BaseEntity
     {
+        modelBuilder.Entity<TEntity>(entity =>
+        {
+            entity.ToTable(tableName);
+            entity.HasKey("Id");
+            entity.Property<string>("Code").HasMaxLength(40).IsRequired();
+            entity.Property<string>("Name").HasMaxLength(200).IsRequired();
+            entity.HasIndex("Code").IsUnique();
+        });
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        ApplyContentIdentityRules();
+        ApplyFinancialPrincipalSoftDelete();
+        ApplyFinancialConcurrencyVersions();
+
         foreach (var entry in ChangeTracker.Entries<Domain.Common.BaseEntity>())
         {
             if (entry.State == EntityState.Modified)
@@ -1728,6 +3115,121 @@ public class AppDbContext : DbContext, IAppDbContext
             OutboxEvents.Add(staffEvent);
         }
 
-        return base.SaveChangesAsync(cancellationToken);
+        var securityStateUserIds = SecurityStateUserIds();
+        if (_userSecurityStateCache is not null)
+        {
+            foreach (var userId in securityStateUserIds)
+            {
+                await _userSecurityStateCache.RemoveAsync(userId, cancellationToken);
+            }
+        }
+
+        var savedEntityCount = await base.SaveChangesAsync(cancellationToken);
+
+        if (_userSecurityStateCache is not null)
+        {
+            foreach (var userId in securityStateUserIds)
+            {
+                await _userSecurityStateCache.RemoveAsync(userId, cancellationToken);
+            }
+        }
+
+        return savedEntityCount;
+    }
+
+    private Guid[] SecurityStateUserIds()
+    {
+        var userIds = ChangeTracker.Entries<User>()
+            .Where(entry =>
+                entry.State is EntityState.Modified or EntityState.Deleted &&
+                (entry.State == EntityState.Deleted ||
+                 entry.Property(nameof(User.IsActive)).IsModified ||
+                 entry.Property(nameof(User.PasswordResetVersion)).IsModified ||
+                 entry.Property(nameof(User.SecurityStampVersion)).IsModified))
+            .Select(entry => entry.Entity.Id);
+        var userRoleIds = ChangeTracker.Entries<UserRole>()
+            .Where(entry => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Select(entry => entry.Entity.UserId);
+        return userIds.Concat(userRoleIds).Distinct().ToArray();
+    }
+
+    private void ApplyFinancialConcurrencyVersions()
+    {
+        foreach (var entry in ChangeTracker.Entries<StudentBalance>())
+        {
+            if (entry.State == EntityState.Modified)
+                entry.Entity.Version += 1;
+        }
+
+        foreach (var entry in ChangeTracker.Entries<TeacherAccount>())
+        {
+            if (entry.State == EntityState.Modified)
+                entry.Entity.Version += 1;
+        }
+    }
+
+    private void ApplyFinancialPrincipalSoftDelete()
+    {
+        var deletedUsers = ChangeTracker.Entries<User>()
+            .Where(entry => entry.State == EntityState.Deleted)
+            .ToList();
+
+        foreach (var entry in deletedUsers)
+        {
+            var userId = entry.Entity.Id;
+            if (!UserHasFinancialHistory(userId))
+                continue;
+
+            entry.State = EntityState.Modified;
+            entry.Entity.IsActive = false;
+            entry.Entity.IsDeleted = true;
+            entry.Entity.DeletedAt = DateTime.UtcNow;
+            entry.Entity.SuspensionReason ??= "Soft-deleted because financial history exists.";
+            entry.Entity.SecurityStampVersion += 1;
+        }
+    }
+
+    private bool UserHasFinancialHistory(Guid userId)
+    {
+        return StudentBalances.Any(balance => balance.UserId == userId)
+            || RechargeRequests.Any(request => request.UserId == userId || request.ResolvedByUserId == userId)
+            || StudentAccessGrants.Any(grant => grant.UserId == userId || grant.CancelledByUserId == userId)
+            || BalanceTransactions.Any(transaction => transaction.PerformedByUserId == userId)
+            || TeacherAccounts.Any(account => account.Teacher.UserId == userId)
+            || TeacherPayouts.Any(payout => payout.Teacher.UserId == userId || payout.HandledByUserId == userId)
+            || AuditLogs.Any(log => log.PerformedByUserId == userId);
+    }
+
+    private void ApplyContentIdentityRules()
+    {
+        AssignOrValidateInternalCodes(ChangeTracker.Entries<Lesson>(), "LES");
+        AssignOrValidateInternalCodes(ChangeTracker.Entries<LessonVideo>(), "VID");
+        AssignOrValidateInternalCodes(ChangeTracker.Entries<Exam>(), "EXM");
+    }
+
+    private static void AssignOrValidateInternalCodes<TEntity>(
+        IEnumerable<Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<TEntity>> entries,
+        string prefix)
+        where TEntity : Domain.Common.BaseEntity
+    {
+        foreach (var entry in entries)
+        {
+            var property = entry.Property("InternalCode");
+            if (entry.State == EntityState.Added)
+            {
+                property.CurrentValue = $"{prefix}-{entry.Entity.Id:N}";
+                continue;
+            }
+
+            if (entry.State == EntityState.Modified && property.IsModified)
+            {
+                if (!Equals(property.CurrentValue, property.OriginalValue))
+                {
+                    throw new InvalidOperationException("Internal content codes cannot be changed after creation.");
+                }
+
+                property.IsModified = false;
+            }
+        }
     }
 }

@@ -1,0 +1,12 @@
+# Worker Docker build context — exclude dev artifacts
+node_modules/
+dist/
+.env
+.env.*
+*.log
+.tmp/
+.DS_Store
+Thumbs.db
+*.tmp
+.vscode/
+.idea/

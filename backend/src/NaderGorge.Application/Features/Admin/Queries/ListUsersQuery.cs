@@ -13,7 +13,8 @@ public record ListUsersQuery(
     string? GradeLevel = null,
     string? StudyTrack = null,
     string? Gender = null,
-    string? Governorate = null
+    string? Governorate = null,
+    string? Role = null
 ) : IRequest<ApiResponse<PagedResult<AdminUserListDto>>>;
 
 public record AdminUserListDto(
@@ -26,6 +27,7 @@ public record AdminUserListDto(
     DateTime CreatedAt,
     string[] Roles,
     string StudentCode,
+    string ParentTrackingCode,
     DateTime? DateOfBirth,
     string Gender,
     string EducationStage,
@@ -44,6 +46,7 @@ public record AdminUserListDto(
     DateTime? FatherDateOfBirth,
     DateTime? MotherDateOfBirth,
     string? SuspensionReason,
+    string? AvatarSlug,
     decimal CurrentBalance
 );
 
@@ -60,18 +63,31 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
 
     public async Task<ApiResponse<PagedResult<AdminUserListDto>>> Handle(ListUsersQuery request, CancellationToken ct)
     {
+        var page = Math.Max(1, request.Page);
+        var pageSize = Math.Clamp(request.PageSize, 1, 100);
+        var normalizedSearch = request.Search?.Trim();
+
         var query = _db.Users
+            .AsNoTracking()
             .Include(u => u.StudentProfile)
             .Include(u => u.StudentBalance)
             .Include(u => u.UserRoles)
             .ThenInclude(ur => ur.Role)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(request.Search))
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
         {
-            query = query.Where(u => u.PhoneNumber.Contains(request.Search) ||
-                                     u.FullName.Contains(request.Search) ||
-                                     (u.StudentProfile != null && u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(request.Search)));
+            query = query.Where(u => u.PhoneNumber.Contains(normalizedSearch) ||
+                                     u.FullName.Contains(normalizedSearch) ||
+                                     (u.StudentProfile != null && (
+                                         (u.StudentProfile.StudentCode != null && u.StudentProfile.StudentCode.Contains(normalizedSearch)) ||
+                                         (u.StudentProfile.ParentTrackingCode != null && u.StudentProfile.ParentTrackingCode.Contains(normalizedSearch)))));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Role))
+        {
+            var normalizedRole = request.Role.Trim();
+            query = query.Where(u => u.UserRoles.Any(ur => ur.Role.Name == normalizedRole));
         }
 
         if (!string.IsNullOrWhiteSpace(request.EducationStage) && Enum.TryParse<NaderGorge.Domain.Enums.EducationStage>(request.EducationStage, true, out var stage))
@@ -103,8 +119,9 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
 
         var users = await query
             .OrderByDescending(u => u.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .ThenBy(u => u.Id)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
         var dtos = users.Select(u => new AdminUserListDto(
@@ -117,6 +134,7 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.CreatedAt,
             u.UserRoles.Select(ur => ur.Role.Name).ToArray(),
             u.StudentProfile?.StudentCode ?? "",
+            u.StudentProfile?.ParentTrackingCode ?? "",
             u.StudentProfile?.DateOfBirth,
             u.StudentProfile?.Gender.ToString() ?? "Unknown",
             u.StudentProfile?.EducationStage.ToString() ?? "N/A",
@@ -135,9 +153,10 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
             u.StudentProfile?.FatherDateOfBirth,
             u.StudentProfile?.MotherDateOfBirth,
             u.SuspensionReason,
+            u.StudentProfile?.AvatarSlug,
             u.StudentBalance?.CurrentBalance ?? 0m
         )).ToList();
 
-        return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, request.Page, request.PageSize));
+        return ApiResponse<PagedResult<AdminUserListDto>>.Ok(new PagedResult<AdminUserListDto>(dtos, total, page, pageSize));
     }
 }

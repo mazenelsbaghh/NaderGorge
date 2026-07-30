@@ -1,0 +1,14 @@
+{
+  "baselineMultiplier": 2,
+  "capturedAt": "2026-07-29T19:41:59.096445Z",
+  "droppedIterationRate": 0,
+  "durationSeconds": 1802,
+  "errorRate": 0,
+  "healthyNodeCount": 3,
+  "p95Milliseconds": 20.1170835,
+  "p99Milliseconds": 0,
+  "releaseId": "src-bdf19804cf29d19634b131a16d3e519d26f0d425",
+  "schemaVersion": 1,
+  "sourceEvidenceSha256": "b15c5c21d184790242221a14cc26f17b431f7c1489a3ec87668026f876f33940",
+  "status": "failed"
+}

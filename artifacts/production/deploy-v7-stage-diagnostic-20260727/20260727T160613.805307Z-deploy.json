@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "3f56ab82-abe6-41c7-a32f-c5b6e0c5a526",
+  "command": "deploy",
+  "startedAt": "2026-07-27T16:06:13.805307Z",
+  "completedAt": "2026-07-27T16:06:13.805841Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: rollout stopped with node-3 drained; recovery marker: /var/lib/massar/deploy-recovery/src-d7642250932e6a765c0a8222f4c2b9ff66d7702f-node-3.json; MASSAR_DEPLOY_FAILURE stage=validate-compose line=40 status=1; MASSAR_RECOVERY_FAILURE stage=restore-previous-compose line=52 status=1"
+}

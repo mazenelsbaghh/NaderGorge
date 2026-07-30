@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "b5270a29-d129-4e23-a5ef-6fc4acbd95c8",
+  "command": "legacy-prepare",
+  "startedAt": "2026-07-27T17:59:19.946315Z",
+  "completedAt": "2026-07-27T17:59:19.946523Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "legacy cutover blocked: database name does not match the approved timestamped pattern"
+}

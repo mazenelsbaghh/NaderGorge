@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 2,
+  "globalGates": {
+    "errorRateMaximumExclusive": 0.01,
+    "p95MillisecondsMaximumExclusive": 1000,
+    "p99MillisecondsMaximumExclusive": 2000,
+    "droppedIterationRateMaximumExclusive": 0.005,
+    "nodeImbalanceRatioMaximum": 0.2,
+    "unexpectedNodeRate": 0,
+    "signalrHoldSuccessRateMinimumExclusive": 0.99,
+    "workflowSuccessRateMinimumExclusive": 0.99
+  },
+  "capacityAggregation": {
+    "runner": "deploy/production/scripts/run_live_load.py",
+    "assembler": "deploy/production/scripts/assemble_capacity_ceiling.py",
+    "evidenceSchema": "deploy/production/evidence/schemas/capacity-ceiling.schema.json",
+    "stageCapacitySchema": "deploy/production/evidence/schemas/capacity-stage.schema.json",
+    "thresholds": "deploy/production/config/capacity-thresholds.json",
+    "resourceSampling": ["before", "every-30s-during", "after"],
+    "requiredNMinusOneSeries": ["node-1", "node-2", "node-3"],
+    "stopAfterFirstFailure": true,
+    "safeOperatingCeilingFactor": 0.6,
+    "bottleneckRule": "minimum contiguous maximum passing RPS across all three N-1 series"
+  },
+  "runs": [
+    {
+      "name": "three-node-steady",
+      "profile": "steady",
+      "execution": "automatic-k6",
+      "expectedNodes": ["node-1", "node-2", "node-3"],
+      "duration": "30m",
+      "minimumBaselineMultiplier": 2,
+      "websocketRequired": true,
+      "workflowProbesRequired": false,
+      "capacityEvidence": ["before", "during", "after"]
+    },
+    {
+      "name": "three-node-capacity-series",
+      "profile": "steady",
+      "execution": "sequential-separate-k6-evidence",
+      "expectedNodes": ["node-1", "node-2", "node-3"],
+      "stages": [
+        {"sequence": 1, "duration": "5m", "baselineMultiplier": 0.5},
+        {"sequence": 2, "duration": "5m", "baselineMultiplier": 1},
+        {"sequence": 3, "duration": "5m", "baselineMultiplier": 1.5},
+        {"sequence": 4, "duration": "5m", "baselineMultiplier": 2},
+        {"sequence": 5, "duration": "5m", "baselineMultiplier": 2.5},
+        {"sequence": 6, "duration": "5m", "baselineMultiplier": 3},
+        {"sequence": 7, "duration": "5m", "baselineMultiplier": 3.5},
+        {"sequence": 8, "duration": "5m", "baselineMultiplier": 4}
+      ],
+      "stopAfterFirstFailure": true,
+      "separateEvidencePerStage": true,
+      "websocketRequired": true,
+      "workflowProbesRequired": false,
+      "capacityEvidence": ["before", "each-stage", "after"]
+    },
+    {
+      "name": "n-minus-one-capacity-node-1",
+      "profile": "n-minus-one",
+      "execution": "controlled-drain-plus-sequential-separate-k6-evidence",
+      "excludedNode": "node-1",
+      "expectedNodes": ["node-2", "node-3"],
+      "stages": [
+        {"sequence": 1, "duration": "5m", "baselineMultiplier": 0.5},
+        {"sequence": 2, "duration": "5m", "baselineMultiplier": 1},
+        {"sequence": 3, "duration": "5m", "baselineMultiplier": 1.5},
+        {"sequence": 4, "duration": "5m", "baselineMultiplier": 2},
+        {"sequence": 5, "duration": "5m", "baselineMultiplier": 2.5},
+        {"sequence": 6, "duration": "5m", "baselineMultiplier": 3},
+        {"sequence": 7, "duration": "5m", "baselineMultiplier": 3.5},
+        {"sequence": 8, "duration": "5m", "baselineMultiplier": 4}
+      ],
+      "stopAfterFirstFailure": true,
+      "separateEvidencePerStage": true,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "each-stage", "after"]
+    },
+    {
+      "name": "n-minus-one-capacity-node-2",
+      "profile": "n-minus-one",
+      "execution": "controlled-drain-plus-sequential-separate-k6-evidence",
+      "excludedNode": "node-2",
+      "expectedNodes": ["node-1", "node-3"],
+      "stages": [
+        {"sequence": 1, "duration": "5m", "baselineMultiplier": 0.5},
+        {"sequence": 2, "duration": "5m", "baselineMultiplier": 1},
+        {"sequence": 3, "duration": "5m", "baselineMultiplier": 1.5},
+        {"sequence": 4, "duration": "5m", "baselineMultiplier": 2},
+        {"sequence": 5, "duration": "5m", "baselineMultiplier": 2.5},
+        {"sequence": 6, "duration": "5m", "baselineMultiplier": 3},
+        {"sequence": 7, "duration": "5m", "baselineMultiplier": 3.5},
+        {"sequence": 8, "duration": "5m", "baselineMultiplier": 4}
+      ],
+      "stopAfterFirstFailure": true,
+      "separateEvidencePerStage": true,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "each-stage", "after"]
+    },
+    {
+      "name": "n-minus-one-capacity-node-3",
+      "profile": "n-minus-one",
+      "execution": "controlled-drain-plus-sequential-separate-k6-evidence",
+      "excludedNode": "node-3",
+      "expectedNodes": ["node-1", "node-2"],
+      "stages": [
+        {"sequence": 1, "duration": "5m", "baselineMultiplier": 0.5},
+        {"sequence": 2, "duration": "5m", "baselineMultiplier": 1},
+        {"sequence": 3, "duration": "5m", "baselineMultiplier": 1.5},
+        {"sequence": 4, "duration": "5m", "baselineMultiplier": 2},
+        {"sequence": 5, "duration": "5m", "baselineMultiplier": 2.5},
+        {"sequence": 6, "duration": "5m", "baselineMultiplier": 3},
+        {"sequence": 7, "duration": "5m", "baselineMultiplier": 3.5},
+        {"sequence": 8, "duration": "5m", "baselineMultiplier": 4}
+      ],
+      "stopAfterFirstFailure": true,
+      "separateEvidencePerStage": true,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "each-stage", "after"]
+    },
+    {
+      "name": "n-minus-one-node-1",
+      "profile": "n-minus-one",
+      "execution": "controlled-drain-plus-k6",
+      "excludedNode": "node-1",
+      "expectedNodes": ["node-2", "node-3"],
+      "duration": "10m",
+      "minimumBaselineMultiplier": 2,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "during", "after"]
+    },
+    {
+      "name": "n-minus-one-node-2",
+      "profile": "n-minus-one",
+      "execution": "controlled-drain-plus-k6",
+      "excludedNode": "node-2",
+      "expectedNodes": ["node-1", "node-3"],
+      "duration": "10m",
+      "minimumBaselineMultiplier": 2,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "during", "after"]
+    },
+    {
+      "name": "n-minus-one-node-3",
+      "profile": "n-minus-one",
+      "execution": "controlled-drain-plus-k6",
+      "excludedNode": "node-3",
+      "expectedNodes": ["node-1", "node-2"],
+      "duration": "10m",
+      "minimumBaselineMultiplier": 2,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "during", "after"]
+    },
+    {
+      "name": "rolling-deploy-continuity",
+      "profile": "rolling-deploy",
+      "execution": "controlled-rolling-deploy-plus-k6",
+      "expectedNodes": ["node-1", "node-2", "node-3"],
+      "duration": "full-rollout",
+      "minimumBaselineMultiplier": 1,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "per-node", "after"]
+    },
+    {
+      "name": "failover-continuity",
+      "profile": "failover",
+      "execution": "controlled-single-failure-plus-k6",
+      "expectedNodes": ["node-1", "node-2", "node-3"],
+      "duration": "full-drill",
+      "minimumBaselineMultiplier": 1,
+      "websocketRequired": true,
+      "workflowProbesRequired": true,
+      "capacityEvidence": ["before", "during", "after"]
+    }
+  ],
+  "manualChecks": [
+    "real role login and authorized navigation on student, admin, teacher, and staff surfaces",
+    "a valid upload is published, read byte-identically through another node, then deleted",
+    "two SignalR clients on different nodes receive the same application event and reconnect",
+    "an acknowledged database write and queued job survive each approved failover",
+    "file quorum loss visibly refuses writes and heal restores checksum parity"
+  ]
+}

@@ -9,7 +9,7 @@ import {
   AdminPageSkeleton, ContentHierarchyPanel,
   PackageCodeProfileSummary, ContentImageUpload
 } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
 import { contentService, TermDto } from "@/services/content-service";
@@ -67,22 +67,22 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
 
   if (pkgLoading) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
   if (!pkg) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على الباقة المطلوبة.</p>
           <NeumorphButton onClick={() => router.push("/teacher/packages")} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة للباقات
           </NeumorphButton>
         </div>
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
@@ -96,7 +96,7 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
   }));
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى ▸ الباقات"
       pageTitle={pkg.name}
@@ -203,6 +203,6 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
           />
         </div>
       )}
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

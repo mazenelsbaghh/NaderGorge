@@ -25,10 +25,10 @@ import { adminService } from '@/services/admin-service';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
 import { contentService, type VideoChapterDto, type VideoDto } from '@/services/content-service';
 import { workerService, type WorkerJobStatus } from '@/services/worker-service';
-import { AdminShellChrome, AdminTeacherPhotoUpload } from '@/components/admin';
+import { AdminPage, AdminTeacherPhotoUpload } from '@/components/admin';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePlatformEvents } from '@/hooks/usePlatformEvents';
-import { registerCacheStore, unregisterCacheStore } from '@/lib/cache-invalidation';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -863,12 +863,10 @@ export default function AIMonitorPageClient() {
 
   useEffect(() => {
     loadProcessingVideos();
-    registerCacheStore('admin:ai-monitor', () => {}, () => {
+    const cleanupCacheStore = registerCacheStore('admin:ai-monitor', () => {}, () => {
       void loadProcessingVideos();
     });
-    return () => {
-      unregisterCacheStore('admin:ai-monitor');
-    };
+    return cleanupCacheStore;
   }, []);
 
   // Start polling once we have items; don't restart when item count changes
@@ -957,7 +955,7 @@ export default function AIMonitorPageClient() {
   ).length;
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/ai-monitor"
       sectionLabel="مراقبة الذكاء الاصطناعي"
       pageTitle="مركز تحليل الفيديو"
@@ -1469,6 +1467,6 @@ export default function AIMonitorPageClient() {
           </div>
         )}
       </div>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

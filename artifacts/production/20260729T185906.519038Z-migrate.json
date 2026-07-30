@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "634cec2c-12f7-4eb6-a797-a1aefb81596b",
+  "command": "migrate",
+  "startedAt": "2026-07-29T18:59:06.519038Z",
+  "completedAt": "2026-07-29T18:59:06.519227Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

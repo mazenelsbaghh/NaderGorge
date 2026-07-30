@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "0cb66c2a-5127-4a8e-ae89-311cc02891b2",
+  "command": "file-failover-test",
+  "startedAt": "2026-07-28T04:25:36.902402Z",
+  "completedAt": "2026-07-28T04:25:36.902804Z",
+  "status": "failed",
+  "targets": [
+    "node-1"
+  ],
+  "reason": "file failover drill failed safely: SshTransportError"
+}

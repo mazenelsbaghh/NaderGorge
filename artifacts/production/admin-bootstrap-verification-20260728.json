@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "operation": "initial-production-admin-bootstrap",
+  "status": "pass",
+  "accountCreated": true,
+  "passwordRecordedInOperationalArtifacts": false,
+  "loginRole": "Admin",
+  "directNodeAuthorization": {
+    "node-1": "pass",
+    "node-2": "pass",
+    "node-3": "pass"
+  },
+  "remoteBuildStagingRemoved": true,
+  "postBootstrapClusterStatus": "success",
+  "postBootstrapStatusEvidence": "artifacts/production/20260728T143758.015118Z-status.json",
+  "postBootstrapAuditEvidence": "artifacts/production/20260728T143802.920826Z-audit.json"
+}

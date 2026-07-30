@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "7a483c96-8ff7-4397-bb48-319f08a82b0f",
+  "command": "thanaweya-log-count",
+  "startedAt": "2026-07-29T00:02:06.335748Z",
+  "completedAt": "2026-07-29T00:02:06.336551Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "{\"byNode\": {\"node-1\": 0, \"node-2\": 0, \"node-3\": 0}, \"requests\": 0}"
+}

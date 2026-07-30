@@ -1,8 +1,10 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
-import { useEffect, useState, useCallback } from 'react';
+import { type ReactNode, useEffect, useState, useCallback } from 'react';
 import {
+  ChevronLeft,
+  ChevronRight,
   Download,
   Filter,
   Shield,
@@ -17,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import { AddUserDrawer } from '../users/components/AddUserDrawer';
 
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
@@ -27,17 +29,31 @@ import {
 } from '@/components/admin';
 import {
   formatRelativeDate,
-  getInitials,
 } from '@/components/admin/admin-utils';
 import { AdminUserListDto, adminService } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { getEducationStageLabel, getGradeLevelLabel, getStudyTrackLabel } from '@/lib/academic-labels';
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 
-function normalizeRole(user: AdminUserListDto): 'Admin' | 'Assistant' | 'Student' | 'Teacher' {
-  if (user.roles.includes('Admin')) return 'Admin';
-  if (user.roles.includes('Student')) return 'Student';
-  if (user.roles.includes('Teacher')) return 'Teacher';
-  return 'Assistant';
+const STUDENT_PAGE_SIZES = [25, 50] as const;
+
+function isRequestCancellation(error: unknown) {
+  if (error instanceof DOMException && error.name === 'AbortError') return true;
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'ERR_CANCELED'
+  );
+}
+
+function StudentManagementFrame({ staff, children }: { staff: boolean; children: ReactNode }) {
+  const title = 'إدارة الطلاب';
+  const subtitle = 'البحث عن الطلاب، فلترة المراحل، تفعيل أو تعليق الحسابات وتصدير البيانات الأكاديمية.';
+  if (staff) return <AssistantShellChrome activePath="/assistant/students" sectionLabel="خدمة الطلاب" pageTitle={title} subtitle={subtitle}>{children}</AssistantShellChrome>;
+  return <AdminPage activePath="/admin/students" sectionLabel="الطلاب" pageTitle={title} subtitle={subtitle}>{children}</AdminPage>;
 }
 
 function statusLabel(status: string) {
@@ -51,12 +67,18 @@ function getStatusClasses(status: string) {
   return 'bg-[var(--admin-card-strong)] text-[var(--admin-muted)]';
 }
 
-export default function AdminStudentsPageClient() {
+export default function AdminStudentsPageClient({ staff = false }: { staff?: boolean }) {
   const router = useRouter();
   const [users, setUsers] = useState<AdminUserListDto[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] =
+    useState<(typeof STUDENT_PAGE_SIZES)[number]>(25);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
   const [educationStageFilter, setEducationStageFilter] = useState('');
   const [gradeLevelFilter, setGradeLevelFilter] = useState('');
   const [studyTrackFilter, setStudyTrackFilter] = useState('');
@@ -67,28 +89,50 @@ export default function AdminStudentsPageClient() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  const fetchUsers = useCallback(async () => {
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [search]);
+
+  const fetchUsers = useCallback(async (signal: AbortSignal) => {
     try {
       setLoading(true);
       setLoadError(false);
       const data = await adminService.listUsers(
-        1,
-        1000,
-        search,
+        page,
+        pageSize,
+        debouncedSearch,
         educationStageFilter || undefined,
         gradeLevelFilter || undefined,
         studyTrackFilter || undefined,
         genderFilter || undefined,
-        governorateFilter || undefined
+        governorateFilter || undefined,
+        'Student',
+        signal
       );
+      if (!data || signal.aborted) return;
+
+      const lastPage = Math.max(1, Math.ceil(data.totalCount / pageSize));
+      setTotalCount(data.totalCount);
+      if (page > lastPage) {
+        setPage(lastPage);
+        return;
+      }
       setUsers(data.items);
-    } catch {
+    } catch (error) {
+      if (isRequestCancellation(error)) return;
       setLoadError(true);
     } finally {
-      setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
   }, [
-    search,
+    page,
+    pageSize,
+    debouncedSearch,
     educationStageFilter,
     gradeLevelFilter,
     studyTrackFilter,
@@ -97,14 +141,14 @@ export default function AdminStudentsPageClient() {
   ]);
 
   useEffect(() => {
-    let isMounted = true;
-    fetchUsers().finally(() => {
-      if (!isMounted) return;
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchUsers]);
+    const controller = new AbortController();
+    void fetchUsers(controller.signal);
+    return () => controller.abort();
+  }, [fetchUsers, reloadToken]);
+
+  const refreshUsers = useCallback(() => {
+    setReloadToken((current) => current + 1);
+  }, []);
 
   async function handleToggleStatus(user: AdminUserListDto) {
     const nextStatus = user.status === 'Active' ? 'Disabled' : 'Active';
@@ -132,18 +176,15 @@ export default function AdminStudentsPageClient() {
     const toastId = toast.loading('جاري تصدير بيانات الطلاب...');
 
     try {
-      const data = await adminService.listUsers(
-        1,
-        100000,
-        search,
-        educationStageFilter || undefined,
-        gradeLevelFilter || undefined,
-        studyTrackFilter || undefined,
-        genderFilter || undefined,
-        governorateFilter || undefined
-      );
-
-      const itemsToExport = data.items.filter((user) => normalizeRole(user) === 'Student');
+      const itemsToExport = await adminService.exportUsers({
+        search: search.trim() || undefined,
+        educationStage: educationStageFilter || undefined,
+        gradeLevel: gradeLevelFilter || undefined,
+        studyTrack: studyTrackFilter || undefined,
+        gender: genderFilter || undefined,
+        governorate: governorateFilter || undefined,
+        role: 'Student',
+      });
 
       if (!itemsToExport || itemsToExport.length === 0) {
         toast.error('لا توجد بيانات لتصديرها', { id: toastId });
@@ -158,39 +199,21 @@ export default function AdminStudentsPageClient() {
 
       const mapEducationStage = (s?: string) => {
         if (!s) return '—';
-        const m: Record<string, string> = {
-          Secondary: 'ثانوية',
-          Baccalaureate: 'بكالوريا',
-        };
-        return m[s] || s;
+        return getEducationStageLabel(s);
       };
 
       const mapGradeLevel = (g?: string) => {
         if (!g || g === 'N/A') return '—';
-        const m: Record<string, string> = {
-          FirstSecondary: 'أولى ثانوي',
-          SecondSecondary: 'ثانية ثانوي',
-          FirstBaccalaureate: 'أولى بكالوريا',
-          SecondBaccalaureate: 'ثانية بكالوريا',
-        };
-        return m[g] || g;
+        return getGradeLevelLabel(g);
       };
 
       const mapStudyTrack = (t?: string) => {
         if (!t || t === 'N/A') return '—';
-        const m: Record<string, string> = {
-          Science: 'علمي',
-          Arts: 'أدبي',
-          MedicineAndLifeSciences: 'الطب وعلوم الحياة',
-          EngineeringAndComputerScience: 'الهندسة وعلوم الحاسب',
-          Business: 'قطاع الأعمال',
-          ArtsAndHumanities: 'الآداب والفنون',
-        };
-        return m[t] || t;
+        return getStudyTrackLabel(t);
       };
 
       const headers = [
-        'كود الطالب',
+        'رقم متابعة ولي الأمر',
         'الاسم الكامل',
         'رقم الهاتف',
         'رقم الهاتف الإضافي',
@@ -208,7 +231,7 @@ export default function AdminStudentsPageClient() {
 
       for (const u of itemsToExport) {
         const rowData = [
-          u.studentCode || '—',
+          u.parentTrackingCode || '—',
           u.fullName,
           u.phoneNumber,
           u.secondaryPhone || '—',
@@ -253,9 +276,11 @@ export default function AdminStudentsPageClient() {
     }
   };
 
-  const filteredStudents = users.filter((user) => normalizeRole(user) === 'Student');
-  const activeStudents = filteredStudents.filter((user) => user.status === 'Active').length;
-  const pendingStudents = filteredStudents.filter((user) => user.status !== 'Active').length;
+  const activeStudents = users.filter((user) => user.status === 'Active').length;
+  const pendingStudents = users.filter((user) => user.status !== 'Active').length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const firstVisibleItem = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastVisibleItem = Math.min(page * pageSize, totalCount);
 
   const columns: AdminColumn<AdminUserListDto>[] = [
     {
@@ -263,9 +288,12 @@ export default function AdminStudentsPageClient() {
       label: 'الطالب',
       render: (u) => (
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[var(--admin-border)] bg-[var(--admin-primary-15)] font-bold text-[var(--admin-primary)] shadow-sm">
-            {getInitials(u.fullName)}
-          </div>
+          <UserAvatar
+            avatarSlug={u.avatarSlug}
+            fullName={u.fullName}
+            size={48}
+            className="shadow-sm"
+          />
           <div>
             <div className="font-bold text-[var(--admin-text)]">
               {u.fullName}
@@ -283,21 +311,23 @@ export default function AdminStudentsPageClient() {
       render: (u) => (
         <div className="flex flex-col gap-1">
           <span className="text-sm font-bold text-[var(--admin-text)]">
-            {u.grade !== 'N/A' ? u.grade : '—'}
+            {u.grade && u.grade !== 'N/A' ? getGradeLevelLabel(u.grade) : '—'}
           </span>
-          <span className="text-xs text-[var(--admin-muted)]">
-            {u.educationStage !== 'N/A' ? (u.educationStage === 'Secondary' ? 'ثانوية' : 'بكالوريا') : ''}
-            {u.track !== 'N/A' && ` - ${u.track === 'Science' ? 'علمي' : u.track === 'Arts' ? 'أدبي' : u.track}`}
-          </span>
+          {(u.educationStage && u.educationStage !== 'N/A') || (u.track && u.track !== 'N/A') ? (
+            <span className="text-xs text-[var(--admin-muted)]">
+              {u.educationStage && u.educationStage !== 'N/A' && getEducationStageLabel(u.educationStage)}
+              {u.track && u.track !== 'N/A' && `${u.educationStage && u.educationStage !== 'N/A' ? ' - ' : ''}${getStudyTrackLabel(u.track)}`}
+            </span>
+          ) : null}
         </div>
       ),
     },
     {
-      key: 'studentCode',
-      label: 'كود الطالب',
+      key: 'parentTrackingCode',
+      label: 'رقم متابعة ولي الأمر',
       render: (u) => (
-        <span className="font-mono text-sm text-[var(--admin-text)] font-semibold">
-          {u.studentCode || '—'}
+        <span className="font-mono text-sm font-semibold text-[var(--admin-primary)]">
+          {u.parentTrackingCode || '—'}
         </span>
       ),
     },
@@ -352,27 +382,16 @@ export default function AdminStudentsPageClient() {
   ];
 
   return (
-    <AdminShellChrome
-      activePath="/admin/students"
-      sectionLabel="الطلاب"
-      pageTitle="إدارة الطلاب"
-      subtitle="البحث عن الطلاب، فلترة المراحل، تفعيل أو تعليق الحسابات وتصدير البيانات الأكاديمية."
-      action={
-        <NeumorphButton
-          intent="primary"
-          size="lg"
-          pill
-          onClick={() => setShowAddUser(true)}
-        >
-          <UserPlus className="h-4 w-4" />
-          إضافة طالب جديد
+    <StudentManagementFrame staff={staff}>
+      <div className="flex justify-end">
+        <NeumorphButton intent="primary" size="lg" pill onClick={() => setShowAddUser(true)}>
+          <UserPlus className="h-4 w-4" />إضافة طالب جديد
         </NeumorphButton>
-      }
-    >
+      </div>
       <AddUserDrawer
         open={showAddUser}
         onClose={() => setShowAddUser(false)}
-        onSuccess={() => fetchUsers()}
+        onSuccess={refreshUsers}
         defaultRole="Student"
       />
       <ConfirmDialog
@@ -398,7 +417,7 @@ export default function AdminStudentsPageClient() {
         onCancel={() => setConfirmUser(null)}
       />
 
-      {loadError ? (
+      {loadError && users.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-[var(--admin-border)] p-16 text-center gap-6 bg-[var(--admin-card-soft)]">
           <div className="rounded-full bg-red-100 p-6 text-red-500 dark:bg-red-900/20 shadow-sm">
             <RefreshCw className="h-10 w-10" />
@@ -412,7 +431,7 @@ export default function AdminStudentsPageClient() {
             </p>
           </div>
           <NeumorphButton
-            onClick={() => void fetchUsers()}
+            onClick={refreshUsers}
             intent="primary"
             size="lg"
             pill
@@ -421,7 +440,7 @@ export default function AdminStudentsPageClient() {
             <RefreshCw className="h-4 w-4" /> إعادة المحاولة الآن
           </NeumorphButton>
         </div>
-      ) : loading ? (
+      ) : loading && users.length === 0 ? (
         <AdminPageSkeleton />
       ) : (
         <>
@@ -430,31 +449,31 @@ export default function AdminStudentsPageClient() {
               variant="light"
               icon={Users}
               label="إجمالي الطلاب"
-              value={filteredStudents.length}
-              subtitle="إجمالي الطلاب المسجلين بالمنصة"
+              value={totalCount}
+              subtitle="وفق البحث والفلاتر الحالية"
             />
 
             <AdminStatCard
               variant="accent"
               icon={Sparkles}
-              label="النشطون"
+              label="النشطون في الصفحة"
               value={activeStudents}
-              subtitle="طلاب حساباتهم نشطة وموثقة"
+              subtitle={`من أصل ${users.length} طالب ظاهر`}
             />
 
             <AdminStatCard
               variant="muted"
               icon={Shield}
-              label="المعلقون"
+              label="المعلقون في الصفحة"
               value={pendingStudents}
-              subtitle="حسابات طلاب معلقة مؤقتاً"
+              subtitle={`من أصل ${users.length} طالب ظاهر`}
             />
           </section>
 
           <AdminSearchToolbar
             value={search}
             onChange={setSearch}
-            placeholder="البحث بكود الطالب، الاسم، أو رقم الهاتف..."
+            placeholder="البحث برقم متابعة ولي الأمر، الاسم، أو رقم الهاتف..."
             actions={
               <>
                 <button
@@ -487,12 +506,15 @@ export default function AdminStudentsPageClient() {
                   </label>
                   <select
                     value={educationStageFilter}
-                    onChange={(e) => setEducationStageFilter(e.target.value)}
+                    onChange={(e) => {
+                      setEducationStageFilter(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
                   >
                     <option value="">الكل</option>
-                    <option value="Secondary">ثانوية</option>
-                    <option value="Baccalaureate">بكالوريا</option>
+                    <option value="Secondary">{getEducationStageLabel('Secondary')}</option>
+                    <option value="Baccalaureate">{getEducationStageLabel('Baccalaureate')}</option>
                   </select>
                 </div>
                 <div>
@@ -501,14 +523,17 @@ export default function AdminStudentsPageClient() {
                   </label>
                   <select
                     value={gradeLevelFilter}
-                    onChange={(e) => setGradeLevelFilter(e.target.value)}
+                    onChange={(e) => {
+                      setGradeLevelFilter(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
                   >
                     <option value="">الكل</option>
-                    <option value="FirstSecondary">أولى ثانوي</option>
-                    <option value="SecondSecondary">ثانية ثانوي</option>
-                    <option value="FirstBaccalaureate">أولى بكالوريا</option>
-                    <option value="SecondBaccalaureate">ثانية بكالوريا</option>
+                    <option value="FirstSecondary">{getGradeLevelLabel('FirstSecondary')}</option>
+                    <option value="SecondSecondary">{getGradeLevelLabel('SecondSecondary')}</option>
+                    <option value="FirstBaccalaureate">{getGradeLevelLabel('FirstBaccalaureate')}</option>
+                    <option value="SecondBaccalaureate">{getGradeLevelLabel('SecondBaccalaureate')}</option>
                   </select>
                 </div>
                 <div>
@@ -517,20 +542,23 @@ export default function AdminStudentsPageClient() {
                   </label>
                   <select
                     value={studyTrackFilter}
-                    onChange={(e) => setStudyTrackFilter(e.target.value)}
+                    onChange={(e) => {
+                      setStudyTrackFilter(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
                   >
                     <option value="">الكل</option>
-                    <option value="Arts">أدبي</option>
-                    <option value="Science">علمي</option>
+                    <option value="Arts">{getStudyTrackLabel('Arts')}</option>
+                    <option value="Science">{getStudyTrackLabel('Science')}</option>
                     <option value="MedicineAndLifeSciences">
-                      الطب وعلوم الحياة
+                      {getStudyTrackLabel('MedicineAndLifeSciences')}
                     </option>
                     <option value="EngineeringAndComputerScience">
-                      الهندسة وعلوم الحاسب
+                      {getStudyTrackLabel('EngineeringAndComputerScience')}
                     </option>
-                    <option value="Business">قطاع الأعمال</option>
-                    <option value="ArtsAndHumanities">الآداب والفنون</option>
+                    <option value="Business">{getStudyTrackLabel('Business')}</option>
+                    <option value="ArtsAndHumanities">{getStudyTrackLabel('ArtsAndHumanities')}</option>
                   </select>
                 </div>
                 <div>
@@ -539,7 +567,10 @@ export default function AdminStudentsPageClient() {
                   </label>
                   <select
                     value={genderFilter}
-                    onChange={(e) => setGenderFilter(e.target.value)}
+                    onChange={(e) => {
+                      setGenderFilter(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] p-3 text-right focus:border-[var(--admin-primary)] focus:outline-none"
                   >
                     <option value="">الكل</option>
@@ -551,20 +582,104 @@ export default function AdminStudentsPageClient() {
             </div>
           )}
 
-          <div className="content-visibility-auto">
+          {loadError ? (
+            <div
+              role="alert"
+              className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-[var(--admin-danger-10)] px-4 py-3 text-sm font-bold text-[var(--admin-danger)]"
+            >
+              <span>تعذر تحديث النتائج. ما زالت آخر بيانات ناجحة معروضة.</span>
+              <button
+                type="button"
+                onClick={refreshUsers}
+                className="min-h-11 rounded-full px-4 underline underline-offset-4"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
+          ) : null}
+
+          <div
+            className={`content-visibility-auto transition-opacity ${
+              loading ? 'opacity-70' : 'opacity-100'
+            }`}
+            aria-busy={loading}
+          >
             <AdminDataTable
-              data={filteredStudents}
+              data={users}
               columns={columns}
-              loading={loading}
+              loading={false}
+              pagination={false}
               rowKey={(u) => u.id}
               emptyMessage="لا توجد نتائج مطابقة لفلترة الطلاب."
               onRowClick={(u) => {
-                router.push(`/admin/users/${u.id}`);
+                router.push(staff ? `/assistant/students/${u.id}` : `/admin/users/${u.id}`);
               }}
             />
+            <div className="flex flex-wrap items-center justify-between gap-4 border-x border-b border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:px-6">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="text-sm font-bold text-[var(--admin-muted)]">
+                  عرض {firstVisibleItem.toLocaleString('ar-EG')}–
+                  {lastVisibleItem.toLocaleString('ar-EG')} من{' '}
+                  {totalCount.toLocaleString('ar-EG')} طالب
+                </span>
+                <label className="flex items-center gap-2 text-sm font-bold text-[var(--admin-muted)]">
+                  عدد الصفوف
+                  <select
+                    aria-label="عدد الطلاب في الصفحة"
+                    value={pageSize}
+                    onChange={(event) => {
+                      setPageSize(
+                        Number(event.target.value) as (typeof STUDENT_PAGE_SIZES)[number]
+                      );
+                      setPage(1);
+                    }}
+                    className="min-h-11 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 text-[var(--admin-text)]"
+                  >
+                    {STUDENT_PAGE_SIZES.map((size) => (
+                      <option key={size} value={size}>
+                        {size.toLocaleString('ar-EG')}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <nav
+                className="flex items-center gap-2"
+                aria-label="صفحات قائمة الطلاب"
+              >
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="الصفحة السابقة"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <span
+                  className="min-w-24 text-center text-sm font-black text-[var(--admin-primary)]"
+                  aria-current="page"
+                >
+                  {page.toLocaleString('ar-EG')} /{' '}
+                  {totalPages.toLocaleString('ar-EG')}
+                </span>
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() =>
+                    setPage((current) => Math.min(totalPages, current + 1))
+                  }
+                  className="flex min-h-11 min-w-11 items-center justify-center rounded-full text-[var(--admin-muted)] transition hover:bg-[var(--admin-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="الصفحة التالية"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+              </nav>
+            </div>
           </div>
         </>
       )}
-    </AdminShellChrome>
+    </StudentManagementFrame>
   );
 }

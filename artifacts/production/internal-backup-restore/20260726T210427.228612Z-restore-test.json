@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "7bf1f251-6412-40ae-a54f-e0df76914ec2",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T21:04:27.228612Z",
+  "completedAt": "2026-07-26T21:04:27.229344Z",
+  "status": "success",
+  "targets": [
+    "node-1"
+  ],
+  "reason": null
+}

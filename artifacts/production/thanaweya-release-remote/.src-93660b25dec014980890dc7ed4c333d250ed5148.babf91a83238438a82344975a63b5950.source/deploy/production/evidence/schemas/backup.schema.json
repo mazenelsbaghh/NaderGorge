@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "backupId", "kind", "startedAt", "completedAt", "encrypted", "status", "checksum"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "backupId": { "type": "string", "minLength": 1 },
+    "kind": { "enum": ["db-full", "db-wal", "files-hourly"] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "encrypted": { "const": true },
+    "status": { "enum": ["complete", "failed"] },
+    "checksum": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "expiresAt": { "type": "string", "format": "date-time" }
+  }
+}

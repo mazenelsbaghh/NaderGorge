@@ -106,6 +106,16 @@ public static class RateLimitingConfig
                         QueueLimit = 0
                     }));
 
+            options.AddPolicy("web-vitals", context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = isE2e ? 100000 : 120,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
             options.AddPolicy("live-support-public", context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",

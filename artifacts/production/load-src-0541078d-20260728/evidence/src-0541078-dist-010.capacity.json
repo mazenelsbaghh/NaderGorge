@@ -1,0 +1,2223 @@
+{
+  "baselineRps": 10,
+  "capturedAt": "2026-07-28T04:19:56.483034Z",
+  "completedAt": "2026-07-28T04:19:47.428Z",
+  "excludedNode": null,
+  "expectedNodes": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "loadEvidenceSha256": "86ea6057868b3edf4f67008c8c709a2da1b9eaf9d689cd9627a40bba68ac7f1b",
+  "profile": "steady",
+  "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+  "requestedRps": 10,
+  "runId": "src-0541078-dist-010",
+  "samples": [
+    {
+      "capturedAt": "2026-07-28T04:19:16.224680Z",
+      "nodes": [
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "3.46%",
+              "memory": "8.043MiB / 31.34GiB",
+              "memoryPercent": "0.03%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "259kB / 361kB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.14%",
+              "memory": "48.01MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "328kB / 333kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "44.95MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.68kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "44.52MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.81kB / 26.9kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "45.25MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.72kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "54.52MiB / 31.34GiB",
+              "memoryPercent": "0.17%",
+              "name": "massar_production-landing-1",
+              "networkIo": "3.87kB / 85kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "44.72MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.64kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 4.1kB",
+              "cpuPercent": "0.41%",
+              "memory": "182.5MiB / 31.34GiB",
+              "memoryPercent": "0.57%",
+              "name": "massar_production-backend-1",
+              "networkIo": "228kB / 182kB",
+              "pids": "41"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "17.2MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "0B / 374MB",
+              "cpuPercent": "0.02%",
+              "memory": "13.26MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "12"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 4.77,
+            "count": 8,
+            "iowaitPercent": 0.0,
+            "loadAverage": [
+              0.38330078125,
+              0.6259765625,
+              0.46630859375
+            ],
+            "stealPercent": 0.38
+          },
+          "hostname": "massar-node-1",
+          "memory": {
+            "availableBytes": 30902321152,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648492544
+          },
+          "nodeId": "node-1",
+          "patroni": {
+            "replication": [
+              {
+                "application_name": "node-3",
+                "client_addr": "10.77.0.13",
+                "state": "streaming",
+                "sync_priority": 1,
+                "sync_state": "quorum",
+                "usename": "replicator"
+              },
+              {
+                "application_name": "node-2",
+                "client_addr": "10.77.0.12",
+                "state": "streaming",
+                "sync_priority": 1,
+                "sync_state": "quorum",
+                "usename": "replicator"
+              }
+            ],
+            "role": "primary",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 18,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909267664
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "18",
+            "connected_clients": "79",
+            "connected_slaves": "2",
+            "instantaneous_ops_per_sec": "37",
+            "loading": "0",
+            "master_repl_offset": "40473867",
+            "maxmemory": "4294967296",
+            "role": "master",
+            "total_commands_processed": "1682375",
+            "used_memory": "3465560"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 393056935936,
+            "totalBytes": 415381426176
+          }
+        },
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "0.09%",
+              "memory": "8.145MiB / 31.34GiB",
+              "memoryPercent": "0.03%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "288kB / 435kB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "49.47MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "380kB / 419kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "45.09MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.64kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "45.68MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.77kB / 26.9kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "45.51MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.72kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "54.28MiB / 31.34GiB",
+              "memoryPercent": "0.17%",
+              "name": "massar_production-landing-1",
+              "networkIo": "3.87kB / 85kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "44.91MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.68kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 4.1kB",
+              "cpuPercent": "1.22%",
+              "memory": "196.3MiB / 31.34GiB",
+              "memoryPercent": "0.61%",
+              "name": "massar_production-backend-1",
+              "networkIo": "310kB / 276kB",
+              "pids": "42"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.03%",
+              "memory": "17.19MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "4.1kB / 370MB",
+              "cpuPercent": "0.01%",
+              "memory": "12.23MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "12"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 7.5,
+            "count": 8,
+            "iowaitPercent": 0.12,
+            "loadAverage": [
+              0.775390625,
+              0.7041015625,
+              0.474609375
+            ],
+            "stealPercent": 6.07
+          },
+          "hostname": "massar-node-2",
+          "memory": {
+            "availableBytes": 31703330816,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648496640
+          },
+          "nodeId": "node-2",
+          "patroni": {
+            "replication": [],
+            "role": "replica",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 18,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909267664
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "0",
+            "connected_clients": "32",
+            "connected_slaves": "0",
+            "instantaneous_ops_per_sec": "10",
+            "loading": "0",
+            "master_link_status": "up",
+            "master_repl_offset": "40474006",
+            "maxmemory": "4294967296",
+            "role": "slave",
+            "slave_repl_offset": "40474006",
+            "total_commands_processed": "1086558",
+            "used_memory": "2767912"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 400024297472,
+            "totalBytes": 415381426176
+          }
+        },
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "0.02%",
+              "memory": "7.652MiB / 31.34GiB",
+              "memoryPercent": "0.02%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "319kB / 506kB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "32.8kB / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "49.47MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "426kB / 517kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "3.67%",
+              "memory": "46.96MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.67kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "4.33%",
+              "memory": "56.52MiB / 31.34GiB",
+              "memoryPercent": "0.18%",
+              "name": "massar_production-landing-1",
+              "networkIo": "4.02kB / 85kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "46.08MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.75kB / 26.8kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "4.74%",
+              "memory": "46.97MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.87kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "4.71%",
+              "memory": "46.31MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.81kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "20.5kB / 4.1kB",
+              "cpuPercent": "5.81%",
+              "memory": "184MiB / 31.34GiB",
+              "memoryPercent": "0.57%",
+              "name": "massar_production-backend-1",
+              "networkIo": "323kB / 278kB",
+              "pids": "41"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "17.47MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "246kB / 375MB",
+              "cpuPercent": "0.02%",
+              "memory": "13.1MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "16"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 0.5,
+            "count": 8,
+            "iowaitPercent": 0.13,
+            "loadAverage": [
+              0.05615234375,
+              0.130859375,
+              0.15380859375
+            ],
+            "stealPercent": 0.13
+          },
+          "hostname": "massar-node-3",
+          "memory": {
+            "availableBytes": 31199879168,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648484352
+          },
+          "nodeId": "node-3",
+          "patroni": {
+            "replication": [],
+            "role": "replica",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 18,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909267664
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "0",
+            "connected_clients": "32",
+            "connected_slaves": "0",
+            "instantaneous_ops_per_sec": "8",
+            "loading": "0",
+            "master_link_status": "up",
+            "master_repl_offset": "40473867",
+            "maxmemory": "4294967296",
+            "role": "slave",
+            "slave_repl_offset": "40473867",
+            "total_commands_processed": "216459",
+            "used_memory": "2548872"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 383659368448,
+            "totalBytes": 415381426176
+          }
+        }
+      ],
+      "phase": "before"
+    },
+    {
+      "capturedAt": "2026-07-28T04:19:24.043348Z",
+      "nodes": [
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "3.62%",
+              "memory": "19.39MiB / 31.34GiB",
+              "memoryPercent": "0.06%",
+              "name": "massar-k6-src-0541078-dist-010-McZJyQ",
+              "networkIo": "0B / 0B",
+              "pids": "13"
+            },
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "0.30%",
+              "memory": "7.734MiB / 31.34GiB",
+              "memoryPercent": "0.02%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "1.12MB / 1.23MB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.17%",
+              "memory": "48.64MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "334kB / 347kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "3.86%",
+              "memory": "45.35MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.68kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "3.71%",
+              "memory": "44.94MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.81kB / 26.9kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "3.90%",
+              "memory": "44.78MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.72kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "6.14%",
+              "memory": "55.33MiB / 31.34GiB",
+              "memoryPercent": "0.17%",
+              "name": "massar_production-landing-1",
+              "networkIo": "12.3kB / 925kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "3.67%",
+              "memory": "45.55MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.64kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 4.1kB",
+              "cpuPercent": "2.87%",
+              "memory": "183.5MiB / 31.34GiB",
+              "memoryPercent": "0.57%",
+              "name": "massar_production-backend-1",
+              "networkIo": "249kB / 203kB",
+              "pids": "41"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "17.2MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "0B / 374MB",
+              "cpuPercent": "0.01%",
+              "memory": "13.3MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "13"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 3.23,
+            "count": 8,
+            "iowaitPercent": 0.0,
+            "loadAverage": [
+              0.32421875,
+              0.60498046875,
+              0.46044921875
+            ],
+            "stealPercent": 1.24
+          },
+          "hostname": "massar-node-1",
+          "memory": {
+            "availableBytes": 30856548352,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648492544
+          },
+          "nodeId": "node-1",
+          "patroni": {
+            "replication": [
+              {
+                "application_name": "node-3",
+                "client_addr": "10.77.0.13",
+                "state": "streaming",
+                "sync_priority": 1,
+                "sync_state": "quorum",
+                "usename": "replicator"
+              },
+              {
+                "application_name": "node-2",
+                "client_addr": "10.77.0.12",
+                "state": "streaming",
+                "sync_priority": 1,
+                "sync_state": "quorum",
+                "usename": "replicator"
+              }
+            ],
+            "role": "primary",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 20,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909269736
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "18",
+            "connected_clients": "79",
+            "connected_slaves": "2",
+            "instantaneous_ops_per_sec": "14",
+            "loading": "0",
+            "master_repl_offset": "40477015",
+            "maxmemory": "4294967296",
+            "role": "master",
+            "total_commands_processed": "1682772",
+            "used_memory": "3425264"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 2 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 393056772096,
+            "totalBytes": 415381426176
+          }
+        },
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "4.77%",
+              "memory": "8.492MiB / 31.34GiB",
+              "memoryPercent": "0.03%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "1.24MB / 1.38MB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "49.46MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "384kB / 431kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "45.47MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.64kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "45.44MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.77kB / 26.9kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "46.11MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.72kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "2.96%",
+              "memory": "55.97MiB / 31.34GiB",
+              "memoryPercent": "0.17%",
+              "name": "massar_production-landing-1",
+              "networkIo": "13.3kB / 1.01MB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "45.29MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.68kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 4.1kB",
+              "cpuPercent": "0.78%",
+              "memory": "197.6MiB / 31.34GiB",
+              "memoryPercent": "0.62%",
+              "name": "massar_production-backend-1",
+              "networkIo": "332kB / 301kB",
+              "pids": "42"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.04%",
+              "memory": "17.19MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "4.1kB / 370MB",
+              "cpuPercent": "0.04%",
+              "memory": "12.33MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "14"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 2.6,
+            "count": 8,
+            "iowaitPercent": 0.0,
+            "loadAverage": [
+              1.0244140625,
+              0.7626953125,
+              0.49609375
+            ],
+            "stealPercent": 1.61
+          },
+          "hostname": "massar-node-2",
+          "memory": {
+            "availableBytes": 31692238848,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648496640
+          },
+          "nodeId": "node-2",
+          "patroni": {
+            "replication": [],
+            "role": "replica",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 20,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909269736
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "0",
+            "connected_clients": "32",
+            "connected_slaves": "0",
+            "instantaneous_ops_per_sec": "7",
+            "loading": "0",
+            "master_link_status": "up",
+            "master_repl_offset": "40477015",
+            "maxmemory": "4294967296",
+            "role": "slave",
+            "slave_repl_offset": "40477015",
+            "total_commands_processed": "1086674",
+            "used_memory": "2763792"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 400024227840,
+            "totalBytes": 415381426176
+          }
+        },
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "0.32%",
+              "memory": "8.246MiB / 31.34GiB",
+              "memoryPercent": "0.03%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "1.1MB / 1.29MB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "32.8kB / 0B",
+              "cpuPercent": "0.40%",
+              "memory": "49.59MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "431kB / 530kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "46.8MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.67kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "1.78%",
+              "memory": "55.66MiB / 31.34GiB",
+              "memoryPercent": "0.17%",
+              "name": "massar_production-landing-1",
+              "networkIo": "11.4kB / 842kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "46.45MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.75kB / 26.8kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "46.72MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.87kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "46.24MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.88kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "20.5kB / 4.1kB",
+              "cpuPercent": "0.49%",
+              "memory": "186.3MiB / 31.34GiB",
+              "memoryPercent": "0.58%",
+              "name": "massar_production-backend-1",
+              "networkIo": "340kB / 302kB",
+              "pids": "42"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "16.97MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "246kB / 375MB",
+              "cpuPercent": "0.01%",
+              "memory": "13.11MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "16"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 1.25,
+            "count": 8,
+            "iowaitPercent": 0.12,
+            "loadAverage": [
+              0.046875,
+              0.1259765625,
+              0.15185546875
+            ],
+            "stealPercent": 0.38
+          },
+          "hostname": "massar-node-3",
+          "memory": {
+            "availableBytes": 31158157312,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648484352
+          },
+          "nodeId": "node-3",
+          "patroni": {
+            "replication": [],
+            "role": "replica",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 20,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909269736
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "0",
+            "connected_clients": "32",
+            "connected_slaves": "0",
+            "instantaneous_ops_per_sec": "5",
+            "loading": "0",
+            "master_link_status": "up",
+            "master_repl_offset": "40476876",
+            "maxmemory": "4294967296",
+            "role": "slave",
+            "slave_repl_offset": "40476876",
+            "total_commands_processed": "216579",
+            "used_memory": "2595856"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 383659286528,
+            "totalBytes": 415381426176
+          }
+        }
+      ],
+      "phase": "during"
+    },
+    {
+      "capturedAt": "2026-07-28T04:19:53.907718Z",
+      "nodes": [
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "0.02%",
+              "memory": "7.695MiB / 31.34GiB",
+              "memoryPercent": "0.02%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "6.51MB / 6.64MB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.03%",
+              "memory": "49.59MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "351kB / 389kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "2.96%",
+              "memory": "46.32MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.68kB / 25.6kB",
+              "pids": "13"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "44.53MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.81kB / 26.9kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "3.72%",
+              "memory": "46.15MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.72kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "1.93%",
+              "memory": "60.56MiB / 31.34GiB",
+              "memoryPercent": "0.19%",
+              "name": "massar_production-landing-1",
+              "networkIo": "62.8kB / 6.22MB",
+              "pids": "18"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.60%",
+              "memory": "47.1MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.64kB / 27.5kB",
+              "pids": "18"
+            },
+            {
+              "blockIo": "0B / 4.1kB",
+              "cpuPercent": "5.01%",
+              "memory": "185.6MiB / 31.34GiB",
+              "memoryPercent": "0.58%",
+              "name": "massar_production-backend-1",
+              "networkIo": "277kB / 246kB",
+              "pids": "41"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.04%",
+              "memory": "17.2MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "0B / 374MB",
+              "cpuPercent": "0.06%",
+              "memory": "13.38MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "15"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 3.0,
+            "count": 8,
+            "iowaitPercent": 0.0,
+            "loadAverage": [
+              0.26953125,
+              0.5625,
+              0.4501953125
+            ],
+            "stealPercent": 0.63
+          },
+          "hostname": "massar-node-1",
+          "memory": {
+            "availableBytes": 30921801728,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648492544
+          },
+          "nodeId": "node-1",
+          "patroni": {
+            "replication": [
+              {
+                "application_name": "node-3",
+                "client_addr": "10.77.0.13",
+                "state": "streaming",
+                "sync_priority": 1,
+                "sync_state": "quorum",
+                "usename": "replicator"
+              },
+              {
+                "application_name": "node-2",
+                "client_addr": "10.77.0.12",
+                "state": "streaming",
+                "sync_priority": 1,
+                "sync_state": "quorum",
+                "usename": "replicator"
+              }
+            ],
+            "role": "primary",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 20,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909289200
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "18",
+            "connected_clients": "79",
+            "connected_slaves": "2",
+            "instantaneous_ops_per_sec": "65",
+            "loading": "0",
+            "master_repl_offset": "40488446",
+            "maxmemory": "4294967296",
+            "role": "master",
+            "total_commands_processed": "1684065",
+            "used_memory": "3445192"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-1",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 3 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 393056763904,
+            "totalBytes": 415381426176
+          }
+        },
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "3.43%",
+              "memory": "8.5MiB / 31.34GiB",
+              "memoryPercent": "0.03%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "6.65MB / 6.79MB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.91%",
+              "memory": "49.25MiB / 31.34GiB",
+              "memoryPercent": "0.15%",
+              "name": "massar_production-worker-1",
+              "networkIo": "401kB / 473kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "45.62MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.64kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "46.16MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.83kB / 26.9kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "46MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.72kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "57.25MiB / 31.34GiB",
+              "memoryPercent": "0.18%",
+              "name": "massar_production-landing-1",
+              "networkIo": "63.8kB / 6.31MB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "45.34MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.68kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 4.1kB",
+              "cpuPercent": "0.42%",
+              "memory": "202.5MiB / 31.34GiB",
+              "memoryPercent": "0.63%",
+              "name": "massar_production-backend-1",
+              "networkIo": "365kB / 350kB",
+              "pids": "42"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.02%",
+              "memory": "17.19MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "4.1kB / 370MB",
+              "cpuPercent": "0.04%",
+              "memory": "12.29MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "13"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 1.75,
+            "count": 8,
+            "iowaitPercent": 0.0,
+            "loadAverage": [
+              0.619140625,
+              0.6884765625,
+              0.478515625
+            ],
+            "stealPercent": 0.38
+          },
+          "hostname": "massar-node-2",
+          "memory": {
+            "availableBytes": 31708041216,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648496640
+          },
+          "nodeId": "node-2",
+          "patroni": {
+            "replication": [],
+            "role": "replica",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 20,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909289200
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "0",
+            "connected_clients": "32",
+            "connected_slaves": "0",
+            "instantaneous_ops_per_sec": "5",
+            "loading": "0",
+            "master_link_status": "up",
+            "master_repl_offset": "40488585",
+            "maxmemory": "4294967296",
+            "role": "slave",
+            "slave_repl_offset": "40488585",
+            "total_commands_processed": "1086991",
+            "used_memory": "2785000"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-2",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 4 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 400024145920,
+            "totalBytes": 415381426176
+          }
+        },
+        {
+          "containers": [
+            {
+              "blockIo": "0B / 16.4kB",
+              "cpuPercent": "0.03%",
+              "memory": "8MiB / 31.34GiB",
+              "memoryPercent": "0.02%",
+              "name": "massar_production-gateway-1",
+              "networkIo": "6.6MB / 6.78MB",
+              "pids": "10"
+            },
+            {
+              "blockIo": "32.8kB / 0B",
+              "cpuPercent": "0.88%",
+              "memory": "51.72MiB / 31.34GiB",
+              "memoryPercent": "0.16%",
+              "name": "massar_production-worker-1",
+              "networkIo": "449kB / 573kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "46.34MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-admin-1",
+              "networkIo": "2.67kB / 27.5kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "59.12MiB / 31.34GiB",
+              "memoryPercent": "0.18%",
+              "name": "massar_production-landing-1",
+              "networkIo": "63.4kB / 6.22MB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.00%",
+              "memory": "46MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-teacher-1",
+              "networkIo": "2.75kB / 26.8kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "46.28MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-student-1",
+              "networkIo": "2.87kB / 25.6kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "4.1kB / 0B",
+              "cpuPercent": "0.01%",
+              "memory": "45.85MiB / 31.34GiB",
+              "memoryPercent": "0.14%",
+              "name": "massar_production-staff-1",
+              "networkIo": "2.88kB / 25kB",
+              "pids": "12"
+            },
+            {
+              "blockIo": "20.5kB / 4.1kB",
+              "cpuPercent": "0.55%",
+              "memory": "189.7MiB / 31.34GiB",
+              "memoryPercent": "0.59%",
+              "name": "massar_production-backend-1",
+              "networkIo": "367kB / 344kB",
+              "pids": "40"
+            },
+            {
+              "blockIo": "0B / 0B",
+              "cpuPercent": "0.03%",
+              "memory": "17.22MiB / 31.34GiB",
+              "memoryPercent": "0.05%",
+              "name": "massar-backup-tls-proxy",
+              "networkIo": "0B / 0B",
+              "pids": "9"
+            },
+            {
+              "blockIo": "246kB / 375MB",
+              "cpuPercent": "0.01%",
+              "memory": "13MiB / 31.34GiB",
+              "memoryPercent": "0.04%",
+              "name": "massar-backup-bucket",
+              "networkIo": "0B / 0B",
+              "pids": "13"
+            }
+          ],
+          "cpu": {
+            "busyPercent": 0.75,
+            "count": 8,
+            "iowaitPercent": 0.0,
+            "loadAverage": [
+              0.09521484375,
+              0.12841796875,
+              0.15185546875
+            ],
+            "stealPercent": 0.0
+          },
+          "hostname": "massar-node-3",
+          "memory": {
+            "availableBytes": 31155519488,
+            "swapFreeBytes": 0,
+            "swapTotalBytes": 0,
+            "totalBytes": 33648484352
+          },
+          "nodeId": "node-3",
+          "patroni": {
+            "replication": [],
+            "role": "replica",
+            "state": "running",
+            "timeline": 6
+          },
+          "postgres": {
+            "activeConnections": 1,
+            "connections": 20,
+            "databaseBytes": 19823639,
+            "maxConnections": 300,
+            "replicationLagBytes": 0,
+            "waitingLocks": 0,
+            "walBytes": 3909289200
+          },
+          "queues": {
+            "ai-essay-grading": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-live-support-turns": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "ai-video-chapters": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "generate-chapter-mindmaps": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            },
+            "notifications": {
+              "active": 0,
+              "delayed": 0,
+              "failed": 0,
+              "stalled": 0,
+              "waiting": 0
+            }
+          },
+          "redis": {
+            "aof_delayed_fsync": "0",
+            "blocked_clients": "0",
+            "connected_clients": "32",
+            "connected_slaves": "0",
+            "instantaneous_ops_per_sec": "8",
+            "loading": "0",
+            "master_link_status": "up",
+            "master_repl_offset": "40488446",
+            "maxmemory": "4294967296",
+            "role": "slave",
+            "slave_repl_offset": "40488446",
+            "total_commands_processed": "216899",
+            "used_memory": "2635504"
+          },
+          "releases": [
+            {
+              "name": "massar_production-gateway-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-worker-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-admin-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-landing-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-teacher-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-student-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-staff-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            },
+            {
+              "name": "massar_production-backend-1",
+              "nodeId": "node-3",
+              "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+              "status": "Up 5 minutes (healthy)"
+            }
+          ],
+          "rootDisk": {
+            "freeBytes": 383659229184,
+            "totalBytes": 415381426176
+          }
+        }
+      ],
+      "phase": "after"
+    }
+  ],
+  "schemaVersion": 1,
+  "startedAt": "2026-07-28T04:19:47.427Z",
+  "status": "failed",
+  "thresholds": {
+    "cpuBusyPercentMaximum": 85.0,
+    "cpuIowaitPercentMaximum": 10.0,
+    "cpuStealPercentMaximum": 5.0,
+    "diskFreePercentMinimum": 15.0,
+    "maximumSampleAgeSeconds": 120.0,
+    "memoryAvailablePercentMinimum": 20.0,
+    "minimumDuringSamples": 1.0,
+    "postgresConnectionUtilizationPercentMaximum": 70.0,
+    "postgresReplicationLagBytesMaximum": 16777216.0,
+    "postgresWaitingLocksMaximum": 0.0,
+    "queueFailedMaximum": 0.0,
+    "queueStalledMaximum": 0.0,
+    "queueWaitingMaximum": 100.0,
+    "redisAofDelayedFsyncMaximum": 0.0,
+    "redisBlockedClientsClusterTotalAbsoluteMaximum": 24.0,
+    "redisBlockedClientsClusterTotalIncreaseMaximum": 5.0,
+    "redisMemoryUtilizationPercentMaximum": 70.0,
+    "schemaVersion": 1
+  },
+  "violations": [
+    "node-2:cpu-steal:6.07>5.0",
+    "stale:sample-2:during"
+  ]
+}

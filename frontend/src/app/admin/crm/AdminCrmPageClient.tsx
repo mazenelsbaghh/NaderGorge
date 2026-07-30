@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AdminShellChrome } from '@/components/admin';
+import { AdminPage } from '@/components/admin';
 import { CrmStudentQueue } from '@/components/crm/CrmStudentQueue';
 import { CrmReportsPanel } from '@/components/crm/CrmReportsPanel';
 import { BarChart2, ListTodo } from 'lucide-react';
@@ -10,7 +10,7 @@ export default function AdminCrmPageClient() {
   const [activeTab, setActiveTab] = useState<'queue' | 'reports'>('queue');
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/crm"
       sectionLabel="الكول سنتر والمتابعة"
       pageTitle="إدارة علاقات الطلاب والاتصالات"
@@ -52,6 +52,6 @@ export default function AdminCrmPageClient() {
           <CrmReportsPanel />
         )}
       </div>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

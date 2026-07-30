@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "fd84cd14-f0b8-446c-84f8-0a7ca84c50ef",
+  "command": "build",
+  "startedAt": "2026-07-27T23:29:55.742911Z",
+  "completedAt": "2026-07-27T23:29:55.742955Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-3 file sender to node-1 file receiver timed out"
+}

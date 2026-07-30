@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "bcf2fdea-60d7-47ca-ba01-228de779948f",
+  "command": "restore-test",
+  "startedAt": "2026-07-27T04:03:25.918663Z",
+  "completedAt": "2026-07-27T04:03:25.919057Z",
+  "status": "failed",
+  "targets": [
+    "node-2"
+  ],
+  "reason": "restore test failed: massar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test."
+}

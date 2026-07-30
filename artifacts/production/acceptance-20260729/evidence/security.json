@@ -1,0 +1,11 @@
+{
+  "capturedAt": "2026-07-29T19:41:59.096445Z",
+  "directOriginDenied": true,
+  "internalPortsClosed": true,
+  "releaseId": "src-bdf19804cf29d19634b131a16d3e519d26f0d425",
+  "schemaVersion": 1,
+  "scope": "pre-dns",
+  "sourceEvidenceSha256": "61596ee168d718404b45bc1e98911e3a0996b3d02b98ccf6a9f25f4a9fbf31a8",
+  "status": "success",
+  "wrongHostDenied": true
+}

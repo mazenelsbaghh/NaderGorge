@@ -1,0 +1,83 @@
+{
+  "clusterId": "massar-production",
+  "images": {
+    "backend": "sha256:f7d6dd2d7a9574b3e7b8c35dc8b5edcd97a76fa7b50662e8dbd6effd30c8160b",
+    "frontend": "sha256:138eaa27ca5cd3231e2eec1f7a540470d628b365eec3c3905452c7e971f6a5a5",
+    "worker": "sha256:2639d43980e382facb96ad2fe3045e56a294ccb92edbff4707ae5f5da8156672"
+  },
+  "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+  "nodes": {
+    "node-1": {
+      "files": {
+        ".initial-manifest.sha256": [
+          2049,
+          758676
+        ],
+        ".release-files.sha256": [
+          2049,
+          758690
+        ],
+        "manifest.json": [
+          2049,
+          758635
+        ]
+      },
+      "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+      "nodeId": "node-1",
+      "releaseId": "prod-20260726-166-r1",
+      "schemaVersion": 1,
+      "status": "sealed",
+      "treeSha256": "0e41b67896337db0d94153090e5ab269de9ee858b423fe64b229ed7532a96cd5"
+    },
+    "node-2": {
+      "files": {
+        ".initial-manifest.sha256": [
+          2049,
+          315058
+        ],
+        ".release-files.sha256": [
+          2049,
+          315059
+        ],
+        "manifest.json": [
+          2049,
+          315057
+        ]
+      },
+      "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+      "nodeId": "node-2",
+      "releaseId": "prod-20260726-166-r1",
+      "schemaVersion": 1,
+      "status": "sealed",
+      "treeSha256": "0e41b67896337db0d94153090e5ab269de9ee858b423fe64b229ed7532a96cd5"
+    },
+    "node-3": {
+      "files": {
+        ".initial-manifest.sha256": [
+          2049,
+          565912
+        ],
+        ".release-files.sha256": [
+          2049,
+          565913
+        ],
+        "manifest.json": [
+          2049,
+          565911
+        ]
+      },
+      "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+      "nodeId": "node-3",
+      "releaseId": "prod-20260726-166-r1",
+      "schemaVersion": 1,
+      "status": "sealed",
+      "treeSha256": "0e41b67896337db0d94153090e5ab269de9ee858b423fe64b229ed7532a96cd5"
+    }
+  },
+  "operationId": "2dcb759396f6441d877c2bf84012b7ac",
+  "releaseId": "prod-20260726-166-r1",
+  "schemaVersion": 1,
+  "sealedAt": "2026-07-27T07:16:51.638390Z",
+  "status": "success",
+  "treeSha256": "0e41b67896337db0d94153090e5ab269de9ee858b423fe64b229ed7532a96cd5"
+}

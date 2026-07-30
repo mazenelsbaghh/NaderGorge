@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "61bbec47-dc09-48da-9b4f-b17295bf3a7d",
+  "command": "deploy",
+  "startedAt": "2026-07-27T16:14:39.607962Z",
+  "completedAt": "2026-07-27T16:14:39.608203Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: rollout failed on node-3; restored and undrained previous release prod-20260726-166-r1; MASSAR_DEPLOY_FAILURE stage=verify-shared-write line=1 status=1"
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "steady-30m-20260729",
+  "releaseId": "src-bdf19804cf29d19634b131a16d3e519d26f0d425",
+  "baselineRps": 1,
+  "profile": "steady",
+  "excludedNode": null,
+  "expectedNodes": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "stages": [
+    {
+      "sequence": 1,
+      "requestedRps": 2,
+      "duration": "30m",
+      "runId": "steady-30m-001"
+    }
+  ]
+}

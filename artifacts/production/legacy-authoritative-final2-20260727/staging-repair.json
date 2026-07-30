@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-27T19:54:43.021334Z",
+  "status": "success",
+  "isolated": true,
+  "repairs": [
+    "normalize-supported-video-providers",
+    "block-missing-live-support-attachments"
+  ],
+  "affectedRows": 3,
+  "normalizedProviderRows": 25,
+  "affectedPathSetSha256": "b5245ee39f2037b75ba4e44eae876ecd46e880fc97b617b680488101844ee0c2",
+  "contentDeleted": false
+}

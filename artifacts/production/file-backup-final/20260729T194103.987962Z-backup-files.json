@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "fcb895af-f238-40cb-a4a2-43cb4fdeb3af",
+  "command": "backup-files",
+  "startedAt": "2026-07-29T19:41:03.987962Z",
+  "completedAt": "2026-07-29T19:41:03.988154Z",
+  "status": "blocked",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "backup-files requires exactly one node"
+}

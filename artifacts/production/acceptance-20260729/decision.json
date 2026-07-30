@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "decision": "NO-GO",
+  "evaluatedAt": "2026-07-29T19:41:59.141045Z",
+  "reasons": [
+    "failed:load.json"
+  ],
+  "evidenceDigests": {
+    "release.json": "f074d0336af87dc87a93e7a59a3a12a5525a331d0fce211a6fbb5d52986ad585",
+    "cluster-health.json": "6e5a105ec6ba2470c3e90ed3fef0a6a3bb78b7f03bae039a193b743f98c3f39f",
+    "database-backup.json": "362aca2658881295da6ac4b1717a2009c7411040f47380f72410cbe3a87b9eb0",
+    "database-restore.json": "3b98b2c1069d22c6483d72178d798ad701405fb66f9647edc1685fd0275819e3",
+    "file-backup.json": "751c84f0e8eaeeac044b5c30f0a8b1f06a59a2f6f40c27df5bbfde709de86d19",
+    "file-restore.json": "9dba655ed3f2d7cd3f3566990e22c2df2c0f552430e4ab3b1684e862ca42152b",
+    "load.json": "5459fa57ca8efa8ee9033ef5d0df1e2b7dd18919d665d8e0f2b1962295fe0b09",
+    "chaos.json": "dd87a4d0ac0f42863ee6ae6a75d6ca7dd6b4172d11d9eef81b74b1f09c6c6a89",
+    "security.json": "113c85e2225215414e6ebe391892a38ece507d4c1d021c40a62d47079052251b",
+    "automated-tests.json": "25902dff8f999d2773b1027105824ffbfee5fd05000217933b1c09d56c8f551b",
+    "manual-qa.json": "2f44d623b366260409cc5787219c6680763d30d44bfa3967b7a96aab39cae6ae"
+  },
+  "signature": "56960ddfed4ab911a4053a2e90b00206819ac5ab55f8a610c9d9eb4f1fddd7ed"
+}

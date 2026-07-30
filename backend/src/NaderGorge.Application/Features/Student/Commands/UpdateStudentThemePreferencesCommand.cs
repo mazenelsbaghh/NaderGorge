@@ -77,7 +77,10 @@ public class UpdateStudentThemePreferencesCommandHandler : IRequestHandler<Updat
         profile.LightThemePaletteId = trimmedLight;
         profile.DarkThemePaletteId = trimmedDark;
         profile.CurrentMode = trimmedMode;
-        profile.AvatarSlug = request.AvatarSlug;
+        if (!string.IsNullOrWhiteSpace(request.AvatarSlug))
+        {
+            profile.AvatarSlug = request.AvatarSlug.Trim();
+        }
 
         _db.AuditLogs.Add(new AuditLog
         {
@@ -86,13 +89,17 @@ public class UpdateStudentThemePreferencesCommandHandler : IRequestHandler<Updat
             EntityId = profile.Id,
             PerformedByUserId = request.UserId,
             OldValues = $"LightThemePaletteId={oldLight ?? StudentThemeCatalog.DefaultLightPaletteId};DarkThemePaletteId={oldDark ?? StudentThemeCatalog.DefaultDarkPaletteId};CurrentMode={oldMode};AvatarSlug={oldAvatar}",
-            NewValues = $"LightThemePaletteId={trimmedLight};DarkThemePaletteId={trimmedDark};CurrentMode={trimmedMode};AvatarSlug={request.AvatarSlug}",
+            NewValues = $"LightThemePaletteId={trimmedLight};DarkThemePaletteId={trimmedDark};CurrentMode={trimmedMode};AvatarSlug={profile.AvatarSlug}",
         });
 
         await _db.SaveChangesAsync(cancellationToken);
 
         return ApiResponse<StudentThemePreferencesDto>.Ok(
-            StudentThemeCatalog.BuildPreferences(profile.LightThemePaletteId, profile.DarkThemePaletteId, profile.CurrentMode),
+            StudentThemeCatalog.BuildPreferences(
+                profile.LightThemePaletteId,
+                profile.DarkThemePaletteId,
+                profile.CurrentMode,
+                profile.AvatarSlug),
             "تم حفظ تفضيلات الثيم بنجاح."
         );
     }

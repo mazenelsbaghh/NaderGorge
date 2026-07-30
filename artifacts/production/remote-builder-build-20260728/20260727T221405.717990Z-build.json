@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "1fb3d5a0-7671-46a0-bbc5-7baddb43180e",
+  "command": "build",
+  "startedAt": "2026-07-27T22:14:05.717990Z",
+  "completedAt": "2026-07-27T22:14:05.718043Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-3 source receiver: sudo: I'm sorry massar-ops. I'm afraid I can't do that"
+}

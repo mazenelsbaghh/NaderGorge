@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "a4b9e5a1-ead2-486f-8c6e-60ef6e43c675",
+  "command": "build",
+  "startedAt": "2026-07-27T20:24:00.804415Z",
+  "completedAt": "2026-07-27T20:24:00.804734Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Command '['docker', 'build', '--pull', '--platform', 'linux/amd64', '--tag', 'massar/migrator:src-8e9f8adbe01c4819a1dbb0dd006b62b4898f85e0', '--file', 'artifacts/production/release-20260727-v10-retry/.src-8e9f8adbe01c4819a1dbb0dd006b62b4898f85e0.4abad764475a485eae11545c7f94e4dc.source/backend/Dockerfile.migrator', 'artifacts/production/release-20260727-v10-retry/.src-8e9f8adbe01c4819a1dbb0dd006b62b4898f85e0.4abad764475a485eae11545c7f94e4dc.source/backend']' returned non-zero exit status 100."
+}

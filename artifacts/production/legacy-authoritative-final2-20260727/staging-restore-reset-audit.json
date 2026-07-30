@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "backupId": "legacy-20260727T195014Z-ae80acbf",
+  "restoreId": "legacy-restore-51bc1971059f6e6a54a814b8909a3410",
+  "capturedAt": "2026-07-27T19:54:31.214143Z",
+  "status": "captured-before-reset",
+  "tableCountsBeforeReset": {
+    "VideoPlaybackSessions": 304,
+    "cluster_leases": 0
+  }
+}

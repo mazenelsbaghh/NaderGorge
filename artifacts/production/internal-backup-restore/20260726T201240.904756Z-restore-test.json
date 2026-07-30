@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "1869bcbc-2ced-4f99-b8b4-bfa83c8cc61a",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T20:12:40.904756Z",
+  "completedAt": "2026-07-26T20:12:40.905226Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: 2026-07-26 20:12:39.666 UTC [201874] LOG:  recovery stopping before commit of transaction 802, time 2026-07-26 20:11:49.698596+00\n2026-07-26 20:12:39.670 UTC [201874] FATAL:  could not restore file \"00000006000000000000000B\" from archive: child process was terminated by signal 3: Quit\nmassar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test."
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "c2c09034-1d1d-4843-8acd-b83a4e64f29a",
+  "command": "migrate",
+  "startedAt": "2026-07-28T18:25:09.702550Z",
+  "completedAt": "2026-07-28T18:25:09.702776Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "migration blocked: migration safety gate fields do not match the exact contract"
+}

@@ -2,42 +2,58 @@
 
 import { devConsole } from '@/utils/dev-console';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import type { ReactNode } from 'react';
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { 
-  BookCheck, 
-  FileQuestion, 
-  GraduationCap, 
-  LayoutList, 
-  Timer, 
-  Plus, 
-  BarChart3, 
-  Trash2, 
-  Edit, 
-  User as UserIcon, 
-  Save, 
+import {
+  BookCheck,
+  FileQuestion,
+  GraduationCap,
+  LayoutList,
+  Timer,
+  Plus,
+  BarChart3,
+  Trash2,
+  Edit,
+  User as UserIcon,
+  Save,
   X,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  ArrowRight
 } from 'lucide-react';
-import { 
-  AdminShellChrome, 
-  AdminStatCard, 
-  AdminPageSkeleton, 
-  AdminBackButton 
+import {
+  AdminPage,
+  AdminStatCard,
+  AdminPageSkeleton,
+  AdminBackButton,
+  ContentInternalCode,
+  AdminConfirmationDialog,
 } from '@/components/admin';
+import type { AdminShellRoute } from '@/components/admin/AdminShellChrome';
+import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 
-export default function ExamProfilePageClient({ id }: { id: string }) {
+export default function ExamProfilePageClient({
+  id,
+  activePath = '/admin/content',
+  sectionLabel = 'إدارة المحتوى ▸ بروفايل الامتحان',
+  surface = 'admin',
+}: {
+  id: string;
+  activePath?: AdminShellRoute;
+  sectionLabel?: string;
+  surface?: 'admin' | 'teacher';
+}) {
   const [data, setData] = useState<ExamDashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Tabs: 'questions' | 'attempts'
   const [activeTab, setActiveTab] = useState<'questions' | 'attempts'>('questions');
-  
+
   // Search query for student attempts
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,11 +61,50 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editingQuestionData, setEditingQuestionData] = useState<InlineExamQuestionDto | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [questionPendingDeletion, setQuestionPendingDeletion] = useState<string | null>(null);
+  const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
 
   // Adding question state
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
   const [addingQuestionData, setAddingQuestionData] = useState<InlineExamQuestionDto | null>(null);
   const [savingAdd, setSavingAdd] = useState(false);
+  const isTeacherSurface = surface === 'teacher';
+  const backAction = isTeacherSurface ? (
+    <button type="button" onClick={() => window.history.back()} className="admin-btn-ghost inline-flex items-center gap-2">
+      <ArrowRight className="h-4 w-4" />
+      رجوع
+    </button>
+  ) : (
+    <AdminBackButton />
+  );
+
+  const renderChrome = (children: ReactNode, pageTitle: string, subtitle: string, action?: ReactNode) => {
+    if (isTeacherSurface) {
+      return (
+        <TeacherShellChrome
+          activePath="/teacher/packages"
+          sectionLabel="المحتوى الدراسي ▸ بروفايل الامتحان"
+          pageTitle={pageTitle}
+          subtitle={subtitle}
+          action={action}
+        >
+          {children}
+        </TeacherShellChrome>
+      );
+    }
+
+    return (
+      <AdminPage
+        activePath={activePath}
+        sectionLabel={sectionLabel}
+        pageTitle={pageTitle}
+        subtitle={subtitle}
+        action={action}
+      >
+        {children}
+      </AdminPage>
+    );
+  };
 
   const loadData = useCallback(async () => {
     try {
@@ -80,8 +135,8 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
     if (!data?.attempts) return [];
     if (!searchQuery.trim()) return data.attempts;
     const q = searchQuery.toLowerCase().trim();
-    return data.attempts.filter(a => 
-      a.studentName?.toLowerCase().includes(q) || 
+    return data.attempts.filter(a =>
+      a.studentName?.toLowerCase().includes(q) ||
       a.studentPhone?.toLowerCase().includes(q)
     );
   }, [data?.attempts, searchQuery]);
@@ -152,10 +207,10 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
 
       await adminService.updateExamQuestion(id, editingQuestionId, payload);
       toast.success('تم حفظ تعديلات السؤال بنجاح');
-      
+
       setEditingQuestionId(null);
       setEditingQuestionData(null);
-      
+
       // Refresh dashboard
       const refreshed = await adminService.getExamDashboard(id);
       setData(refreshed || null);
@@ -167,16 +222,18 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
   };
 
   const handleDeleteQuestion = async (examQuestionId: string) => {
-    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا السؤال نهائياً من الامتحان؟')) return;
-
     try {
+      setIsDeletingQuestion(true);
       await adminService.deleteExamQuestion(id, examQuestionId);
       toast.success('تم حذف السؤال بنجاح');
       // Refresh dashboard
       const refreshed = await adminService.getExamDashboard(id);
       setData(refreshed || null);
+      setQuestionPendingDeletion(null);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'أخفق حذف السؤال');
+    } finally {
+      setIsDeletingQuestion(false);
     }
   };
 
@@ -212,8 +269,8 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
 
     try {
       setSavingAdd(true);
-      
-      // We will first add the question to get an ID if we wanted to upload audio, 
+
+      // We will first add the question to get an ID if we wanted to upload audio,
       // but since adding expects questions payload, we add questions first.
       // If we want audio, we upload it after or just use a standard flow.
       // For addQuestionsToExam, we can send the clean question first:
@@ -223,7 +280,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
       // Call addQuestionsToExam
       await adminService.addQuestionsToExam(id, { questions: [cleanQuestion] });
       toast.success('تمت إضافة السؤال بنجاح');
-      
+
       setIsAddingQuestion(false);
       setAddingQuestionData(null);
 
@@ -238,45 +295,25 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
   };
 
   if (loading) {
-    return (
-      <AdminShellChrome
-        activePath="/admin/content"
-        sectionLabel="إدارة المحتوى"
-        pageTitle="بروفايل الامتحان التفصيلي"
-        subtitle="جاري تحميل البيانات..."
-      >
-        <AdminPageSkeleton />
-      </AdminShellChrome>
-    );
+    return renderChrome(<AdminPageSkeleton />, 'بروفايل الامتحان التفصيلي', 'جاري تحميل البيانات...');
   }
 
   if (!data) {
-    return (
-      <AdminShellChrome
-        activePath="/admin/content"
-        sectionLabel="إدارة المحتوى"
-        pageTitle="الامتحان غير موجود"
-        subtitle="أخفق العثور على الامتحان المطلوب"
-        action={<AdminBackButton />}
-      >
+    return renderChrome(
         <div className="rounded-3xl border border-red-200 bg-red-50 p-8 shadow-sm text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-red-500 mb-4" />
           <p className="text-red-700 font-bold">لم يتم العثور على تفاصيل الامتحان أو ليس لديك الصلاحيات اللازمة للوصول إليه.</p>
-        </div>
-      </AdminShellChrome>
+        </div>,
+        'الامتحان غير موجود',
+        'أخفق العثور على الامتحان المطلوب',
+        backAction,
     );
   }
 
-  return (
-    <AdminShellChrome
-      activePath="/admin/content"
-      sectionLabel="إدارة المحتوى ▸ بروفايل الامتحان"
-      pageTitle={data.title}
-      subtitle={data.description || 'استعراض تحليلات الامتحان، إحصائيات الأسئلة، ومحاولات الطلاب بالكامل.'}
-      action={<AdminBackButton />}
-    >
+  const content = (
       <div className="space-y-8">
-        
+        <ContentInternalCode code={data.internalCode} label="كود الامتحان الداخلي" />
+
         {/* Statistics Cards */}
         <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <AdminStatCard variant="light" icon={FileQuestion} label="عدد الأسئلة" value={data.questionCount} />
@@ -425,12 +462,12 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                   }
 
                   return (
-                    <div 
-                      key={q.examQuestionId} 
+                    <div
+                      key={q.examQuestionId}
                       className="group relative rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 transition-all hover:border-[var(--admin-primary)] hover:shadow-md"
                     >
                       <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
-                        
+
                         {/* Question Details */}
                         <div className="flex gap-4 flex-1">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--admin-card-strong)] text-sm font-bold text-[var(--admin-text)] shadow-sm">
@@ -448,9 +485,9 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                                 />
                               </div>
                             )}
-                            
+
                             {q.baseText && (
-                              <p className="text-[var(--admin-muted)] mt-2 text-sm italic border-r-2 border-[var(--admin-border)] pr-3 bg-[var(--admin-background)] py-1 rounded">
+                              <p className="mt-2 rounded-lg bg-[var(--admin-card-soft)] px-3 py-2 text-sm italic text-[var(--admin-muted)]">
                                 {q.baseText}
                               </p>
                             )}
@@ -459,11 +496,11 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                             {q.type === 'MCQ' && q.options && q.options.length > 0 && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 pl-4">
                                 {q.options.map((opt: any) => (
-                                  <div 
-                                    key={opt.id} 
+                                  <div
+                                    key={opt.id}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold ${
-                                      opt.isCorrect 
-                                        ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400' 
+                                      opt.isCorrect
+                                        ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400'
                                         : 'bg-[var(--admin-background)] border-[var(--admin-border)] text-[var(--admin-muted)]'
                                     }`}
                                   >
@@ -524,8 +561,8 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                                   <span className="font-bold text-green-600 dark:text-green-400">{q.correctPercentage}%</span>
                                 </div>
                                 <div className="w-full h-1.5 bg-[var(--admin-bg)] rounded-full overflow-hidden border border-[var(--admin-border)]">
-                                  <div 
-                                    className="h-full bg-green-500 rounded-full" 
+                                  <div
+                                    className="h-full bg-green-500 rounded-full"
                                     style={{ width: `${q.correctPercentage}%` }}
                                   />
                                 </div>
@@ -564,7 +601,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                               تعديل
                             </button>
                             <button
-                              onClick={() => handleDeleteQuestion(q.examQuestionId)}
+                              onClick={() => setQuestionPendingDeletion(q.examQuestionId)}
                               className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20"
                             >
                               <Trash2 size={14} />
@@ -599,7 +636,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
         {/* Attempts Tab */}
         {activeTab === 'attempts' && (
           <div className="space-y-6">
-            
+
             {/* Search Box */}
             <div className="flex items-center bg-[var(--admin-card)] rounded-2xl border border-[var(--admin-border)] px-4 py-2.5 w-full max-w-md shadow-sm">
               <UserIcon className="text-[var(--admin-muted)] w-5 h-5 ml-2.5" />
@@ -630,7 +667,7 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
                     </thead>
                     <tbody className="divide-y divide-[var(--admin-border)]">
                       {filteredAttempts.map((attempt, index) => (
-                        <tr 
+                        <tr
                           key={`${attempt.studentId}-${index}`}
                           className="text-sm text-[var(--admin-text)] hover:bg-[var(--admin-background)]/50 transition-colors"
                         >
@@ -676,7 +713,25 @@ export default function ExamProfilePageClient({ id }: { id: string }) {
             </div>
           </div>
         )}
+      <AdminConfirmationDialog
+        open={questionPendingDeletion !== null}
+        onClose={() => setQuestionPendingDeletion(null)}
+        onConfirm={async () => {
+          if (questionPendingDeletion) await handleDeleteQuestion(questionPendingDeletion);
+        }}
+        title="حذف سؤال من الامتحان"
+        consequence="سيُحذف هذا السؤال نهائيًا من الامتحان، ولن يعود متاحًا للطلاب أو ضمن تحليلاته."
+        confirmLabel="حذف السؤال"
+        variant="danger"
+        isConfirming={isDeletingQuestion}
+      />
       </div>
-    </AdminShellChrome>
+  );
+
+  return renderChrome(
+    content,
+    data.title,
+    data.description || 'استعراض تحليلات الامتحان، إحصائيات الأسئلة، ومحاولات الطلاب بالكامل.',
+    backAction,
   );
 }

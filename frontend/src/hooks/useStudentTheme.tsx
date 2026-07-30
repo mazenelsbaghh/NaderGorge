@@ -72,6 +72,18 @@ export function StudentThemeProvider({ children }: { children: ReactNode }) {
   }, [mode, preferences]);
 
   useEffect(() => {
+    if (!preferences) {
+      return;
+    }
+
+    const persistedAvatar = preferences.avatarSlug ?? null;
+    const currentAvatar = useAuthStore.getState().user?.avatarSlug ?? null;
+    if (persistedAvatar !== currentAvatar) {
+      useAuthStore.getState().updateAvatar(persistedAvatar);
+    }
+  }, [preferences]);
+
+  useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.dataset.studentThemeSurface = 'student';
       document.documentElement.dataset.studentThemePalette = currentPalette.id;

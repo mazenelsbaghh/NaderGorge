@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "0a3cfc55-8aa6-4c8e-8dbe-d77499c9a0f5",
+  "command": "collect-current-manifest",
+  "startedAt": "2026-07-27T07:17:15.279121Z",
+  "completedAt": "2026-07-27T07:17:15.279318Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

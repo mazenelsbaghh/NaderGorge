@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "d3bc3b11-76fd-47f9-a742-fd55287b6375",
+  "command": "thanaweya-log-count",
+  "startedAt": "2026-07-29T00:01:53.432668Z",
+  "completedAt": "2026-07-29T00:01:53.432856Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-1 could not count thanaweya requests: sudo: I'm sorry massar-ops. I'm afraid I can't do that"
+}

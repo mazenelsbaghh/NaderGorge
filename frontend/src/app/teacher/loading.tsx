@@ -1,17 +1,13 @@
-'use client';
-
 import { AdminPageSkeleton } from '@/components/admin';
-import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
+import { AsyncRegionState } from '@/components/ui/AsyncRegionState';
 
 export default function TeacherLoading() {
   return (
-    <TeacherShellChrome
-      activePath="/teacher"
-      sectionLabel="لوحة المعلم"
-      pageTitle="جاري تحميل الصفحة"
-      subtitle="يتم تجهيز بيانات القسم الآن."
+    <AsyncRegionState
+      status="loading"
+      message="جاري تحميل محتوى المعلم"
     >
       <AdminPageSkeleton />
-    </TeacherShellChrome>
+    </AsyncRegionState>
   );
 }

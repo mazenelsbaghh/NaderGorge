@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { CircleCheck, Plus, Shield, Tags } from 'lucide-react';
 
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminColumn,
   AdminStatCard,
@@ -229,15 +229,16 @@ export default function AdminQuestionsPageClient({ mode }: { mode?: 'admin' | 'a
     },
   ];
 
-  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminShellChrome;
+  const Shell = mode === 'assistant' ? AssistantShellChrome : AdminPage;
   const shellActivePath = mode === 'assistant' ? '/assistant/questions' : '/admin/questions';
+  const isAssistantWorkspace = mode === 'assistant';
 
   return (
     <Shell
       activePath={shellActivePath as any}
-      sectionLabel="بنك الأسئلة"
-      pageTitle="إدارة الأسئلة"
-      subtitle="إنشاء الأسئلة ومراجعة التصنيفات والإجابات الصحيحة."
+      sectionLabel={isAssistantWorkspace ? 'مساحة عمل الأسئلة' : 'بنك الأسئلة'}
+      pageTitle={isAssistantWorkspace ? 'متابعة بنك الأسئلة' : 'إدارة الأسئلة'}
+      subtitle={isAssistantWorkspace ? 'راجع الأسئلة والتصنيفات والإجابات الصحيحة المكلف بها.' : 'إنشاء الأسئلة ومراجعة التصنيفات والإجابات الصحيحة.'}
       action={
         <NeumorphButton
           onClick={() => setShowModal(true)}

@@ -3,11 +3,26 @@
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
+import { useCallback, useMemo, useState } from "react";
 
 import { testimonials } from "./data";
 
 export function TestimonialsSection() {
   const prefersReducedMotion = useReducedMotion();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const paginate = useCallback((direction: number) => {
+    setCurrentIndex(
+      (index) =>
+        (index + direction + testimonials.length) % testimonials.length
+    );
+  }, []);
+  const orderedTestimonials = useMemo(
+    () =>
+      testimonials.map(
+        (_, index) => testimonials[(currentIndex + index) % testimonials.length]
+      ),
+    [currentIndex]
+  );
 
   const titleVariants = {
     hidden: {
@@ -49,7 +64,7 @@ export function TestimonialsSection() {
   };
 
   return (
-    <section id="testimonials" className="landing-section mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16">
+    <section id="testimonials" className="landing-section landing-section--stories mt-3 px-5 py-14 md:px-12 md:py-16 lg:px-16">
       <div className="relative z-10 mx-auto max-w-[1180px]">
         <motion.div
           initial="hidden"
@@ -64,9 +79,38 @@ export function TestimonialsSection() {
           </p>
         </motion.div>
 
-        <div className="mt-9 grid items-center gap-4 md:grid-cols-[44px_1fr_44px]">
+        <div
+          className="mt-9 grid items-center gap-4 md:grid-cols-[44px_1fr_44px]"
+          role="region"
+          aria-roledescription="carousel"
+          aria-label="آراء طلاب منصة مسار"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowRight") {
+              event.preventDefault();
+              paginate(-1);
+            }
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              paginate(1);
+            }
+            if (event.key === "Home") {
+              event.preventDefault();
+              setCurrentIndex(0);
+            }
+            if (event.key === "End") {
+              event.preventDefault();
+              setCurrentIndex(Math.max(testimonials.length - 1, 0));
+            }
+          }}
+        >
+          <p className="sr-only" aria-live="polite" aria-atomic="true">
+            الرأي {currentIndex + 1} من {testimonials.length}،{" "}
+            {testimonials[currentIndex]?.name}
+          </p>
           <button
             type="button"
+            onClick={() => paginate(-1)}
             className="hidden h-11 w-11 items-center justify-center rounded-full bg-[var(--landing-card)] text-[var(--landing-ink)] border border-[var(--landing-line)] hover:bg-[var(--landing-card-strong)] transition-colors duration-200 md:flex"
             aria-label="الرأي السابق"
           >
@@ -80,7 +124,7 @@ export function TestimonialsSection() {
             whileInView="visible"
             viewport={{ once: true, margin: "-50px" }}
           >
-            {testimonials.map((review) => (
+            {orderedTestimonials.map((review) => (
               <motion.figure
                 key={review.name}
                 variants={itemVariants}
@@ -115,6 +159,7 @@ export function TestimonialsSection() {
 
           <button
             type="button"
+            onClick={() => paginate(1)}
             className="hidden h-11 w-11 items-center justify-center rounded-full bg-[var(--landing-card)] text-[var(--landing-ink)] border border-[var(--landing-line)] hover:bg-[var(--landing-card-strong)] transition-colors duration-200 md:flex"
             aria-label="الرأي التالي"
           >
@@ -122,14 +167,26 @@ export function TestimonialsSection() {
           </button>
         </div>
 
-        <div className="mt-8 flex justify-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-[var(--landing-ink)]" />
-          <span className="h-2 w-2 rounded-full bg-[#0E8F8F]" />
-          <span className="h-2 w-2 rounded-full bg-[var(--landing-line)]" />
-          <span className="h-2 w-2 rounded-full bg-[var(--landing-line)]" />
+        <div
+          className="mt-5 flex justify-center gap-1"
+          aria-label={`الرأي ${currentIndex + 1} من ${testimonials.length}`}
+        >
+          {testimonials.map((review, index) => (
+            <button
+              key={review.name}
+              type="button"
+              onClick={() => setCurrentIndex(index)}
+              aria-label={`عرض رأي ${review.name}`}
+              aria-current={index === currentIndex ? "true" : undefined}
+              className={`min-h-11 min-w-11 rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--landing-accent)] before:mx-auto before:block before:h-2 before:rounded-full before:content-[''] ${
+                index === currentIndex
+                  ? "before:w-6 before:bg-[var(--landing-accent)]"
+                  : "before:w-2 before:bg-[var(--landing-line)]"
+              }`}
+            />
+          ))}
         </div>
       </div>
     </section>
   );
 }
-

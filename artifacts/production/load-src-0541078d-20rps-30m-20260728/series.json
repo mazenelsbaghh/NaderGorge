@@ -1,0 +1,12 @@
+{
+  "excludedNode": null,
+  "seriesId": "src-0541078-steady-20rps-30m",
+  "stages": [
+    {
+      "capacityEvidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/load-src-0541078d-20rps-30m-20260728/evidence/src-0541078-steady-020-30m.capacity.json",
+      "evidencePath": "/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/load-src-0541078d-20rps-30m-20260728/evidence/src-0541078-steady-020-30m.load.json",
+      "requestedRps": 20,
+      "sequence": 1
+    }
+  ]
+}

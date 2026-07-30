@@ -43,9 +43,13 @@ public class AdminController : ControllerBase
         [FromQuery] string? gradeLevel = null,
         [FromQuery] string? studyTrack = null,
         [FromQuery] string? gender = null,
-        [FromQuery] string? governorate = null
+        [FromQuery] string? governorate = null,
+        [FromQuery] string? role = null,
+        CancellationToken cancellationToken = default
     )
-        => Ok(await _mediator.Send(new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate)));
+        => Ok(await _mediator.Send(
+            new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate, role),
+            cancellationToken));
 
     [HttpPost("users")]
     [HasPermission("users.manage")]
@@ -67,9 +71,19 @@ public class AdminController : ControllerBase
     {
         var result = await _mediator.Send(new UpdateStudentProfileCommand(
             userId, dto.FullName, dto.Phone, dto.ParentPhone, dto.SecondaryPhone, dto.MotherPhone,
-            dto.Governorate, dto.District, dto.Address, dto.SchoolName, dto.DateOfBirth,
+            dto.SecondaryParentPhone, dto.Nationality, dto.Governorate, dto.District, dto.Address,
+            dto.SchoolName, dto.DateOfBirth, dto.FatherDateOfBirth, dto.MotherDateOfBirth,
             dto.Gender, dto.EducationStage, dto.GradeLevel, dto.StudyTrack, dto.SchoolType,
-            dto.IsFatherAlive, dto.IsMotherAlive, GetUserId()));
+            dto.StudentCode, dto.IsFatherAlive, dto.IsMotherAlive, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("users/staff/{userId:guid}/profile")]
+    [HasPermission("users.manage")]
+    public async Task<IActionResult> UpdateStaffProfile(Guid userId, [FromBody] UpdateStaffProfileRequest dto)
+    {
+        var result = await _mediator.Send(new UpdateStaffProfileCommand(
+            userId, dto.FullName, dto.PhoneNumber, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -169,6 +183,32 @@ public class AdminController : ControllerBase
         return result.Success ? Ok(result) : NotFound(result);
     }
 
+    [HttpPut("codes/groups/{id:guid}/settings")]
+    [HasPermission("codes.manage")]
+    public async Task<IActionResult> UpdateCodeGroupSettings(Guid id, [FromBody] UpdateCodeGroupSettingsRequest dto)
+    {
+        var result = await _mediator.Send(new UpdateCodeGroupSettingsCommand(
+            GroupId: id,
+            AdminId: GetUserId(),
+            Name: dto.Name,
+            TeacherId: dto.TeacherId,
+            ExpiresAt: dto.ExpiresAt,
+            RevenueOwner: dto.RevenueOwner,
+            RevenueAllocationMode: dto.RevenueAllocationMode,
+            RevenueAllocationValue: dto.RevenueAllocationValue,
+            AccountingTiming: dto.AccountingTiming));
+
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("codes/groups/{id:guid}/unused")]
+    [HasPermission("codes.manage")]
+    public async Task<IActionResult> RemoveUnusedCodes(Guid id, [FromBody] RemoveUnusedCodesRequest dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new RemoveUnusedCodesCommand(id, GetUserId(), dto.KeepEmptyGroup), ct);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     // --- Student Profile Actions ---
     [HttpPost("users/students/{userId:guid}/overrides")]
     [HasPermission("watch_requests.manage")]
@@ -190,7 +230,14 @@ public class AdminController : ControllerBase
     [HasPermission("users.manage")]
     public async Task<IActionResult> AdjustBalance(Guid userId, [FromBody] BalanceAdjustmentRequest dto)
     {
-        var result = await _mediator.Send(new AdjustBalanceCommand(userId, dto.Amount, dto.Reason, GetUserId()));
+        var result = await _mediator.Send(new AdjustBalanceCommand(
+            userId,
+            dto.Amount,
+            dto.Reason,
+            GetUserId(),
+            dto.Scope,
+            dto.Operation,
+            dto.TeacherId));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -266,11 +313,24 @@ public class AdminController : ControllerBase
         return File(bytes, "text/csv", $"subscribers_section_{id:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
     }
 
+    [HttpGet("lessons/{id:guid}/subscribers")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> GetLessonSubscribers(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? search = null)
+        => Ok(await _mediator.Send(new GetContentSubscribersQuery("lesson", id, page, pageSize, search)));
+
+    [HttpGet("lessons/{id:guid}/subscribers/export")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> ExportLessonSubscribers(Guid id, [FromQuery] string? search = null)
+    {
+        var bytes = await _mediator.Send(new ExportContentSubscribersQuery("lesson", id, search));
+        return File(bytes, "text/csv", $"subscribers_lesson_{id:N}_{DateTime.UtcNow:yyyy-MM-dd}.csv");
+    }
+
     [HttpPut("packages/{id:guid}")]
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdatePackage(Guid id, [FromBody] UpdatePackageDto dto)
     {
-        var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive));
+        var result = await _mediator.Send(new UpdatePackageCommand(id, dto.Name, dto.Description, dto.Price, dto.IsActive, dto.AcademicScopes, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -293,14 +353,18 @@ public class AdminController : ControllerBase
             return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
         }
 
-        if (!image.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
-        {
-            return BadRequest(ApiResponse.Fail("Uploaded file must be an image"));
-        }
-
         await using var imageStream = image.OpenReadStream();
         using var memoryStream = new MemoryStream();
         await imageStream.CopyToAsync(memoryStream, cancellationToken);
+
+        try
+        {
+            UploadFileSafety.Validate(memoryStream.ToArray(), image.FileName, image.ContentType, SafeUploadKind.PublicImage);
+        }
+        catch (InvalidUploadContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
 
         try
         {
@@ -329,18 +393,55 @@ public class AdminController : ControllerBase
             return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
         }
 
-        if (!image.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        try
         {
-            return BadRequest(ApiResponse.Fail("Uploaded file must be an image"));
+            await using var imageStream = image.OpenReadStream();
+            using var memoryStream = new MemoryStream();
+            await imageStream.CopyToAsync(memoryStream, cancellationToken);
+            UploadFileSafety.Validate(memoryStream.ToArray(), image.FileName, image.ContentType, SafeUploadKind.PublicImage);
+            memoryStream.Position = 0;
+            var imageUrl = await _imageStorage.SaveAsWebpAsync(memoryStream, "questions", cancellationToken);
+            return Ok(ApiResponse<string>.Ok(imageUrl, "Question image uploaded successfully"));
+        }
+        catch (UnknownImageFormatException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidUploadContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidImageContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded image is invalid or too large"));
+        }
+    }
+
+    [HttpPost("popup/image")]
+    [HasPermission("settings.manage")]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<IActionResult> UploadPlatformPopupImage(IFormFile image, CancellationToken cancellationToken)
+    {
+        if (image.Length == 0 || image.Length > 10 * 1024 * 1024)
+        {
+            return BadRequest(ApiResponse.Fail("Image must be between 1 byte and 10 MB"));
         }
 
         try
         {
             await using var imageStream = image.OpenReadStream();
-            var imageUrl = await _imageStorage.SaveAsWebpAsync(imageStream, "questions", cancellationToken);
-            return Ok(ApiResponse<string>.Ok(imageUrl, "Question image uploaded successfully"));
+            using var memoryStream = new MemoryStream();
+            await imageStream.CopyToAsync(memoryStream, cancellationToken);
+            UploadFileSafety.Validate(memoryStream.ToArray(), image.FileName, image.ContentType, SafeUploadKind.PublicImage);
+            memoryStream.Position = 0;
+            var imageUrl = await _imageStorage.SaveAsWebpAsync(memoryStream, "platform-popup", cancellationToken);
+            return Ok(ApiResponse<string>.Ok(imageUrl, "Popup image uploaded successfully"));
         }
         catch (UnknownImageFormatException)
+        {
+            return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
+        }
+        catch (InvalidUploadContentException)
         {
             return BadRequest(ApiResponse.Fail("Uploaded file is not a supported image"));
         }
@@ -410,7 +511,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateTerm(Guid id, [FromBody] UpdateTermDto dto)
     {
-        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price, GetUserId()));
+        var result = await _mediator.Send(new UpdateTermCommand(id, dto.Title, dto.Order, dto.Price, GetUserId(), dto.AcademicScopes));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -444,7 +545,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateSection(Guid id, [FromBody] UpdateSectionDto dto)
     {
-        var result = await _mediator.Send(new UpdateSectionCommand(id, dto.Title, dto.Order, dto.Price, GetUserId()));
+        var result = await _mediator.Send(new UpdateSectionCommand(id, dto.Title, dto.Order, dto.Price, GetUserId(), dto.AcademicScopes));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -460,7 +561,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateLesson(Guid id, [FromBody] UpdateLessonDto dto)
     {
-        var result = await _mediator.Send(new UpdateLessonCommand(id, dto.Title, dto.Summary, dto.Order, dto.Price, GetUserId()));
+        var result = await _mediator.Send(new UpdateLessonCommand(id, dto.Title, dto.Summary, dto.Order, dto.Price, GetUserId(), dto.AcademicScopes));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -484,7 +585,7 @@ public class AdminController : ControllerBase
     [HasPermission("content.manage")]
     public async Task<IActionResult> UpdateVideo(Guid id, [FromBody] UpdateVideoRequest dto)
     {
-        var result = await _mediator.Send(new UpdateVideoCommand(id, dto.Title, dto.Provider, dto.UrlOrEmbedCode, dto.Order, dto.Limit, GetUserId()));
+        var result = await _mediator.Send(new UpdateVideoCommand(id, dto.Title, dto.Provider, dto.UrlOrEmbedCode, dto.Order, dto.Limit, dto.VideoTypeId, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -558,7 +659,7 @@ public class AdminController : ControllerBase
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<IActionResult> UploadResourceFile(
         IFormFile file,
-        [FromServices] Microsoft.AspNetCore.Hosting.IWebHostEnvironment environment,
+        [FromServices] ISharedFileStorage sharedStorage,
         CancellationToken cancellationToken)
     {
         if (file == null || file.Length == 0)
@@ -571,38 +672,35 @@ public class AdminController : ControllerBase
             return BadRequest(ApiResponse.Fail("File size must not exceed 10 MB"));
         }
 
-        var allowedMimes = new[]
+        byte[] fileBytes;
+        SafeUploadResult validation;
+        await using (var input = file.OpenReadStream())
         {
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "application/zip",
-            "application/x-zip-compressed"
-        };
-
-        var isAllowed = file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ||
-                         allowedMimes.Any(mime => string.Equals(mime, file.ContentType, StringComparison.OrdinalIgnoreCase));
-
-        if (!isAllowed)
-        {
-            return BadRequest(ApiResponse.Fail("Unsupported file type. Allowed types: Images, PDFs, Word/Excel documents, and ZIP files."));
+            using var memory = new MemoryStream();
+            await input.CopyToAsync(memory, cancellationToken);
+            fileBytes = memory.ToArray();
         }
 
-        var uploadsFolder = Path.Combine(environment.WebRootPath, "uploads", "resources");
-        Directory.CreateDirectory(uploadsFolder);
-
-        var safeFileName = $"{Guid.NewGuid():N}_{Path.GetFileName(file.FileName)}";
-        var physicalPath = Path.Combine(uploadsFolder, safeFileName);
-
-        await using (var fileStream = new FileStream(physicalPath, FileMode.Create))
+        try
         {
-            await file.CopyToAsync(fileStream, cancellationToken);
+            validation = UploadFileSafety.Validate(fileBytes, file.FileName, file.ContentType, SafeUploadKind.ProtectedResource);
+        }
+        catch (InvalidUploadContentException)
+        {
+            return BadRequest(ApiResponse.Fail("Unsupported file type. Allowed types: safe Images, PDFs, Word/Excel documents, and ZIP files."));
         }
 
-        var relativeUrl = $"/uploads/resources/{safeFileName}";
-        return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl }));
+        var dateFolder = DateTime.UtcNow.ToString("yyyy/MM");
+        var safeFileName = validation.SafeFileName;
+        await using var storedContent = new MemoryStream(fileBytes, writable: false);
+        await sharedStorage.WriteAsync(
+            SharedFileArea.Protected,
+            Path.Combine("resources", dateFolder, safeFileName),
+            storedContent,
+            cancellationToken);
+
+        var relativeUrl = $"/protected/resources/{dateFolder}/{safeFileName}";
+        return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl, FileName = validation.DisplayFileName, ContentType = validation.ContentType }));
     }
 
     [HttpPost("teacher-photos/upload")]
@@ -637,6 +735,22 @@ public class AdminController : ControllerBase
             GetUserId());
 
         var result = await _mediator.Send(cmd);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("exams/{examId:guid}/status")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetExamStatus(Guid examId, [FromBody] SetContentStatusRequest dto)
+    {
+        var result = await _mediator.Send(new SetExamActiveStatusCommand(examId, dto.IsActive, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpPut("homework/{homeworkId:guid}/status")]
+    [HasPermission("content.manage")]
+    public async Task<IActionResult> SetHomeworkStatus(Guid homeworkId, [FromBody] SetContentStatusRequest dto)
+    {
+        var result = await _mediator.Send(new SetHomeworkActiveStatusCommand(homeworkId, dto.IsActive, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -702,6 +816,14 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> DeleteExamQuestion(Guid examId, Guid questionId)
     {
         var result = await _mediator.Send(new DeleteExamQuestionCommand(examId, questionId, GetUserId()));
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpDelete("exams/{examId:guid}/attempts/{attemptId:guid}")]
+    [HasPermission("exams.manage")]
+    public async Task<IActionResult> DeleteExamAttempt(Guid examId, Guid attemptId)
+    {
+        var result = await _mediator.Send(new DeleteExamAttemptCommand(examId, attemptId, GetUserId()));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -833,6 +955,11 @@ public class AdminController : ControllerBase
     }
 
     // --- Codes ---
+    [HttpGet("codes/academic-subject-eligibilities")]
+    [HasPermission("codes.manage")]
+    public async Task<IActionResult> GetAcademicSubjectEligibilities(CancellationToken ct)
+        => Ok(await _mediator.Send(new GetAcademicSubjectEligibilitiesQuery(), ct));
+
     [HttpPost("codes/bulk-generate")]
     [HasPermission("codes.manage")]
     public async Task<IActionResult> BulkGenerateCodes([FromBody] BulkGenerateRequest dto)
@@ -848,10 +975,20 @@ public class AdminController : ControllerBase
             ContentSectionId: dto.ContentSectionId,
             LessonId: dto.LessonId,
             ExamId: dto.ExamId,
+            PublicExamProductId: dto.PublicExamProductId,
+            VideoTypeId: dto.VideoTypeId,
+            IncludeFutureVideos: dto.IncludeFutureVideos,
             VideoTargetIds: dto.VideoTargetIds,
             BalanceAmount: dto.BalanceAmount,
+            TeacherId: dto.TeacherId,
             DiscountPercentage: dto.DiscountPercentage,
-            ExpiresAt: dto.ExpiresAt
+            RevenueOwner: dto.RevenueOwner,
+            RevenueAllocationMode: dto.RevenueAllocationMode,
+            RevenueAllocationValue: dto.RevenueAllocationValue,
+            AccountingTiming: dto.AccountingTiming,
+            ExpiresAt: dto.ExpiresAt,
+            ExpireActivatedAccess: dto.ExpireActivatedAccess,
+            AcademicScopes: dto.AcademicScopes
         ));
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -916,6 +1053,7 @@ public class AdminController : ControllerBase
             req.Title,
             req.Order,
             req.MaxWatchCount,
+            req.VideoTypeId,
             req.FileName,
             req.FileSizeBytes,
             GetUserId()), ct);
@@ -941,6 +1079,7 @@ public class AdminController : ControllerBase
             req.Title,
             req.Order,
             req.MaxWatchCount,
+            req.VideoTypeId,
             req.SourceUrl,
             GetUserId()), ct);
         return response.Success ? Ok(response) : BadRequest(response);
@@ -1098,8 +1237,10 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> UpdateTeacher(Guid id, [FromBody] UpdateTeacherProfileRequestDto dto)
     {
         var result = await _mediator.Send(new UpdateTeacherProfileCommand(
-            id, dto.Bio, dto.Specialization, dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds,
-            dto.AssistantPhoneNumbers, dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl));
+            id, GetUserId(), dto.FullName, dto.PhoneNumber, dto.NewPassword, dto.Bio, dto.Specialization,
+            dto.CommissionRate, dto.ProfileImageUrl, dto.ContactInfo, dto.SubjectIds, dto.AssistantPhoneNumbers,
+            dto.FacebookUrl, dto.YouTubeUrl, dto.TelegramUrl, dto.IntroVideoUrl, dto.ShowOnLanding, dto.IsVisibleToStudents,
+            dto.IsContentVisibleToStudents));
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -1127,6 +1268,9 @@ public class AdminController : ControllerBase
 
 public record UpdateSubjectRequest(string Name, string Description);
 public record UpdateTeacherProfileRequestDto(
+    string FullName,
+    string PhoneNumber,
+    string? NewPassword,
     string Bio,
     string Specialization,
     decimal CommissionRate,
@@ -1136,7 +1280,11 @@ public record UpdateTeacherProfileRequestDto(
     string? AssistantPhoneNumbers = null,
     string? FacebookUrl = null,
     string? YouTubeUrl = null,
-    string? TelegramUrl = null);
+    string? TelegramUrl = null,
+    string? IntroVideoUrl = null,
+    bool ShowOnLanding = true,
+    bool IsVisibleToStudents = true,
+    bool IsContentVisibleToStudents = true);
 
 public record CreateRoleDto(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
 public record UpdateRoleDto(string Name, List<string> Permissions, string AllowedDomain, List<string> AllowedNavbarItems);
@@ -1151,7 +1299,12 @@ public record ApproveWatchRequestBody(string? Reason, int? AddedViews = null);
 public record ToggleStudentStatusRequest(bool IsActive, string? Reason);
 public record OverrideVideoLimitRequest(Guid VideoId, int AddedViews, string Reason);
 public record GamificationAdjustmentRequest(int Points, string Reason);
-public record BalanceAdjustmentRequest(decimal Amount, string Reason);
+public record BalanceAdjustmentRequest(
+    decimal Amount,
+    string Reason,
+    string? Scope = null,
+    string? Operation = null,
+    Guid? TeacherId = null);
 public record CancelPackageRequest(bool RefundBalance, string? Reason = null);
 public record BulkGenerateRequest(
     string GroupName,
@@ -1163,21 +1316,42 @@ public record BulkGenerateRequest(
     Guid? ContentSectionId = null,
     Guid? LessonId = null,
     Guid? ExamId = null,
+    Guid? PublicExamProductId = null,
+    Guid? VideoTypeId = null,
+    bool IncludeFutureVideos = true,
     List<Guid>? VideoTargetIds = null,
     decimal? BalanceAmount = null,
+    Guid? TeacherId = null,
     decimal? DiscountPercentage = null,
-    DateTime? ExpiresAt = null
+    Domain.Enums.SalesOwnerType? RevenueOwner = null,
+    Domain.Enums.TeacherAllocationMode? RevenueAllocationMode = null,
+    decimal? RevenueAllocationValue = null,
+    Domain.Enums.CodeAccountingTiming AccountingTiming = Domain.Enums.CodeAccountingTiming.OnActivation,
+    DateTime? ExpiresAt = null,
+    bool ExpireActivatedAccess = true,
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null
 );
-public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, string? FileName, long? FileSizeBytes);
-public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, string SourceUrl);
+public record UpdateCodeGroupSettingsRequest(
+    string? Name = null,
+    Guid? TeacherId = null,
+    DateTime? ExpiresAt = null,
+    Domain.Enums.SalesOwnerType? RevenueOwner = null,
+    Domain.Enums.TeacherAllocationMode? RevenueAllocationMode = null,
+    decimal? RevenueAllocationValue = null,
+    Domain.Enums.CodeAccountingTiming AccountingTiming = Domain.Enums.CodeAccountingTiming.OnActivation
+);
+public record RemoveUnusedCodesRequest(bool KeepEmptyGroup = true);
+public record CreateBunnyTusUploadRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, string? FileName, long? FileSizeBytes);
+public record FetchBunnyVideoRequest(Guid? TeacherId, Guid? PackageId, Guid LessonId, string Title, int Order, int MaxWatchCount, Guid VideoTypeId, string SourceUrl);
 public record SyncBunnyUsageRequest(DateTime PeriodStart, DateTime PeriodEnd, Guid? TeacherId, Guid? PackageId, bool ForceRefresh);
-public record UpdateVideoRequest(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit);
+public record UpdateVideoRequest(string Title, string Provider, string UrlOrEmbedCode, int Order, int Limit, Guid VideoTypeId);
 public record AttachHomeworkRequest(string Title, string Instructions, bool IsMandatory, bool IsRandomized, int RequiredPointsToPass, decimal TotalScore, List<AttachHomeworkQuestionDto> Questions);
 public record LinkLessonExamRequest(Guid? ExamId);
-public record UpdateTermDto(string Title, int Order, decimal Price);
-public record UpdateSectionDto(string Title, int Order, decimal Price);
-public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price);
-public record UpdatePackageDto(string Name, string Description, decimal Price, bool IsActive);
+public record SetContentStatusRequest(bool IsActive);
+public record UpdateTermDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record UpdateSectionDto(string Title, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record UpdateLessonDto(string Title, string Summary, int Order, decimal Price, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
+public record UpdatePackageDto(string Name, string Description, decimal Price, bool IsActive, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null);
 public record UpsertPackageCodeProfileRequest(
     PackageCodePageProfileStatus Status,
     string? HeroEyebrow,
@@ -1197,10 +1371,12 @@ public record UploadTeacherProfileImageRequest(Guid TeacherId, string Base64Imag
 public record UpdateSettingsRequest(Dictionary<string, string> Settings);
 public record UpdateStudentProfileRequest(
     string? FullName, string? Phone, string? ParentPhone, string? SecondaryPhone, string? MotherPhone,
-    string? Governorate, string? District, string? Address, string? SchoolName, string? DateOfBirth,
+    string? SecondaryParentPhone, string? Nationality, string? Governorate, string? District,
+    string? Address, string? SchoolName, string? DateOfBirth, string? FatherDateOfBirth, string? MotherDateOfBirth,
     string? Gender, string? EducationStage, string? GradeLevel, string? StudyTrack, string? SchoolType,
-    bool? IsFatherAlive, bool? IsMotherAlive
+    string? StudentCode, bool? IsFatherAlive, bool? IsMotherAlive
 );
+public record UpdateStaffProfileRequest(string FullName, string PhoneNumber);
 public record AdminResetPasswordRequest(string NewPassword);
 public record AddStudentNoteRequest(string Content, bool IsPinned);
 public record AdminCreateUserRequest(

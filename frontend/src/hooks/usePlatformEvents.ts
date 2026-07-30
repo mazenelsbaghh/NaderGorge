@@ -3,8 +3,14 @@ import * as signalR from '@microsoft/signalr';
 import { getBackendHubUrl } from '@/lib/backend-url';
 import { useAuthStore } from '@/stores/auth-store';
 import toast from 'react-hot-toast';
-import { invalidateMany } from '@/lib/cache-invalidation';
+import { invalidateCanonicalKeys, invalidateForStaffDataChanged, resetRealtimeEventDedupe } from '@/lib/realtime-invalidation-map';
+import { parseStaffDataChangedPayload } from '@/lib/data-changed-event';
+import { recordRealtimeMetric, recordReconnectDuration, recordSnapshotReconciliation } from '@/lib/realtime-observability';
 import type { StaffDataChangedPayload } from '@/lib/staff-realtime-scopes';
+
+// Keep every platform event on the canonical scope-to-query mapping. Detail
+// keys remain supported by the adapter for entity-specific refreshes.
+const invalidateMany = (keys: readonly string[]) => invalidateCanonicalKeys(keys);
 
 export interface NotificationPayload {
   id: string;
@@ -53,9 +59,11 @@ export interface ResourceReadyPayload {
 }
 
 export interface ExtraWatchRequestPayload {
+  requestId?: string;
   videoId: string;
   status: string;
   allowedWatchCount: number;
+  reason?: string;
 }
 
 export interface AiJobProgressPayload {
@@ -246,9 +254,10 @@ export interface PlatformEventHandlers {
 
 // Module-level connection to share across components
 let sharedConnection: signalR.HubConnection | null = null;
-let connectionPromise: Promise<signalR.HubConnection> | null = null;
+let connectionPromise: Promise<signalR.HubConnection | null> | null = null;
 let activeHooksCount = 0;
 let latestAccessToken: string | null = null;
+let reconnectStartedAt: number | null = null;
 const connectionStatusListeners = new Set<(isConnected: boolean) => void>();
 const activePackages = new Set<string>();
 const activeLessons = new Set<string>();
@@ -325,7 +334,8 @@ if (typeof window !== 'undefined') {
 }
 
 export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [isConnected, setIsConnected] = useState(
     sharedConnection ? sharedConnection.state === signalR.HubConnectionState.Connected : false
   );
@@ -645,9 +655,10 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
         const hubUrl = getBackendHubUrl('/hubs/platform');
 
         sharedConnection = new signalR.HubConnectionBuilder()
+          .configureLogging(signalR.LogLevel.None)
           .withUrl(hubUrl, {
             accessTokenFactory: () => latestAccessToken || '',
-            skipNegotiation: false,
+            skipNegotiation: true,
             transport: signalR.HttpTransportType.WebSockets
           })
           .withAutomaticReconnect()
@@ -656,11 +667,28 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
         // Register status change callbacks
         sharedConnection.onreconnecting((error) => {
           console.warn('Platform SignalR reconnecting:', error);
+          reconnectStartedAt ??= Date.now();
           connectionStatusListeners.forEach(listener => listener(false));
         });
 
         sharedConnection.onreconnected(async (connectionId) => {
           console.log('Platform SignalR reconnected:', connectionId);
+          recordRealtimeMetric('reconnect');
+          if (reconnectStartedAt !== null) {
+            recordReconnectDuration(Date.now() - reconnectStartedAt);
+            reconnectStartedAt = null;
+          }
+          recordSnapshotReconciliation();
+          resetRealtimeEventDedupe();
+          invalidateCanonicalKeys([
+            'session',
+            'employees',
+            'hr:employees',
+            'operations:dashboard',
+            'student:shell',
+            'student:dashboard',
+            'student:quick-access',
+          ]);
           connectionStatusListeners.forEach(listener => listener(true));
 
           // Re-join active package groups
@@ -684,8 +712,11 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
           }
         });
 
-        sharedConnection.onclose((error) => {
-          console.error('Platform SignalR closed:', error);
+        sharedConnection.onclose(() => {
+          // Closing is normal during sign-out, route/surface changes and after
+          // SignalR has exhausted its automatic reconnect policy. The next
+          // authenticated mount creates a fresh transport, so this must not
+          // surface as a production console error.
           connectionStatusListeners.forEach(listener => listener(false));
         });
 
@@ -1273,12 +1304,34 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
 
         sharedConnection.on('StaffDataChanged', (payloadJson: string) => {
           try {
-            const payload = JSON.parse(payloadJson) as StaffDataChangedPayload;
+            const payload = parseStaffDataChangedPayload(JSON.parse(payloadJson));
+            if (!payload) return;
+            invalidateForStaffDataChanged(payload);
+            const currentUserId = useAuthStore.getState().user?.id;
+            if (currentUserId && (payload.entityIds?.includes(currentUserId) || payload.scopes.some((scope) => ['users', 'settings', 'hr'].includes(scope)))) {
+              void useAuthStore.getState().refreshCurrentSession();
+            }
             listeners.StaffDataChanged.forEach(handler => handler(payload));
           } catch (e) {
             console.error('Error handling StaffDataChanged event:', e);
           }
         });
+
+        const invalidateHrWorkspace = () => {
+          invalidateMany([
+            'employees',
+            'hr:employees',
+            'hr:approvals',
+            'hr:documents',
+            'hr:lifecycle',
+            'operations:dashboard',
+          ]);
+        };
+        sharedConnection.on('hr.approval.escalated', invalidateHrWorkspace);
+        sharedConnection.on('hr.document.expiring', invalidateHrWorkspace);
+        sharedConnection.on('hr.employee.hired', invalidateHrWorkspace);
+        sharedConnection.on('hr.employee.offboarded', invalidateHrWorkspace);
+        sharedConnection.on('hr.lifecycle.task.overdue', invalidateHrWorkspace);
 
         connectionPromise = sharedConnection.start()
           .then(async () => {
@@ -1308,12 +1361,15 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
             return sharedConnection!;
           })
           .catch((err) => {
-            console.error('Platform SignalR Connection Error:', err);
+            const message = err instanceof Error ? err.message : String(err);
+            if (!message.includes('stopped during negotiation')) {
+              console.warn('Platform SignalR connection unavailable:', err);
+            }
             setIsConnected(false);
             connectionStatusListeners.forEach(listener => listener(false));
             sharedConnection = null;
             connectionPromise = null;
-            throw err;
+            return null;
           });
       } else {
         if (sharedConnection.state === signalR.HubConnectionState.Connected) {
@@ -1333,7 +1389,10 @@ export const usePlatformEvents = (handlers?: PlatformEventHandlers) => {
       }
     };
 
-    void initConnection();
+    // Connection setup can be cancelled by React cleanup while SignalR is still
+    // negotiating. Consume that expected rejection so it never becomes a Next.js
+    // unhandled-rejection overlay; connection state is already reset above.
+    void initConnection().catch(() => undefined);
 
     return () => {
       activeHooksCount--;

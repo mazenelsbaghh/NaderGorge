@@ -1,0 +1,9 @@
+{
+  "builderNodeId": "node-3",
+  "createdAt": "2026-07-28T21:09:18.441395Z",
+  "manifestSha256": "a7c714a1b45816278be79f0c6393417a675ef5cd40f274a175d2bdff9e056ed3",
+  "releaseId": "src-54f76a00b872b2ec5501322fe15c7198d1bf1f2a",
+  "schemaVersion": 1,
+  "sourceStateSha256": "54f76a00b872b2ec5501322fe15c7198d1bf1f2a21c373afdf65c5ef7b5cca13",
+  "status": "success"
+}

@@ -32,7 +32,7 @@ class StatusSyncWorker(
         try {
             val response = apiService.syncStatus(
                 token,
-                SyncStatusRequest(prefManager.getLastBalance().toDouble())
+                SyncStatusRequest(null)
             )
 
             if (response.isSuccessful && response.body()?.success == true) {

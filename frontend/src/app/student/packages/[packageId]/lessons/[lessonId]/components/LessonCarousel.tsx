@@ -1,7 +1,7 @@
 "use client";
 
-import { CSSProperties, useEffect, useState, MouseEvent, useRef } from "react";
-import { AnimatePresence, motion, useMotionTemplate, useMotionValue } from "framer-motion";
+import { useEffect, useState, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import clsx from "clsx";
 import SecureVideoPlayer from "../../../../../../../components/video/SecureVideoPlayer";
@@ -10,7 +10,8 @@ import { WatchStatusBar } from "../../../../../../../components/video/WatchStatu
 import { ChapterList } from "../../../../../../../components/video/ChapterList";
 import { LessonMindmapDisplay } from "../../../../../../../components/video/LessonMindmapDisplay";
 import { useRouter, useParams } from "next/navigation";
-import { Lock, Award, ClipboardCheck } from "lucide-react";
+import { Lock, Award, ClipboardCheck, BadgeCheck, ShoppingCart } from "lucide-react";
+import toast from "react-hot-toast";
 
 // --- Icons ---
 function IconCheck({ className, ...props }: React.ComponentProps<"svg">) {
@@ -27,6 +28,10 @@ interface VideoModel {
     examId?: string;
     examPassed?: boolean;
     isExamLocked?: boolean;
+    hasAccess?: boolean;
+    isUnlockedByCode?: boolean;
+    unlockLabel?: string;
+    videoTypeName?: string;
     exams?: { examId: string; title: string; passed: boolean; isMandatory: boolean }[];
     chapters?: import("@/services/content-service").VideoChapterDto[];
 }
@@ -50,12 +55,13 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
     if (videos.length <= 1) return null;
 
     return (
-        <nav aria-label="Progress" className="flex justify-start overflow-x-auto px-4 py-4 md:px-10 md:py-6">
+        <nav aria-label="فيديوهات الدرس" className="flex justify-start overflow-x-auto px-4 py-4 md:px-10 md:py-6">
             <ol className="flex w-max min-w-full flex-nowrap items-start justify-start gap-3 sm:w-full sm:flex-row sm:flex-wrap" role="list">
                 {videos.map((video, stepIdx) => {
                     const isCompleted = current > stepIdx;
                     const isCurrent = current === stepIdx;
                     const isExamLocked = video.isExamLocked;
+                    const isAccessLocked = video.hasAccess === false;
                     const isFuture = !isCompleted && !isCurrent && !isExamLocked;
 
                     return (
@@ -69,6 +75,7 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                 isCompleted ? "bg-[var(--admin-success-10)]" : "",
                                 isCurrent ? "bg-[var(--admin-primary-10)] border border-[var(--admin-primary)]/20" : "",
                                 isFuture ? "bg-[var(--admin-card-soft)]" : "",
+                                isAccessLocked ? "bg-gray-500/5 border border-dashed border-gray-500/20" : "",
                                 isExamLocked ? "bg-gray-500/5 opacity-60 border border-dashed border-gray-500/20" : ""
                             )}
                         >
@@ -91,10 +98,10 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                             isCompleted && "bg-[var(--admin-success)] text-white",
                                             isCurrent && "bg-[var(--admin-primary-strong)] text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-strong)]/30",
                                             isFuture && "bg-[var(--admin-card-strong)] text-[var(--admin-muted)] border border-[var(--admin-border)]",
-                                            isExamLocked && "bg-gray-500/20 text-gray-400 border border-gray-500/30"
+                                            (isExamLocked || isAccessLocked) && "bg-gray-500/20 text-gray-400 border border-gray-500/30"
                                         )}
                                     >
-                                        {isExamLocked ? (
+                                        {isExamLocked || isAccessLocked ? (
                                             <Lock className="h-3.5 w-3.5" />
                                         ) : isCompleted ? (
                                             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
@@ -110,12 +117,18 @@ function Steps({ videos, current, onChange }: { videos: VideoModel[]; current: n
                                             isCompleted && "text-[var(--admin-muted)]",
                                             isCurrent && "text-[var(--admin-primary)] font-black",
                                             isFuture && "text-[var(--admin-muted)] opacity-60 group-hover:opacity-100",
-                                            isExamLocked && "text-gray-400 font-medium"
+                                            (isExamLocked || isAccessLocked) && "text-gray-400 font-medium"
                                         )}
                                         title={video.title}
                                     >
                                         {video.title}
                                     </motion.span>
+                                    {video.isUnlockedByCode && (
+                                        <span className="hidden items-center gap-1 rounded-full bg-[var(--admin-success-10)] px-2 py-0.5 text-[10px] font-black text-[var(--admin-success)] sm:inline-flex">
+                                            <BadgeCheck className="h-3 w-3" />
+                                            {video.unlockLabel || "مفتوح بالكود"}
+                                        </span>
+                                    )}
                                 </span>
                             </button>
 
@@ -148,8 +161,7 @@ export function LessonCarousel({
     const [mounted, setMounted] = useState(false);
     const [watchStatus, setWatchStatus] = useState<WatchStatus | null>(null);
     const [mobilePanel, setMobilePanel] = useState<"chapters" | "mindmap">("chapters");
-    const mouseX = useMotionValue(0);
-    const mouseY = useMotionValue(0);
+    const [isBuyingLesson, setIsBuyingLesson] = useState(false);
     const playerRef = useRef<SecureVideoPlayerRef>(null);
     const [currentTime, setCurrentTime] = useState(0);
 
@@ -157,31 +169,37 @@ export function LessonCarousel({
         setMounted(true);
     }, []);
 
-    function handleMouseMove({ currentTarget, clientX, clientY }: MouseEvent) {
-        if (window.innerWidth <= 768) return;
-        const { left, top } = currentTarget.getBoundingClientRect();
-        mouseX.set(clientX - left);
-        mouseY.set(clientY - top);
-    }
-
     if (!videos || videos.length === 0) return null;
 
     const activeVideo = videos[activeStep];
+    const activeVideoHasAccess = activeVideo.hasAccess !== false;
     const hasChapters = Boolean(activeVideo.chapters && activeVideo.chapters.length > 0);
     const hasMindmaps = Boolean(activeVideo.chapters?.some((chapter) => chapter.mindmapImageUrl));
 
+    const handleBuyLesson = async () => {
+        if (!lessonId || isBuyingLesson) return;
+        setIsBuyingLesson(true);
+        try {
+            const { balanceService } = await import("@/services/balance-service");
+            const success = await balanceService.purchaseContent("Lesson", lessonId);
+            if (success) {
+                toast.success("تم شراء الحصة بنجاح");
+                router.refresh();
+            } else {
+                toast.error("لم يتم شراء الحصة");
+            }
+        } catch (error: any) {
+            toast.error(error?.message || "تعذر شراء الحصة. تأكد من رصيدك.");
+        } finally {
+            setIsBuyingLesson(false);
+        }
+    };
+
     return (
-        <motion.div
-            className="animated-cards relative w-full rounded-[24px]"
-            onMouseMove={handleMouseMove}
-            style={{
-                "--x": useMotionTemplate`${mouseX}px`,
-                "--y": useMotionTemplate`${mouseY}px`,
-            } as CSSProperties}
-        >
+        <div className="relative w-full rounded-2xl">
             <div
                 className={clsx(
-                    "group relative w-full overflow-hidden rounded-[24px] border border-[var(--admin-border)] bg-gradient-to-b from-[var(--admin-card)]/95 to-[var(--admin-background)] backdrop-blur-md transition duration-500",
+                    "group relative w-full overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] transition-colors duration-200",
                     "hover:border-[var(--admin-primary)]/30"
                 )}
             >
@@ -248,9 +266,10 @@ export function LessonCarousel({
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.1, duration: 0.4 }}
-                                        className="inline-flex rounded-full bg-[var(--admin-primary)]/10 px-3 py-1 text-xs font-bold text-[var(--admin-primary)] sm:text-sm"
+                                        className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--admin-primary)]/10 px-3 py-1 text-xs font-bold text-[var(--admin-primary)] sm:text-sm"
                                     >
-                                        الفيديو {activeStep + 1} من {videos.length}
+                                        <span>الفيديو {activeStep + 1} من {videos.length}</span>
+                                        {activeVideo.videoTypeName ? <span className="text-[var(--admin-muted)]">· {activeVideo.videoTypeName}</span> : null}
                                     </motion.div>
 
                                     <motion.h2
@@ -278,6 +297,13 @@ export function LessonCarousel({
                                         </button>
                                     )}
 
+                                    {activeVideo.isUnlockedByCode && (
+                                        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--admin-success-20)] bg-[var(--admin-success-10)] px-3 py-1.5 text-xs font-black text-[var(--admin-success)]">
+                                            <BadgeCheck className="h-3.5 w-3.5" />
+                                            <span>{activeVideo.unlockLabel || "هذا الفيديو مفتوح بالكود"}</span>
+                                        </div>
+                                    )}
+
                                     <motion.div
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -301,36 +327,60 @@ export function LessonCarousel({
                                     transition={{ type: "spring", stiffness: 300, damping: 25, mass: 0.5 }}
                                     className="w-full relative z-30"
                                 >
-                                    <div className="relative rounded-[20px] overflow-hidden shadow-2xl border border-[var(--admin-primary)]/20 bg-black aspect-video ring-4 ring-black/5">
-                                        <SecureVideoPlayer
-                                            ref={playerRef}
-                                            className="absolute inset-0 w-full h-full object-cover"
-                                            lessonVideoId={activeVideo.id}
-                                            isExamLocked={activeVideo.isExamLocked}
-                                            blockingExamId={activeVideo.isExamLocked ? videos.find(v => v.examId && !v.examPassed)?.examId : undefined}
-                                            videoExamId={activeVideo.examId}
-                                            chapters={activeVideo.chapters}
-                                            onWatchStatusChange={(s: WatchStatus) => setWatchStatus(s)}
-                                            onWatchProgress={(time) => setCurrentTime(time)}
-                                            onEnded={() => {
-                                                if (activeStep < videos.length - 1) {
-                                                    onStepChange(activeStep + 1);
-                                                }
-                                            }}
-                                            lessonPrice={lessonPrice}
-                                            lessonId={lessonId}
-                                        />
-                                    </div>
+                                    {activeVideoHasAccess ? (
+                                        <div className="relative aspect-video overflow-hidden rounded-xl border border-[var(--admin-primary)]/20 bg-black">
+                                            <SecureVideoPlayer
+                                                ref={playerRef}
+                                                className="absolute inset-0 h-full w-full object-cover"
+                                                lessonVideoId={activeVideo.id}
+                                                isExamLocked={activeVideo.isExamLocked}
+                                                blockingExamId={activeVideo.isExamLocked ? videos.find(v => v.examId && !v.examPassed)?.examId : undefined}
+                                                videoExamId={activeVideo.examId}
+                                                chapters={activeVideo.chapters}
+                                                onWatchStatusChange={(s: WatchStatus) => setWatchStatus(s)}
+                                                onWatchProgress={(time) => setCurrentTime(time)}
+                                                onEnded={() => {
+                                                    if (activeStep < videos.length - 1) {
+                                                        onStepChange(activeStep + 1);
+                                                    }
+                                                }}
+                                                lessonPrice={lessonPrice}
+                                                lessonId={lessonId}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="flex aspect-video flex-col items-center justify-center rounded-[20px] border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-6 text-center">
+                                            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--admin-primary-10)] text-[var(--admin-primary)]">
+                                                <Lock className="h-7 w-7" />
+                                            </div>
+                                            <h3 className="text-xl font-black text-[var(--admin-text)]">الفيديو داخل الحصة لكنه غير مفتوح لك</h3>
+                                            <p className="mt-2 max-w-md text-sm font-medium leading-7 text-[var(--admin-muted)]">
+                                                يمكنك شراء الحصة كاملة، والفيديوهات المفتوحة بالكود ستظل ظاهرة ومباشرة.
+                                            </p>
+                                            {lessonPrice !== undefined && lessonId && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleBuyLesson}
+                                                    disabled={isBuyingLesson}
+                                                    className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-[var(--admin-primary)] px-5 py-3 text-sm font-black text-[var(--admin-primary-contrast)] transition hover:bg-[var(--admin-primary-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    <ShoppingCart className="h-4 w-4" />
+                                                    {isBuyingLesson ? "جاري الشراء..." : `شراء الحصة (${lessonPrice} ج.م)`}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
 
-                                    {/* Watch Status Bar — standalone, outside the player */}
-                                    <div className="mt-4">
-                                        <WatchStatusBar
-                                            status={watchStatus}
-                                            title={activeVideo.title}
-                                        />
-                                    </div>
+                                    {activeVideoHasAccess && (
+                                        <div className="mt-4">
+                                            <WatchStatusBar
+                                                status={watchStatus}
+                                                title={activeVideo.title}
+                                            />
+                                        </div>
+                                    )}
 
-                                    {hasChapters && (
+                                    {activeVideoHasAccess && hasChapters && (
                                         <>
                                             <div className="mt-5 flex gap-2 lg:hidden">
                                                 <button
@@ -386,6 +436,6 @@ export function LessonCarousel({
                 </div>
 
             </div>
-        </motion.div>
+        </div>
     );
 }

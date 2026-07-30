@@ -10,7 +10,7 @@ namespace NaderGorge.Infrastructure.Data;
 public class SlowQueryInterceptor : DbCommandInterceptor
 {
     private readonly ILogger<SlowQueryInterceptor> _logger;
-    private const int SlowQueryThresholdMs = 250; // Threshold of 250ms
+    private const int SlowQueryThresholdMs = 250;
 
     public SlowQueryInterceptor(ILogger<SlowQueryInterceptor> logger)
     {
@@ -22,7 +22,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         DbDataReader result)
     {
-        LogSlowQuery(command, eventData);
+        LogSlowQuery(eventData);
         return base.ReaderExecuted(command, eventData, result);
     }
 
@@ -32,7 +32,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         DbDataReader result,
         CancellationToken cancellationToken = default)
     {
-        LogSlowQuery(command, eventData);
+        LogSlowQuery(eventData);
         return base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
     }
 
@@ -41,7 +41,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         int result)
     {
-        LogSlowQuery(command, eventData);
+        LogSlowQuery(eventData);
         return base.NonQueryExecuted(command, eventData, result);
     }
 
@@ -51,7 +51,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         int result,
         CancellationToken cancellationToken = default)
     {
-        LogSlowQuery(command, eventData);
+        LogSlowQuery(eventData);
         return base.NonQueryExecutedAsync(command, eventData, result, cancellationToken);
     }
 
@@ -60,7 +60,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         object? result)
     {
-        LogSlowQuery(command, eventData);
+        LogSlowQuery(eventData);
         return base.ScalarExecuted(command, eventData, result);
     }
 
@@ -70,17 +70,20 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         object? result,
         CancellationToken cancellationToken = default)
     {
-        LogSlowQuery(command, eventData);
+        LogSlowQuery(eventData);
         return base.ScalarExecutedAsync(command, eventData, result, cancellationToken);
     }
 
-    private void LogSlowQuery(DbCommand command, CommandExecutedEventData eventData)
+    private void LogSlowQuery(CommandExecutedEventData eventData)
     {
         var durationMs = eventData.Duration.TotalMilliseconds;
         if (durationMs > SlowQueryThresholdMs)
         {
-            _logger.LogWarning("Slow Database Query Detected: took {DurationMs}ms (Threshold: {Threshold}ms). Command Text: {CommandText}",
-                durationMs, SlowQueryThresholdMs, command.CommandText);
+            _logger.LogWarning(
+                "Slow database command detected: operation {Operation} took {DurationMs}ms (threshold {ThresholdMs}ms).",
+                eventData.ExecuteMethod,
+                durationMs,
+                SlowQueryThresholdMs);
         }
     }
 }

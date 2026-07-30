@@ -3,7 +3,7 @@
 import { devConsole } from '@/utils/dev-console';
 import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
+import { AdminPage, AdminTabBar, AdminTab, AdminStatCard, AdminDataTable, AdminTeacherPhotoUpload } from '@/components/admin';
 import { adminService, type UserAuditLogDto } from '@/services/admin-service';
 import { teacherService, type TeacherDto } from '@/services/teacher-service';
 import { formatRelativeDate, getInitials } from '@/components/admin/admin-utils';
@@ -11,12 +11,13 @@ import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import {
   Users, Package, BookOpen, PenLine, DollarSign, Wallet,
   GraduationCap, Activity, Phone, User, Clock3,
-  FileText, ArrowLeft, Download, X, Check,
+  FileText, ArrowLeft, Download, X, Check, Eye,
   Image as ImageIcon, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 import { compressImage, renameFileToMatchBase64 } from '@/utils/image-compressor';
+import { GRADE_LEVEL_LABELS, TEACHER_GRADE_GROUPS } from '@/lib/academic-labels';
 
 /* ─── Social Media Icons (reused from AdminTeachersPageClient) ─── */
 const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -37,73 +38,8 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-/* ─── Grade name map ─── */
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: 'الأول الثانوي', SecondSecondary: 'الثاني الثانوي',
-  SecondaryGrade3: 'الثالث الثانوي', FirstBaccalaureate: 'الأول بكالوريا',
-  SecondBaccalaureate: 'الثاني بكالوريا', PrimaryGrade1: 'الأول الابتدائي',
-  PrimaryGrade2: 'الثاني الابتدائي', PrimaryGrade3: 'الثالث الابتدائي',
-  PrimaryGrade4: 'الرابع الابتدائي', PrimaryGrade5: 'الخامس الابتدائي',
-  PrimaryGrade6: 'السادس الابتدائي', PrepGrade1: 'الأول الإعدادي',
-  PrepGrade2: 'الثاني الإعدادي', PrepGrade3: 'الثالث الإعدادي',
-  AzhariPrimary1: 'الأول الابتدائي الأزهري', AzhariPrep1: 'الأول الإعدادي الأزهري',
-  AzhariSecondary1: 'الأول الثانوي الأزهري', AmericanGrade9: 'Grade 9',
-  AmericanGrade10: 'Grade 10', AmericanGrade11: 'Grade 11', AmericanGrade12: 'Grade 12',
-};
-
-const GRADE_GROUPS = [
-  {
-    label: 'المرحلة الثانوية العامة',
-    grades: [
-      { value: 'FirstSecondary', label: 'الأول الثانوي' },
-      { value: 'SecondSecondary', label: 'الثاني الثانوي' },
-      { value: 'SecondaryGrade3', label: 'الثالث الثانوي' },
-    ]
-  },
-  {
-    label: 'بكالوريا',
-    grades: [
-      { value: 'FirstBaccalaureate', label: 'الأول بكالوريا' },
-      { value: 'SecondBaccalaureate', label: 'الثاني بكالوريا' },
-    ]
-  },
-  {
-    label: 'المرحلة الإعدادية',
-    grades: [
-      { value: 'PrepGrade1', label: 'الأول الإعدادي' },
-      { value: 'PrepGrade2', label: 'الثاني الإعدادي' },
-      { value: 'PrepGrade3', label: 'الثالث الإعدادي' },
-    ]
-  },
-  {
-    label: 'المرحلة الابتدائية',
-    grades: [
-      { value: 'PrimaryGrade1', label: 'الأول الابتدائي' },
-      { value: 'PrimaryGrade2', label: 'الثاني الابتدائي' },
-      { value: 'PrimaryGrade3', label: 'الثالث الابتدائي' },
-      { value: 'PrimaryGrade4', label: 'الرابع الابتدائي' },
-      { value: 'PrimaryGrade5', label: 'الخامس الابتدائي' },
-      { value: 'PrimaryGrade6', label: 'السادس الابتدائي' },
-    ]
-  },
-  {
-    label: 'التعليم الأزهري',
-    grades: [
-      { value: 'AzhariPrimary1', label: 'الأول الابتدائي الأزهري' },
-      { value: 'AzhariPrep1', label: 'الأول الإعدادي الأزهري' },
-      { value: 'AzhariSecondary1', label: 'الأول الثانوي الأزهري' },
-    ]
-  },
-  {
-    label: 'التعليم الأمريكي (American)',
-    grades: [
-      { value: 'AmericanGrade9', label: 'Grade 9' },
-      { value: 'AmericanGrade10', label: 'Grade 10' },
-      { value: 'AmericanGrade11', label: 'Grade 11' },
-      { value: 'AmericanGrade12', label: 'Grade 12' },
-    ]
-  }
-];
+const GRADE_NAMES = GRADE_LEVEL_LABELS;
+const GRADE_GROUPS = TEACHER_GRADE_GROUPS;
 
 /* ─── Helpers ─── */
 const translateAction = (action: string): string => {
@@ -203,12 +139,19 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const [isUploadingProfile, setIsUploadingProfile] = useState(false);
 
   const [bio, setBio] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [showOnLanding, setShowOnLanding] = useState(true);
+  const [isVisibleToStudents, setIsVisibleToStudents] = useState(true);
+  const [isContentVisibleToStudents, setIsContentVisibleToStudents] = useState(true);
   const [assistantPhoneNumbers, setAssistantPhoneNumbers] = useState('');
   const [facebookUrl, setFacebookUrl] = useState('');
   const [youtubeUrl, setYouTubeUrl] = useState('');
   const [telegramUrl, setTelegramUrl] = useState('');
+  const [introVideoUrl, setIntroVideoUrl] = useState('');
   const [commissionRate, setCommissionRate] = useState<number>(0);
 
   const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
@@ -247,7 +190,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         adminService.getTeacherEssays(id).catch(() => []),
         adminService.getTeacherActivations(id).catch(() => []),
         adminService.getFinancePayouts(id).catch(() => []),
-        adminService.listCodeGroups({ force: true }).catch(() => []),
+        adminService.listCodeGroups().catch(() => []),
         (t as TeacherDto)?.userId
           ? adminService.getUserAuditLogs((t as TeacherDto).userId).catch(() => [])
           : Promise.resolve([]),
@@ -279,13 +222,20 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
 
   const handleOpenModal = () => {
     if (!teacher) return;
+    setFullName(teacher.fullName || '');
+    setPhoneNumber(teacher.phoneNumber || '');
+    setNewPassword('');
     setBio(teacher.bio || '');
     setContactInfo(teacher.contactInfo || '');
     setProfileImageUrl(teacher.profileImageUrl || '');
+    setShowOnLanding(teacher.showOnLanding);
+    setIsVisibleToStudents(teacher.isVisibleToStudents);
+    setIsContentVisibleToStudents(teacher.isContentVisibleToStudents);
     setAssistantPhoneNumbers(teacher.assistantPhoneNumbers || '');
     setFacebookUrl(teacher.facebookUrl || '');
     setYouTubeUrl(teacher.youtubeUrl || '');
     setTelegramUrl(teacher.telegramUrl || '');
+    setIntroVideoUrl(teacher.introVideoUrl || '');
     setCommissionRate(teacher.commissionRate || 0);
     setSelectedGrades(teacher.specialization ? teacher.specialization.split(',') : []);
     setSelectedSubjectIds(teacher.subjectIds || []);
@@ -301,7 +251,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!teacher) return;
-    
+
     if (selectedSubjectIds.length === 0) {
       toast.error('يرجى تحديد مادة دراسية واحدة على الأقل');
       return;
@@ -315,6 +265,9 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
     try {
       const gradesString = selectedGrades.join(',');
       const res = await teacherService.updateTeacher(teacher.id, {
+        fullName: fullName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        newPassword: newPassword.trim() || undefined,
         bio: bio.trim(),
         specialization: gradesString,
         commissionRate,
@@ -325,6 +278,10 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
         facebookUrl: facebookUrl.trim() || undefined,
         youtubeUrl: youtubeUrl.trim() || undefined,
         telegramUrl: telegramUrl.trim() || undefined,
+        introVideoUrl: introVideoUrl.trim() || undefined,
+        showOnLanding,
+        isVisibleToStudents,
+        isContentVisibleToStudents,
       });
 
       if (res.success) {
@@ -376,7 +333,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
   );
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/teachers"
       sectionLabel="المستخدمين"
       pageTitle="ملف المعلم الشامل"
@@ -867,12 +824,12 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
               </p>
 
               <form onSubmit={handleSave} className="mt-6 space-y-6">
-                
+
                 {/* Account Details (Readonly) */}
                 <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-4">
                   <h4 className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-2 mb-2">
                     <User className="h-4 w-4 text-[var(--admin-primary)]" />
-                    بيانات حساب الدخول للمنصة (للقراءة فقط)
+                    بيانات حساب الدخول للمنصة
                   </h4>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -880,9 +837,9 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">الاسم الكامل</label>
                       <input
                         type="text"
-                        disabled
-                        value={teacher?.fullName || ''}
-                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] opacity-60 outline-none"
+                        value={fullName}
+                        onChange={(event) => setFullName(event.target.value)}
+                        className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none"
                       />
                     </div>
 
@@ -891,15 +848,53 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       <div className="relative">
                         <input
                           type="tel"
-                          disabled
-                          value={teacher?.phoneNumber || ''}
+                          value={phoneNumber}
+                          onChange={(event) => setPhoneNumber(event.target.value)}
                           dir="ltr"
-                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] opacity-60 outline-none"
+                          className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] py-3 pl-4 pr-12 text-sm text-[var(--admin-text)] outline-none"
                         />
                         <Phone className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
                       </div>
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">كلمة مرور جديدة (اختياري)</label>
+                    <input type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} placeholder="اتركها فارغة بدون تغيير" className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] outline-none" autoComplete="new-password" />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5">
+                  <div>
+                    <h4 className="flex items-center gap-2 text-sm font-black text-[var(--admin-text)]">
+                      <Eye className="h-4 w-4 text-[var(--admin-primary)]" />
+                      إظهار في الصفحة الرئيسية
+                    </h4>
+                    <p className="mt-1 text-xs leading-6 text-[var(--admin-muted)]">
+                      يظهر المعلم في شريط المدرسين المتحرك في صفحة الهبوط.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={showOnLanding}
+                    aria-label="إظهار المعلم في الصفحة الرئيسية"
+                    disabled={isSaving}
+                    onClick={() => setShowOnLanding((value) => !value)}
+                    className={`relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 disabled:opacity-60 ${showOnLanding ? 'bg-[var(--admin-primary)]' : 'bg-[var(--admin-border)]'}`}
+                  >
+                    <span className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${showOnLanding ? '-translate-x-1' : '-translate-x-7'}`} />
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <button type="button" role="switch" aria-checked={isVisibleToStudents} onClick={() => setIsVisibleToStudents(value => !value)} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-right">
+                    <span className="block text-sm font-black text-[var(--admin-text)]">ظهور المدرس للطلاب والزوار</span>
+                    <span className="text-xs text-[var(--admin-muted)]">{isVisibleToStudents ? 'ظاهر' : 'مخفي'}</span>
+                  </button>
+                  <button type="button" role="switch" aria-checked={isContentVisibleToStudents} onClick={() => setIsContentVisibleToStudents(value => !value)} className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-right">
+                    <span className="block text-sm font-black text-[var(--admin-text)]">محتوى المدرس للطلاب والزوار</span>
+                    <span className="text-xs text-[var(--admin-muted)]">{isContentVisibleToStudents ? 'ظاهر' : 'مخفي'}</span>
+                  </button>
                 </div>
 
                 {/* Photo Upload Section */}
@@ -1063,6 +1058,29 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                   </div>
                 </div>
 
+                <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[var(--admin-text)] mb-2">رابط الفيديو التعريفي للمدرس</label>
+                    <p className="mb-3 text-xs font-bold leading-6 text-[var(--admin-muted)]">
+                      سيظهر في بروفايل المدرس العام داخل مشغل المنصة.
+                    </p>
+                    <input
+                      type="url"
+                      dir="ltr"
+                      disabled={isSaving}
+                      value={introVideoUrl}
+                      onChange={(e) => setIntroVideoUrl(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=... أو رابط ملف الفيديو"
+                      className="w-full rounded-[14px] border border-[var(--admin-border)] bg-[var(--admin-bg)] px-4 py-3 text-sm text-[var(--admin-text)] placeholder-[var(--admin-muted)] outline-none focus:border-[var(--admin-primary)] disabled:opacity-60 transition"
+                    />
+                  </div>
+                  {introVideoUrl ? (
+                    <a href={introVideoUrl} target="_blank" rel="noreferrer" className="admin-btn-secondary inline-flex w-fit items-center gap-2">
+                      معاينة الرابط الحالي
+                    </a>
+                  ) : null}
+                </div>
+
                 {/* Grade levels checkbox checklist */}
                 <div>
                   <label className="block text-xs font-bold text-[var(--admin-text)] mb-3">المراحل والصفوف الدراسية التي يدرّسها المعلم *</label>
@@ -1074,7 +1092,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                           {group.grades.map((grade) => {
                             const isChecked = selectedGrades.includes(grade.value);
                             const toggleGrade = () => {
-                              setSelectedGrades(prev => 
+                              setSelectedGrades(prev =>
                                 prev.includes(grade.value)
                                   ? prev.filter(v => v !== grade.value)
                                   : [...prev, grade.value]
@@ -1121,7 +1139,7 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
                       {subjects.map((sub) => {
                         const isChecked = selectedSubjectIds.includes(sub.id);
                         const toggleSubject = () => {
-                          setSelectedSubjectIds(prev => 
+                          setSelectedSubjectIds(prev =>
                             prev.includes(sub.id)
                               ? prev.filter(id => id !== sub.id)
                               : [...prev, sub.id]
@@ -1184,6 +1202,6 @@ export default function TeacherProfilePageClient({ params }: { params: { id: str
           </div>
         )}
       </AnimatePresence>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

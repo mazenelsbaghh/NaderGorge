@@ -22,6 +22,46 @@ namespace NaderGorge.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AcademicSubjectEligibility", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EducationStage")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("GradeLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("EducationStage", "GradeLevel", "IsActive");
+
+                    b.HasIndex("EducationStage", "GradeLevel", "SubjectId")
+                        .IsUnique();
+
+                    b.HasIndex("SubjectId", "IsActive", "EducationStage", "GradeLevel");
+
+                    b.ToTable("academic_subject_eligibilities", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.AccessCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -125,6 +165,311 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("access_code_activation_logs", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestType", "Version")
+                        .IsUnique();
+
+                    b.ToTable("hr_approval_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDefinitionStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApproverKind")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("EscalationPermission")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Permission")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("SlaMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SpecificUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalDefinitionId", "Order")
+                        .IsUnique();
+
+                    b.ToTable("hr_approval_definition_steps", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_approval_step_sla", "\"SlaMinutes\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDelegation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("DelegateUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EndsAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("PrincipalUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrincipalUserId", "DelegateUserId", "Scope", "StartsAt", "EndsAt");
+
+                    b.ToTable("hr_approval_delegations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_approval_delegation_dates", "\"EndsAt\" > \"StartsAt\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalInstance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("CurrentStepOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("RequesterEmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalDefinitionId");
+
+                    b.HasIndex("RequesterEmployeeId");
+
+                    b.HasIndex("RequestType", "RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("State", "CurrentStepOrder");
+
+                    b.ToTable("hr_approval_instances", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalStepInstance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActingUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalDefinitionStepId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovalInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DecidedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("DelegationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("DueAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EscalationLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("OriginalApproverUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalDefinitionStepId");
+
+                    b.HasIndex("ApprovalInstanceId", "Order")
+                        .IsUnique();
+
+                    b.HasIndex("State", "DueAt");
+
+                    b.ToTable("hr_approval_step_instances", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AssetCustody", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("AssignedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssignedCondition")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("ClosedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ExceptionApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ExceptionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("ReturnCondition")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ReturnedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 0");
+
+                    b.HasIndex("EmployeeId", "State");
+
+                    b.ToTable("hr_asset_custodies", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Assistant.AssistantTaskQueue", b =>
                 {
                     b.Property<Guid>("Id")
@@ -159,6 +504,174 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("StudentId");
 
                     b.ToTable("assistant_tasks", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Accepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("AttendancePolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AttendanceSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DecisionCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EvidenceJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendancePolicyId");
+
+                    b.HasIndex("AttendanceSessionId");
+
+                    b.HasIndex("EmployeeId", "OccurredAt");
+
+                    b.HasIndex("EmployeeId", "EventType", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("hr_attendance_attempts", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceBreak", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AllowedMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("AttendanceSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceSessionId")
+                        .IsUnique()
+                        .HasFilter("\"EndedAt\" IS NULL");
+
+                    b.ToTable("hr_attendance_breaks", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_attendance_break_times", "\"EndedAt\" IS NULL OR \"EndedAt\" > \"StartedAt\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceCorrection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("AppliedJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("AttendanceSessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BeforeJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EvidenceReference")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("HrDecisionByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ManagerDecisionByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ProposedClockedInAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ProposedClockedOutAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendanceSessionId");
+
+                    b.HasIndex("EmployeeId", "State");
+
+                    b.ToTable("hr_attendance_corrections", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceLog", b =>
@@ -210,6 +723,207 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("attendance_logs", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendancePolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
+
+                    b.Property<int>("MaximumAccuracyMeters")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("RadiusMeters")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_attendance_policies", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendancePolicyAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttendancePolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ShiftTemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttendancePolicyId");
+
+                    b.HasIndex("EmployeeId", "EffectiveFrom");
+
+                    b.HasIndex("ShiftTemplateId", "EffectiveFrom");
+
+                    b.ToTable("hr_attendance_policy_assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_attendance_policy_assignment_target", "(CASE WHEN \"EmployeeId\" IS NOT NULL THEN 1 ELSE 0 END) + (CASE WHEN \"ShiftTemplateId\" IS NOT NULL THEN 1 ELSE 0 END) = 1");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendancePolicyException", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowRemote")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EndsAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("OverridePolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("OverridePolicyId");
+
+                    b.HasIndex("EmployeeId", "StartsAt", "EndsAt");
+
+                    b.ToTable("hr_attendance_policy_exceptions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_attendance_policy_exception_dates", "\"EndsAt\" > \"StartsAt\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ClockedInAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ClockedOutAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EarlyLeaveMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("LateMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OvertimeMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ShiftAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("WorkDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("WorkedMinutes")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique()
+                        .HasFilter("\"State\" = 0");
+
+                    b.HasIndex("ShiftAssignmentId");
+
+                    b.HasIndex("EmployeeId", "WorkDate");
+
+                    b.ToTable("hr_attendance_sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_attendance_session_times", "\"ClockedOutAt\" IS NULL OR \"ClockedOutAt\" > \"ClockedInAt\"");
+                        });
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.AuditLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -220,6 +934,14 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ActorSnapshot")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ActorType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("CorrelationId")
                         .HasMaxLength(64)
@@ -248,6 +970,14 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<Guid?>("PerformedByUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("RequestId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -307,6 +1037,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("PerformedByUserId");
 
                     b.HasIndex("StudentBalanceId");
+
+                    b.HasIndex("TransactionType", "ReferenceId")
+                        .IsUnique()
+                        .HasFilter("\"ReferenceId\" IS NOT NULL AND \"TransactionType\" IN ('DigitalRecharge', 'CodeRedemption')");
 
                     b.ToTable("balance_transactions", (string)null);
                 });
@@ -510,6 +1244,223 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("bunny_video_assets", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Candidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CvAssetReference")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<Guid?>("EmployeeProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("RequisitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeProfileId")
+                        .IsUnique()
+                        .HasFilter("\"EmployeeProfileId\" IS NOT NULL");
+
+                    b.HasIndex("RequisitionId", "PhoneNumber")
+                        .IsUnique();
+
+                    b.ToTable("hr_candidates", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CandidateInterview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Feedback")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<Guid>("InterviewerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ScheduledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal?>("Score")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidateId");
+
+                    b.HasIndex("InterviewerUserId", "ScheduledAt");
+
+                    b.ToTable("hr_candidate_interviews", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_interview_score", "\"Score\" IS NULL OR (\"Score\" >= 0 AND \"Score\" <= 100)");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CandidateOffer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("BaseSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("CandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("OfferNumber")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateOnly>("ProposedStartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CandidateId");
+
+                    b.HasIndex("OfferNumber")
+                        .IsUnique();
+
+                    b.ToTable("hr_candidate_offers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_offer_salary", "\"BaseSalary\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CaseEvidence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AddedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssetReference")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeCaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeCaseId", "ContentHash")
+                        .IsUnique();
+
+                    b.ToTable("hr_case_evidence", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CaseResponse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentReference")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeCaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Response")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<Guid>("SubmittedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeCaseId");
+
+                    b.ToTable("hr_case_responses", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ChatMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -636,11 +1587,46 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("chat_rooms", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ClusterLease", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("FencingGeneration")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("LastOutcome")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("OwnerToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RenewedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Name");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("cluster_leases", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroup", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AccountingRecordedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("AccountingTiming")
+                        .HasColumnType("integer");
 
                     b.Property<decimal?>("BalanceAmount")
                         .HasColumnType("decimal(18,2)");
@@ -663,8 +1649,18 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("ExamId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("ExpireActivatedAccess")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IncludeFutureVideos")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<Guid?>("LessonId")
                         .HasColumnType("uuid");
@@ -677,10 +1673,22 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("PackageId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PublicExamProductId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("QrDataGenerated")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid>("TeacherId")
+                    b.Property<int?>("RevenueAllocationMode")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("RevenueAllocationValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("RevenueOwner")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TeacherId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("TermId")
@@ -692,13 +1700,104 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<Guid?>("VideoTypeId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
 
+                    b.HasIndex("PublicExamProductId");
+
                     b.HasIndex("TeacherId");
 
+                    b.HasIndex("VideoTypeId");
+
                     b.ToTable("code_groups", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupDeliveryConfirmation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("CodeGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ConfirmedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("ConfirmedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeGroupId")
+                        .IsUnique();
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("code_group_delivery_confirmations", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupFinancialTerms", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CodeGroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Recipient")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Trigger")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgreementId");
+
+                    b.HasIndex("CodeGroupId")
+                        .IsUnique();
+
+                    b.ToTable("code_group_financial_terms", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeVideoTarget", b =>
@@ -758,6 +1857,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -770,6 +1872,8 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("ReviewedByUserId");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("TeacherId");
 
                     b.ToTable("community_posts", (string)null);
                 });
@@ -790,6 +1894,9 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ParentCommentId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("PostId")
                         .HasColumnType("uuid");
@@ -815,6 +1922,8 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("AuthorUserId");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ParentCommentId");
 
                     b.HasIndex("PostId");
 
@@ -950,6 +2059,39 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("TermId");
 
                     b.ToTable("content_sections", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CostCenter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_cost_centers", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.CrmCallLog", b =>
@@ -1192,7 +2334,424 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("PhoneNumber")
                         .IsUnique();
 
-                    b.ToTable("digital_wallets", (string)null);
+                    b.ToTable("digital_wallets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_digital_wallets_current_balance_non_negative", "\"CurrentBalance\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.DisciplinaryAction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeCaseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("FinancialAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("PayrollLineItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeCaseId");
+
+                    b.HasIndex("PayrollLineItemId")
+                        .IsUnique()
+                        .HasFilter("\"PayrollLineItemId\" IS NOT NULL");
+
+                    b.ToTable("hr_disciplinary_actions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_disciplinary_financial", "\"Type\" <> 2 OR \"FinancialAmount\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.DiscountStackingPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("MaxDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MaxDiscountPercentage")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("PriorityJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("IsDefault");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("discount_stacking_policies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_discount_policy_amount", "\"MaxDiscountAmount\" IS NULL OR \"MaxDiscountAmount\" > 0");
+
+                            t.HasCheckConstraint("CK_discount_policy_percentage", "\"MaxDiscountPercentage\" IS NULL OR (\"MaxDiscountPercentage\" >= 0 AND \"MaxDiscountPercentage\" <= 100)");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeCase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CaseNumber")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsConfidential")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OpenedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CaseNumber")
+                        .IsUnique();
+
+                    b.HasIndex("EmployeeId", "State", "IsConfidential");
+
+                    b.ToTable("hr_employee_cases", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeCompensation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BaseSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "EffectiveFrom")
+                        .IsUnique();
+
+                    b.ToTable("hr_employee_compensations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_compensation_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("ExpiresOn")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("IssuedOn")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("LegalHold")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateOnly?>("RetainUntil")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresOn", "IsArchived");
+
+                    b.HasIndex("EmployeeId", "Category", "Name");
+
+                    b.HasIndex("RetainUntil", "LegalHold", "IsArchived");
+
+                    b.ToTable("hr_employee_documents", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeDocumentVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssetReference")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("MimeType")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeDocumentId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("hr_employee_document_versions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_document_version_size", "\"SizeBytes\" >= 0 AND \"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeLifecycleTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CompletionNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("DueAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Phase")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "Phase");
+
+                    b.HasIndex("State", "DueAt");
+
+                    b.ToTable("hr_employee_lifecycle_tasks", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeePayroll", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BaseSalarySnapshot")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<decimal>("Deductions")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EmployeeNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("EmployeeNumberSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<decimal>("Gross")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Net")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("PayrollRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayrollRunId", "EmployeeId")
+                        .IsUnique();
+
+                    b.HasIndex("EmployeeId", "Status", "PayrollRunId");
+
+                    b.ToTable("hr_employee_payrolls", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeProfile", b =>
@@ -1207,11 +2766,34 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<int>("DailyBreakAllowanceMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DailyShortPermissionAllowanceMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EmployeeNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("EmploymentStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("HireDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("ShortPermissionMaxMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<TimeSpan>("StandardStartTime")
                         .HasColumnType("interval");
 
                     b.Property<int>("TargetDailyHours")
                         .HasColumnType("integer");
+
+                    b.Property<DateOnly?>("TerminationDate")
+                        .HasColumnType("date");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -1219,39 +2801,115 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("WorkMode")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("EmployeeNumber")
+                        .IsUnique();
 
                     b.HasIndex("UserId")
                         .IsUnique();
 
+                    b.HasIndex("EmploymentStatus", "HireDate", "TerminationDate");
+
                     b.ToTable("employee_profiles", (string)null);
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeVacation", b =>
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmploymentAssignment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ChangeReason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("CostCenterId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
 
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateOnly>("EndDate")
-                        .HasColumnType("date");
-
-                    b.Property<DateTime?>("HandledAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("HandledBy")
+                    b.Property<Guid?>("JobGradeId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Reason")
+                    b.Property<Guid?>("JobPositionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ManagerEmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrganizationUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("WorkLocationId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CostCenterId");
+
+                    b.HasIndex("JobGradeId");
+
+                    b.HasIndex("JobPositionId");
+
+                    b.HasIndex("ManagerEmployeeId");
+
+                    b.HasIndex("WorkLocationId");
+
+                    b.HasIndex("EmployeeId", "EffectiveFrom");
+
+                    b.HasIndex("OrganizationUnitId", "EffectiveFrom", "EffectiveTo", "EmployeeId");
+
+                    b.ToTable("hr_employment_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmploymentContract", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BaseSalary")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ContractNumber")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ProbationEndDate")
+                        .HasColumnType("date");
 
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
@@ -1259,16 +2917,26 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("TermsJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("TermsVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmployeeId");
+                    b.HasIndex("ContractNumber")
+                        .IsUnique();
 
-                    b.HasIndex("HandledBy");
+                    b.HasIndex("EmployeeId", "StartDate");
 
-                    b.ToTable("employee_vacations", (string)null);
+                    b.ToTable("hr_employment_contracts", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.EssaySubmission", b =>
@@ -1353,6 +3021,16 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int?>("DurationMinutes")
                         .HasColumnType("integer");
 
+                    b.Property<string>("InternalCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("IsMandatory")
                         .HasColumnType("boolean");
 
@@ -1379,6 +3057,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByTeacherId");
+
+                    b.HasIndex("InternalCode")
+                        .IsUnique();
 
                     b.HasIndex("LessonVideoId");
 
@@ -1435,6 +3116,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<string>("RequestReason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -1454,6 +3140,69 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ExtraWatchRequests", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialInvoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TeacherSettlementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TeacherId", "Status");
+
+                    b.ToTable("financial_invoices", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.FormSubmission", b =>
@@ -1566,6 +3315,144 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("student_gamifications", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.GiftIssuance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ExamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("IssuedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("LessonVideoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId");
+
+                    b.HasIndex("IssuedByUserId");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("LessonVideoId");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("RequestId")
+                        .IsUnique();
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("CreatedAt", "Status");
+
+                    b.ToTable("gift_issuances", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_gift_issuances_max_uses", "\"MaxUses\" IS NULL OR \"MaxUses\" > 0");
+
+                            t.HasCheckConstraint("CK_gift_issuances_target", "(\"TargetType\" = 0 AND \"PackageId\" IS NOT NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR (\"TargetType\" = 1 AND \"PackageId\" IS NULL AND \"LessonId\" IS NOT NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR (\"TargetType\" = 2 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NOT NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR (\"TargetType\" = 3 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NOT NULL AND \"TeacherId\" IS NULL AND \"Amount\" IS NULL) OR (\"TargetType\" = 4 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NULL AND \"Amount\" > 0) OR (\"TargetType\" = 5 AND \"PackageId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL AND \"TeacherId\" IS NOT NULL AND \"Amount\" > 0)");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.GiftRecipient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("GiftIssuanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OutcomeCode")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("OutcomeMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("RevocationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("RevokedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("UsesConsumed")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RevokedByUserId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("GiftIssuanceId", "StudentId")
+                        .IsUnique();
+
+                    b.ToTable("gift_recipients", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_gift_recipients_uses", "\"UsesConsumed\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Homework.Homework", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1577,6 +3464,11 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("IsMandatory")
                         .HasColumnType("boolean");
@@ -1739,6 +3631,644 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("homework_submissions", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("SerialNumber")
+                        .IsUnique()
+                        .HasFilter("\"SerialNumber\" IS NOT NULL");
+
+                    b.ToTable("hr_assets", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_asset_value", "\"Value\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrFinancialInstallment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("AppliedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("FinancialRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PayrollLineItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayrollLineItemId")
+                        .IsUnique()
+                        .HasFilter("\"PayrollLineItemId\" IS NOT NULL");
+
+                    b.HasIndex("FinancialRequestId", "Sequence")
+                        .IsUnique();
+
+                    b.HasIndex("State", "DueDate");
+
+                    b.ToTable("hr_financial_installments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_financial_installment_amount", "\"Amount\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrFinancialRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ApprovalInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentReference")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("OutstandingBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("RequestedInstallments")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "State", "CreatedAt");
+
+                    b.ToTable("hr_financial_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_financial_request_amount", "\"Amount\" > 0 AND \"OutstandingBalance\" >= 0");
+
+                            t.HasCheckConstraint("CK_hr_financial_request_installments", "\"RequestedInstallments\" BETWEEN 1 AND 60");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrIdempotencyRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ResponseJson")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)");
+
+                    b.Property<Guid?>("ResultEntityId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("Scope", "ActorUserId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("hr_idempotency_records", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrLeaveRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ApprovalInstanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentReference")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("DayFraction")
+                        .HasColumnType("decimal(4,2)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<decimal>("ReservedAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Workdays")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalInstanceId")
+                        .IsUnique()
+                        .HasFilter("\"ApprovalInstanceId\" IS NOT NULL");
+
+                    b.HasIndex("LeaveTypeId");
+
+                    b.HasIndex("EmployeeId", "StartDate", "EndDate");
+
+                    b.HasIndex("State", "StartDate", "EndDate", "EmployeeId");
+
+                    b.ToTable("hr_leave_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_leave_request_dates", "\"EndDate\" >= \"StartDate\"");
+
+                            t.HasCheckConstraint("CK_hr_leave_request_fraction", "\"DayFraction\" > 0 AND \"DayFraction\" <= 1");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrMigrationBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("ReconciledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ReportJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("SourceCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("SourceSystem")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("SourceTotal")
+                        .HasColumnType("decimal(24,4)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TargetCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<decimal>("TargetTotal")
+                        .HasColumnType("decimal(24,4)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Module", "RequestHash")
+                        .IsUnique();
+
+                    b.HasIndex("Module", "State", "CreatedAt");
+
+                    b.ToTable("hr_migration_batches", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrMigrationConflict", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("MigrationBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResolutionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MigrationBatchId", "State");
+
+                    b.HasIndex("MigrationBatchId", "SourceType", "SourceId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_migration_conflicts", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrMigrationRecordMap", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(24,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("MigrationBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("SourceId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceType", "SourceId")
+                        .IsUnique();
+
+                    b.HasIndex("MigrationBatchId", "TargetType", "TargetId")
+                        .IsUnique();
+
+                    b.ToTable("hr_migration_record_maps", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrModuleRollout", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ChangedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ChangedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ReadTarget")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("ReconciliationBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("WriteTarget")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Module")
+                        .IsUnique();
+
+                    b.ToTable("hr_module_rollouts", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrPayrollInputSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeePayrollId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PayrollLineItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeePayrollId");
+
+                    b.HasIndex("PayrollLineItemId")
+                        .IsUnique();
+
+                    b.HasIndex("SourceType", "SourceId")
+                        .IsUnique();
+
+                    b.ToTable("hr_payroll_input_sources", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrPayrollRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CutoffAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("FinanceReviewedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("FinanceReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("GmApprovedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("GmApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("PaidByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("PreparedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("PreparedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ReconciliationHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("RunNumber")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("SourceDataVersion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalDeductions")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalGross")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalNet")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunNumber")
+                        .IsUnique();
+
+                    b.HasIndex("PeriodStart", "PeriodEnd")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "PeriodEnd");
+
+                    b.ToTable("hr_payroll_runs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_payroll_run_period", "\"PeriodEnd\" >= \"PeriodStart\"");
+                        });
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.IncomingSmsLog", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1791,9 +4321,273 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("DeduplicationHash")
                         .IsUnique();
 
+                    b.HasIndex("MatchedRechargeRequestId")
+                        .IsUnique()
+                        .HasFilter("\"MatchedRechargeRequestId\" IS NOT NULL");
+
                     b.HasIndex("WalletId");
 
-                    b.ToTable("incoming_sms_logs", (string)null);
+                    b.ToTable("incoming_sms_logs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_incoming_sms_logs_match_consistency", "(\"IsMatched\" = FALSE AND \"MatchedRechargeRequestId\" IS NULL) OR (\"IsMatched\" = TRUE AND \"MatchedRechargeRequestId\" IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.JobGrade", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_job_grades", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.JobPosition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_job_positions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveBalance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Carried")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Granted")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Reserved")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("Used")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaveTypeId");
+
+                    b.HasIndex("EmployeeId", "LeaveTypeId", "Year")
+                        .IsUnique();
+
+                    b.ToTable("hr_leave_balances", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_leave_balance_nonnegative", "\"Reserved\" >= 0 AND \"Used\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("EntryType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("LeaveBalanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaveBalanceId");
+
+                    b.HasIndex("SourceType", "SourceId", "EntryType")
+                        .IsUnique();
+
+                    b.ToTable("hr_leave_ledger_entries", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LeavePolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowNegativeBalance")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("AnnualEntitlement")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("MaximumCarryover")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("WorkCalendarId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkCalendarId");
+
+                    b.HasIndex("LeaveTypeId", "EffectiveFrom");
+
+                    b.ToTable("hr_leave_policies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_leave_policy_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowsHalfDay")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("RequiresAttachment")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_leave_types", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Lesson", b =>
@@ -1810,6 +4604,11 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<Guid?>("ExamId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("InternalCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<int>("Order")
                         .HasColumnType("integer");
@@ -1832,6 +4631,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ContentSectionId");
+
+                    b.HasIndex("InternalCode")
+                        .IsUnique();
 
                     b.ToTable("lessons", (string)null);
                 });
@@ -1968,6 +4770,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("ExamId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("InternalCode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -2008,11 +4815,19 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("VideoTag")
                         .HasColumnType("text");
 
+                    b.Property<Guid>("VideoTypeId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExamId");
 
+                    b.HasIndex("InternalCode")
+                        .IsUnique();
+
                     b.HasIndex("LessonId");
+
+                    b.HasIndex("VideoTypeId");
 
                     b.ToTable("lesson_videos", (string)null);
                 });
@@ -3417,6 +6232,12 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("AcademicScopeOwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AcademicScopeOwnerType")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("text");
@@ -3443,6 +6264,8 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("AcademicScopeOwnerType", "AcademicScopeOwnerId");
 
                     b.ToTable("notification_events", (string)null);
                 });
@@ -3480,6 +6303,109 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("ParentDeviceTokens", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.OffboardingProcess", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BlockersJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("CompletedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InitiatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("LastWorkingDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId")
+                        .IsUnique()
+                        .HasFilter("\"State\" <> 3 AND \"State\" <> 4");
+
+                    b.ToTable("hr_offboarding_processes", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.OrganizationUnit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("ManagerEmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("ManagerEmployeeId");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("hr_organization_units", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.OutboxEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3488,6 +6414,13 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ClaimedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ClaimedBy")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
 
                     b.Property<bool>("IsDeadLetter")
                         .ValueGeneratedOnAdd()
@@ -3503,6 +6436,12 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("NextAttemptAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("RetryCount")
@@ -3527,6 +6466,8 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProcessedAt", "CreatedAt");
+
+                    b.HasIndex("ProcessedAt", "IsDeadLetter", "NextAttemptAt", "LeaseExpiresAt", "CreatedAt");
 
                     b.ToTable("outbox_events", (string)null);
                 });
@@ -3658,6 +6599,48 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("package_code_page_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PayComponent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Classification")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsInsurable")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsTaxable")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_pay_components", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollAdjustment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3689,6 +6672,62 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("PayrollRecordId");
 
                     b.ToTable("payroll_adjustments", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollLineItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeePayrollId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Explanation")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("InputsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsAdjustment")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("PayComponentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RuleVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayComponentId");
+
+                    b.HasIndex("RuleVersionId");
+
+                    b.HasIndex("EmployeePayrollId", "SourceType", "SourceId", "PayComponentId")
+                        .IsUnique();
+
+                    b.ToTable("hr_payroll_line_items", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollRecord", b =>
@@ -3734,6 +6773,268 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("payroll_records", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Expression")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("PayComponentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Rate")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayComponentId", "EffectiveFrom", "Version")
+                        .IsUnique();
+
+                    b.ToTable("hr_payroll_rules", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_payroll_rule_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+
+                            t.HasCheckConstraint("CK_hr_payroll_rule_version", "\"Version\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollSettlementAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OriginalPayrollLineItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("SettlementPayrollRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SettlementPayrollRunId");
+
+                    b.HasIndex("OriginalPayrollLineItemId", "SettlementPayrollRunId")
+                        .IsUnique();
+
+                    b.ToTable("hr_payroll_settlement_adjustments", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Payslip", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AssetReference")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeePayrollId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeePayrollId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("hr_payslips", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PerformanceCycle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("EndsOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateOnly>("StartsOn")
+                        .HasColumnType("date");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartsOn", "EndsOn");
+
+                    b.ToTable("hr_performance_cycles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_performance_cycle_dates", "\"EndsOn\" >= \"StartsOn\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PerformanceGoal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("PerformanceCycleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("Weight")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PerformanceCycleId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("hr_performance_goals", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_performance_goal_weight", "\"Weight\" > 0 AND \"Weight\" <= 100");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PerformanceReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AppealReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("AppealResolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ManagerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PerformanceCycleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ScoresJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("WeightedScore")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PerformanceCycleId", "EmployeeId")
+                        .IsUnique();
+
+                    b.ToTable("hr_performance_reviews", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_performance_review_score", "\"WeightedScore\" >= 0 AND \"WeightedScore\" <= 100");
+                        });
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformSetting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3757,6 +7058,452 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PlatformSettings");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Behavior")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("CreditAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DisableReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("DiscountType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("OwnerType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("StackingPolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("StartsAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalCodes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("StackingPolicyId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("TargetType", "TargetId", "Status");
+
+                    b.ToTable("printable_code_batches", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_printable_batches_total", "\"TotalCodes\" > 0 AND \"TotalCodes\" <= 10000 AND \"UsedCount\" >= 0");
+
+                            t.HasCheckConstraint("CK_printable_batches_values", "(\"Behavior\" = 0 AND \"DiscountType\" IS NOT NULL AND \"DiscountValue\" > 0) OR (\"Behavior\" = 1) OR (\"Behavior\" = 2 AND \"CreditAmount\" > 0)");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeRedemption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AppliedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PrintableCodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PurchaseOperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("PrintableCodeId", "RequestId")
+                        .IsUnique();
+
+                    b.ToTable("printable_code_redemptions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_printable_redemption_amount", "\"AppliedAmount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BackgroundColor")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("BackgroundImageUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("HeightMm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LayoutJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("WidthMm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("printable_code_templates", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_printable_templates_size", "\"WidthMm\" > 0 AND \"HeightMm\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableSalesCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("CodePlaintext")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("ConsumedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ConsumedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("QrPayload")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<long>("SerialNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("UsageLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BatchId");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("ConsumedByUserId");
+
+                    b.HasIndex("SerialNumber")
+                        .IsUnique();
+
+                    b.ToTable("printable_sales_codes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_printable_sales_codes_usage", "\"UsageLimit\" > 0 AND \"UsedCount\" >= 0 AND \"UsedCount\" <= \"UsageLimit\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PromotionalBalanceAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AvailableAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ConsumedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("ExpiredAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("GiftRecipientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("MaxPurchaseCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("OriginalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PurchaseCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("RevokedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GiftRecipientId")
+                        .IsUnique();
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("StudentId", "TeacherId", "Status", "ExpiresAt");
+
+                    b.ToTable("promotional_balance_allocations", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_promotional_balance_conservation", "\"OriginalAmount\" > 0 AND \"AvailableAmount\" >= 0 AND \"ConsumedAmount\" >= 0 AND \"ExpiredAmount\" >= 0 AND \"RevokedAmount\" >= 0 AND \"OriginalAmount\" = \"AvailableAmount\" + \"ConsumedAmount\" + \"ExpiredAmount\" + \"RevokedAmount\"");
+
+                            t.HasCheckConstraint("CK_promotional_balance_purchase_count", "\"PurchaseCount\" >= 0 AND (\"MaxPurchaseCount\" IS NULL OR (\"MaxPurchaseCount\" > 0 AND \"PurchaseCount\" <= \"MaxPurchaseCount\"))");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PromotionalBalanceUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ContentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ContentType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("GiftRecipientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PurchaseOperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AllocationId");
+
+                    b.HasIndex("GiftRecipientId");
+
+                    b.HasIndex("PurchaseOperationId", "AllocationId")
+                        .IsUnique();
+
+                    b.ToTable("promotional_balance_usages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_promotional_balance_usage_amount", "\"Amount\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PublicExamProduct", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AvailableFrom")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("AvailableUntil")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisableReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("DisabledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("DisabledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GradeLevel")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPlatformWide")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid?>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DisabledByUserId");
+
+                    b.HasIndex("ExamId")
+                        .IsUnique();
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("IsPublished", "DisabledAt", "AvailableFrom", "AvailableUntil");
+
+                    b.ToTable("public_exam_products", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_public_exam_price", "(\"IsPaid\" = FALSE AND \"Price\" = 0) OR (\"IsPaid\" = TRUE AND \"Price\" > 0)");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.QuestionBankItem", b =>
@@ -3888,6 +7635,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
@@ -3904,9 +7654,12 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasIndex("ResolvedByUserId");
 
+                    b.HasIndex("TeacherId");
+
                     b.HasIndex("UserId");
 
-                    b.HasIndex("WalletId");
+                    b.HasIndex("WalletId", "Status", "Amount", "SenderPhoneNumber", "CreatedAt")
+                        .HasFilter("\"Status\" = 0");
 
                     b.ToTable("recharge_requests", (string)null);
                 });
@@ -3947,6 +7700,105 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("refresh_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ReportDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConfigurationJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId", "Domain", "CreatedAt");
+
+                    b.ToTable("report_definitions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Requisition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Openings")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("OrganizationUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Requirements")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<string>("RequisitionNumber")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationUnitId");
+
+                    b.HasIndex("RequisitionNumber")
+                        .IsUnique();
+
+                    b.HasIndex("State", "CreatedAt");
+
+                    b.ToTable("hr_requisitions", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_requisition_openings", "\"Openings\" > 0");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Role", b =>
@@ -3994,6 +7846,647 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("roles", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesCoupon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisableReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("DiscountType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("GlobalUsageLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("NormalizedCode")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("OwnerType")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("PerStudentUsageLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("StackingPolicyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("StartsAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("NormalizedCode")
+                        .IsUnique();
+
+                    b.HasIndex("StackingPolicyId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("TargetType", "TargetId", "Status");
+
+                    b.ToTable("sales_coupons", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_sales_coupons_discount_value", "\"DiscountValue\" > 0 AND (\"DiscountType\" <> 0 OR \"DiscountValue\" <= 100)");
+
+                            t.HasCheckConstraint("CK_sales_coupons_limits", "(\"GlobalUsageLimit\" IS NULL OR \"GlobalUsageLimit\" > 0) AND (\"PerStudentUsageLimit\" IS NULL OR \"PerStudentUsageLimit\" > 0) AND \"UsedCount\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesCouponUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CouponId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("PurchaseOperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("CouponId", "PurchaseOperationId")
+                        .IsUnique();
+
+                    b.HasIndex("CouponId", "StudentId", "PurchaseOperationId")
+                        .IsUnique();
+
+                    b.ToTable("sales_coupon_usages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_sales_coupon_usage_amounts", "\"GrossAmount\" >= 0 AND \"DiscountAmount\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesFinancialEffect", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CouponDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PlatformShareImpact")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PrintableCodeDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PromotionalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("PurchaseOperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TeacherShareImpact")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PurchaseOperationId")
+                        .IsUnique();
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("StudentId", "TargetType", "TargetId");
+
+                    b.ToTable("sales_financial_effects", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_sales_financial_effect_amounts", "\"GrossAmount\" >= 0 AND \"CouponDiscountAmount\" >= 0 AND \"PrintableCodeDiscountAmount\" >= 0 AND \"PromotionalAmount\" >= 0 AND \"PaidAmount\" >= 0 AND \"TeacherShareImpact\" >= 0 AND \"PlatformShareImpact\" >= 0");
+
+                            t.HasCheckConstraint("CK_sales_financial_effect_conservation", "\"GrossAmount\" = \"CouponDiscountAmount\" + \"PrintableCodeDiscountAmount\" + \"PromotionalAmount\" + \"PaidAmount\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("GradeLevel")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("VideoTypeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("VideoTypeId");
+
+                    b.HasIndex("TargetType", "TargetId", "TeacherId", "VideoTypeId", "IsActive");
+
+                    b.ToTable("sales_rules", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SharedTeacherPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AvailableFrom")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("AvailableUntil")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("DistributionMode")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("EducationStage")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("GradeLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedByUserId");
+
+                    b.HasIndex("EducationStage", "GradeLevel", "IsPublished");
+
+                    b.HasIndex("IsPublished", "AvailableFrom", "AvailableUntil");
+
+                    b.ToTable("shared_teacher_packages", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_shared_teacher_packages_price", "\"Price\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SharedTeacherPackageItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ContentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ContentType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsIncluded")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("SharedTeacherPackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("SharedTeacherPackageId", "ContentType", "ContentId");
+
+                    b.ToTable("shared_teacher_package_items", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SharedTeacherPackageTeacher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AllocationMode")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AllocationValue")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SharedTeacherPackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("TeacherId");
+
+                    b.HasIndex("SharedTeacherPackageId", "TeacherId", "SubjectId")
+                        .IsUnique();
+
+                    b.ToTable("shared_teacher_package_teachers", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateOnly>("EffectiveFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EffectiveTo")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PublishedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("ReplacesAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ShiftTemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublishedByUserId");
+
+                    b.HasIndex("ReplacesAssignmentId")
+                        .IsUnique()
+                        .HasFilter("\"ReplacesAssignmentId\" IS NOT NULL");
+
+                    b.HasIndex("ShiftTemplateId");
+
+                    b.HasIndex("EmployeeId", "EffectiveFrom", "EffectiveTo");
+
+                    b.ToTable("hr_shift_assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_shift_assignments_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" > \"EffectiveFrom\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftSegment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("DayOfWeek")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan>("EndsAt")
+                        .HasColumnType("interval");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ShiftTemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<TimeSpan>("StartsAt")
+                        .HasColumnType("interval");
+
+                    b.Property<int>("UnpaidBreakMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("WorkDateRule")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ShiftTemplateId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("hr_shift_segments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_hr_shift_segments_nonzero", "\"StartsAt\" <> \"EndsAt\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftSwapRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("HrDecisionByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ManagerDecisionByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("RequesterAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequesterEmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TargetAssignmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetEmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequesterAssignmentId");
+
+                    b.HasIndex("TargetAssignmentId");
+
+                    b.HasIndex("TargetEmployeeId");
+
+                    b.HasIndex("RequesterEmployeeId", "Status");
+
+                    b.ToTable("hr_shift_swap_requests", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("GraceMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MinimumBreakMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("OvertimeAfterMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("WorkCalendarId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("WorkCalendarId");
+
+                    b.ToTable("hr_shift_templates", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.SocialMediaPlan", b =>
@@ -4142,6 +8635,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<Guid?>("GiftRecipientId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("GrantType")
                         .HasColumnType("integer");
 
@@ -4157,7 +8653,13 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid?>("LessonVideoId")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PublicExamProductId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("TermId")
@@ -4169,15 +8671,83 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("UsesConsumed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<Guid?>("VideoTypeId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccessCodeId");
 
                     b.HasIndex("CancelledByUserId");
 
-                    b.HasIndex("UserId", "PackageId");
+                    b.HasIndex("GiftRecipientId")
+                        .IsUnique();
 
-                    b.ToTable("student_access_grants", (string)null);
+                    b.HasIndex("PublicExamProductId");
+
+                    b.HasIndex("UserId", "PackageId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"PackageId\" IS NOT NULL AND \"GrantType\" = 0");
+
+                    b.HasIndex("UserId", "GrantType", "ContentSectionId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 2 AND \"ContentSectionId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "ExamId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 5 AND \"ExamId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "LessonId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 3 AND \"LessonId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "LessonVideoId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 4 AND \"LessonVideoId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "TermId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 1 AND \"TermId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "AccessCodeId", "ContentSectionId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"ContentSectionId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "AccessCodeId", "ExamId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"ExamId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "AccessCodeId", "LessonId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"LessonId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "AccessCodeId", "LessonVideoId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"LessonVideoId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "AccessCodeId", "PackageId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"PackageId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "AccessCodeId", "TermId")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\" = TRUE AND \"AccessCodeId\" IS NOT NULL AND \"TermId\" IS NOT NULL");
+
+                    b.HasIndex("UserId", "GrantType", "VideoTypeId", "PackageId", "TermId", "ContentSectionId", "LessonId")
+                        .HasDatabaseName("IX_student_access_grants_video_type_scope")
+                        .HasFilter("\"IsActive\" = TRUE AND \"GrantType\" = 4 AND \"VideoTypeId\" IS NOT NULL");
+
+                    b.ToTable("student_access_grants", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_student_access_grants_gift_uses", "\"UsesConsumed\" >= 0 AND (\"MaxUses\" IS NULL OR (\"MaxUses\" > 0 AND \"UsesConsumed\" <= \"MaxUses\"))");
+
+                            t.HasCheckConstraint("CK_student_access_grants_target_shape", "(\"GrantType\" = 0 AND \"PackageId\" IS NOT NULL AND \"TermId\" IS NULL AND \"ContentSectionId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR (\"GrantType\" = 1 AND \"TermId\" IS NOT NULL AND \"ContentSectionId\" IS NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR (\"GrantType\" = 2 AND \"ContentSectionId\" IS NOT NULL AND \"LessonId\" IS NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR (\"GrantType\" = 3 AND \"LessonId\" IS NOT NULL AND \"LessonVideoId\" IS NULL AND \"ExamId\" IS NULL) OR (\"GrantType\" = 4 AND (\"LessonVideoId\" IS NOT NULL OR \"VideoTypeId\" IS NOT NULL) AND \"ExamId\" IS NULL) OR (\"GrantType\" = 5 AND \"ExamId\" IS NOT NULL AND \"LessonVideoId\" IS NULL)");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentAnswer", b =>
@@ -4244,12 +8814,21 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("student_balances", (string)null);
+                    b.ToTable("student_balances", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_student_balances_non_negative", "\"CurrentBalance\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentExamAttempt", b =>
@@ -4292,6 +8871,57 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("student_exam_attempts", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.StudentFacingAcademicScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("EducationStage")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("GradeLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("OwnerType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScopeLevel")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SubjectId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("SubjectId");
+
+                    b.HasIndex("OwnerType", "OwnerId");
+
+                    b.HasIndex("ScopeLevel", "EducationStage", "GradeLevel", "SubjectId");
+
+                    b.HasIndex("OwnerType", "OwnerId", "ScopeLevel", "EducationStage", "GradeLevel", "SubjectId");
+
+                    b.ToTable("student_facing_academic_scopes", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_student_facing_scopes_shape", "(\"ScopeLevel\" = 1 AND \"EducationStage\" IS NULL AND \"GradeLevel\" IS NULL AND \"SubjectId\" IS NULL) OR (\"ScopeLevel\" = 2 AND \"EducationStage\" IS NOT NULL AND \"GradeLevel\" IS NULL AND \"SubjectId\" IS NULL) OR (\"ScopeLevel\" = 3 AND \"EducationStage\" IS NOT NULL AND \"GradeLevel\" IS NOT NULL AND \"SubjectId\" IS NULL) OR (\"ScopeLevel\" = 0 AND \"EducationStage\" IS NOT NULL AND \"GradeLevel\" IS NOT NULL AND \"SubjectId\" IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentNote", b =>
@@ -4447,6 +9077,8 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
+                    b.HasIndex("EducationStage", "GradeLevel", "UserId");
+
                     b.ToTable("student_profiles", (string)null);
                 });
 
@@ -4594,6 +9226,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<decimal>("CurrentBalance")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("ReservedBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<Guid>("TeacherId")
                         .HasColumnType("uuid");
 
@@ -4603,12 +9240,273 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
                     b.HasKey("Id");
 
                     b.HasIndex("TeacherId")
                         .IsUnique();
 
-                    b.ToTable("teacher_accounts", (string)null);
+                    b.ToTable("teacher_accounts", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_teacher_accounts_balances_non_negative", "\"TotalEarnings\" >= 0 AND \"CurrentBalance\" >= 0 AND \"ReservedBalance\" >= 0");
+
+                            t.HasCheckConstraint("CK_teacher_accounts_reserved_available", "\"ReservedBalance\" <= \"CurrentBalance\"");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherFinancialAgreement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AllocationMode")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AllocationValue")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EffectiveFrom")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("EffectiveTo")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PriceBasis")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("ScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ScopeType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Trigger")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeacherId", "ScopeType", "ScopeId", "Trigger", "EffectiveFrom");
+
+                    b.ToTable("teacher_financial_agreements", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_teacher_financial_agreements_dates", "\"EffectiveTo\" IS NULL OR \"EffectiveTo\" >= \"EffectiveFrom\"");
+
+                            t.HasCheckConstraint("CK_teacher_financial_agreements_value", "\"AllocationValue\" >= 0 AND (\"AllocationMode\" <> 0 OR \"AllocationValue\" <= 100)");
+                        });
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherFinancialAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AgreementAllocationMode")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("AgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AgreementScopeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("AgreementScopeType")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("AllocationMode")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AllocationValue")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<long?>("CodeSerialNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ContentNameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("DiscountBearer")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("GrossBasisAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("PayoutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PayoutStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PlatformShareAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("PriceBasis")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("ReversedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ReviewStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SettlementLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StudentNameSnapshot")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("StudentPhoneSnapshot")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TeacherFinancialEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TeacherShareAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PayoutId");
+
+                    b.HasIndex("TeacherFinancialEventId");
+
+                    b.HasIndex("TeacherId", "CreatedAt");
+
+                    b.HasIndex("TeacherId", "ReviewStatus", "PayoutStatus");
+
+                    b.ToTable("teacher_financial_allocations", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherFinancialEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("EGP");
+
+                    b.Property<string>("DetailsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GrossAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PayoutStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PlatformDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PlatformShareAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PromotionalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ReviewStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SourceType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("StudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TeacherDiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("TargetType", "TargetId");
+
+                    b.HasIndex("ReviewStatus", "PayoutStatus", "OccurredAt");
+
+                    b.ToTable("teacher_financial_events", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_teacher_financial_events_amounts", "\"DiscountAmount\" >= 0 AND \"PlatformDiscountAmount\" >= 0 AND \"TeacherDiscountAmount\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPayout", b =>
@@ -4617,8 +9515,18 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -4627,6 +9535,12 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("HandledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("PaidByUserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("RejectionReason")
@@ -4639,18 +9553,69 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<Guid>("TeacherId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("TransferReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApprovedByUserId");
+
                     b.HasIndex("HandledByUserId");
+
+                    b.HasIndex("PaidByUserId");
 
                     b.HasIndex("Status");
 
                     b.HasIndex("TeacherId");
 
                     b.ToTable("teacher_payouts", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPayoutAdjustment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("RelatedFinancialEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelatedPayoutId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelatedFinancialEventId");
+
+                    b.HasIndex("RelatedPayoutId");
+
+                    b.HasIndex("TeacherId", "Status");
+
+                    b.ToTable("teacher_payout_adjustments", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPhoto", b =>
@@ -4714,9 +9679,44 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<string>("FacebookUrl")
                         .HasColumnType("text");
 
+                    b.Property<string>("IntroVideoUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsContentVisibleToStudents")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsPublicProfileEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsVisibleToStudents")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("ProfileImageUrl")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("PublicBio")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PublicSlug")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<decimal>("RatingAverage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<int>("RatingCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ShowOnLanding")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Specialization")
                         .IsRequired()
@@ -4737,10 +9737,223 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PublicSlug")
+                        .IsUnique()
+                        .HasFilter("\"PublicSlug\" IS NOT NULL");
+
                     b.HasIndex("UserId")
                         .IsUnique();
 
                     b.ToTable("teacher_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSettlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasDefaultValue("EGP");
+
+                    b.Property<decimal>("DebtDeductionAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GrossDueAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("NetPayableAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("PaidByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("PeriodFrom")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("PeriodTo")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeacherId", "Status", "PeriodFrom", "PeriodTo");
+
+                    b.ToTable("teacher_settlements", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSettlementLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AdjustmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AllocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("DescriptionSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("TeacherSettlementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdjustmentId")
+                        .IsUnique()
+                        .HasFilter("\"AdjustmentId\" IS NOT NULL");
+
+                    b.HasIndex("AllocationId")
+                        .IsUnique()
+                        .HasFilter("\"AllocationId\" IS NOT NULL");
+
+                    b.HasIndex("TeacherSettlementId");
+
+                    b.ToTable("teacher_settlement_lines", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSettlementPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("AttachmentUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("PaidByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("TeacherSettlementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TransferReference")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TeacherSettlementId");
+
+                    b.ToTable("teacher_settlement_payments", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherStaffMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByTeacherUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("PermissionKeys")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasDefaultValue("");
+
+                    b.Property<Guid>("TeacherId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByTeacherUserId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.HasIndex("TeacherId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("teacher_staff_members", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSubject", b =>
@@ -4795,6 +10008,50 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("terms", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TrustedAttendanceDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("EmployeeId", "TokenHash")
+                        .IsUnique();
+
+                    b.ToTable("hr_trusted_attendance_devices", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4804,6 +10061,9 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -4811,6 +10071,11 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("IsProfileComplete")
                         .HasColumnType("boolean");
@@ -4826,6 +10091,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<int>("SecurityStampVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("SuspensionReason")
                         .HasColumnType("text");
@@ -5010,11 +10280,52 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("VideoPlaybackSessions");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.VideoType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique();
+
+                    b.HasIndex("SortOrder", "Name");
+
+                    b.ToTable("video_types", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.VideoWatchEvent", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("ActualWatchedSeconds")
+                        .HasColumnType("numeric");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -5025,8 +10336,15 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<bool>("IsLocked")
                         .HasColumnType("boolean");
 
+                    b.Property<decimal>("LastPlaybackRate")
+                        .HasColumnType("numeric");
+
                     b.Property<Guid>("LessonVideoId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("PlaybackRateBreakdownJson")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<int>("TimeWatchedInSeconds")
                         .HasColumnType("integer");
@@ -5052,6 +10370,15 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.WebVitalsMetric", b =>
                 {
+                    b.Property<string>("ConnectionClass")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
@@ -5064,6 +10391,21 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("MetricId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("DeviceClass")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("NavigationType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
+
                     b.Property<string>("PageUrl")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -5073,6 +10415,21 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ReleaseId")
+                        .IsRequired()
+                        .HasMaxLength(96)
+                        .HasColumnType("character varying(96)");
+
+                    b.Property<string>("RouteTemplate")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("character varying(180)");
+
+                    b.Property<string>("Surface")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -5091,7 +10448,142 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.HasIndex("MetricName");
 
+                    b.HasIndex("ReleaseId", "RouteTemplate", "Surface", "DeviceClass", "MetricName", "CreatedAt");
+
                     b.ToTable("web_vitals_metrics", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.WorkCalendar", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("HolidaysJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("WorkingDaysMask")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_work_calendars", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.WorkLocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("GeofenceRadiusMeters")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("hr_work_locations", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.WorkdayClassification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("WorkDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "WorkDate")
+                        .IsUnique();
+
+                    b.ToTable("hr_workday_classifications", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.EssayQuestion", b =>
@@ -5116,6 +10608,17 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasDiscriminator().HasValue(2);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AcademicSubjectEligibility", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.AccessCode", b =>
@@ -5170,6 +10673,74 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Teacher");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDefinitionStep", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.ApprovalDefinition", "ApprovalDefinition")
+                        .WithMany("Steps")
+                        .HasForeignKey("ApprovalDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovalDefinition");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalInstance", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.ApprovalDefinition", "ApprovalDefinition")
+                        .WithMany()
+                        .HasForeignKey("ApprovalDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "RequesterEmployee")
+                        .WithMany()
+                        .HasForeignKey("RequesterEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovalDefinition");
+
+                    b.Navigation("RequesterEmployee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalStepInstance", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.ApprovalDefinitionStep", "DefinitionStep")
+                        .WithMany()
+                        .HasForeignKey("ApprovalDefinitionStepId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.ApprovalInstance", "ApprovalInstance")
+                        .WithMany("Steps")
+                        .HasForeignKey("ApprovalInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovalInstance");
+
+                    b.Navigation("DefinitionStep");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AssetCustody", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.HrAsset", "Asset")
+                        .WithMany("Custodies")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Asset");
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Assistant.AssistantTaskQueue", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.User", "AssignedAssistant")
@@ -5187,15 +10758,138 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceAttempt", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AttendancePolicy", "AttendancePolicy")
+                        .WithMany()
+                        .HasForeignKey("AttendancePolicyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.AttendanceSession", "AttendanceSession")
+                        .WithMany()
+                        .HasForeignKey("AttendanceSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AttendancePolicy");
+
+                    b.Navigation("AttendanceSession");
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceBreak", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AttendanceSession", "AttendanceSession")
+                        .WithMany("Breaks")
+                        .HasForeignKey("AttendanceSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AttendanceSession");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceCorrection", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AttendanceSession", "AttendanceSession")
+                        .WithMany()
+                        .HasForeignKey("AttendanceSessionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AttendanceSession");
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceLog", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendancePolicyAssignment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.AttendancePolicy", "AttendancePolicy")
+                        .WithMany()
+                        .HasForeignKey("AttendancePolicyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.ShiftTemplate", "ShiftTemplate")
+                        .WithMany()
+                        .HasForeignKey("ShiftTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AttendancePolicy");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("ShiftTemplate");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendancePolicyException", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.AttendancePolicy", "OverridePolicy")
+                        .WithMany()
+                        .HasForeignKey("OverridePolicyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("OverridePolicy");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceSession", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.ShiftAssignment", "ShiftAssignment")
+                        .WithMany()
+                        .HasForeignKey("ShiftAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("ShiftAssignment");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.AuditLog", b =>
@@ -5218,7 +10912,7 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.StudentBalance", "StudentBalance")
                         .WithMany("Transactions")
                         .HasForeignKey("StudentBalanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("PerformedByUser");
@@ -5285,6 +10979,68 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Teacher");
 
                     b.Navigation("UploadedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Candidate", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "EmployeeProfile")
+                        .WithMany()
+                        .HasForeignKey("EmployeeProfileId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.Requisition", "Requisition")
+                        .WithMany("Candidates")
+                        .HasForeignKey("RequisitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmployeeProfile");
+
+                    b.Navigation("Requisition");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CandidateInterview", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Candidate", "Candidate")
+                        .WithMany("Interviews")
+                        .HasForeignKey("CandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Candidate");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CandidateOffer", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Candidate", "Candidate")
+                        .WithMany("Offers")
+                        .HasForeignKey("CandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Candidate");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CaseEvidence", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeCase", "EmployeeCase")
+                        .WithMany("Evidence")
+                        .HasForeignKey("EmployeeCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmployeeCase");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CaseResponse", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeCase", "EmployeeCase")
+                        .WithMany("Responses")
+                        .HasForeignKey("EmployeeCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmployeeCase");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.ChatMessage", b =>
@@ -5380,12 +11136,40 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
                         .WithMany("CodeGroups")
                         .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupDeliveryConfirmation", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.CodeGroup", "CodeGroup")
+                        .WithMany()
+                        .HasForeignKey("CodeGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CodeGroup");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CodeGroupFinancialTerms", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherFinancialAgreement", "Agreement")
+                        .WithMany()
+                        .HasForeignKey("AgreementId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.CodeGroup", "CodeGroup")
+                        .WithMany()
+                        .HasForeignKey("CodeGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Agreement");
+
+                    b.Navigation("CodeGroup");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.CodeVideoTarget", b =>
@@ -5420,9 +11204,16 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasForeignKey("ReviewedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany("CommunityPosts")
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("AuthorUser");
 
                     b.Navigation("ReviewedByUser");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostComment", b =>
@@ -5432,6 +11223,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasForeignKey("AuthorUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.CommunityPostComment", "ParentComment")
+                        .WithMany("Replies")
+                        .HasForeignKey("ParentCommentId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("NaderGorge.Domain.Entities.CommunityPost", "Post")
                         .WithMany("Comments")
@@ -5445,6 +11241,8 @@ namespace NaderGorge.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("AuthorUser");
+
+                    b.Navigation("ParentComment");
 
                     b.Navigation("Post");
 
@@ -5567,33 +11365,182 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.DisciplinaryAction", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeCase", "EmployeeCase")
+                        .WithMany("Actions")
+                        .HasForeignKey("EmployeeCaseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.PayrollLineItem", "PayrollLineItem")
+                        .WithMany()
+                        .HasForeignKey("PayrollLineItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("EmployeeCase");
+
+                    b.Navigation("PayrollLineItem");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.DiscountStackingPolicy", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeCase", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeCompensation", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeDocument", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeDocumentVersion", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeDocument", "EmployeeDocument")
+                        .WithMany("Versions")
+                        .HasForeignKey("EmployeeDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmployeeDocument");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeLifecycleTask", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeePayroll", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.HrPayrollRun", "PayrollRun")
+                        .WithMany("Employees")
+                        .HasForeignKey("PayrollRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("PayrollRun");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeProfile", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.User", "User")
                         .WithOne("EmployeeProfile")
                         .HasForeignKey("NaderGorge.Domain.Entities.EmployeeProfile", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeVacation", b =>
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmploymentAssignment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.CostCenter", "CostCenter")
+                        .WithMany()
+                        .HasForeignKey("CostCenterId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.JobGrade", "JobGrade")
+                        .WithMany()
+                        .HasForeignKey("JobGradeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.JobPosition", "JobPosition")
+                        .WithMany()
+                        .HasForeignKey("JobPositionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "ManagerEmployee")
+                        .WithMany()
+                        .HasForeignKey("ManagerEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.OrganizationUnit", "OrganizationUnit")
+                        .WithMany()
+                        .HasForeignKey("OrganizationUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.WorkLocation", "WorkLocation")
+                        .WithMany()
+                        .HasForeignKey("WorkLocationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CostCenter");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("JobGrade");
+
+                    b.Navigation("JobPosition");
+
+                    b.Navigation("ManagerEmployee");
+
+                    b.Navigation("OrganizationUnit");
+
+                    b.Navigation("WorkLocation");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmploymentContract", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("NaderGorge.Domain.Entities.User", "HandledByUser")
-                        .WithMany()
-                        .HasForeignKey("HandledBy")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Employee");
-
-                    b.Navigation("HandledByUser");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.EssaySubmission", b =>
@@ -5729,6 +11676,78 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.GiftIssuance", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.Exam", "Exam")
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "IssuedByUser")
+                        .WithMany()
+                        .HasForeignKey("IssuedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.LessonVideo", "LessonVideo")
+                        .WithMany()
+                        .HasForeignKey("LessonVideoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.Package", "Package")
+                        .WithMany()
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("IssuedByUser");
+
+                    b.Navigation("Lesson");
+
+                    b.Navigation("LessonVideo");
+
+                    b.Navigation("Package");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.GiftRecipient", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.GiftIssuance", "GiftIssuance")
+                        .WithMany("Recipients")
+                        .HasForeignKey("GiftIssuanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "RevokedByUser")
+                        .WithMany()
+                        .HasForeignKey("RevokedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GiftIssuance");
+
+                    b.Navigation("RevokedByUser");
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Homework.HomeworkAnswer", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Homework.HomeworkSubmission", "Submission")
@@ -5784,6 +11803,102 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrFinancialInstallment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.HrFinancialRequest", "FinancialRequest")
+                        .WithMany("Installments")
+                        .HasForeignKey("FinancialRequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.PayrollLineItem", "PayrollLineItem")
+                        .WithMany()
+                        .HasForeignKey("PayrollLineItemId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FinancialRequest");
+
+                    b.Navigation("PayrollLineItem");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrFinancialRequest", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrLeaveRequest", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.ApprovalInstance", "ApprovalInstance")
+                        .WithMany()
+                        .HasForeignKey("ApprovalInstanceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.LeaveType", "LeaveType")
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ApprovalInstance");
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("LeaveType");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrMigrationConflict", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.HrMigrationBatch", "MigrationBatch")
+                        .WithMany("Conflicts")
+                        .HasForeignKey("MigrationBatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MigrationBatch");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrMigrationRecordMap", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.HrMigrationBatch", "MigrationBatch")
+                        .WithMany("RecordMaps")
+                        .HasForeignKey("MigrationBatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MigrationBatch");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrPayrollInputSource", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeePayroll", "EmployeePayroll")
+                        .WithMany()
+                        .HasForeignKey("EmployeePayrollId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.PayrollLineItem", "PayrollLineItem")
+                        .WithMany()
+                        .HasForeignKey("PayrollLineItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmployeePayroll");
+
+                    b.Navigation("PayrollLineItem");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.IncomingSmsLog", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.DigitalWallet", "Wallet")
@@ -5793,6 +11908,55 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Wallet");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveBalance", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.LeaveType", "LeaveType")
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("LeaveType");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveLedgerEntry", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LeaveBalance", "LeaveBalance")
+                        .WithMany()
+                        .HasForeignKey("LeaveBalanceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LeaveBalance");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.LeavePolicy", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.LeaveType", "LeaveType")
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.WorkCalendar", "WorkCalendar")
+                        .WithMany()
+                        .HasForeignKey("WorkCalendarId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("LeaveType");
+
+                    b.Navigation("WorkCalendar");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Lesson", b =>
@@ -5875,9 +12039,17 @@ namespace NaderGorge.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NaderGorge.Domain.Entities.VideoType", "VideoType")
+                        .WithMany("Videos")
+                        .HasForeignKey("VideoTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Exam");
 
                     b.Navigation("Lesson");
+
+                    b.Navigation("VideoType");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LiveSupport.LiveSupportAIConversationState", b =>
@@ -6294,6 +12466,34 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.OffboardingProcess", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.OrganizationUnit", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "ManagerEmployee")
+                        .WithMany()
+                        .HasForeignKey("ManagerEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.OrganizationUnit", "Parent")
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ManagerEmployee");
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Package", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
@@ -6336,10 +12536,36 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.PayrollRecord", "PayrollRecord")
                         .WithMany("Adjustments")
                         .HasForeignKey("PayrollRecordId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("PayrollRecord");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollLineItem", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeePayroll", "EmployeePayroll")
+                        .WithMany("Lines")
+                        .HasForeignKey("EmployeePayrollId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.PayComponent", "PayComponent")
+                        .WithMany()
+                        .HasForeignKey("PayComponentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.PayrollRule", "RuleVersion")
+                        .WithMany()
+                        .HasForeignKey("RuleVersionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("EmployeePayroll");
+
+                    b.Navigation("PayComponent");
+
+                    b.Navigation("RuleVersion");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollRecord", b =>
@@ -6352,12 +12578,248 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "EmployeeProfile")
                         .WithMany()
                         .HasForeignKey("EmployeeProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ApprovedByUser");
 
                     b.Navigation("EmployeeProfile");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollRule", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.PayComponent", "PayComponent")
+                        .WithMany()
+                        .HasForeignKey("PayComponentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PayComponent");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PayrollSettlementAdjustment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.PayrollLineItem", "OriginalPayrollLineItem")
+                        .WithMany()
+                        .HasForeignKey("OriginalPayrollLineItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.HrPayrollRun", "SettlementPayrollRun")
+                        .WithMany()
+                        .HasForeignKey("SettlementPayrollRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OriginalPayrollLineItem");
+
+                    b.Navigation("SettlementPayrollRun");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Payslip", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeePayroll", "EmployeePayroll")
+                        .WithMany()
+                        .HasForeignKey("EmployeePayrollId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("EmployeePayroll");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PerformanceGoal", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.PerformanceCycle", "PerformanceCycle")
+                        .WithMany("Goals")
+                        .HasForeignKey("PerformanceCycleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PerformanceCycle");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PerformanceReview", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.PerformanceCycle", "PerformanceCycle")
+                        .WithMany()
+                        .HasForeignKey("PerformanceCycleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("PerformanceCycle");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeBatch", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.DiscountStackingPolicy", "StackingPolicy")
+                        .WithMany()
+                        .HasForeignKey("StackingPolicyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.PrintableCodeTemplate", "Template")
+                        .WithMany("Batches")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("StackingPolicy");
+
+                    b.Navigation("Teacher");
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeRedemption", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.PrintableSalesCode", "PrintableCode")
+                        .WithMany("Redemptions")
+                        .HasForeignKey("PrintableCodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PrintableCode");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeTemplate", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableSalesCode", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.PrintableCodeBatch", "Batch")
+                        .WithMany("Codes")
+                        .HasForeignKey("BatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "ConsumedByUser")
+                        .WithMany()
+                        .HasForeignKey("ConsumedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Batch");
+
+                    b.Navigation("ConsumedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PromotionalBalanceAllocation", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.GiftRecipient", "GiftRecipient")
+                        .WithOne("PromotionalBalanceAllocation")
+                        .HasForeignKey("NaderGorge.Domain.Entities.PromotionalBalanceAllocation", "GiftRecipientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("GiftRecipient");
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PromotionalBalanceUsage", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.PromotionalBalanceAllocation", "Allocation")
+                        .WithMany("Usages")
+                        .HasForeignKey("AllocationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.GiftRecipient", "GiftRecipient")
+                        .WithMany()
+                        .HasForeignKey("GiftRecipientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Allocation");
+
+                    b.Navigation("GiftRecipient");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PublicExamProduct", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "DisabledByUser")
+                        .WithMany()
+                        .HasForeignKey("DisabledByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.Exam", "Exam")
+                        .WithOne("PublicExamProduct")
+                        .HasForeignKey("NaderGorge.Domain.Entities.PublicExamProduct", "ExamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("DisabledByUser");
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.QuestionBankItem", b =>
@@ -6402,6 +12864,11 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasForeignKey("ResolvedByUserId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NaderGorge.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -6418,6 +12885,8 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Navigation("ResolvedByUser");
 
+                    b.Navigation("Teacher");
+
                     b.Navigation("User");
 
                     b.Navigation("Wallet");
@@ -6432,6 +12901,280 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ReportDefinition", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "OwnerUser")
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OwnerUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Requisition", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.OrganizationUnit", "OrganizationUnit")
+                        .WithMany()
+                        .HasForeignKey("OrganizationUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("OrganizationUnit");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesCoupon", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.DiscountStackingPolicy", "StackingPolicy")
+                        .WithMany()
+                        .HasForeignKey("StackingPolicyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("StackingPolicy");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesCouponUsage", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.SalesCoupon", "Coupon")
+                        .WithMany("Usages")
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Coupon");
+
+                    b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesFinancialEffect", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Student");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesRule", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.VideoType", "VideoType")
+                        .WithMany()
+                        .HasForeignKey("VideoTypeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("Teacher");
+
+                    b.Navigation("VideoType");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SharedTeacherPackage", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("UpdatedByUser");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SharedTeacherPackageItem", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.SharedTeacherPackage", "SharedTeacherPackage")
+                        .WithMany("Items")
+                        .HasForeignKey("SharedTeacherPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany("SharedPackageItems")
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SharedTeacherPackage");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SharedTeacherPackageTeacher", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.SharedTeacherPackage", "SharedTeacherPackage")
+                        .WithMany("Teachers")
+                        .HasForeignKey("SharedTeacherPackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany("SharedPackageTeachers")
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SharedTeacherPackage");
+
+                    b.Navigation("Subject");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftAssignment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("PublishedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.ShiftAssignment", "ReplacesAssignment")
+                        .WithMany()
+                        .HasForeignKey("ReplacesAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.ShiftTemplate", "ShiftTemplate")
+                        .WithMany()
+                        .HasForeignKey("ShiftTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+
+                    b.Navigation("ReplacesAssignment");
+
+                    b.Navigation("ShiftTemplate");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftSegment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.ShiftTemplate", "ShiftTemplate")
+                        .WithMany("Segments")
+                        .HasForeignKey("ShiftTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ShiftTemplate");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftSwapRequest", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.ShiftAssignment", "RequesterAssignment")
+                        .WithMany()
+                        .HasForeignKey("RequesterAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "RequesterEmployee")
+                        .WithMany()
+                        .HasForeignKey("RequesterEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.ShiftAssignment", "TargetAssignment")
+                        .WithMany()
+                        .HasForeignKey("TargetAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "TargetEmployee")
+                        .WithMany()
+                        .HasForeignKey("TargetEmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RequesterAssignment");
+
+                    b.Navigation("RequesterEmployee");
+
+                    b.Navigation("TargetAssignment");
+
+                    b.Navigation("TargetEmployee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftTemplate", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.WorkCalendar", "WorkCalendar")
+                        .WithMany("ShiftTemplates")
+                        .HasForeignKey("WorkCalendarId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("WorkCalendar");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.SocialMediaPlan", b =>
@@ -6483,6 +13226,16 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasForeignKey("CancelledByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("NaderGorge.Domain.Entities.GiftRecipient", "GiftRecipient")
+                        .WithOne("AccessGrant")
+                        .HasForeignKey("NaderGorge.Domain.Entities.StudentAccessGrant", "GiftRecipientId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.PublicExamProduct", "PublicExamProduct")
+                        .WithMany()
+                        .HasForeignKey("PublicExamProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NaderGorge.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -6492,6 +13245,10 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("AccessCode");
 
                     b.Navigation("CancelledByUser");
+
+                    b.Navigation("GiftRecipient");
+
+                    b.Navigation("PublicExamProduct");
 
                     b.Navigation("User");
                 });
@@ -6527,7 +13284,7 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.User", "User")
                         .WithOne("StudentBalance")
                         .HasForeignKey("NaderGorge.Domain.Entities.StudentBalance", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -6550,6 +13307,23 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Exam");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.StudentFacingAcademicScope", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.Subject", "Subject")
+                        .WithMany()
+                        .HasForeignKey("SubjectId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Subject");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentNote", b =>
@@ -6639,26 +13413,112 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
                         .WithOne()
                         .HasForeignKey("NaderGorge.Domain.Entities.TeacherAccount", "TeacherId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Teacher");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherFinancialAgreement", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherFinancialAllocation", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherPayout", "Payout")
+                        .WithMany("Allocations")
+                        .HasForeignKey("PayoutId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherFinancialEvent", "TeacherFinancialEvent")
+                        .WithMany("Allocations")
+                        .HasForeignKey("TeacherFinancialEventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany("FinancialAllocations")
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Payout");
+
+                    b.Navigation("Teacher");
+
+                    b.Navigation("TeacherFinancialEvent");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherFinancialEvent", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "Student")
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Student");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPayout", b =>
                 {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("NaderGorge.Domain.Entities.User", "HandledByUser")
                         .WithMany()
                         .HasForeignKey("HandledByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("NaderGorge.Domain.Entities.User", "PaidByUser")
+                        .WithMany()
+                        .HasForeignKey("PaidByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
                         .WithMany()
                         .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("ApprovedByUser");
+
                     b.Navigation("HandledByUser");
+
+                    b.Navigation("PaidByUser");
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPayoutAdjustment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherFinancialEvent", "RelatedFinancialEvent")
+                        .WithMany()
+                        .HasForeignKey("RelatedFinancialEventId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherPayout", "RelatedPayout")
+                        .WithMany("Adjustments")
+                        .HasForeignKey("RelatedPayoutId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("RelatedFinancialEvent");
+
+                    b.Navigation("RelatedPayout");
 
                     b.Navigation("Teacher");
                 });
@@ -6681,6 +13541,80 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasForeignKey("NaderGorge.Domain.Entities.TeacherProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSettlement", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany()
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Teacher");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSettlementLine", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherPayoutAdjustment", "Adjustment")
+                        .WithMany()
+                        .HasForeignKey("AdjustmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherFinancialAllocation", "Allocation")
+                        .WithMany()
+                        .HasForeignKey("AllocationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherSettlement", "TeacherSettlement")
+                        .WithMany("Lines")
+                        .HasForeignKey("TeacherSettlementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Adjustment");
+
+                    b.Navigation("Allocation");
+
+                    b.Navigation("TeacherSettlement");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSettlementPayment", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherSettlement", "TeacherSettlement")
+                        .WithMany("Payments")
+                        .HasForeignKey("TeacherSettlementId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TeacherSettlement");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherStaffMember", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", "CreatedByTeacherUser")
+                        .WithMany("CreatedTeacherStaffMembers")
+                        .HasForeignKey("CreatedByTeacherUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.TeacherProfile", "Teacher")
+                        .WithMany("StaffMembers")
+                        .HasForeignKey("TeacherId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.User", "User")
+                        .WithMany("TeacherStaffMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedByTeacherUser");
+
+                    b.Navigation("Teacher");
 
                     b.Navigation("User");
                 });
@@ -6713,6 +13647,23 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Package");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TrustedAttendanceDevice", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.UserRole", b =>
@@ -6810,9 +13761,42 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.WorkdayClassification", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.EmployeeProfile", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalDefinition", b =>
+                {
+                    b.Navigation("Steps");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ApprovalInstance", b =>
+                {
+                    b.Navigation("Steps");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.AttendanceSession", b =>
+                {
+                    b.Navigation("Breaks");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.BunnyVideoAsset", b =>
                 {
                     b.Navigation("UsageSnapshots");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Candidate", b =>
+                {
+                    b.Navigation("Interviews");
+
+                    b.Navigation("Offers");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.ChatRoom", b =>
@@ -6840,6 +13824,11 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("PollVotes");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.CommunityPostComment", b =>
+                {
+                    b.Navigation("Replies");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.ContentSection", b =>
                 {
                     b.Navigation("Lessons");
@@ -6857,11 +13846,44 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("RechargeRequests");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeCase", b =>
+                {
+                    b.Navigation("Actions");
+
+                    b.Navigation("Evidence");
+
+                    b.Navigation("Responses");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeeDocument", b =>
+                {
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.EmployeePayroll", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Exam", b =>
                 {
                     b.Navigation("Attempts");
 
                     b.Navigation("ExamQuestions");
+
+                    b.Navigation("PublicExamProduct");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.GiftIssuance", b =>
+                {
+                    b.Navigation("Recipients");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.GiftRecipient", b =>
+                {
+                    b.Navigation("AccessGrant");
+
+                    b.Navigation("PromotionalBalanceAllocation");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Homework.Homework", b =>
@@ -6874,6 +13896,28 @@ namespace NaderGorge.Infrastructure.Migrations
             modelBuilder.Entity("NaderGorge.Domain.Entities.Homework.HomeworkSubmission", b =>
                 {
                     b.Navigation("Answers");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrAsset", b =>
+                {
+                    b.Navigation("Custodies");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrFinancialRequest", b =>
+                {
+                    b.Navigation("Installments");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrMigrationBatch", b =>
+                {
+                    b.Navigation("Conflicts");
+
+                    b.Navigation("RecordMaps");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.HrPayrollRun", b =>
+                {
+                    b.Navigation("Employees");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.IncomingSmsLog", b =>
@@ -6914,14 +13958,61 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Adjustments");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PerformanceCycle", b =>
+                {
+                    b.Navigation("Goals");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeBatch", b =>
+                {
+                    b.Navigation("Codes");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeTemplate", b =>
+                {
+                    b.Navigation("Batches");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableSalesCode", b =>
+                {
+                    b.Navigation("Redemptions");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.PromotionalBalanceAllocation", b =>
+                {
+                    b.Navigation("Usages");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.QuestionBankItem", b =>
                 {
                     b.Navigation("Options");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.Requisition", b =>
+                {
+                    b.Navigation("Candidates");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.Role", b =>
                 {
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SalesCoupon", b =>
+                {
+                    b.Navigation("Usages");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.SharedTeacherPackage", b =>
+                {
+                    b.Navigation("Items");
+
+                    b.Navigation("Teachers");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.ShiftTemplate", b =>
+                {
+                    b.Navigation("Segments");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.StudentBalance", b =>
@@ -6948,19 +14039,48 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Comments");
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherFinancialEvent", b =>
+                {
+                    b.Navigation("Allocations");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherPayout", b =>
+                {
+                    b.Navigation("Adjustments");
+
+                    b.Navigation("Allocations");
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherProfile", b =>
                 {
                     b.Navigation("CodeGroups");
+
+                    b.Navigation("CommunityPosts");
 
                     b.Navigation("EssaySubmissions");
 
                     b.Navigation("Exams");
 
+                    b.Navigation("FinancialAllocations");
+
                     b.Navigation("Packages");
 
                     b.Navigation("QuestionBankItems");
 
+                    b.Navigation("SharedPackageItems");
+
+                    b.Navigation("SharedPackageTeachers");
+
+                    b.Navigation("StaffMembers");
+
                     b.Navigation("TeacherSubjects");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.TeacherSettlement", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.Term", b =>
@@ -6970,6 +14090,8 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.User", b =>
                 {
+                    b.Navigation("CreatedTeacherStaffMembers");
+
                     b.Navigation("Devices");
 
                     b.Navigation("EmployeeProfile");
@@ -6982,7 +14104,19 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.Navigation("TeacherProfile");
 
+                    b.Navigation("TeacherStaffMemberships");
+
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.VideoType", b =>
+                {
+                    b.Navigation("Videos");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.WorkCalendar", b =>
+                {
+                    b.Navigation("ShiftTemplates");
                 });
 #pragma warning restore 612, 618
         }

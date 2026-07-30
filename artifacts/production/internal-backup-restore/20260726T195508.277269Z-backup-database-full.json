@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "aaf6349c-c40b-48eb-99cf-9aed4944d907",
+  "command": "backup-database-full",
+  "startedAt": "2026-07-26T19:55:08.277269Z",
+  "completedAt": "2026-07-26T19:55:08.277871Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

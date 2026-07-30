@@ -1,0 +1,12 @@
+[Unit]
+Description=Massar encrypted incremental shared-file backup
+After=network-online.target
+ConditionPathIsMountPoint=/srv/massar-shared
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/massar/backup/files.env
+ExecStart=/usr/local/sbin/massar-backup-files
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

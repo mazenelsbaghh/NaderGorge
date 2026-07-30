@@ -1,0 +1,12 @@
+[Unit]
+Description=Initialize the Massar pgBackRest stanza on the Patroni primary
+After=network-online.target patroni.service massar-backup-bucket.service
+Requires=massar-backup-bucket.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/massar/backup/pgbackrest.env
+ExecStart=/usr/local/sbin/massar-initialize-database-backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

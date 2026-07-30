@@ -2,19 +2,20 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video, Sparkles } from 'lucide-react';
-import { AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab } from '@/components/admin';
+import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText, Video, Sparkles, Users } from 'lucide-react';
+import { AdminPage, AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer, LessonAIAnalysisTab, ContentInternalCode, ContentBasicDetailsForm, ContentSubscribersTab } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { adminService, type LessonCockpitDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 
-type ActiveTab = 'overview' | 'videos' | 'ai-analysis' | 'resources' | 'homework' | 'exam' | 'comments';
+type ActiveTab = 'overview' | 'videos' | 'ai-analysis' | 'resources' | 'homework' | 'exam' | 'comments' | 'subscribers';
 
 const TAB_OPTIONS: AdminTab<ActiveTab>[] = [
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'videos', label: 'الفيديوهات', icon: PlaySquare },
   { key: 'ai-analysis', label: 'تحليل AI', icon: Sparkles },
   { key: 'comments', label: 'التعليقات', icon: MessageSquareText },
+  { key: 'subscribers', label: 'الطلاب المشتركون', icon: Users },
   { key: 'resources', label: 'المذكرات والملفات', icon: FileText },
   { key: 'homework', label: 'الواجبات', icon: ClipboardList },
   { key: 'exam', label: 'الامتحان المرفق', icon: BookCheck },
@@ -44,20 +45,20 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
 
   if (loading) {
     return (
-      <AdminShellChrome
+      <AdminPage
         activePath="/admin/content"
         sectionLabel="إدارة المحتوى"
         pageTitle="جاري التحميل..."
         subtitle="الرجاء الانتظار"
       >
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
   if (!lesson) {
      return (
-        <AdminShellChrome
+        <AdminPage
             activePath="/admin/content"
             sectionLabel="إدارة المحتوى"
             pageTitle="خطأ"
@@ -66,7 +67,7 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
             <div className="p-8 text-center text-[var(--admin-muted)]">
                 لا يمكن العثور على الحصة المطلوبة
             </div>
-        </AdminShellChrome>
+        </AdminPage>
      )
   }
 
@@ -90,7 +91,7 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
   }
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/content"
       sectionLabel="إدارة المحتوى ▸ الحصص"
       pageTitle={lesson.title}
@@ -104,6 +105,9 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
         </button>
       }
     >
+      <div className="mb-6 flex justify-start">
+        <ContentInternalCode code={lesson.internalCode} label="كود الحصة الداخلي" />
+      </div>
       <section className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-4">
         <AdminStatCard variant="accent" icon={BookOpenText} label="معرف الحصة" value={lesson.lessonId.split('-')[0]} />
         <AdminStatCard variant="light" icon={PlaySquare} label="الفيديوهات" value={`${lesson.videos?.length || 0}`} />
@@ -116,17 +120,34 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       </div>
 
       {activeTab === 'overview' && (
-        <EntityOverviewDashboard 
-          entityType="حصة" 
+        <EntityOverviewDashboard
+          entityType="حصة"
           details={{ title: lesson.title, description: lesson.summary, price: lesson.price }}
           stats={overviewStats}
           loading={false}
           onPriceUpdate={async (newPrice) => {
-            await adminService.updateLesson(lesson.lessonId, { title: lesson.title, summary: lesson.summary, order: 0, price: newPrice });
+            await adminService.updateLesson(lesson.lessonId, { title: lesson.title, summary: lesson.summary, order: lesson.order, price: newPrice });
             toast.success('تم تحديث السعر');
             await loadData();
           }}
         >
+          <ContentBasicDetailsForm
+            title={lesson.title}
+            order={lesson.order}
+            price={lesson.price}
+            summary={lesson.summary}
+            summaryLabel="ملخص الحصة"
+            onSave={async ({ title, summary, order, price }) => {
+              await adminService.updateLesson(lesson.lessonId, {
+                title,
+                summary: summary ?? '',
+                order,
+                price,
+              });
+              await loadData();
+            }}
+          />
+
           {/* Quick navigation cards */}
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h3 className="mb-4 text-lg font-black text-[var(--admin-text)]">انتقال سريع</h3>
@@ -170,14 +191,14 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
           </div>
         </EntityOverviewDashboard>
       )}
-      
+
       {activeTab === 'videos' && (
         <div className="space-y-6">
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة فيديو جديد</h3>
             <AddVideoForm lessonId={lesson.lessonId} onSuccess={loadData} />
           </div>
-          
+
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الفيديوهات المرفقة ({lesson.videos?.length || 0})</h3>
             <LessonVideoList videos={lesson.videos || []} lessonId={lesson.lessonId} onRefresh={loadData} />
@@ -197,13 +218,19 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
         />
       )}
 
+      {activeTab === 'subscribers' && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <ContentSubscribersTab contentType="lesson" contentId={lesson.lessonId} contentName={lesson.title} />
+        </div>
+      )}
+
       {activeTab === 'resources' && (
         <div className="space-y-6">
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة ملف أو مذكرة</h3>
             <AddResourceForm lessonId={lesson.lessonId} onSuccess={loadData} />
           </div>
-          
+
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
             <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الملفات المرفقة ({lesson.resources?.length || 0})</h3>
             <LessonResourceList resources={lesson.resources || []} />
@@ -227,20 +254,7 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
       {activeTab === 'exam' && (
         <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in">
           {lesson.examId ? (
-            <AttachedExamViewer 
-              examId={lesson.examId} 
-              onUnlink={async () => {
-                if (confirm('هل أنت متأكد من إلغاء ربط هذا الامتحان بالحصة؟')) {
-                  try {
-                    await adminService.linkLessonExam(lesson.lessonId, null);
-                    toast.success('تم إلغاء ربط الامتحان بنجاح');
-                    loadData();
-                  } catch {
-                    toast.error('أخفق إلغاء ربط الامتحان');
-                  }
-                }
-              }}
-            />
+            <AttachedExamViewer examId={lesson.examId} />
           ) : (
             <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
               <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
@@ -265,20 +279,7 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
                     {v.exams.map((exam: any) => (
                       <div key={exam.examId} className="space-y-2">
                         <p className="text-xs font-bold text-[var(--admin-muted)]">امتحان: {exam.title}</p>
-                        <AttachedExamViewer 
-                          examId={exam.examId} 
-                          onUnlink={async () => {
-                            if (confirm(`هل أنت متأكد من إلغاء ربط امتحان "${exam.title}"؟`)) {
-                              try {
-                                await adminService.unlinkVideoExam(v.id, exam.examId);
-                                toast.success('تم إلغاء ربط الامتحان بنجاح');
-                                loadData();
-                              } catch {
-                                toast.error('أخفق إلغاء ربط الامتحان');
-                              }
-                            }
-                          }}
-                        />
+                        <AttachedExamViewer examId={exam.examId} />
                       </div>
                     ))}
                   </div>
@@ -302,6 +303,6 @@ export default function LessonProfilePageClient(props: { params: { id: string } 
           )}
         </div>
       )}
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

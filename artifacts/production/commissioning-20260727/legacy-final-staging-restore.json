@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "backupId": "legacy-20260727-final01",
+  "capturedAt": "2026-07-27T04:56:12.825564Z",
+  "status": "success",
+  "isolated": true,
+  "container": "massar-legacy-stage-166",
+  "hostPort": 63512,
+  "migrationCount": 129,
+  "latestMigration": "20260726182136_EnsureSystemRoles",
+  "unvalidatedConstraintCount": 0,
+  "invalidIndexCount": 0,
+  "userCount": 63,
+  "resetTables": [
+    "VideoPlaybackSessions",
+    "cluster_leases"
+  ],
+  "resetTableCountsBefore": {
+    "VideoPlaybackSessions": 304,
+    "cluster_leases": 0
+  },
+  "resetAudit": "artifacts/production/commissioning-20260727/legacy-final-staging-restore-reset-audit.json",
+  "fileCounts": {
+    "assets": 334,
+    "protected": 1,
+    "appData": 0
+  },
+  "credentialScope": "disposable-local-container"
+}

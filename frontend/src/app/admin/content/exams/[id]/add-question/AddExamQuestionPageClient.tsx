@@ -3,22 +3,26 @@
 import { devConsole } from '@/utils/dev-console';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
+import { AdminPage } from '@/components/admin/AdminShellChrome';
 import { AdminBackButton } from '@/components/admin/AdminBackButton';
+import { AdminConfirmationDialog } from '@/components/admin/AdminConfirmationDialog';
+import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
-import { Plus, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, AlertCircle, Trash2, ArrowRight } from 'lucide-react';
 import { adminService, ExamDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { questionTextToPlainText } from '@/lib/question-text';
 
-export default function AddExamQuestionPageClient(props: { params: { id: string } }) {
+export default function AddExamQuestionPageClient(props: { params: { id: string }; surface?: 'admin' | 'teacher' }) {
   const params = props.params;
+  const surface = props.surface ?? 'admin';
   const router = useRouter();
 
   const [examData, setExamData] = useState<ExamDashboardDto | null>(null);
   const [loadingContext, setLoadingContext] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [questionPendingDeletion, setQuestionPendingDeletion] = useState<string | null>(null);
 
   const getDefaultQuestion = (order: number): InlineExamQuestionDto => ({
     text: '',
@@ -97,8 +101,6 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
   };
 
   const handleRemoveQuestion = async (examQuestionId: string) => {
-    if (!window.confirm('هل أنت متأكد من رغبتك في حذف هذا السؤال؟')) return;
-    
     try {
       await adminService.deleteExamQuestion(params.id, examQuestionId);
       toast.success('تم حذف السؤال بنجاح');
@@ -111,14 +113,8 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
     }
   };
 
-  return (
-    <AdminShellChrome
-      activePath="/admin/content"
-      sectionLabel="إدارة المحتوى ▸ تعديل الامتحان"
-      pageTitle="إضافة أسئلة أُخرى"
-      subtitle={`إرفاق أسئلة إضافية مع الحفظ التلقائي الفوري`}
-      action={<AdminBackButton />}
-    >
+  const content = (
+    <>
       <div className="flex flex-col gap-6">
         
         {loadingContext ? (
@@ -160,7 +156,7 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
                           <p className="font-bold text-sm md:text-base">{questionTextToPlainText(q.text).slice(0, 80)}{questionTextToPlainText(q.text).length > 80 ? '...' : ''}</p>
                        </div>
                        <button 
-                         onClick={() => handleRemoveQuestion(q.examQuestionId)}
+                         onClick={() => setQuestionPendingDeletion(q.examQuestionId)}
                          className="text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-1 border border-red-200/50"
                        >
                           <Trash2 size={14} />
@@ -225,6 +221,50 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
           </>
         )}
       </div>
-    </AdminShellChrome>
+      <AdminConfirmationDialog
+        open={questionPendingDeletion !== null}
+        onClose={() => setQuestionPendingDeletion(null)}
+        onConfirm={async () => {
+          if (!questionPendingDeletion) return;
+          await handleRemoveQuestion(questionPendingDeletion);
+          setQuestionPendingDeletion(null);
+        }}
+        title="حذف سؤال من الامتحان"
+        consequence="سيُحذف السؤال نهائيًا من الامتحان. راجع أثر ذلك على الدرجات قبل المتابعة."
+        confirmLabel="حذف السؤال"
+        variant="danger"
+      />
+    </>
+  );
+
+  if (surface === 'teacher') {
+    return (
+      <TeacherShellChrome
+        activePath="/teacher/packages"
+        sectionLabel="المحتوى الدراسي ▸ أسئلة الامتحان"
+        pageTitle="إضافة أسئلة للامتحان"
+        subtitle="إدارة أسئلة امتحان الحصة داخل لوحة المدرس"
+        action={
+          <button type="button" onClick={() => router.back()} className="admin-btn-ghost inline-flex items-center gap-2">
+            <ArrowRight className="h-4 w-4" />
+            رجوع
+          </button>
+        }
+      >
+        {content}
+      </TeacherShellChrome>
+    );
+  }
+
+  return (
+    <AdminPage
+      activePath="/admin/content"
+      sectionLabel="إدارة المحتوى ▸ تعديل الامتحان"
+      pageTitle="إضافة أسئلة أُخرى"
+      subtitle={`إرفاق أسئلة إضافية مع الحفظ التلقائي الفوري`}
+      action={<AdminBackButton />}
+    >
+      {content}
+    </AdminPage>
   );
 }

@@ -10,7 +10,7 @@ public class APIService: APIServiceProtocol {
     private let baseURL: URL
     private let session: URLSession
     
-    public init(baseURL: URL = URL(string: "http://localhost:5000")!, session: URLSession = .shared) {
+    public init(baseURL: URL = URL(string: "https://api.massar-academy.net")!, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.session = session
     }
@@ -30,14 +30,12 @@ public class APIService: APIServiceProtocol {
             throw APIError.invalidResponse
         }
         
-        guard httpResponse.statusCode == 200 else {
-            if httpResponse.statusCode == 400 || httpResponse.statusCode == 404 {
-                throw APIError.invalidCode
-            }
-            throw APIError.serverError(statusCode: httpResponse.statusCode)
-        }
-        
-        return try JSONDecoder().decode(VerifyCodeResponse.self, from: data)
+        return try decodeApiResponse(
+            VerifyCodeResponse.self,
+            from: data,
+            statusCode: httpResponse.statusCode,
+            invalidCodeStatuses: [400, 404]
+        )
     }
     
     public func fetchStudentDetails(token: String) async throws -> StudentDetailsResponse {
@@ -52,14 +50,45 @@ public class APIService: APIServiceProtocol {
             throw APIError.invalidResponse
         }
         
-        guard httpResponse.statusCode == 200 else {
-            if httpResponse.statusCode == 401 {
+        return try decodeApiResponse(
+            StudentDetailsResponse.self,
+            from: data,
+            statusCode: httpResponse.statusCode,
+            unauthorizedStatuses: [401, 403]
+        )
+    }
+
+    private func decodeApiResponse<T: Decodable>(
+        _ type: T.Type,
+        from data: Data,
+        statusCode: Int,
+        invalidCodeStatuses: Set<Int> = [],
+        unauthorizedStatuses: Set<Int> = []
+    ) throws -> T {
+        let decoder = JSONDecoder()
+        let envelope = try? decoder.decode(ApiResponse<T>.self, from: data)
+
+        guard (200..<300).contains(statusCode) else {
+            if invalidCodeStatuses.contains(statusCode) {
+                throw APIError.invalidCode
+            }
+            if unauthorizedStatuses.contains(statusCode) {
                 throw APIError.unauthorized
             }
-            throw APIError.serverError(statusCode: httpResponse.statusCode)
+            if let message = envelope?.message, !message.isEmpty {
+                throw APIError.apiMessage(message)
+            }
+            throw APIError.serverError(statusCode: statusCode)
         }
-        
-        return try JSONDecoder().decode(StudentDetailsResponse.self, from: data)
+
+        if let envelope {
+            guard envelope.success, let payload = envelope.data else {
+                throw APIError.apiMessage(envelope.message ?? "استجابة غير مكتملة من الخادم.")
+            }
+            return payload
+        }
+
+        return try decoder.decode(T.self, from: data)
     }
 }
 
@@ -67,6 +96,7 @@ public enum APIError: Error, LocalizedError, Equatable {
     case invalidResponse
     case invalidCode
     case unauthorized
+    case apiMessage(String)
     case serverError(statusCode: Int)
     
     public var errorDescription: String? {
@@ -77,10 +107,19 @@ public enum APIError: Error, LocalizedError, Equatable {
             return "الرمز غير صالح، يرجى التحقق وإعادة المحاولة."
         case .unauthorized:
             return "انتهت صلاحية الجلسة، يرجى إعادة ربط الطالب."
+        case .apiMessage(let message):
+            return message
         case .serverError(let code):
             return "خطأ في الخادم (رمز الخطأ: \(code))"
         }
     }
+}
+
+private struct ApiResponse<T: Decodable>: Decodable {
+    let success: Bool
+    let data: T?
+    let message: String?
+    let errors: [String]?
 }
 
 public struct JWTDecoder {

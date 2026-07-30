@@ -10,7 +10,7 @@ import {
   Eye,
 } from 'lucide-react';
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminColumn
 } from '@/components/admin';
@@ -21,6 +21,8 @@ import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import TaskCreateModal from '@/components/assistant/TaskCreateModal';
 import TaskDetailsModal from '@/components/assistant/TaskDetailsModal';
+import { registerCacheStore } from '@/lib/cache-invalidation';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 export default function AdminOperationsPageClient() {
   const { user } = useAuthStore();
@@ -94,6 +96,15 @@ export default function AdminOperationsPageClient() {
 
   useEffect(() => {
     fetchTasks();
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    const cleanupTasksCache = registerCacheStore('operations:tasks', () => {}, () => void fetchTasks());
+    const cleanupDashboardCache = registerCacheStore('operations:dashboard', () => {}, () => void fetchTasks());
+    return () => {
+      cleanupTasksCache();
+      cleanupDashboardCache();
+    };
   }, [fetchTasks]);
 
   const handleResolveDirectly = async (taskId: string, approve: boolean) => {
@@ -203,7 +214,7 @@ export default function AdminOperationsPageClient() {
       render: (t) => (
         <span className="font-mono text-xs text-[var(--admin-muted)]">
           {t.dueDate
-            ? new Date(t.dueDate).toLocaleDateString('ar-EG', {
+            ? formatCairoDateTime(t.dueDate, {
                 month: 'short',
                 day: 'numeric',
                 hour: '2-digit',
@@ -260,7 +271,7 @@ export default function AdminOperationsPageClient() {
   ];
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/operations"
       sectionLabel="إدارة العمليات"
       pageTitle="متابعة المهام التشغيلية اليومية"
@@ -366,6 +377,6 @@ export default function AdminOperationsPageClient() {
         isManager={isUserApprovedManager}
         currentUserId={user?.id}
       />
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

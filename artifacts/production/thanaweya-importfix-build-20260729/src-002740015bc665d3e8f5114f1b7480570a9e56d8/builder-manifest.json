@@ -1,0 +1,34 @@
+{
+  "artifacts": {
+    "backend": {
+      "filename": "backend.tar",
+      "sha256": "b31be47c1f0f6173fde3f9b0a3a56de970f2f58a83c69d65ee39cff286916520"
+    },
+    "frontend": {
+      "filename": "frontend.tar",
+      "sha256": "562de35f126fcd6a4bd43a941b69a0951dd43186599aae2b5cae4dc568770390"
+    },
+    "migrator": {
+      "filename": "migrator.tar",
+      "sha256": "edad04bd4d62ae4bd0086da51ac44efd80a3409d1ff6fb77d4eb49f70d575eff"
+    },
+    "worker": {
+      "filename": "worker.tar",
+      "sha256": "7733894c23728e2a1f672aadba9268f051047939e96c854eb1d3e1bcea940cdd"
+    }
+  },
+  "builderNodeId": "node-3",
+  "clusterId": "massar-production",
+  "createdAt": "2026-07-28T22:27:43.204835Z",
+  "images": {
+    "backend": "sha256:1aa0189281604d135668f16c99b7a9fc8cb49a442203600ae20908f630dea6fd",
+    "frontend": "sha256:36284301865860a6df522a143b54d560daae43ee5e23ce0cf0b9607707ee7a93",
+    "migrator": "sha256:73f6b0df82ed789830d9d650f1cdd8b9a3ebac1d181335e34183d6a329089a9c",
+    "worker": "sha256:414e6fa94501c9827a9229799cd3058a586e64eaff6f1b856004b7aed929d451"
+  },
+  "platform": "linux/amd64",
+  "releaseId": "src-002740015bc665d3e8f5114f1b7480570a9e56d8",
+  "schemaVersion": 1,
+  "sourceStateSha256": "002740015bc665d3e8f5114f1b7480570a9e56d884b0c7d6d35bb9d4b059d364",
+  "status": "success"
+}

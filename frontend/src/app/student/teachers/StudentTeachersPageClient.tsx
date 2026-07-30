@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
-import { GraduationCap, ChevronLeft, BookOpen, ArrowRight, BookOpenText } from "lucide-react";
+import { GraduationCap, ChevronLeft, BookOpen, ArrowRight, BookOpenText, Layers, ShieldCheck } from "lucide-react";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -10,30 +10,13 @@ import Link from "next/link";
 import { studentService, type PublicTeacherDto } from "@/services/student-service";
 import { contentService, type PackageDto } from "@/services/content-service";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
-import { devConsole } from "@/utils/dev-console";
+import { GRADE_LEVEL_LABELS } from "@/lib/academic-labels";
+import { usePlatformQuery } from "@/components/providers/QueryProvider";
+import { queryKeys } from "@/lib/query-keys";
+import { useAuthStore } from "@/stores/auth-store";
 
-const GRADE_NAMES: Record<string, string> = {
-  FirstSecondary: "الأول الثانوي",
-  SecondSecondary: "الثاني الثانوي",
-  SecondaryGrade3: "الثالث الثانوي",
-  FirstBaccalaureate: "الأول بكالوريا",
-  SecondBaccalaureate: "الثاني بكالوريا",
-  PrimaryGrade1: "الأول الابتدائي",
-  PrimaryGrade2: "الثاني الابتدائي",
-  PrimaryGrade3: "الثالث الابتدائي",
-  PrimaryGrade4: "الرابع الابتدائي",
-  PrimaryGrade5: "الخامس الابتدائي",
-  PrimaryGrade6: "السادس الابتدائي",
-  PrepGrade1: "الأول الإعدادي",
-  PrepGrade2: "الثاني الإعدادي",
-  PrepGrade3: "الثالث الإعدادي",
-  AzhariPrimary1: "الأول الابتدائي الأزهري",
-  AzhariPrep1: "الأول الإعدادي الأزهري",
-  AzhariSecondary1: "الأول الثانوي الأزهري",
-  AmericanGrade9: "Grade 9",
-  AmericanGrade10: "Grade 10",
-  AmericanGrade11: "Grade 11",
-  AmericanGrade12: "Grade 12",
+const GRADE_NAMES: { [key: string]: string } = {
+  ...GRADE_LEVEL_LABELS,
   All: "جميع الصفوف الدراسية",
 };
 
@@ -52,44 +35,71 @@ const fadeUp = {
 };
 
 export default function StudentTeachersPageClient() {
-
-  const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
-  const [packages, setPackages] = useState<PackageDto[]>([]);
-  const [loading, setLoading] = useState(true);
-
   // Flow states
   const [activeTeacher, setActiveTeacher] = useState<PublicTeacherDto | null>(null);
   const [activeGrade, setActiveGrade] = useState<string | null>(null);
-
-  useEffect(() => {
-    Promise.all([
-      studentService.getPublicTeachers(),
-      contentService.getPackages(),
-    ])
-      .then(([teachersData, packagesRes]) => {
-        setTeachers(teachersData || []);
-        setPackages(packagesRes.data?.data || []);
-      })
-      .catch((err) => {
-        devConsole.error("Error loading teachers/packages:", err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
+  const userId = useAuthStore((state) => state.user?.id);
+  const userBoundary = userId ?? 'pending';
+  const teachersQueryFn = useCallback(
+    ({ signal }: { signal: AbortSignal }) => studentService.getPublicTeachers(signal),
+    []
+  );
+  const packagesQueryFn = useCallback(
+    async ({ signal }: { signal: AbortSignal }) => {
+      const response = await contentService.getPackages({ signal });
+      return response.data?.data ?? [];
+    },
+    []
+  );
+  const teachersQuery = usePlatformQuery<PublicTeacherDto[]>({
+    queryKey: queryKeys.student.teachers(userBoundary),
+    queryFn: teachersQueryFn,
+    staleTime: 60_000,
+    enabled: Boolean(userId),
+  });
+  const packagesQuery = usePlatformQuery<PackageDto[]>({
+    queryKey: queryKeys.student.packages(userBoundary),
+    queryFn: packagesQueryFn,
+    staleTime: 30_000,
+    enabled: Boolean(userId),
+  });
+  const teachers = teachersQuery.data ?? [];
+  const packages = packagesQuery.data ?? [];
+  const loading =
+    !userId ||
+    (teachersQuery.data === undefined && teachersQuery.error === null) ||
+    (packagesQuery.data === undefined && packagesQuery.error === null);
+  const hasLoadError = Boolean(teachersQuery.error || packagesQuery.error);
+  const refetch = () => {
+    void Promise.all([
+      teachersQuery.refetch(),
+      packagesQuery.refetch(),
+    ]).catch(() => undefined);
+  };
 
   if (loading) {
     return (
       <div className="space-y-8 animate-pulse">
         {/* Banner Skeleton */}
         <div className="h-[200px] rounded-3xl bg-[var(--admin-card-strong)]" />
-        
+
         {/* Grid Skeleton */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-96 rounded-[2rem] bg-[var(--admin-card-strong)]" />
+            <div key={i} className="h-80 rounded-2xl bg-[var(--admin-card-strong)]" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (hasLoadError && teachersQuery.data === undefined && packagesQuery.data === undefined) {
+    return (
+      <div role="alert" className="rounded-2xl border border-[var(--admin-danger-20)] bg-[var(--admin-danger-10)] p-6 text-center">
+        <p className="font-bold text-[var(--admin-danger)]">تعذر تحميل بيانات المدرسين حاليًا.</p>
+        <button type="button" onClick={refetch} className="mt-4 min-h-11 rounded-xl bg-[var(--admin-primary)] px-5 text-sm font-black text-[var(--admin-primary-contrast)]">
+          إعادة المحاولة
+        </button>
       </div>
     );
   }
@@ -104,22 +114,30 @@ export default function StudentTeachersPageClient() {
         animate="visible"
         key="teachers-list"
       >
+        {hasLoadError && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-4 py-3 text-sm font-bold text-[var(--admin-warning)]">
+            <span>تعذر تحديث بعض البيانات؛ يتم عرض آخر نسخة متاحة.</span>
+            <button type="button" onClick={refetch} className="min-h-11 rounded-xl border border-current px-4">
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
         {/* Banner Section */}
         <motion.section
           variants={fadeUp}
-          className="relative overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm sm:p-10"
+          className="relative overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-7 shadow-sm sm:p-10"
         >
-          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-[var(--admin-primary-15)] blur-[48px]" />
-          <div className="absolute right-10 bottom-0 top-0 hidden w-40 opacity-10 lg:block">
+          <div className="absolute inset-y-0 right-0 hidden w-1 bg-[var(--admin-secondary,#0E8F8F)] lg:block" />
+          <div className="absolute right-10 bottom-0 top-0 hidden w-40 opacity-[0.07] lg:block">
             <GraduationCap className="h-full w-full text-[var(--admin-primary)]" />
           </div>
-          
+
           <div className="relative z-10 max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--admin-primary-20)] bg-[var(--admin-primary-10)] px-3 py-1 text-xs font-bold text-[var(--admin-primary-strong)]">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-3 py-1 text-xs font-bold text-[var(--admin-primary-strong)]">
               <GraduationCap className="h-3.5 w-3.5" />
               <span>نخبة من أفضل المعلمين</span>
             </div>
-            <h1 className="text-3xl font-black tracking-tight text-[var(--admin-text)] sm:text-5xl">
+            <h1 className="text-3xl font-black text-[var(--admin-text)] sm:text-5xl">
               مدرسو المنصة
             </h1>
             <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--admin-muted)] sm:text-base">
@@ -132,14 +150,18 @@ export default function StudentTeachersPageClient() {
         {teachers.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
             <GraduationCap className="mb-4 h-16 w-16 text-[var(--admin-muted)] opacity-60" />
-            <p className="font-bold text-[var(--admin-muted)]">لا يوجد معلمون مسجلون في المنصة حالياً.</p>
+            <p className="font-bold text-[var(--admin-muted)]">لا يوجد معلمون متاحون حالياً.</p>
+            <p className="mt-2 max-w-md text-sm font-medium leading-6 text-[var(--admin-muted)]">
+              عند إضافة مدرسين نشطين على المنصة سيظهرون هنا تلقائياً.
+            </p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {teachers.map((teacher) => {
               const teacherPackages = packages.filter(
                 (p) => p.teacherId === teacher.id
               );
+              const teacherProfileHref = `/student/teachers/${teacher.slug || teacher.teacherId || teacher.id}`;
 
               const specList = teacher.specialization
                 ? teacher.specialization
@@ -148,93 +170,84 @@ export default function StudentTeachersPageClient() {
                 : [];
 
               return (
-                <motion.div
+                <motion.article
                   key={teacher.id}
                   variants={fadeUp}
-                  onClick={() => {
-                    setActiveTeacher(teacher);
-                    setActiveGrade(null);
-                  }}
-                  className="group flex flex-col justify-between overflow-hidden rounded-[2rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm transition-all hover:border-[var(--admin-primary-30)] hover:shadow-lg hover:shadow-[var(--admin-primary-10)] hover:scale-[1.01] cursor-pointer"
+                  className="group overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] shadow-sm transition hover:border-[var(--admin-primary)]"
                 >
-                  <div>
-                    {/* Teacher Profile Info */}
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        {teacher.profileImageUrl ? (
-                          <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-[var(--admin-border)] shadow-sm">
-                            <Image
-                              src={resolveMediaUrl(teacher.profileImageUrl)}
-                              alt={teacher.fullName}
-                              fill
-                              className="object-cover"
-                              sizes="64px"
-                            />
+                  <Link href={teacherProfileHref} className="flex min-h-80 flex-col focus-visible:outline-none">
+                    <div className="flex min-w-0 flex-1 flex-col p-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3">
+                          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--admin-card-soft)] text-lg font-black text-[var(--admin-primary)]">
+                            {teacher.profileImageUrl ? (
+                              <Image
+                                src={resolveMediaUrl(teacher.profileImageUrl)}
+                                alt={teacher.fullName}
+                                fill
+                                className="object-cover transition duration-200 group-hover:scale-[1.03]"
+                                sizes="48px"
+                              />
+                            ) : (
+                              teacher.fullName.charAt(0)
+                            )}
                           </div>
-                        ) : (
-                          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-primary-15)] text-[var(--admin-primary)] font-extrabold text-xl">
-                            {teacher.fullName.charAt(0)}
-                          </div>
-                        )}
-
-                        <div>
-                          <h2 className="text-lg font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)] transition-colors">
-                            أ. {teacher.fullName}
-                          </h2>
-                          
-                          {/* Subjects tag list */}
-                          {teacher.subjectNames && teacher.subjectNames.length > 0 && (
+                          <div className="min-w-0 flex-1">
+                            <h2 className="truncate text-base font-black text-[var(--admin-text)] transition-colors group-hover:text-[var(--admin-primary)]">
+                              أ. {teacher.fullName}
+                            </h2>
                             <div className="mt-1 flex flex-wrap gap-1">
-                              {teacher.subjectNames.map((subject, idx) => (
-                                <span
-                                  key={idx}
-                                  className="inline-flex items-center rounded-md bg-[var(--admin-primary-10)] px-2 py-0.5 text-xs font-bold text-[var(--admin-primary)]"
-                                >
+                              {(teacher.subjectNames || []).slice(0, 2).map((subject, idx) => (
+                                <span key={idx} className="rounded-full bg-[var(--admin-primary-15)] px-2 py-0.5 text-[11px] font-bold text-[var(--admin-primary)]">
                                   {subject}
                                 </span>
                               ))}
                             </div>
-                          )}
+                          </div>
+                          <ShieldCheck className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" />
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Specializations & Bio */}
-                    <div className="mt-4 space-y-3">
-                      {specList.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 items-center">
-                          <span className="text-xs font-bold text-[var(--admin-muted)]">المراحل:</span>
+                        {teacher.bio ? (
+                          <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-[var(--admin-muted)]">
+                            {teacher.bio}
+                          </p>
+                        ) : (
+                          <p className="mt-3 line-clamp-2 text-sm font-medium leading-6 text-[var(--admin-muted)]">
+                            لا يوجد وصف متوفر حالياً للمعلم.
+                          </p>
+                        )}
+
+                        <div className="mt-4 space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-black text-[var(--admin-text)]">
+                            <GraduationCap className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
+                            <span>المراحل المتاحة</span>
+                          </div>
                           <div className="flex flex-wrap gap-1">
-                            {specList.map((spec, sIdx) => (
+                            {(specList.length > 0 ? specList : ["جميع الصفوف"]).slice(0, 3).map((spec, sIdx) => (
                               <span
                                 key={sIdx}
-                                className="rounded-full bg-[var(--admin-card-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--admin-muted)] border border-[var(--admin-border)]/40"
+                                className="rounded-full border border-[var(--admin-border)] bg-[var(--admin-card-soft)] px-2 py-0.5 text-[11px] font-bold text-[var(--admin-muted)]"
                               >
                                 {spec}
                               </span>
                             ))}
                           </div>
                         </div>
-                      )}
+                      </div>
 
-                      {teacher.bio ? (
-                        <p className="text-xs leading-relaxed text-[var(--admin-muted)] line-clamp-2">
-                          {teacher.bio}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-[var(--admin-muted)]/60 italic">
-                          لا يوجد وصف متوفر حالياً للمعلم.
-                        </p>
-                      )}
+                      <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--admin-border)] pt-3">
+                        <div className="flex items-center gap-2 text-xs font-bold text-[var(--admin-muted)]">
+                          <Layers className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
+                          <span>{teacherPackages.length} باقة متاحة</span>
+                        </div>
+                        <span className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[var(--admin-primary)] px-3 text-xs font-black text-[var(--admin-primary-contrast)] transition group-hover:bg-[var(--admin-primary-strong)]">
+                          الملف
+                          <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                        </span>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Flow Action Prompt */}
-                  <div className="mt-6 border-t border-[var(--admin-border)]/50 pt-4 flex items-center justify-between text-xs font-bold text-[var(--admin-primary)] group-hover:text-[var(--admin-primary-strong)] transition-colors">
-                    <span>تصفح الصفوف الدراسية والباقات ({teacherPackages.length})</span>
-                    <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
-                  </div>
-                </motion.div>
+                  </Link>
+                </motion.article>
               );
             })}
           </div>
@@ -248,9 +261,12 @@ export default function StudentTeachersPageClient() {
     (p) => p.teacherId === activeTeacher.id
   );
 
-  const uniqueGrades = Array.from(
-    new Set(teacherPackages.map((p) => p.targetGrade || "All"))
-  );
+  const getPackageGrades = (pkg: PackageDto) => (pkg.targetGrade || "All")
+    .split(',')
+    .map((grade) => grade.trim())
+    .filter(Boolean);
+
+  const uniqueGrades = Array.from(new Set(teacherPackages.flatMap(getPackageGrades)));
 
   // LEVEL 2: Render Grade Levels of Selected Teacher
   if (activeGrade === null) {
@@ -281,6 +297,12 @@ export default function StudentTeachersPageClient() {
               </p>
             </div>
           </div>
+          <Link
+            href={`/student/teachers/${activeTeacher.id}`}
+            className="inline-flex h-10 items-center justify-center rounded-xl bg-[var(--admin-primary)] px-4 text-sm font-black text-white"
+          >
+            فتح بروفايل المدرس
+          </Link>
         </div>
 
         {/* Teacher profile summary card */}
@@ -334,9 +356,7 @@ export default function StudentTeachersPageClient() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {uniqueGrades.map((grade) => {
-                const gradePackagesCount = teacherPackages.filter(
-                  (p) => (p.targetGrade || "All") === grade
-                ).length;
+                const gradePackagesCount = teacherPackages.filter((pkg) => getPackageGrades(pkg).includes(grade)).length;
 
                 return (
                   <motion.button
@@ -370,9 +390,7 @@ export default function StudentTeachersPageClient() {
   }
 
   // LEVEL 3: Render Packages for Selected Teacher & Grade
-  const filteredPackages = teacherPackages.filter(
-    (p) => (p.targetGrade || "All") === activeGrade
-  );
+  const filteredPackages = teacherPackages.filter((pkg) => getPackageGrades(pkg).includes(activeGrade));
 
   return (
     <motion.div

@@ -41,7 +41,7 @@ public class VerifyParentCodeCommandHandler : IRequestHandler<VerifyParentCodeCo
             .Include(s => s.User)
             .FirstOrDefaultAsync(s => s.ParentTrackingCode == trackingCodeNormalized, ct);
 
-        if (studentProfile == null)
+        if (studentProfile?.User is not { IsActive: true, IsDeleted: false })
         {
             return ApiResponse<VerifyCodeResponse>.Fail("الرمز غير صالح، يرجى التحقق وإعادة المحاولة");
         }
@@ -65,7 +65,9 @@ public class VerifyParentCodeCommandHandler : IRequestHandler<VerifyParentCodeCo
             }
         }
 
-        var token = _tokenService.GenerateParentToken(studentProfile.Id);
+        var token = _tokenService.GenerateParentToken(
+            studentProfile.User,
+            studentProfile.Id);
 
         return ApiResponse<VerifyCodeResponse>.Ok(new VerifyCodeResponse(token, studentProfile.User.FullName));
     }

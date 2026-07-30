@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "a7b069db-60ca-4cde-bad3-b6ea84eb87ea",
+  "command": "deploy",
+  "startedAt": "2026-07-28T21:24:35.235965Z",
+  "completedAt": "2026-07-28T21:24:35.236125Z",
+  "status": "blocked",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "--release, --manifest, and --backup-evidence are required"
+}

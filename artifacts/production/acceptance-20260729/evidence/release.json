@@ -1,0 +1,9 @@
+{
+  "createdAt": "2026-07-29T19:41:59.096445Z",
+  "digestParity": true,
+  "nodeCount": 3,
+  "releaseId": "src-bdf19804cf29d19634b131a16d3e519d26f0d425",
+  "schemaVersion": 1,
+  "sourceEvidenceSha256": "7f451616a6e5d90c59a675babbd253c79e3e30b07cce32b2d26da11bb3875cc4",
+  "status": "success"
+}

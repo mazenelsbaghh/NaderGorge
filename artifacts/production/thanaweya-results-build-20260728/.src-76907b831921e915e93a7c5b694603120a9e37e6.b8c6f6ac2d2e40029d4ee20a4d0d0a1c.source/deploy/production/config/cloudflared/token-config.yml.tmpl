@@ -1,0 +1,24 @@
+# This connector intentionally has no `tunnel:` or `credentials-file:` entries.
+# Its identity is supplied only by the root-readable token file referenced by the
+# dedicated systemd unit. The separate metrics port lets it coexist with the
+# legacy cloudflared service during connector migration.
+metrics: 127.0.0.1:2010
+
+ingress:
+  - hostname: massar-academy.net
+    service: http://127.0.0.1:8088
+  - hostname: app.massar-academy.net
+    service: http://127.0.0.1:8088
+  - hostname: admin.massar-academy.net
+    service: http://127.0.0.1:8088
+  - hostname: teacher.massar-academy.net
+    service: http://127.0.0.1:8088
+  - hostname: staff.massar-academy.net
+    service: http://127.0.0.1:8088
+  - hostname: api.massar-academy.net
+    service: http://127.0.0.1:8088
+  - hostname: ws.massar-academy.net
+    service: http://127.0.0.1:8088
+  - hostname: assets.massar-academy.net
+    service: http://127.0.0.1:8088
+  - service: http_status:404

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "glob": "src/assets/**",
+      "rule": "asset-colors",
+      "reason": "Approved brand/media assets retain source colors.",
+      "owner": "design-system",
+      "reviewDate": "2026-07-14"
+    },
+    {
+      "glob": "src/lib/accessible-color",
+      "rule": "runtime-contrast-colors",
+      "reason": "WCAG contrast calculation and its tests require concrete sRGB color inputs and outputs.",
+      "owner": "accessibility",
+      "reviewDate": "2026-07-29"
+    }
+  ]
+}

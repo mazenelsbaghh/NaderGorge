@@ -1,0 +1,17 @@
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "sqlite"
+
+# One encrypted backup object is stored on every one of the three nodes.
+replication_factor = 3
+
+rpc_bind_addr = "__OVERLAY_ADDRESS__:8738"
+rpc_public_addr = "__OVERLAY_ADDRESS__:8738"
+
+[s3_api]
+s3_region = "massar-internal"
+api_bind_addr = "0.0.0.0:9000"
+root_domain = ".s3.massar.internal"
+
+[admin]
+api_bind_addr = "127.0.0.1:3903"

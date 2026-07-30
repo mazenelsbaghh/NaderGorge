@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "e81dacd7-6b27-48bd-8458-92306a1c4c24",
+  "command": "backup-repository-sync-clients",
+  "startedAt": "2026-07-27T07:02:42.453401Z",
+  "completedAt": "2026-07-27T07:02:42.453837Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

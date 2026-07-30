@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "src-d14f64a885383ff6637f555fb47ccb1d19e8d8dc",
+  "gitCommit": "7b96888f013e9c663eaffcdb0f4db0129f464bb8",
+  "sourceStateSha256": "d14f64a885383ff6637f555fb47ccb1d19e8d8dcb7cbab396d0814d6b085da84",
+  "dirtySourceSnapshot": true,
+  "createdAt": "2026-07-27T08:39:57.350320Z",
+  "platform": "linux/amd64",
+  "images": {
+    "backend": "sha256:94a47ba2200cde5284710a6bce7943d74b572c0c278160b5960de29dfb463829",
+    "frontend": "sha256:9658cc399cfa5aa5f01c9704154f1080967d2880a3c8f0b246d7fe766c2439a3",
+    "worker": "sha256:2883b4ae8f6a606eeab2b6b93b3bd22dbc02b5ac8c614dd884c932ba564928b8",
+    "migrator": "sha256:78c298edc2b83fb02e5344f5327dc651cc503ee6c13439194d2a6d496e13dea5"
+  },
+  "status": "success",
+  "nodeCount": 3,
+  "digestParity": true,
+  "distribution": {
+    "node-1": {
+      "status": "verified",
+      "releaseFilesSha256": "32543566b11fb8e252515eb81fdd00ac156772310f38d8e6ba97731b493ecd15"
+    },
+    "node-2": {
+      "status": "verified",
+      "releaseFilesSha256": "32543566b11fb8e252515eb81fdd00ac156772310f38d8e6ba97731b493ecd15"
+    },
+    "node-3": {
+      "status": "verified",
+      "releaseFilesSha256": "32543566b11fb8e252515eb81fdd00ac156772310f38d8e6ba97731b493ecd15"
+    }
+  }
+}

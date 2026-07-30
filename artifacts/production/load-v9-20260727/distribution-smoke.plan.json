@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "v9-distribution-smoke",
+  "releaseId": "src-f8369c56e77d9fb0c6c75d2ef7502d25343d5113",
+  "baselineRps": 10,
+  "profile": "steady",
+  "excludedNode": null,
+  "expectedNodes": ["node-1", "node-2", "node-3"],
+  "stages": [
+    {
+      "sequence": 1,
+      "requestedRps": 10,
+      "duration": "30s",
+      "runId": "v9-dist-010"
+    }
+  ]
+}

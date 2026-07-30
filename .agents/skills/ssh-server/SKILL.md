@@ -1,241 +1,192 @@
 ---
 name: ssh-server
-description: Connect and manage the Nader Gorge production server via SSH. Use for deployments, server maintenance, file transfers, service management, Docker operations, and any remote server tasks. Trigger when user mentions "السيرفر", "server", "deploy", "production", "الديبلوي", "الدهول", "سيرفر", or server-related operations.
+description: Safely inspect, debug, deploy, fail over, back up, restore-test, and operate the three-node Massar Production cluster through strict SSH and the reviewed cluster commands. Use for production bugs, health, logs, releases, Cloudflare, database, Redis, SignalR, files, and load tests.
 ---
 
-# SSH Server Skill — Nader Gorge Production
+# SSH Server — Massar Production
 
-This skill provides structured workflows for connecting to and managing the Nader Gorge production server.
+Use this skill for every Production operation. The cluster is exactly
+`node-1`, `node-2`, and `node-3`, defined only in
+`deploy/production/inventory/production.yml`. Never paste a server address in
+an operational command.
 
-## 🚀 Quick Deploy (Recommended)
+## Ready-to-use environment
 
-Use the built-in deploy script for one-command deployments with smart selective rebuilding and database schema verification:
-
-```bash
-# Smart deploy: push to git + migrate + rebuild ONLY changed containers
-bash ".agents/skills/ssh-server/scripts/deploy.sh"
-
-# Force a full rebuild of all containers (bypassing selective smart build)
-bash ".agents/skills/ssh-server/scripts/deploy.sh" --force
-
-# Deploy without running migrations
-bash ".agents/skills/ssh-server/scripts/deploy.sh" --no-migrate
-
-# Run migrations only (no push, no rebuild) and verify schema
-bash ".agents/skills/ssh-server/scripts/deploy.sh" --migrate-only
-```
-
-### Smart Rebuild & Verification Process
-1. **🔍 Database Schema Pre-check**: Runs a local check comparing the codebase DbContext snapshot (`AppDbContextModelSnapshot.cs`) against the live production database.
-   - Generates/updates the documentation under `.agents/skills/ssh-server/docs/database_schema.md`.
-   - Warns of any missing tables or columns before upload.
-2. **📤 Git Sync**: Pushes the current branch to GitHub (`origin`) and the production server (`prod`).
-3. **🔄 Checkout**: Checks out the latest code on the production server.
-4. **🗄️ Database Migrations**: Runs pending EF Core migrations on the database.
-5. **🛠️ Smart Selective Rebuilds**:
-   - Diffs the files changed between the last deployed commit and the current HEAD.
-   - Outputs a clear build plan listing exactly which containers will be rebuilt/recreated.
-   - Only builds and restarts containers belonging to modified folders:
-     - `backend/` -> `backend`
-     - `worker/` -> `worker`
-     - `frontend/` -> `landing student admin teacher assistant`
-     - `docker/nginx/` -> `nginx`
-   - If root infrastructure files (like `docker-compose.yml`, `.env`, etc.) change or if `--force`/`--full` is used, a full rebuild of all containers is executed.
-6. **✅ Final Verification**:
-   - Health-checks all restarted containers.
-   - Runs a final database schema check and strictly fails the deployment if the schema is not 100% in sync with the codebase.
-
----
-
-## Server Credentials
-
-```
-hostname = "72.62.27.189"
-username = "root"
-password = "MazenElsbagh.12"
-```
-
-## Connection Command
+At the beginning of every terminal session run exactly:
 
 ```bash
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189
+export MASSAR_KNOWN_HOSTS_FILE="/Users/mazenelsbagh/.ssh/massar_prod_known_hosts"
+export MASSAR_SSH_IDENTITY_FILE="/Users/mazenelsbagh/.ssh/massar_prod_cluster_ed25519"
 ```
 
-> If `sshpass` is not installed on the local machine, install it first:
-> ```bash
-> brew install sshpass   # macOS
-> ```
-
-## Quick Connect (Interactive)
+Then use these two references:
 
 ```bash
-ssh root@72.62.27.189
-# Password: MazenElsbagh.12
+CLUSTER="python3 deploy/production/scripts/clusterctl.py"
+INVENTORY="deploy/production/inventory/production.yml"
 ```
 
----
-
-## Preparation Steps
-
-Before executing any remote task:
-
-1. **Verify connectivity** — Ping the server first:
-   ```bash
-   ping -c 3 72.62.27.189
-   ```
-
-2. **Check local `sshpass`** — Required for non-interactive scripts:
-   ```bash
-   which sshpass || brew install sshpass
-   ```
-
-3. **Define a helper alias** for this session (optional):
-   ```bash
-   alias srun='sshpass -p "MazenElsbagh.12" ssh -o StrictHostKeyChecking=no root@72.62.27.189'
-   ```
-
----
-
-## Common Workflows
-
-### 1. Run a Single Remote Command
+For routine, safe commands use the bundled wrapper:
 
 ```bash
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 '<command>'
+bash .agents/skills/ssh-server/scripts/massar.sh status
+bash .agents/skills/ssh-server/scripts/massar.sh logs node-2 backend 20
+bash .agents/skills/ssh-server/scripts/massar.sh backups
+bash .agents/skills/ssh-server/scripts/massar.sh failover-dry
 ```
 
-Example — check disk space:
-```bash
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'df -h'
-```
+Run `bash .agents/skills/ssh-server/scripts/massar.sh --help` for all safe
+commands. The wrapper uses the inventory and strict SSH transport, checks the
+two local SSH files (including key mode `0600`), stores evidence under
+`artifacts/production/`, redacts sensitive log fields, and intentionally
+offers no mutating command.
 
-### 2. Upload a File (SCP)
+The private key is a path, not a value. Do not print, copy, commit, upload, or
+change it. It must remain mode `0600`; strict host-key verification is always
+required. Strict host-key verification is mandatory.
 
-```bash
-sshpass -p 'MazenElsbagh.12' scp -o StrictHostKeyChecking=no <local_file> root@72.62.27.189:<remote_path>
-```
+## Non-negotiable safety rules
 
-Example — upload docker-compose:
-```bash
-sshpass -p 'MazenElsbagh.12' scp -o StrictHostKeyChecking=no docker-compose.yml root@72.62.27.189:/app/nader-gorge/
-```
+1. Begin with `status` or `audit`; save evidence under `artifacts/production/`.
+2. For every state change: run `--dry-run`, inspect it, then run `--yes`.
+3. Use `massar-ops` and the strict transport only. Root/password SSH is rescue
+   only; never put passwords, tokens, private keys, or admin values in argv,
+   logs, evidence, source, or chat.
+4. Never mutate two quorum members at once. Stop on host-key mismatch, missing
+   etcd/Sentinel/Gluster quorum, duplicate PostgreSQL writer/Redis master,
+   stale backup, failed isolated restore, or image-digest mismatch.
+5. A Patroni replica and a Gluster brick are not backups. Never restore against the production DB;
+   use only the isolated restore commands.
+6. No domain/DNS cutover until `accept` produces signed `GO` evidence.
 
-### 3. Download a File from Server
-
-```bash
-sshpass -p 'MazenElsbagh.12' scp -o StrictHostKeyChecking=no root@72.62.27.189:<remote_path> <local_destination>
-```
-
-### 4. Sync a Directory (rsync)
-
-```bash
-sshpass -p 'MazenElsbagh.12' rsync -avz --progress -e "ssh -o StrictHostKeyChecking=no" <local_dir>/ root@72.62.27.189:<remote_dir>/
-```
-
-### 5. Docker Operations
-
-```bash
-# List running containers
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker ps'
-
-# Pull and restart all services
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'cd /app/nader-gorge && docker compose pull && docker compose up -d'
-
-# View logs for a service
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker compose -f /app/nader-gorge/docker-compose.yml logs --tail=100 <service_name>'
-
-# Restart a single service
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker compose -f /app/nader-gorge/docker-compose.yml restart <service_name>'
-```
-
-### 6. Full Deployment Workflow
+## Fast daily workflow
 
 ```bash
-# Step 1: Build locally (if needed)
-# Step 2: Upload updated files
-sshpass -p 'MazenElsbagh.12' scp -o StrictHostKeyChecking=no docker-compose.yml root@72.62.27.189:/app/nader-gorge/
+$CLUSTER --inventory "$INVENTORY" status --node all \
+  --evidence-dir artifacts/production/status
 
-# Step 3: Pull latest images and redeploy
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 '
-  cd /app/nader-gorge
-  docker compose pull
-  docker compose up -d --remove-orphans
-  docker compose ps
-'
+$CLUSTER --inventory "$INVENTORY" backup-schedules-status --node all \
+  --evidence-dir artifacts/production/backup-status
+
+$CLUSTER --inventory "$INVENTORY" cloudflare-status --node all \
+  --evidence-dir artifacts/production/cloudflare-status
 ```
 
-### 7. Check Server Health
+Interpretation:
+
+- `status: success` means the three-node health/quorum/release gate passed.
+- `backup-schedules-status: success` means the scheduled encrypted backup
+  checks are healthy; it does not replace an isolated restore test.
+- `cloudflare-status: success` means all configured tunnel replicas are
+  reachable. It does not by itself authorize a DNS cutover.
+
+## Debug a Production bug
+
+1. Capture `status` first.
+2. Identify the affected surface: public root, `app`, `admin`, `teacher`,
+   `staff`, `api`, `ws`, or `assets`.
+3. Read logs and health through `deploy/production/scripts/ssh_transport.py`
+   using an inventory-selected `SshTarget`; scope commands to an exact service,
+   time window, and node. Never use raw addresses or a permissive SSH command.
+4. Check all three nodes for errors before assuming one node is responsible.
+5. Reproduce with a harmless read-only request where possible. For API errors,
+   record status code and correlation/time window, never user data or tokens.
+6. Fix locally, run focused checks, then use the release flow below. Do not
+   patch application containers by hand.
+
+Useful service names are `massar_production-backend-1`, the surface containers,
+and `massar_production-gateway-1`. Keep log output redacted; do not include
+Authorization, cookies, phone numbers, or result records in evidence.
+
+## Release flow (only after the user requests deployment)
+
+Build only on remote builder `node-3`; never build application images locally.
 
 ```bash
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 '
-  echo "=== CPU & Memory ===" && top -bn1 | head -20
-  echo "=== Disk ===" && df -h
-  echo "=== Docker ===" && docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-  echo "=== Memory ===" && free -h
-'
+# 1. Compute the immutable source release ID locally (does not build).
+python3 - <<'PY'
+import sys
+from pathlib import Path
+sys.path.insert(0, "deploy/production/scripts")
+from release_images import source_state
+print(source_state(Path("."))["releaseId"])
+PY
+
+# 2. Build once remotely, distribute exact digests to all nodes.
+$CLUSTER --inventory "$INVENTORY" build --node all --release "src-<sha>" \
+  --remote-builder --dry-run --evidence-dir artifacts/production/build
+$CLUSTER --inventory "$INVENTORY" build --node all --release "src-<sha>" \
+  --remote-builder --yes --evidence-dir artifacts/production/build
+
+# 3. Produce a fresh encrypted-backup + isolated-restore migration gate.
+python3 deploy/production/scripts/prepare_release_migration_gate.py --help
+
+# 4. Migrate once, then rolling deploy node-3 → node-2 → node-1.
+$CLUSTER --inventory "$INVENTORY" migrate --node all --release "src-<sha>" \
+  --manifest artifacts/production/build/src-<sha>/manifest.json \
+  --backup-evidence artifacts/production/migration-gate.json --dry-run
+$CLUSTER --inventory "$INVENTORY" migrate --node all --release "src-<sha>" \
+  --manifest artifacts/production/build/src-<sha>/manifest.json \
+  --backup-evidence artifacts/production/migration-gate.json --yes
+$CLUSTER --inventory "$INVENTORY" deploy --node all --release "src-<sha>" \
+  --manifest artifacts/production/build/src-<sha>/manifest.json \
+  --backup-evidence artifacts/production/migration-gate.json --dry-run
+$CLUSTER --inventory "$INVENTORY" deploy --node all --release "src-<sha>" \
+  --manifest artifacts/production/build/src-<sha>/manifest.json \
+  --backup-evidence artifacts/production/migration-gate.json --yes
 ```
 
-### 8. View Application Logs
+Verify `status --node all` after every release. If a gate fails, stop; do not
+force deployment or hand-edit a remote release.
+
+## Data, file, and recovery operations
 
 ```bash
-# Backend logs
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker compose -f /app/nader-gorge/docker-compose.yml logs --tail=200 -f backend'
+# Safe read-only planning/status
+$CLUSTER --inventory "$INVENTORY" backup-repository-plan --node all
+$CLUSTER --inventory "$INVENTORY" backup-schedules-status --node all
 
-# Frontend logs  
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker compose -f /app/nader-gorge/docker-compose.yml logs --tail=200 -f frontend'
+# Bounded drills: always dry-run first.
+$CLUSTER --inventory "$INVENTORY" restore-test --node node-3 --dry-run
+$CLUSTER --inventory "$INVENTORY" file-failover-test --node node-1 \
+  --maximum-outage-seconds 30 --dry-run
+$CLUSTER --inventory "$INVENTORY" failover-test --node all --dry-run
 ```
 
-### 9. Database Operations
+`failover-test` is a real bounded PostgreSQL/Redis drill and may briefly move
+one writer. Run it only with a healthy preflight and wait for full recovery
+before any other mutation.
 
-```bash
-# Connect to PostgreSQL
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker compose -f /app/nader-gorge/docker-compose.yml exec postgres psql -U postgres nadergorge'
+## SignalR, files, and load tests
 
-# Run a migration
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker compose -f /app/nader-gorge/docker-compose.yml exec backend dotnet ef database update'
+- SignalR/load probes require a disposable test account and externally stored
+  `0600` token files. Create them with
+  `deploy/production/scripts/prepare_load_test_tokens.py`; never use a real
+  user account or place credentials in the repository.
+- File validation must prove upload → read from another node → delete, without
+  logging file contents or user identifiers.
+- Run the 30-minute load plan only after approval and during a safe window.
+  It must collect p95/p99/errors, CPU steal, database replication, Redis, and
+  queue evidence. See `docs/production/performance-and-ha-validation.md`.
 
-# Backup database
-sshpass -p 'MazenElsbagh.12' ssh -o StrictHostKeyChecking=no root@72.62.27.189 'docker compose -f /app/nader-gorge/docker-compose.yml exec postgres pg_dump -U postgres nadergorge > /backups/nadergorge_$(date +%Y%m%d_%H%M%S).sql'
-```
+## Cloudflare and domains
 
----
+Use the one tunnel with replicas on all three nodes. The connector targets each
+node's local HAProxy, which balances across all three application nodes. The
+only final public hostnames are the root plus `app`, `admin`, `teacher`,
+`staff`, `api`, `ws`, and `assets`.
 
-## Execution Rules
+Before any DNS change, run `accept` and require signed `GO`. Then follow
+`docs/production/cloudflare-cutover.md`; use Full (strict), proxy web hosts,
+keep origin locked down, and verify HTTP, WebSocket, cookies, uploads, and
+protected assets after cutover.
 
-1. **Always show the command before running it** — let the user review it.
-2. **Use `sshpass`** for automated/scripted operations to avoid interactive password prompts.
-3. **Always use `-o StrictHostKeyChecking=no`** to bypass host key prompts on first connect.
-4. **Prefer multi-line heredoc scripts** for complex multi-step remote operations.
-5. **Check exit codes** — after any deployment, run `docker compose ps` to verify all containers are healthy.
-6. **Never store credentials in committed files** — the credentials in this skill file are for local agent use only.
+## References
 
----
-
-## SSH Key Setup (One-Time, Recommended)
-
-To avoid password prompts permanently:
-
-```bash
-# Generate key if not exists
-ssh-keygen -t ed25519 -C "nader-gorge-prod" -f ~/.ssh/nader_gorge_prod
-
-# Copy key to server
-sshpass -p 'MazenElsbagh.12' ssh-copy-id -o StrictHostKeyChecking=no -i ~/.ssh/nader_gorge_prod.pub root@72.62.27.189
-
-# Test passwordless login
-ssh -i ~/.ssh/nader_gorge_prod root@72.62.27.189
-```
-
-Then update `~/.ssh/config`:
-```
-Host nader-gorge-prod
-    HostName 72.62.27.189
-    User root
-    IdentityFile ~/.ssh/nader_gorge_prod
-    StrictHostKeyChecking no
-```
-
-After setup, connect simply with:
-```bash
-ssh nader-gorge-prod
-```
+- Architecture and exact roles: `specs/166-three-node-production-cluster/architecture.md`
+- Database/schema audit implementation:
+  `deploy/production/scripts/audit_database.py`
+- Historical generated comparison (not current production evidence):
+  `.agents/skills/ssh-server/docs/database_schema.md`
+- Backup and recovery: `docs/production/backup-and-restore.md`
+- Performance/HA test procedure: `docs/production/performance-and-ha-validation.md`

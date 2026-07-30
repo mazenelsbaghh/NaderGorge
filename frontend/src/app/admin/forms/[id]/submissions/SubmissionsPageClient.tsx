@@ -7,7 +7,7 @@ import { ArrowRight, Inbox, Eye, CheckCircle, RefreshCw, FileText, Settings } fr
 import toast from 'react-hot-toast';
 
 import {
-  AdminShellChrome,
+  AdminPage,
   AdminDataTable,
   AdminModal,
   AdminPageSkeleton,
@@ -22,6 +22,7 @@ import {
   FormFieldConfig,
   FormSubmissionStatus,
 } from '@/services/forms-service';
+import { registerCacheStore } from '@/lib/cache-invalidation';
 
 interface SubmissionsPageProps {
   params: { id: string };
@@ -61,6 +62,8 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
 
   useEffect(() => {
     loadData();
+    const cleanupCacheStore = registerCacheStore('forms:submissions', () => setSubmissions([]), loadData);
+    return cleanupCacheStore;
   }, [loadData]);
 
   const openDetailsModal = (sub: FormSubmissionDto) => {
@@ -95,9 +98,9 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
 
   if (loading) {
     return (
-      <AdminShellChrome activePath="/admin/forms" sectionLabel="أدوات الإدارة" pageTitle="الطلبات المستلمة">
+      <AdminPage activePath="/admin/forms" sectionLabel="أدوات الإدارة" pageTitle="الطلبات المستلمة">
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
@@ -188,7 +191,7 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
   }
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/forms"
       sectionLabel="النماذج المخصصة"
       pageTitle={form?.title || 'الطلبات'}
@@ -322,6 +325,6 @@ export default function SubmissionsPageClient({ params }: SubmissionsPageProps) 
           </div>
         )}
       </AdminModal>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

@@ -1,0 +1,21 @@
+{
+  "backupId": "legacy-20260727T195014Z-ae80acbf",
+  "completedAt": "2026-07-27T19:56:23.250330Z",
+  "journalState": {
+    "phase": "planned",
+    "startedWriters": []
+  },
+  "operationId": "0bbc8ff9b3ab2ec35debc7c6422e67049051503f9b281760e2250eca08b9769b",
+  "reason": null,
+  "retryAllowed": false,
+  "schemaVersion": 1,
+  "sourceHost": "72.62.27.189",
+  "sourceUser": "root",
+  "sshAttempted": false,
+  "startedAt": "2026-07-27T19:56:23.249887Z",
+  "status": "dry-run",
+  "writers": [
+    "massar_backend",
+    "massar_worker"
+  ]
+}

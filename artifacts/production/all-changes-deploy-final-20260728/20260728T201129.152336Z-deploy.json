@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "4091cd9c-2288-478d-8fe1-ae46b31fddc3",
+  "command": "deploy",
+  "startedAt": "2026-07-28T20:11:29.152336Z",
+  "completedAt": "2026-07-28T20:11:29.152717Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Traceback (most recent call last):\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/deploy_release.py\", line 849, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/deploy_release.py\", line 842, in main\n    raise rollout_error\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/deploy_release.py\", line 824, in main\n    assert_rollout_quor"
+}

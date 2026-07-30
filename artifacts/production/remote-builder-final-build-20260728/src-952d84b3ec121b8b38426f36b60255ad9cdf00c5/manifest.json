@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "src-952d84b3ec121b8b38426f36b60255ad9cdf00c5",
+  "gitCommit": "7b96888f013e9c663eaffcdb0f4db0129f464bb8",
+  "sourceStateSha256": "952d84b3ec121b8b38426f36b60255ad9cdf00c589cc0a5c7420ee170e54b709",
+  "dirtySourceSnapshot": true,
+  "createdAt": "2026-07-28T00:42:12.074016Z",
+  "platform": "linux/amd64",
+  "images": {
+    "backend": "sha256:ee3716ba235b83411e548c581b223ded2595ab055fd7be3cec758ecb6b154482",
+    "frontend": "sha256:1cd9c146e0b9f3567b0592599d4cde00c353f2c6a496464e654586b24fe429ad",
+    "migrator": "sha256:10478f8e0a51099e8d70032adee361c0650823dd1391261988baee877ba36c1e",
+    "worker": "sha256:d1d9e171975990aa0bab211879d60bc6798ccf0648f9a306c8a9ad8e4b531d7e"
+  },
+  "status": "success",
+  "nodeCount": 3,
+  "digestParity": true,
+  "builderNodeId": "node-3",
+  "distribution": {
+    "node-1": {
+      "status": "verified",
+      "artifacts": {
+        "backend": "227f6012d4e0cf370f677b5a2ec2dd48beb1c8b9d17da1cbfeea36a22325188b",
+        "frontend": "70768c38d297698e0364a2f75017972c39dea71e34ecbf2c921a4b3a231c13c9",
+        "worker": "eb090b97f2db3ae43b72645dae4056772802582e5b29c69faa326952e091a56c",
+        "migrator": "2ab3f7888fdb7410ca13e91a008d32312aaba6829f03cf40c068750ce68c555b"
+      },
+      "imageDigests": {
+        "backend": "sha256:ee3716ba235b83411e548c581b223ded2595ab055fd7be3cec758ecb6b154482",
+        "frontend": "sha256:1cd9c146e0b9f3567b0592599d4cde00c353f2c6a496464e654586b24fe429ad",
+        "migrator": "sha256:10478f8e0a51099e8d70032adee361c0650823dd1391261988baee877ba36c1e",
+        "worker": "sha256:d1d9e171975990aa0bab211879d60bc6798ccf0648f9a306c8a9ad8e4b531d7e"
+      }
+    },
+    "node-2": {
+      "status": "verified",
+      "artifacts": {
+        "backend": "227f6012d4e0cf370f677b5a2ec2dd48beb1c8b9d17da1cbfeea36a22325188b",
+        "frontend": "70768c38d297698e0364a2f75017972c39dea71e34ecbf2c921a4b3a231c13c9",
+        "worker": "eb090b97f2db3ae43b72645dae4056772802582e5b29c69faa326952e091a56c",
+        "migrator": "2ab3f7888fdb7410ca13e91a008d32312aaba6829f03cf40c068750ce68c555b"
+      },
+      "imageDigests": {
+        "backend": "sha256:ee3716ba235b83411e548c581b223ded2595ab055fd7be3cec758ecb6b154482",
+        "frontend": "sha256:1cd9c146e0b9f3567b0592599d4cde00c353f2c6a496464e654586b24fe429ad",
+        "migrator": "sha256:10478f8e0a51099e8d70032adee361c0650823dd1391261988baee877ba36c1e",
+        "worker": "sha256:d1d9e171975990aa0bab211879d60bc6798ccf0648f9a306c8a9ad8e4b531d7e"
+      }
+    },
+    "node-3": {
+      "status": "verified",
+      "artifacts": {
+        "backend": "227f6012d4e0cf370f677b5a2ec2dd48beb1c8b9d17da1cbfeea36a22325188b",
+        "frontend": "70768c38d297698e0364a2f75017972c39dea71e34ecbf2c921a4b3a231c13c9",
+        "worker": "eb090b97f2db3ae43b72645dae4056772802582e5b29c69faa326952e091a56c",
+        "migrator": "2ab3f7888fdb7410ca13e91a008d32312aaba6829f03cf40c068750ce68c555b"
+      },
+      "imageDigests": {
+        "backend": "sha256:ee3716ba235b83411e548c581b223ded2595ab055fd7be3cec758ecb6b154482",
+        "frontend": "sha256:1cd9c146e0b9f3567b0592599d4cde00c353f2c6a496464e654586b24fe429ad",
+        "migrator": "sha256:10478f8e0a51099e8d70032adee361c0650823dd1391261988baee877ba36c1e",
+        "worker": "sha256:d1d9e171975990aa0bab211879d60bc6798ccf0648f9a306c8a9ad8e4b531d7e"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "4c4cbba4-5605-4b4b-b9ae-f56d6052ec1d",
+  "command": "database-archive-config",
+  "startedAt": "2026-07-26T19:50:42.837851Z",
+  "completedAt": "2026-07-26T19:50:42.838025Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

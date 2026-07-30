@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "633459fc-4984-49bd-b0cd-de48d78d911a",
+  "command": "migrate",
+  "startedAt": "2026-07-27T12:36:55.883059Z",
+  "completedAt": "2026-07-27T12:36:55.883461Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "migration blocked: clean audit or production migration gate failed"
+}

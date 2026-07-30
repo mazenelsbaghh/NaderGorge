@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -25,9 +26,7 @@ import { z } from 'zod';
 import Image from 'next/image';
 import { AVATAR_LIST } from '@/data/avatars';
 
-import { AcademicFields, requiresTrack } from '@/components/registration/AcademicFields';
-import type { AcademicData } from '@/components/registration/AcademicFields';
-import { FeatureCarousel } from '@/components/ui/feature-carousel';
+import type { AcademicData } from '@/lib/academic-labels';
 import { RadioGroup, Radio } from '@/components/ui/radio-group';
 import { authService, getDeviceFingerprint } from '@/services/auth-service';
 
@@ -35,6 +34,25 @@ import { useAuthStore } from '@/stores/auth-store';
 import { getDistrictsForGovernorate } from '@/data/governorate-districts';
 import { InteractiveHoverButton } from '@/components/ui/interactive-hover-button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import {
+  getEducationStageLabel,
+  getGradeLevelLabel,
+  getStudyTrackLabel,
+  requiresTrack,
+} from '@/lib/academic-labels';
+import { getRegistrationApiErrors } from '@/lib/api-errors';
+import { cairoCurrentDate, cairoDateAfterDays } from '@/lib/cairo-time';
+
+const FeatureCarousel = dynamic(() =>
+  import('@/components/ui/feature-carousel').then(
+    (module) => module.FeatureCarousel,
+  ),
+);
+const AcademicFields = dynamic(() =>
+  import('@/components/registration/AcademicFields').then(
+    (module) => module.AcademicFields,
+  ),
+);
 
 const EGYPTIAN_GOVERNORATES = [
   'القاهرة', 'الجيزة', 'الإسكندرية', 'الدقهلية', 'البحيرة', 'الفيوم',
@@ -45,6 +63,8 @@ const EGYPTIAN_GOVERNORATES = [
 ];
 
 const egyptianPhoneRegex = /^01[0125]\d{8}$/;
+const isPastCairoDate = (date: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(date) && date < cairoCurrentDate();
 
 const schema = z
   .object({
@@ -88,6 +108,10 @@ const schema = z
     return true;
   }, { message: 'يرجى إدخال تاريخ ميلاد الأب', path: ['fatherDateOfBirth'] })
   .refine((d) => {
+    if (d.fatherDateOfBirth && !isPastCairoDate(d.fatherDateOfBirth)) return false;
+    return true;
+  }, { message: 'تاريخ ميلاد الأب يجب أن يكون تاريخًا سابقًا لليوم', path: ['fatherDateOfBirth'] })
+  .refine((d) => {
     if (d.isMotherAlive && !d.motherPhone?.match(egyptianPhoneRegex)) return false;
     return true;
   }, { message: 'تأكد من كتابة رقم هاتف الأم بشكل صحيح', path: ['motherPhone'] })
@@ -95,6 +119,10 @@ const schema = z
     if (d.isMotherAlive && !d.motherDateOfBirth) return false;
     return true;
   }, { message: 'يرجى إدخال تاريخ ميلاد الأم', path: ['motherDateOfBirth'] })
+  .refine((d) => {
+    if (d.motherDateOfBirth && !isPastCairoDate(d.motherDateOfBirth)) return false;
+    return true;
+  }, { message: 'تاريخ ميلاد الأم يجب أن يكون تاريخًا سابقًا لليوم', path: ['motherDateOfBirth'] })
   .refine((d) => {
     if (requiresTrack(d.gradeLevel) && !d.studyTrack) return false;
     return true;
@@ -392,36 +420,9 @@ export function RegistrationForm() {
       // Redirect directly to the student dashboard
       router.push('/student');
     } catch (err: unknown) {
-      const message =
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
-          ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message as string)
-          : 'عذرًا، فشل إنشاء الحساب. يُرجى المحاولة مرة أخرى لاحقًا.';
-
-      const normalizedMessage = message.toLowerCase();
-      const isDuplicatePhoneError =
-        normalizedMessage.includes('phone number already registered') ||
-        normalizedMessage.includes('رقم الهاتف') ||
-        normalizedMessage.includes('مسجل بالفعل');
-
-      if (isDuplicatePhoneError) {
-        setActiveStep(0);
-        setErrors([
-          {
-            field: 'phoneNumber',
-            message: 'هذا الرقم مسجل مسبقًا. يمكنك تسجيل الدخول بدلاً من ذلك، أو تغيير الرقم.',
-          },
-        ]);
-        return;
-      }
-
-      setErrors([
-        {
-          message,
-        },
-      ]);
+      const localizedErrors = getRegistrationApiErrors(err);
+      setErrors(localizedErrors);
+      setActiveStep(findStepIndexForField(localizedErrors[0]?.field));
     } finally {
       setLoading(false);
     }
@@ -506,14 +507,14 @@ export function RegistrationForm() {
               <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--admin-primary)]">المسار الحالي</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                  {formData.educationStage === 'Secondary' ? 'ثانوية' : formData.educationStage === 'Baccalaureate' ? 'بكالوريا' : 'المرحلة الدراسية'}
+                  {formData.educationStage ? getEducationStageLabel(formData.educationStage) : 'المرحلة الدراسية'}
                 </span>
                 <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                  {formData.gradeLevel || 'الصف الدراسي'}
+                  {formData.gradeLevel ? getGradeLevelLabel(formData.gradeLevel) : 'الصف الدراسي'}
                 </span>
                 {requiresTrack(formData.gradeLevel) ? (
                   <span className="rounded-full bg-[var(--admin-bg)]/80 px-4 py-2.5 text-sm font-bold text-[var(--admin-text)] shadow-sm border border-[var(--admin-border)]">
-                    {formData.studyTrack || 'الشعبة / التخصص'}
+                    {formData.studyTrack ? getStudyTrackLabel(formData.studyTrack) : 'الشعبة / التخصص'}
                   </span>
                 ) : null}
               </div>
@@ -845,7 +846,8 @@ export function RegistrationForm() {
                 </div>
                 <div>
                   <label className="auth-label" htmlFor="reg-fatherDob">عيد ميلاد الأب</label>
-                  <input id="reg-fatherDob" name="fatherDateOfBirth" type="date" dir="ltr" className={inputCls('fatherDateOfBirth')} style={selectStyle} value={formData.fatherDateOfBirth ?? ''} onChange={handleChange} />
+                  <input id="reg-fatherDob" name="fatherDateOfBirth" type="date" dir="ltr" max={cairoDateAfterDays(-1)} className={inputCls('fatherDateOfBirth')} style={selectStyle} value={formData.fatherDateOfBirth ?? ''} onChange={handleChange} />
+                  {fieldError('fatherDateOfBirth') && <p className="auth-field-error">{fieldError('fatherDateOfBirth')}</p>}
                   {formData.fatherDateOfBirth && (
                     <span className="mt-1 inline-flex rounded-full bg-[var(--admin-card-strong)] px-3 py-1 text-xs font-bold text-[var(--admin-text)]">
                       باقي {computeBirthdayInfo(formData.fatherDateOfBirth).daysToNextBirthday} يوم على عيد ميلاد الأب
@@ -865,7 +867,8 @@ export function RegistrationForm() {
                 </div>
                 <div>
                   <label className="auth-label" htmlFor="reg-motherDob">عيد ميلاد الأم</label>
-                  <input id="reg-motherDob" name="motherDateOfBirth" type="date" dir="ltr" className={inputCls('motherDateOfBirth')} style={selectStyle} value={formData.motherDateOfBirth ?? ''} onChange={handleChange} />
+                  <input id="reg-motherDob" name="motherDateOfBirth" type="date" dir="ltr" max={cairoDateAfterDays(-1)} className={inputCls('motherDateOfBirth')} style={selectStyle} value={formData.motherDateOfBirth ?? ''} onChange={handleChange} />
+                  {fieldError('motherDateOfBirth') && <p className="auth-field-error">{fieldError('motherDateOfBirth')}</p>}
                   {formData.motherDateOfBirth && (
                     <span className="mt-1 inline-flex rounded-full bg-[var(--admin-card-strong)] px-3 py-1 text-xs font-bold text-[var(--admin-text)]">
                       باقي {computeBirthdayInfo(formData.motherDateOfBirth).daysToNextBirthday} يوم على عيد ميلاد الأم

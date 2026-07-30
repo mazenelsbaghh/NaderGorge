@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "d43e72c7-85df-4416-b66a-dd63f9e470d2",
+  "command": "database-archive-status",
+  "startedAt": "2026-07-26T21:19:14.453614Z",
+  "completedAt": "2026-07-26T21:19:14.454155Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

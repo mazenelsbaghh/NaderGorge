@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+  "capturedAt": "2026-07-28T11:45:44.619742Z",
+  "nodes": [
+    {
+      "nodeId": "node-1",
+      "status": "success"
+    },
+    {
+      "nodeId": "node-2",
+      "status": "success"
+    },
+    {
+      "nodeId": "node-3",
+      "status": "success"
+    }
+  ],
+  "status": "success"
+}

@@ -87,8 +87,45 @@ public class VerifyCodeTests : IDisposable
         var principal = _tokenService.ValidateToken(response.Data.Token);
         Assert.NotNull(principal);
         Assert.True(principal.IsInRole("Parent"));
+        Assert.Equal(user.Id.ToString(), principal.FindFirst(
+            System.Security.Claims.ClaimTypes.NameIdentifier)?.Value);
+        Assert.Equal("0", principal.FindFirst("passwordResetVersion")?.Value);
+        Assert.Equal("0", principal.FindFirst("securityStampVersion")?.Value);
         var studentIdClaim = principal.FindFirst("StudentId")?.Value;
         Assert.Equal(profile.Id.ToString(), studentIdClaim);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public async Task VerifyCode_RevokedStudent_ShouldRejectCode(
+        bool isActive,
+        bool isDeleted)
+    {
+        var user = new User
+        {
+            FullName = "طالب موقوف",
+            PhoneNumber = $"010{Guid.NewGuid():N}"[..11],
+            PasswordHash = "hash",
+            IsActive = isActive,
+            IsDeleted = isDeleted
+        };
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+        _db.StudentProfiles.Add(new StudentProfile
+        {
+            UserId = user.Id,
+            ParentTrackingCode = "654321"
+        });
+        await _db.SaveChangesAsync();
+
+        var handler = new VerifyParentCodeCommandHandler(_db, _tokenService);
+        var response = await handler.Handle(
+            new VerifyParentCodeCommand("654321", null, null),
+            CancellationToken.None);
+
+        Assert.False(response.Success);
+        Assert.Equal("الرمز غير صالح، يرجى التحقق وإعادة المحاولة", response.Message);
     }
 
     [Fact]

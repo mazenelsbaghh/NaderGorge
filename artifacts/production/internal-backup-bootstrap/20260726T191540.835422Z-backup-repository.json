@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "7ccbdb39-cc4f-498d-9a6c-119aa7bf4143",
+  "command": "backup-repository",
+  "startedAt": "2026-07-26T19:15:40.835422Z",
+  "completedAt": "2026-07-26T19:15:40.835891Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "ERROR: three Garage nodes did not form one cluster"
+}

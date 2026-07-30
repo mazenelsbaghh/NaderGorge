@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "8aa4b50b-2a7a-41f0-858a-12dbea323528",
+  "command": "backup-database-initialize",
+  "startedAt": "2026-07-26T19:50:36.192195Z",
+  "completedAt": "2026-07-26T19:50:36.192876Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

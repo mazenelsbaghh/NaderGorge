@@ -1,27 +1,52 @@
 'use client';
 
 import { devConsole } from '@/utils/dev-console';
-import { useCallback, useState, useEffect } from 'react';
+import { type ReactNode, useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AdminShellChrome, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable } from '@/components/admin';
-import { adminService, type StudentPackageDto, type StudentProfileExtendedDto } from '@/services/admin-service';
+import { AdminPage, AdminTabBar, AdminTab, AdminStatCard, AdminModal, AdminDataTable, AdminConfirmationDialog } from '@/components/admin';
+import { adminService, type AdminTeacherOptionDto, type StudentPackageDto, type StudentProfileExtendedDto } from '@/services/admin-service';
 import { Users, FileText, MonitorPlay, MonitorUp, Power, Video, Clock3, MapPin, GraduationCap, UsersRound, Wallet, Package, PenLine, DollarSign, KeyRound, StickyNote, Trash2, Pin, ChevronDown, ChevronRight, Lock, Unlock, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatRelativeDate } from '@/components/admin/admin-utils';
+import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import {
+  GRADES_BY_STAGE,
+  STAGE_OPTIONS,
+  TRACKS_BY_GRADE,
+  getEducationStageLabel,
+  getGradeLevelLabel,
+  getStudyTrackLabel,
+  type EducationStage,
+  type GradeLevel,
+} from '@/lib/academic-labels';
 
 
-export default function AdminStudentProfileClient({ params }: { params: { id: string } }) {
+function StudentProfileFrame({ staff, action, children }: { staff: boolean; action: ReactNode; children: ReactNode }) {
+  const title = 'ملف الطالب الشامل';
+  const subtitle = 'تفاصيل شاملة للمنهج، الأجهزة، والماليات';
+  if (staff) return <AssistantShellChrome activePath="/assistant/students" sectionLabel="خدمة الطلاب" pageTitle={title} subtitle={subtitle} action={action}>{children}</AssistantShellChrome>;
+  return <AdminPage activePath="/admin/students" sectionLabel="الطلاب" pageTitle={title} subtitle={subtitle} action={action}>{children}</AdminPage>;
+}
+
+export default function AdminStudentProfileClient({ params, staff = false }: { params: { id: string }; staff?: boolean }) {
   const { id } = params;
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'devices' | 'financials' | 'overrides' | 'audit' | 'notes'>('overview');
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState<StudentProfileExtendedDto | null>(null);
-  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'|'watchCount'|'balance'|'editProfile'|'password'|'cancelPackage'>('none');
+  const [modalOpen, setModalOpen] = useState<'none'|'override'|'disconnect'|'gamification'|'status'|'watchLimit'|'balance'|'editProfile'|'password'|'cancelPackage'>('none');
   const [overrideInput, setOverrideInput] = useState({ videoId: '', addedViews: 1, reason: '' });
   const [gamificationInput, setGamificationInput] = useState({ points: 10, reason: '' });
-  const [watchCountEdit, setWatchCountEdit] = useState({ lessonVideoId: '', videoTitle: '', currentCount: 0, newCount: 0, maxCount: 0 });
-  const [balanceInput, setBalanceInput] = useState({ amount: 0, reason: '' });
+  const [watchLimitIncrease, setWatchLimitIncrease] = useState({ lessonVideoId: '', videoTitle: '', currentCount: 0, maxCount: 0, addedViews: 1, reason: '' });
+  const [balanceInput, setBalanceInput] = useState<{
+    scope: 'general' | 'teacher';
+    operation: 'credit' | 'debit';
+    amount: number;
+    teacherId: string;
+    reason: string;
+  }>({ scope: 'general', operation: 'credit', amount: 0, teacherId: '', reason: '' });
+  const [teachers, setTeachers] = useState<AdminTeacherOptionDto[]>([]);
   const [editFields, setEditFields] = useState<Record<string, string | boolean | null>>({});
   const [passwordInput, setPasswordInput] = useState('');
   const [noteInput, setNoteInput] = useState({ content: '', isPinned: false });
@@ -35,6 +60,8 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
   const [refundBalanceOption, setRefundBalanceOption] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [devicePendingDisconnection, setDevicePendingDisconnection] = useState<string | null>(null);
+  const [isDisconnectingDevice, setIsDisconnectingDevice] = useState(false);
   const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({});
   const [expandedTerms, setExpandedTerms] = useState<Record<string, boolean>>({});
   const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
@@ -150,6 +177,12 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
     fetchStudent();
   }, [fetchStudent]);
 
+  useEffect(() => {
+    adminService.getTeachers()
+      .then(setTeachers)
+      .catch((error) => devConsole.error('Failed to load teachers', error));
+  }, []);
+
   const handleOverrideSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -177,6 +210,20 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
         toast.error('فشل الفصل');
     } finally {
         setSubmitting(false);
+    }
+  };
+
+  const handleDisconnectDevice = async (deviceId: string) => {
+    setIsDisconnectingDevice(true);
+    try {
+      await adminService.disconnectDevice(id, deviceId);
+      toast.success('تم فصل الجهاز');
+      fetchStudent();
+      setDevicePendingDisconnection(null);
+    } catch {
+      toast.error('فشل فصل الجهاز');
+    } finally {
+      setIsDisconnectingDevice(false);
     }
   };
 
@@ -253,13 +300,18 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
     }
   };
 
-  const handleWatchCountSubmit = async (e: React.FormEvent) => {
+  const handleWatchLimitIncreaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
     setSubmitting(true);
     try {
-      await adminService.setWatchCount(watchCountEdit.lessonVideoId, id, watchCountEdit.newCount);
-      toast.success(`تم تعديل المشاهدات من ${watchCountEdit.currentCount} إلى ${watchCountEdit.newCount}`);
+      await adminService.overrideVideoLimit(
+        id,
+        watchLimitIncrease.lessonVideoId,
+        watchLimitIncrease.addedViews,
+        watchLimitIncrease.reason
+      );
+      toast.success(`تمت زيادة الحد المسموح من ${watchLimitIncrease.maxCount} إلى ${watchLimitIncrease.maxCount + watchLimitIncrease.addedViews}`);
       setModalOpen('none');
       fetchStudent();
     } catch {
@@ -272,14 +324,28 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
   const handleBalanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    if (balanceInput.amount <= 0) {
+      toast.error('اكتب مبلغ أكبر من صفر');
+      return;
+    }
+    if (balanceInput.scope === 'teacher' && !balanceInput.teacherId) {
+      toast.error('اختار المدرس');
+      return;
+    }
     setSubmitting(true);
     try {
-      await adminService.adjustBalance(id, balanceInput.amount, balanceInput.reason);
-      toast.success(`تم تعديل الرصيد بمقدار ${balanceInput.amount >= 0 ? '+' : ''}${balanceInput.amount} ج.م`);
+      await adminService.adjustBalance(id, {
+        scope: balanceInput.scope,
+        operation: balanceInput.operation,
+        amount: balanceInput.amount,
+        teacherId: balanceInput.scope === 'teacher' ? balanceInput.teacherId : null,
+        reason: balanceInput.reason,
+      });
+      toast.success(`${balanceInput.operation === 'credit' ? 'تمت إضافة' : 'تم خصم'} ${balanceInput.amount} ج.م`);
       setModalOpen('none');
       fetchStudent();
-    } catch {
-      toast.error('فشل تعديل الرصيد');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'فشل تعديل الرصيد');
     } finally {
       setSubmitting(false);
     }
@@ -339,28 +405,17 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
 
   const mapEducationStage = (s?: string) => {
     if (!s) return 'غير متوفر';
-    const m: Record<string, string> = { Secondary: 'ثانوية', Baccalaureate: 'بكالوريا' };
-    return m[s] || s;
+    return getEducationStageLabel(s);
   };
 
   const mapGradeLevel = (g?: string) => {
     if (!g) return 'غير متوفر';
-    const m: Record<string, string> = {
-      FirstSecondary: 'أولى ثانوي', SecondSecondary: 'ثانية ثانوي',
-      FirstBaccalaureate: 'أولى بكالوريا', SecondBaccalaureate: 'ثانية بكالوريا',
-    };
-    return m[g] || g;
+    return getGradeLevelLabel(g);
   };
 
   const mapStudyTrack = (t?: string) => {
     if (!t) return 'لا ينطبق';
-    const m: Record<string, string> = {
-      Science: 'علمي', Arts: 'أدبي',
-      MedicineAndLifeSciences: 'الطب وعلوم الحياة',
-      EngineeringAndComputerScience: 'الهندسة وعلوم الحاسب',
-      Business: 'قطاع الأعمال', ArtsAndHumanities: 'الآداب والفنون',
-    };
-    return m[t] || t;
+    return getStudyTrackLabel(t);
   };
 
   const formatDate = (d?: string | null) => {
@@ -368,27 +423,46 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
     return new Date(d).toLocaleDateString('en-GB');
   };
 
+  const toDateInputValue = (d?: string | null) => {
+    if (!d) return '';
+    return new Date(d).toISOString().split('T')[0];
+  };
+
+  const editStage = String(editFields.educationStage || '') as EducationStage | '';
+  const editGrade = String(editFields.gradeLevel || '') as GradeLevel | '';
+  const editGradeGroups = editStage ? GRADES_BY_STAGE[editStage] ?? [] : [];
+  const editTrackOptions = editGrade ? TRACKS_BY_GRADE[editGrade] ?? [] : [];
+
+  const selectedTeacherBalance = studentData?.promotionalBalances?.find((balance) => balance.teacherId === balanceInput.teacherId);
+  const selectedBalanceCurrent = balanceInput.scope === 'teacher'
+    ? selectedTeacherBalance?.availableAmount ?? 0
+    : studentData?.currentBalance ?? 0;
+  const signedBalancePreview = balanceInput.operation === 'credit' ? balanceInput.amount : -balanceInput.amount;
+  const nextBalancePreview = selectedBalanceCurrent + signedBalancePreview;
+
   return (
-    <AdminShellChrome
-       activePath="/admin/students"
-       sectionLabel="الطلاب"
-       pageTitle="ملف الطالب الشامل"
-       subtitle="تفاصيل شاملة للمنهج، الأجهزة، والماليات"
+    <StudentProfileFrame
+       staff={staff}
        action={
           <div className="flex gap-4">
-            <button 
+            <button
               onClick={() => {
                 setEditFields({
                   fullName: studentData?.fullName || '',
                   phone: studentData?.phone || '',
                   parentPhone: studentData?.parentPhone || '',
                   secondaryPhone: studentData?.secondaryPhone || '',
+                  secondaryParentPhone: studentData?.secondaryParentPhone || '',
                   motherPhone: studentData?.motherPhone || '',
+                  nationality: studentData?.nationality || '',
                   governorate: studentData?.governorate || '',
                   district: studentData?.district || '',
                   address: studentData?.address || '',
                   schoolName: studentData?.schoolName || '',
-                  dateOfBirth: studentData?.dateOfBirth ? new Date(studentData.dateOfBirth).toISOString().split('T')[0] : '',
+                  studentCode: studentData?.studentCode || '',
+                  dateOfBirth: toDateInputValue(studentData?.dateOfBirth),
+                  fatherDateOfBirth: toDateInputValue(studentData?.fatherDateOfBirth),
+                  motherDateOfBirth: toDateInputValue(studentData?.motherDateOfBirth),
                   gender: studentData?.gender || '',
                   educationStage: studentData?.educationStage || '',
                   gradeLevel: studentData?.grade || '',
@@ -404,23 +478,23 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                <PenLine size={20} />
                تعديل البيانات
             </button>
-            <button 
+            <button
               onClick={() => { setPasswordInput(''); setModalOpen('password'); }}
               className="flex items-center gap-2 rounded-2xl bg-amber-500/10 px-4 py-2 font-medium text-amber-600 hover:bg-amber-500/20 transition-colors"
             >
                <KeyRound size={20} />
                تغيير الباسورد
             </button>
-            <button 
+            <button
               onClick={handleStatusToggleClick}
-              className={`flex items-center gap-2 rounded-2xl px-4 py-2 font-medium transition-colors 
+              className={`flex items-center gap-2 rounded-2xl px-4 py-2 font-medium transition-colors
                  ${studentData?.isActive ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'}`}
             >
                <Power size={20} />
                {studentData?.isActive ? 'إيقاف الحساب' : 'تفعيل الحساب'}
             </button>
-            <button 
-               onClick={() => router.push('/admin/students')}
+            <button
+               onClick={() => router.push(staff ? '/assistant/students' : '/admin/students')}
                className="flex items-center gap-2 rounded-2xl bg-[var(--admin-surface-low)] px-4 py-2 text-[var(--admin-text)] transition-colors hover:bg-[var(--admin-border)]"
             >
                <Users size={20} />
@@ -430,7 +504,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
        }
     >
        <AdminTabBar tabs={TABS} activeTab={activeTab} onSelect={setActiveTab} />
-       
+
        <div className="mt-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
          {activeTab === 'overview' && (
             <div className="flex flex-col gap-8">
@@ -446,7 +520,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                   <AdminStatCard variant="muted" icon={FileText} label="باقات نشطة" value={studentData?.packages?.length || 0} />
                   <AdminStatCard variant="accent" icon={MonitorPlay} label="تجاوزات نشطة" value={studentData?.overrides?.length || 0} />
                </div>
-               
+
                {/* ── Section 1: البيانات الشخصية ── */}
                <div className="rounded-3xl bg-[var(--admin-bg)] p-8 shadow-sm">
                    <div className="flex items-center gap-3 mb-5">
@@ -488,6 +562,10 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                            <div>
                                <p className="text-[var(--admin-muted)] text-sm mb-1">كود الطالب</p>
                                <p className="text-[var(--admin-text)] font-semibold font-mono">{studentData?.studentCode || 'غير متوفر'}</p>
+                           </div>
+                           <div>
+                               <p className="text-[var(--admin-muted)] text-sm mb-1">رقم متابعة ولي الأمر</p>
+                               <p className="text-[var(--admin-primary)] font-semibold font-mono">{studentData?.parentTrackingCode || 'غير متوفر'}</p>
                            </div>
                            <div>
                                <p className="text-[var(--admin-muted)] text-sm mb-1">حالة الملف</p>
@@ -630,11 +708,11 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                      <AdminStatCard
                         variant="muted"
                         icon={DollarSign}
-                        label="الرصيد"
+                        label="الرصيد العام للمنصة"
                         value={`${studentData?.currentBalance ?? 0} ج.م`}
                       >
                         <button
-                          onClick={() => { setBalanceInput({ amount: 0, reason: '' }); setModalOpen('balance'); }}
+                          onClick={() => { setBalanceInput({ scope: 'general', operation: 'credit', amount: 0, teacherId: '', reason: '' }); setModalOpen('balance'); }}
                           className="mt-4 flex items-center justify-center gap-2 w-full rounded-xl bg-[var(--admin-primary-15)] px-4 py-2 text-sm font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-all duration-300 shadow-sm"
                           title="تعديل الرصيد"
                         >
@@ -642,6 +720,46 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                           <span>تعديل الرصيد</span>
                         </button>
                       </AdminStatCard>
+                  </div>
+
+                  <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                     <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                       <div>
+                         <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">أرصدة المدرسين</h3>
+                         <p className="text-[var(--admin-muted)]">الرصيد المخصص لكل مدرس منفصل عن الرصيد العام للمنصة.</p>
+                       </div>
+                       <button
+                         onClick={() => { setBalanceInput({ scope: 'teacher', operation: 'credit', amount: 0, teacherId: studentData?.promotionalBalances?.[0]?.teacherId ?? '', reason: '' }); setModalOpen('balance'); }}
+                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 text-sm font-bold text-[var(--admin-primary-contrast)] hover:bg-[var(--admin-primary-strong)]"
+                       >
+                         <PenLine size={14} />
+                         تعديل رصيد مدرس
+                       </button>
+                     </div>
+
+                     {(studentData?.promotionalBalances?.length ?? 0) > 0 ? (
+                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                         {studentData?.promotionalBalances.map((balance) => (
+                           <button
+                             key={balance.teacherId ?? 'general-promotional'}
+                             type="button"
+                             onClick={() => { setBalanceInput({ scope: 'teacher', operation: 'credit', amount: 0, teacherId: balance.teacherId ?? '', reason: '' }); setModalOpen('balance'); }}
+                             className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 text-right transition hover:border-[var(--admin-primary)] hover:bg-[var(--admin-hover)]"
+                           >
+                             <p className="text-sm font-bold text-[var(--admin-muted)]">المدرس</p>
+                             <p className="mt-1 text-lg font-black text-[var(--admin-text)]">{balance.teacherName}</p>
+                             <div className="mt-3 flex items-end justify-between gap-3">
+                               <span className="text-xs font-bold text-[var(--admin-muted)]">الرصيد المتاح</span>
+                               <span className="font-mono text-2xl font-black text-[var(--admin-primary)]">{balance.availableAmount} ج.م</span>
+                             </div>
+                           </button>
+                         ))}
+                       </div>
+                     ) : (
+                       <div className="rounded-2xl border border-dashed border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-5 text-center text-sm font-bold text-[var(--admin-muted)]">
+                         لا يوجد رصيد مخصص لأي مدرس حالياً.
+                       </div>
+                     )}
                   </div>
 
                   <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
@@ -776,7 +894,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                   </div>
               </div>
           )}
-         
+
          {activeTab === 'overrides' && (
              <div className="flex flex-col gap-6">
                  <div className="flex justify-between items-center bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
@@ -789,8 +907,8 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                         إضافة تجاوز جديد
                     </button>
                  </div>
-                 
-                 <AdminDataTable<any> 
+
+                 <AdminDataTable<any>
                     columns={[
                         {key: 'videoTitle', label: 'اسم الفيديو', render: (row: any) => row.videoTitle || row.videoId},
                         {key: 'limitChange', label: 'تعديل الحد الأقصى', render: (row: any) => (
@@ -891,14 +1009,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                            {/* Disconnect button */}
                            {device.isActive && (
                              <button
-                               onClick={async () => {
-                                 if (!confirm('هل تريد فصل هذا الجهاز؟')) return;
-                                 try {
-                                   await adminService.disconnectDevice(id, device.id);
-                                   toast.success('تم فصل الجهاز');
-                                   fetchStudent();
-                                 } catch { toast.error('فشل فصل الجهاز'); }
-                               }}
+                               onClick={() => setDevicePendingDisconnection(device.id)}
                                className="w-full rounded-2xl bg-red-500/10 py-2 text-sm font-bold text-red-500 hover:bg-red-500/20 transition-colors"
                              >
                                فصل الجهاز
@@ -932,7 +1043,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                           <div key={log.id} className="relative group">
                             {/* Timeline node */}
                             <div className="absolute right-[-31px] top-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full border-2 border-[var(--admin-bg)] bg-[var(--admin-primary)] ring-4 ring-[var(--admin-primary-15)]" />
-                            
+
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5">
                               <div>
                                 <p className="text-sm font-bold text-[var(--admin-text)]">
@@ -972,13 +1083,13 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                          fetchStudent();
                        } catch { toast.error('فشل إضافة الملاحظة'); }
                      }} className="flex flex-col gap-4">
-                          <textarea 
-                            required 
-                            rows={4} 
+                          <textarea
+                            required
+                            rows={4}
                             placeholder="اكتب ملاحظتك هنا عن الطالب..."
                             className="w-full bg-[var(--admin-bg)] p-4 rounded-2xl text-[var(--admin-text)] border border-[var(--admin-border)]/40 focus:border-[var(--admin-primary)] focus:ring-2 focus:ring-[var(--admin-primary-15)] outline-none resize-none transition-all duration-200 placeholder:text-[var(--admin-muted)]/70 text-sm shadow-[inset_0_2px_4px_rgba(78,70,57,0.03)]"
-                            value={noteInput.content} 
-                            onChange={e => setNoteInput(p => ({...p, content: e.target.value}))} 
+                            value={noteInput.content}
+                            onChange={e => setNoteInput(p => ({...p, content: e.target.value}))}
                           />
                           <div className="flex flex-wrap gap-4 justify-between items-center mt-1">
                             <Checkbox
@@ -997,8 +1108,8 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                               </Checkbox.Content>
                             </Checkbox>
 
-                            <button 
-                              type="submit" 
+                            <button
+                              type="submit"
                               className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[var(--admin-primary)] to-[var(--admin-primary-strong)] px-6 py-2.5 font-bold text-xs text-[var(--admin-primary-contrast)] cursor-pointer hover:filter hover:brightness-110 active:scale-[0.98] transition-all duration-200 shadow-[0_4px_12px_var(--admin-primary-15)]"
                             >
                               <PenLine size={16} />
@@ -1010,9 +1121,9 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                   {(studentData?.notes?.length ?? 0) > 0 ? (
                     <div className="flex flex-col gap-4">
                       {studentData!.notes.map(note => (
-                        <div 
-                          key={note.id} 
-                          className={note.isPinned 
+                        <div
+                          key={note.id}
+                          className={note.isPinned
                             ? "bg-gradient-to-br from-[var(--admin-primary-15)] to-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.005]"
                             : "bg-[var(--admin-card-soft)] p-6 rounded-3xl shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.005] hover:bg-[var(--admin-card-strong)]"
                           }
@@ -1035,17 +1146,17 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                 <span>•</span>
                                 <span>{new Date(note.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}</span>
                               </div>
-                              <button 
-                                onClick={async () => { 
-                                  try { 
-                                    await adminService.deleteStudentNote(id, note.id); 
-                                    toast.success('تم حذف الملاحظة'); 
-                                    fetchStudent(); 
-                                  } catch { 
-                                    toast.error('فشل حذف الملاحظة'); 
-                                  } 
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await adminService.deleteStudentNote(id, note.id);
+                                    toast.success('تم حذف الملاحظة');
+                                    fetchStudent();
+                                  } catch {
+                                    toast.error('فشل حذف الملاحظة');
+                                  }
                                 }}
-                                className="flex items-center justify-center p-2 rounded-xl text-[var(--admin-muted)] hover:bg-[var(--admin-danger-10)] hover:text-[var(--admin-danger)] transition-colors duration-200" 
+                                className="flex items-center justify-center p-2 rounded-xl text-[var(--admin-muted)] hover:bg-[var(--admin-danger-10)] hover:text-[var(--admin-danger)] transition-colors duration-200"
                                 title="حذف الملاحظة"
                               >
                                 <Trash2 size={16} />
@@ -1086,12 +1197,18 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                        label="جلسات محتسبة"
                        value={studentData?.watchTracking?.activities?.reduce((sum, activity) => sum + activity.watchCount, 0) || 0}
                      />
+                     <AdminStatCard
+                       variant="muted"
+                       icon={MonitorPlay}
+                       label="متوسط السرعة"
+                       value={`${(studentData?.watchTracking?.averagePlaybackRate || 1).toFixed(2).replace(/\.00$/, '')}×`}
+                     />
                   </div>
 
                   <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
                      <div className="mb-5">
                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">سجل مشاهدة الفيديوهات</h3>
-                       <p className="text-[var(--admin-muted)]">آخر الفيديوهات التي شاهدها الطالب مع الزمن التراكمي الفعلي وآخر نشاط.</p>
+                       <p className="text-[var(--admin-muted)]">زمن المشاهدة المحتسب، السرعة المستخدمة، وآخر نشاط لكل فيديو.</p>
                      </div>
 
                      {(() => {
@@ -1148,7 +1265,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                              return (
                                <div key={pkg.packageName} className="border border-[var(--admin-border)]/40 rounded-3xl overflow-hidden bg-[var(--admin-card-soft)]">
                                  {/* Package Row */}
-                                 <div 
+                                 <div
                                    onClick={() => setExpandedPackages(prev => ({ ...prev, [pkg.packageName]: !prev[pkg.packageName] }))}
                                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-[var(--admin-card-strong)]/40 transition-colors select-none"
                                  >
@@ -1169,7 +1286,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                        return (
                                          <div key={term.termTitle} className="border border-[var(--admin-border)]/20 rounded-2xl overflow-hidden bg-[var(--admin-card-soft)]/50 mr-4">
                                            {/* Term Row */}
-                                           <div 
+                                           <div
                                              onClick={() => setExpandedTerms(prev => ({ ...prev, [termKey]: !prev[termKey] }))}
                                              className="flex items-center justify-between p-3.5 cursor-pointer hover:bg-[var(--admin-card-strong)]/30 transition-colors select-none"
                                            >
@@ -1190,7 +1307,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                                  return (
                                                    <div key={lesson.lessonTitle} className="border border-[var(--admin-border)]/10 rounded-xl overflow-hidden mr-4 bg-[var(--admin-card-soft)]/20">
                                                      {/* Lesson Row */}
-                                                     <div 
+                                                     <div
                                                        onClick={() => setExpandedLessons(prev => ({ ...prev, [lessonKey]: !prev[lessonKey] }))}
                                                        className="flex items-center justify-between p-3 cursor-pointer hover:bg-[var(--admin-card-strong)]/20 transition-colors select-none"
                                                      >
@@ -1214,8 +1331,20 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                                              {/* Metrics */}
                                                              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[var(--admin-muted)]">
                                                                <div>
-                                                                 <span className="font-bold">المشاهدة:</span> {formatDuration(activity.watchedSeconds)}
+                                                                 <span className="font-bold">الوقت المحتسب:</span> {formatDuration(activity.watchedSeconds)}
                                                                </div>
+                                                               <div dir="ltr">
+                                                                 <span className="font-bold" dir="rtl">متوسط السرعة:</span> {activity.averagePlaybackRate.toFixed(2).replace(/\.00$/, '')}×
+                                                               </div>
+                                                               {activity.playbackRateSeconds && Object.entries(activity.playbackRateSeconds).length > 0 && (
+                                                                 <div className="w-full text-[11px] text-[var(--admin-muted)]">
+                                                                   <span className="font-bold">وقت كل سرعة:</span>{' '}
+                                                                   {Object.entries(activity.playbackRateSeconds)
+                                                                     .sort(([first], [second]) => Number(first) - Number(second))
+                                                                     .map(([rate, seconds]) => `${rate}×: ${formatDuration(Math.round(seconds))}`)
+                                                                     .join(' · ')}
+                                                                 </div>
+                                                               )}
                                                                <div>
                                                                  <span className="font-bold">المشاهدات:</span> {activity.watchCount} / {activity.maxWatchCount === 0 ? '∞' : activity.maxWatchCount}
                                                                </div>
@@ -1232,20 +1361,22 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                                                              <button
                                                                onClick={(e) => {
                                                                  e.stopPropagation();
-                                                                 setWatchCountEdit({
+                                                                 setWatchLimitIncrease({
                                                                    lessonVideoId: activity.lessonVideoId,
                                                                    videoTitle: activity.videoTitle,
                                                                    currentCount: activity.watchCount,
-                                                                   newCount: activity.watchCount,
-                                                                   maxCount: activity.maxWatchCount
+                                                                   maxCount: activity.maxWatchCount,
+                                                                   addedViews: 1,
+                                                                   reason: ''
                                                                  });
-                                                                 setModalOpen('watchCount');
+                                                                 setModalOpen('watchLimit');
                                                                }}
-                                                               className="flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors"
-                                                               title="تعديل عدد المشاهدات"
+                                                               disabled={activity.maxWatchCount === 0}
+                                                               className="flex items-center gap-1.5 rounded-xl bg-[var(--admin-primary-15)] px-3 py-1.5 text-xs font-bold text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                                                               title={activity.maxWatchCount === 0 ? 'المشاهدات غير محدودة' : 'إضافة مشاهدات مسموحة'}
                                                              >
-                                                               <PenLine size={14} />
-                                                               تعديل
+                                                               <MonitorUp size={14} />
+                                                               إضافة مشاهدات
                                                              </button>
                                                            </div>
                                                          ))}
@@ -1270,17 +1401,30 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                   </div>
               </div>
           )}
-         
+
+         <AdminConfirmationDialog
+           open={devicePendingDisconnection !== null}
+           onClose={() => setDevicePendingDisconnection(null)}
+           onConfirm={async () => {
+             if (devicePendingDisconnection) await handleDisconnectDevice(devicePendingDisconnection);
+           }}
+           title="فصل جهاز الطالب"
+           consequence="سيتم إنهاء جلسة هذا الجهاز، وسيحتاج الطالب إلى تسجيل الدخول مجددًا من عليه."
+           confirmLabel="فصل الجهاز"
+           variant="danger"
+           isConfirming={isDisconnectingDevice}
+         />
+
          <AdminModal open={modalOpen === 'gamification'} onClose={() => !submitting && setModalOpen('none')} title="تعديل نقاط الطالب">
              <form onSubmit={handleGamificationSubmit} className="flex flex-col gap-4">
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">إضافة / خصم نقاط (يمكن استخدام قيم سالبة)</label>
-                     <input required type="number" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
+                     <input required type="number" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                             value={gamificationInput.points} onChange={e => setGamificationInput({...gamificationInput, points: parseInt(e.target.value) || 0})} />
                  </div>
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">السبب</label>
-                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
+                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                             value={gamificationInput.reason} onChange={e => setGamificationInput({...gamificationInput, reason: e.target.value})} />
                  </div>
                  <div className="flex gap-4 mt-4">
@@ -1296,17 +1440,17 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
              <form onSubmit={handleOverrideSubmit} className="flex flex-col gap-4">
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">رقم الفيديو المتجاوز (UUID)</label>
-                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
+                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                             value={overrideInput.videoId} onChange={e => setOverrideInput({...overrideInput, videoId: e.target.value})} />
                  </div>
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">عدد المشاهدات الإضافية</label>
-                     <input required type="number" min="1" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
+                     <input required type="number" min="1" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                             value={overrideInput.addedViews} onChange={e => setOverrideInput({...overrideInput, addedViews: parseInt(e.target.value) || 1})} />
                  </div>
                  <div>
                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">السبب (يظهر للآدمنز)</label>
-                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50" 
+                     <input required type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
                             value={overrideInput.reason} onChange={e => setOverrideInput({...overrideInput, reason: e.target.value})} />
                  </div>
                  <div className="flex gap-4 mt-4">
@@ -1318,19 +1462,32 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
              </form>
           </AdminModal>
 
-          <AdminModal open={modalOpen === 'watchCount'} onClose={() => !submitting && setModalOpen('none')} title={`تعديل مشاهدات: ${watchCountEdit.videoTitle}`}>
-              <form onSubmit={handleWatchCountSubmit} className="flex flex-col gap-4">
+          <AdminModal open={modalOpen === 'watchLimit'} onClose={() => !submitting && setModalOpen('none')} title={`إضافة مشاهدات مسموحة: ${watchLimitIncrease.videoTitle}`}>
+              <form onSubmit={handleWatchLimitIncreaseSubmit} className="flex flex-col gap-4">
                   <div className="text-center">
-                      <p className="text-sm text-[var(--admin-muted)] mb-1">العدد الحالي: <strong className="text-[var(--admin-text)] text-lg">{watchCountEdit.currentCount}</strong> / {watchCountEdit.maxCount === 0 ? '∞' : watchCountEdit.maxCount}</p>
+                      <p className="text-sm text-[var(--admin-muted)] mb-1">
+                        المشاهدات المستخدمة: <strong className="text-[var(--admin-text)] text-lg">{watchLimitIncrease.currentCount}</strong> / {watchLimitIncrease.maxCount}
+                      </p>
                       <div className="flex items-center justify-center gap-4 mt-4">
-                          <button type="button" disabled={submitting} onClick={() => setWatchCountEdit(p => ({...p, newCount: Math.max(0, p.newCount - 1)}))}
+                          <button type="button" disabled={submitting} onClick={() => setWatchLimitIncrease(current => ({...current, addedViews: Math.max(1, current.addedViews - 1)}))}
                             className="h-12 w-12 rounded-xl bg-red-500/10 text-red-500 font-bold text-xl hover:bg-red-500/20 transition-colors disabled:opacity-50">−</button>
-                          <input type="number" min="0" required disabled={submitting}
+                          <input type="number" min="1" required disabled={submitting}
                             className="w-24 text-center bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-2xl font-bold border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
-                            value={watchCountEdit.newCount} onChange={e => setWatchCountEdit(p => ({...p, newCount: Math.max(0, parseInt(e.target.value) || 0)}))} />
-                          <button type="button" disabled={submitting} onClick={() => setWatchCountEdit(p => ({...p, newCount: p.newCount + 1}))}
+                            value={watchLimitIncrease.addedViews} onChange={e => setWatchLimitIncrease(current => ({...current, addedViews: Math.max(1, parseInt(e.target.value) || 1)}))} />
+                          <button type="button" disabled={submitting} onClick={() => setWatchLimitIncrease(current => ({...current, addedViews: current.addedViews + 1}))}
                             className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-500 font-bold text-xl hover:bg-emerald-500/20 transition-colors disabled:opacity-50">+</button>
                       </div>
+                      <p className="mt-3 text-sm font-bold text-emerald-600">
+                        بعد الحفظ: {watchLimitIncrease.currentCount} / {watchLimitIncrease.maxCount + watchLimitIncrease.addedViews}
+                      </p>
+                  </div>
+                  <div>
+                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">سبب الزيادة</label>
+                      <input required type="text" disabled={submitting}
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
+                        value={watchLimitIncrease.reason}
+                        onChange={event => setWatchLimitIncrease(current => ({ ...current, reason: event.target.value }))}
+                        placeholder="مثال: فتح مشاهدة إضافية للطالب" />
                   </div>
                   <div className="flex gap-4 mt-4">
                       <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
@@ -1344,14 +1501,78 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
           <AdminModal open={modalOpen === 'balance'} onClose={() => !submitting && setModalOpen('none')} title="تعديل الرصيد">
               <form onSubmit={handleBalanceSubmit} className="flex flex-col gap-4">
                   <div className="text-center mb-2">
-                      <p className="text-sm text-[var(--admin-muted)]">الرصيد الحالي</p>
-                      <p className="text-3xl font-bold text-[var(--admin-text)]">{studentData?.currentBalance ?? 0} <span className="text-base font-normal text-[var(--admin-muted)]">ج.م</span></p>
+                      <p className="text-sm text-[var(--admin-muted)]">
+                        {balanceInput.scope === 'teacher' ? `رصيد المدرس: ${selectedTeacherBalance?.teacherName || 'اختار المدرس'}` : 'الرصيد العام للمنصة'}
+                      </p>
+                      <p className="text-3xl font-bold text-[var(--admin-text)]">{selectedBalanceCurrent} <span className="text-base font-normal text-[var(--admin-muted)]">ج.م</span></p>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[var(--admin-surface)] p-1">
+                    {[
+                      { key: 'general', label: 'رصيد عام' },
+                      { key: 'teacher', label: 'رصيد مدرس' },
+                    ].map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        disabled={submitting}
+                        onClick={() => setBalanceInput((current) => ({
+                          ...current,
+                          scope: option.key as 'general' | 'teacher',
+                          teacherId: option.key === 'teacher' ? current.teacherId : '',
+                        }))}
+                        className={`rounded-xl px-3 py-2 text-sm font-black transition ${balanceInput.scope === option.key ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {balanceInput.scope === 'teacher' && (
+                    <div>
+                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">المدرس</label>
+                      <select
+                        required
+                        disabled={submitting}
+                        className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
+                        value={balanceInput.teacherId}
+                        onChange={(event) => setBalanceInput((current) => ({ ...current, teacherId: event.target.value }))}
+                      >
+                        <option value="">اختار المدرس</option>
+                        {teachers.map((teacher) => {
+                          const teacherBalance = studentData?.promotionalBalances?.find((balance) => balance.teacherId === teacher.id)?.availableAmount ?? 0;
+                          return (
+                            <option key={teacher.id} value={teacher.id}>
+                              {teacher.fullName} - الرصيد {teacherBalance} ج.م
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[var(--admin-surface)] p-1">
+                    {[
+                      { key: 'credit', label: 'إضافة' },
+                      { key: 'debit', label: 'خصم' },
+                    ].map((option) => (
+                      <button
+                        key={option.key}
+                        type="button"
+                        disabled={submitting}
+                        onClick={() => setBalanceInput((current) => ({ ...current, operation: option.key as 'credit' | 'debit' }))}
+                        className={`rounded-xl px-3 py-2 text-sm font-black transition ${balanceInput.operation === option.key ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <div>
-                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">المبلغ (موجب للإضافة، سالب للخصم)</label>
-                      <input required type="number" step="0.01" disabled={submitting}
+                      <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">المبلغ</label>
+                      <input required type="number" step="0.01" min="0.01" disabled={submitting}
                         className="w-full bg-[var(--admin-surface)] p-3 rounded-xl text-[var(--admin-text)] text-lg font-bold text-center border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none disabled:opacity-50"
-                        value={balanceInput.amount} onChange={e => setBalanceInput(p => ({...p, amount: parseFloat(e.target.value) || 0}))} />
+                        value={balanceInput.amount || ''} onChange={e => setBalanceInput(p => ({...p, amount: parseFloat(e.target.value) || 0}))} />
                   </div>
                   <div>
                       <label className="block text-sm font-bold text-[var(--admin-text)] mb-2">السبب</label>
@@ -1361,8 +1582,8 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                         value={balanceInput.reason} onChange={e => setBalanceInput(p => ({...p, reason: e.target.value}))} />
                   </div>
                   {balanceInput.amount !== 0 && (
-                    <p className={`text-sm text-center font-bold ${balanceInput.amount > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      الرصيد الجديد: {((studentData?.currentBalance ?? 0) + balanceInput.amount).toFixed(2)} ج.م
+                    <p className={`text-sm text-center font-bold ${nextBalancePreview >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      الرصيد الجديد: {nextBalancePreview.toFixed(2)} ج.م
                     </p>
                   )}
                   <div className="flex gap-4 mt-2">
@@ -1375,50 +1596,129 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
           </AdminModal>
 
           <AdminModal open={modalOpen === 'editProfile'} onClose={() => !submitting && setModalOpen('none')} title="تعديل بيانات الطالب">
-              <form onSubmit={handleEditProfileSubmit} className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
-                  {[
-                    { key: 'fullName', label: 'الاسم الكامل', type: 'text' },
-                    { key: 'phone', label: 'رقم الهاتف', type: 'text' },
-                    { key: 'parentPhone', label: 'هاتف ولي الأمر', type: 'text' },
-                    { key: 'secondaryPhone', label: 'هاتف إضافي', type: 'text' },
-                    { key: 'motherPhone', label: 'هاتف الأم', type: 'text' },
-                    { key: 'governorate', label: 'المحافظة', type: 'text' },
-                    { key: 'district', label: 'المنطقة / الحي', type: 'text' },
-                    { key: 'address', label: 'العنوان', type: 'text' },
-                    { key: 'schoolName', label: 'اسم المدرسة', type: 'text' },
-                    { key: 'dateOfBirth', label: 'تاريخ الميلاد', type: 'date' },
-                  ].map(f => (
-                    <div key={f.key}>
-                      <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">{f.label}</label>
-                      <input type={f.type} disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
-                        value={String(editFields[f.key] ?? '')} onChange={e => setEditFields(p => ({...p, [f.key]: e.target.value}))} />
-                    </div>
-                  ))}
-                  <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={handleEditProfileSubmit} className="flex flex-col gap-5 max-h-[70vh] overflow-y-auto pr-1">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {[
+                      { key: 'fullName', label: 'الاسم الكامل', type: 'text' },
+                      { key: 'phone', label: 'رقم الهاتف', type: 'text' },
+                      { key: 'secondaryPhone', label: 'هاتف الطالب الإضافي', type: 'text' },
+                      { key: 'studentCode', label: 'كود الطالب', type: 'text' },
+                      { key: 'nationality', label: 'الجنسية', type: 'text' },
+                      { key: 'dateOfBirth', label: 'تاريخ ميلاد الطالب', type: 'date' },
+                    ].map(f => (
+                      <div key={f.key}>
+                        <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">{f.label}</label>
+                        <input type={f.type} disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                          value={String(editFields[f.key] ?? '')} onChange={e => setEditFields(p => ({...p, [f.key]: e.target.value}))} />
+                      </div>
+                    ))}
                     <div>
                       <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">النوع</label>
                       <select disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
                         value={String(editFields.gender ?? '')} onChange={e => setEditFields(p => ({...p, gender: e.target.value}))}>
-                        <option value="">---</option><option value="Male">ذكر</option><option value="Female">أنثى</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">نوع المدرسة</label>
-                      <select disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
-                        value={String(editFields.schoolType ?? '')} onChange={e => setEditFields(p => ({...p, schoolType: e.target.value}))}>
-                        <option value="">---</option><option value="Government">حكومية</option><option value="Language">لغات</option><option value="Experimental">تجريبية</option><option value="Private">خاصة</option><option value="Azhari">أزهرية</option>
+                        <option value="">---</option>
+                        <option value="Male">ذكر</option>
+                        <option value="Female">أنثى</option>
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)] disabled:opacity-50">
-                      <input type="checkbox" disabled={submitting} checked={editFields.isFatherAlive === true} onChange={e => setEditFields(p => ({...p, isFatherAlive: e.target.checked}))} className="rounded" />
-                      الأب على قيد الحياة
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--admin-text)] disabled:opacity-50">
-                      <input type="checkbox" disabled={submitting} checked={editFields.isMotherAlive === true} onChange={e => setEditFields(p => ({...p, isMotherAlive: e.target.checked}))} className="rounded" />
-                      الأم على قيد الحياة
-                    </label>
+
+                  <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                    <h4 className="mb-3 text-sm font-black text-[var(--admin-text)]">بيانات ولي الأمر</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {[
+                        { key: 'parentPhone', label: 'هاتف الأب / ولي الأمر', type: 'text' },
+                        { key: 'secondaryParentPhone', label: 'هاتف ولي أمر إضافي', type: 'text' },
+                        { key: 'motherPhone', label: 'هاتف الأم', type: 'text' },
+                        { key: 'fatherDateOfBirth', label: 'تاريخ ميلاد الأب', type: 'date' },
+                        { key: 'motherDateOfBirth', label: 'تاريخ ميلاد الأم', type: 'date' },
+                      ].map(f => (
+                        <div key={f.key}>
+                          <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">{f.label}</label>
+                          <input type={f.type} disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                            value={String(editFields[f.key] ?? '')} onChange={e => setEditFields(p => ({...p, [f.key]: e.target.value}))} />
+                        </div>
+                      ))}
+                      <label className="flex items-center gap-2 cursor-pointer rounded-xl bg-[var(--admin-surface)] px-3 py-2.5 text-sm text-[var(--admin-text)] disabled:opacity-50">
+                        <input type="checkbox" disabled={submitting} checked={editFields.isFatherAlive === true} onChange={e => setEditFields(p => ({...p, isFatherAlive: e.target.checked}))} className="rounded" />
+                        الأب على قيد الحياة
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer rounded-xl bg-[var(--admin-surface)] px-3 py-2.5 text-sm text-[var(--admin-text)] disabled:opacity-50">
+                        <input type="checkbox" disabled={submitting} checked={editFields.isMotherAlive === true} onChange={e => setEditFields(p => ({...p, isMotherAlive: e.target.checked}))} className="rounded" />
+                        الأم على قيد الحياة
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                    <h4 className="mb-3 text-sm font-black text-[var(--admin-text)]">البيانات الدراسية</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">المرحلة الدراسية</label>
+                        <select disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                          value={String(editFields.educationStage ?? '')}
+                          onChange={e => setEditFields(p => ({...p, educationStage: e.target.value, gradeLevel: '', studyTrack: ''}))}>
+                          <option value="">اختار المرحلة</option>
+                          {STAGE_OPTIONS.map(stage => <option key={stage.value} value={stage.value}>{stage.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">الصف الدراسي</label>
+                        <select disabled={submitting || !editStage} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                          value={String(editFields.gradeLevel ?? '')}
+                          onChange={e => setEditFields(p => ({...p, gradeLevel: e.target.value, studyTrack: ''}))}>
+                          <option value="">اختار الصف</option>
+                          {editGradeGroups.map((group, groupIndex) => (
+                            <optgroup key={group.groupLabel || groupIndex} label={group.groupLabel || 'الصفوف'}>
+                              {group.grades.map(grade => <option key={grade.value} value={grade.value}>{grade.label}</option>)}
+                            </optgroup>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">الشعبة / التخصص</label>
+                        <select disabled={submitting || editTrackOptions.length === 0} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                          value={String(editFields.studyTrack ?? '')} onChange={e => setEditFields(p => ({...p, studyTrack: e.target.value}))}>
+                          <option value="">لا ينطبق</option>
+                          {editTrackOptions.map(track => <option key={track.value} value={track.value}>{track.label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">نوع المدرسة</label>
+                        <select disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                          value={String(editFields.schoolType ?? '')} onChange={e => setEditFields(p => ({...p, schoolType: e.target.value}))}>
+                          <option value="">---</option>
+                          <option value="Government">حكومية</option>
+                          <option value="Language">لغات</option>
+                          <option value="Experimental">تجريبية</option>
+                          <option value="Private">خاصة</option>
+                          <option value="Azhari">أزهرية</option>
+                          <option value="American">أمريكية</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">اسم المدرسة</label>
+                        <input type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                          value={String(editFields.schoolName ?? '')} onChange={e => setEditFields(p => ({...p, schoolName: e.target.value}))} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                    <h4 className="mb-3 text-sm font-black text-[var(--admin-text)]">العنوان</h4>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {[
+                        { key: 'governorate', label: 'المحافظة' },
+                        { key: 'district', label: 'المنطقة / الحي' },
+                        { key: 'address', label: 'العنوان التفصيلي' },
+                      ].map(f => (
+                        <div key={f.key} className={f.key === 'address' ? 'md:col-span-2' : ''}>
+                          <label className="block text-xs font-bold text-[var(--admin-muted)] mb-1">{f.label}</label>
+                          <input type="text" disabled={submitting} className="w-full bg-[var(--admin-surface)] p-2.5 rounded-xl text-[var(--admin-text)] border border-[var(--admin-border)] focus:border-[var(--admin-primary)] outline-none text-sm disabled:opacity-50"
+                            value={String(editFields[f.key] ?? '')} onChange={e => setEditFields(p => ({...p, [f.key]: e.target.value}))} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div className="flex gap-4 mt-4 sticky bottom-0 bg-[var(--admin-bg)] pt-3">
                       <button type="button" disabled={submitting} onClick={() => setModalOpen('none')} className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50">إلغاء</button>
@@ -1453,8 +1753,8 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                   <p className="text-sm text-[var(--admin-muted)] font-bold">يرجى كتابة سبب إيقاف الحساب. سيظهر هذا السبب للطالب عند محاولة تسجيل الدخول:</p>
                   <div>
                       <label className="block text-xs font-bold text-[var(--admin-muted)] mb-2">سبب الإيقاف</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         disabled={submitting}
                         value={suspensionReasonInput}
                         onChange={(e) => setSuspensionReasonInput(e.target.value)}
@@ -1463,7 +1763,7 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                       />
                   </div>
                   <div className="flex gap-3">
-                      <button 
+                      <button
                         disabled={submitting}
                         onClick={() => toggleStatusDirect(false, suspensionReasonInput)}
                         className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
@@ -1491,12 +1791,12 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
 
                     <div className="space-y-3">
                         <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] hover:bg-[var(--admin-hover)] transition-colors">
-                            <input 
-                              type="checkbox" 
+                            <input
+                              type="checkbox"
                               disabled={submitting}
-                              checked={refundBalanceOption} 
-                              onChange={(e) => setRefundBalanceOption(e.target.checked)} 
-                              className="w-4 h-4 text-[var(--admin-primary)] focus:ring-[var(--admin-primary)] border-gray-300 rounded disabled:opacity-50" 
+                              checked={refundBalanceOption}
+                              onChange={(e) => setRefundBalanceOption(e.target.checked)}
+                              className="w-4 h-4 text-[var(--admin-primary)] focus:ring-[var(--admin-primary)] border-gray-300 rounded disabled:opacity-50"
                             />
                             <div>
                                 <span className="block text-sm font-bold text-[var(--admin-text)]">إرجاع قيمة الباقة إلى محفظة الطالب</span>
@@ -1518,17 +1818,17 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
                     </div>
 
                     <div className="flex gap-4">
-                        <button 
+                        <button
                           disabled={submitting}
                           onClick={handleCancelPackageConfirm}
                           className="flex-1 px-4 py-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         >
                             {submitting ? 'جاري الإلغاء...' : 'تأكيد إلغاء الباقة'}
                         </button>
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           disabled={submitting}
-                          onClick={() => setModalOpen('none')} 
+                          onClick={() => setModalOpen('none')}
                           className="flex-1 px-4 py-3 rounded-xl font-bold text-[var(--admin-text)] bg-[var(--admin-hover)] hover:bg-[var(--admin-border)] transition-colors disabled:opacity-50"
                         >
                             تراجع
@@ -1538,6 +1838,6 @@ export default function AdminStudentProfileClient({ params }: { params: { id: st
               )}
           </AdminModal>
        </div>
-    </AdminShellChrome>
+    </StudentProfileFrame>
   );
 }

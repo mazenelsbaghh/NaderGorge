@@ -22,6 +22,7 @@
   flex-direction: column;
   overflow-x: hidden;
   overflow-y: auto;
+  touch-action: pan-y;
   overscroll-behavior: none;
   font-family: var(--font-tajawal, var(--font-sans, system-ui, sans-serif));
   direction: rtl;
@@ -199,6 +200,26 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
+}
+
+.auth-shell__static-grid {
+  background-image:
+    radial-gradient(circle at 80% 18%, color-mix(in srgb, var(--admin-primary) 14%, transparent), transparent 32%),
+    radial-gradient(circle at 18% 82%, color-mix(in srgb, var(--admin-primary) 10%, transparent), transparent 34%),
+    linear-gradient(color-mix(in srgb, var(--admin-primary) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--admin-primary) 5%, transparent) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 42px 42px, 42px 42px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell *,
+  .auth-shell *::before,
+  .auth-shell *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .auth-shell__glow-top {
@@ -610,6 +631,7 @@
    Inline error feedback, same as Admin's warning states.
    ───────────────────────────────────────────────────── */
 .auth-error-banner {
+  scroll-margin-block: 1rem;
   border-radius: 0.875rem;
   border: 1px solid color-mix(in srgb, var(--admin-danger) 30%, transparent);
   background: color-mix(in srgb, var(--admin-danger) 10%, transparent);
@@ -689,10 +711,11 @@
   display: flex;
   width: 100%;
   min-height: 100dvh;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 5rem 1rem 1.5rem;
+  padding: 5rem 1rem max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
 }
 
 .auth-login-card {
@@ -817,7 +840,7 @@
 @media (max-width: 767px) {
   .auth-login-main {
     justify-content: flex-start;
-    padding: 4.75rem 0.75rem 1rem;
+    padding: 4.75rem 0.75rem max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
   }
 
   .auth-login-card {

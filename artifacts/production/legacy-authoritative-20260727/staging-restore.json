@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "backupId": "legacy-20260727T175340Z-ff7061df",
+  "restoreId": "legacy-restore-a0e7b462fef536d1f5899864dff5ba1f",
+  "capturedAt": "2026-07-27T17:58:19.383736Z",
+  "status": "success",
+  "isolated": true,
+  "container": "massar-legacy-stage-166",
+  "hostPort": 62270,
+  "migrationCount": 129,
+  "latestMigration": "20260726182136_EnsureSystemRoles",
+  "unvalidatedConstraintCount": 0,
+  "invalidIndexCount": 0,
+  "userCount": 66,
+  "resetTables": [
+    "VideoPlaybackSessions",
+    "cluster_leases"
+  ],
+  "resetTableCountsBefore": {
+    "VideoPlaybackSessions": 304,
+    "cluster_leases": 0
+  },
+  "resetAudit": "artifacts/production/legacy-authoritative-20260727/staging-restore-reset-audit.json",
+  "fileCounts": {
+    "assets": 334,
+    "protected": 1,
+    "appData": 0
+  },
+  "sourceCapture": {
+    "backupId": "legacy-20260727T175340Z-ff7061df",
+    "sourceMode": "frozen-writers-held",
+    "authoritativeSource": true,
+    "writersFrozenAtCompletion": true,
+    "sourceHost": "72.62.27.189",
+    "sourceUser": "root",
+    "manifestSha256": "7ce1e79bcbc2964d02cba42288abdc91312caa925aeadabe824774c3ffc5a822",
+    "captureEvidenceSha256": "4bece732d0ccb778f5c5007c6c7cee3615acd0ccdb2c3bd6c64ae24eb50a41fc",
+    "artifactSha256": {
+      "database": "6a1d8889f61a1b45518124e95149f4f3777e8b71b258a593a628dc920b656586",
+      "assets": "2fbc83a3eb93cb2dd330396ef9e08270c839d0d64e69eacbeb5458d469584af9",
+      "protected": "b221285ef2eb1f177e88fa626bd7fb6c1d27616058cf2c0bec99590138f67c46",
+      "appData": "48207077ba6bb6a3b2cf266a3889f01436ebaf497b50cf5f607e0a56ef68011f"
+    }
+  },
+  "credentialScope": "disposable-local-container"
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "60e74778-cae7-4652-a536-2bae7a0e6f3d",
+  "command": "build",
+  "startedAt": "2026-07-28T16:49:52.305805Z",
+  "completedAt": "2026-07-28T16:49:52.305931Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-3: remote builder failed: remote builder refuses the current PostgreSQL leader"
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "94cb0753-1be2-4e1a-8304-a10f1f8e4a72",
+  "command": "rollback",
+  "startedAt": "2026-07-28T12:03:57.398205Z",
+  "completedAt": "2026-07-28T12:03:57.398354Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "rollback blocked: migration safety gate is stale or temporally inconsistent"
+}

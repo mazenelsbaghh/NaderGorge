@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "30fad4c3-99f3-42eb-8105-fba353c1507b",
+  "command": "backup-repository",
+  "startedAt": "2026-07-26T19:46:11.482963Z",
+  "completedAt": "2026-07-26T19:46:11.483315Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "ERROR: one or more internal backup bucket nodes are unhealthy"
+}

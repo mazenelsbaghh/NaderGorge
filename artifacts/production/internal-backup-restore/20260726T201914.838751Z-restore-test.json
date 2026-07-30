@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "99d54f81-bfae-4283-ace0-b7210664c5d5",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T20:19:14.838751Z",
+  "completedAt": "2026-07-26T20:19:14.839162Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: restore verification failed: PITR probe mismatch expected=49f068007ff5e0d1ba0a66bd8ebbddf8 actual=<empty>\nmassar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test."
+}

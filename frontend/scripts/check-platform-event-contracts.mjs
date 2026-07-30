@@ -4,6 +4,11 @@ import path from 'node:path';
 const repositoryRoot = path.resolve(import.meta.dirname, '../..');
 const backendRoot = path.join(repositoryRoot, 'backend/src');
 const hookPath = path.join(repositoryRoot, 'frontend/src/hooks/usePlatformEvents.ts');
+const liveSupportHookPath = path.join(repositoryRoot, 'frontend/src/hooks/useLiveSupportHub.ts');
+const internalOnlyEvents = new Set([
+  'LiveSupportAITurnQueued',
+  'EssayEvaluationQueued',
+]);
 
 function listFiles(directory, extension) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -55,15 +60,19 @@ for (const filePath of listFiles(backendRoot, '.cs')) {
   for (const initializer of outboxInitializers(source)) {
     const types = eventTypes(initializer);
     types.forEach((type) => producerTypes.add(type));
-    if (types.length > 0 && !/Target(?:UserId|Group)\s*=/.test(initializer)) {
+    if (types.length > 0 && types.some((type) => !internalOnlyEvents.has(type)) && !/Target(?:UserId|Group)\s*=/.test(initializer)) {
       untargetedProducers.push(`${path.relative(repositoryRoot, filePath)}: ${types.join(', ')}`);
     }
   }
 }
 
 const hookSource = fs.readFileSync(hookPath, 'utf8');
+const liveSupportHookSource = fs.readFileSync(liveSupportHookPath, 'utf8');
 const listenerTypes = new Set(
-  [...hookSource.matchAll(/sharedConnection\.on\('([^']+)'/g)].map((match) => match[1])
+  [
+    ...hookSource.matchAll(/sharedConnection\.on\('([^']+)'/g),
+    ...liveSupportHookSource.matchAll(/connection\.on\('([^']+)'/g),
+  ].map((match) => match[1])
 );
 const registeredListeners = new Set(
   [...hookSource.matchAll(/listeners\.([A-Za-z0-9]+)\.add\(/g)].map((match) => match[1])
@@ -71,7 +80,7 @@ const registeredListeners = new Set(
 const cleanedListeners = new Set(
   [...hookSource.matchAll(/listeners\.([A-Za-z0-9]+)\.delete\(/g)].map((match) => match[1])
 );
-const missingListeners = [...producerTypes].filter((type) => !listenerTypes.has(type)).sort();
+const missingListeners = [...producerTypes].filter((type) => !internalOnlyEvents.has(type) && !listenerTypes.has(type)).sort();
 const missingProducers = [...listenerTypes].filter((type) => !producerTypes.has(type)).sort();
 const missingCleanup = [...registeredListeners]
   .filter((type) => !cleanedListeners.has(type))

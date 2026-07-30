@@ -35,15 +35,26 @@ public struct ParentAppContainer: View {
                     }
                 })
             } else {
-                LinkingView(onLinkSuccess: {
-                    dashboardViewModel.loadProfiles()
-                    withAnimation(.spring()) {
-                        hasLinkedStudent = !dashboardViewModel.linkedProfiles.isEmpty
-                        if hasLinkedStudent {
-                            showOnboarding = false
+                LinkingView(
+                    onLinkSuccess: {
+                        dashboardViewModel.loadProfiles()
+                        withAnimation(.spring()) {
+                            hasLinkedStudent = !dashboardViewModel.linkedProfiles.isEmpty
+                            if hasLinkedStudent {
+                                showOnboarding = false
+                            }
+                        }
+                    },
+                    onBack: {
+                        withAnimation(.spring()) {
+                            if !dashboardViewModel.linkedProfiles.isEmpty {
+                                hasLinkedStudent = true
+                            } else {
+                                showOnboarding = true
+                            }
                         }
                     }
-                })
+                )
             }
         }
         .onAppear {

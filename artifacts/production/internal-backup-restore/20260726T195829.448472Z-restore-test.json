@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "0f8ebb47-811b-4219-adb6-bc100053c265",
+  "command": "restore-test",
+  "startedAt": "2026-07-26T19:58:29.448472Z",
+  "completedAt": "2026-07-26T19:58:29.449022Z",
+  "status": "failed",
+  "targets": [
+    "node-3"
+  ],
+  "reason": "restore test failed: massar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore test.\n2026-07-26 19:58:05.540 P00  ERROR: [041]: unable to get info for path/file '/var/lib/massar-restore-tests/database.IiUij2/data/postmaster.pid': [13] Permission denied\nmassar-db-restore-test.service: Failed with result 'exit-code'.\nFailed to start massar-db-restore-test.service - Massar isolated PostgreSQL PITR restore"
+}

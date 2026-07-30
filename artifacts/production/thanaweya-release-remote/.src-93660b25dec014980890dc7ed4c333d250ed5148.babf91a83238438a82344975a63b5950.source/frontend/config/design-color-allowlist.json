@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "glob": "src/assets/**",
+      "rule": "asset-colors",
+      "reason": "Approved brand/media assets retain source colors.",
+      "owner": "design-system",
+      "reviewDate": "2026-07-14"
+    }
+  ]
+}

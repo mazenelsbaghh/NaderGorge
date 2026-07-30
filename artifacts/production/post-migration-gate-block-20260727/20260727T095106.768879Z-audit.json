@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "27404015-c1d7-45b6-80ee-d2d2bbfd2675",
+  "command": "audit",
+  "startedAt": "2026-07-27T09:51:06.768879Z",
+  "completedAt": "2026-07-27T09:51:06.769497Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

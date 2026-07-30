@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "173b194b-3fd4-4638-ab88-1728ff98d4ab",
+  "command": "failover-test",
+  "startedAt": "2026-07-29T02:51:15.816958Z",
+  "completedAt": "2026-07-29T02:51:15.817183Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "[Errno 13] Permission denied: '/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/run_postgres_failover_drill.sh'"
+}

@@ -1,22 +1,36 @@
+import { useCallback } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 
+type PermissionUser = ReturnType<typeof useAuthStore.getState>['user'];
+
+export function evaluatePermission(user: PermissionUser, permission?: string): boolean {
+  if (!permission) return true;
+  if (!user) return false;
+  const roles = user.roles || [];
+  if (roles.some((role) => ['admin', 'superadmin'].includes(role.toLowerCase()))) return true;
+  return (user.permissions || []).includes(permission);
+}
+
+export function evaluateStaffAccess(user: PermissionUser): boolean {
+  const hasStaffRole = user?.roles?.some((role) => {
+    const normalized = role.toLowerCase();
+    return normalized.includes('staff') || normalized.includes('assistant') ||
+      normalized.includes('admin') || normalized.includes('supervisor') ||
+      normalized === 'employee';
+  });
+
+  return !!hasStaffRole || !!user?.permissions?.some((permission) =>
+    permission.startsWith('hr.self.') || permission === 'hr.attendance.self');
+}
+
 export function useHasPermission() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
 
-  const hasPermission = (permission: string | undefined): boolean => {
-    if (!permission) return true;
-    if (!user) return false;
-
-    // Admin role bypasses all permission restrictions
-    const roles = user.roles || [];
-    if (roles.includes("Admin")) {
-      return true;
-    }
-
-    // Check if the user has the permission claim
-    const permissions = user.permissions || [];
-    return permissions.includes(permission);
-  };
+  const hasPermission = useCallback(
+    (permission: string | undefined): boolean =>
+      evaluatePermission(user, permission),
+    [user],
+  );
 
   return { hasPermission };
 }

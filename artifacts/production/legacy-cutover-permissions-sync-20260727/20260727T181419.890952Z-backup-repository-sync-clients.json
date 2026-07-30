@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "32bc66fb-f504-42da-9f41-57108808947f",
+  "command": "backup-repository-sync-clients",
+  "startedAt": "2026-07-27T18:14:19.890952Z",
+  "completedAt": "2026-07-27T18:14:19.891077Z",
+  "status": "blocked",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "--secret-dir is required"
+}

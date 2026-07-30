@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calendar, KeyRound, BookOpenText, Link2, ChevronRight, Users, Video, Clock3, DollarSign, Layers, Eye, EyeOff } from 'lucide-react';
 import {
-  AdminShellChrome, AdminStatCard, AdminTabBar, AdminTab,
+  AdminPage, AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
   PackageCodeProfileSummary, ContentImageUpload,
@@ -38,7 +38,7 @@ function formatWatchTime(seconds?: number): string {
 export default function PackageProfilePageClient(props: { params: { id: string } }) {
   const params = props.params;
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('terms');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [pkg, setPkg] = useState<any>(null);
   const [pkgLoading, setPkgLoading] = useState(true);
   const [codeProfileSummary, setCodeProfileSummary] = useState<PackageCodeProfileSummary | null>(null);
@@ -115,22 +115,22 @@ export default function PackageProfilePageClient(props: { params: { id: string }
 
   if (pkgLoading) {
     return (
-      <AdminShellChrome activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <AdminPage activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
   if (!pkg) {
     return (
-      <AdminShellChrome activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
+      <AdminPage activePath="/admin/content" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="الباقة غير موجودة">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على الباقة المطلوبة.</p>
           <NeumorphButton onClick={() => router.push('/admin/content')} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة للباقات
           </NeumorphButton>
         </div>
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
@@ -158,7 +158,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
   }
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/content"
       sectionLabel="إدارة المحتوى ▸ الباقات"
       pageTitle={pkg.name}
@@ -246,6 +246,11 @@ export default function PackageProfilePageClient(props: { params: { id: string }
               toast.success('تمت إضافة الترم.');
               await loadTerms();
             }}
+            onUpdate={async (id, { title, order, price }) => {
+              await adminService.updateTerm(id, { title, order, price });
+              toast.success('تم تحديث الترم.');
+              await loadTerms();
+            }}
             onImageUpload={async (id, file) => {
               await adminService.uploadContentImage('term', id, file);
               await loadTerms();
@@ -312,7 +317,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
           </EntityOverviewDashboard>
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
             <h3 className="mb-6 text-xl font-black text-[var(--admin-text)]">إعدادات الباقة الأساسية</h3>
-            <PackageDetailsForm pkg={pkg} />
+            <PackageDetailsForm pkg={pkg} onSuccess={loadPkg} />
           </div>
         </div>
       )}
@@ -336,6 +341,6 @@ export default function PackageProfilePageClient(props: { params: { id: string }
           />
         </div>
       )}
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

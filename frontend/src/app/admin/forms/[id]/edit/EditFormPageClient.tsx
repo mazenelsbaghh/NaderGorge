@@ -6,31 +6,18 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye, ClipboardList, Upload, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { AdminShellChrome, AdminPageSkeleton } from '@/components/admin';
+import { AdminPage, AdminPageSkeleton } from '@/components/admin';
 import { getAdminFormDetails, updateAdminForm, FormFieldConfig, FormFieldType } from '@/services/forms-service';
 import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 import { adminService } from '@/services/admin-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { cairoDateTimeLocalToIso, formatCairoDateTimeLocal } from '@/components/admin/admin-utils';
 
 interface EditFormPageProps {
   params: { id: string };
 }
 
 const PREVIEW_GOVERNORATES = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'الدقهلية'];
-
-const formatForDateTimeLocal = (isoString?: string) => {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  
-  const yyyy = date.getFullYear();
-  const MM = pad(date.getMonth() + 1);
-  const dd = pad(date.getDate());
-  const hh = pad(date.getHours());
-  const mm = pad(date.getMinutes());
-  
-  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
-};
 
 export default function EditFormPageClient({ params }: EditFormPageProps) {
   const { id } = params;
@@ -65,8 +52,8 @@ export default function EditFormPageClient({ params }: EditFormPageProps) {
         setSlug(data.slug);
         setIsActive(data.isActive);
         setCoverImageUrl(data.coverImageUrl || '');
-        setStartsAt(formatForDateTimeLocal(data.startsAt));
-        setExpiresAt(formatForDateTimeLocal(data.expiresAt));
+        setStartsAt(data.startsAt ? formatCairoDateTimeLocal(data.startsAt) : '');
+        setExpiresAt(data.expiresAt ? formatCairoDateTimeLocal(data.expiresAt) : '');
         setFields(JSON.parse(data.fieldsJson || '[]'));
       } catch (error) {
         devConsole.error('Error loading form details:', error);
@@ -224,8 +211,8 @@ export default function EditFormPageClient({ params }: EditFormPageProps) {
         slug: slug.trim().toLowerCase(),
         isActive,
         coverImageUrl: coverImageUrl.trim() || undefined,
-        startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+        startsAt: startsAt ? cairoDateTimeLocalToIso(startsAt) : undefined,
+        expiresAt: expiresAt ? cairoDateTimeLocalToIso(expiresAt) : undefined,
         fieldsJson: JSON.stringify(fields),
       });
       toast.success('تم تحديث النموذج بنجاح');
@@ -239,18 +226,18 @@ export default function EditFormPageClient({ params }: EditFormPageProps) {
 
   if (loading) {
     return (
-      <AdminShellChrome
+      <AdminPage
         activePath="/admin/forms"
         sectionLabel="النماذج المخصصة"
         pageTitle="تعديل النموذج"
       >
         <AdminPageSkeleton />
-      </AdminShellChrome>
+      </AdminPage>
     );
   }
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/forms"
       sectionLabel="النماذج المخصصة"
       pageTitle="تعديل النموذج"
@@ -803,6 +790,6 @@ export default function EditFormPageClient({ params }: EditFormPageProps) {
           </div>
         </div>
       </form>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

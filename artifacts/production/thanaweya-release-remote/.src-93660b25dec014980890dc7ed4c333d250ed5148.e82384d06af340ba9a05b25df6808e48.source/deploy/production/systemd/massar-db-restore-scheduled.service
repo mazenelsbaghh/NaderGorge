@@ -1,0 +1,15 @@
+[Unit]
+Description=Massar primary-owned monthly PostgreSQL PITR drill
+After=network-online.target patroni.service massar-backup-bucket.service
+Requires=massar-backup-bucket.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/lib/massar/run_database_restore_drill.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=false
+ProtectHome=true

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "backupId": "legacy-20260727T195014Z-ae80acbf",
+  "capturedAt": "2026-07-27T19:51:58.183380Z",
+  "status": "success",
+  "sourceMode": "frozen-writers-held",
+  "freezeRequested": true,
+  "leaveWritersFrozenRequested": true,
+  "artifacts": {
+    "database": {
+      "backupId": "legacy-20260727T195014Z-ae80acbf",
+      "file": "legacy-20260727T195014Z-ae80acbf-database.dump.gpg",
+      "encrypted": true,
+      "verified": true,
+      "bytes": 1628053,
+      "sha256": "1fe6c1bcbf95f6c140ab6332a89a999c7fe1c825121097a3fc3c96a52d921908"
+    },
+    "assets": {
+      "backupId": "legacy-20260727T195014Z-ae80acbf",
+      "file": "legacy-20260727T195014Z-ae80acbf-assets.tar.gpg",
+      "encrypted": true,
+      "verified": true,
+      "bytes": 117434099,
+      "sha256": "871f1ea5516365d933282cd50def42c71c166292d61357a086765fba9b8bf859"
+    },
+    "protected": {
+      "backupId": "legacy-20260727T195014Z-ae80acbf",
+      "file": "legacy-20260727T195014Z-ae80acbf-protected.tar.gpg",
+      "encrypted": true,
+      "verified": true,
+      "bytes": 1189264,
+      "sha256": "4d3f3c3c836ecc62c1bd2801553e0b689d53fae4c8806717a75695843aa9eed0"
+    },
+    "appData": {
+      "backupId": "legacy-20260727T195014Z-ae80acbf",
+      "file": "legacy-20260727T195014Z-ae80acbf-app-data.tar.gpg",
+      "encrypted": true,
+      "verified": true,
+      "bytes": 219,
+      "sha256": "0debe0dafd5d2696d97e2bda1a2208615d2cf6b802c219f4a9df848fa8f483a2"
+    }
+  }
+}

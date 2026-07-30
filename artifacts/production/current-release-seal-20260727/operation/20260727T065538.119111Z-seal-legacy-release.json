@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "17113c0b-e2ee-4474-a9d0-7955bf0b9bf1",
+  "command": "seal-legacy-release",
+  "startedAt": "2026-07-27T06:55:38.119111Z",
+  "completedAt": "2026-07-27T06:55:38.119635Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Traceback (most recent call last):\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/seal_legacy_release.py\", line 206, in <module>\n    raise SystemExit(main())\n                     ~~~~^^\n  File \"/Users/mazenelsbagh/mazen mac/apps/nader gorge/deploy/production/scripts/seal_legacy_release.py\", line 195, in main\n    result = seal(\n        inventory, StrictSshTransport(args.known_hosts, args.identity), destination\n    )\n  File \"/Users/mazenelsbagh/mazen mac/apps/nade"
+}

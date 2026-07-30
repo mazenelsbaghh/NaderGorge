@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "3e8404e1-ac44-465a-b02f-d7b70e787a41",
+  "command": "legacy-prepare",
+  "startedAt": "2026-07-27T17:59:19.836672Z",
+  "completedAt": "2026-07-27T17:59:19.836823Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

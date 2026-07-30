@@ -24,13 +24,22 @@ import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground
 import dynamic from 'next/dynamic';
 const RippleGrid = dynamic(() => import('@/components/ui/ripple-grid').then(mod => ({ default: mod.RippleGrid })), { ssr: false });
 import { RegistrationForm } from '@/components/forms/RegistrationForm';
-import { RegistrationInstructionsModal } from '@/components/registration/RegistrationInstructionsModal';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
+import { useConstrainedMotion } from '@/hooks/useConstrainedMotion';
 import { Info } from 'lucide-react';
+
+const RegistrationInstructionsModal = dynamic(
+  () =>
+    import('@/components/registration/RegistrationInstructionsModal').then(
+      (module) => module.RegistrationInstructionsModal,
+    ),
+  { ssr: false },
+);
 
 export default function RegisterPageClient() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
+  const { allowEnhancedMotion, isPageVisible } = useConstrainedMotion();
   const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
@@ -44,6 +53,7 @@ export default function RegisterPageClient() {
     setShowInstructions(false);
     localStorage.setItem('hasSeenRegisterInstructions', 'true');
   };
+  const rippleGridColor = isDark ? '#36d6d6' : '#0e8f8f'; // design-token-allow: WebGL uniform requires a concrete color value.
 
   return (
     <div 
@@ -52,16 +62,19 @@ export default function RegisterPageClient() {
     >
 
       {/* ── Ripple Interactive Background ── */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <RippleGrid
-          gridColor={isDark ? '#64748b' : '#94a3b8'}
-          rippleIntensity={0.05}
-          gridSize={10}
-          gridThickness={isDark ? 15 : 12}
-          mouseInteraction={true}
-          mouseInteractionRadius={1.2}
-          opacity={isDark ? 0.8 : 0.4}
-        />
+      <div className="auth-shell__static-grid absolute inset-0 z-0 pointer-events-none">
+        {allowEnhancedMotion ? (
+          <RippleGrid
+            active={isPageVisible}
+            gridColor={rippleGridColor}
+            rippleIntensity={0.05}
+            gridSize={10}
+            gridThickness={isDark ? 15 : 12}
+            mouseInteraction
+            mouseInteractionRadius={1.2}
+            opacity={isDark ? 0.45 : 0.25}
+          />
+        ) : null}
       </div>
 
       {/* ── Ambient Glow Orbs ── */}
@@ -137,7 +150,12 @@ export default function RegisterPageClient() {
         </p>
       </main>
 
-      <RegistrationInstructionsModal open={showInstructions} onClose={handleCloseInstructions} />
+      {showInstructions ? (
+        <RegistrationInstructionsModal
+          open
+          onClose={handleCloseInstructions}
+        />
+      ) : null}
     </div>
   );
 }

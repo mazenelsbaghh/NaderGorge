@@ -1,86 +1,46 @@
-/**
- * Shared Motion Utilities — Massar Platform
- *
- * Centralized Framer Motion variants, easings, and transition presets.
- * Import these instead of re-defining animation configs in every component.
- *
- * Usage:
- *   import { fadeSlideUp, stagger, easeQuart } from '@/lib/motion';
- */
+export const MOTION_DURATION = {
+  fast: 0.16,
+  standard: 0.24,
+  deliberate: 0.32,
+} as const;
 
-/* ─── Easing Curves ─── */
-
-/** Smooth, confident deceleration — the project's signature easing */
+export const MOTION_EASE_OUT = [0.16, 1, 0.3, 1] as const;
 export const easeQuart = [0.25, 1, 0.5, 1] as const;
-
-/** Slightly snappier variant for small/fast animations */
-export const easeQuint = [0.22, 1, 0.36, 1] as const;
-
-/* ─── Transition Presets ─── */
-
-/** Standard entrance transition (500ms) */
-export const enterTransition = { duration: 0.5, ease: easeQuart };
-
-/** Fast feedback transition (300ms) — for forms, toggles */
-export const feedbackTransition = { duration: 0.3, ease: easeQuart };
-
-/** Quick micro-interaction (200ms) */
-export const microTransition = { duration: 0.2, ease: easeQuart };
-
-/** Exit transition — 75% of entrance duration */
-export const exitTransition = { duration: 0.25, ease: easeQuart };
-
-/* ─── Variant Presets ─── */
-
-/** Fade + slide up — the most common entrance pattern */
-export const fadeSlideUp = {
-  hidden: { opacity: 0, y: 18 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: enterTransition,
-  },
-};
-
-/** Fade + slide up + subtle scale — for cards */
-export const fadeScaleUp = {
-  hidden: { opacity: 0, y: 14, scale: 0.97 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: enterTransition,
-  },
-};
-
-/** Parent container stagger — wraps children with fadeSlideUp/fadeScaleUp */
-export const stagger = (delayMs = 100) => ({
-  hidden: {},
-  show: { transition: { staggerChildren: delayMs / 1000 } },
-});
-
-/** Creates a staggered card variant with custom per-item delay */
-export const staggeredCard = (delayPerItem = 0.08) => ({
-  hidden: { opacity: 0, y: 14, scale: 0.97 },
-  show: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { delay: i * delayPerItem, duration: 0.45, ease: easeQuart },
-  }),
-});
-
-/** Exit animation — scale down + fade */
+export const feedbackTransition = {
+  duration: MOTION_DURATION.fast,
+  ease: MOTION_EASE_OUT,
+} as const;
 export const exitScale = {
   opacity: 0,
-  scale: 0.95,
-  transition: exitTransition,
-};
-
-/** Expand/collapse for forms and drawers */
-export const expandCollapse = {
-  initial: { opacity: 0, height: 0 },
-  animate: { opacity: 1, height: 'auto' as const },
-  exit: { opacity: 0, height: 0 },
+  scale: 0.98,
   transition: feedbackTransition,
-};
+} as const;
+export const fadeSlideUp = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: MOTION_DURATION.standard,
+      ease: MOTION_EASE_OUT,
+    },
+  },
+} as const;
+
+export function enterTransition(reduced: boolean | null) {
+  return reduced
+    ? { duration: 0 }
+    : {
+        duration: MOTION_DURATION.standard,
+        ease: MOTION_EASE_OUT,
+      };
+}
+
+export function enterFromY(reduced: boolean | null, distance = 12) {
+  return {
+    initial: reduced ? false : { opacity: 0, y: distance },
+    animate: { opacity: 1, y: 0 },
+    exit: reduced ? { opacity: 0 } : { opacity: 0, y: distance },
+    transition: enterTransition(reduced),
+  } as const;
+}

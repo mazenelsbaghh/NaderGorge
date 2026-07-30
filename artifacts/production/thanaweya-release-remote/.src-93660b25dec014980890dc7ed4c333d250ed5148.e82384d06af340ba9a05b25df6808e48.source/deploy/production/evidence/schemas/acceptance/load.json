@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "releaseId", "capturedAt", "durationSeconds", "baselineMultiplier", "errorRate", "p95Milliseconds", "p99Milliseconds", "droppedIterationRate", "healthyNodeCount", "sourceEvidenceSha256"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "status": {"enum": ["success", "failed"]},
+    "releaseId": {"type": "string", "pattern": "^(?:git-[0-9a-f]{7,40}|src-[0-9a-f]{40})$"},
+    "capturedAt": {"type": "string", "format": "date-time"},
+    "durationSeconds": {"type": "number", "minimum": 0},
+    "baselineMultiplier": {"type": "number", "minimum": 0},
+    "errorRate": {"type": "number", "minimum": 0, "maximum": 1},
+    "p95Milliseconds": {"type": "number", "minimum": 0},
+    "p99Milliseconds": {"type": "number", "minimum": 0},
+    "droppedIterationRate": {"type": "number", "minimum": 0, "maximum": 1},
+    "healthyNodeCount": {"type": "integer", "minimum": 0, "maximum": 3},
+    "sourceEvidenceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

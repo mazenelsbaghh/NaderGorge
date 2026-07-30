@@ -9,6 +9,10 @@ public class OutboxEvent : BaseEntity
     public string? TargetGroup { get; set; }
     public string? TargetUserId { get; set; }
     public DateTime? ProcessedAt { get; set; }
+    public string? ClaimedBy { get; set; }
+    public DateTime? ClaimedAt { get; set; }
+    public DateTime? LeaseExpiresAt { get; set; }
+    public DateTime? NextAttemptAt { get; set; }
     public int RetryCount { get; set; } = 0;
     public string? LastError { get; set; }
     public bool IsDeadLetter { get; set; } = false;

@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, BookOpenText, PlaySquare, FileText, ClipboardList, BookCheck, MessageSquareText } from "lucide-react";
-import { AdminStatCard, AdminTabBar, AdminTab, AddVideoForm, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { AdminStatCard, AdminTabBar, AdminTab, LessonVideoList, AddResourceForm, LessonResourceList, UnifiedAssessmentBuilder, AdminPageSkeleton, LessonCommentsModerationTab, EntityOverviewDashboard, AttachedExamViewer, AttachedHomeworkViewer } from "@/components/admin";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { adminService, type LessonCockpitDto } from "@/services/admin-service";
+import { teacherService } from "@/services/teacher-service";
 import toast from "react-hot-toast";
 
 type ActiveTab = "overview" | "videos" | "resources" | "homework" | "exam" | "comments";
@@ -44,20 +45,20 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
 
   if (loading) {
     return (
-      <TeacherShellChrome
+      <TeacherPage
         activePath="/teacher/packages"
         sectionLabel="إدارة المحتوى"
         pageTitle="جاري التحميل..."
         subtitle="الرجاء الانتظار"
       >
         <AdminPageSkeleton />
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
   if (!lesson) {
      return (
-        <TeacherShellChrome
+        <TeacherPage
             activePath="/teacher/packages"
             sectionLabel="إدارة المحتوى"
             pageTitle="خطأ"
@@ -66,12 +67,12 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
             <div className="p-8 text-center text-[var(--admin-muted)]">
                 لا يمكن العثور على الحصة المطلوبة
             </div>
-        </TeacherShellChrome>
+        </TeacherPage>
      )
   }
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى ▸ الحصص"
       pageTitle={lesson.title}
@@ -106,13 +107,21 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
       {activeTab === "videos" && (
         <div className="space-y-6">
           <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
-            <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة فيديو جديد</h3>
-            <AddVideoForm lessonId={lesson.lessonId} onSuccess={loadData} />
-          </div>
-          
-          <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
-            <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)]">الفيديوهات المرفقة ({lesson.videos?.length || 0})</h3>
-            <LessonVideoList videos={lesson.videos || []} lessonId={lesson.lessonId} onRefresh={loadData} />
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-bold text-[var(--admin-text)]">فيديوهات الحصة ({lesson.videos?.length || 0})</h3>
+                <p className="mt-1 text-sm font-medium text-[var(--admin-muted)]">
+                  الفيديوهات تظهر هنا للمتابعة والمعاينة فقط. إضافة أو تغيير مصدر الفيديو تتم من الإدارة.
+                </p>
+              </div>
+            </div>
+            <LessonVideoList
+              videos={lesson.videos || []}
+              lessonId={lesson.lessonId}
+              onRefresh={loadData}
+              readOnly
+              showProviderDetails={false}
+            />
           </div>
         </div>
       )}
@@ -122,6 +131,7 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
           lessonId={lesson.lessonId}
           pendingCount={lesson.commentsSummary?.pending || 0}
           onRefresh={loadData}
+          moderationApi={teacherService}
         />
       )}
 
@@ -142,11 +152,11 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
       {activeTab === "homework" && (
         <div className="space-y-6">
           {lesson.homework && lesson.homework.length > 0 ? (
-            <AttachedHomeworkViewer homeworkId={lesson.homework[0].id} />
+            <AttachedHomeworkViewer homeworkId={lesson.homework[0].id} surface="teacher" />
           ) : (
             <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
               <h3 className="mb-4 text-xl font-bold text-[var(--admin-text)]">إضافة واجب جديد</h3>
-              <UnifiedAssessmentBuilder type="homework" lessonId={lesson.lessonId} onSuccess={loadData} />
+              <UnifiedAssessmentBuilder type="homework" lessonId={lesson.lessonId} onSuccess={loadData} surface="teacher" />
             </div>
           )}
         </div>
@@ -157,31 +167,21 @@ export default function TeacherLessonProfilePageClient(props: { params: { id: st
           {lesson.examId ? (
             <AttachedExamViewer 
               examId={lesson.examId} 
-              onUnlink={async () => {
-                if (confirm('هل أنت متأكد من إلغاء ربط هذا الامتحان بالحصة؟')) {
-                  try {
-                    await adminService.linkLessonExam(lesson.lessonId, null);
-                    toast.success('تم إلغاء ربط الامتحان بنجاح');
-                    loadData();
-                  } catch {
-                    toast.error('أخفق إلغاء ربط الامتحان');
-                  }
-                }
-              }}
+              surface="teacher"
             />
           ) : (
             <>
               <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-8 shadow-sm">
                 <h3 className="mb-6 text-xl font-bold text-[var(--admin-text)] flex items-center gap-3">
                   <BookCheck className="h-6 w-6 text-[var(--admin-primary)]" />
-                  إنشاء امتحان مدمج
+                  إنشاء امتحان للحصة
                 </h3>
-                <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} forceTargetType="Lesson" />
+                <UnifiedAssessmentBuilder type="exam" lessonId={lesson.lessonId} videos={lesson.videos || []} onSuccess={loadData} forceTargetType="Lesson" surface="teacher" />
               </div>
             </>
           )}
         </div>
       )}
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

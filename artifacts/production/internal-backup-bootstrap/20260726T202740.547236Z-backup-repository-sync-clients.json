@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "ec4c2d20-8f4b-4d92-9cac-3e321bab78ac",
+  "command": "backup-repository-sync-clients",
+  "startedAt": "2026-07-26T20:27:40.547236Z",
+  "completedAt": "2026-07-26T20:27:40.547626Z",
+  "status": "failed",
+  "targets": [
+    "node-2"
+  ],
+  "reason": "ERROR: node-2: ssh: connect to host 191.218.161.78 port 22: Operation timed out\nscp: Connection closed"
+}

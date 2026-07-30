@@ -1,0 +1,63 @@
+{
+  "byteParity": true,
+  "capturedAt": "2026-07-29T23:26:54.050307Z",
+  "clusterId": "massar-production",
+  "images": {
+    "backend": "sha256:86dd49735b2b4c93fa0281fea979319bae529c0a84b2901058da8fe35098f784",
+    "frontend": "sha256:27ca8e07bb56ab0fa9794e72d9a5384fcb961a302a997d319f967bc4ea96ebe1",
+    "migrator": "sha256:15942286f7342b25b1789ed2d9c4cf994443b2e0407973d2a1fa18008ad89a17",
+    "worker": "sha256:0b2fde327a57d347ea869eba58b50bee570355dd34e47aad39ed47fe6d81cc75"
+  },
+  "manifestSha256": "ddec11b6372b2b1b8f99a0da52ae52faad01ee0efbe39fb3481d1c984892e637",
+  "nodeCount": 3,
+  "nodes": {
+    "node-1": {
+      "actualImages": {
+        "backend": "sha256:86dd49735b2b4c93fa0281fea979319bae529c0a84b2901058da8fe35098f784",
+        "frontend": "sha256:27ca8e07bb56ab0fa9794e72d9a5384fcb961a302a997d319f967bc4ea96ebe1",
+        "migrator": "sha256:15942286f7342b25b1789ed2d9c4cf994443b2e0407973d2a1fa18008ad89a17",
+        "worker": "sha256:0b2fde327a57d347ea869eba58b50bee570355dd34e47aad39ed47fe6d81cc75"
+      },
+      "manifestPath": "/opt/massar/releases/src-d5332d5c11102a01114d0a482841470496787236/manifest.json",
+      "manifestSha256": "ddec11b6372b2b1b8f99a0da52ae52faad01ee0efbe39fb3481d1c984892e637",
+      "nodeLabel": "node-1",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "368f5661513b32be1405ce32c21e334a6209d37d60234cf3637c7f5280700278",
+      "releaseRoot": "/opt/massar/releases/src-d5332d5c11102a01114d0a482841470496787236",
+      "resolutionMode": "current-pointer"
+    },
+    "node-2": {
+      "actualImages": {
+        "backend": "sha256:86dd49735b2b4c93fa0281fea979319bae529c0a84b2901058da8fe35098f784",
+        "frontend": "sha256:27ca8e07bb56ab0fa9794e72d9a5384fcb961a302a997d319f967bc4ea96ebe1",
+        "migrator": "sha256:15942286f7342b25b1789ed2d9c4cf994443b2e0407973d2a1fa18008ad89a17",
+        "worker": "sha256:0b2fde327a57d347ea869eba58b50bee570355dd34e47aad39ed47fe6d81cc75"
+      },
+      "manifestPath": "/opt/massar/releases/src-d5332d5c11102a01114d0a482841470496787236/manifest.json",
+      "manifestSha256": "ddec11b6372b2b1b8f99a0da52ae52faad01ee0efbe39fb3481d1c984892e637",
+      "nodeLabel": "node-2",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "368f5661513b32be1405ce32c21e334a6209d37d60234cf3637c7f5280700278",
+      "releaseRoot": "/opt/massar/releases/src-d5332d5c11102a01114d0a482841470496787236",
+      "resolutionMode": "current-pointer"
+    },
+    "node-3": {
+      "actualImages": {
+        "backend": "sha256:86dd49735b2b4c93fa0281fea979319bae529c0a84b2901058da8fe35098f784",
+        "frontend": "sha256:27ca8e07bb56ab0fa9794e72d9a5384fcb961a302a997d319f967bc4ea96ebe1",
+        "migrator": "sha256:15942286f7342b25b1789ed2d9c4cf994443b2e0407973d2a1fa18008ad89a17",
+        "worker": "sha256:0b2fde327a57d347ea869eba58b50bee570355dd34e47aad39ed47fe6d81cc75"
+      },
+      "manifestPath": "/opt/massar/releases/src-d5332d5c11102a01114d0a482841470496787236/manifest.json",
+      "manifestSha256": "ddec11b6372b2b1b8f99a0da52ae52faad01ee0efbe39fb3481d1c984892e637",
+      "nodeLabel": "node-3",
+      "releaseFilesDigestVerified": true,
+      "releaseFilesSha256": "368f5661513b32be1405ce32c21e334a6209d37d60234cf3637c7f5280700278",
+      "releaseRoot": "/opt/massar/releases/src-d5332d5c11102a01114d0a482841470496787236",
+      "resolutionMode": "current-pointer"
+    }
+  },
+  "releaseId": "src-d5332d5c11102a01114d0a482841470496787236",
+  "schemaVersion": 1,
+  "status": "success"
+}

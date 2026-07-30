@@ -1,0 +1,11 @@
+{
+  "action": "prepare",
+  "candidateDatabase": "massar_platform_candidate_20260727_175858",
+  "completedAt": "2026-07-27T17:59:19.939021Z",
+  "operationId": "92443107-e69f-476e-a8d1-1dad8378f1f1",
+  "reason": "database name does not match the approved timestamped pattern",
+  "result": "safe-refusal",
+  "schemaVersion": 1,
+  "startedAt": "2026-07-27T17:59:19.938884Z",
+  "writesOpened": false
+}

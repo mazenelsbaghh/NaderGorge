@@ -31,11 +31,6 @@ object BackgroundSyncScheduler {
         )
     }
 
-    fun cancel(context: Context) {
-        WorkManager.getInstance(context).cancelUniqueWork(STATUS_SYNC_WORK_NAME)
-        stopRealtimeService(context)
-    }
-
     fun startRealtimeService(context: Context) {
         try {
             ContextCompat.startForegroundService(
@@ -49,5 +44,10 @@ object BackgroundSyncScheduler {
 
     fun stopRealtimeService(context: Context) {
         context.stopService(Intent(context, RealtimeSyncService::class.java))
+    }
+
+    fun cancel(context: Context) {
+        WorkManager.getInstance(context).cancelUniqueWork(STATUS_SYNC_WORK_NAME)
+        stopRealtimeService(context)
     }
 }

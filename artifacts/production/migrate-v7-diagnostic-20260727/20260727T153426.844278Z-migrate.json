@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "461a613f-ed19-4b17-a390-553fc218fd4d",
+  "command": "migrate",
+  "startedAt": "2026-07-27T15:34:26.844278Z",
+  "completedAt": "2026-07-27T15:34:26.844746Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "migration blocked: clean audit or production migration gate failed: MASSAR_MIGRATION_FAILURE stage=verify-pre-migration-hash line=21 status=127"
+}

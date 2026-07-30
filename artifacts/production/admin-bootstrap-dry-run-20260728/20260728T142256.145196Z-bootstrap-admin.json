@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "535e946b-18ea-4d51-853c-227858ea828a",
+  "command": "bootstrap-admin",
+  "startedAt": "2026-07-28T14:22:56.145196Z",
+  "completedAt": "2026-07-28T14:22:56.145315Z",
+  "status": "dry-run",
+  "targets": [
+    "node-1"
+  ],
+  "reason": null
+}

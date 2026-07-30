@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-27T03:55:04.413505Z",
+  "status": "success",
+  "isolated": true,
+  "container": "massar-legacy-stage-166",
+  "hostPort": 58814,
+  "migrationCount": 129,
+  "latestMigration": "20260726182136_EnsureSystemRoles",
+  "unvalidatedConstraintCount": 0,
+  "invalidIndexCount": 0,
+  "userCount": 63,
+  "resetTables": [
+    "refresh_tokens",
+    "devices",
+    "ParentDeviceTokens",
+    "outbox_events",
+    "web_vitals_metrics",
+    "VideoPlaybackSessions",
+    "cluster_leases",
+    "hr_idempotency_records"
+  ],
+  "fileCounts": {
+    "assets": 334,
+    "protected": 1
+  },
+  "passwordPersisted": false
+}

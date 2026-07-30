@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "66c9a457-2194-40c7-80a7-ce3ffe6f160d",
+  "command": "build",
+  "startedAt": "2026-07-28T23:28:29.630545Z",
+  "completedAt": "2026-07-28T23:28:29.630813Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "Command '['docker', 'build', '--pull', '--platform', 'linux/amd64', '--tag', 'massar/backend:src-93660b25dec014980890dc7ed4c333d250ed5148', '--file', '/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/thanaweya-release/.src-93660b25dec014980890dc7ed4c333d250ed5148.db34f26128e74f2e982c06f9dbb82bda.source/backend/Dockerfile', '/Users/mazenelsbagh/mazen mac/apps/nader gorge/artifacts/production/thanaweya-release/.src-93660b25dec014980890dc7ed4c333d250ed5148.db34f26128e74f2e982c06f"
+}

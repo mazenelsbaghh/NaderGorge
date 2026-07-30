@@ -1,16 +1,13 @@
-'use client';
-
-import { AdminPageSkeleton, AdminShellChrome } from '@/components/admin';
+import { AdminPageSkeleton } from '@/components/admin';
+import { AsyncRegionState } from '@/components/ui/AsyncRegionState';
 
 export default function AdminLoading() {
   return (
-    <AdminShellChrome
-      activePath="/admin"
-      sectionLabel="لوحة الإدارة"
-      pageTitle="جاري تحميل الصفحة"
-      subtitle="يتم تجهيز بيانات القسم الآن."
+    <AsyncRegionState
+      status="loading"
+      message="جاري تحميل محتوى الإدارة"
     >
       <AdminPageSkeleton />
-    </AdminShellChrome>
+    </AsyncRegionState>
   );
 }

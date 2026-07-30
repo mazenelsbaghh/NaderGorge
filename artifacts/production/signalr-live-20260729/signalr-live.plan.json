@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "signalr-live-20260729",
+  "releaseId": "src-4b029ab0cec2cbd9c6653ac22cf5e3d0fca6eabb",
+  "baselineRps": 1,
+  "profile": "steady",
+  "excludedNode": null,
+  "expectedNodes": ["node-1", "node-2", "node-3"],
+  "stages": [
+    {
+      "sequence": 1,
+      "requestedRps": 1,
+      "duration": "30s",
+      "runId": "signalr-live-001"
+    }
+  ]
+}

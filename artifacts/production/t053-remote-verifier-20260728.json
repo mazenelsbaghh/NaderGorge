@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "operation": "t053-isolated-remote-verification",
+  "status": "pass",
+  "node": "node-1",
+  "localBuildUsed": false,
+  "productionSecretsUsed": false,
+  "productionDataServicesMutated": false,
+  "isolatedInfrastructure": {
+    "postgresql": "16-alpine",
+    "migrationsApplied": 129,
+    "redisMasterCount": 1,
+    "sentinelCount": 3
+  },
+  "testResult": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "signalRCrossNode": "pass",
+    "outboxReplayStableIdentity": "pass",
+    "leaseFencing": "pass",
+    "sentinelDiscovery": "pass"
+  },
+  "cleanup": {
+    "containersRemoved": true,
+    "networkRemoved": true,
+    "sourceStagingRemoved": true
+  },
+  "postVerificationClusterStatus": "success",
+  "postVerificationStatusEvidence": "artifacts/production/20260728T145130.684071Z-status.json"
+}

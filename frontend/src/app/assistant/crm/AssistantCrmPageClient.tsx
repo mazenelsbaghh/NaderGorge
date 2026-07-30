@@ -1,13 +1,13 @@
 'use client';
 
-import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
+import { AssistantPage } from '@/components/assistant/AssistantShellChrome';
 import { CrmStudentQueue } from '@/components/crm/CrmStudentQueue';
 import { NavRouteGuard } from '@/components/layout/NavRouteGuard';
 
 export default function AssistantCrmPageClient() {
   return (
     <NavRouteGuard routePath="/assistant/crm" permission="crm.manage">
-      <AssistantShellChrome
+      <AssistantPage
         activePath="/assistant/crm"
         sectionLabel="متابعة الطلاب"
         pageTitle="قائمة الاتصال اليومية"
@@ -16,8 +16,7 @@ export default function AssistantCrmPageClient() {
         <div className="space-y-8 animate-[fadeIn_0.4s_ease-out]" dir="rtl">
           <CrmStudentQueue mode="agent" />
         </div>
-      </AssistantShellChrome>
+      </AssistantPage>
     </NavRouteGuard>
   );
 }
-

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "971fdef9-9dcc-4759-95cb-eae15395c6ab",
+  "command": "rollback",
+  "startedAt": "2026-07-28T12:40:03.299959Z",
+  "completedAt": "2026-07-28T12:40:03.300469Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

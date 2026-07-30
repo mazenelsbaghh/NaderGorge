@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "590d3452-92ab-45b6-bf2a-b458a0d93a24",
+  "command": "deploy",
+  "startedAt": "2026-07-27T15:42:42.066358Z",
+  "completedAt": "2026-07-27T15:42:42.066742Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "deployment blocked: another rollout owns the global Production lock"
+}

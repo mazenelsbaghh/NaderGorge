@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "88346efc-49b0-4f19-86b4-dca5a22d483c",
+  "command": "backup-schedules-activate",
+  "startedAt": "2026-07-26T21:16:55.985159Z",
+  "completedAt": "2026-07-26T21:16:55.985528Z",
+  "status": "success",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": null
+}

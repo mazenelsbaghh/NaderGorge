@@ -1,8 +1,14 @@
 package com.nadergorge.paymentlistener
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,6 +38,7 @@ class MainActivity : ComponentActivity() {
         if (!prefManager.getServerUrl().isNullOrBlank() && !prefManager.getPairingToken().isNullOrBlank()) {
             BackgroundSyncScheduler.schedule(this)
             BackgroundSyncScheduler.startRealtimeService(this)
+            requestBatteryOptimizationBypassIfNeeded()
         }
 
         setContent {
@@ -81,12 +88,7 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(currentScreen) {
                         if (currentScreen == "dashboard" && !hasSmsPermission) {
-                            permissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.RECEIVE_SMS,
-                                    Manifest.permission.READ_SMS
-                                )
-                            )
+                            permissionLauncher.launch(requiredRuntimePermissions())
                         }
                     }
 
@@ -97,6 +99,7 @@ class MainActivity : ComponentActivity() {
                                 onSetupSuccess = {
                                     BackgroundSyncScheduler.schedule(this)
                                     BackgroundSyncScheduler.startRealtimeService(this)
+                                    requestBatteryOptimizationBypassIfNeeded()
                                     currentScreen = "dashboard"
                                 }
                             )
@@ -113,12 +116,7 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 PermissionRequiredScreen(
                                     onRequestPermission = {
-                                        permissionLauncher.launch(
-                                            arrayOf(
-                                                Manifest.permission.RECEIVE_SMS,
-                                                Manifest.permission.READ_SMS
-                                            )
-                                        )
+                                        permissionLauncher.launch(requiredRuntimePermissions())
                                     }
                                 )
                             }
@@ -126,6 +124,34 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun requiredRuntimePermissions(): Array<String> {
+        val permissions = mutableListOf(
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_SMS
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions += Manifest.permission.POST_NOTIFICATIONS
+        }
+
+        return permissions.toTypedArray()
+    }
+
+    private fun requestBatteryOptimizationBypassIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (powerManager.isIgnoringBatteryOptimizations(packageName)) return
+
+        runCatching {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.parse("package:$packageName")
+                }
+            )
         }
     }
 }

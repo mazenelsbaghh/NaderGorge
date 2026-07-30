@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpenText, ChevronRight } from "lucide-react";
 import { AdminPageSkeleton, AdminTabBar, AdminTab, ContentImageUpload, EntityOverviewDashboard } from "@/components/admin";
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { ContentHierarchyPanel, HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
 import { adminService } from "@/services/admin-service";
 import { contentService, LessonSummaryDto } from "@/services/content-service";
@@ -58,22 +58,22 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
 
   if (sectionLoading) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="جاري التحميل..." subtitle="">
         <AdminPageSkeleton />
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
   if (!section) {
     return (
-      <TeacherShellChrome activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="القسم غير موجود">
+      <TeacherPage activePath="/teacher/packages" sectionLabel="إدارة المحتوى" pageTitle="خطأ" subtitle="القسم غير موجود">
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
           <p className="text-[var(--admin-muted)]">لا يمكن العثور على القسم المطلوب.</p>
           <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
             <ChevronRight className="h-4 w-4" /> عودة
           </NeumorphButton>
         </div>
-      </TeacherShellChrome>
+      </TeacherPage>
     );
   }
 
@@ -87,7 +87,7 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
   }));
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/packages"
       sectionLabel="إدارة المحتوى ▸ الباقات ▸ الأترام ▸ الأقسام"
       pageTitle={section.title}
@@ -143,6 +143,6 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
           />
         </div>
       )}
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

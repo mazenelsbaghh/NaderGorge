@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "surfaces": {
+    "public": "massar-academy.net",
+    "student": "app.massar-academy.net",
+    "admin": "admin.massar-academy.net",
+    "teacher": "teacher.massar-academy.net",
+    "staff": "staff.massar-academy.net",
+    "api": "api.massar-academy.net",
+    "websocket": "ws.massar-academy.net",
+    "assets": "assets.massar-academy.net"
+  },
+  "workflows": [
+    {
+      "id": "all-eight-host-ingress",
+      "surface": "all",
+      "description": "Every approved hostname routes to the intended surface with node and immutable release identity.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "deploy/production/tests/test_domain_contract.py",
+          "marker": "test_exact_domain_surface_contract_is_consistent_everywhere"
+        },
+        {
+          "path": "frontend/tests/e2e/production-domain.spec.ts",
+          "marker": "serves through cluster ingress"
+        }
+      ]
+    },
+    {
+      "id": "public-landing-navigation",
+      "surface": "public",
+      "description": "Anonymous visitor can load and navigate the public landing surface.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "deploy/production/tests/test_app_topology.py",
+          "marker": "test_every_node_runs_the_complete_application_stack"
+        },
+        {
+          "path": "frontend/tests/e2e/production-domain.spec.ts",
+          "marker": "https://massar-academy.net"
+        }
+      ]
+    },
+    {
+      "id": "student-login-navigation",
+      "surface": "student",
+      "description": "A real student logs in on the student host and reaches enrolled content and dashboard navigation.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/auth.spec.ts",
+          "marker": "Successful login with valid seeded student"
+        },
+        {
+          "path": "frontend/tests/e2e/student-journey.spec.ts",
+          "marker": "Student dashboard loads correctly"
+        }
+      ]
+    },
+    {
+      "id": "admin-login-authorized-flow",
+      "surface": "admin",
+      "description": "A real Admin logs in on the Admin host, receives the secure parent-domain cookie, and opens an authorized Admin workflow.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/admin-content.spec.ts",
+          "marker": "Create Package, Section, Lesson, and Video"
+        },
+        {
+          "path": "frontend/tests/e2e/production-domain.spec.ts",
+          "marker": "Admin login emits one secure parent-domain refresh cookie"
+        }
+      ]
+    },
+    {
+      "id": "teacher-login-authorized-flow",
+      "surface": "teacher",
+      "description": "A real teacher logs in on the teacher host, opens owned content, and is denied another teacher's content.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/teacher-isolation.spec.ts",
+          "marker": "Teacher A can access their own package"
+        },
+        {
+          "path": "frontend/tests/e2e/teacher-isolation.spec.ts",
+          "marker": "Teacher B is blocked from accessing Teacher A"
+        }
+      ]
+    },
+    {
+      "id": "staff-login-authorized-flow",
+      "surface": "staff",
+      "description": "A real staff/assistant user logs in on the staff host and completes one permitted workflow while a missing permission is denied.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/assistant-dashboard.spec.ts",
+          "marker": "Assistant resolves a pending submission"
+        },
+        {
+          "path": "frontend/tests/e2e/assistant-dashboard.spec.ts",
+          "marker": "Assistant without crm.manage is blocked"
+        }
+      ]
+    },
+    {
+      "id": "api-live-ready-cors-identity",
+      "surface": "api",
+      "description": "API liveness/readiness, CORS, node identity, and immutable release identity are correct.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "backend/tests/NaderGorge.Application.Tests/ClusterHealthContractTests.cs",
+          "marker": "LiveContract_ContainsStableStatusNodeReleaseAndTimestamp"
+        },
+        {
+          "path": "frontend/tests/e2e/production-domain.spec.ts",
+          "marker": "API liveness, CORS, and identity are stable"
+        }
+      ]
+    },
+    {
+      "id": "api-authenticated-write-read-cross-node",
+      "surface": "api",
+      "description": "An authenticated write is acknowledged and read back through a different serving node without duplicate effect.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/comprehensive-features.spec.ts",
+          "marker": "Student Theme Preference - Retrieve and Update"
+        },
+        {
+          "path": "backend/tests/NaderGorge.Application.Tests/OutboxProcessorTests.cs",
+          "marker": "OutboxProcessorTests"
+        }
+      ]
+    },
+    {
+      "id": "websocket-authenticated-handshake-reconnect",
+      "surface": "websocket",
+      "description": "An authenticated SignalR client negotiates, upgrades, handshakes, reconnects, and rejoins its active group.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/production-domain.spec.ts",
+          "marker": "authenticated WebSocket completes the SignalR handshake"
+        },
+        {
+          "path": "frontend/tests/e2e/signalr-events.spec.ts",
+          "marker": "student reconnects and rejoins the active lesson group"
+        }
+      ]
+    },
+    {
+      "id": "websocket-cross-node-event",
+      "surface": "websocket",
+      "description": "Two authenticated clients pinned to different nodes receive the same application event exactly once.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "backend/tests/NaderGorge.Integration.Tests/ClusterCoordinationTests.cs",
+          "marker": "ClusterCoordinationTests"
+        },
+        {
+          "path": "frontend/tests/e2e/signalr-events.spec.ts",
+          "marker": "SignalR listener registry safety"
+        }
+      ]
+    },
+    {
+      "id": "public-asset-read",
+      "surface": "assets",
+      "description": "A known public asset is readable with approved CORS/cache headers and byte-stable content.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "backend/tests/NaderGorge.Integration.Tests/SharedFileStorageTests.cs",
+          "marker": "WriteReadDelete_IsAtomicAndReturnsChecksum"
+        },
+        {
+          "path": "deploy/production/tests/test_app_topology.py",
+          "marker": "test_node_gateway_has_exact_surface_routes_and_private_asset_denials"
+        }
+      ]
+    },
+    {
+      "id": "protected-asset-authorization",
+      "surface": "assets",
+      "description": "Anonymous access is denied, authorized signed download succeeds, expired or traversal input fails.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "backend/tests/NaderGorge.Application.Tests/SecureDownloadTests.cs",
+          "marker": "SignDownload_ShouldReturn403_WhenAccessDenied"
+        },
+        {
+          "path": "frontend/tests/e2e/production-domain.spec.ts",
+          "marker": "protected assets cannot be fetched anonymously"
+        }
+      ]
+    },
+    {
+      "id": "valid-upload-cross-node-read-delete",
+      "surface": "assets",
+      "description": "A valid public and protected upload is published through each app node, read byte-identically through every node, then deleted.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "backend/tests/NaderGorge.Integration.Tests/SharedFileStorageTests.cs",
+          "marker": "WriteReadDelete_IsAtomicAndReturnsChecksum"
+        },
+        {
+          "path": "backend/tests/NaderGorge.Application.Tests/Security/UploadsAndAssetsSecurityTests.cs",
+          "marker": "Validate_AcceptsRealPdfHeader"
+        }
+      ]
+    },
+    {
+      "id": "invalid-upload-not-published",
+      "surface": "assets",
+      "description": "Invalid content is rejected before publication and a failed write leaves no destination or temporary artifact.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/production-domain.spec.ts",
+          "marker": "authenticated multipart upload reaches API validation without publishing a file"
+        },
+        {
+          "path": "backend/tests/NaderGorge.Integration.Tests/SharedFileStorageTests.cs",
+          "marker": "FailedWrite_RemovesTemporaryFileAndDoesNotPublishDestination"
+        }
+      ]
+    },
+    {
+      "id": "wrong-role-and-permission-denial",
+      "surface": "all",
+      "description": "Student, teacher, and staff users cannot enter unauthorized surfaces or execute missing permissions.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": false,
+      "coverage": [
+        {
+          "path": "frontend/tests/e2e/auth.spec.ts",
+          "marker": "Prevent Student from accessing Admin"
+        },
+        {
+          "path": "frontend/tests/e2e/auth.spec.ts",
+          "marker": "Prevent Teacher from accessing Admin"
+        },
+        {
+          "path": "frontend/tests/e2e/assistant-dashboard.spec.ts",
+          "marker": "Assistant without crm.manage is blocked"
+        }
+      ]
+    },
+    {
+      "id": "three-node-distribution-and-drain",
+      "surface": "all",
+      "description": "Traffic reaches all three nodes, then excludes exactly one drained node while the other two keep serving.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "deploy/production/tests/test_app_distribution.py",
+          "marker": "test_300_requests_reach_all_three_nodes"
+        },
+        {
+          "path": "deploy/production/tests/test_app_distribution.py",
+          "marker": "test_drained_app_is_removed_while_two_nodes_keep_serving"
+        }
+      ]
+    },
+    {
+      "id": "single-node-and-data-leader-loss-continuity",
+      "surface": "all",
+      "description": "Login, navigation, WebSocket, upload, acknowledged writes, DB, Redis, and storage remain correct during one bounded failure at a time.",
+      "localAutomated": true,
+      "credentialGated": true,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "deploy/production/tests/test_postgres_failover.py",
+          "marker": "test_failover_drill_preserves_acknowledged_write_and_rejoins_old_primary"
+        },
+        {
+          "path": "deploy/production/tests/test_redis_failover.py",
+          "marker": "test_redis_drill_resolves_current_master_preserves_data_and_rejoins_replica"
+        },
+        {
+          "path": "deploy/production/tests/test_file_failover.py",
+          "marker": "cleanup"
+        }
+      ]
+    },
+    {
+      "id": "external-port-origin-wrong-host-denial",
+      "surface": "all",
+      "description": "Internal service ports, direct origin, and wrong Host are denied from an external vantage point.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": true,
+      "coverage": [
+        {
+          "path": "deploy/production/tests/test_origin_exposure.py",
+          "marker": "test_public_origins_expose_only_reviewed_ssh"
+        },
+        {
+          "path": "deploy/production/tests/test_app_topology.py",
+          "marker": "deny_status 421"
+        }
+      ]
+    },
+    {
+      "id": "admin-bootstrap-no-stale-material",
+      "surface": "admin",
+      "description": "First Admin creation is parameterized and no password or temporary bootstrap material remains in arguments, logs, or tracked files.",
+      "localAutomated": true,
+      "credentialGated": false,
+      "infrastructureGated": false,
+      "coverage": [
+        {
+          "path": "deploy/production/tests/test_database_tools.py",
+          "marker": "test_admin_wrapper_uses_no_echo_and_never_passes_password_as_argument"
+        },
+        {
+          "path": "deploy/production/tests/test_no_tracked_secrets.py",
+          "marker": "literal password assignment"
+        }
+      ]
+    }
+  ]
+}

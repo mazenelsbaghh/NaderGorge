@@ -1,0 +1,1654 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-27T06:22:28.200096Z",
+  "status": "STAGING_POLICY_APPROVED",
+  "policyDecision": "PRESERVE_ALL_DURABLE_STATE",
+  "policyVersion": 2,
+  "directProductionImportAllowed": false,
+  "legacyMigrationCount": 125,
+  "legacyLatestMigration": "20260725120000_AddEmployeeBreakControls",
+  "productionMigrationCount": 125,
+  "productionLatestMigration": "20260726160804_AlignProductionModel",
+  "schemaMatch": false,
+  "productionMigrationsMissingFromLegacy": [
+    "20260726120000_HardenProductionBootstrapData",
+    "20260726160804_AlignProductionModel"
+  ],
+  "tables": [
+    {
+      "table": "ExtraWatchRequests",
+      "legacyRows": 23,
+      "productionRows": 0,
+      "delta": 23,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "ParentDeviceTokens",
+      "legacyRows": 13,
+      "productionRows": 0,
+      "delta": 13,
+      "classification": "DURABLE_PRESERVE",
+      "candidateAction": "PRESERVE"
+    },
+    {
+      "table": "PlatformSettings",
+      "legacyRows": 48,
+      "productionRows": 0,
+      "delta": 48,
+      "classification": "REFERENCE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "StudentNotes",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "VideoPlaybackSessions",
+      "legacyRows": 304,
+      "productionRows": 0,
+      "delta": 304,
+      "classification": "RESET_ON_IMPORT",
+      "candidateAction": "RESET"
+    },
+    {
+      "table": "__EFMigrationsHistory",
+      "legacyRows": 125,
+      "productionRows": 125,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "academic_subject_eligibilities",
+      "legacyRows": 8,
+      "productionRows": 0,
+      "delta": 8,
+      "classification": "REFERENCE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "access_code_activation_logs",
+      "legacyRows": 6,
+      "productionRows": 0,
+      "delta": 6,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "access_codes",
+      "legacyRows": 317,
+      "productionRows": 0,
+      "delta": 317,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "assistant_tasks",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "attendance_logs",
+      "legacyRows": 12,
+      "productionRows": 0,
+      "delta": 12,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "audit_logs",
+      "legacyRows": 551,
+      "productionRows": 0,
+      "delta": 551,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "balance_transactions",
+      "legacyRows": 173,
+      "productionRows": 0,
+      "delta": 173,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "bunny_usage_snapshots",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "bunny_video_assets",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "chat_message_read_states",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "chat_messages",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "chat_participants",
+      "legacyRows": 26,
+      "productionRows": 0,
+      "delta": 26,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "chat_rooms",
+      "legacyRows": 9,
+      "productionRows": 0,
+      "delta": 9,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "code_group_delivery_confirmations",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "code_group_financial_terms",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "code_groups",
+      "legacyRows": 53,
+      "productionRows": 0,
+      "delta": 53,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "code_video_targets",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "community_post_comments",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "community_post_likes",
+      "legacyRows": 3,
+      "productionRows": 0,
+      "delta": 3,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "community_post_poll_options",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "community_post_poll_votes",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "community_posts",
+      "legacyRows": 10,
+      "productionRows": 0,
+      "delta": 10,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "content_sections",
+      "legacyRows": 40,
+      "productionRows": 0,
+      "delta": 40,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "crm_call_logs",
+      "legacyRows": 4,
+      "productionRows": 0,
+      "delta": 4,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "crm_student_statuses",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "custom_forms",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "devices",
+      "legacyRows": 207,
+      "productionRows": 0,
+      "delta": 207,
+      "classification": "DURABLE_PRESERVE",
+      "candidateAction": "PRESERVE"
+    },
+    {
+      "table": "digital_wallets",
+      "legacyRows": 5,
+      "productionRows": 0,
+      "delta": 5,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "discount_stacking_policies",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "employee_profiles",
+      "legacyRows": 15,
+      "productionRows": 0,
+      "delta": 15,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "essay_submissions",
+      "legacyRows": 8,
+      "productionRows": 0,
+      "delta": 8,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "exam_questions",
+      "legacyRows": 70,
+      "productionRows": 0,
+      "delta": 70,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "exams",
+      "legacyRows": 43,
+      "productionRows": 0,
+      "delta": 43,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "financial_invoices",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "form_submissions",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "gamification_action_logs",
+      "legacyRows": 51,
+      "productionRows": 0,
+      "delta": 51,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "gift_issuances",
+      "legacyRows": 7,
+      "productionRows": 0,
+      "delta": 7,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "gift_recipients",
+      "legacyRows": 7,
+      "productionRows": 0,
+      "delta": 7,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "homework_answers",
+      "legacyRows": 23,
+      "productionRows": 0,
+      "delta": 23,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "homework_questions",
+      "legacyRows": 15,
+      "productionRows": 0,
+      "delta": 15,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "homework_submissions",
+      "legacyRows": 12,
+      "productionRows": 0,
+      "delta": 12,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "homeworks",
+      "legacyRows": 12,
+      "productionRows": 0,
+      "delta": 12,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_approval_definition_steps",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_approval_definitions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_approval_delegations",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_approval_instances",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_approval_step_instances",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_asset_custodies",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_assets",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_attendance_attempts",
+      "legacyRows": 57,
+      "productionRows": 0,
+      "delta": 57,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_attendance_breaks",
+      "legacyRows": 7,
+      "productionRows": 0,
+      "delta": 7,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_attendance_corrections",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_attendance_policies",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_attendance_policy_assignments",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_attendance_policy_exceptions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_attendance_sessions",
+      "legacyRows": 5,
+      "productionRows": 0,
+      "delta": 5,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_candidate_interviews",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_candidate_offers",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_candidates",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_case_evidence",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_case_responses",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_cost_centers",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_disciplinary_actions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_employee_cases",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_employee_compensations",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_employee_document_versions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_employee_documents",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_employee_lifecycle_tasks",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_employee_payrolls",
+      "legacyRows": 11,
+      "productionRows": 0,
+      "delta": 11,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_employment_assignments",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_employment_contracts",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_financial_installments",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_financial_requests",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_idempotency_records",
+      "legacyRows": 10,
+      "productionRows": 0,
+      "delta": 10,
+      "classification": "DURABLE_PRESERVE",
+      "candidateAction": "PRESERVE"
+    },
+    {
+      "table": "hr_job_grades",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_job_positions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_leave_balances",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_leave_ledger_entries",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_leave_policies",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_leave_requests",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_leave_types",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_migration_batches",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_migration_conflicts",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_migration_record_maps",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_module_rollouts",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_offboarding_processes",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_organization_units",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_pay_components",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_payroll_input_sources",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_payroll_line_items",
+      "legacyRows": 11,
+      "productionRows": 0,
+      "delta": 11,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_payroll_rules",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_payroll_runs",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_payroll_settlement_adjustments",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_payslips",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_performance_cycles",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_performance_goals",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_performance_reviews",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_requisitions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_shift_assignments",
+      "legacyRows": 7,
+      "productionRows": 0,
+      "delta": 7,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_shift_segments",
+      "legacyRows": 10,
+      "productionRows": 0,
+      "delta": 10,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_shift_swap_requests",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_shift_templates",
+      "legacyRows": 10,
+      "productionRows": 0,
+      "delta": 10,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_trusted_attendance_devices",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_work_calendars",
+      "legacyRows": 1,
+      "productionRows": 1,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "hr_work_locations",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "hr_workday_classifications",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "incoming_sms_logs",
+      "legacyRows": 64,
+      "productionRows": 0,
+      "delta": 64,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "lesson_comments",
+      "legacyRows": 15,
+      "productionRows": 0,
+      "delta": 15,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "lesson_progress",
+      "legacyRows": 37,
+      "productionRows": 0,
+      "delta": 37,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "lesson_resources",
+      "legacyRows": 4,
+      "productionRows": 0,
+      "delta": 4,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "lesson_videos",
+      "legacyRows": 74,
+      "productionRows": 0,
+      "delta": 74,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "lessons",
+      "legacyRows": 53,
+      "productionRows": 0,
+      "delta": 53,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_action_executions",
+      "legacyRows": 8,
+      "productionRows": 0,
+      "delta": 8,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_ai_conversation_states",
+      "legacyRows": 80,
+      "productionRows": 0,
+      "delta": 80,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_ai_knowledge_entries",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "live_support_ai_knowledge_revisions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "live_support_ai_pending_actions",
+      "legacyRows": 24,
+      "productionRows": 0,
+      "delta": 24,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_ai_policy_knowledge_revisions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "live_support_ai_policy_versions",
+      "legacyRows": 7,
+      "productionRows": 0,
+      "delta": 7,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_ai_turns",
+      "legacyRows": 148,
+      "productionRows": 0,
+      "delta": 148,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_ai_verification_attempts",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "live_support_ai_verification_policy_questions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "live_support_ai_verification_sessions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "live_support_assignments",
+      "legacyRows": 64,
+      "productionRows": 0,
+      "delta": 64,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_attachments",
+      "legacyRows": 3,
+      "productionRows": 0,
+      "delta": 3,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_conversations",
+      "legacyRows": 88,
+      "productionRows": 0,
+      "delta": 88,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_events",
+      "legacyRows": 1045,
+      "productionRows": 0,
+      "delta": 1045,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_guest_sessions",
+      "legacyRows": 13,
+      "productionRows": 0,
+      "delta": 13,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_messages",
+      "legacyRows": 369,
+      "productionRows": 0,
+      "delta": 369,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_queue_entries",
+      "legacyRows": 108,
+      "productionRows": 0,
+      "delta": 108,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_ratings",
+      "legacyRows": 6,
+      "productionRows": 0,
+      "delta": 6,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_schedule_windows",
+      "legacyRows": 18,
+      "productionRows": 0,
+      "delta": 18,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_staff_configs",
+      "legacyRows": 14,
+      "productionRows": 0,
+      "delta": 14,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "live_support_student_link_history",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "media_production_pipelines",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "notification_events",
+      "legacyRows": 17,
+      "productionRows": 0,
+      "delta": 17,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "outbox_events",
+      "legacyRows": 8708,
+      "productionRows": 1,
+      "delta": 8707,
+      "classification": "DURABLE_PRESERVE",
+      "candidateAction": "PRESERVE"
+    },
+    {
+      "table": "package_code_page_profiles",
+      "legacyRows": 3,
+      "productionRows": 0,
+      "delta": 3,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "packages",
+      "legacyRows": 22,
+      "productionRows": 0,
+      "delta": 22,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "payroll_adjustments",
+      "legacyRows": 2,
+      "productionRows": 0,
+      "delta": 2,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "payroll_records",
+      "legacyRows": 5,
+      "productionRows": 0,
+      "delta": 5,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "printable_code_batches",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "printable_code_redemptions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "printable_code_templates",
+      "legacyRows": 4,
+      "productionRows": 0,
+      "delta": 4,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "printable_sales_codes",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "promotional_balance_allocations",
+      "legacyRows": 6,
+      "productionRows": 0,
+      "delta": 6,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "promotional_balance_usages",
+      "legacyRows": 4,
+      "productionRows": 0,
+      "delta": 4,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "public_exam_products",
+      "legacyRows": 6,
+      "productionRows": 0,
+      "delta": 6,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "question_bank_items",
+      "legacyRows": 70,
+      "productionRows": 0,
+      "delta": 70,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "question_options",
+      "legacyRows": 241,
+      "productionRows": 0,
+      "delta": 241,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "recharge_requests",
+      "legacyRows": 77,
+      "productionRows": 0,
+      "delta": 77,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "refresh_tokens",
+      "legacyRows": 759,
+      "productionRows": 0,
+      "delta": 759,
+      "classification": "DURABLE_PRESERVE",
+      "candidateAction": "PRESERVE"
+    },
+    {
+      "table": "report_definitions",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "roles",
+      "legacyRows": 8,
+      "productionRows": 6,
+      "delta": 2,
+      "classification": "REFERENCE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "sales_coupon_usages",
+      "legacyRows": 8,
+      "productionRows": 0,
+      "delta": 8,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "sales_coupons",
+      "legacyRows": 6,
+      "productionRows": 0,
+      "delta": 6,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "sales_financial_effects",
+      "legacyRows": 38,
+      "productionRows": 0,
+      "delta": 38,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "sales_rules",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "shared_teacher_package_items",
+      "legacyRows": 16,
+      "productionRows": 0,
+      "delta": 16,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "shared_teacher_package_teachers",
+      "legacyRows": 16,
+      "productionRows": 0,
+      "delta": 16,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "shared_teacher_packages",
+      "legacyRows": 8,
+      "productionRows": 0,
+      "delta": 8,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "social_media_plans",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "student_access_grants",
+      "legacyRows": 113,
+      "productionRows": 0,
+      "delta": 113,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_answers",
+      "legacyRows": 161,
+      "productionRows": 0,
+      "delta": 161,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_badges",
+      "legacyRows": 3,
+      "productionRows": 0,
+      "delta": 3,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_balances",
+      "legacyRows": 26,
+      "productionRows": 0,
+      "delta": 26,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_exam_attempts",
+      "legacyRows": 83,
+      "productionRows": 0,
+      "delta": 83,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_facing_academic_scopes",
+      "legacyRows": 71,
+      "productionRows": 0,
+      "delta": 71,
+      "classification": "REFERENCE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_gamifications",
+      "legacyRows": 10,
+      "productionRows": 0,
+      "delta": 10,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_profiles",
+      "legacyRows": 26,
+      "productionRows": 0,
+      "delta": 26,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "student_status_trackers",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "subjects",
+      "legacyRows": 13,
+      "productionRows": 0,
+      "delta": 13,
+      "classification": "REFERENCE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "task_comments",
+      "legacyRows": 7,
+      "productionRows": 0,
+      "delta": 7,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "task_items",
+      "legacyRows": 10,
+      "productionRows": 0,
+      "delta": 10,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_accounts",
+      "legacyRows": 10,
+      "productionRows": 0,
+      "delta": 10,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_financial_agreements",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "teacher_financial_allocations",
+      "legacyRows": 50,
+      "productionRows": 0,
+      "delta": 50,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_financial_events",
+      "legacyRows": 50,
+      "productionRows": 0,
+      "delta": 50,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_payout_adjustments",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "teacher_payouts",
+      "legacyRows": 3,
+      "productionRows": 0,
+      "delta": 3,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_photos",
+      "legacyRows": 15,
+      "productionRows": 0,
+      "delta": 15,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_profiles",
+      "legacyRows": 16,
+      "productionRows": 0,
+      "delta": 16,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_settlement_lines",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "teacher_settlement_payments",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "SENSITIVE_PRESERVE_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "teacher_settlements",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "teacher_staff_members",
+      "legacyRows": 1,
+      "productionRows": 0,
+      "delta": 1,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "teacher_subjects",
+      "legacyRows": 18,
+      "productionRows": 0,
+      "delta": 18,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "terms",
+      "legacyRows": 31,
+      "productionRows": 0,
+      "delta": 31,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "user_roles",
+      "legacyRows": 63,
+      "productionRows": 0,
+      "delta": 63,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "users",
+      "legacyRows": 63,
+      "productionRows": 0,
+      "delta": 63,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "video_chapters",
+      "legacyRows": 194,
+      "productionRows": 0,
+      "delta": 194,
+      "classification": "CONTENT_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "video_overrides",
+      "legacyRows": 30,
+      "productionRows": 0,
+      "delta": 30,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "video_types",
+      "legacyRows": 9,
+      "productionRows": 5,
+      "delta": 4,
+      "classification": "REFERENCE_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "video_watch_events",
+      "legacyRows": 75,
+      "productionRows": 0,
+      "delta": 75,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "MIGRATE_IN_STAGING"
+    },
+    {
+      "table": "warning_events",
+      "legacyRows": 0,
+      "productionRows": 0,
+      "delta": 0,
+      "classification": "RELATIONAL_DATA_REVIEW",
+      "candidateAction": "NONE"
+    },
+    {
+      "table": "web_vitals_metrics",
+      "legacyRows": 5127,
+      "productionRows": 0,
+      "delta": 5127,
+      "classification": "DURABLE_PRESERVE",
+      "candidateAction": "PRESERVE"
+    }
+  ],
+  "summary": {
+    "RESET_ON_IMPORT": 1,
+    "DURABLE_PRESERVE": 6,
+    "REFERENCE_REVIEW": 6,
+    "CONTENT_REVIEW": 21,
+    "SENSITIVE_PRESERVE_REVIEW": 17,
+    "RELATIONAL_DATA_REVIEW": 78
+  },
+  "requiredPath": [
+    "encrypted source backup",
+    "isolated PostgreSQL 16 staging restore",
+    "apply current migrations in staging",
+    "preserve all durable auth, device, outbox, telemetry and HR idempotency state",
+    "reset only VideoPlaybackSessions and cluster_leases",
+    "require pending outbox events to equal zero before candidate build",
+    "foreign-key, uniqueness, login and file checks",
+    "fresh Production backup",
+    "bounded maintenance import with rollback evidence"
+  ]
+}

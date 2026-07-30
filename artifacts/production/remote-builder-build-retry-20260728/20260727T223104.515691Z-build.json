@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "839a51b0-69aa-49b6-99ea-bd6bc4724080",
+  "command": "build",
+  "startedAt": "2026-07-27T22:31:04.515691Z",
+  "completedAt": "2026-07-27T22:31:04.515740Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "node-3: remote builder failed: remote builder refuses the current Redis master"
+}

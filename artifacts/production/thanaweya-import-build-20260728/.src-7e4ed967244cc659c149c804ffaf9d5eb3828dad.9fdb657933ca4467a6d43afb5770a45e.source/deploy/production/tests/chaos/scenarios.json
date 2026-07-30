@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "rules": {
+    "maximumConcurrentFailedNodes": 1,
+    "requireHealthyPreState": true,
+    "requireHealthyPostState": true,
+    "abortOnSecondFailure": true
+  },
+  "scenarios": [
+    {"name": "ingress", "target": "node-3", "failure": "drain and stop one HAProxy ingress", "maximumSeconds": 60},
+    {"name": "app", "target": "node-3", "failure": "drain and stop gateway", "maximumSeconds": 120},
+    {"name": "postgres", "target": "current-writer", "failure": "stop Patroni once", "maximumSeconds": 60},
+    {"name": "redis", "target": "current-master", "failure": "stop Redis once", "maximumSeconds": 60},
+    {"name": "files", "target": "preferred-data-brick", "failure": "stop one Gluster brick", "maximumSeconds": 120},
+    {"name": "worker", "target": "node-3", "failure": "stop one BullMQ worker", "maximumSeconds": 120},
+    {"name": "tunnel", "target": "node-3", "failure": "stop one tunnel connector", "maximumSeconds": 60}
+  ]
+}

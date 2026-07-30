@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Plus, Trash2, ArrowUp, ArrowDown, Settings, Eye, ClipboardList, Upload, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { AdminShellChrome } from '@/components/admin';
+import { AdminPage } from '@/components/admin';
 import { createAdminForm, FormFieldConfig, FormFieldType } from '@/services/forms-service';
 import { getAbsoluteLandingUrl } from '@/utils/url-utils';
 import { adminService } from '@/services/admin-service';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
+import { cairoDateTimeLocalToUtcISOString } from '@/lib/cairo-time';
 
 const PREVIEW_GOVERNORATES = ['القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'الدقهلية'];
 
@@ -181,8 +182,8 @@ export default function NewFormPageClient() {
         slug: slug.trim().toLowerCase(),
         isActive,
         coverImageUrl: coverImageUrl.trim() || undefined,
-        startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
+        startsAt: startsAt ? cairoDateTimeLocalToUtcISOString(startsAt) : undefined,
+        expiresAt: expiresAt ? cairoDateTimeLocalToUtcISOString(expiresAt) : undefined,
         fieldsJson: JSON.stringify(fields),
       });
       toast.success('تم إنشاء النموذج بنجاح');
@@ -195,7 +196,7 @@ export default function NewFormPageClient() {
   };
 
   return (
-    <AdminShellChrome
+    <AdminPage
       activePath="/admin/forms"
       sectionLabel="النماذج المخصصة"
       pageTitle="إنشاء نموذج جديد"
@@ -748,6 +749,6 @@ export default function NewFormPageClient() {
           </div>
         </div>
       </form>
-    </AdminShellChrome>
+    </AdminPage>
   );
 }

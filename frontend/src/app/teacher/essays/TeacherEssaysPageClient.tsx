@@ -15,7 +15,7 @@ import toast from "react-hot-toast";
 import { sanitizeRichHtml } from '@/lib/sanitize-html';
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
 
-import { TeacherShellChrome } from "@/components/teacher/TeacherShellChrome";
+import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 
 export default function TeacherEssaysPageClient() {
   const [essays, setEssays] = useState<PendingEssayDto[]>([]);
@@ -179,7 +179,7 @@ export default function TeacherEssaysPageClient() {
   ];
 
   return (
-    <TeacherShellChrome
+    <TeacherPage
       activePath="/teacher/essays"
       sectionLabel="تصحيح المقالي"
       pageTitle="مساحة تصحيح الإجابات المقالية"
@@ -339,6 +339,6 @@ export default function TeacherEssaysPageClient() {
           ) : null}
         </AdminModal>
       </div>
-    </TeacherShellChrome>
+    </TeacherPage>
   );
 }

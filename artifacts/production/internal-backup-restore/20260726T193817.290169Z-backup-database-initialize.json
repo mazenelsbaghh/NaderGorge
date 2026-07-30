@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "424c1356-59ce-4f2c-b69f-c8239391c74b",
+  "command": "backup-database-initialize",
+  "startedAt": "2026-07-26T19:38:17.290169Z",
+  "completedAt": "2026-07-26T19:38:17.290819Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "pgBackRest stanza initialization failed on: node-2"
+}

@@ -18,6 +18,7 @@ import '../auth.css';
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
 
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
@@ -25,11 +26,8 @@ import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
 import { LoginForm } from '@/components/forms/LoginForm';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
-import {
-  getSurfaceName,
-  getSurfaceOrigins,
-  isValidRedirectUrl,
-} from '@/packages/surface-runtime/config';
+import { getSurfaceName, getSurfaceOrigins } from '@/packages/surface-runtime/config';
+import { resolveReturnNavigation } from '@/lib/safe-return-url';
 
 function getLoginCopy(surface: string) {
   let title = 'بوابة الطالب';
@@ -50,6 +48,7 @@ function getLoginCopy(surface: string) {
 }
 
 export default function LoginPageClient() {
+  const router = useRouter();
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
 
@@ -79,24 +78,31 @@ export default function LoginPageClient() {
       const hasAdmin = allowedDomains.includes('admin') || roles.some(r => r.toLowerCase().includes('admin') || r.toLowerCase().includes('supervisor'));
       const hasTeacher = allowedDomains.includes('teacher') || roles.some(r => r.toLowerCase().includes('teacher'));
       const hasAssistant = allowedDomains.includes('assistant') || roles.some(r => r.toLowerCase().includes('assistant') || r.toLowerCase().includes('staff'));
+      const isEmployee = roles.some(r => r.toLowerCase() === 'employee');
 
       if (hasAdmin) {
         defaultDestination = `${origins.admin}/admin`;
       } else if (hasTeacher) {
         defaultDestination = `${origins.teacher}/teacher`;
+      } else if (isEmployee) {
+        defaultDestination = `${origins.assistant}/employee`;
       } else if (hasAssistant) {
         defaultDestination = `${origins.assistant}/assistant`;
       }
 
-      // Validate returnUrl
-      if (returnUrl && isValidRedirectUrl(returnUrl, surface)) {
-        window.location.replace(returnUrl);
-        return;
+      const navigation = resolveReturnNavigation({
+        returnUrl,
+        defaultDestination,
+        surface,
+        currentOrigin: window.location.origin,
+      });
+      if (navigation.sameOrigin) {
+        router.replace(navigation.href);
+      } else {
+        window.location.replace(navigation.href);
       }
-
-      window.location.replace(defaultDestination);
     }
-  }, [isAuthenticated, isLoading, user, surface]);
+  }, [isAuthenticated, isLoading, router, user, surface]);
 
   if (isLoading || isAuthenticated) {
     return (

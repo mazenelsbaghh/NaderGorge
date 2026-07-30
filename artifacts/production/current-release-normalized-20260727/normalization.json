@@ -1,0 +1,37 @@
+{
+  "clusterId": "massar-production",
+  "collectorCapturedAt": "2026-07-27T07:17:24.643023Z",
+  "completedAt": "2026-07-27T07:17:51.364969Z",
+  "manifestSha256": "9c8d47cff7e88926ef16fb3688170ca9d75ade0dcf1efdf3ea5ee9b92a7dafd6",
+  "nodeCount": 3,
+  "nodes": {
+    "node-1": {
+      "device": 2049,
+      "inode": 758691,
+      "releaseId": "prod-20260726-166-r1",
+      "schemaVersion": 1,
+      "status": "verified",
+      "target": "/opt/massar/releases/prod-20260726-166-r1"
+    },
+    "node-2": {
+      "device": 2049,
+      "inode": 315060,
+      "releaseId": "prod-20260726-166-r1",
+      "schemaVersion": 1,
+      "status": "verified",
+      "target": "/opt/massar/releases/prod-20260726-166-r1"
+    },
+    "node-3": {
+      "device": 2049,
+      "inode": 565914,
+      "releaseId": "prod-20260726-166-r1",
+      "schemaVersion": 1,
+      "status": "verified",
+      "target": "/opt/massar/releases/prod-20260726-166-r1"
+    }
+  },
+  "operationId": "2c9412a9cf0f4676a32d07c65e693169",
+  "releaseId": "prod-20260726-166-r1",
+  "schemaVersion": 1,
+  "status": "success"
+}

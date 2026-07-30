@@ -4,6 +4,7 @@ public class CorrelationIdMiddleware
 {
     private readonly RequestDelegate _next;
     private const string CorrelationIdHeader = "X-Correlation-Id";
+    internal const string CorrelationIdItem = "CorrelationId";
 
     public CorrelationIdMiddleware(RequestDelegate next)
     {
@@ -12,10 +13,13 @@ public class CorrelationIdMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var correlationId = context.Request.Headers[CorrelationIdHeader].FirstOrDefault()
-            ?? Guid.NewGuid().ToString("N");
+        var suppliedCorrelationId =
+            context.Request.Headers[CorrelationIdHeader].FirstOrDefault();
+        var correlationId = IsSafeCorrelationId(suppliedCorrelationId)
+            ? suppliedCorrelationId!
+            : Guid.NewGuid().ToString("N");
 
-        context.Items["CorrelationId"] = correlationId;
+        context.Items[CorrelationIdItem] = correlationId;
         context.Response.Headers[CorrelationIdHeader] = correlationId;
 
         using var scope = context.RequestServices
@@ -25,4 +29,11 @@ public class CorrelationIdMiddleware
 
         await _next(context);
     }
+
+    private static bool IsSafeCorrelationId(string? correlationId) =>
+        correlationId is { Length: >= 8 and <= 64 } &&
+        correlationId.All(character =>
+            character is >= 'a' and <= 'z' ||
+            character is >= '0' and <= '9' ||
+            character == '-');
 }

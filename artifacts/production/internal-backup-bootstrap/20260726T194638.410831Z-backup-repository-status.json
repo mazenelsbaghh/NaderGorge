@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "283452d5-d0ea-41db-996f-4182acb54e14",
+  "command": "backup-repository-status",
+  "startedAt": "2026-07-26T19:46:38.410831Z",
+  "completedAt": "2026-07-26T19:46:38.411307Z",
+  "status": "failed",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "ERROR: one or more internal backup bucket nodes are unhealthy: {\"node-1\": \"active\\nactivating\\ncurl: (7) Failed to connect to 127.0.0.1 port 9443 after 0 ms: Could not connect to server\\n[ALERT]    (8) : config : parsing [/usr/local/etc/haproxy/haproxy.cfg:13] : 'bind 127.0.0.1:9443' in section 'frontend' : cannot open the file '/run/secrets/backup-tls.pem'.\\n[ALERT]    (8) : config : Error(s) found in configuration file : /usr/local/etc/haproxy/haproxy.cfg\\n[ALERT]    (8) : config : Fatal error"
+}

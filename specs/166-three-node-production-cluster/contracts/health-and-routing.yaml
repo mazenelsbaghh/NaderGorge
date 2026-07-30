@@ -1,0 +1,88 @@
+openapi: 3.1.0
+info:
+  title: Massar Cluster Health and Routing Contract
+  version: 1.0.0
+paths:
+  /api/health/live:
+    get:
+      summary: Process liveness only
+      responses:
+        "200":
+          description: Process is alive
+          headers:
+            X-Massar-Node:
+              schema: { type: string, enum: [node-1, node-2, node-3] }
+            X-Massar-Release:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Liveness"
+  /api/health/ready:
+    get:
+      summary: Safe traffic readiness
+      responses:
+        "200":
+          description: Ready for HTTP and WebSocket traffic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Readiness"
+        "503":
+          description: Alive but not safe to receive traffic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Readiness"
+  /api/health/dependencies:
+    get:
+      summary: Authenticated operational dependency evidence
+      security:
+        - OperationsToken: []
+      responses:
+        "200":
+          description: Dependency state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dependencies"
+components:
+  securitySchemes:
+    OperationsToken:
+      type: http
+      scheme: bearer
+  schemas:
+    Liveness:
+      type: object
+      additionalProperties: false
+      required: [status, nodeId, releaseId, observedAt]
+      properties:
+        status: { type: string, const: live }
+        nodeId: { type: string, enum: [node-1, node-2, node-3] }
+        releaseId: { type: string, minLength: 1 }
+        observedAt: { type: string, format: date-time }
+    Readiness:
+      type: object
+      additionalProperties: false
+      required: [status, nodeId, releaseId, reasons, observedAt]
+      properties:
+        status: { type: string, enum: [ready, not_ready] }
+        nodeId: { type: string, enum: [node-1, node-2, node-3] }
+        releaseId: { type: string, minLength: 1 }
+        reasons:
+          type: array
+          items: { type: string }
+        observedAt: { type: string, format: date-time }
+    Dependencies:
+      type: object
+      additionalProperties: false
+      required: [postgresWriter, redisMaster, fileQuorum, migrationsCurrent]
+      properties:
+        postgresWriter: { type: boolean }
+        redisMaster: { type: boolean }
+        fileQuorum: { type: boolean }
+        migrationsCurrent: { type: boolean }
+        postgresRole: { type: string, enum: [primary, replica, unknown] }
+        redisRole: { type: string, enum: [master, replica, unknown] }
+        latestWalArchiveAgeSeconds: { type: integer, minimum: 0 }
+        latestFileBackupAgeSeconds: { type: integer, minimum: 0 }

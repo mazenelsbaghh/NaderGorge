@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "operationId": "df3f01b2-0521-40d4-8673-bced5ef0cc29",
+  "command": "collect-current-manifest",
+  "startedAt": "2026-07-29T15:09:20.776500Z",
+  "completedAt": "2026-07-29T15:09:20.776721Z",
+  "status": "blocked",
+  "targets": [
+    "node-1",
+    "node-2",
+    "node-3"
+  ],
+  "reason": "--manifest-output and --output are required"
+}

@@ -3,17 +3,19 @@
 import { devConsole } from '@/utils/dev-console';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { AdminShellChrome } from '@/components/admin/AdminShellChrome';
+import { AdminPage } from '@/components/admin/AdminShellChrome';
 import { AdminBackButton } from '@/components/admin/AdminBackButton';
+import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
-import { Plus, Save, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, Save, AlertCircle, Trash2, ArrowRight } from 'lucide-react';
 import { adminService, HomeworkDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { questionTextToPlainText } from '@/lib/question-text';
 
-export default function AddHomeworkQuestionPageClient(props: { params: { id: string } }) {
+export default function AddHomeworkQuestionPageClient(props: { params: { id: string }; surface?: 'admin' | 'teacher' }) {
   const params = props.params;
+  const surface = props.surface ?? 'admin';
   const router = useRouter();
 
   const [homeworkData, setHomeworkData] = useState<HomeworkDashboardDto | null>(null);
@@ -151,14 +153,7 @@ export default function AddHomeworkQuestionPageClient(props: { params: { id: str
      }
   };
 
-  return (
-    <AdminShellChrome
-      activePath="/admin/content"
-      sectionLabel="إدارة المحتوى ▸ تعديل الواجب"
-      pageTitle="أسئلة الواجب"
-      subtitle={`إرفاق أسئلة إضافية لواجب موجود مسبقاً (${params.id.split('-')[0]})`}
-      action={<AdminBackButton />}
-    >
+  const content = (
       <div className="flex flex-col gap-6">
         
         {loadingContext ? (
@@ -268,6 +263,36 @@ export default function AddHomeworkQuestionPageClient(props: { params: { id: str
            </>
         )}
       </div>
-    </AdminShellChrome>
+  );
+
+  if (surface === 'teacher') {
+    return (
+      <TeacherShellChrome
+        activePath="/teacher/packages"
+        sectionLabel="المحتوى الدراسي ▸ أسئلة الواجب"
+        pageTitle="أسئلة الواجب"
+        subtitle={`إدارة أسئلة واجب الحصة (${params.id.split('-')[0]})`}
+        action={
+          <button type="button" onClick={() => router.back()} className="admin-btn-ghost inline-flex items-center gap-2">
+            <ArrowRight className="h-4 w-4" />
+            رجوع
+          </button>
+        }
+      >
+        {content}
+      </TeacherShellChrome>
+    );
+  }
+
+  return (
+    <AdminPage
+      activePath="/admin/content"
+      sectionLabel="إدارة المحتوى ▸ تعديل الواجب"
+      pageTitle="أسئلة الواجب"
+      subtitle={`إرفاق أسئلة إضافية لواجب موجود مسبقاً (${params.id.split('-')[0]})`}
+      action={<AdminBackButton />}
+    >
+      {content}
+    </AdminPage>
   );
 }

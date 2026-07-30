@@ -1,0 +1,72 @@
+{
+  "completedAt": "2026-07-28T12:54:41.248588Z",
+  "directReadinessFailureReturnCode": 7,
+  "drill": "single-node-gateway-readiness-failure",
+  "events": [
+    {
+      "at": "2026-07-28T12:54:27.867560Z",
+      "name": "prestate-ready",
+      "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4"
+    },
+    {
+      "at": "2026-07-28T12:54:31.378957Z",
+      "name": "traffic-drained"
+    },
+    {
+      "at": "2026-07-28T12:54:32.452907Z",
+      "container": "massar_production-gateway-1",
+      "dockerOutput": "Flag --time has been deprecated, use --timeout instead\nmassar_production-gateway-1",
+      "name": "gateway-stopped"
+    },
+    {
+      "at": "2026-07-28T12:54:33.463038Z",
+      "name": "direct-readiness-failed-as-injected"
+    },
+    {
+      "at": "2026-07-28T12:54:35.129857Z",
+      "name": "traffic-survived",
+      "nodeCounts": {
+        "node-1": 30,
+        "node-2": 30
+      },
+      "requests": 60
+    },
+    {
+      "at": "2026-07-28T12:54:38.206316Z",
+      "name": "gateway-recovered",
+      "releaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4"
+    },
+    {
+      "at": "2026-07-28T12:54:41.248546Z",
+      "name": "traffic-undrained"
+    }
+  ],
+  "expectedReleaseId": "src-0541078d8f68c5f05df6cf21f665e6714390d4e4",
+  "loadBalancerProof": {
+    "failures": 0,
+    "nodeCounts": {
+      "node-1": 30,
+      "node-2": 30
+    },
+    "releaseIds": [
+      "src-0541078d8f68c5f05df6cf21f665e6714390d4e4"
+    ],
+    "requests": 60
+  },
+  "operationId": "51b55d4e-b362-4f78-8f30-f22128fecd3f",
+  "recoveryErrors": [],
+  "schemaVersion": 1,
+  "startedAt": "2026-07-28T12:54:26.741255Z",
+  "status": "pass",
+  "target": "node-3",
+  "trafficPoststate": {
+    "node-1": "UP",
+    "node-2": "UP",
+    "node-3": "UP"
+  },
+  "trafficPrestate": {
+    "node-1": "UP",
+    "node-2": "UP",
+    "node-3": "UP"
+  }
+}

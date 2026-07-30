@@ -8,6 +8,8 @@ public sealed class LiveSupportAIRecoveryBackgroundService(
     IConfiguration configuration,
     ILogger<LiveSupportAIRecoveryBackgroundService> logger) : BackgroundService
 {
+    private readonly Guid _ownerToken = Guid.NewGuid();
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var interval = TimeSpan.FromSeconds(Math.Clamp(configuration.GetValue("LiveSupportAI:RecoveryIntervalSeconds", 30), 10, 300));
@@ -18,13 +20,23 @@ public sealed class LiveSupportAIRecoveryBackgroundService(
             try
             {
                 using var scope = scopes.CreateScope();
-                var locks = scope.ServiceProvider.GetRequiredService<IIdempotencyService>();
-                if (!await locks.TryLockAsync("live-support-ai-recovery", interval + interval)) continue;
-                var recovery = scope.ServiceProvider.GetRequiredService<ILiveSupportAIRecoveryService>();
-                var result = await recovery.RecoverBatchAsync(DateTime.UtcNow, batchSize, stoppingToken);
-                await locks.SaveResultAsync("live-support-ai-recovery", 200, "{\"status\":\"completed\"}", interval);
-                if (result.ReconciledConversations > 0)
-                    logger.LogInformation("AI live support recovery reconciled {Count} conversations", result.ReconciledConversations);
+                await ClusterLeaseRunner.TryRunAsync(
+                    scope.ServiceProvider,
+                    "live-support-ai-recovery",
+                    _ownerToken,
+                    interval + interval,
+                    async (services, token) =>
+                    {
+                        var recovery = services.GetRequiredService<ILiveSupportAIRecoveryService>();
+                        var recoveryBatch = await recovery.RecoverBatchAsync(DateTime.UtcNow, batchSize, token);
+                        if (recoveryBatch.ReconciledConversations > 0)
+                        {
+                            logger.LogInformation(
+                                "AI live support recovery reconciled {Count} conversations",
+                                recoveryBatch.ReconciledConversations);
+                        }
+                    },
+                    stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
             catch (Exception exception) { logger.LogError(exception, "AI live support recovery iteration failed with a safe internal error"); }

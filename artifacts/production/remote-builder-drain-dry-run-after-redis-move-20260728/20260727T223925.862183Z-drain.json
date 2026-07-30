@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "operationId": "ad98ea56-4f10-49a2-8cbd-f64b6a2af54a",
+  "command": "drain",
+  "startedAt": "2026-07-27T22:39:25.862183Z",
+  "completedAt": "2026-07-27T22:39:25.862307Z",
+  "status": "dry-run",
+  "targets": [
+    "node-3"
+  ],
+  "reason": null
+}
