@@ -10,8 +10,8 @@ type HeroSectionProps = {
   baselineStudentsCount: number;
 };
 
-function formatArabicNumber(value: number) {
-  return new Intl.NumberFormat('ar-EG').format(value);
+function formatStudentCount(value: number) {
+  return new Intl.NumberFormat('en-US').format(value);
 }
 
 export function HeroSection({
@@ -58,8 +58,11 @@ export function HeroSection({
               <GraduationCap className="h-5 w-5" />
               ابدأ التعلم الآن
             </Link>
-            <span className="text-sm font-bold text-[var(--landing-muted)]">
-              +{formatArabicNumber(totalRegisteredStudents)} طالب داخل الرحلة
+            <span
+              dir="ltr"
+              className="text-lg font-black tabular-nums tracking-tight text-[var(--landing-ink)] sm:text-xl"
+            >
+              {formatStudentCount(totalRegisteredStudents)}+ Students
             </span>
           </div>
 

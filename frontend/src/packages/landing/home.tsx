@@ -5,7 +5,7 @@ import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { ScholarlyParticles } from '@/components/landing/ScholarlyParticles';
 
 const FALLBACK_REGISTERED_STUDENTS_COUNT = 0;
-const LANDING_STUDENTS_BASELINE = 5000;
+const LANDING_STUDENTS_BASELINE = 100_000;
 
 const API_BASE_URL =
   process.env.INTERNAL_API_URL ||
