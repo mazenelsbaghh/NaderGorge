@@ -33,6 +33,7 @@ coverage/
 # Test artifacts
 frontend/playwright-report/
 frontend/test-results/
+artifacts/
 
 # OS
 .DS_Store
