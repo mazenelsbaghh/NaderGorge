@@ -1,6 +1,6 @@
 ---
 name: ssh-server
-description: Safely inspect, debug, deploy, fail over, back up, restore-test, and operate the three-node Massar Production cluster through strict SSH and the reviewed cluster commands. Use for production bugs, health, logs, releases, Cloudflare, database, Redis, SignalR, files, and load tests.
+description: Plan affected components, enforce EF migrations, selectively build, and safely inspect, debug, or deploy the three-node Massar Production cluster through strict SSH and reviewed commands. Use for backend, frontend, worker, database, Docker, urgent releases, health, logs, backups, Cloudflare, Redis, SignalR, files, and load tests.
 ---
 
 # SSH Server — Massar Production
@@ -9,6 +9,38 @@ Use this skill for every Production operation. The cluster is exactly
 `node-1`, `node-2`, and `node-3`, defined only in
 `deploy/production/inventory/production.yml`. Never paste a server address in
 an operational command.
+
+## Start here — simple workflow
+
+For any change, start with:
+
+```bash
+make ops-plan
+make ops-check
+```
+
+`ops-plan` reads the Git delta and prints:
+
+- affected components: frontend, backend, worker, database, infrastructure;
+- a conservative list of local Docker images affected by build-context files;
+- whether an EF migration exists or is required;
+- the four immutable images required by the Production release contract.
+
+Then choose one path:
+
+```bash
+make ops-build                 # build only affected local images
+make ops-fast                  # urgent local checks + cached affected build
+make prod-db-inventory         # compare expected/live DB tables, read-only
+make prod-db-fast-preview REASON="incident or change reference"
+make prod-plan                 # Production plan; no state change
+make prod-release-preview RELEASE=... MANIFEST=... BACKUP_EVIDENCE=...
+```
+
+Every helper prints timestamped steps. Local checks and Docker output stream
+live. Long remote operations emit a heartbeat every 15 seconds and then print
+the final release/evidence result; the strict SSH transport may buffer remote
+Docker output until that bounded step finishes.
 
 ## Ready-to-use environment
 
@@ -45,6 +77,17 @@ The private key is a path, not a value. Do not print, copy, commit, upload, or
 change it. It must remain mode `0600`; strict host-key verification is always
 required. Strict host-key verification is mandatory.
 
+The higher-level helpers are:
+
+```bash
+bash .agents/skills/ssh-server/scripts/ops.sh --help
+bash .agents/skills/ssh-server/scripts/database.sh --help
+bash .agents/skills/ssh-server/scripts/deploy.sh --help
+```
+
+`ops.sh` is local/read-only except the explicit `db-add` scaffold and Docker
+build commands. `deploy.sh` is preview-only unless `--yes` is supplied.
+
 ## Non-negotiable safety rules
 
 1. Begin with `status` or `audit`; save evidence under `artifacts/production/`.
@@ -58,6 +101,119 @@ required. Strict host-key verification is mandatory.
 5. A Patroni replica and a Gluster brick are not backups. Never restore against the production DB;
    use only the isolated restore commands.
 6. No domain/DNS cutover until `accept` produces signed `GO` evidence.
+7. Never deploy an EF model change without a new migration. `make
+   ops-db-guard` is mandatory and fails closed.
+8. Never install `dotnet-ef`, SDKs, packages, or container images implicitly.
+   `ops-db-migration` uses only an already-installed tool and otherwise stops.
+   Local Docker builds require every base image to exist, use `--pull=false`
+   and `--network=none`, and stop instead of downloading.
+9. “Fast” means focused verification and cached builds. It never skips
+   Production health, backup/restore evidence, migration coverage, dry-run,
+   rolling node order, or automatic application rollback.
+10. Missing Production tables are repaired only by repository EF migrations.
+    Never synthesize a table with ad-hoc SQL. Unknown server migrations or a
+    missing table with no pending reviewed migration fail closed.
+
+## Change and Docker decision table
+
+| Changed area | Focused checks | Local Docker | Production Docker |
+|---|---|---|---|
+| `frontend/` | offline lint + typecheck | shared `frontend` | all four immutable images |
+| backend/API/application | `.NET` application tests, `--no-restore` | `backend` | all four immutable images |
+| EF entities/context/migrations | migration pair + snapshot + EF pending-model check | `backend`, `migrator` | all four immutable images |
+| `worker/` | offline worker build/tests | `worker` | all four immutable images |
+| `docker/nginx/` | Compose contract | `gateway` | foundation workflow, not app release |
+| Production/Compose/skill tooling | contract checks | only changed build contexts | all four immutable images |
+
+Production intentionally rebuilds backend, frontend, worker, and migrator
+together. Selective Production images would break the single immutable release
+manifest and digest-parity guarantees. Remote build cache provides speed while
+retaining one auditable release identity.
+
+The explicit DB-only repair lane is the exception because it changes no
+application image or release. It can apply only migrations already embedded in
+the migrator image of the current immutable Production release. This repairs a
+server that missed a reviewed migration without rebuilding anything. A new
+repository migration that was never shipped still requires the immutable
+release path; the helper fails closed instead of running unbound SQL.
+
+## Database and EF migrations
+
+Before any build or release:
+
+```bash
+make ops-db-guard
+```
+
+If it reports an EF model change without a migration:
+
+```bash
+make ops-db-migration NAME=DescribeTheSchemaChange
+make ops-db-guard
+```
+
+The guard includes additions, edits, renames, and deletions from the reviewed
+Git merge-base. For schema inputs it requires a newly added main migration,
+its new `.Designer.cs` pair, and a changed model snapshot. It then builds with
+`--no-restore` and runs EF's pending-model check. Missing tools or stale/missing
+artifacts fail closed. The scaffold command never downloads `dotnet-ef`; if
+the tool is unavailable it stops and explains the prerequisite. Review the
+generated migration and snapshot before commit. Never generate or edit a
+migration directly on a Production node.
+
+### Expected tables versus the live server
+
+```bash
+make prod-db-inventory
+```
+
+This writes two timestamped files under
+`artifacts/production/schema-inventory/`: the raw read-only server catalog and
+the comparison with `AppDbContextModelSnapshot.cs` plus repository migration
+IDs. The comparison lists expected/actual/missing/extra tables and
+pending/unexpected migrations. It does not expose row values or credentials.
+
+If a missing table is covered by migrations already shipped in the current
+Production migrator, the DB-only lane can create it. If the current release
+does not contain the migration, it stops and requires the immutable release
+path:
+
+```bash
+make prod-db-fast-preview REASON="Backward-compatible schema incident"
+make prod-db-fast \
+  REASON="Backward-compatible schema incident" \
+  CONFIRM=DB-ONLY
+```
+
+This path does not build, distribute, restart, or roll backend, frontend, or
+worker images. It proves identical current manifests and digests on all three
+nodes, checks that every pending migration is in that current manifest, runs
+three-node health and a read-only pre-inventory, then previews the existing
+migration gate. The confirmed command creates a fresh encrypted full backup,
+migrates an isolated restored copy, boots the exact current backend against it
+for N-1 compatibility, destroys the copy, performs a migrate dry-run, runs the
+reviewed current migrator once under its advisory lock, and requires the
+post-inventory to match. Database Down/restore rollback remains prohibited; a
+failure requires a reviewed forward-fix migration. The current application
+release remains unchanged.
+
+## Urgent safe path
+
+For a time-sensitive fix:
+
+```bash
+make ops-fast
+make prod-fast-release \
+  RELEASE=src-... \
+  MANIFEST=artifacts/production/build/src-.../manifest.json \
+  BACKUP_EVIDENCE=artifacts/production/migration-gates/src-....json \
+  REASON="Customer-facing incident reference"
+```
+
+`prod-fast-release` requires an explicit reason and `--yes` internally. It
+still runs the DB guard, three-node status, migrate dry-run, deploy dry-run,
+serialized migration, node-3 → node-2 → node-1 rollout, final health, and the
+existing application-only automatic rollback contract.
 
 ## Fast daily workflow
 
@@ -100,7 +256,8 @@ Authorization, cookies, phone numbers, or result records in evidence.
 
 ## Release flow (only after the user requests deployment)
 
-Build only on remote builder `node-3`; never build application images locally.
+Build Production release images only on remote builder `node-3`; local
+offline Docker builds are disposable developer checks, never release inputs.
 
 ```bash
 # 1. Compute the immutable source release ID locally (does not build).
@@ -119,25 +276,39 @@ $CLUSTER --inventory "$INVENTORY" build --node all --release "src-<sha>" \
   --remote-builder --yes --evidence-dir artifacts/production/build
 
 # 3. Produce a fresh encrypted-backup + isolated-restore migration gate.
-python3 deploy/production/scripts/prepare_release_migration_gate.py --help
+make prod-gate RELEASE=src-<sha>
 
 # 4. Migrate once, then rolling deploy node-3 → node-2 → node-1.
 $CLUSTER --inventory "$INVENTORY" migrate --node all --release "src-<sha>" \
   --manifest artifacts/production/build/src-<sha>/manifest.json \
-  --backup-evidence artifacts/production/migration-gate.json --dry-run
+  --backup-evidence artifacts/production/migration-gates/src-<sha>.json --dry-run
 $CLUSTER --inventory "$INVENTORY" migrate --node all --release "src-<sha>" \
   --manifest artifacts/production/build/src-<sha>/manifest.json \
-  --backup-evidence artifacts/production/migration-gate.json --yes
+  --backup-evidence artifacts/production/migration-gates/src-<sha>.json --yes
 $CLUSTER --inventory "$INVENTORY" deploy --node all --release "src-<sha>" \
   --manifest artifacts/production/build/src-<sha>/manifest.json \
-  --backup-evidence artifacts/production/migration-gate.json --dry-run
+  --backup-evidence artifacts/production/migration-gates/src-<sha>.json --dry-run
 $CLUSTER --inventory "$INVENTORY" deploy --node all --release "src-<sha>" \
   --manifest artifacts/production/build/src-<sha>/manifest.json \
-  --backup-evidence artifacts/production/migration-gate.json --yes
+  --backup-evidence artifacts/production/migration-gates/src-<sha>.json --yes
 ```
 
 Verify `status --node all` after every release. If a gate fails, stop; do not
 force deployment or hand-edit a remote release.
+
+The same flow is available through Make with live local output and remote
+heartbeats:
+
+```bash
+make prod-build-preview RELEASE=src-...
+make prod-build RELEASE=src-...
+make prod-gate RELEASE=src-...
+make prod-release-preview RELEASE=src-...
+make prod-release RELEASE=src-...
+```
+
+`MANIFEST` and `BACKUP_EVIDENCE` default to the release-bound artifact paths
+shown by `make help` and can be overridden explicitly.
 
 ## Data, file, and recovery operations
 

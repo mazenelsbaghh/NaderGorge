@@ -16,7 +16,8 @@ from ssh_transport import SshTarget, StrictSshTransport
 REMOTE_AUDIT = r"""
 set -euo pipefail
 test "$(cat /etc/massar/cluster-id)" = "massar-production"
-sudo docker run --rm -i --network host \
+sudo docker image inspect postgres:16-alpine >/dev/null
+sudo docker run --pull=never --rm -i --network host \
   -v /etc/massar/secrets/postgres-app-password:/run/secrets/pgapp:ro \
   postgres:16-alpine sh -ec \
   'export PGPASSWORD="$(cat /run/secrets/pgapp)"; exec psql -h 127.0.0.1 -p 6432 -U massar_app -d massar_platform -XAt -v ON_ERROR_STOP=1' <<'SQL'
@@ -49,8 +50,33 @@ def main() -> int:
     args = parser.parse_args()
 
     inventory = load_inventory(args.inventory)
-    node = inventory.nodes[0]
     transport = StrictSshTransport(args.known_hosts, args.identity)
+    primaries = []
+    for candidate in inventory.nodes:
+        check = transport.run(
+            SshTarget(
+                candidate.id,
+                candidate.public_address,
+                str(inventory.cluster["ssh_user"]),
+            ),
+            (
+                "curl",
+                "--fail",
+                "--silent",
+                "--max-time",
+                "5",
+                "http://127.0.0.1:8008/primary",
+            ),
+            timeout_seconds=15,
+            check=False,
+        )
+        if check.returncode == 0:
+            primaries.append(candidate)
+    if len(primaries) != 1:
+        raise RuntimeError(
+            f"expected exactly one Patroni primary, observed {len(primaries)}"
+        )
+    node = primaries[0]
     result = transport.run(
         SshTarget(node.id, node.public_address, str(inventory.cluster["ssh_user"])),
         ("bash", "-lc", REMOTE_AUDIT),
@@ -73,6 +99,7 @@ def main() -> int:
         "capturedAt": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
         "mode": "read-only",
         "status": "success",
+        "sourceNode": node.id,
         "migrationCount": len(migrations),
         "latestMigration": migrations[-1] if migrations else None,
         "migrationIds": migrations,

@@ -8,9 +8,11 @@ import datetime as dt
 import json
 import re
 import sys
+import uuid
 from pathlib import Path
 
 from clusterctl import load_inventory
+from deploy_release import RolloutLock, all_nodes_running_release
 from release_contract import (
     ReleaseContractError,
     load_migration_safety_gate,
@@ -78,21 +80,33 @@ report_failure() {{
 trap 'report_failure "$LINENO"' ERR
 stage="verify-release"
 test "$(cat /etc/massar/cluster-id)" = "massar-production"
+sudo docker image inspect postgres:16-alpine >/dev/null
 test "$(sudo docker image inspect {image} --format '{{{{.Id}}}}')" = "{digest}"
 test "$(sha256sum /opt/massar/releases/{args.release}/manifest.json | awk '{{print $1}}')" = "{manifest_sha256}"
 test "$(python3 -c 'import json; print(json.load(open("/opt/massar/current/manifest.json"))["releaseId"])')" = "{gate.current_release_id}"
+test "$(sha256sum /opt/massar/current/manifest.json | awk '{{print $1}}')" = "{gate.current_manifest_sha256}"
 stage="verify-database-identity"
-system_identifier="$(sudo docker run --rm --network host \
+system_identifier="$(sudo docker run --pull=never --rm --network host \
   -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
   postgres:16-alpine sh -ec \
   'export PGPASSWORD="$(cat /run/secrets/pgsuper)"; psql -h 127.0.0.1 -p 6432 -U postgres -d postgres -XAt -v ON_ERROR_STOP=1 -c "select system_identifier from pg_control_system();"' )"
 test "$system_identifier" = "{gate.database_system_identifier}"
 migration_hash() {{
-  sudo docker run --rm --network host \
+  sudo docker run --pull=never --rm --network host \
     -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
     postgres:16-alpine sh -ec \
     'export PGPASSWORD="$(cat /run/secrets/pgsuper)"; exec psql -h 127.0.0.1 -p 6432 -U postgres -d massar_platform -XAt -v ON_ERROR_STOP=1 -c "$1"' \
     sh 'select "MigrationId" from "__EFMigrationsHistory" order by "MigrationId";' |
+    sha256sum | awk '{{print $1}}'
+}}
+schema_hash() {{
+  sudo docker run --pull=never --rm --network host \
+    -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
+    postgres:16-alpine sh -ec \
+    'set -o pipefail; export PGPASSWORD="$(cat /run/secrets/pgsuper)";
+     pg_dump -h 127.0.0.1 -p 6432 -U postgres -d massar_platform \
+       --schema-only --no-owner --no-privileges --quote-all-identifiers |
+       sed -E "/^-- (Dumped from|Dumped by|Started on|Completed on)/d; /^.(un)?restrict[[:space:]]/d"' |
     sha256sum | awk '{{print $1}}'
 }}
 stage="verify-pre-migration-hash"
@@ -101,19 +115,19 @@ stage="clean-audit-database"
 audit_db="massar_audit_$(date -u +%Y%m%d%H%M%S)"
 case "$audit_db" in massar_audit_[0-9]*) ;; *) exit 40 ;; esac
 cleanup() {{
-  sudo docker run --rm --network host \
+  sudo docker run --pull=never --rm --network host \
     -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
     postgres:16-alpine sh -ec \
     'export PGPASSWORD="$(cat /run/secrets/pgsuper)"; dropdb --if-exists --force -h 127.0.0.1 -p 6432 -U postgres "$1"' sh "$audit_db" >/dev/null 2>&1 || true
 }}
 trap cleanup EXIT
 stage="create-clean-audit-database"
-sudo docker run --rm --network host \
+sudo docker run --pull=never --rm --network host \
   -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
   postgres:16-alpine sh -ec \
   'export PGPASSWORD="$(cat /run/secrets/pgsuper)"; createdb -h 127.0.0.1 -p 6432 -U postgres -O massar_app "$1"' sh "$audit_db"
 stage="migrate-clean-audit-database"
-sudo docker run --rm --network host \
+sudo docker run --pull=never --rm --network host \
   -v /etc/massar/secrets/postgres-app-password:/run/secrets/pgapp:ro \
   --user 0:0 \
   --entrypoint /bin/sh {image} -ec \
@@ -132,7 +146,7 @@ select concat_ws('|',
     from roles where "Name" in ('Admin','Teacher','Assistant','Student')));
 SQL
 )"
-audit_result="$(sudo docker run --rm --network host \
+audit_result="$(sudo docker run --pull=never --rm --network host \
   -v /etc/massar/secrets/postgres-app-password:/run/secrets/pgapp:ro \
   postgres:16-alpine sh -ec \
   'export PGPASSWORD="$(cat /run/secrets/pgapp)";
@@ -151,7 +165,7 @@ stage="cleanup-clean-audit-database"
 cleanup
 trap - EXIT
 stage="production-migration"
-sudo docker run --rm --network host \
+sudo docker run --pull=never --rm --network host \
   -v /etc/massar/secrets/postgres-app-password:/run/secrets/pgapp:ro \
   --user 0:0 \
   --entrypoint /bin/sh {image} -ec \
@@ -161,8 +175,10 @@ sudo docker run --rm --network host \
    exec setpriv --reuid=65532 --regid=65532 --clear-groups dotnet NaderGorge.Migrator.dll'
 stage="verify-post-migration-hash"
 test "$(migration_hash)" = "{gate.post_migration_ids_sha256}"
+stage="verify-post-migration-schema"
+test "$(schema_hash)" = "{gate.post_migration_schema_sha256}"
 stage="verify-production-indexes"
-sudo docker run --rm --network host \
+sudo docker run --pull=never --rm --network host \
   -v /etc/massar/secrets/postgres-app-password:/run/secrets/pgapp:ro \
   postgres:16-alpine sh -ec \
   'export PGPASSWORD="$(cat /run/secrets/pgapp)";
@@ -171,7 +187,29 @@ sudo docker run --rm --network host \
      -c "select count(*) from pg_index where not indisvalid;"' | grep -qx 0
 stage="success"
 """
-    completed = transport.run(target, ("bash", "-lc", script), timeout_seconds=600, check=False)
+    lock = RolloutLock(
+        transport,
+        target,
+        f"database-migration-{uuid.uuid4()}",
+    )
+    lock.acquire()
+    try:
+        if not all_nodes_running_release(
+            inventory,
+            transport,
+            gate.current_release_id,
+        ):
+            raise MigrationError(
+                "application release parity changed after the migration gate"
+            )
+        completed = transport.run(
+            target,
+            ("bash", "-lc", script),
+            timeout_seconds=600,
+            check=False,
+        )
+    finally:
+        lock.release()
     if completed.returncode:
         marker = re.search(
             r"MASSAR_MIGRATION_FAILURE stage=[a-z0-9-]+ line=[0-9]+ status=[0-9]+",

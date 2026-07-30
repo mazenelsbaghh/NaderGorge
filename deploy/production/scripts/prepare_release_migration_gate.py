@@ -148,6 +148,7 @@ trap cleanup EXIT HUP INT TERM
 
 test "$(id -u)" = 0
 test "$(cat /etc/massar/cluster-id)" = "massar-production"
+sudo docker image inspect postgres:16-alpine >/dev/null
 if ! mkdir "$lock_dir" 2>/dev/null; then
   printf 'migration evidence lock is already owned by %s\n' \
     "$(cat "$lock_dir/owner" 2>/dev/null || printf unknown)" >&2
@@ -206,7 +207,7 @@ if test -n "$requested_compatibility_release"; then
 fi
 
 live_system_identifier="$(
-  sudo docker run --rm --network host \
+  sudo docker run --pull=never --rm --network host \
     -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
     postgres:16-alpine sh -ec \
     'export PGPASSWORD="$(cat /run/secrets/pgsuper)";
@@ -314,10 +315,10 @@ migration_hash() {{
     sha256sum | awk '{{print $1}}'
 }}
 schema_hash() {{
-  sudo docker run --rm --network host \
+  sudo docker run --pull=never --rm --network host \
     -v /etc/massar/secrets/postgres-superuser-password:/run/secrets/pgsuper:ro \
     postgres:16-alpine sh -ec \
-    'export PGPASSWORD="$(cat /run/secrets/pgsuper)";
+    'set -o pipefail; export PGPASSWORD="$(cat /run/secrets/pgsuper)";
      pg_dump -h 127.0.0.1 -p 6544 -U postgres -d massar_platform \
        --schema-only --no-owner --no-privileges --quote-all-identifiers |
        sed -E "/^-- (Dumped from|Dumped by|Started on|Completed on)/d; /^.(un)?restrict[[:space:]]/d"' |
@@ -397,7 +398,7 @@ fi
 # The target migrator reads only the isolated copy. Its digest was bound to the
 # final three-node release manifest before this operation began.
 stage="target-migration"
-sudo docker run --rm --network host \
+sudo docker run --pull=never --rm --network host \
   -v /etc/massar/secrets/postgres-app-password:/run/secrets/pgapp:ro \
   --user 0:0 \
   --entrypoint /bin/sh "massar/migrator:$release_id" -ec \
@@ -458,7 +459,7 @@ if ss -ltnH 'sport = :5245' | grep -q .; then
   exit 71
 fi
 stage="n-minus-one-readiness"
-sudo docker run -d --name "$smoke_name" --network host \
+sudo docker run --pull=never -d --name "$smoke_name" --network host \
   --env-file /etc/massar/app.env \
   -e ASPNETCORE_URLS=http://127.0.0.1:5245 \
   -e Cluster__NodeId=nminus1-compat \

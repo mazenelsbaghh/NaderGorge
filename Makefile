@@ -6,6 +6,11 @@
         verify verify-backend verify-frontend verify-worker verify-docker verify-e2e verify-surfaces verify-surfaces-static \
         verify-performance-budgets verify-performance-budget-contracts \
         migrate migrate-add \
+        ops-plan ops-check ops-build ops-fast ops-db-guard ops-db-migration \
+        prod-status prod-audit prod-logs prod-plan prod-db-inventory \
+        prod-db-fast-preview prod-db-fast \
+        prod-build-preview prod-build prod-gate-preview prod-gate \
+        prod-release-preview prod-release prod-fast-release \
         dev frontend backend stop \
         logs-production logs-production-backend \
         android-builder-start android-builder-stop android-builder-reset android-gradle-cache-clean android-builder-shell \
@@ -20,6 +25,16 @@ ANDROID_GRADLE_VOLUME := parent_android_gradle_cache
 PERFORMANCE_BASELINE ?= artifacts/performance-167/baseline/frontend-routes.json
 PERFORMANCE_CANDIDATE ?= artifacts/performance-167/final/frontend-routes.json
 PYTHON ?= python3
+OPS_BASE ?= AUTO
+RELEASE ?=
+MANIFEST ?= artifacts/production/build/$(RELEASE)/manifest.json
+BACKUP_EVIDENCE ?= artifacts/production/migration-gates/$(RELEASE).json
+NODE ?= node-1
+SERVICE ?= backend
+MINUTES ?= 15
+REASON ?=
+CONFIRM ?=
+SSH_SKILL_SCRIPTS := .agents/skills/ssh-server/scripts
 
 help: ## Show all available make targets
 	@echo ""
@@ -277,24 +292,7 @@ migrate: ## Apply all pending EF Core migrations to the database
 	docker compose --profile migration run --rm migrator
 	@echo "Migrations applied."
 
-migrate-add: ## Scaffold a new EF Core migration (usage: make migrate-add NAME=MyMigration)
-	@[ "$(NAME)" ] || (echo "" && echo "  NAME is required." && echo "     Usage: make migrate-add NAME=MyMigration" && echo "" && exit 1)
-	@echo "Adding migration: $(NAME)"
-	docker run --rm \
-		--network massar_net \
-		-v "$(PWD)/backend":/src \
-		-w /src \
-		-e "ConnectionStrings__DefaultConnection=Host=db;Database=massar_platform;Username=postgres;Password=postgres" \
-		-e "ConnectionStrings__Redis=redis:6379,abortConnect=false" \
-		mcr.microsoft.com/dotnet/sdk:9.0 \
-		sh -c "dotnet tool install --global dotnet-ef && \
-		       export PATH=\$$PATH:/root/.dotnet/tools && \
-		       dotnet restore NaderGorge.sln && \
-		       dotnet ef migrations add $(NAME) \
-		         --project src/NaderGorge.Infrastructure \
-		         --startup-project src/NaderGorge.API \
-		         --output-dir Migrations"
-	@echo "Migration '$(NAME)' created in backend/src/NaderGorge.Infrastructure/Migrations/"
+migrate-add: ops-db-migration ## Alias: scaffold an EF migration without downloading tools
 
 # =============================================================================
 # LOCAL (NATIVE) DEVELOPMENT
@@ -343,29 +341,100 @@ stop: ## Kill all native processes running on known ports
 	@echo "Done."
 
 # =============================================================================
-# DEPLOYMENT
+# OPERATIONS AND PRODUCTION
 # =============================================================================
 
-deploy: ## Refuse unsafe auto-stage/commit/merge/push deployment
-	@echo "Refusing unsafe deploy: this target no longer stages, commits, merges, or pushes dirty worktree changes."
-	@echo "Use reviewed git commits and CI/CD, then run an explicit production target with PROD_SSH_HOST configured."
-	@exit 1
+ops-plan: ## Detect affected frontend/backend/worker/database and Docker images
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh plan --base="$(OPS_BASE)"
 
-deploy-production: ## Run production deploy hook over key-based SSH; requires PROD_SSH_HOST
-	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
-	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "cd /var/www/nadergorge && git pull --ff-only && docker compose up -d --build && python3 /var/www/nadergorge/scratch/fix_migrations_vps.py"
+ops-check: ## Run DB guard and checks only for affected components
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh check --base="$(OPS_BASE)"
 
-migrate-production: ## Populate migration history and run pending migrations over key-based SSH; requires PROD_SSH_HOST
-	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
-	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "python3 /var/www/nadergorge/scratch/fix_migrations_vps.py --skip-build"
+ops-build: ## Build only locally affected Docker images with live progress
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh build --base="$(OPS_BASE)"
 
-logs-production: ## Tail live logs from ALL services over key-based SSH; requires PROD_SSH_HOST
-	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
-	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "cd /var/www/nadergorge && docker compose logs -f"
+ops-fast: ## Urgent local path: DB guard, focused checks, cached affected build
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh fast --base="$(OPS_BASE)"
 
-logs-production-backend: ## Tail backend logs over key-based SSH; requires PROD_SSH_HOST
-	@[ "$(PROD_SSH_HOST)" ] || (echo "PROD_SSH_HOST is required, for example root@your-host" && exit 1)
-	ssh -o StrictHostKeyChecking=accept-new "$(PROD_SSH_HOST)" "cd /var/www/nadergorge && docker compose logs -f backend"
+ops-db-guard: ## Block EF model changes that do not include a migration
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh db-guard --base="$(OPS_BASE)"
+
+ops-db-migration: ## Add EF migration using installed tools (NAME=Required; no downloads)
+	@[ "$(NAME)" ] || (echo "Usage: make ops-db-migration NAME=DescribeTheSchemaChange" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/ops.sh db-add "$(NAME)" --base="$(OPS_BASE)"
+
+prod-status: ## Show three-node Production health/quorum/release with evidence
+	bash $(SSH_SKILL_SCRIPTS)/massar.sh status
+
+prod-audit: ## Run the read-only three-node Production audit
+	bash $(SSH_SKILL_SCRIPTS)/massar.sh audit
+
+prod-logs: ## Read redacted Production logs (NODE/SERVICE/MINUTES)
+	bash $(SSH_SKILL_SCRIPTS)/massar.sh logs "$(NODE)" "$(SERVICE)" "$(MINUTES)"
+
+prod-plan: ## Show affected areas and immutable Production image plan
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh plan --base="$(OPS_BASE)"
+
+prod-db-inventory: ## Read-only: compare expected EF tables/migrations with Production
+	bash $(SSH_SKILL_SCRIPTS)/database.sh inventory
+
+prod-db-fast-preview: ## Preview no-build repair using current release migrator
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-db-fast-preview" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/database.sh fast \
+		--base="$(OPS_BASE)" --reason="$(REASON)"
+
+prod-db-fast: ## Repair DB drift with current migrator; CONFIRM=DB-ONLY required
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-db-fast" && exit 2)
+	@[ "$(CONFIRM)" = "DB-ONLY" ] || \
+		(echo "Refusing: use CONFIRM=DB-ONLY after reviewing prod-db-fast-preview" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/database.sh fast \
+		--base="$(OPS_BASE)" --reason="$(REASON)" --yes
+
+prod-build-preview: ## Preview node-3 immutable build (RELEASE required)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh build --release="$(RELEASE)"
+
+prod-build: ## Build/distribute four immutable images on node-3 (RELEASE required)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh build --release="$(RELEASE)" --yes
+
+prod-gate-preview: ## Preview backup/restore migration gate (RELEASE/MANIFEST)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh gate \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" --output="$(BACKUP_EVIDENCE)"
+
+prod-gate: ## Create backup/restore migration evidence (RELEASE/MANIFEST)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh gate \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--output="$(BACKUP_EVIDENCE)" --yes
+
+prod-release-preview: ## Preview migrate + rolling three-node release
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--backup-evidence="$(BACKUP_EVIDENCE)" --base="$(OPS_BASE)"
+
+prod-release: ## Run reviewed migrate + zero-downtime rolling release
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--backup-evidence="$(BACKUP_EVIDENCE)" --base="$(OPS_BASE)" --yes
+
+prod-fast-release: ## Urgent safe release; REASON required, safety gates remain
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-fast-release" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh fast-release \
+		--release="$(RELEASE)" --manifest="$(MANIFEST)" \
+		--backup-evidence="$(BACKUP_EVIDENCE)" --base="$(OPS_BASE)" \
+		--reason="$(REASON)" --yes
+
+deploy: prod-release-preview ## Safe default: deployment command is preview-only
+
+deploy-production: prod-release ## Backward-compatible safe rolling Production release
+
+migrate-production: ## Refuse unbound DB migration; use prod-gate then prod-release
+	@echo "Blocked: Production migrations require release manifest and backup/restore evidence."
+	@echo "Run make prod-gate, then make prod-release."
+	@exit 2
+
+logs-production: prod-logs ## Backward-compatible redacted Production logs
+
+logs-production-backend: ## Redacted backend logs from NODE (default node-1)
+	@$(MAKE) prod-logs NODE="$(NODE)" SERVICE=backend MINUTES="$(MINUTES)"
 
 
 # =============================================================================
