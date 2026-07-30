@@ -13,6 +13,13 @@ body {
   overflow-x: hidden;
 }
 
+/* Arabic letters are naturally connected. Tailwind tracking utilities that work
+   well for Latin display text create visible gaps in Arabic headings, so keep
+   the native spacing for every Arabic heading across the application. */
+:lang(ar) :is(h1, h2, h3, h4, h5, h6) {
+  letter-spacing: normal;
+}
+
 /* Every authenticated workspace has a reliable, visible vertical scroll area.
    Extra bottom padding keeps the final controls above mobile navigation and iOS safe areas. */
 .app-shell-scroll {
