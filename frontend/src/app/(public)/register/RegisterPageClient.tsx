@@ -17,7 +17,7 @@
 import '../auth.css';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AnimatedThemeToggler } from '@/components/ui/animated-theme-toggler';
 import { useAuthTheme } from '@/hooks/useAuthTheme';
 import { useRootOverscrollBackground } from '@/hooks/useRootOverscrollBackground';
@@ -40,18 +40,10 @@ export default function RegisterPageClient() {
   const { isDark, themeVars, toggleTheme } = useAuthTheme();
   useRootOverscrollBackground();
   const { allowEnhancedMotion, isPageVisible } = useConstrainedMotion();
-  const [showInstructions, setShowInstructions] = useState(false);
-
-  useEffect(() => {
-    const hasSeen = localStorage.getItem('hasSeenRegisterInstructions');
-    if (!hasSeen) {
-      setShowInstructions(true);
-    }
-  }, []);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const handleCloseInstructions = () => {
     setShowInstructions(false);
-    localStorage.setItem('hasSeenRegisterInstructions', 'true');
   };
   const rippleGridColor = isDark ? '#36d6d6' : '#0e8f8f'; // design-token-allow: WebGL uniform requires a concrete color value.
 

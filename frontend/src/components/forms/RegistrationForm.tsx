@@ -69,6 +69,7 @@ const isPastCairoDate = (date: string) =>
 const schema = z
   .object({
     fullName: z.string().min(5, 'يرجى إدخال اسمك رباعيًا')
+      .regex(/^[\u0621-\u064A\s]+$/, 'يرجى كتابة الاسم بالحروف العربية فقط')
       .refine((n) => n.trim().split(/\s+/).length >= 4, 'يرجى إدخال اسمك رباعيًا (مثال: أحمد محمد محمود علي)'),
     phoneNumber: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم الهاتف بشكل صحيح، مثال: 01012345678'),
     secondaryPhone: z.string().regex(egyptianPhoneRegex, 'تأكد من كتابة رقم الهاتف بشكل صحيح').optional().or(z.literal('')),

@@ -19,6 +19,7 @@ interface RegistrationInstructionsModalProps {
   confirmLabel?: string;
   title?: string;
   subtitle?: string;
+  mode?: 'register' | 'login';
 }
 
 export function RegistrationInstructionsModal({
@@ -27,6 +28,7 @@ export function RegistrationInstructionsModal({
   confirmLabel = 'فهمت وموافق على الشروط',
   title = 'تعليمات وشروط هامة قبل التسجيل',
   subtitle = 'يرجى قراءتها بدقة قبل إنشاء الحساب أو تسجيل الدخول لأول مرة.',
+  mode = 'register',
 }: RegistrationInstructionsModalProps) {
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function RegistrationInstructionsModal({
 
   if (!open) return null;
 
-  const instructions = [
+  const registrationInstructions = [
     {
       title: 'الاسم رباعي وحقيقي',
       description: 'يجب كتابة الاسم رباعياً ومطابقاً للبطاقة الشخصية أو شهادة الميلاد الرسمية لتجنب إلغاء الحساب.',
@@ -78,6 +80,33 @@ export function RegistrationInstructionsModal({
       color: 'text-green-500 bg-green-500/10 border-green-500/20',
     },
   ];
+  const loginInstructions = [
+    {
+      title: 'استخدم حسابك الشخصي فقط',
+      description: 'اكتب رقم الهاتف وكلمة المرور المسجلين للحساب نفسه. لا تنشئ حسابًا جديدًا إذا نسيت بيانات الدخول.',
+      icon: User,
+      color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+    },
+    {
+      title: 'لا تشارك كلمة المرور',
+      description: 'كلمة المرور سرية. مشاركتها قد تعرض حسابك وبياناتك الدراسية للإيقاف لحمايتك.',
+      icon: ShieldAlert,
+      color: 'text-red-500 bg-red-500/10 border-red-500/20',
+    },
+    {
+      title: 'استخدم أجهزتك المعتادة',
+      description: 'سجّل الدخول من أجهزتك الشخصية المعتمدة فقط، وتجنب التنقل المتكرر بين أجهزة كثيرة.',
+      icon: MonitorSmartphone,
+      color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+    },
+    {
+      title: 'نسيت كلمة المرور؟',
+      description: 'استخدم استعادة كلمة المرور من صفحة الدخول بدل تكرار المحاولات أو إنشاء حساب ثانٍ.',
+      icon: MessageSquareCode,
+      color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+    },
+  ];
+  const instructions = mode === 'login' ? loginInstructions : registrationInstructions;
 
   return (
     <AnimatePresence>
@@ -162,7 +191,9 @@ export function RegistrationInstructionsModal({
             <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-amber-500/90 text-xs font-semibold leading-relaxed flex gap-3 items-center text-right">
               <ShieldAlert className="h-5 w-5 shrink-0" />
               <span>
-                ملاحظة: تلتزم الأكاديمية بحماية خصوصية بياناتك وتوفير المحتوى بأعلى معايير الأمان والجودة. مخالفة الشروط أعلاه قد يعرض حسابك للتجميد الفوري.
+                {mode === 'login'
+                  ? 'ملاحظة: إذا كانت بيانات الدخول غير متاحة لديك، استخدم استعادة كلمة المرور أو تواصل مع الدعم.'
+                  : 'ملاحظة: تلتزم الأكاديمية بحماية خصوصية بياناتك وتوفير المحتوى بأعلى معايير الأمان والجودة. مخالفة الشروط أعلاه قد يعرض حسابك للتجميد الفوري.'}
               </span>
             </div>
           </div>

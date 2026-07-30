@@ -52,6 +52,8 @@ public class RegisterCommandValidator : AbstractValidator<RegisterCommand>
         // ── Personal ──────────────────────────────────────────────────────
         RuleFor(x => x.FullName)
             .NotEmpty().MaximumLength(200)
+            .Matches(@"^[\u0621-\u064A\s]+$")
+            .WithMessage("الاسم يجب أن يُكتب بالحروف العربية فقط.")
             .Must(name => name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= 4)
             .WithMessage("Full name must contain at least 4 parts (الاسم رباعي)");
 

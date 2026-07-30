@@ -16,7 +16,7 @@
 
 import '../auth.css';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth-store';
@@ -28,6 +28,7 @@ import { LoginForm } from '@/components/forms/LoginForm';
 import { PlatformLogo } from '@/components/shared/PlatformLogo';
 import { getSurfaceName, getSurfaceOrigins } from '@/packages/surface-runtime/config';
 import { resolveReturnNavigation } from '@/lib/safe-return-url';
+import { RegistrationInstructionsModal } from '@/components/registration/RegistrationInstructionsModal';
 
 function getLoginCopy(surface: string) {
   let title = 'بوابة الطالب';
@@ -55,6 +56,7 @@ export default function LoginPageClient() {
   const { user, isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
   const surface = getSurfaceName();
   const loginCopy = getLoginCopy(surface);
+  const [showLoginInstructions, setShowLoginInstructions] = useState(true);
 
   useEffect(() => {
     loadFromStorage();
@@ -229,6 +231,15 @@ export default function LoginPageClient() {
 
         <p className="auth-footer-caption">© 2026 منصة مسار</p>
       </main>
+
+      {showLoginInstructions ? <RegistrationInstructionsModal
+        open
+        mode="login"
+        title="تعليمات مهمة قبل تسجيل الدخول"
+        subtitle="هذه التعليمات تخص استخدام حسابك الحالي، وليست تعليمات إنشاء حساب جديد."
+        confirmLabel="فهمت، متابعة لتسجيل الدخول"
+        onClose={() => setShowLoginInstructions(false)}
+      /> : null}
     </div>
   );
 }
