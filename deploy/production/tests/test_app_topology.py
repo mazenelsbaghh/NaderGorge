@@ -33,6 +33,22 @@ def test_every_node_runs_the_complete_application_stack() -> None:
     assert "subnet: 172.29.0.0/24" in compose
 
 
+def test_worker_keeps_shared_storage_group_after_dropping_root() -> None:
+    # Regression for the 2026-07-30 subtitle EACCES incident on shared storage.
+    compose = (ROOT / "deploy/production/compose/compose.app.yml").read_text()
+    entrypoint = (ROOT / "worker/docker-entrypoint.sh").read_text()
+
+    worker = compose.split("\n  worker:\n", 1)[1].split("\n  landing:\n", 1)[0]
+    assert "group_add:" in worker
+    assert "MASSAR_SHARED_GID: ${MASSAR_SHARED_GID:" in worker
+
+    assert 'shared_gid="${MASSAR_SHARED_GID:-}"' in entrypoint
+    assert 'usermod --append --groups "$shared_group" worker' in entrypoint
+    assert entrypoint.index("prepare_shared_storage_group") < entrypoint.index(
+        'exec gosu worker "$@"'
+    )
+
+
 def test_haproxy_balances_every_approved_host_across_three_nodes() -> None:
     config = (ROOT / "deploy/production/config/haproxy/postgres.cfg").read_text()
     for host in HOSTS:

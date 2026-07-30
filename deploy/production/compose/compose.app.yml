@@ -65,6 +65,7 @@ services:
       MASSAR_RELEASE_ID: ${MASSAR_RELEASE_ID}
       NODE_ENV: production
       BACKEND_API_URL: http://backend:5245
+      MASSAR_SHARED_GID: ${MASSAR_SHARED_GID:?MASSAR_SHARED_GID is required}
       SHARED_STORAGE_ROOT: /shared
       SHARED_PUBLIC_ROOT: /shared/public
       SUBTITLE_STORAGE_PATH: /shared/public/subtitles
