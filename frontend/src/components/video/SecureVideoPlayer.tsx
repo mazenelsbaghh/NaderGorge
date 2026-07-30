@@ -791,28 +791,24 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
     const webkitElement = el as HTMLElement & {
       webkitRequestFullscreen?: () => Promise<void> | void;
     };
-    const requestProviderFullscreen = () => {
-      if (provider !== 'bunny') return false;
-      sendCommand('requestFullscreen');
-      return true;
-    };
+    const useNativeIPhonePlayer = /iPhone|iPod/i.test(navigator.userAgent)
+      && (provider === 'youtube' || provider === 'bunny');
 
     if (!document.fullscreenElement && !webkitDocument.webkitFullscreenElement) {
+      if (useNativeIPhonePlayer) {
+        sendCommand('play');
+        return;
+      }
       try {
         if (el.requestFullscreen) {
           await el.requestFullscreen();
         } else if (webkitElement.webkitRequestFullscreen) {
           await webkitElement.webkitRequestFullscreen();
-        } else if (requestProviderFullscreen()) {
-          // iPhone Safari only permits the underlying <video> to enter native
-          // fullscreen. Bunny handles that inside its cross-origin player.
         } else {
           setIsPseudoFullscreen(true);
         }
       } catch {
-        if (!requestProviderFullscreen()) {
-          setIsPseudoFullscreen(true);
-        }
+        setIsPseudoFullscreen(true);
       }
     } else {
       if (document.exitFullscreen) {

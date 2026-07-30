@@ -157,6 +157,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
   }
 
   const safeSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=true`);
+  const safeIosSrc = JSON.stringify(`https://player.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=false&playsinline=false&disableIosPlayer=false`);
   const watermarkBrand = escapeHtml('Massar Academy');
   const watermarkStudentName = escapeHtml(studentName);
   const watermarkStudentPhone = escapeHtml(studentPhone);
@@ -192,7 +193,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 </head>
 <body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
   <div id="wrap">
-    <iframe id="bunny-frame" src=${safeSrc} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>
+    <iframe id="bunny-frame" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>
     <div class="click-overlay" id="click-overlay"></div>
     <div id="video-watermark">
       <span style="font-weight:900">${watermarkBrand}</span><br>
@@ -201,6 +202,12 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
     </div>
   </div>
 
+  <script>
+    (function () {
+      var isIPhone = /iPhone|iPod/i.test(navigator.userAgent);
+      document.getElementById('bunny-frame').src = isIPhone ? ${safeIosSrc} : ${safeSrc};
+    })();
+  </script>
   <script src="//assets.mediadelivery.net/playerjs/player-0.1.0.min.js"></script>
   <script>
     // ═══════════════════════════════════════════════════════
@@ -229,16 +236,6 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
           if (!playerjs.Player.prototype.getPlaybackRate) {
             playerjs.Player.prototype.getPlaybackRate = function (callback) {
               this.send({ method: 'getPlaybackRate' }, callback);
-            };
-          }
-          if (!playerjs.Player.prototype.requestFullscreen) {
-            playerjs.Player.prototype.requestFullscreen = function () {
-              this.send({ method: 'requestFullscreen' });
-            };
-          }
-          if (!playerjs.Player.prototype.exitFullscreen) {
-            playerjs.Player.prototype.exitFullscreen = function () {
-              this.send({ method: 'exitFullscreen' });
             };
           }
         }
@@ -340,8 +337,6 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         case 'mute': player.setVolume(0); break;
         case 'unmute': player.setVolume(1); break;
         case 'setPlaybackRate': player.setPlaybackRate(msg.rate); break;
-        case 'requestFullscreen': player.requestFullscreen(); break;
-        case 'exitFullscreen': player.exitFullscreen(); break;
       }
     });
 
@@ -416,6 +411,7 @@ function generateYouTubeEmbedHtml(videoId: string, studentName: string, studentP
 var _k = ${xorKey};
 var _d = [${encodedId.join(',')}];
 var _vid = _d.map(function(c) { return String.fromCharCode(c ^ _k); }).join('');
+var _useNativeIPhonePlayer = /iPhone|iPod/i.test(navigator.userAgent);
 
 // ═══════════════════════════════════════════════════════
 // LAYER 2: Closed Shadow DOM
@@ -553,7 +549,11 @@ function onYouTubeIframeAPIReady() {
   player = new YT.Player(ytDivId, {
     videoId: _vid,  // use decoded variable, not plain string
     playerVars: {
-      autoplay: 1, controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3, playsinline: 1,
+      autoplay: _useNativeIPhonePlayer ? 0 : 1,
+      controls: 0, disablekb: 1, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3,
+      // YouTube has no programmatic fullscreen API. On iPhone, disabling inline
+      // playback hands the video to the native iOS fullscreen player.
+      playsinline: _useNativeIPhonePlayer ? 0 : 1,
       // Explicit client identity is required by YouTube when an embed is nested in our secure player.
       origin: window.location.origin,
       widget_referrer: window.location.origin,
@@ -565,7 +565,7 @@ function onYouTubeIframeAPIReady() {
         postToParent('ready', {
           duration: e.target.getDuration(), volume: e.target.getVolume(), isMuted: e.target.isMuted(), provider: 'youtube'
         });
-        e.target.playVideo();
+        if (!_useNativeIPhonePlayer) e.target.playVideo();
         startProgressUpdates();
         // Send available quality levels after a short delay (they're not available immediately)
         setTimeout(function() {
