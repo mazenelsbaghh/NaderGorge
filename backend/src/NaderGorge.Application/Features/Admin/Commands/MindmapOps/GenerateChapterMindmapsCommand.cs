@@ -12,11 +12,13 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
 {
     private readonly IAppDbContext _db;
     private readonly IJobEnqueuer _jobEnqueuer;
+    private readonly IAiJobCancellationStore _cancellations;
 
-    public GenerateChapterMindmapsCommandHandler(IAppDbContext db, IJobEnqueuer jobEnqueuer)
+    public GenerateChapterMindmapsCommandHandler(IAppDbContext db, IJobEnqueuer jobEnqueuer, IAiJobCancellationStore cancellations)
     {
         _db = db;
         _jobEnqueuer = jobEnqueuer;
+        _cancellations = cancellations;
     }
 
     public async Task<ApiResponse> Handle(GenerateChapterMindmapsCommand request, CancellationToken ct)
@@ -38,6 +40,8 @@ public class GenerateChapterMindmapsCommandHandler : IRequestHandler<GenerateCha
 
         if (lockRows == 0)
             return ApiResponse.Fail("Video is already processing mind maps.");
+
+        await _cancellations.ClearMindmapCancellationAsync(video.Id);
 
         var teacherUserId = await _db.LessonVideos
             .Where(v => v.Id == video.Id)

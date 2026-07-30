@@ -10,9 +10,7 @@ from urllib.parse import quote
 
 
 COPIED_OPTIONAL_KEYS = (
-    "AI_PRIMARY_PROVIDER",
     "GEMINI_API_KEY",
-    "GEMINI_FALLBACK_API_KEY",
     "BUNNY_STREAM_LIBRARY_ID",
     "BUNNY_STREAM_API_KEY",
     "BUNNY_STREAM_TUS_UPLOAD_EXPIRY_MINUTES",
@@ -117,8 +115,8 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
     for key in COPIED_OPTIONAL_KEYS:
         if source.get(key):
             values[key] = source[key]
-    if values.get("AI_PRIMARY_PROVIDER", "developer") == "developer" and not values.get("GEMINI_API_KEY"):
-        raise ValueError("developer AI mode requires GEMINI_API_KEY")
+    if not values.get("GEMINI_API_KEY"):
+        raise ValueError("GEMINI_API_KEY is required for the Gemini Developer API")
     return [safe_line(key, value) for key, value in values.items()]
 
 

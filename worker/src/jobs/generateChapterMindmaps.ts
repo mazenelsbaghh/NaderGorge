@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { generateChapterMindmap } from '../services/geminiService.js';
 import { throwIfCancellationRequested } from '../cancellation.js';
 import { fetchWithTimeout } from '../services/workerFetch.js';
-import { AIProviderExecutionError } from '../services/aiProvider.js';
+import { GeminiDeveloperApiError } from '../services/aiProvider.js';
 import { sharedMindmapsRoot, sharedPublicRoot } from '../config/storage.js';
 
 // Resolve worker root reliably regardless of process.cwd()
@@ -36,8 +36,8 @@ function sleep(ms: number) {
 }
 
 function isQuotaError(error: unknown) {
-    return error instanceof AIProviderExecutionError &&
-        (error.primaryCategory === 'quota-exhausted' || error.fallbackCategory === 'quota-exhausted');
+    return error instanceof GeminiDeveloperApiError &&
+        error.category === 'quota-exhausted';
 }
 
 async function postMindmapResults(lessonVideoId: string, results: Array<{ title: string; imageUrl: string }>) {

@@ -57,6 +57,22 @@ test('ingestStreamJob skips existing completed job without removing or enqueuing
   assert.equal(queueRef.added.length, 0);
 });
 
+test('ingestStreamJob replaces a failed job when analysis is requested again', async () => {
+  const originalGet = Redis.prototype.get;
+  try {
+    Redis.prototype.get = async () => null;
+    redisRef = redis();
+    let removed = false;
+    const existing = { getState: async () => 'failed', remove: async () => { removed = true; } };
+    const result = await ingestStreamJob(redisRef as any, queues(existing), '2-1', ['jobType', 'video analysis', 'jobId', 'job-2', 'payload', '{}']);
+    assert.equal(result.action, 'enqueued');
+    assert.equal(removed, true);
+    assert.equal(queueRef.added.length, 1);
+  } finally {
+    Redis.prototype.get = originalGet;
+  }
+});
+
 test('ingestStreamJob preserves cancellation marker on ordinary duplicate ingestion', async () => {
   const oldGet = Redis.prototype.get;
   try {

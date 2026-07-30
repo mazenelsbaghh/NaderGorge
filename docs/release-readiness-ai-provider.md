@@ -17,8 +17,7 @@ The harness prints JSON evidence with secret-safe details and uses these exit co
 
 Required environment for a real run:
 
-- Vertex: `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, `AI_TEMP_GCS_BUCKET`, and usable Google Application Default Credentials.
-- Developer provider: `GEMINI_API_KEY` (or the configured fallback key).
+- Gemini Developer API: `GEMINI_API_KEY`.
 - Callback readiness: `AI_CALLBACK_SECRET` and a reachable `BACKEND_API_URL`.
 - Worker readiness: `WORKER_URL` pointing at the running worker HTTP server.
 
@@ -27,12 +26,7 @@ The probe uses a synthetic prompt and only validates the provider response schem
 Current local evidence (2026-07-13):
 
 ```text
-AI_PRIMARY_PROVIDER=missing
-GOOGLE_CLOUD_PROJECT=missing
-GOOGLE_CLOUD_LOCATION=missing
-AI_TEMP_GCS_BUCKET=missing
 GEMINI_API_KEY=missing
-GEMINI_FALLBACK_API_KEY=missing
 AI_CALLBACK_SECRET=missing
 BACKEND_API_URL=missing
 WORKER_URL=missing

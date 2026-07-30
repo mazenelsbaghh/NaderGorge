@@ -11,6 +11,8 @@ frontend/.next/
 worker/dist/
 backend/bin/
 backend/obj/
+backend/**/bin/
+backend/**/obj/
 
 # Git
 .git/

@@ -85,7 +85,6 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   const handleCancel = async () => {
     setIsCancelling(true);
     try {
-      await workerService.cancelWorkerJob(videoId);
       const realId = videoId.replace('_mindmaps', '');
 
       if (isMindmap) {
@@ -105,21 +104,14 @@ export function AIProgressTracker({ videoId, isMindmap, onComplete }: { videoId:
   const handleRetry = async () => {
     setIsRetrying(true);
     try {
-      // If there's an active job, retry it; otherwise re-trigger analysis
-      if (status?.state === 'failed') {
-        await workerService.retryWorkerJob(videoId);
-        toast.success('جاري إعادة المحاولة...');
-        setStatus(null);
+      const realId = videoId.replace('_mindmaps', '');
+      if (isMindmap) {
+        await adminService.generateVideoMindmaps(realId);
       } else {
-        const realId = videoId.replace('_mindmaps', '');
-        if (isMindmap) {
-          await adminService.generateVideoMindmaps(realId);
-        } else {
-          await adminService.triggerVideoAiAnalysis(realId);
-        }
-        toast.success('تم إعادة تشغيل العملية');
-        setStatus(null);
+        await adminService.triggerVideoAiAnalysis(realId);
       }
+      toast.success('تم إعادة تشغيل العملية');
+      setStatus(null);
     } catch {
       toast.error('تعذر إعادة المحاولة');
     } finally {

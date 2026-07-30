@@ -192,7 +192,7 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
 </head>
 <body oncontextmenu="return false" ondragstart="return false" onselectstart="return false">
   <div id="wrap">
-    <iframe id="bunny-frame" src=${safeSrc} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;" allowfullscreen></iframe>
+    <iframe id="bunny-frame" src=${safeSrc} allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>
     <div class="click-overlay" id="click-overlay"></div>
     <div id="video-watermark">
       <span style="font-weight:900">${watermarkBrand}</span><br>
@@ -229,6 +229,16 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
           if (!playerjs.Player.prototype.getPlaybackRate) {
             playerjs.Player.prototype.getPlaybackRate = function (callback) {
               this.send({ method: 'getPlaybackRate' }, callback);
+            };
+          }
+          if (!playerjs.Player.prototype.requestFullscreen) {
+            playerjs.Player.prototype.requestFullscreen = function () {
+              this.send({ method: 'requestFullscreen' });
+            };
+          }
+          if (!playerjs.Player.prototype.exitFullscreen) {
+            playerjs.Player.prototype.exitFullscreen = function () {
+              this.send({ method: 'exitFullscreen' });
             };
           }
         }
@@ -330,6 +340,8 @@ function generateBunnyEmbedHtml(videoId: string, studentName: string, studentPho
         case 'mute': player.setVolume(0); break;
         case 'unmute': player.setVolume(1); break;
         case 'setPlaybackRate': player.setPlaybackRate(msg.rate); break;
+        case 'requestFullscreen': player.requestFullscreen(); break;
+        case 'exitFullscreen': player.exitFullscreen(); break;
       }
     });
 

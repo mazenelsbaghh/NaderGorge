@@ -16,7 +16,6 @@ import { createWorkerAdminGuard, isWorkerAdminEnabled } from './server/adminAcce
 import { ingestStreamJob, type QueueSet } from './queues/jobIngestion.js';
 import { claimStaleStreamMessages } from './queues/streamRecovery.js';
 import { readAIConfig } from './services/aiConfig.js';
-import { TemporaryAudioStorage } from './services/temporaryAudioStorage.js';
 import { generateLiveSupportReply } from './services/geminiService.js';
 import { runLiveSupportAgent, type LiveSupportClaimContext } from './services/liveSupportAgent.js';
 import { fetchWithTimeout } from './services/workerFetch.js';
@@ -31,13 +30,9 @@ let liveSupportWorkerReady = false;
 
 async function validateAIStartup() {
   const config = readAIConfig();
-  if (config.primaryProvider === 'vertex') {
-    await new TemporaryAudioStorage(config).validateAccess();
-  }
   aiStartupReady = true;
-  console.log('[AI startup] Provider and temporary-storage configuration validated.', {
+  console.log('[AI startup] Gemini Developer API configuration validated.', {
     provider: config.primaryProvider,
-    location: config.location,
   });
 }
 

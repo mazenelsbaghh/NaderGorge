@@ -1,4 +1,5 @@
 using MediatR;
+using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain;
@@ -11,10 +12,12 @@ public record CancelAnalyzeVideoAICommand(Guid VideoId, Guid AdminId, bool IsMin
 public class CancelAnalyzeVideoAICommandHandler : IRequestHandler<CancelAnalyzeVideoAICommand, bool>
 {
     private readonly IAppDbContext _context;
+    private readonly IAiJobCancellationStore _cancellations;
 
-    public CancelAnalyzeVideoAICommandHandler(IAppDbContext context)
+    public CancelAnalyzeVideoAICommandHandler(IAppDbContext context, IAiJobCancellationStore cancellations)
     {
         _context = context;
+        _cancellations = cancellations;
     }
 
     public async Task<bool> Handle(CancelAnalyzeVideoAICommand request, CancellationToken cancellationToken)
@@ -26,10 +29,13 @@ public class CancelAnalyzeVideoAICommandHandler : IRequestHandler<CancelAnalyzeV
 
         if (request.IsMindmapOnly)
         {
+            await _cancellations.RequestMindmapCancellationAsync(video.Id);
             video.IsProcessingMindmaps = false;
         }
         else
         {
+            await _cancellations.RequestVideoAnalysisCancellationAsync(video.Id);
+            await _cancellations.RequestMindmapCancellationAsync(video.Id);
             video.IsProcessingAI = false;
             video.IsProcessingMindmaps = false;
             video.SubtitleUrl = null;

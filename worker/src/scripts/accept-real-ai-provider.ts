@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import { generateLiveSupportReply } from '../services/geminiService.js';
 import { readAIConfig } from '../services/aiConfig.js';
-import { TemporaryAudioStorage } from '../services/temporaryAudioStorage.js';
 import { fetchWithTimeout, redactExternalText } from '../services/workerFetch.js';
 
 dotenv.config();
@@ -68,16 +67,6 @@ async function checkProvider() {
   } catch (error) {
     record('provider-configuration', 'blocked', safeError(error));
     return;
-  }
-
-  if (config.primaryProvider === 'vertex') {
-    try {
-      await new TemporaryAudioStorage(config).validateAccess();
-      record('temporary-storage-lifecycle', 'passed', 'Vertex temporary bucket is reachable and has a delete rule within 24 hours.');
-    } catch (error) {
-      record('temporary-storage-lifecycle', 'blocked', safeError(error));
-      return;
-    }
   }
 
   try {

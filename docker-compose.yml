@@ -153,16 +153,9 @@ services:
     environment:
       REDIS_URL: "redis://:${REDIS_PASSWORD:-localdevredispassword_32_chars_minimum_change_before_prod}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
       DB_CONNECTION_STRING: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-massar_platform}"
-      AI_PRIMARY_PROVIDER: ${AI_PRIMARY_PROVIDER:-vertex}
-      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-}
-      GOOGLE_CLOUD_LOCATION: ${GOOGLE_CLOUD_LOCATION:-global}
-      AI_TEMP_GCS_BUCKET: ${AI_TEMP_GCS_BUCKET:-}
-      AI_TEMP_GCS_PREFIX: ${AI_TEMP_GCS_PREFIX:-ai-analysis}
-      AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gemini-2.5-flash}
+      AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gemini-flash-latest}
       AI_IMAGE_MODEL: ${AI_IMAGE_MODEL:-gemini-3-pro-image-preview}
-      GEMINI_FALLBACK_API_KEY: ${GEMINI_FALLBACK_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-application-credentials.json
       FIREBASE_APPLICATION_CREDENTIALS: /run/secrets/firebase-adminsdk.json
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
@@ -188,8 +181,6 @@ services:
     ports:
       - "127.0.0.1:${MASSAR_WORKER_PORT:-3001}:3001"
     secrets:
-      - source: google_application_credentials
-        target: google-application-credentials.json
       - source: firebase_adminsdk
         target: firebase-adminsdk.json
     networks:
@@ -404,7 +395,5 @@ volumes:
     name: massar_protected_resources
 
 secrets:
-  google_application_credentials:
-    file: ${GOOGLE_APPLICATION_CREDENTIALS_HOST_PATH:-./secrets/google-application-credentials.json}
   firebase_adminsdk:
     file: ${FIREBASE_APPLICATION_CREDENTIALS_HOST_PATH:-./secrets/firebase-adminsdk.json}

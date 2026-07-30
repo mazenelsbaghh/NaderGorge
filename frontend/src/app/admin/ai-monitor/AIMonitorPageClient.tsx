@@ -908,9 +908,11 @@ export default function AIMonitorPageClient() {
   // ── Actions ───────────────────────────────────────────────────────────────
   const handleCancel = async (videoId: string, isMindmap: boolean) => {
     try {
-      const idSuffix = isMindmap ? '_mindmaps' : '';
-      await workerService.cancelWorkerJob(`${videoId}${idSuffix}`);
-      await adminService.cancelVideoAiAnalysis(videoId); // Unlocks both states
+      if (isMindmap) {
+        await adminService.cancelMindmapGeneration(videoId);
+      } else {
+        await adminService.cancelVideoAiAnalysis(videoId);
+      }
       toast.success('تم إلغاء المهمة');
       await loadProcessingVideos();
     } catch {
@@ -920,9 +922,13 @@ export default function AIMonitorPageClient() {
 
   const handleRetry = async (videoId: string, isMindmap: boolean) => {
     try {
-      const idSuffix = isMindmap ? '_mindmaps' : '';
-      await workerService.retryWorkerJob(`${videoId}${idSuffix}`);
+      if (isMindmap) {
+        await adminService.generateVideoMindmaps(videoId);
+      } else {
+        await adminService.triggerVideoAiAnalysis(videoId);
+      }
       toast.success('تمت إعادة المحاولة');
+      await loadProcessingVideos();
     } catch {
       toast.error('تعذر إعادة المحاولة');
     }

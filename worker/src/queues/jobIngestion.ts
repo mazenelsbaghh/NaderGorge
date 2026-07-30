@@ -95,9 +95,13 @@ export async function ingestStreamJob(redis: Redis, queues: QueueSet, messageStr
   const existingJob = await targetQueue.getJob(targetJobId);
   if (existingJob) {
     const state = await existingJob.getState();
-    logQueueEvent('job-stream', 'Skipping duplicate existing BullMQ job.', { jobId: targetJobId, state });
-    await acknowledge(redis, messageStreamId);
-    return { action: 'skipped-existing', targetJobId };
+    if (state === 'failed') {
+      await existingJob.remove();
+    } else {
+      logQueueEvent('job-stream', 'Skipping duplicate existing BullMQ job.', { jobId: targetJobId, state });
+      await acknowledge(redis, messageStreamId);
+      return { action: 'skipped-existing', targetJobId };
+    }
   }
 
   if (await isJobCancellationMarked(targetJobId)) {

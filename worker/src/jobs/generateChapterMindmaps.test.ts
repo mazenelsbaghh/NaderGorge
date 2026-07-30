@@ -4,13 +4,11 @@ import fs from 'fs';
 import path from 'path';
 import type { Job } from 'bullmq';
 import { generateMindmapsProcessor, type GenerateMindmapsJobData } from './generateChapterMindmaps.js';
-import { AIProviderGateway } from '../services/aiProvider.js';
 import type { AIConfig } from '../services/aiConfig.js';
 import { setAIServiceRuntimeFactoryForTests } from '../services/geminiService.js';
 
-const vertexConfig: AIConfig = {
-  primaryProvider: 'vertex', project: 'p', location: 'global', temporaryBucket: 'bucket',
-  temporaryPrefix: 'ai-analysis', textModel: 'text-model', imageModel: 'image-model', fallbackApiKey: 'fallback',
+const developerConfig: AIConfig = {
+  primaryProvider: 'developer', developerApiKey: 'test-key', textModel: 'text-model', imageModel: 'image-model',
 };
 
 test('2026-06-20 partial chapter generation does not publish an incomplete batch', async (testContext) => {
@@ -22,11 +20,10 @@ test('2026-06-20 partial chapter generation does not publish an incomplete batch
     return generatedChapterCount === 1
       ? { candidates: [{ content: { parts: [{ inlineData: { data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==' } }] } }] }
       : { candidates: [{ content: { parts: [] } }] };
-  } }, files: {} };
+  } } };
 
   setAIServiceRuntimeFactoryForTests(() => ({
-    config: vertexConfig, gateway: new AIProviderGateway(vertexConfig), vertex: client as any, developer: client as any,
-    temporaryStorage: {} as any,
+    config: developerConfig, developer: client as any,
   }));
   globalThis.fetch = async (url) => {
     callbackUrls.push(String(url));

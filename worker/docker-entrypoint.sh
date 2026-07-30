@@ -18,7 +18,6 @@ prepare_secret() {
   fi
 }
 
-prepare_secret GOOGLE_APPLICATION_CREDENTIALS
 prepare_secret FIREBASE_APPLICATION_CREDENTIALS
 
 exec gosu worker "$@"

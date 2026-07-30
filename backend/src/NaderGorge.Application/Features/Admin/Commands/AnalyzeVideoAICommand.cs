@@ -13,11 +13,13 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
 {
     private readonly IAppDbContext _db;
     private readonly IJobEnqueuer _jobEnqueuer;
+    private readonly IAiJobCancellationStore _cancellations;
 
-    public AnalyzeVideoAICommandHandler(IAppDbContext db, IJobEnqueuer jobEnqueuer)
+    public AnalyzeVideoAICommandHandler(IAppDbContext db, IJobEnqueuer jobEnqueuer, IAiJobCancellationStore cancellations)
     {
         _db = db;
         _jobEnqueuer = jobEnqueuer;
+        _cancellations = cancellations;
     }
 
     public async Task<ApiResponse> Handle(AnalyzeVideoAICommand request, CancellationToken ct)
@@ -37,6 +39,8 @@ public class AnalyzeVideoAICommandHandler : IRequestHandler<AnalyzeVideoAIComman
         var video = await _db.LessonVideos.FirstOrDefaultAsync(v => v.Id == request.VideoId, ct);
         if (video == null)
             return ApiResponse.Fail("Video not found");
+
+        await _cancellations.ClearVideoAnalysisCancellationAsync(video.Id);
 
         // The URL extraction here assumes standard embed code implies the backend 
         // has access to the raw URL or the FFmpeg extractor can download the video.
