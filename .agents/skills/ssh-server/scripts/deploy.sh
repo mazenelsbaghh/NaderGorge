@@ -39,15 +39,21 @@ usage() {
   cat <<'EOF'
 Usage:
   deploy.sh plan [--base=REF]
-  deploy.sh build --release=ID [--yes]
+  deploy.sh release-id
+  deploy.sh build --release=ID|auto [--yes]
   deploy.sh gate --release=ID --manifest=PATH [--output=PATH] [--yes]
   deploy.sh release --release=ID --manifest=PATH --backup-evidence=PATH [--yes]
   deploy.sh fast-release --release=ID --manifest=PATH --backup-evidence=PATH \
     --reason=TEXT --yes
+  deploy.sh small-release --component=frontend|backend|worker|all \
+    --reason=TEXT [--base=REF] [--yes]
 
 Behavior:
   - plan shows the affected backend/frontend/worker/database areas.
   - build uses node-3 and always creates all four immutable Production images.
+  - release-id prints the exact immutable ID for the current source state.
+  - small-release computes the ID and evidence paths automatically, then runs
+    check, build, migration gate, and zero-downtime rolling release in order.
   - gate creates the encrypted-backup, isolated-restore, and N-1 evidence.
   - release always runs status plus migrate/deploy dry-runs first.
   - without --yes every mutating command remains a preview.
@@ -65,6 +71,7 @@ backup_evidence=""
 gate_output=""
 base="${MASSAR_BASE_REF:-AUTO}"
 reason=""
+component=""
 confirmed=false
 
 for argument in "$@"; do
@@ -75,6 +82,7 @@ for argument in "$@"; do
     --output=*) gate_output="${argument#*=}" ;;
     --base=*) base="${argument#*=}" ;;
     --reason=*) reason="${argument#*=}" ;;
+    --component=*) component="${argument#*=}" ;;
     --yes) confirmed=true ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $argument" >&2; usage >&2; exit 2 ;;
@@ -104,6 +112,25 @@ require_release() {
   [[ -n "$release" ]] || { echo "--release is required" >&2; exit 2; }
 }
 
+exact_release_id() {
+  python3 - "$ROOT" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root / "deploy/production/scripts"))
+from release_images import source_state
+
+print(source_state(root)["releaseId"])
+PY
+}
+
+normalize_release() {
+  if [[ -z "$release" || "$release" == "auto" ]]; then
+    release="$(exact_release_id)"
+  fi
+}
+
 require_release_evidence() {
   require_release
   [[ -f "$manifest" ]] || { echo "--manifest must be an existing file" >&2; exit 2; }
@@ -121,8 +148,12 @@ case "$command_name" in
   plan)
     run python3 "$PLANNER" plan --base "$base"
     ;;
+  release-id)
+    exact_release_id
+    ;;
   build)
     require_operator_environment
+    normalize_release
     require_release
     cluster build --node all --release "$release" --remote-builder \
       --dry-run --evidence-dir "$EVIDENCE_ROOT/build"
@@ -132,6 +163,47 @@ case "$command_name" in
     else
       step "Preview complete. Re-run with --yes to build and distribute."
     fi
+    ;;
+  small-release)
+    require_operator_environment
+    case "$component" in
+      frontend|backend|worker|all) ;;
+      *)
+        echo "--component must be frontend, backend, worker, or all" >&2
+        exit 2
+        ;;
+    esac
+    [[ ${#reason} -ge 12 ]] || {
+      echo "small-release requires --reason with at least 12 characters" >&2
+      exit 2
+    }
+    release="$(exact_release_id)"
+    manifest="$EVIDENCE_ROOT/build/$release/manifest.json"
+    backup_evidence="$EVIDENCE_ROOT/migration-gates/$release.json"
+    step "SMALL RELEASE PLAN"
+    printf '  Component intent: %s\n  Release:          %s\n  Manifest:         %s\n  Gate evidence:    %s\n  Reason:           %s\n' \
+      "$component" "$release" "$manifest" "$backup_evidence" "$reason"
+    step "Production keeps one four-image immutable manifest; remote cache avoids unchanged rebuild work."
+    run python3 "$PLANNER" validate-scope --base "$base" --scope "$component"
+    run bash "$OPS" check --base="$base"
+    if [[ "$confirmed" != "true" ]]; then
+      "$0" build --release="$release"
+      step "Preview complete. Review the plan, then re-run with --yes."
+      exit 0
+    fi
+    "$0" build --release="$release" --yes
+    [[ -f "$manifest" ]] || {
+      echo "Build completed without the expected manifest: $manifest" >&2
+      exit 2
+    }
+    "$0" gate --release="$release" --manifest="$manifest" \
+      --output="$backup_evidence" --yes
+    [[ -f "$backup_evidence" ]] || {
+      echo "Migration gate completed without evidence: $backup_evidence" >&2
+      exit 2
+    }
+    "$0" release --release="$release" --manifest="$manifest" \
+      --backup-evidence="$backup_evidence" --base="$base" --yes
     ;;
   gate)
     require_operator_environment

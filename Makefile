@@ -9,6 +9,7 @@
         ops-plan ops-check ops-build ops-fast ops-db-guard ops-db-migration \
         prod-status prod-audit prod-logs prod-plan prod-db-inventory \
         prod-db-fast-preview prod-db-fast \
+        prod-small-preview prod-small prod-release-id \
         prod-build-preview prod-build prod-gate-preview prod-gate \
         prod-release-preview prod-release prod-fast-release \
         dev frontend backend stop \
@@ -26,6 +27,7 @@ PERFORMANCE_BASELINE ?= artifacts/performance-167/baseline/frontend-routes.json
 PERFORMANCE_CANDIDATE ?= artifacts/performance-167/final/frontend-routes.json
 PYTHON ?= python3
 OPS_BASE ?= AUTO
+SMALL_BASE ?= HEAD^
 RELEASE ?=
 MANIFEST ?= artifacts/production/build/$(RELEASE)/manifest.json
 BACKUP_EVIDENCE ?= artifacts/production/migration-gates/$(RELEASE).json
@@ -34,6 +36,7 @@ SERVICE ?= backend
 MINUTES ?= 15
 REASON ?=
 CONFIRM ?=
+COMPONENT ?= frontend
 SSH_SKILL_SCRIPTS := .agents/skills/ssh-server/scripts
 
 help: ## Show all available make targets
@@ -374,6 +377,23 @@ prod-logs: ## Read redacted Production logs (NODE/SERVICE/MINUTES)
 
 prod-plan: ## Show affected areas and immutable Production image plan
 	bash $(SSH_SKILL_SCRIPTS)/deploy.sh plan --base="$(OPS_BASE)"
+
+prod-release-id: ## Print the exact immutable release ID; never type a short SHA
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release-id
+
+prod-small-preview: ## Preview one-command safe release (COMPONENT/REASON)
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-small-preview" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh small-release \
+		--component="$(COMPONENT)" --reason="$(REASON)" --base="$(SMALL_BASE)"
+
+prod-small: ## Build, gate, and roll safely; CONFIRM must match COMPONENT uppercase
+	@[ "$(REASON)" ] || (echo "REASON is required for prod-small" && exit 2)
+	@expected="$$(printf '%s' "$(COMPONENT)" | tr '[:lower:]' '[:upper:]')"; \
+		[ "$(CONFIRM)" = "$$expected" ] || \
+		(echo "Refusing: review prod-small-preview then use CONFIRM=$$expected" && exit 2)
+	bash $(SSH_SKILL_SCRIPTS)/deploy.sh small-release \
+		--component="$(COMPONENT)" --reason="$(REASON)" \
+		--base="$(SMALL_BASE)" --yes
 
 prod-db-inventory: ## Read-only: compare expected EF tables/migrations with Production
 	bash $(SSH_SKILL_SCRIPTS)/database.sh inventory

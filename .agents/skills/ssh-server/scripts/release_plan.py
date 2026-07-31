@@ -30,6 +30,9 @@ class PlanError(RuntimeError):
     pass
 
 
+APPLICATION_COMPONENTS = frozenset(("frontend", "backend", "worker"))
+
+
 @dataclass(frozen=True)
 class ReleasePlan:
     base: str
@@ -230,11 +233,33 @@ def render_human(plan: ReleasePlan) -> None:
     )
 
 
+def validate_scope(plan: ReleasePlan, scope: str) -> None:
+    if scope == "all":
+        return
+    affected_applications = APPLICATION_COMPONENTS.intersection(plan.components)
+    requires_all = bool(
+        {"database", "infrastructure"}.intersection(plan.components)
+    )
+    if requires_all or affected_applications != {scope}:
+        affected = ", ".join(plan.components) or "none"
+        raise PlanError(
+            f"scope '{scope}' is incompatible with affected components: {affected}; "
+            "use --scope=all or select the single affected application"
+        )
+
+
 def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser(description=__doc__)
     value.add_argument(
         "command",
-        choices=("plan", "check-db", "images", "services", "components"),
+        choices=(
+            "plan",
+            "check-db",
+            "images",
+            "services",
+            "components",
+            "validate-scope",
+        ),
     )
     value.add_argument(
         "--base",
@@ -242,6 +267,10 @@ def parser() -> argparse.ArgumentParser:
         help="Comparison base. AUTO uses HEAD when dirty, otherwise HEAD^.",
     )
     value.add_argument("--json", action="store_true")
+    value.add_argument(
+        "--scope",
+        choices=("frontend", "backend", "worker", "all"),
+    )
     return value
 
 
@@ -253,7 +282,12 @@ def main() -> int:
         changed_paths(base),
         lambda path: git_succeeds("cat-file", "-e", f"{base}:{path}"),
     )
-    if args.command == "images":
+    if args.command == "validate-scope":
+        if args.scope is None:
+            raise PlanError("validate-scope requires --scope")
+        validate_scope(plan, args.scope)
+        print(f"Build scope accepted: {args.scope}")
+    elif args.command == "images":
         print(" ".join(plan.local_images))
     elif args.command == "services":
         print(" ".join(plan.local_services))

@@ -83,6 +83,35 @@ alone permits a partial Production deployment. For a genuine faster
 Production lane, first implement and test selective artifact reuse in the
 release tooling, then update this rule and its tests.
 
+For a normal small release, use the one-command path instead of copying a SHA
+or evidence paths by hand:
+
+```bash
+make prod-small-preview \
+  COMPONENT=frontend \
+  REASON="Reviewed mobile registration fix"
+make prod-small \
+  COMPONENT=frontend \
+  REASON="Reviewed mobile registration fix" \
+  CONFIRM=FRONTEND
+```
+
+`prod-small-preview` is non-mutating. `prod-small` computes the exact immutable
+release ID from the current source (never type or shorten it), derives the
+manifest and migration-gate paths, runs affected checks, builds once on
+`node-3`, distributes exact digests, creates fresh backup/restore evidence,
+then migrates once and rolls `node-3` → `node-2` → `node-1`. Every mutation is
+preceded by its dry-run. Any failed check, missing artifact, unhealthy node, or
+gate failure stops the chain. Automatic rollback remains application-only;
+the compatible forward database schema is retained.
+
+The small lane compares `HEAD^` plus staged, unstaged, and untracked files by
+default, so it scopes the latest change instead of the whole feature branch.
+Override `SMALL_BASE=<reviewed-ref>` only when the intended change spans more
+than the latest commit. The helper refuses a single-component selection when
+the delta contains another application, database, or infrastructure changes;
+choose `COMPONENT=all CONFIRM=ALL` for that case.
+
 `ops-plan` reads the Git delta and prints:
 
 - affected components: frontend, backend, worker, database, infrastructure;
@@ -266,15 +295,11 @@ release remains unchanged.
 For a time-sensitive fix, obtain the required build-scope decision first. Then:
 
 ```bash
-make ops-fast
-make prod-fast-release \
-  RELEASE=src-... \
-  MANIFEST=artifacts/production/build/src-.../manifest.json \
-  BACKUP_EVIDENCE=artifacts/production/migration-gates/src-....json \
-  REASON="Customer-facing incident reference"
+make prod-small-preview COMPONENT=frontend REASON="Customer-facing incident reference"
+make prod-small COMPONENT=frontend REASON="Customer-facing incident reference" CONFIRM=FRONTEND
 ```
 
-`prod-fast-release` requires an explicit reason and `--yes` internally. It
+The small-release helper requires an explicit reason and confirmation. It
 still runs the DB guard, three-node status, migrate dry-run, deploy dry-run,
 serialized migration, node-3 → node-2 → node-1 rollout, final health, and the
 existing application-only automatic rollback contract.
@@ -364,8 +389,9 @@ The same flow is available through Make with live local output and remote
 heartbeats:
 
 ```bash
-make prod-build-preview RELEASE=src-...
-make prod-build RELEASE=src-...
+make prod-release-id
+make prod-build-preview RELEASE=auto
+make prod-build RELEASE=auto
 make prod-gate RELEASE=src-...
 make prod-release-preview RELEASE=src-...
 make prod-release RELEASE=src-...

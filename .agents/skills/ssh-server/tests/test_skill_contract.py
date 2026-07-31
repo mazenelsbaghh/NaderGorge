@@ -124,6 +124,23 @@ def test_release_plan_selects_affected_images() -> None:
     assert plan.migration_required is False
 
 
+def test_release_plan_rejects_incompatible_small_release_scope() -> None:
+    frontend_plan = release_plan.classify(
+        "HEAD^", ("frontend/src/app/page.tsx",)
+    )
+    release_plan.validate_scope(frontend_plan, "frontend")
+    with pytest.raises(release_plan.PlanError, match="incompatible"):
+        release_plan.validate_scope(frontend_plan, "backend")
+
+    database_plan = release_plan.classify(
+        "HEAD^",
+        ("backend/src/NaderGorge.Domain/Entities/Student.cs",),
+    )
+    with pytest.raises(release_plan.PlanError, match="use --scope=all"):
+        release_plan.validate_scope(database_plan, "backend")
+    release_plan.validate_scope(database_plan, "all")
+
+
 def test_release_plan_blocks_entity_change_without_migration() -> None:
     plan = release_plan.classify(
         "HEAD^",
@@ -249,6 +266,51 @@ def test_make_preview_and_mutation_targets_keep_confirmation_boundary() -> None:
     assert "--yes" not in preview
     assert "--yes" in mutation
     assert "--yes" not in deploy_alias
+
+
+def test_small_release_is_one_command_with_a_strict_confirmation_boundary() -> None:
+    preview = make_dry(
+        "prod-small-preview",
+        "COMPONENT=frontend",
+        "REASON=reviewed frontend incident",
+    )
+    assert "small-release" in preview
+    assert "--component=\"frontend\"" in preview
+    assert "--yes" not in preview
+
+    rejected = subprocess.run(
+        (
+            "make",
+            "prod-small",
+            "COMPONENT=frontend",
+            "REASON=reviewed frontend incident",
+        ),
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert rejected.returncode != 0
+    assert "CONFIRM=FRONTEND" in rejected.stdout + rejected.stderr
+
+    confirmed = make_dry(
+        "prod-small",
+        "COMPONENT=frontend",
+        "REASON=reviewed frontend incident",
+        "CONFIRM=FRONTEND",
+    )
+    assert "--yes" in confirmed
+
+
+def test_deploy_help_documents_auto_and_small_release_contract() -> None:
+    completed = subprocess.run(
+        ("bash", str(ROOT / ".agents/skills/ssh-server/scripts/deploy.sh"), "--help"),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "build --release=ID|auto" in completed.stdout
+    assert "small-release --component=frontend|backend|worker|all" in completed.stdout
 
 
 def test_schema_inventory_reports_missing_tables_and_pending_migrations(
