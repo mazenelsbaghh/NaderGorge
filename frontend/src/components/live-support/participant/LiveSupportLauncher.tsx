@@ -376,5 +376,24 @@ function getParticipantMutationError(cause: unknown, fallback: string) {
 
 function ClosedActions({ conversation, onNew }: { conversation: LiveSupportConversation; onNew: () => void }) {
   const [rated, setRated] = useState(!conversation.canRate);
-  return <div className="space-y-3 border-t border-slate-100 pt-3">{!rated && conversation.status === 'Closed' && <ConversationRating conversationId={conversation.id} onRated={() => setRated(true)}/>}<button type="button" onClick={onNew} className="h-11 w-full rounded-xl bg-slate-900 font-semibold text-white">محادثة جديدة</button></div>;
+  const [submittedStars, setSubmittedStars] = useState<number>();
+
+  useEffect(() => {
+    setRated(!conversation.canRate);
+    setSubmittedStars(undefined);
+  }, [conversation.id, conversation.canRate]);
+
+  return <div className="space-y-3 border-t border-slate-100 pt-3">
+    {!rated && conversation.status === 'Closed' && (
+      <ConversationRating
+        conversationId={conversation.id}
+        onRated={(stars) => {
+          setRated(true);
+          setSubmittedStars(stars);
+        }}
+      />
+    )}
+    {submittedStars && <p role="status" className="rounded-xl bg-cyan-50 px-3 py-2 text-center text-sm font-semibold text-cyan-900">شكرًا لتقييمك {submittedStars} من 5 نجوم.</p>}
+    <button type="button" onClick={onNew} className="h-11 w-full rounded-xl bg-slate-900 font-semibold text-white">محادثة جديدة</button>
+  </div>;
 }

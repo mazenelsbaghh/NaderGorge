@@ -90,7 +90,7 @@ RULES:
 - Text direction is Right-to-Left Arabic — preserve it exactly.
 - Do NOT add any text before block 1 or after the last block.`;
 
-const chaptersPrompt = `You are an expert educational content analyst for an Arabic-language learning platform in Egypt.
+const chaptersPrompt = `You are an expert educational content analyst for an Egyptian learning platform.
 
 Listen carefully to the attached audio file (a full lesson recording) and divide it into logical study chapters.
 
@@ -101,8 +101,12 @@ STRICT RULES:
    - First chapter startTime = 0
    - Last chapter endTime = total audio duration in seconds (rounded to nearest second)
 4. TIMESTAMPS: startTime and endTime are integers (seconds). Be precise — use the actual moment the speaker transitions topics.
-5. SUMMARIES: Each summaryText must be 3-5 sentences in EGYPTIAN COLLOQUIAL ARABIC (العامية المصرية). Write as if a friendly Egyptian teacher is telling a student what this chapter covers. Use casual, warm language like "هنا هنتعلم..." or "في الجزء ده هنشرح...". Avoid formal/classical Arabic.
-6. TITLES: Short, descriptive Arabic titles (3-7 words).`;
+5. LANGUAGE: Detect the dominant language actually spoken by the teacher in this chapter. Write BOTH title and summaryText in that same language. Do not translate an English lesson into Arabic, do not translate an Arabic lesson into English, and do not mix languages unless the teacher deliberately uses a necessary technical term.
+6. SUMMARIES: Each summaryText must be 3-5 natural, student-facing sentences. Write in the teacher's voice, as though the teacher is speaking directly to the class and guiding them through the chapter—not as a third-person report about the lesson.
+   - For Egyptian Arabic, use warm, clear Egyptian colloquial Arabic such as "هنا هنتعلم..." and "ركزوا معايا..."; avoid formal/classical Arabic.
+   - For English, use clear, friendly classroom English such as "In this part, we'll..." and "Notice how...".
+   - Preserve the teacher's subject vocabulary, examples, and level of formality without inventing facts.
+7. TITLES: Short, descriptive titles in the detected chapter language (3-7 words).`;
 
 const chapterSchema = {
   type: Type.ARRAY,
@@ -235,7 +239,7 @@ export async function evaluateEssayWithAI(answerText: string, expectedAnswer?: s
   return { isCorrect: parsed.isCorrect, feedback: parsed.feedback };
 }
 
-function mindmapParts(chapter: { title: string; summaryText: string }, teacherPhotoPaths?: string[]) {
+function mindmapParts(chapter: { title: string; summaryText: string; order: number }, teacherPhotoPaths?: string[]) {
   const parts: Array<Record<string, unknown>> = [];
   let hasPhoto = false;
   if (teacherPhotoPaths && teacherPhotoPaths.length > 0) {
@@ -251,24 +255,33 @@ function mindmapParts(chapter: { title: string; summaryText: string }, teacherPh
   return parts;
 }
 
-function mindmapPrompt(chapter: { title: string; summaryText: string }, hasPhoto: boolean) {
-  return `A premium, ultra-high-detail 3D isometric educational mindmap about: "${chapter.title}".
-Format Requirement: The generated image MUST be strictly in a 16:9 Widescreen Landscape horizontal format. DO NOT generate portrait or vertical images.
-Chapter Context: ${chapter.summaryText}
-Style: Pixar, colorful, vibrant, 3D render, glowing volumetric lighting.
-Layout: Wide horizontal landscape 16:9 composition. Use the width to spread out the mindmap horizontally.
-Background: A beautiful cinematic horizontal environment matching the subject and era of the chapter context.
-Center: A large elegant glowing central node with the Arabic text "${chapter.title}" written clearly in big, bold, legible text.
-Branches: Glowing curved light beams extending from the center, connecting to smaller colorful 3D nodes. Inside each small node, write exactly ONE very short Arabic keyword (max 2 words) extracted from the context.
-${hasPhoto ? 'Characters: A highly detailed, friendly 3D Pixar-style caricature of the teacher matching the provided reference images extremely closely (incorporating facial details and style from all of them), dressed for the subject.' : 'Characters: A friendly 3D Pixar-style teacher dressed for the subject.'}
-Decorations: Floating thematic elements, subtle sparkles, 8k resolution, masterpiece.
+function mindmapPrompt(chapter: { title: string; summaryText: string; order: number }, hasPhoto: boolean) {
+  const visualDirections = [
+    'a clean editorial infographic with layered paper-cut depth and crisp diagrammatic hierarchy',
+    'a cinematic 3D diorama that turns the lesson concept into a meaningful scene',
+    'an illustrated scientific notebook spread with labeled visual metaphors and tactile objects',
+    'a premium museum-exhibit composition with symbolic artifacts arranged around the concept',
+    'a modern motion-design poster with rich spatial depth, purposeful icons, and a clear learning path',
+  ];
+  const visualDirection = visualDirections[(Math.max(chapter.order, 1) - 1) % visualDirections.length];
 
-CRITICAL INSTRUCTIONS FOR 100% ACCURATE ARABIC TEXT:
-1. Arabic is Right-to-Left. Write it strictly from right to left.
-2. Letters MUST be CONNECTED (cursive), never isolated.
-3. The spelling of "${chapter.title}" must be exact.
-4. Sub-node phrases must be one or two words with correct connectivity.
-5. Typography must be bold, readable, and accurate.`;
+  return `Create one premium educational visual mind map about "${chapter.title}".
+Format: strictly 16:9 wide landscape. Never create a portrait or square composition.
+Lesson context: ${chapter.summaryText}
+
+LANGUAGE RULE (non-negotiable): Detect the language used in the lesson context. Every visible word in the image—the central title and all labels—MUST use that same language and script. Do not translate it. Do not force Arabic into an English lesson or English into an Arabic lesson. Use only the exact central title "${chapter.title}" and at most 3 short labels, each copied or faithfully condensed from the lesson context.
+
+ART DIRECTION: Use ${visualDirection}. Make the background, objects, symbols, color palette, and visual metaphors specific to the chapter's actual topic, period, subject, examples, and learning goal. Avoid generic classroom scenery, repeated neon branches, stock floating icons, or a one-size-fits-all "AI mind map" look. The illustration must communicate the lesson even before its labels are read.
+
+INFORMATION DESIGN: Put the central idea prominently in the center or strongest focal point. Connect 3-5 distinct concepts with a readable hierarchy and generous spacing. Use relevant objects, diagrams, timelines, processes, maps, formulas, or historical/scientific symbols when the context calls for them. Keep all text large, minimal, high-contrast, and fully inside safe margins; no tiny paragraphs and no illegible pseudo-text.
+
+${hasPhoto
+    ? 'TEACHER REFERENCE: The supplied images are identity references for the teacher. If the teacher appears, preserve their actual facial identity precisely: face shape, eye shape and spacing, eyebrows, nose, lips, skin tone, hairline, hairstyle, facial hair, glasses, and distinguishing marks. Do not turn the teacher into a generic person, celebrity, caricature, or a different ethnicity. Keep the likeness realistic and recognizable, with natural proportions. The teacher should support the explanation, not block the map.'
+    : 'TEACHER: Do not add a generic teacher, portrait, or face when no teacher reference image is supplied. Focus entirely on lesson-specific visual concepts.'}
+
+TYPOGRAPHY: Match the detected language. For Arabic, preserve right-to-left direction, connected letters, and correct spelling. For Latin-script languages, use correct left-to-right spelling and punctuation. Never mix scripts unless the source title itself does.
+
+Quality bar: polished, original, topic-specific educational art; coherent lighting and perspective; no watermark, no logo, no duplicated objects.`;
 }
 
 function saveMindmapImage(imageData: string, lessonVideoId: string, chapterOrder: number) {

@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Star } from 'lucide-react';
 import { getLiveSupportApiError, liveSupportService } from '@/services/live-support-service';
-export function ConversationRating({ conversationId, onRated }: { conversationId: string; onRated?: () => void }) {
+export function ConversationRating({ conversationId, onRated }: { conversationId: string; onRated?: (stars: number) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastStars, setLastStars] = useState<number | null>(null);
@@ -14,7 +14,7 @@ export function ConversationRating({ conversationId, onRated }: { conversationId
     setError(null);
     try {
       await liveSupportService.submitRating(conversationId, { stars });
-      onRated?.();
+      onRated?.(stars);
     } catch (cause) {
       setError(getLiveSupportApiError(cause, 'تعذر حفظ التقييم. حاول مرة أخرى.'));
     } finally {

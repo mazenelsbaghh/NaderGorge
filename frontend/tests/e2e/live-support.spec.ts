@@ -146,6 +146,7 @@ test.describe('live support participant', () => {
     await expect(page.getByPlaceholder('اكتب رسالتك')).toHaveCount(0);
     await page.getByRole('button', { name: '5 نجوم' }).click();
     await expect.poll(() => ratingCount).toBe(1);
+    await expect(page.getByRole('status')).toContainText('شكرًا لتقييمك 5 من 5 نجوم.');
     await expect(page.getByRole('button', { name: 'محادثة جديدة' })).toBeVisible();
   });
 
