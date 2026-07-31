@@ -313,6 +313,14 @@ def test_deploy_help_documents_auto_and_small_release_contract() -> None:
     assert "small-release --component=frontend|backend|worker|all" in completed.stdout
 
 
+def test_small_release_reenters_non_executable_helper_through_bash() -> None:
+    script = (
+        ROOT / ".agents/skills/ssh-server/scripts/deploy.sh"
+    ).read_text(encoding="utf-8")
+    assert script.count('bash "$0"') == 4
+    assert '\n      "$0" build' not in script
+
+
 def test_schema_inventory_reports_missing_tables_and_pending_migrations(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

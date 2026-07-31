@@ -187,22 +187,22 @@ case "$command_name" in
     run python3 "$PLANNER" validate-scope --base "$base" --scope "$component"
     run bash "$OPS" check --base="$base"
     if [[ "$confirmed" != "true" ]]; then
-      "$0" build --release="$release"
+      bash "$0" build --release="$release"
       step "Preview complete. Review the plan, then re-run with --yes."
       exit 0
     fi
-    "$0" build --release="$release" --yes
+    bash "$0" build --release="$release" --yes
     [[ -f "$manifest" ]] || {
       echo "Build completed without the expected manifest: $manifest" >&2
       exit 2
     }
-    "$0" gate --release="$release" --manifest="$manifest" \
+    bash "$0" gate --release="$release" --manifest="$manifest" \
       --output="$backup_evidence" --yes
     [[ -f "$backup_evidence" ]] || {
       echo "Migration gate completed without evidence: $backup_evidence" >&2
       exit 2
     }
-    "$0" release --release="$release" --manifest="$manifest" \
+    bash "$0" release --release="$release" --manifest="$manifest" \
       --backup-evidence="$backup_evidence" --base="$base" --yes
     ;;
   gate)
