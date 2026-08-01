@@ -81,7 +81,7 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
         "API_CALLBACK_SECRET": read_secret(secrets, "api-callback"),
         "AI_CALLBACK_SECRET": read_secret(secrets, "ai-callback"),
         "WORKER_ADMIN_TOKEN": read_secret(secrets, "worker-admin"),
-        "WORKER_ADMIN_ENABLED": "false",
+        "WORKER_ADMIN_ENABLED": "true",
         "ParentReports__SigningSecret": read_secret(secrets, "parent-signing"),
         "CORS_ALLOWED_ORIGINS": (
             "https://massar-academy.net,https://app.massar-academy.net,"

@@ -153,8 +153,8 @@ services:
     environment:
       REDIS_URL: "redis://:${REDIS_PASSWORD:-localdevredispassword_32_chars_minimum_change_before_prod}@${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
       DB_CONNECTION_STRING: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGRES_HOST:-db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-massar_platform}"
-      AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gemini-flash-latest}
-      AI_IMAGE_MODEL: ${AI_IMAGE_MODEL:-gemini-3-pro-image-preview}
+      AI_TEXT_MODEL: ${AI_TEXT_MODEL:-gemini-3.6-flash}
+      AI_IMAGE_MODEL: ${AI_IMAGE_MODEL:-gemini-3-pro-image}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       FIREBASE_APPLICATION_CREDENTIALS: /run/secrets/firebase-adminsdk.json
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}

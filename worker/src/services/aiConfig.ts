@@ -16,7 +16,7 @@ export function readAIConfig(): AIConfig {
   return {
     primaryProvider: 'developer',
     developerApiKey,
-    textModel: optional('AI_TEXT_MODEL') || 'gemini-flash-latest',
-    imageModel: optional('AI_IMAGE_MODEL') || 'gemini-3-pro-image-preview',
+    textModel: optional('AI_TEXT_MODEL') || 'gemini-3.6-flash',
+    imageModel: optional('AI_IMAGE_MODEL') || 'gemini-3-pro-image',
   };
 }
