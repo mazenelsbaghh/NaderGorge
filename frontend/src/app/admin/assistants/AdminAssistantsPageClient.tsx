@@ -72,8 +72,10 @@ export default function AdminAssistantsPageClient() {
     try {
       setLoading(true);
       setLoadError(false);
-      const data = await adminService.listUsers(1, 1000, search);
-      setUsers(data.items);
+      setUsers(await adminService.listAllUsers({
+        search: search || undefined,
+        staffOnly: true,
+      }));
     } catch {
       setLoadError(true);
     } finally {
@@ -117,8 +119,11 @@ export default function AdminAssistantsPageClient() {
     const toastId = toast.loading('جاري تصدير بيانات الموظفين والمساعدين...');
 
     try {
-      const data = await adminService.listUsers(1, 100000, search);
-      const itemsToExport = data.items.filter(
+      const matchingUsers = await adminService.listAllUsers({
+        search: search || undefined,
+        staffOnly: true,
+      });
+      const itemsToExport = matchingUsers.filter(
         (user) => normalizeRole(user) === 'Assistant'
       );
 

@@ -25,8 +25,11 @@ import { CodeTypeSelector, CodeTypeSelection } from '@/components/codes/CodeType
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import { invalidateMany } from '@/lib/cache-invalidation';
+import { AssistantPage } from '@/components/assistant/AssistantShellChrome';
 
-export default function AdminCodesPageClient() {
+export default function AdminCodesPageClient({ mode = 'admin' }: { mode?: 'admin' | 'assistant' }) {
+  const isAssistant = mode === 'assistant';
+  const codesBasePath = isAssistant ? '/assistant/codes' : '/admin/codes';
   const [groups, setGroups] = useState<CodeGroupDto[]>([]);
   const [subjects, setSubjects] = useState<SubjectDto[]>([]);
   const [teachers, setTeachers] = useState<TeacherDto[]>([]);
@@ -275,7 +278,7 @@ export default function AdminCodesPageClient() {
       align: 'left',
       render: (g) => (
         <div className="flex items-center justify-end gap-2">
-          <Link href={`/admin/codes/${g.id}`} prefetch={false} passHref legacyBehavior>
+          <Link href={`${codesBasePath}/${g.id}`} prefetch={false} passHref legacyBehavior>
             <NeumorphButton
               type="button"
               intent="icon"
@@ -290,20 +293,21 @@ export default function AdminCodesPageClient() {
     },
   ];
 
+  const PageShell = isAssistant ? AssistantPage : AdminPage;
   return (
-    <AdminPage
-      activePath="/admin/codes"
+    <PageShell
+      activePath={codesBasePath as never}
       sectionLabel="إدارة الأكواد"
       pageTitle="مجموعات أكواد الوصول"
       subtitle="إدارة التوليد والطباعة (QR) والاستخدام في شاشة واحدة."
       action={
         <div className="flex flex-wrap items-center gap-2">
-          <Link href="/admin/codes/templates" prefetch={false} passHref legacyBehavior>
+          {!isAssistant && <Link href="/admin/codes/templates" prefetch={false} passHref legacyBehavior>
             <NeumorphButton type="button" intent="ghost" size="lg" pill>
               <LayoutTemplate className="h-4 w-4" />
               قوالب الطباعة
             </NeumorphButton>
-          </Link>
+          </Link>}
           <NeumorphButton onClick={() => setShowGenModal(true)} intent="primary" size="lg" pill>
             <Plus className="h-4 w-4" />
             إنشاء دفعة جديدة
@@ -608,6 +612,6 @@ export default function AdminCodesPageClient() {
           </div>
         </form>
       </AdminModal>
-    </AdminPage>
+    </PageShell>
   );
 }

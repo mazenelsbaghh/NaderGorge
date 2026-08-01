@@ -16,6 +16,7 @@ import {
   AdminPageSkeleton,
   AdminModal,
 } from '@/components/admin';
+import { AssistantPage } from '@/components/assistant/AssistantShellChrome';
 import { cairoDateTimeLocalToIso, formatCairoDateTimeLocal, formatDate } from '@/components/admin/admin-utils';
 import { adminService, CodeDetailDto, CodeGroupDto } from '@/services/admin-service';
 import { adminSalesService, type PrintableTemplateDto } from '@/services/admin-sales-service';
@@ -90,7 +91,10 @@ function Segmented({
   );
 }
 
-export default function CodeGroupDetailsPageClient() {
+export default function CodeGroupDetailsPageClient({ mode = 'admin' }: { mode?: 'admin' | 'assistant' }) {
+  const isAssistant = mode === 'assistant';
+  const codesBasePath = isAssistant ? '/assistant/codes' : '/admin/codes';
+  const PageShell = isAssistant ? AssistantPage : AdminPage;
   const params = useParams();
   const router = useRouter();
   const groupId = params.groupId as string;
@@ -139,7 +143,7 @@ export default function CodeGroupDetailsPageClient() {
           setTeachers(teachersResponse.data ?? []);
         } else {
           toast.error('مجموعة الأكواد غير موجودة');
-          router.push('/admin/codes');
+          router.push(codesBasePath);
           return;
         }
       } catch (error) {
@@ -164,7 +168,7 @@ export default function CodeGroupDetailsPageClient() {
     if (groupId) {
       void loadGroupData();
     }
-  }, [groupId, router]);
+  }, [codesBasePath, groupId, router]);
 
   useEffect(() => {
     if (!group) return;
@@ -315,7 +319,7 @@ export default function CodeGroupDetailsPageClient() {
       toast.success(`تم مسح ${response.data.removedCount} كود غير مستخدم.`);
       setShowRemoveUnusedModal(false);
       if (response.data.groupDeleted) {
-        router.push('/admin/codes');
+        router.push(codesBasePath);
         return;
       }
       const [groupsData, codesData] = await Promise.all([
@@ -399,25 +403,25 @@ export default function CodeGroupDetailsPageClient() {
 
   if (loading) {
     return (
-      <AdminPage
-        activePath="/admin/codes"
+      <PageShell
+        activePath={codesBasePath as never}
         sectionLabel="إدارة الأكواد"
         pageTitle="تفاصيل مجموعة الأكواد"
         subtitle="جاري تحميل البيانات..."
       >
         <AdminPageSkeleton />
-      </AdminPage>
+      </PageShell>
     );
   }
 
   return (
-    <AdminPage
-      activePath="/admin/codes"
+    <PageShell
+      activePath={codesBasePath as never}
       sectionLabel="إدارة الأكواد"
       pageTitle={group ? `تفاصيل: ${group.name || 'دفعة أكواد'}` : 'تفاصيل المجموعة'}
       subtitle="استعراض الأكواد، سجل الشحن، الربط، وطباعة كود الـ QR."
       action={
-        <Link href="/admin/codes" prefetch={false} passHref legacyBehavior>
+        <Link href={codesBasePath} prefetch={false} passHref legacyBehavior>
           <NeumorphButton intent="ghost" size="md">
             <ArrowRight className="h-4 w-4 ml-1.5" />
             العودة للمجموعات
@@ -710,6 +714,6 @@ export default function CodeGroupDetailsPageClient() {
           </div>
         </div>
       </AdminModal>
-    </AdminPage>
+    </PageShell>
   );
 }

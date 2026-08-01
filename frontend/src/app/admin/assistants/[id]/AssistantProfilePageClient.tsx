@@ -212,8 +212,8 @@ export default function AssistantProfilePageClient() {
     try {
       setLoading(true);
       // 1. Load assistant from users list
-      const usersData = await adminService.listUsers(1, 1000, '');
-      const user = usersData.items.find((u) => u.id === id);
+      const users = await adminService.listAllUsers({ staffOnly: true });
+      const user = users.find((u) => u.id === id);
       if (!user) {
         toast.error('المساعد غير موجود');
         router.push('/admin/assistants');

@@ -92,7 +92,8 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/content/homework'
   ],
   'codes.manage': [
-    '/admin/codes'
+    '/admin/codes',
+    '/assistant/codes'
   ],
   'gifts.manage': [
     '/admin/gifts'
@@ -138,7 +139,8 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
   ],
   'payments.manage': [
     '/admin/wallets',
-    '/admin/recharge-verification'
+    '/admin/recharge-verification',
+    '/assistant/recharge-verification'
   ],
   'finance.manage': [
     '/admin/finance',
@@ -267,6 +269,13 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     label: 'إدارة المحتوى التعليمي',
     subItems: [
       { key: '/assistant/content', label: 'إدارة باقات ودروس وملفات المحتوى التعليمي' }
+    ]
+  },
+  {
+    key: '/assistant/codes',
+    label: 'الأكواد',
+    subItems: [
+      { key: '/assistant/codes', label: 'إدارة مجموعات أكواد الوصول' }
     ]
   },
   {
@@ -554,7 +563,7 @@ export default function AdminSettingsPageClient() {
         mapped.forEach(k => {
           if (domain === 'admin' && k.startsWith('/admin')) {
             keysSet.add(k);
-          } else if (domain === 'assistant') {
+          } else if (domain === 'assistant' && k.startsWith('/assistant')) {
             keysSet.add(k);
           }
         });

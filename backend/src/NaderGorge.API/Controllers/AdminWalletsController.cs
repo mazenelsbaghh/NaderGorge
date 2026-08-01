@@ -14,7 +14,8 @@ namespace NaderGorge.API.Controllers;
 
 [ApiController]
 [Route("api/admin/wallets")]
-[Authorize(Roles = "Admin,Supervisor,Assistant")]
+[Authorize]
+[HasPermission("payments.manage")]
 public class AdminWalletsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -116,4 +117,3 @@ public record ResolveRechargeRequestDto(
     bool Approve,
     string? RejectionReason,
     Guid? SmsLogId);
-

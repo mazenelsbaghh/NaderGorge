@@ -45,10 +45,11 @@ public class AdminController : ControllerBase
         [FromQuery] string? gender = null,
         [FromQuery] string? governorate = null,
         [FromQuery] string? role = null,
+        [FromQuery] bool staffOnly = false,
         CancellationToken cancellationToken = default
     )
         => Ok(await _mediator.Send(
-            new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate, role),
+            new ListUsersQuery(page, pageSize, search, educationStage, gradeLevel, studyTrack, gender, governorate, role, staffOnly),
             cancellationToken));
 
     [HttpPost("users")]

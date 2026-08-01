@@ -192,6 +192,17 @@ export interface AdminUserListDto {
   currentBalance?: number;
 }
 
+export interface AdminUserFilters {
+  search?: string;
+  educationStage?: string;
+  gradeLevel?: string;
+  studyTrack?: string;
+  gender?: string;
+  governorate?: string;
+  role?: string;
+  staffOnly?: boolean;
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;
@@ -792,6 +803,7 @@ export const adminService = {
     governorate?: string,
     role?: string,
     signal?: AbortSignal,
+    staffOnly?: boolean,
   ) => {
     const res = await apiClient.get<ApiResponse<PagedResult<AdminUserListDto>>>('/admin/users', {
       signal,
@@ -805,30 +817,22 @@ export const adminService = {
         ...(gender ? { gender } : {}),
         ...(governorate ? { governorate } : {}),
         ...(role ? { role } : {}),
+        ...(staffOnly ? { staffOnly: true } : {}),
       }
     });
     return res.data?.data;
   },
 
-  exportUsers: async (
-    filters: {
-      search?: string;
-      educationStage?: string;
-      gradeLevel?: string;
-      studyTrack?: string;
-      gender?: string;
-      governorate?: string;
-      role?: string;
-    },
+  listAllUsers: async (
+    filters: AdminUserFilters = {},
     signal?: AbortSignal,
   ) => {
     const pageSize = 100;
-    const items: AdminUserListDto[] = [];
+    const matchingUsers: AdminUserListDto[] = [];
     let page = 1;
-    let totalCount = Number.POSITIVE_INFINITY;
 
-    while (items.length < totalCount) {
-      const result = await adminService.listUsers(
+    while (true) {
+      const usersPage = await adminService.listUsers(
         page,
         pageSize,
         filters.search ?? '',
@@ -839,16 +843,22 @@ export const adminService = {
         filters.governorate,
         filters.role,
         signal,
+        filters.staffOnly,
       );
-      if (!result) break;
-      totalCount = result.totalCount;
-      items.push(...result.items);
-      if (result.items.length < pageSize) break;
+      matchingUsers.push(...usersPage.items);
+
+      if (matchingUsers.length >= usersPage.totalCount || usersPage.items.length === 0) {
+        return matchingUsers;
+      }
+
       page += 1;
     }
-
-    return items;
   },
+
+  exportUsers: async (
+    filters: AdminUserFilters,
+    signal?: AbortSignal,
+  ) => adminService.listAllUsers(filters, signal),
 
   createUser: async (payload: AdminCreateUserPayload) => {
     const res = await apiClient.post<ApiResponse<AdminCreateUserResult>>('/admin/users', {

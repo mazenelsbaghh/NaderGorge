@@ -17,6 +17,7 @@ import {
   Headphones, Home, LogOut, Menu, MessageSquareText, PanelRightClose,
   PanelRightOpen, PhoneCall, Search, Shield, Star, X, type LucideIcon,
   WalletCards, Users, BarChart3,
+  KeyRound,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -37,7 +38,8 @@ export type AssistantShellRoute =
   | '/assistant/live-support' | '/assistant/attendance' | '/assistant/vacations'
   | '/assistant/notifications' | '/assistant/content' | '/assistant/community'
   | '/assistant/questions' | '/assistant/watch-requests' | '/assistant/payroll'
-  | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/students' | '/assistant/reports';
+  | '/assistant/financial-requests' | '/assistant/recharge-verification' | '/assistant/students' | '/assistant/reports'
+  | '/assistant/codes';
 
 type AssistantShellChromeProps = {
   activePath: AssistantShellRoute;
@@ -69,6 +71,7 @@ type AssistantNavItem = { href: AssistantShellRoute; label: string; icon: Lucide
 const navItems: AssistantNavItem[] = [
   { href: '/assistant/tasks', label: 'المهام والعمليات', icon: ClipboardList, group: 'operations', permission: 'tasks.manage' },
   { href: '/assistant/content', label: 'إدارة المحتوى التعليمي', icon: BookOpen, group: 'learning', permission: 'content.manage' },
+  { href: '/assistant/codes', label: 'الأكواد', icon: KeyRound, group: 'operations', permission: 'codes.manage' },
   { href: '/assistant/community', label: 'إدارة مجتمع الطلاب', icon: MessageSquareText, group: 'learning', permission: 'community.manage' },
   { href: '/assistant/questions', label: 'الامتحانات والأسئلة', icon: Shield, group: 'learning', permission: 'exams.manage' },
   { href: '/assistant/watch-requests', label: 'طلبات إعادة المشاهدة', icon: Star, group: 'learning', permission: 'watch_requests.manage' },

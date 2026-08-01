@@ -73,8 +73,7 @@ export default function AdminAdminsPageClient() {
     try {
       setLoading(true);
       setLoadError(false);
-      const data = await adminService.listUsers(1, 1000, search);
-      setUsers(data.items);
+      setUsers(await adminService.listAllUsers({ search: search || undefined }));
     } catch {
       setLoadError(true);
     } finally {
@@ -123,8 +122,8 @@ export default function AdminAdminsPageClient() {
     const toastId = toast.loading('جاري تصدير بيانات المديرين...');
 
     try {
-      const data = await adminService.listUsers(1, 100000, search);
-      const itemsToExport = data.items.filter(
+      const matchingUsers = await adminService.listAllUsers({ search: search || undefined });
+      const itemsToExport = matchingUsers.filter(
         (user) => normalizeRole(user) === 'Admin'
       );
 

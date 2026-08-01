@@ -14,7 +14,8 @@ public record ListUsersQuery(
     string? StudyTrack = null,
     string? Gender = null,
     string? Governorate = null,
-    string? Role = null
+    string? Role = null,
+    bool StaffOnly = false
 ) : IRequest<ApiResponse<PagedResult<AdminUserListDto>>>;
 
 public record AdminUserListDto(
@@ -88,6 +89,16 @@ public class ListUsersQueryHandler : IRequestHandler<ListUsersQuery, ApiResponse
         {
             var normalizedRole = request.Role.Trim();
             query = query.Where(u => u.UserRoles.Any(ur => ur.Role.Name == normalizedRole));
+        }
+
+        if (request.StaffOnly)
+        {
+            query = query.Where(u => u.UserRoles.Any(ur =>
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Assistant ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.AssistantReviewer ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.AssistantAcademic ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Supervisor ||
+                ur.Role.Type == NaderGorge.Domain.Enums.RoleType.Staff));
         }
 
         if (!string.IsNullOrWhiteSpace(request.EducationStage) && Enum.TryParse<NaderGorge.Domain.Enums.EducationStage>(request.EducationStage, true, out var stage))
