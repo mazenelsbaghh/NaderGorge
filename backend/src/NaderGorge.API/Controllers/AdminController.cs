@@ -336,16 +336,21 @@ public class AdminController : ControllerBase
 
     [HttpPost("content/{contentType}/{id:guid}/image")]
     [HasPermission("content.manage")]
-    [RequestSizeLimit(10 * 1024 * 1024)]
+    [RequestSizeLimit(12 * 1024 * 1024)]
     public async Task<IActionResult> UploadContentImage(
         string contentType,
         Guid id,
-        IFormFile image,
+        [FromForm(Name = "image")] IFormFile? image,
         CancellationToken cancellationToken)
     {
         if (!Enum.TryParse<ContentImageType>(contentType, true, out var parsedContentType))
         {
             return BadRequest(ApiResponse.Fail("Unsupported content image type"));
+        }
+
+        if (image is null)
+        {
+            return BadRequest(ApiResponse.Fail("Image is required"));
         }
 
         if (image.Length == 0 || image.Length > 10 * 1024 * 1024)

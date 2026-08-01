@@ -53,11 +53,13 @@ public static class Seeder
             }
             else
             {
-                if (existingRole.AllowedDomain != defaultRole.AllowedDomain ||
-                    (existingRole.Name == "Staff" && existingRole.PermissionsJson != defaultRole.PermissionsJson))
+                // Existing roles are editable configuration. Only backfill the
+                // portal for legacy rows that still have the migration default;
+                // never overwrite permissions or a domain chosen by an admin.
+                if (existingRole.AllowedDomain == "all" &&
+                    defaultRole.AllowedDomain != "all")
                 {
                     existingRole.AllowedDomain = defaultRole.AllowedDomain;
-                    if (existingRole.Name == "Staff") existingRole.PermissionsJson = defaultRole.PermissionsJson;
                     addedAny = true;
                 }
             }

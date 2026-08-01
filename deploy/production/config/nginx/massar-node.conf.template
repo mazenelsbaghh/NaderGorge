@@ -1,3 +1,6 @@
+# Backend validates each image at 10 MB; leave room for multipart boundaries.
+client_max_body_size 12m;
+
 map $http_origin $massar_cors_origin {
     default "";
     "~^https://(app|admin|teacher|staff)\.massar-academy\.net$" $http_origin;

@@ -64,6 +64,7 @@ export function playLiveSupportSound(sound: LiveSupportSound) {
     bell: [784, 1047],
     chime: [523, 659, 784],
   };
+  const notificationPeakGain = 0.22;
 
   notes[sound].forEach((frequency, index) => {
     const oscillator = context.createOscillator();
@@ -71,7 +72,7 @@ export function playLiveSupportSound(sound: LiveSupportSound) {
     oscillator.type = sound === 'bell' ? 'sine' : 'triangle';
     oscillator.frequency.value = frequency;
     gain.gain.setValueAtTime(0.0001, context.currentTime + index * 0.12);
-    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + index * 0.12 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(notificationPeakGain, context.currentTime + index * 0.12 + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + index * 0.12 + 0.35);
     oscillator.connect(gain).connect(context.destination);
     oscillator.start(context.currentTime + index * 0.12);

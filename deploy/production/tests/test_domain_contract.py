@@ -46,6 +46,15 @@ def test_cookie_cors_and_canonical_origins_cover_only_browser_surfaces() -> None
     assert "localhost" not in environment
 
 
+def test_api_gateway_accepts_the_backend_image_upload_envelope() -> None:
+    nginx = (
+        ROOT / "deploy/production/config/nginx/massar-node.conf.template"
+    ).read_text(encoding="utf-8")
+
+    # The backend limits the file itself to 10 MB; Nginx must allow multipart overhead.
+    assert "client_max_body_size 12m;" in nginx
+
+
 def test_domain_rehearsal_covers_authenticated_websocket_cookie_and_safe_upload() -> None:
     source = (
         ROOT / "frontend/tests/e2e/production-domain.spec.ts"
