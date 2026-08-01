@@ -172,12 +172,13 @@ async function generateAudioContent(
   inlineAudio: InlineAudioFile,
   generation: AudioGenerationRequest,
 ): Promise<GeneratedContent> {
+  const audio = inlineAudio.reference();
   const requestFor = (audio: InlineAudioData) => ({
     model: runtime.config.textModel,
     contents: [{ role: 'user', parts: [{ inlineData: audio }, { text: generation.prompt }] }],
     config: { responseMimeType: generation.responseMimeType, ...(generation.responseSchema ? { responseSchema: generation.responseSchema } : {}) },
   });
-  return executeGeminiRequest(() => runtime.developer.models.generateContent(requestFor(inlineAudio.reference())));
+  return executeGeminiRequest(() => runtime.developer.models.generateContent(requestFor(audio)));
 }
 
 export async function analyzeVideoChapters(audioFilePath: string): Promise<VideoAIResult> {

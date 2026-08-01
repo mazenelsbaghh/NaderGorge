@@ -34,6 +34,8 @@ public class EmployeeProvisioningTests
         db.Roles.Add(role);
         await db.SaveChangesAsync();
 
+        var cairoTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+        var earliestHireDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairoTimeZone));
         var result = await new CreateEmployeeCommandHandler(db).Handle(
             new CreateEmployeeCommand(
                 "Support Employee",
@@ -46,13 +48,14 @@ public class EmployeeProvisioningTests
                 actor.Id,
                 "create-support-1"),
             CancellationToken.None);
+        var latestHireDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairoTimeZone));
 
         Assert.True(result.Success);
         var user = await db.Users.Include(item => item.EmployeeProfile).SingleAsync(item => item.Id == result.Data!.UserId);
         Assert.NotNull(user.EmployeeProfile);
         Assert.Equal(7000, user.EmployeeProfile!.BasicSalary);
         Assert.Matches("^EMP-[A-F0-9]{32}$", user.EmployeeProfile.EmployeeNumber);
-        Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow), user.EmployeeProfile.HireDate);
+        Assert.InRange(user.EmployeeProfile.HireDate, earliestHireDate, latestHireDate);
         Assert.Equal(EmployeeEmploymentStatus.Active, user.EmployeeProfile.EmploymentStatus);
         Assert.Contains(await db.UserRoles.ToListAsync(), item => item.UserId == user.Id && item.RoleId == role.Id);
         Assert.Contains(await db.AuditLogs.ToListAsync(), item =>

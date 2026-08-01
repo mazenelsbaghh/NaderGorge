@@ -8,9 +8,11 @@ test('Gemini Developer request returns the provider response', async () => {
 
 test('Gemini Developer request classifies errors without exposing provider details', async () => {
   await assert.rejects(
-    executeGeminiRequest(async () => { throw { status: 403, secret: 'hidden' }; }),
+    executeGeminiRequest(async () => { throw { name: 'ApiError', status: 403, secret: 'hidden' }; }),
     (error: unknown) => error instanceof GeminiDeveloperApiError
       && error.category === 'permission'
+      && error.providerErrorName === 'ApiError'
+      && error.providerStatus === 403
       && !error.message.includes('hidden'),
   );
 });
