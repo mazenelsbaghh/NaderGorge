@@ -17,10 +17,10 @@ function runtime(client: any) {
 
 afterEach(() => setAIServiceRuntimeFactoryForTests(undefined));
 
-test('video analysis sends compressed audio inline and never calls the Files API', async (testContext) => {
+test('video analysis sends 12kbps audio inline without using the Files API', async (testContext) => {
   const audioPath = path.join(process.cwd(), '.tmp', 'inline-audio-test.wav');
   fs.mkdirSync(path.dirname(audioPath), { recursive: true });
-  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'anullsrc=r=16000:cl=mono', '-t', '0.1', audioPath], { stdio: 'ignore' });
+  execFileSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'anullsrc=r=16000:cl=mono', '-t', '5', audioPath], { stdio: 'ignore' });
   testContext.after(() => fs.rmSync(audioPath, { force: true }));
   const requests: any[] = [];
   const client = { models: { generateContent: async (request: any) => {
@@ -39,6 +39,13 @@ test('video analysis sends compressed audio inline and never calls the Files API
     assert.ok(audio.data.length > 0);
     assert.equal(request.contents[0].parts.some((part: any) => part.fileData), false);
   }
+  const compressedPath = path.join(process.cwd(), '.tmp', 'inline-audio-test.mp3');
+  fs.writeFileSync(compressedPath, Buffer.from(requests[0].contents[0].parts[0].inlineData.data, 'base64'));
+  testContext.after(() => fs.rmSync(compressedPath, { force: true }));
+  const bitrate = Number(execFileSync('ffprobe', [
+    '-v', 'error', '-show_entries', 'format=bit_rate', '-of', 'default=noprint_wrappers=1:nokey=1', compressedPath,
+  ], { encoding: 'utf8' }).trim());
+  assert.ok(bitrate <= 14_000, `expected compressed bitrate near 12kbps, received ${bitrate}`);
 });
 
 test('essay evaluation validates and returns the existing structured result', async () => {

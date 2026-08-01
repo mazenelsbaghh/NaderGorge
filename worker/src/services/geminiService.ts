@@ -24,6 +24,7 @@ type GeneratedContent = Awaited<ReturnType<GenAIClient['models']['generateConten
 type InlineAudioData = { mimeType: string; data: string };
 // Gemini direct inline requests are capped at 20 MB. Reserve room for JSON/prompt overhead.
 const MAX_INLINE_AUDIO_BYTES = 14 * 1024 * 1024;
+const INLINE_AUDIO_BITRATE = '12k';
 
 interface AudioGenerationRequest {
   operation: 'transcription' | 'chapters';
@@ -147,11 +148,16 @@ class InlineAudioFile {
     if (!this.inlineData) {
       const target = path.join(path.dirname(this.audioFilePath), `.${path.basename(this.audioFilePath)}.${randomUUID()}.inline.mp3`);
       try {
-        execFileSync('ffmpeg', ['-y', '-i', this.audioFilePath, '-vn', '-ac', '1', '-ar', '16000', '-b:a', '16k', target], { stdio: 'ignore', timeout: providerTimeoutMs });
+        execFileSync('ffmpeg', ['-y', '-i', this.audioFilePath, '-vn', '-ac', '1', '-ar', '16000', '-b:a', INLINE_AUDIO_BITRATE, target], { stdio: 'ignore', timeout: providerTimeoutMs });
       } catch {
         throw new Error('Could not compress audio for the direct Gemini request.');
       }
       const size = fs.statSync(target).size;
+      console.log('[AI audio] Compressed lesson audio for Gemini inline input.', {
+        sourceBytes: fs.statSync(this.audioFilePath).size,
+        compressedBytes: size,
+        bitrate: INLINE_AUDIO_BITRATE,
+      });
       if (size > MAX_INLINE_AUDIO_BYTES) {
         fs.unlinkSync(target);
         throw new Error('Lesson audio remains too large for Gemini inline input; split the lesson before analysis.');
