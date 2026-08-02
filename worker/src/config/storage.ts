@@ -27,7 +27,7 @@ export const sharedSubtitlesRoot = path.resolve(
 );
 
 export const sharedAiVideoCheckpointsRoot = path.resolve(
-  process.env.AI_VIDEO_CHECKPOINT_STORAGE_PATH || path.join(sharedStorageRoot, 'ai-video-checkpoints'),
+  process.env.AI_VIDEO_CHECKPOINT_STORAGE_PATH || path.join(sharedStorageRoot, 'private', 'ai-video-checkpoints'),
 );
 
 export function resolveWithin(root: string, relativePath: string) {
