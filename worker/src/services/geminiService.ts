@@ -5,7 +5,7 @@ import path from 'path';
 import { randomUUID } from 'node:crypto';
 import { execFileSync, execSync } from 'child_process';
 import { readAIConfig, type AIConfig } from './aiConfig.js';
-import { executeGeminiRequest, GeminiDeveloperApiError } from './aiProvider.js';
+import { executeGeminiRequest, executeRetriableGeminiRequest, GeminiDeveloperApiError } from './aiProvider.js';
 import { classifyAIError } from './aiErrors.js';
 import type { LiveSupportAgentPrompt } from './liveSupportAgent.js';
 import { parseLiveSupportDecision, type LiveSupportDecision } from './liveSupportDecisionSchema.js';
@@ -69,6 +69,8 @@ export interface VideoAIResult {
     order: number;
   }>;
 }
+
+export type VideoChapter = VideoAIResult['chapters'][number];
 
 export interface EssayAIResult {
   isCorrect: boolean;
@@ -184,10 +186,10 @@ async function generateAudioContent(
     contents: [{ role: 'user', parts: [{ inlineData: audio }, { text: generation.prompt }] }],
     config: { responseMimeType: generation.responseMimeType, ...(generation.responseSchema ? { responseSchema: generation.responseSchema } : {}) },
   });
-  return executeGeminiRequest(() => runtime.developer.models.generateContent(requestFor(audio)));
+  return executeRetriableGeminiRequest(() => runtime.developer.models.generateContent(requestFor(audio)));
 }
 
-export async function analyzeVideoChapters(audioFilePath: string): Promise<VideoAIResult> {
+export async function transcribeVideoAudio(audioFilePath: string): Promise<string> {
   const runtime = createRuntime();
   const developerAudio = new InlineAudioFile(audioFilePath);
   try {
@@ -198,6 +200,16 @@ export async function analyzeVideoChapters(audioFilePath: string): Promise<Video
     });
     const srtContent = (srtResponse.text || '').trim();
     if (!srtContent) throw new Error('AI transcription returned empty SRT content.');
+    return srtContent;
+  } finally {
+    developerAudio.delete();
+  }
+}
+
+export async function generateVideoChapters(audioFilePath: string): Promise<VideoAIResult['chapters']> {
+  const runtime = createRuntime();
+  const developerAudio = new InlineAudioFile(audioFilePath);
+  try {
     const chaptersResponse = await generateAudioContent(runtime, developerAudio, {
       operation: 'chapters',
       prompt: chaptersPrompt,
@@ -206,10 +218,17 @@ export async function analyzeVideoChapters(audioFilePath: string): Promise<Video
     });
     const chaptersText = (chaptersResponse.text || '').trim();
     if (!chaptersText) throw new Error('AI chapter analysis returned empty content.');
-    return { srtContent, chapters: parseChapters(chaptersText) };
+    return parseChapters(chaptersText);
   } finally {
     developerAudio.delete();
   }
+}
+
+
+export async function analyzeVideoChapters(audioFilePath: string): Promise<VideoAIResult> {
+  const srtContent = await transcribeVideoAudio(audioFilePath);
+  const chapters = await generateVideoChapters(audioFilePath);
+  return { srtContent, chapters };
 }
 
 function essayEvaluationPrompt(answerText: string, expectedAnswer?: string, questionText?: string) {

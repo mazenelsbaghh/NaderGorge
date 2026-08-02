@@ -3,11 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { extractAudioFromVideo } from '../utils/audioExtractor.js';
-import { analyzeVideoChapters } from '../services/geminiService.js';
+import { generateVideoChapters, transcribeVideoAudio } from '../services/geminiService.js';
 import type { VideoAIResult } from '../services/geminiService.js';
 import { throwIfCancellationRequested } from '../cancellation.js';
-import { classifyExternalFailure, fetchWithTimeout } from '../services/workerFetch.js';
+import { fetchWithTimeout } from '../services/workerFetch.js';
 import { atomicWriteFileSync, sharedSubtitlesRoot } from '../config/storage.js';
+import { createVideoAnalysisCheckpoint } from '../services/aiVideoCheckpoint.js';
 
 // Resolve worker root reliably regardless of process.cwd()
 const __filename = fileURLToPath(import.meta.url);
@@ -52,12 +53,16 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
     let audioPath = job.data.audioPath || '';
     let result: VideoAIResult | null = null;
     let isSuccess = false;
+    const checkpoint = createVideoAnalysisCheckpoint(lessonVideoId, sourceUrl);
 
     try {
         await throwIfCancellationRequested(job);
 
-        // Step 1: Extract Audio via FFmpeg (saves locally to .tmp directory)
-        if (!audioPath || !fs.existsSync(audioPath)) {
+        let srtContent = checkpoint.transcription();
+        let chapters = checkpoint.chapters();
+
+        // Completed AI stages can be delivered again without downloading the source.
+        if ((!srtContent || !chapters) && (!audioPath || !fs.existsSync(audioPath))) {
             const stage = 'جاري استخراج وتحضير الصوت من الفيديو...';
             await job.updateProgress({ percentage: 10, stage });
             await notifyProgress(lessonVideoId, 10, stage);
@@ -65,18 +70,33 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
             audioPath = await extractAudioFromVideo(sourceUrl, lessonVideoId);
             await job.updateData({ ...job.data, audioPath });
         } else {
-            console.log(`[Job ${job.id}] Found existing extracted audio file. Skipping extraction stage.`);
+            console.log(`[Job ${job.id}] Audio extraction is not required for the remaining stages.`);
         }
-        
-        // Step 2: Upload to Gemini & Execute Flash 2.5 Prompt
-        {
-            const stage = 'الذكاء الاصطناعي يقوم بتحليل وتلخيص المحتوى (قد يستغرق دقائق)...';
+
+        if (!srtContent) {
+            const stage = 'جاري تحويل صوت المحاضرة إلى ترجمة مكتوبة...';
             await job.updateProgress({ percentage: 40, stage });
             await notifyProgress(lessonVideoId, 40, stage);
+            await throwIfCancellationRequested(job);
+            srtContent = await transcribeVideoAudio(audioPath);
+            checkpoint.saveTranscription(srtContent);
+        } else {
+            console.log(`[Job ${job.id}] Reusing completed transcription checkpoint.`);
         }
+
+        if (!chapters) {
+            const stage = 'جاري تقسيم المحاضرة إلى فصول وكتابة الملخصات...';
+            await job.updateProgress({ percentage: 65, stage });
+            await notifyProgress(lessonVideoId, 65, stage);
+            await throwIfCancellationRequested(job);
+            chapters = await generateVideoChapters(audioPath);
+            checkpoint.saveChapters(chapters);
+        } else {
+            console.log(`[Job ${job.id}] Reusing completed chapters checkpoint.`);
+        }
+
         await throwIfCancellationRequested(job);
-        console.log(`[Job ${job.id}] Starting Gemini processing...`);
-        result = await analyzeVideoChapters(audioPath);
+        result = { srtContent, chapters };
 
         // Save SRT file to configured shared storage.
         {
@@ -127,12 +147,11 @@ export default async function analyzeVideoProcessor(job: Job<AnalyzeVideoJobData
         await notifyProgress(lessonVideoId, 100, doneStage, 'completed');
         
         isSuccess = true;
+        checkpoint.clear();
         return { success: true, chaptersProcessed: result.chapters.length };
         
     } catch (error) {
         console.error(`[Job ${job.id}] Failed processing video:`, error);
-        const failure = classifyExternalFailure(error);
-        await notifyProgress(lessonVideoId, 0, failure.remediation, 'failed');
         throw error;
     } finally {
         // Cleanup temp audio file ONLY when the pipeline is completely successful.

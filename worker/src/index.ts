@@ -145,7 +145,9 @@ async function startAIWorker() {
 
   worker.on('failed', (job, err) => {
     console.error(`[AI Worker] Job ${job?.id} has failed with ${err.message}`);
-    if (job) {
+    const maxAttempts = job?.opts.attempts ?? 1;
+    const attemptsExhausted = job ? job.attemptsMade >= maxAttempts : true;
+    if (job && attemptsExhausted) {
       reportFailureToBackend(job.id!, err.message);
     }
   });

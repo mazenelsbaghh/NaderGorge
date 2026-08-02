@@ -26,6 +26,10 @@ export const sharedSubtitlesRoot = path.resolve(
   process.env.SUBTITLE_STORAGE_PATH || path.join(sharedPublicRoot, 'subtitles'),
 );
 
+export const sharedAiVideoCheckpointsRoot = path.resolve(
+  process.env.AI_VIDEO_CHECKPOINT_STORAGE_PATH || path.join(sharedStorageRoot, 'ai-video-checkpoints'),
+);
+
 export function resolveWithin(root: string, relativePath: string) {
   if (!relativePath || path.isAbsolute(relativePath)) {
     throw new Error('A non-empty relative storage path is required.');
