@@ -20,13 +20,19 @@ interface LinkExamFormProps {
 export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFormProps) {
   const router = useRouter();
   const [examId, setExamId] = useState(currentExamId || '');
+  const [linkedExamId, setLinkedExamId] = useState(currentExamId || '');
   const [saving, setSaving] = useState(false);
   const [examData, setExamData] = useState<ExamDashboardDto | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [unlinkConfirmationOpen, setUnlinkConfirmationOpen] = useState(false);
 
   useEffect(() => {
-    if (!currentExamId) {
+    setLinkedExamId(currentExamId || '');
+    setExamId(currentExamId || '');
+  }, [currentExamId]);
+
+  useEffect(() => {
+    if (!linkedExamId) {
       setExamData(null);
       return;
     }
@@ -34,7 +40,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
     const abortController = new AbortController();
     
     setLoadingData(true);
-    adminService.getExamDashboard(currentExamId)
+    adminService.getExamDashboard(linkedExamId)
       .then(data => {
         if (!abortController.signal.aborted) {
           setExamData(data);
@@ -52,7 +58,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
       });
 
     return () => abortController.abort();
-  }, [currentExamId]);
+  }, [linkedExamId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +67,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
     try {
       setSaving(true);
       await adminService.linkLessonExam(lessonId, examId);
+      setLinkedExamId(examId);
       toast.success('تم ربط الامتحان بنجاح.');
       onSuccess?.();
     } catch {
@@ -75,7 +82,10 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
       setSaving(true);
       await adminService.linkLessonExam(lessonId, null);
       toast.success('تم إلغاء ربط الامتحان.');
+      setLinkedExamId('');
+      setExamData(null);
       setExamId('');
+      router.refresh();
       onSuccess?.();
     } catch {
       toast.error('حدث خطأ.');
@@ -86,7 +96,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
 
   return (
     <div className="space-y-6">
-      {currentExamId ? (
+      {linkedExamId ? (
         <div className="flex flex-col gap-4 rounded-2xl border border-[var(--admin-primary-15)] bg-[var(--admin-card)] p-6 shadow-sm overflow-hidden">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-4 gap-4">
             <div className="flex items-center gap-4">
@@ -97,13 +107,13 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                 <h4 className="font-bold text-lg text-[var(--admin-text)]">
                   {loadingData ? 'جارٍ تحميل البيانات...' : (examData?.title || 'يوجد امتحان مرفق')}
                 </h4>
-                <p className="text-sm font-mono text-[var(--admin-muted)] mt-1 opacity-70">معرف: {currentExamId}</p>
+                <p className="text-sm font-mono text-[var(--admin-muted)] mt-1 opacity-70">معرف: {linkedExamId}</p>
               </div>
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => router.push(`/admin/content/exams/${currentExamId}/dashboard`)}
+                onClick={() => router.push(`/admin/content/exams/${linkedExamId}/dashboard`)}
                 className="flex items-center gap-2 rounded-xl border border-[var(--admin-border)] hover:border-[var(--admin-primary)] bg-[var(--admin-card)] px-4 py-2 font-bold text-[var(--admin-text)] shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
               >
                 <LayoutDashboard className="h-4 w-4 text-[var(--admin-primary)]" />
@@ -111,7 +121,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
               </button>
               <button
                 type="button"
-                onClick={() => router.push(`/admin/content/exams/${currentExamId}/add-question`)}
+                onClick={() => router.push(`/admin/content/exams/${linkedExamId}/add-question`)}
                 className="flex items-center gap-2 rounded-xl bg-[var(--admin-primary)] px-4 py-2 font-bold text-white shadow-sm hover:bg-[var(--admin-primary)]/90 transition-all hover:-translate-y-0.5"
               >
                 <Plus className="h-4 w-4" />
@@ -145,7 +155,7 @@ export function LinkExamForm({ lessonId, currentExamId, onSuccess }: LinkExamFor
                       <Users className="w-5 h-5 text-[var(--admin-primary)]" />
                       أحدث الطلاب المنضمين
                     </h5>
-                    <button onClick={() => router.push(`/admin/content/exams/${currentExamId}/dashboard`)} className="text-sm font-bold text-[var(--admin-primary)] hover:underline flex items-center gap-1">
+                    <button onClick={() => router.push(`/admin/content/exams/${linkedExamId}/dashboard`)} className="text-sm font-bold text-[var(--admin-primary)] hover:underline flex items-center gap-1">
                       عرض الكل <ArrowUpLeft className="w-4 h-4" />
                     </button>
                   </div>

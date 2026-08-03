@@ -482,7 +482,7 @@ function TeacherShellFrame({
     <TeacherShellContext.Provider value={shellContext}>
     <div
       dir="rtl"
-      className="relative h-dvh max-h-dvh overflow-x-hidden bg-[var(--admin-bg)] text-[var(--admin-text)]"
+      className="relative h-screen h-dvh max-h-screen max-h-dvh overflow-x-hidden bg-[var(--admin-bg)] text-[var(--admin-text)]"
       style={themeVars}
       data-testid="teacher-shell"
       data-shell-instance={shellInstanceId}
@@ -637,7 +637,7 @@ function TeacherShellFrame({
         </div>
       </aside>
 
-      <main ref={mainScrollRef} id="main-content" className="app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] lg:mr-24 lg:px-7 lg:py-8 lg:pb-10">
+      <main ref={mainScrollRef} id="main-content" tabIndex={-1} className="app-shell-scroll relative z-10 h-screen h-dvh min-h-0 overflow-y-scroll overscroll-y-contain px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom))] [scrollbar-gutter:stable] lg:mr-24 lg:px-7 lg:py-8 lg:pb-10">
         <header className="mb-8 flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between lg:mb-9">
           <div className="w-full">
             <div className="mb-4 flex w-full items-center justify-end gap-2 lg:hidden">

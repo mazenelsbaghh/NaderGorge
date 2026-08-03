@@ -49,6 +49,10 @@ test('replica without the lease does not execute the scheduled effect', async ()
 
 test('heartbeat renews a long task and records the fenced completion', async () => {
   let renewals = 0;
+  let resolveSecondRenewal: (() => void) | undefined;
+  const secondRenewal = new Promise<void>((resolve) => {
+    resolveSecondRenewal = resolve;
+  });
   const database = {
     query: async (sql: string) => {
       if (sql.includes('RETURNING')) {
@@ -56,13 +60,22 @@ test('heartbeat renews a long task and records the fenced completion', async () 
       }
       if (sql.includes("'running'")) {
         renewals += 1;
+        if (renewals === 2) {
+          resolveSecondRenewal?.();
+        }
       }
       return { rowCount: 1, rows: [] };
     },
   };
   const configured = options(async ({ signal, fencingGeneration }) => {
     assert.equal(fencingGeneration, '7');
-    await new Promise((resolve) => setTimeout(resolve, 35));
+    await Promise.race([
+      secondRenewal,
+      new Promise<never>((_, reject) => setTimeout(
+        () => reject(new Error('Timed out waiting for two lease heartbeats.')),
+        1_000,
+      )),
+    ]);
     assert.equal(signal.aborted, false);
   });
   configured.heartbeatIntervalMs = 10;

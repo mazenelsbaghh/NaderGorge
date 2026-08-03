@@ -120,7 +120,7 @@ export interface EmployeeDetailDto {
 export interface WorkCalendarDto { id: string; code: string; name: string; timeZoneId: string; workingDaysMask: number; }
 export interface ShiftSegmentDto { id?: string; sequence: number; dayOfWeek?: number | null; startsAt: string; endsAt: string; unpaidBreakMinutes: number; workDateRule: string; }
 export interface ShiftTemplateDto { id: string; code: string; name: string; mode: string; workCalendarId: string; graceMinutes: number; minimumBreakMinutes: number; overtimeAfterMinutes: number; version: number; segments: ShiftSegmentDto[]; }
-export interface ShiftAssignmentDto { id: string; employeeId: string; employee: string; shiftTemplateId: string; shift: string; effectiveFrom: string; effectiveTo?: string | null; status: string; reason: string; }
+export interface ShiftAssignmentDto { id: string; employeeId: string; employee: string; shiftTemplateId: string; shift: string; effectiveFrom: string; effectiveTo?: string | null; status: string; reason: string; segments: ShiftSegmentDto[]; }
 export interface ShiftAssignmentPayload { employeeId: string; shiftTemplateId: string; effectiveFrom: string; effectiveTo?: string | null; reason: string; }
 export type AttendancePolicyKind = 'Unrestricted' | 'Geofence' | 'TrustedDevice';
 export interface AttendancePolicyDto {
@@ -138,7 +138,8 @@ export interface AttendancePolicyConfigurationDto {
 export type AttendanceBreakKind = 'Regular' | 'ShortPermission';
 export interface AttendanceBreakDto { id: string; startedAt: string; endedAt?: string | null; kind: AttendanceBreakKind; allowedMinutes: number; }
 export interface AttendanceSessionDto { id: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; breakAllowanceMinutes?: number; shortPermissionMaxMinutes?: number; dailyShortPermissionAllowanceMinutes?: number; breaks?: AttendanceBreakDto[]; }
-export interface AdminBreakSessionDto { id: string; employeeId: string; employee: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; breakAllowanceMinutes: number; shortPermissionMaxMinutes: number; openBreak?: { id: string; startedAt: string; kind: AttendanceBreakKind; allowedMinutes: number } | null; }
+export interface AdminBreakSessionDto { id: string; employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; state: string; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; breakAllowanceMinutes: number; shortPermissionMaxMinutes: number; openBreak?: { id: string; startedAt: string; kind: AttendanceBreakKind; allowedMinutes: number } | null; }
+export interface AdminDailyAttendanceReportDto { employeeId: string; employee: string; employeePhone: string; workDate: string; clockedInAt: string; clockedOutAt?: string | null; workedMinutes: number; lateMinutes: number; earlyLeaveMinutes: number; overtimeMinutes: number; hasOpenSession: boolean; }
 export interface AttendanceCorrectionDto { id: string; employeeId: string; employee: string; attendanceSessionId: string; proposedClockedInAt?: string | null; proposedClockedOutAt?: string | null; reason: string; evidenceReference?: string | null; state: string; beforeJson: string; appliedJson?: string | null; version: number; }
 export interface LeaveTypeDto { id: string; code: string; name: string; isPaid: boolean; requiresAttachment: boolean; allowsHalfDay: boolean; }
 export interface LeaveBalanceDto { id: string; leaveTypeId: string; leaveType: string; year: number; granted: number; carried: number; reserved: number; used: number; available: number; }
@@ -274,6 +275,12 @@ export const hrService = {
       { headers: { 'Idempotency-Key': createClientId() } });
     return res.data;
   },
+  updateShiftAssignment: async (assignmentId: string, payload: {
+    effectiveFrom: string; effectiveTo?: string | null; reason: string; segments: ShiftSegmentDto[];
+  }): Promise<ApiResponse<string>> => {
+    const res = await apiClient.patch<ApiResponse<string>>(`/hr/admin/shifts/assignments/${assignmentId}`, payload);
+    return res.data;
+  },
   getAttendancePolicyConfiguration: async (): Promise<AttendancePolicyConfigurationDto> => {
     const res = await apiClient.get<AttendancePolicyConfigurationDto>('/hr/admin/attendance/policies');
     return res.data;
@@ -316,8 +323,11 @@ export const hrService = {
   listAttendanceCorrections: async (): Promise<AttendanceCorrectionDto[]> => {
     const res = await apiClient.get<AttendanceCorrectionDto[]>('/hr/admin/attendance/corrections'); return res.data ?? [];
   },
-  listAdminBreakSessions: async (): Promise<AdminBreakSessionDto[]> => {
-    const res = await apiClient.get<AdminBreakSessionDto[]>('/hr/admin/attendance/sessions'); return res.data ?? [];
+  listAdminBreakSessions: async (from?: string, to?: string): Promise<AdminBreakSessionDto[]> => {
+    const res = await apiClient.get<AdminBreakSessionDto[]>('/hr/admin/attendance/sessions', { params: { ...(from ? { from } : {}), ...(to ? { to } : {}) } }); return res.data ?? [];
+  },
+  getDailyAttendanceReport: async (from?: string, to?: string): Promise<AdminDailyAttendanceReportDto[]> => {
+    const res = await apiClient.get<AdminDailyAttendanceReportDto[]>('/hr/admin/attendance/daily-report', { params: { ...(from ? { from } : {}), ...(to ? { to } : {}) } }); return res.data ?? [];
   },
   decideAttendanceCorrection: async (id: string, payload: { approve: boolean; isHrDecision: boolean; reason: string; expectedVersion: number }): Promise<ApiResponse<boolean>> => {
     const res = await apiClient.post<ApiResponse<boolean>>(`/hr/admin/attendance/corrections/${id}/decision`, payload); return res.data;

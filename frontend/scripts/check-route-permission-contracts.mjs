@@ -9,11 +9,21 @@ const shellPath = path.join(
   root,
   'src/components/admin/AdminShellChrome.tsx'
 );
+const assistantShellPath = path.join(
+  root,
+  'src/components/assistant/AssistantShellChrome.tsx'
+);
+const settingsPath = path.join(
+  root,
+  'src/app/admin/settings/AdminSettingsPageClient.tsx'
+);
 
 const navigation = fs.readFileSync(navigationPath, 'utf8');
 const policy = fs.readFileSync(policyPath, 'utf8');
 const layout = fs.readFileSync(layoutPath, 'utf8');
 const shell = fs.readFileSync(shellPath, 'utf8');
+const assistantShell = fs.readFileSync(assistantShellPath, 'utf8');
+const settings = fs.readFileSync(settingsPath, 'utf8');
 
 const navigationRoutes = [
   ...navigation.matchAll(/href:\s*['"]([^'"]+)['"]/g),
@@ -40,6 +50,26 @@ if (!shell.includes('canAccessAdminRoute(item.href, user)')) {
   throw new Error('Admin menu visibility must consume the canonical route policy.');
 }
 
+const assistantNavigationRoutes = [
+  ...assistantShell.matchAll(/href:\s*['"](\/assistant\/[^'"]+)['"]/g),
+].map((match) => match[1]);
+const uniqueAssistantRoutes = [...new Set(assistantNavigationRoutes)];
+const missingAssistantSettings = uniqueAssistantRoutes.filter(
+  (route) => route !== '/assistant/dashboard' && !settings.includes(`key: '${route}'`)
+);
+
+if (missingAssistantSettings.length > 0) {
+  throw new Error(
+    `Assistant navigation routes are missing from role settings: ${missingAssistantSettings.join(', ')}`
+  );
+}
+
+if (!settings.match(/'users\.manage':\s*\[[\s\S]*?'\/assistant\/students'[\s\S]*?\]/)) {
+  throw new Error(
+    'The users.manage permission must automatically grant the assistant student-management route.'
+  );
+}
+
 console.log(
-  `admin route permission contracts passed (${uniqueRoutes.length} navigation routes)`
+  `route permission contracts passed (${uniqueRoutes.length} admin routes, ${uniqueAssistantRoutes.length} assistant routes)`
 );

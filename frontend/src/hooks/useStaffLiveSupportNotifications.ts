@@ -42,7 +42,7 @@ export function useStaffLiveSupportNotifications() {
       if (senderType !== 'Student' && senderType !== 'Guest') return;
 
       const current = preferencesRef.current;
-      if (current.soundEnabled) playLiveSupportSound(current.sound);
+      if (current.soundEnabled) playLiveSupportSound(current.sound, current.soundVolume);
       if (current.notificationsEnabled) {
         toast('رسالة جديدة في الدعم المباشر', { icon: '💬', id: `live-support:${event.eventId}` });
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {

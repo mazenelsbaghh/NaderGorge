@@ -16,6 +16,34 @@ namespace NaderGorge.Application.Tests.Auth;
 public sealed class AuthSessionSafetyTests
 {
     [Fact]
+    public async Task StaffRefresh_IssuesAccessAndRefreshTokensForOneYear()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Admin User", "154000");
+        var role = new Role { Id = Guid.NewGuid(), Name = "Admin", Type = RoleType.Admin };
+        db.Roles.Add(role);
+        db.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = role.Id });
+        db.RefreshTokens.Add(new RefreshToken
+        {
+            UserId = user.Id,
+            Token = "staff-refresh",
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        });
+        await db.SaveChangesAsync();
+
+        var beforeRefresh = DateTime.UtcNow;
+        var result = await new RefreshTokenCommandHandler(db, new TokenService(TestJwtConfig()))
+            .Handle(new RefreshTokenCommand("staff-refresh"), CancellationToken.None);
+
+        Assert.True(result.Success);
+        var accessToken = new JwtSecurityTokenHandler().ReadJwtToken(result.Data!.AccessToken);
+        Assert.InRange(accessToken.ValidTo, beforeRefresh.AddDays(365).AddMinutes(-1), beforeRefresh.AddDays(365).AddMinutes(1));
+
+        var rotatedToken = await db.RefreshTokens.SingleAsync(token => token.Token == result.Data.RefreshToken);
+        Assert.InRange(rotatedToken.ExpiresAt, beforeRefresh.AddDays(365).AddMinutes(-1), beforeRefresh.AddDays(365).AddMinutes(1));
+    }
+
+    [Fact]
     public async Task DisabledUser_CannotRefresh()
     {
         await using var db = TestAppDbContextFactory.Create();
@@ -27,7 +55,7 @@ public sealed class AuthSessionSafetyTests
         db.RefreshTokens.Add(new RefreshToken { UserId = user.Id, Token = "refresh-disabled", ExpiresAt = DateTime.UtcNow.AddDays(1) });
         await db.SaveChangesAsync();
 
-        var handler = new RefreshTokenCommandHandler(db, new TokenService(TestJwtConfig()), TestJwtConfig());
+        var handler = new RefreshTokenCommandHandler(db, new TokenService(TestJwtConfig()));
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             handler.Handle(new RefreshTokenCommand("refresh-disabled"), CancellationToken.None));

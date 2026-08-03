@@ -44,7 +44,7 @@ public sealed class LiveSupportSecurityTests
         {
             EmployeeId = employee.Id,
             ShiftAssignmentId = Guid.NewGuid(),
-            WorkDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            WorkDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"))),
             ClockedInAt = DateTime.UtcNow,
             State = AttendanceSessionState.Open,
         });

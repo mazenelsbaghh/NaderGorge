@@ -17,29 +17,40 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
 
     public override async Task OnConnectedAsync()
     {
-        if (StaffUserId is { } staffId)
+        try
         {
-            await service.GetStaffBootstrapAsync(staffId, Context.User!.IsInRole("Admin"), Context.ConnectionAborted);
-            await presence.ConnectedAsync(staffId, Context.ConnectionId);
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"LiveSupport:Staff:{staffId:N}");
-            if (service is ILiveSupportAssignmentCoordinator coordinator)
+            if (StaffUserId is { } staffId)
             {
-                try
+                await service.GetStaffBootstrapAsync(staffId, Context.User!.IsInRole("Admin"), Context.ConnectionAborted);
+                await presence.ConnectedAsync(staffId, Context.ConnectionId);
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"LiveSupport:Staff:{staffId:N}", Context.ConnectionAborted);
+                if (service is ILiveSupportAssignmentCoordinator coordinator)
                 {
-                    await coordinator.AssignWaitingAsync(Context.ConnectionAborted);
-                }
-                catch (Exception exception)
-                {
-                    logger.LogError(exception, "Live support auto-assignment failed when staff {StaffUserId} connected", staffId);
+                    try
+                    {
+                        await coordinator.AssignWaitingAsync(Context.ConnectionAborted);
+                    }
+                    catch (OperationCanceledException) when (Context.ConnectionAborted.IsCancellationRequested)
+                    {
+                        return;
+                    }
+                    catch (Exception exception)
+                    {
+                        logger.LogError(exception, "Live support auto-assignment failed when staff {StaffUserId} connected", staffId);
+                    }
                 }
             }
+            else if (await ParticipantAsync() is { } participant)
+                await Groups.AddToGroupAsync(Context.ConnectionId, participant.Type == LiveSupportParticipantType.Student
+                    ? $"LiveSupport:Participant:Student:{participant.StudentUserId:N}"
+                    : $"LiveSupport:Participant:Guest:{participant.GuestSessionId:N}", Context.ConnectionAborted);
+            else Context.Abort();
+            await base.OnConnectedAsync();
         }
-        else if (await ParticipantAsync() is { } participant)
-            await Groups.AddToGroupAsync(Context.ConnectionId, participant.Type == LiveSupportParticipantType.Student
-                ? $"LiveSupport:Participant:Student:{participant.StudentUserId:N}"
-                : $"LiveSupport:Participant:Guest:{participant.GuestSessionId:N}");
-        else Context.Abort();
-        await base.OnConnectedAsync();
+        catch (OperationCanceledException) when (Context.ConnectionAborted.IsCancellationRequested)
+        {
+            // Normal disconnect during bootstrap; suppress HubConnectionHandler fail logs.
+        }
     }
 
     public async Task Heartbeat()
@@ -52,11 +63,16 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
         try
         {
             LiveSupportParticipantIdentity? participantIdentity = null;
-            if (StaffUserId is { } staffId) await service.GetStaffMessagesAsync(staffId, Context.User!.IsInRole("Admin"), conversationId, 1, Context.ConnectionAborted);
+            if (StaffUserId is { } staffId)
+            {
+                await service.GetStaffMessagesAsync(staffId, Context.User!.IsInRole("Admin"), conversationId, 1, Context.ConnectionAborted);
+                await service.AcknowledgeParticipantMessagesAsync(conversationId, Context.ConnectionAborted);
+            }
             else if (await ParticipantAsync() is { } participant)
             {
                 if (await service.GetParticipantConversationAsync(participant, conversationId, Context.ConnectionAborted) is null) throw new HubException("NOT_PARTICIPANT");
                 participantIdentity = participant;
+                await service.AcknowledgeStaffMessagesAsync(conversationId, Context.ConnectionAborted);
             }
             else throw new HubException("SESSION_EXPIRED");
             await Groups.AddToGroupAsync(Context.ConnectionId, $"LiveSupport:Conversation:{conversationId:N}");

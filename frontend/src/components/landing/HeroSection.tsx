@@ -18,8 +18,9 @@ export function HeroSection({
   registeredStudentsCount,
   baselineStudentsCount,
 }: HeroSectionProps) {
-  const totalRegisteredStudents =
-    baselineStudentsCount + registeredStudentsCount;
+  const safeRegisteredStudentsCount = Math.max(0, registeredStudentsCount);
+  const totalStudentsCount = baselineStudentsCount + safeRegisteredStudentsCount;
+  const studentProofLabel = `${formatStudentCount(totalStudentsCount)} طالب مسجل`;
 
   return (
     <section
@@ -59,10 +60,14 @@ export function HeroSection({
               ابدأ التعلم الآن
             </Link>
             <span
-              dir="ltr"
-              className="text-lg font-black tabular-nums tracking-tight text-[var(--landing-ink)] sm:text-xl"
+              dir="rtl"
+              aria-label={studentProofLabel}
+              className="landing-student-proof"
             >
-              {formatStudentCount(totalRegisteredStudents)}+ Students
+              <span className="landing-student-proof__baseline">
+                {formatStudentCount(totalStudentsCount)}
+              </span>
+              <span className="landing-student-proof__label">طالب</span>
             </span>
           </div>
 

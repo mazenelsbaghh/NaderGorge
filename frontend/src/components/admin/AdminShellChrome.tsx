@@ -64,6 +64,7 @@ import {
   PanelRightOpen,
   Search,
   Coffee,
+  ScrollText,
 } from 'lucide-react';
 
 import { useAdminTheme } from '@/components/admin/useAdminTheme';
@@ -75,6 +76,7 @@ import { useHasPermission } from '@/hooks/useHasPermission';
 import { walletService, type WalletDto } from '@/services/wallet-service';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { IntentLink } from '@/components/navigation/IntentLink';
 import {
@@ -145,6 +147,7 @@ export type AdminShellRoute =
   | '/admin/live-support'
   | '/admin/live-support/ai'
   | '/admin/settings'
+  | '/admin/system-logs'
   | '/admin/popup';
 
 type AdminShellChromeProps = {
@@ -469,6 +472,12 @@ const navItems: AdminNavItem[] = [
     permission: 'reports.manage',
   },
   {
+    href: '/admin/system-logs',
+    label: 'سجل النظام',
+    icon: ScrollText,
+    adminOnly: true,
+  },
+  {
     href: '/admin/settings',
     label: 'الإعدادات',
     icon: Settings,
@@ -556,7 +565,7 @@ const GROUP_CONFIG = [
     id: 'reports',
     label: 'التقارير والمراقبة',
     icon: BarChart3,
-    hrefs: ['/admin/ai-monitor', '/admin/reports', '/admin/settings', '/admin/popup'],
+    hrefs: ['/admin/ai-monitor', '/admin/reports', '/admin/system-logs', '/admin/settings', '/admin/popup'],
   },
 ];
 
@@ -1091,6 +1100,19 @@ function AdminShellFrame({
 
         <div className={`space-y-2 flex-shrink-0 mt-4 ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
           {hasPermission('payments.manage') && <AdminWalletBalanceBadge compact={isSidebarCollapsed} />}
+          <div
+            className={`flex min-h-12 items-center gap-3 rounded-xl bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-2' : 'px-3'}`}
+            title={user?.fullName || 'الحساب الحالي'}
+            aria-label={`الحساب الحالي: ${user?.fullName || 'مستخدم'}`}
+          >
+            <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'مستخدم'} size="sm" />
+            {!isSidebarCollapsed && (
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'مستخدم'}</p>
+                <p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p>
+              </div>
+            )}
+          </div>
           <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-start'} px-1`}>
             <AnimatedThemeToggler
               checked={isDark}
@@ -1345,6 +1367,13 @@ function AdminShellFrame({
                   لا توجد صفحات مطابقة للبحث.
                 </p>
               )}
+            </div>
+            <div className="mt-5 flex items-center gap-3 rounded-xl bg-[var(--admin-hover)] p-3">
+              <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'مستخدم'} size="sm" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'مستخدم'}</p>
+                <p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p>
+              </div>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-2">
               {hasPermission('settings.manage') && (

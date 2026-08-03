@@ -239,12 +239,16 @@ export interface StudentProfileDto {
 }
 
 export interface UpdateStudentProfileDto {
+  fullName: string;
   address: string;
   secondaryPhone?: string | null;
   parentPhone?: string | null;
   secondaryParentPhone?: string | null;
   motherPhone?: string | null;
   schoolName?: string | null;
+  educationStage: string;
+  gradeLevel: string;
+  studyTrack?: string | null;
 }
 
 export interface StudentNotificationDto {

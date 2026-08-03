@@ -688,6 +688,44 @@ body:has(.secure-video-pseudo-fullscreen) *:has(.secure-video-pseudo-fullscreen)
     background: #0A7474;
   }
 
+  .landing-student-proof {
+    display: inline-flex;
+    min-height: 3rem;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 1px solid color-mix(in srgb, var(--landing-accent) 28%, transparent);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--landing-card) 88%, transparent);
+    padding: 0.65rem 1rem;
+    color: var(--landing-ink);
+    white-space: nowrap;
+  }
+
+  .landing-student-proof__baseline,
+  .landing-student-proof__actual {
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .landing-student-proof__actual {
+    color: var(--landing-accent-strong);
+  }
+
+  .landing-student-proof__plus {
+    color: var(--landing-marker-dot);
+    font-size: 1.25rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .landing-student-proof__label {
+    color: var(--landing-muted);
+    font-size: 0.875rem;
+    font-weight: 800;
+  }
+
   .landing-secondary-button {
     display: inline-flex;
     min-height: 2.75rem;

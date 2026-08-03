@@ -51,6 +51,32 @@ public sealed class StudentActionTests
     }
 
     [Fact]
+    public async Task ProfileUpdate_RemainsConfirmableWhenOnlyConversationVersionChanges()
+    {
+        await using var fixture = await ActionFixture.CreateAsync();
+        fixture.Db.StudentProfiles.Add(new StudentProfile
+        {
+            UserId = fixture.StudentId,
+            DateOfBirth = new DateTime(2008, 1, 1),
+            Governorate = "القاهرة",
+            Address = "اختبار"
+        });
+        await fixture.Db.SaveChangesAsync();
+        var definition = (await fixture.Actions.GetCatalogAsync(fixture.StaffId, false, fixture.ConversationId, CancellationToken.None))
+            .Single(x => x.Key == "student.profile.update");
+        var conversation = await fixture.Db.LiveSupportConversations.SingleAsync(x => x.Id == fixture.ConversationId);
+        conversation.Version++;
+        await fixture.Db.SaveChangesAsync();
+
+        var result = await fixture.Actions.ExecuteAsync(
+            fixture.Request(definition, Guid.NewGuid().ToString(), "{\"fullName\":\"اسم الطالب المعدل\"}"),
+            CancellationToken.None);
+
+        Assert.False(result.Replayed);
+        Assert.Equal("اسم الطالب المعدل", await fixture.Db.Users.Where(x => x.Id == fixture.StudentId).Select(x => x.FullName).SingleAsync());
+    }
+
+    [Fact]
     public async Task DeviceDisconnect_RejectsDeviceOwnedByDifferentStudent()
     {
         await using var fixture = await ActionFixture.CreateAsync();

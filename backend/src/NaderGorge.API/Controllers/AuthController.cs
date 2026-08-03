@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Features.Auth;
 using NaderGorge.Application.Features.Auth.Commands;
 using NaderGorge.Application.Features.Auth.Queries;
 using NaderGorge.API.Extensions;
@@ -220,7 +221,7 @@ public class AuthController : ControllerBase
             Secure = Request.IsHttps,
             SameSite = SameSiteMode.Lax,
             Path = "/api/auth/refresh",
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
+            Expires = DateTimeOffset.UtcNow.Add(AuthSessionPolicy.Lifetime)
         };
 
         if (!string.IsNullOrWhiteSpace(cookieDomain))

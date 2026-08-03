@@ -20,6 +20,17 @@ function formatNext(value?: string | null) {
   return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
 }
 
+function formatSupportTime(value: string) {
+  const [hour = '0', minute = '0'] = value.split(':');
+  return new Intl.DateTimeFormat('ar-EG', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'UTC' })
+    .format(new Date(Date.UTC(2000, 0, 1, Number(hour), Number(minute))));
+}
+
+function formatBusinessHours(windows?: LiveSupportAvailability['businessHours']) {
+  if (!windows?.length) return 'لم تُحدد مواعيد العمل لهذا اليوم بعد';
+  return windows.map((window) => `من ${formatSupportTime(window.startLocalTime)} إلى ${formatSupportTime(window.endLocalTime)}`).join('، ');
+}
+
 type LiveSupportLauncherProps = {
   avoidMobileBottomNav?: boolean;
 };
@@ -28,6 +39,7 @@ type SupportVisibilitySettings = {
   liveSupportEnabled: boolean;
   showSupportOutsideAccount: boolean;
   guestSupportWhatsAppNumber: string;
+  supportPhoneNumber: string;
 };
 
 export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSupportLauncherProps) {
@@ -71,8 +83,9 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
         liveSupportEnabled: data?.liveSupportEnabled === true,
         showSupportOutsideAccount: data?.showSupportOutsideAccount === true,
         guestSupportWhatsAppNumber: String(data?.guestSupportWhatsAppNumber ?? ''),
+        supportPhoneNumber: String(data?.supportPhoneNumber ?? ''),
       }))
-      .catch(() => setSupportVisibility({ liveSupportEnabled: false, showSupportOutsideAccount: false, guestSupportWhatsAppNumber: '' }));
+      .catch(() => setSupportVisibility({ liveSupportEnabled: false, showSupportOutsideAccount: false, guestSupportWhatsAppNumber: '', supportPhoneNumber: '' }));
   }, []);
 
   const [activeAction, setActiveAction] = useState<LiveSupportAIPendingDecision | null>(null);
@@ -201,7 +214,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
     try {
       const created = await liveSupportService.createConversation({ subject: String(form.get('subject') || '') });
       startingNew.current = false;
-      setConversation(created); setMessages([]);
+      setConversation(created); setMessages([]); await refresh();
     } catch (cause) {
       setError(getParticipantMutationError(cause, 'تعذر بدء المحادثة. أعد المحاولة.')); await refresh();
     } finally { setLoading(false); }
@@ -241,6 +254,30 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
     finally { setUploading(false); }
   }
 
+  async function editMessage(messageId: string, content: string) {
+    if (!conversation || pendingAction) return;
+    setPendingAction(`edit:${messageId}`); setError('');
+    try {
+      const updated = await liveSupportService.updateParticipantMessage(conversation.id, messageId, content);
+      setMessages((items) => mergeMessages(items, [updated], conversation.id));
+    } catch (cause) {
+      setError(getParticipantMutationError(cause, 'تعذر تعديل الرسالة. أعد المحاولة.'));
+      throw cause;
+    } finally { setPendingAction(null); }
+  }
+
+  async function deleteMessage(messageId: string) {
+    if (!conversation || pendingAction) return;
+    setPendingAction(`delete:${messageId}`); setError('');
+    try {
+      const deleted = await liveSupportService.deleteParticipantMessage(conversation.id, messageId);
+      setMessages((items) => mergeMessages(items, [deleted], conversation.id));
+    } catch (cause) {
+      setError(getParticipantMutationError(cause, 'تعذر حذف الرسالة. أعد المحاولة.'));
+      throw cause;
+    } finally { setPendingAction(null); }
+  }
+
   async function abandon() {
     if (!conversation || mutationInFlight.current) return;
     mutationInFlight.current = true;
@@ -260,6 +297,9 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
   const launcherPositionClass = avoidMobileBottomNav
     ? 'bottom-[calc(5.75rem+env(safe-area-inset-bottom))] lg:bottom-[calc(1rem+env(safe-area-inset-bottom))]'
     : 'bottom-[calc(1rem+env(safe-area-inset-bottom))]';
+  const afterHours = Boolean(availability && !availability.isAvailable && availability.isOutsideBusinessHours);
+  const whatsappNumber = supportVisibility?.guestSupportWhatsAppNumber.replace(/\D/g, '') ?? '';
+  const contactNumber = whatsappNumber || supportVisibility?.supportPhoneNumber.trim() || '';
 
   if (authIsLoading || !supportVisibility) return null;
 
@@ -298,9 +338,9 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
       </header>
       <div className="flex min-h-0 flex-1 flex-col p-4"><LiveSupportWidget>
         {loading && !availability ? <div className="grid flex-1 place-items-center"><LoaderCircle className="animate-spin text-cyan-700"/></div> : null}
-        {availability && !availability.isAvailable && !conversation ? <div className="grid flex-1 place-items-center text-center"><div><span className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-slate-100 text-slate-500"><Headphones size={28}/></span><h3 className="text-lg font-bold text-slate-900">الدعم غير متاح الآن</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">لا يمكن بدء محادثة جديدة حاليًا.</p>{formatNext(availability.nextAvailableAt) && <div className="mt-4 rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900">موعد توفر الدعم القادم<br/>{formatNext(availability.nextAvailableAt)}</div>}</div></div> : null}
+        {availability && !availability.isAvailable && !conversation && !afterHours ? <div className="grid flex-1 place-items-center text-center"><div><span className="mx-auto mb-4 grid size-16 place-items-center rounded-2xl bg-slate-100 text-slate-500"><Headphones size={28}/></span><h3 className="text-lg font-bold text-slate-900">الدعم غير متاح الآن</h3><p className="mt-2 max-w-xs text-sm leading-6 text-slate-600">لا يمكن بدء محادثة جديدة حاليًا.</p>{formatNext(availability.nextAvailableAt) && <div className="mt-4 rounded-2xl bg-cyan-50 px-4 py-3 text-sm font-semibold text-cyan-900">موعد توفر الدعم القادم<br/>{formatNext(availability.nextAvailableAt)}</div>}</div></div> : null}
         {availability && !availability.isAvailable && conversation ? <div role="status" className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900">الدعم غير متاح لبدء محادثة جديدة، لكن يمكنك متابعة محادثتك وسجلها الحالي.</div> : null}
-        {availability?.isAvailable && !conversation ? <form action={start} className="my-auto space-y-4"><h3 className="text-lg font-bold text-slate-900">كيف نساعدك؟</h3><label className="block text-sm font-medium text-slate-700">موضوع المحادثة<input name="subject" maxLength={200} placeholder="اكتب المشكلة باختصار" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-cyan-600"/></label><button disabled={loading || Boolean(pendingAction)} className="h-11 w-full rounded-xl bg-cyan-700 font-semibold text-white disabled:opacity-50">ابدأ المحادثة</button></form> : null}
+        {(availability?.isAvailable || afterHours) && !conversation ? <form action={start} className="my-auto space-y-4">{afterHours ? <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"><h3 className="font-black">نحن الآن خارج مواعيد العمل الرسمية</h3><p className="mt-1">مواعيد العمل اليوم: {formatBusinessHours(availability?.businessHours)}.</p>{contactNumber && <p className="mt-1">للتواصل العاجل: {whatsappNumber ? <a href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noreferrer" dir="ltr" className="font-black underline">{contactNumber}</a> : <a href={`tel:${contactNumber.replace(/\s/g, '')}`} dir="ltr" className="font-black underline">{contactNumber}</a>} — وسنرد عليك صباحًا.</p>}</div> : <h3 className="text-lg font-bold text-slate-900">كيف نساعدك؟</h3>}<label className="block text-sm font-medium text-slate-700">{afterHours ? 'اترك رسالتك وسنتابعها صباحًا' : 'موضوع المحادثة'}<input name="subject" maxLength={200} required placeholder="اكتب المشكلة باختصار" className="mt-1 h-11 w-full rounded-xl border border-slate-200 px-3 outline-none focus:border-cyan-600"/></label><button disabled={loading || Boolean(pendingAction)} className="h-11 w-full rounded-xl bg-cyan-700 font-semibold text-white disabled:opacity-50">{afterHours ? 'إرسال الرسالة' : 'ابدأ المحادثة'}</button></form> : null}
         {conversation && <>{conversation.status === 'Waiting' ? (
           conversation.isAiActive ? (
             <AIConversationStatus turnState={aiTurnState} onRequestHuman={() => void requestHumanSupport().catch(() => setError('تعذر طلب موظف الدعم. حاول مرة أخرى.'))}/>
@@ -323,6 +363,8 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
             onCancelHandoff={handleCancelHandoff}
             onVerificationSuccess={handleVerificationSuccess}
             onRegistrationSuccess={handleRegistrationSuccess}
+            onEditMessage={editMessage}
+            onDeleteMessage={deleteMessage}
           />{conversation.canSend && !activeAction && !activeVerification ? <div className="flex gap-2 border-t border-slate-100 pt-3"><label aria-label="إرفاق ملف" className={`grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 focus-within:outline-2 ${pendingAction ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}><Paperclip size={18}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg" disabled={uploading || Boolean(pendingAction)} onChange={(event) => void upload(event.target.files?.[0])} className="sr-only"/></label><input aria-label="رسالة الدعم" disabled={Boolean(pendingAction)} value={draft} onChange={(event) => { setDraft(event.target.value); setStoredDraft(conversation.id, event.target.value); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }} placeholder="اكتب رسالتك" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 outline-none focus-visible:border-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-700/20 disabled:bg-slate-100"/><button type="button" disabled={!draft.trim() || Boolean(pendingAction)} onClick={() => void send()} aria-label="إرسال" className="grid size-11 place-items-center rounded-xl bg-cyan-700 text-white disabled:opacity-50"><Send size={18}/></button></div> : conversation.canSend ? <p role="status" className="border-t border-slate-100 pt-3 text-center text-xs font-medium text-slate-600">أكمل خطوة التأكيد الظاهرة قبل إرسال رسالة جديدة.</p> : <ClosedActions conversation={conversation} onNew={() => { startingNew.current = true; setConversation(undefined); setMessages([]); }}/>}</>}
         {error && <div role="alert" className="mt-3 text-center text-sm text-red-600"><p>{error}</p><button type="button" disabled={retrying} onClick={() => { setRetrying(true); void refresh().finally(() => setRetrying(false)); }} className="mt-1 font-semibold underline">{retrying ? 'جارٍ التحديث…' : 'إعادة المحاولة'}</button></div>}
       </LiveSupportWidget></div>
@@ -384,7 +426,7 @@ function ClosedActions({ conversation, onNew }: { conversation: LiveSupportConve
   }, [conversation.id, conversation.canRate]);
 
   return <div className="space-y-3 border-t border-slate-100 pt-3">
-    {!rated && conversation.status === 'Closed' && (
+    {!rated && (
       <ConversationRating
         conversationId={conversation.id}
         onRated={(stars) => {

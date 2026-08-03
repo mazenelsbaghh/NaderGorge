@@ -54,7 +54,17 @@ public sealed class ClockInAttendanceCommandHandler : IRequestHandler<ClockInAtt
         var segment = ShiftScheduleRules.SegmentForWorkDate(shift.ShiftTemplate!.Segments, localDate);
         if (segment is null) return await RejectAsync(employee.Id, request, "NO_SCHEDULE", evaluation.PolicyId, ct);
         var workDate = ShiftWorkDateResolver.Resolve(EnsureUtc(request.OccurredAt), segment, cairo);
-        var session = new AttendanceSession { EmployeeId = employee.Id, ShiftAssignmentId = shift.Id, WorkDate = workDate, ClockedInAt = EnsureUtc(request.OccurredAt) };
+        var (scheduledStart, _) = ShiftScheduleRules.ScheduledRangeUtc(workDate, segment, cairo);
+        var lateMinutes = Math.Max(0,
+            (int)(EnsureUtc(request.OccurredAt) - scheduledStart).TotalMinutes - shift.ShiftTemplate.GraceMinutes);
+        var session = new AttendanceSession
+        {
+            EmployeeId = employee.Id,
+            ShiftAssignmentId = shift.Id,
+            WorkDate = workDate,
+            ClockedInAt = EnsureUtc(request.OccurredAt),
+            LateMinutes = lateMinutes,
+        };
         var attempt = NewAttempt(employee.Id, request, true, evaluation.Code, evaluation.PolicyId); attempt.AttendanceSessionId = session.Id;
         _db.AttendanceSessions.Add(session); _db.AttendanceAttempts.Add(attempt);
         if (await _db.LiveSupportStaffConfigs.AnyAsync(item => item.UserId == request.UserId && item.IsEnabled, ct))
@@ -113,7 +123,10 @@ public sealed class StartAttendanceBreakCommandHandler : IRequestHandler<StartAt
         var replay = await _db.AttendanceAttempts.AsNoTracking().FirstOrDefaultAsync(item => item.EmployeeId == employeeId && item.EventType == AttendanceEventType.BreakStart && item.IdempotencyKey == request.IdempotencyKey, ct);
         if (replay?.Accepted == true)
             return ApiResponse<Guid>.Ok(await _db.AttendanceBreaks.Where(item => item.AttendanceSessionId == replay.AttendanceSessionId && item.StartedAt == replay.OccurredAt).Select(item => item.Id).SingleAsync(ct));
-        var session = await _db.AttendanceSessions.Include(item => item.Breaks).SingleOrDefaultAsync(item => item.EmployeeId == employeeId && item.State == AttendanceSessionState.Open, ct);
+        var session = await _db.AttendanceSessions
+            .Include(item => item.Breaks)
+            .Include(item => item.ShiftAssignment!).ThenInclude(item => item.ShiftTemplate!).ThenInclude(item => item.Segments)
+            .SingleOrDefaultAsync(item => item.EmployeeId == employeeId && item.State == AttendanceSessionState.Open, ct);
         if (session is null) return ApiResponse<Guid>.Fail("لا توجد جلسة حضور مفتوحة", ["NO_OPEN_SESSION"]);
         if (session.Breaks.Any(item => !item.EndedAt.HasValue)) return ApiResponse<Guid>.Fail("توجد استراحة مفتوحة", ["BREAK_ALREADY_OPEN"]);
         var allowedMinutes = request.Kind == AttendanceBreakKind.ShortPermission ? employee.ShortPermissionMaxMinutes : employee.DailyBreakAllowanceMinutes;
@@ -167,7 +180,21 @@ public sealed class ClockOutAttendanceCommandHandler : IRequestHandler<ClockOutA
         if (occurredAt <= session.ClockedInAt) return ApiResponse<AttendanceMutationResult>.Fail("وقت الانصراف غير صالح", ["ATTENDANCE_TIME_INVALID"]);
         session.ClockedOutAt = occurredAt; session.State = AttendanceSessionState.Completed; session.Version++;
         var breakMinutes = session.Breaks.Where(item => item.EndedAt.HasValue).Sum(item => (int)(item.EndedAt!.Value - item.StartedAt).TotalMinutes);
-        session.WorkedMinutes = Math.Max(0, (int)(occurredAt - session.ClockedInAt).TotalMinutes - breakMinutes);
+        var segment = ShiftScheduleRules.SegmentForWorkDate(session.ShiftAssignment!.ShiftTemplate!.Segments, session.WorkDate)
+            ?? throw new InvalidOperationException("Attendance shift segment is missing.");
+        var (scheduledStart, scheduledEnd) = ShiftScheduleRules.ScheduledRangeUtc(session.WorkDate, segment, ResolveCairo());
+        var calculation = AttendanceCalculator.Calculate(new(
+            session.ClockedInAt,
+            occurredAt,
+            scheduledStart,
+            scheduledEnd,
+            breakMinutes,
+            session.ShiftAssignment.ShiftTemplate.GraceMinutes,
+            session.ShiftAssignment.ShiftTemplate.OvertimeAfterMinutes));
+        session.WorkedMinutes = calculation.WorkedMinutes;
+        session.LateMinutes = calculation.LateMinutes;
+        session.EarlyLeaveMinutes = calculation.EarlyLeaveMinutes;
+        session.OvertimeMinutes = calculation.OvertimeMinutes;
         var attempt = new AttendanceAttempt { EmployeeId = employeeId, EventType = AttendanceEventType.ClockOut, OccurredAt = occurredAt, Accepted = true, DecisionCode = "ATTENDANCE_ACCEPTED", IdempotencyKey = request.IdempotencyKey, AttendanceSessionId = session.Id };
         _db.AttendanceAttempts.Add(attempt);
         await _audit.WriteMutationAsync("AttendanceClockOut", nameof(AttendanceSession), session.Id, new { clockedOutAt = (DateTime?)null }, new { session.ClockedOutAt, session.WorkedMinutes }, "Employee clock-out", ct, request.UserId);
@@ -175,6 +202,7 @@ public sealed class ClockOutAttendanceCommandHandler : IRequestHandler<ClockOutA
         if (_liveSupport is not null) await _liveSupport.ReleaseStaffAssignmentsAsync(request.UserId, LiveSupportAssignmentEndReason.AttendanceCheckout, ct);
         return ApiResponse<AttendanceMutationResult>.Ok(new(session.Id, attempt.Id, attempt.DecisionCode, session.WorkDate));
     }
+    private static TimeZoneInfo ResolveCairo() { try { return TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"); } catch { return TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"); } }
 }
 
 public sealed record RegisterTrustedAttendanceDeviceCommand(Guid EmployeeId, string DeviceToken, string Name, DateTime? ExpiresAt, Guid ActorUserId)

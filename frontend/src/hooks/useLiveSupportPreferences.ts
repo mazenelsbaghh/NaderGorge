@@ -13,6 +13,7 @@ export type LiveSupportPreferences = {
   notificationsEnabled: boolean;
   soundEnabled: boolean;
   sound: LiveSupportSound;
+  soundVolume: number;
 };
 
 const defaults: LiveSupportPreferences = {
@@ -22,6 +23,7 @@ const defaults: LiveSupportPreferences = {
   notificationsEnabled: true,
   soundEnabled: true,
   sound: 'soft',
+  soundVolume: 50,
 };
 
 function storageKey(userId: string) {
@@ -53,7 +55,7 @@ export function useLiveSupportPreferences() {
   return { preferences, updatePreferences };
 }
 
-export function playLiveSupportSound(sound: LiveSupportSound) {
+export function playLiveSupportSound(sound: LiveSupportSound, volume = defaults.soundVolume) {
   if (typeof window === 'undefined') return;
   const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextConstructor) return;
@@ -64,7 +66,7 @@ export function playLiveSupportSound(sound: LiveSupportSound) {
     bell: [784, 1047],
     chime: [523, 659, 784],
   };
-  const notificationPeakGain = 0.22;
+  const notificationPeakGain = Math.min(1, Math.max(0, volume / 100));
 
   notes[sound].forEach((frequency, index) => {
     const oscillator = context.createOscillator();

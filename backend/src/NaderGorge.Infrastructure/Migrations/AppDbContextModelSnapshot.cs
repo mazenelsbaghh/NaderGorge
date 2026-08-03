@@ -5932,6 +5932,15 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DeliveredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<Guid?>("SenderGuestSessionId")
                         .HasColumnType("uuid");
 
@@ -6412,15 +6421,15 @@ namespace NaderGorge.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
                     b.Property<DateTime?>("ClaimedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("ClaimedBy")
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("IsDeadLetter")
                         .ValueGeneratedOnAdd()
@@ -6431,17 +6440,17 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
+                    b.Property<DateTime?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<string>("PayloadJson")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("LeaseExpiresAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<DateTime?>("NextAttemptAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<int>("RetryCount")
@@ -8054,7 +8063,7 @@ namespace NaderGorge.Infrastructure.Migrations
 
                     b.ToTable("sales_financial_effects", null, t =>
                         {
-                            t.HasCheckConstraint("CK_sales_financial_effect_amounts", "\"GrossAmount\" >= 0 AND \"CouponDiscountAmount\" >= 0 AND \"PrintableCodeDiscountAmount\" >= 0 AND \"PromotionalAmount\" >= 0 AND \"PaidAmount\" >= 0 AND \"TeacherShareImpact\" >= 0 AND \"PlatformShareImpact\" >= 0");
+                            t.HasCheckConstraint("CK_sales_financial_effect_amounts", "\"GrossAmount\" >= 0 AND \"CouponDiscountAmount\" >= 0 AND \"PrintableCodeDiscountAmount\" >= 0 AND \"PromotionalAmount\" >= 0 AND \"PaidAmount\" >= 0 AND \"TeacherShareImpact\" >= 0");
 
                             t.HasCheckConstraint("CK_sales_financial_effect_conservation", "\"GrossAmount\" = \"CouponDiscountAmount\" + \"PrintableCodeDiscountAmount\" + \"PromotionalAmount\" + \"PaidAmount\"");
                         });
@@ -10370,6 +10379,10 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.WebVitalsMetric", b =>
                 {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
                     b.Property<string>("ConnectionClass")
                         .IsRequired()
                         .HasMaxLength(24)
@@ -10379,27 +10392,23 @@ namespace NaderGorge.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<string>("MetricName")
+                    b.Property<string>("DeviceClass")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<string>("MetricId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("DeviceClass")
+                    b.Property<string>("MetricName")
                         .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("NavigationType")
                         .IsRequired()

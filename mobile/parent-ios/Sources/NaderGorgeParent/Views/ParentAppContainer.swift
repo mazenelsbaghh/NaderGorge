@@ -68,9 +68,17 @@ public struct ParentAppContainer: View {
 }
 
 private struct FontRegistrar {
+    private static var resourceBundle: Bundle {
+        #if SWIFT_PACKAGE
+        return .module
+        #else
+        return .main
+        #endif
+    }
+
     static func registerFont(named name: String) {
-        guard let url = Bundle.module.url(forResource: name, withExtension: "ttf") ??
-                        Bundle.module.url(forResource: "Fonts/\(name)", withExtension: "ttf"),
+        guard let url = resourceBundle.url(forResource: name, withExtension: "ttf") ??
+                        resourceBundle.url(forResource: "Fonts/\(name)", withExtension: "ttf"),
               let data = try? Data(contentsOf: url),
               let provider = CGDataProvider(data: data as CFData),
               let font = CGFont(provider) else {

@@ -50,8 +50,11 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
         }
         recordSequence(event.conversationId, event.sequence);
       }
-      if (event.conversationId && ['AssignmentReleased', 'Transferred', 'Closed', 'AIHandoffCompleted'].includes(event.type)) setOwnershipLost(event.conversationId, true);
-      if (event.conversationId === conversationId) snapshotCallback.current?.();
+      if (event.conversationId && ['AssignmentReleased', 'Transferred', 'Closed', 'Abandoned', 'AIHandoffCompleted'].includes(event.type)) setOwnershipLost(event.conversationId, true);
+      // Staff receive events for every conversation assigned to them, including
+      // conversations that are not currently open in the workspace. Reconcile
+      // the bootstrap for all of those events so the queue never stays stale.
+      if (event.conversationId) snapshotCallback.current?.();
     };
     connection.on('LiveSupportEvent', durableEvent);
     connection.onreconnected(() => {

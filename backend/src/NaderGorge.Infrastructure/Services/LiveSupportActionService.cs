@@ -259,6 +259,14 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
     {
         var student = conversation.LinkedStudentUserId;
         if (!student.HasValue) return Hash($"{key}|{conversation.Id:N}|unlinked|{conversation.Version}");
+        if (key == "student.profile.update")
+        {
+            var profileState = await _db.Users
+                .Where(x => x.Id == student)
+                .Select(x => $"{x.FullName}|{x.PhoneNumber}|{x.UpdatedAt}|{x.StudentProfile!.UpdatedAt}")
+                .SingleAsync(ct);
+            return Hash($"{key}|{conversation.Id:N}|{student:N}|{profileState}");
+        }
         var state = key switch
         {
             "student.balance.adjust" or "student.package.cancel" => await _db.StudentBalances.Where(x => x.UserId == student).Select(x => x.CurrentBalance.ToString()).FirstOrDefaultAsync(ct) ?? "0",

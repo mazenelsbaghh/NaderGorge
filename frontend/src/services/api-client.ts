@@ -28,7 +28,6 @@ const AUTH_BYPASS_PATHS = [
   '/auth/register',
   '/auth/refresh',
   '/parent/reports',
-  '/live-support',
   '/metrics/web-vitals',
 ];
 const RATE_LIMIT_TOAST_COOLDOWN_MS = 4_000;

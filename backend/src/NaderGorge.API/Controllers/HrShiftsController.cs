@@ -55,8 +55,64 @@ public sealed class HrShiftsController : ControllerBase
         .OrderBy(item => item.EffectiveFrom).Select(item => new
         {
             item.Id, item.EmployeeId, employee = item.Employee!.User!.FullName, item.ShiftTemplateId,
-            shift = item.ShiftTemplate!.Name, item.EffectiveFrom, item.EffectiveTo, status = item.Status.ToString(), item.Reason
+            shift = item.ShiftTemplate!.Name, item.EffectiveFrom, item.EffectiveTo, status = item.Status.ToString(), item.Reason,
+            segments = item.ShiftTemplate.Segments.OrderBy(segment => segment.Sequence).Select(segment => new
+            { segment.Sequence, segment.DayOfWeek, segment.StartsAt, segment.EndsAt, segment.UnpaidBreakMinutes, workDateRule = segment.WorkDateRule.ToString() })
         }).ToListAsync(ct));
+
+    [HttpPatch("admin/shifts/assignments/{assignmentId:guid}")]
+    [HasPermission(HrPermissions.ShiftManage)]
+    public async Task<IActionResult> UpdatePublishedAssignment(Guid assignmentId, UpdatePublishedShiftAssignmentRequest request, CancellationToken ct)
+    {
+        if (request.EffectiveTo.HasValue && request.EffectiveTo <= request.EffectiveFrom ||
+            request.Segments.Count == 0 || string.IsNullOrWhiteSpace(request.Reason))
+            return BadRequest(new { errors = new[] { "SHIFT_ASSIGNMENT_INVALID" } });
+
+        var assignment = await _db.ShiftAssignments
+            .Include(item => item.ShiftTemplate)
+            .Include(item => item.Employee).ThenInclude(item => item!.User)
+            .SingleOrDefaultAsync(item => item.Id == assignmentId && item.Status == ShiftAssignmentStatus.Published, ct);
+        if (assignment?.ShiftTemplate is null) return NotFound(new { errors = new[] { "SHIFT_ASSIGNMENT_NOT_FOUND" } });
+
+        var conflict = await _db.ShiftAssignments.AsNoTracking().AnyAsync(item =>
+            item.Id != assignmentId && item.EmployeeId == assignment.EmployeeId && item.Status == ShiftAssignmentStatus.Published &&
+            item.EffectiveFrom < (request.EffectiveTo ?? DateOnly.MaxValue) && request.EffectiveFrom < (item.EffectiveTo ?? DateOnly.MaxValue), ct);
+        if (conflict) return Conflict(new { errors = new[] { "SHIFT_ASSIGNMENT_OVERLAP" } });
+
+        var segments = request.Segments.Select(item => new ShiftSegment
+        {
+            Sequence = item.Sequence,
+            DayOfWeek = item.DayOfWeek,
+            StartsAt = item.StartsAt,
+            EndsAt = item.EndsAt,
+            UnpaidBreakMinutes = item.UnpaidBreakMinutes,
+            WorkDateRule = item.WorkDateRule
+        }).ToList();
+        var segmentErrors = ShiftScheduleRules.ValidateSegments(segments);
+        if (segmentErrors.Count > 0) return BadRequest(new { errors = segmentErrors });
+
+        var source = assignment.ShiftTemplate;
+        var replacement = new ShiftTemplate
+        {
+            Code = $"EDIT-{Guid.NewGuid():N}",
+            Name = $"جدول أسبوعي: {assignment.Employee?.User?.FullName ?? source.Name}",
+            Mode = source.Mode,
+            WorkCalendarId = source.WorkCalendarId,
+            GraceMinutes = source.GraceMinutes,
+            MinimumBreakMinutes = source.MinimumBreakMinutes,
+            OvertimeAfterMinutes = source.OvertimeAfterMinutes,
+            Segments = segments
+        };
+        _db.ShiftTemplates.Add(replacement);
+        assignment.ShiftTemplateId = replacement.Id;
+        assignment.EffectiveFrom = request.EffectiveFrom;
+        assignment.EffectiveTo = request.EffectiveTo;
+        assignment.Reason = request.Reason.Trim();
+        assignment.PublishedByUserId = User.RequireUserId();
+        assignment.PublishedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return Ok(new { success = true, data = assignment.Id });
+    }
 
     [HttpPost("admin/shifts/templates")]
     [HasPermission(HrPermissions.ShiftManage)]
@@ -208,6 +264,8 @@ public sealed record ShiftSegmentRequest(int Sequence, DayOfWeek? DayOfWeek, Tim
 public sealed record UpdateWorkCalendarRequest(int WorkingDaysMask);
 public sealed record CreateShiftTemplateRequest(string Code, string Name, ShiftTemplateMode Mode, Guid WorkCalendarId,
     int GraceMinutes, int MinimumBreakMinutes, int OvertimeAfterMinutes, IReadOnlyList<ShiftSegmentRequest> Segments);
+public sealed record UpdatePublishedShiftAssignmentRequest(DateOnly EffectiveFrom, DateOnly? EffectiveTo, string Reason,
+    IReadOnlyList<ShiftSegmentRequest> Segments);
 public sealed record CreateAttendancePolicyRequest(string Code, string Name, AttendancePolicyKind Kind,
     decimal? Latitude, decimal? Longitude, int RadiusMeters = 150, int MaximumAccuracyMeters = 100);
 public sealed record AssignAttendancePolicyRequest(Guid AttendancePolicyId, Guid? EmployeeId, Guid? ShiftTemplateId,

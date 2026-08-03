@@ -1,6 +1,12 @@
 using System.Security.Cryptography;
+using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NaderGorge.API.Controllers;
+using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.HR.Attendance;
 using NaderGorge.Application.Features.HR.Attendance.Commands;
 using NaderGorge.Domain.Entities;
@@ -114,6 +120,74 @@ public sealed class AttendancePolicyTests
             new ClockInAttendanceCommand(seeded.User.Id, "live-support", DateTime.UtcNow, null, null, null, null, "ip", "ua"), default);
         Assert.True(result.Success);
         Assert.Equal(1, coordinator.AssignCalls);
+    }
+
+    [Fact]
+    public async Task AttendanceToday_AfterMidnight_DoesNotReturnYesterdaysCompletedSession()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedAsync(db, AttendancePolicyKind.Unrestricted);
+        db.AttendanceSessions.Add(new AttendanceSession
+        {
+            EmployeeId = seeded.Employee.Id,
+            WorkDate = CairoTime.GetCurrentDate().AddDays(-1),
+            ClockedInAt = DateTime.UtcNow.AddDays(-1),
+            ClockedOutAt = DateTime.UtcNow.AddDays(-1).AddHours(8),
+            State = AttendanceSessionState.Completed,
+        });
+        await db.SaveChangesAsync();
+        var controller = new HrAttendanceController(db, null!)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(
+                        [new Claim(ClaimTypes.NameIdentifier, seeded.User.Id.ToString())],
+                        "test")),
+                },
+            },
+        };
+
+        var response = await controller.Today(default);
+
+        var ok = Assert.IsType<OkObjectResult>(response);
+        Assert.Equal(JsonValueKind.Null, JsonSerializer.SerializeToElement(ok.Value).ValueKind);
+    }
+
+    [Theory]
+    [InlineData(15, 0)]
+    [InlineData(17, 50)]
+    public async Task ClockInRelativeToShiftStart_RecordsOnlyDeductibleLateMinutes(
+        int localHour,
+        int expectedLateMinutes)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedAsync(db, AttendancePolicyKind.Unrestricted);
+        seeded.Template.GraceMinutes = 10;
+        var segment = Assert.Single(seeded.Template.Segments);
+        segment.StartsAt = TimeSpan.FromHours(16);
+        segment.EndsAt = TimeSpan.FromHours(23);
+        await db.SaveChangesAsync();
+        var localClockIn = CairoTime.GetCurrentDate().ToDateTime(new TimeOnly(localHour, 0));
+        var command = new ClockInAttendanceCommand(
+            seeded.User.Id,
+            $"clock-in-{localHour}",
+            CairoTime.ToUtc(localClockIn),
+            null,
+            null,
+            null,
+            null,
+            "127.0.0.1",
+            "test");
+
+        var response = await new ClockInAttendanceCommandHandler(
+            db,
+            new AttendancePolicyEvaluator(db)).Handle(command, default);
+
+        Assert.True(response.Success);
+        var session = await db.AttendanceSessions.SingleAsync();
+        Assert.Equal(expectedLateMinutes, session.LateMinutes);
     }
 
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));

@@ -3,7 +3,9 @@ using System.Text;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NaderGorge.API.Configuration;
@@ -34,6 +36,13 @@ SecurityConfigurationValidator.Validate(builder);
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("Massar");
+if (builder.Environment.IsProduction())
+{
+    dataProtection.PersistKeysToFileSystem(
+        new DirectoryInfo("/app/App_Data/protected/data-protection-keys"));
+}
+builder.Services.Configure<HttpsRedirectionOptions>(options => options.HttpsPort = 443);
 builder.Services.AddScoped<NaderGorge.Application.Common.HR.IHrRequestContext, NaderGorge.API.Services.HttpHrRequestContext>();
 
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
@@ -56,6 +65,7 @@ builder.Services.AddStackExchangeRedisCache(options =>
 builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
     StackExchange.Redis.ConnectionMultiplexer.Connect(redisConfiguration)
 );
+builder.Services.AddSingleton<ILoggerProvider, RedisSystemLogProvider>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -77,7 +87,9 @@ builder.Services.AddSingleton<SlowQueryInterceptor>();
 builder.Services.AddSingleton<DbCommandMetricsInterceptor>();
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsql => npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     options.AddInterceptors(
         sp.GetRequiredService<SlowQueryInterceptor>(),
         sp.GetRequiredService<DbCommandMetricsInterceptor>());
@@ -315,14 +327,21 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ---------- Middleware Pipeline ----------
+// Resolve the original scheme before HSTS/redirect decisions. Production TLS
+// terminates at the trusted node gateway.
+app.UseForwardedHeaders();
+
 var requireHttps = app.Environment.IsProduction() || app.Configuration.GetValue<bool>("Security:RequireHttps");
 if (requireHttps)
 {
     app.UseHsts();
-    app.UseHttpsRedirection();
+    // TLS terminates at the node gateway. Worker-to-backend callbacks stay on
+    // the private Docker network and cannot follow a redirect to port 443.
+    app.UseWhen(
+        context => !context.Request.Path.StartsWithSegments("/api/v1/internal"),
+        branch => branch.UseHttpsRedirection());
 }
 
-app.UseForwardedHeaders();
 // Keep the CORS middleware outside the exception handler.  A controller error
 // must retain its CORS headers so browser clients can read the API error rather
 // than reporting it as an opaque CORS failure.

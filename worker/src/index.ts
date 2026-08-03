@@ -10,7 +10,7 @@ import { ExpressAdapter } from '@bull-board/express';
 import { runNightlySweep } from './jobs/commitment-engine.js';
 import { processNotificationJob } from './jobs/notification-sender.js';
 import { validateWorkerSecurityConfig } from './security.js';
-import { logInfo } from './logging.js';
+import { installSystemLogCapture, logInfo } from './logging.js';
 import { markJobCancellation, clearJobCancellation } from './cancellation.js';
 import { createWorkerAdminGuard, isWorkerAdminEnabled } from './server/adminAccess.js';
 import { ingestStreamJob, type QueueSet } from './queues/jobIngestion.js';
@@ -44,6 +44,7 @@ const JOB_RETENTION_OPTIONS = {
 };
 
 const redis = createRedisConnection();
+installSystemLogCapture(redis);
 const pool = new Pool({
   connectionString: databaseUrl()
 });

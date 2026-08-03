@@ -12,7 +12,9 @@ public sealed record LiveSupportAvailabilityDto(
     int AvailableStaffCount,
     DateTime? NextAvailableAt,
     string Code,
-    string Message);
+    string Message,
+    IReadOnlyList<LiveSupportScheduleWindowDto>? BusinessHours = null,
+    bool IsOutsideBusinessHours = false);
 
 public sealed record LiveSupportMessageDto(
     Guid Id,
@@ -22,7 +24,14 @@ public sealed record LiveSupportMessageDto(
     LiveSupportMessageType Type,
     string Content,
     DateTime SentAt,
-    Guid? AttachmentId);
+    Guid? AttachmentId,
+    DateTime? DeliveredAt,
+    DateTime? ReadAt,
+    DateTime? EditedAt,
+    DateTime? DeletedAt,
+    string? SenderDisplayName = null);
+
+public sealed record UpdateLiveSupportMessageDto(string Content);
 
 public sealed record LiveSupportAISummaryDto(
     string? HandoffSafeSummary,
@@ -49,7 +58,8 @@ public sealed record LiveSupportConversationDto(
     bool CanRate,
     bool IsAiActive,
     bool IsAiTyping,
-    LiveSupportAISummaryDto? AiSummary);
+    LiveSupportAISummaryDto? AiSummary,
+    int UnreadParticipantMessageCount = 0);
 
 public sealed record LiveSupportGuestSessionDto(Guid Id, string DisplayName, DateTime ExpiresAt, string CookieToken);
 

@@ -17,6 +17,8 @@ export interface LiveSupportAvailability {
   nextAvailableAt?: string | null;
   code: string;
   message: string;
+  businessHours?: LiveSupportScheduleWindow[];
+  isOutsideBusinessHours?: boolean;
 }
 
 export interface LiveSupportAISummary {
@@ -47,6 +49,7 @@ export interface LiveSupportConversation {
   isAiActive?: boolean;
   isAiTyping?: boolean;
   aiSummary?: LiveSupportAISummary | null;
+  unreadParticipantMessageCount?: number;
 }
 
 export interface LiveSupportMessage {
@@ -58,6 +61,11 @@ export interface LiveSupportMessage {
   content: string;
   sentAt: string;
   attachmentId?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  senderDisplayName?: string | null;
 }
 
 export interface LiveSupportMessagePage {
@@ -267,6 +275,18 @@ export const liveSupportService = {
     return response.data.data.message;
   },
 
+  updateParticipantMessage: async (conversationId: string, messageId: string, content: string) => {
+    const response = await apiClient.patch<ApiResponse<LiveSupportMessage>>(`/live-support/participant/conversations/${conversationId}/messages/${messageId}`, { content });
+    invalidateSupport(['support:staff']);
+    return response.data.data;
+  },
+
+  deleteParticipantMessage: async (conversationId: string, messageId: string) => {
+    const response = await apiClient.delete<ApiResponse<LiveSupportMessage>>(`/live-support/participant/conversations/${conversationId}/messages/${messageId}`);
+    invalidateSupport(['support:staff']);
+    return response.data.data;
+  },
+
   abandonConversation: async (conversationId: string) => {
     const response = await apiClient.post<ApiResponse<LiveSupportConversation>>(`/live-support/participant/conversations/${conversationId}/abandon`);
     invalidateSupport();
@@ -297,6 +317,18 @@ export const liveSupportService = {
     const response = await apiClient.post<ApiResponse<{ message: LiveSupportMessage; replayed: boolean }>>(`/live-support/staff/conversations/${conversationId}/messages`, payload);
     invalidateSupport(['support:staff', 'support:dashboard']);
     return response.data.data.message;
+  },
+
+  updateStaffMessage: async (conversationId: string, messageId: string, content: string) => {
+    const response = await apiClient.patch<ApiResponse<LiveSupportMessage>>(`/live-support/staff/conversations/${conversationId}/messages/${messageId}`, { content });
+    invalidateSupport();
+    return response.data.data;
+  },
+
+  deleteStaffMessage: async (conversationId: string, messageId: string) => {
+    const response = await apiClient.delete<ApiResponse<LiveSupportMessage>>(`/live-support/staff/conversations/${conversationId}/messages/${messageId}`);
+    invalidateSupport();
+    return response.data.data;
   },
 
   getStaffMessages: (conversationId: string, signal?: AbortSignal) =>

@@ -75,7 +75,8 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/assistants',
     '/admin/admins',
     '/admin/teachers',
-    '/admin/finance'
+    '/admin/finance',
+    '/assistant/students'
   ],
   'content.manage': [
     '/admin/content',
@@ -89,7 +90,8 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
   'exams.manage': [
     '/admin/questions',
     '/admin/content/exams',
-    '/admin/content/homework'
+    '/admin/content/homework',
+    '/assistant/questions'
   ],
   'codes.manage': [
     '/admin/codes',
@@ -108,17 +110,20 @@ const PERMISSION_TO_NAV_MAP: Record<string, string[]> = {
     '/admin/public-exams'
   ],
   'watch_requests.manage': [
-    '/admin/watch-requests'
+    '/admin/watch-requests',
+    '/assistant/watch-requests'
   ],
   'comments.manage': [
     '/admin/comments'
   ],
   'community.manage': [
-    '/admin/community'
+    '/admin/community',
+    '/assistant/community'
   ],
   'reports.manage': [
     '/admin/ai-monitor',
-    '/admin/reports'
+    '/admin/reports',
+    '/assistant/reports'
   ],
   'hr.manage': [
     '/admin/hr',
@@ -279,6 +284,13 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     ]
   },
   {
+    key: '/assistant/students',
+    label: 'إدارة الطلاب',
+    subItems: [
+      { key: '/assistant/students', label: 'البحث عن الطلاب وإدارة حساباتهم وبياناتهم' }
+    ]
+  },
+  {
     key: '/assistant/community',
     label: 'إدارة مجتمع الطلاب',
     subItems: [
@@ -307,6 +319,20 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     ]
   },
   {
+    key: '/assistant/recharge-verification',
+    label: 'مطابقة الشحن',
+    subItems: [
+      { key: '/assistant/recharge-verification', label: 'مراجعة ومطابقة طلبات شحن المحافظ' }
+    ]
+  },
+  {
+    key: '/assistant/reports',
+    label: 'مركز التقارير',
+    subItems: [
+      { key: '/assistant/reports', label: 'عرض تقارير الأداء والعمليات' }
+    ]
+  },
+  {
     key: '/assistant/live-support',
     label: 'الدعم المباشر',
     subItems: [
@@ -326,6 +352,14 @@ const ASSISTANT_NAV_OPTIONS: NavOption[] = [
     subItems: [
       { key: '/assistant/attendance', label: 'سجل الحضور والانصراف' },
       { key: '/assistant/vacations', label: 'تقديم ومتابعة طلبات الإجازات' }
+    ]
+  },
+  {
+    key: '/assistant/payroll',
+    label: 'الراتب والطلبات المالية',
+    subItems: [
+      { key: '/assistant/payroll', label: 'عرض تفاصيل الراتب' },
+      { key: '/assistant/financial-requests', label: 'تقديم ومتابعة الطلبات المالية' }
     ]
   },
   {

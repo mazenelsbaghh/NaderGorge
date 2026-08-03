@@ -99,12 +99,16 @@ public class StudentController : ControllerBase
     {
         var result = await _mediator.Send(new UpdateStudentProfileCommand(
             GetUserId(),
+            dto.FullName,
             dto.Address,
             dto.SecondaryPhone,
             dto.ParentPhone,
             dto.SecondaryParentPhone,
             dto.MotherPhone,
-            dto.SchoolName
+            dto.SchoolName,
+            dto.EducationStage,
+            dto.GradeLevel,
+            dto.StudyTrack
         ));
         return result.Success ? Ok(result) : BadRequest(result);
     }
@@ -168,10 +172,14 @@ public class StudentController : ControllerBase
 
 public class UpdateStudentProfileDto
 {
+    public string FullName { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string? SecondaryPhone { get; set; }
     public string? ParentPhone { get; set; }
     public string? SecondaryParentPhone { get; set; }
     public string? MotherPhone { get; set; }
     public string? SchoolName { get; set; }
+    public string EducationStage { get; set; } = string.Empty;
+    public string GradeLevel { get; set; } = string.Empty;
+    public string? StudyTrack { get; set; }
 }

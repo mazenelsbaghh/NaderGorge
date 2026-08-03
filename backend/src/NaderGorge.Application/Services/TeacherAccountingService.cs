@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -47,6 +48,8 @@ public record TeacherFinancialEventInput(
 
 public class TeacherAccountingService
 {
+    private sealed record ApprovedTeacherCredit(Guid TeacherId, decimal Amount);
+
     private readonly IAppDbContext _db;
 
     public TeacherAccountingService(IAppDbContext db)
@@ -55,6 +58,19 @@ public class TeacherAccountingService
     }
 
     public async Task<TeacherFinancialEvent> RecordEventAsync(TeacherFinancialEventInput input, CancellationToken ct)
+    {
+        if (_db is not DbContext dbContext
+            || dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL"
+            || dbContext.Database.CurrentTransaction != null)
+            return await RecordEventCoreAsync(input, ct);
+
+        await using var transaction = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+        var financialEvent = await RecordEventCoreAsync(input, ct);
+        await transaction.CommitAsync(ct);
+        return financialEvent;
+    }
+
+    private async Task<TeacherFinancialEvent> RecordEventCoreAsync(TeacherFinancialEventInput input, CancellationToken ct)
     {
         var existing = await _db.TeacherFinancialEvents
             .Include(e => e.Allocations)
@@ -243,33 +259,66 @@ public class TeacherAccountingService
 
     private async Task ApplyApprovedAllocationsToAccounts(IEnumerable<TeacherFinancialAllocation> allocations, CancellationToken ct)
     {
-        foreach (var allocation in allocations.Where(a =>
-                     a.ReviewStatus is TeacherFinancialReviewStatus.AutoApproved or TeacherFinancialReviewStatus.Approved
-                     && a.TeacherShareAmount > 0m))
+        foreach (var credit in ApprovedCredits(allocations))
         {
-            var account = await _db.TeacherAccounts
-                .FirstOrDefaultAsync(a => a.TeacherId == allocation.TeacherId, ct);
+            if (await TryCreditExistingAccountAtomically(credit, ct))
+                continue;
 
-            if (account == null)
-            {
-                var teacher = await _db.TeacherProfiles
-                    .FirstOrDefaultAsync(t => t.Id == allocation.TeacherId, ct);
-
-                account = new TeacherAccount
-                {
-                    Id = Guid.NewGuid(),
-                    TeacherId = allocation.TeacherId,
-                    TotalEarnings = 0m,
-                    CurrentBalance = 0m,
-                    ReservedBalance = 0m,
-                    CommissionRate = teacher?.CommissionRate ?? 0m
-                };
-                _db.TeacherAccounts.Add(account);
-            }
-
-            account.TotalEarnings += allocation.TeacherShareAmount;
-            account.CurrentBalance += allocation.TeacherShareAmount;
-            account.UpdatedAt = DateTime.UtcNow;
+            await CreditTrackedAccount(credit, ct);
         }
+    }
+
+    private static IEnumerable<ApprovedTeacherCredit> ApprovedCredits(IEnumerable<TeacherFinancialAllocation> allocations)
+    {
+        return allocations
+            .Where(a =>
+                a.ReviewStatus is TeacherFinancialReviewStatus.AutoApproved or TeacherFinancialReviewStatus.Approved
+                && a.TeacherShareAmount > 0m)
+            .GroupBy(a => a.TeacherId)
+            .Select(group => new ApprovedTeacherCredit(
+                group.Key,
+                group.Sum(allocation => allocation.TeacherShareAmount)));
+    }
+
+    private async Task<bool> TryCreditExistingAccountAtomically(ApprovedTeacherCredit credit, CancellationToken ct)
+    {
+        if (_db is not DbContext dbContext
+            || dbContext.Database.ProviderName != "Npgsql.EntityFrameworkCore.PostgreSQL")
+            return false;
+
+        var now = DateTime.UtcNow;
+        var updatedRows = await _db.TeacherAccounts
+            .Where(account => account.TeacherId == credit.TeacherId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(account => account.TotalEarnings, account => account.TotalEarnings + credit.Amount)
+                .SetProperty(account => account.CurrentBalance, account => account.CurrentBalance + credit.Amount)
+                .SetProperty(account => account.Version, account => account.Version + 1)
+                .SetProperty(account => account.UpdatedAt, now), ct);
+
+        return updatedRows == 1;
+    }
+
+    private async Task CreditTrackedAccount(ApprovedTeacherCredit credit, CancellationToken ct)
+    {
+        var account = await _db.TeacherAccounts
+            .FirstOrDefaultAsync(candidate => candidate.TeacherId == credit.TeacherId, ct);
+
+        if (account == null)
+        {
+            var teacher = await _db.TeacherProfiles
+                .FirstOrDefaultAsync(candidate => candidate.Id == credit.TeacherId, ct);
+
+            account = new TeacherAccount
+            {
+                Id = Guid.NewGuid(),
+                TeacherId = credit.TeacherId,
+                CommissionRate = teacher?.CommissionRate ?? 0m
+            };
+            _db.TeacherAccounts.Add(account);
+        }
+
+        account.TotalEarnings += credit.Amount;
+        account.CurrentBalance += credit.Amount;
+        account.UpdatedAt = DateTime.UtcNow;
     }
 }

@@ -13,5 +13,6 @@ public enum LiveSupportEventType
     AIActionConfirmed, AIActionCancelled, AIActionSucceeded, AIActionFailed,
     AIVerificationStarted, AIVerificationAttempted, AIVerificationSucceeded,
     AIVerificationFailed, AIHandoffRequested, AIHandoffCompleted,
-    AIInactivityWarningSent, AIResolved, AIAutoClosed
+    AIInactivityWarningSent, AIResolved, AIAutoClosed,
+    MessageEdited, MessageDeleted
 }

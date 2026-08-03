@@ -17,6 +17,29 @@ public static class ShiftScheduleRules
         return end - segment.StartsAt;
     }
 
+    public static (DateTime StartUtc, DateTime EndUtc) ScheduledRangeUtc(
+        DateOnly workDate,
+        ShiftSegment segment,
+        TimeZoneInfo timeZone)
+    {
+        var crossesMidnight = segment.EndsAt <= segment.StartsAt;
+        var startDate = crossesMidnight && segment.WorkDateRule == Domain.Enums.ShiftWorkDateRule.SegmentEndDate
+            ? workDate.AddDays(-1)
+            : workDate;
+        var endDate = crossesMidnight && segment.WorkDateRule == Domain.Enums.ShiftWorkDateRule.SegmentStartDate
+            ? workDate.AddDays(1)
+            : workDate;
+        var localStart = DateTime.SpecifyKind(
+            startDate.ToDateTime(TimeOnly.FromTimeSpan(segment.StartsAt)),
+            DateTimeKind.Unspecified);
+        var localEnd = DateTime.SpecifyKind(
+            endDate.ToDateTime(TimeOnly.FromTimeSpan(segment.EndsAt)),
+            DateTimeKind.Unspecified);
+        return (
+            TimeZoneInfo.ConvertTimeToUtc(localStart, timeZone),
+            TimeZoneInfo.ConvertTimeToUtc(localEnd, timeZone));
+    }
+
     public static IReadOnlyList<string> ValidateSegments(IEnumerable<ShiftSegment> segments)
     {
         var rows = segments.OrderBy(item => item.Sequence).ToList();

@@ -5,7 +5,8 @@ import { AIPendingActionCard } from './AIPendingActionCard';
 import { AIHandoffConfirmation } from './AIHandoffConfirmation';
 import { AIGuestVerification } from './AIGuestVerification';
 import { AISecureRegistrationForm } from './AISecureRegistrationForm';
-import { LiveSupportMessageContent } from '@/components/live-support/LiveSupportMessageContent';
+import { LiveSupportMessageContent, LiveSupportMessageMeta } from '@/components/live-support/LiveSupportMessageContent';
+import { LiveSupportMessageActions } from '@/components/live-support/LiveSupportMessageActions';
 
 export interface ParticipantConversationProps {
   conversationId: string;
@@ -19,6 +20,8 @@ export interface ParticipantConversationProps {
   onCancelHandoff: () => Promise<void>;
   onVerificationSuccess: () => void;
   onRegistrationSuccess: () => void;
+  onEditMessage: (messageId: string, content: string) => Promise<void>;
+  onDeleteMessage: (messageId: string) => Promise<void>;
 }
 
 export function ParticipantConversation({
@@ -32,7 +35,9 @@ export function ParticipantConversation({
   onConfirmHandoff,
   onCancelHandoff,
   onVerificationSuccess,
-  onRegistrationSuccess
+  onRegistrationSuccess,
+  onEditMessage,
+  onDeleteMessage
 }: ParticipantConversationProps) {
   return (
     <div role="log" aria-live="polite" aria-relevant="additions" className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-3">
@@ -47,7 +52,12 @@ export function ParticipantConversation({
               : 'ml-auto bg-slate-100 text-slate-800'
           }`}
         >
+          {['Staff', 'Admin'].includes(message.senderType) && message.senderDisplayName ? (
+            <p className="mb-1 text-xs font-bold text-cyan-800">{message.senderDisplayName} · فريق الدعم</p>
+          ) : null}
           <LiveSupportMessageContent message={message} audience="participant"/>
+          {['Student', 'Guest'].includes(message.senderType) ? <LiveSupportMessageActions message={message} onEdit={onEditMessage} onDelete={onDeleteMessage}/> : null}
+          <LiveSupportMessageMeta message={message} audience="participant"/>
         </article>
       ))}
 

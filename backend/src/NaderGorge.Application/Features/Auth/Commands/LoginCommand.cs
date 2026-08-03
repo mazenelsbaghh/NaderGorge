@@ -1,7 +1,6 @@
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using NaderGorge.Application.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
@@ -27,14 +26,12 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
 {
     private readonly IAppDbContext _db;
     private readonly ITokenService _tokens;
-    private readonly IConfiguration _config;
     private readonly ICachedPlatformSettingsReader _settingsReader;
 
-    public LoginCommandHandler(IAppDbContext db, ITokenService tokens, IConfiguration config, ICachedPlatformSettingsReader settingsReader)
+    public LoginCommandHandler(IAppDbContext db, ITokenService tokens, ICachedPlatformSettingsReader settingsReader)
     {
         _db = db;
         _tokens = tokens;
-        _config = config;
         _settingsReader = settingsReader;
     }
 
@@ -147,19 +144,14 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, ApiResponse<Log
         }
 
         // --- Generate tokens ---
-        var accessToken = isStaff
-            ? _tokens.GenerateAccessToken(user, roles)
-            : _tokens.GenerateAccessToken(user, roles, TimeSpan.FromDays(365));
+        var accessToken = _tokens.GenerateAccessToken(user, roles, AuthSessionPolicy.Lifetime);
         var refreshToken = _tokens.GenerateRefreshToken();
 
-        var refreshDays = isStaff
-            ? int.Parse(_config["JwtSettings:RefreshExpirationDays"] ?? "30")
-            : 365;
         _db.RefreshTokens.Add(new RefreshToken
         {
             UserId = user.Id,
             Token = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddDays(refreshDays),
+            ExpiresAt = DateTime.UtcNow.Add(AuthSessionPolicy.Lifetime),
             DeviceFingerprint = request.DeviceFingerprint
         });
 

@@ -14,4 +14,7 @@ public sealed class LiveSupportMessage : BaseEntity
     public string Content { get; set; } = string.Empty;
     public Guid? AttachmentId { get; set; }
     public DateTime SentAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
+    public DateTime? ReadAt { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }

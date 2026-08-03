@@ -2,12 +2,25 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { ImageIcon, LoaderCircle } from 'lucide-react';
+import { Check, CheckCheck, ImageIcon, LoaderCircle } from 'lucide-react';
 import { liveSupportService, type LiveSupportMessage } from '@/services/live-support-service';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 interface LiveSupportMessageContentProps {
   message: LiveSupportMessage;
   audience: 'participant' | 'staff';
+}
+
+export function LiveSupportMessageMeta({ message, audience }: LiveSupportMessageContentProps) {
+  const outgoing = audience === 'staff'
+    ? ['Staff', 'Admin'].includes(message.senderType)
+    : ['Student', 'Guest'].includes(message.senderType);
+  const label = message.readAt ? 'تمت القراءة' : message.deliveredAt ? 'تم الوصول' : 'تم الإرسال';
+  return <span className="mt-1 flex items-center justify-end gap-1 text-[10px] opacity-75" dir="rtl">
+    {message.editedAt && !message.deletedAt ? <span>معدّلة</span> : null}
+    <time dateTime={message.sentAt}>{formatCairoDateTime(message.sentAt, { hour: '2-digit', minute: '2-digit' })}</time>
+    {outgoing && (message.readAt ? <CheckCheck size={14} className="text-sky-400" aria-label={label}/> : message.deliveredAt ? <CheckCheck size={14} aria-label={label}/> : <Check size={14} aria-label={label}/>)}
+  </span>;
 }
 
 export function LiveSupportMessageContent({ message, audience }: LiveSupportMessageContentProps) {
@@ -33,6 +46,8 @@ export function LiveSupportMessageContent({ message, audience }: LiveSupportMess
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [audience, message.attachmentId, message.conversationId, message.type]);
+
+  if (message.deletedAt) return <span className="italic opacity-75">تم حذف الرسالة</span>;
 
   if (message.type === 'Image' && message.attachmentId) {
     if (imageFailed) {

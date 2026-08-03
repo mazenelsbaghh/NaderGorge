@@ -17,6 +17,14 @@ map $http_x_forwarded_proto $massar_forwarded_proto {
     "" https;
 }
 
+# WebSocket authentication is carried in the query string by the SignalR
+# browser client. Never persist that query string in access or routine error
+# logs. The safe format intentionally uses $uri (path only), not $request or
+# $request_uri.
+log_format massar_websocket_safe '$remote_addr - $remote_user [$time_local] '
+    '"$request_method $uri $server_protocol" $status $body_bytes_sent '
+    '"$http_referer" "$http_user_agent"';
+
 proxy_http_version 1.1;
 proxy_set_header Host $host;
 proxy_set_header X-Real-IP $remote_addr;
@@ -53,10 +61,15 @@ server {
         # SignalR reconnects (and API requests) to receive nginx 502 errors.
         proxy_pass http://backend:5245/api/health/ready;
         proxy_set_header Host api.massar-academy.net;
+        # Defining Host in this location disables inheritance of the
+        # http-level proxy_set_header directives. Preserve the trusted TLS
+        # scheme explicitly so backend readiness is not redirected.
+        proxy_set_header X-Forwarded-Proto https;
         proxy_connect_timeout 2s;
         proxy_read_timeout 3s;
     }
     location / {
+        if ($request_method = OPTIONS) { return 204; }
         proxy_pass http://landing:8738;
     }
 }
@@ -73,6 +86,7 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
     }
     location / {
+        if ($request_method = OPTIONS) { return 204; }
         proxy_pass http://student:8738;
     }
 }
@@ -89,6 +103,7 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
     }
     location / {
+        if ($request_method = OPTIONS) { return 204; }
         proxy_pass http://admin:8738;
     }
 }
@@ -105,6 +120,7 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
     }
     location / {
+        if ($request_method = OPTIONS) { return 204; }
         proxy_pass http://teacher:8738;
     }
 }
@@ -121,6 +137,7 @@ server {
         add_header Cache-Control "public, max-age=31536000, immutable, no-transform" always;
     }
     location / {
+        if ($request_method = OPTIONS) { return 204; }
         proxy_pass http://staff:8738;
     }
 }
@@ -137,6 +154,10 @@ server {
     listen 8080;
     server_name ws.massar-academy.net;
     location / {
+        access_log /var/log/nginx/access.log massar_websocket_safe;
+        # Client disconnects are expected for long-lived sockets. Logging them
+        # at error level both creates noise and includes the original URI.
+        error_log /var/log/nginx/error.log crit;
         proxy_pass http://backend:5245;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

@@ -42,6 +42,7 @@ export default function AssistantLiveSupportPageClient() {
   const messagesAbort = useRef<AbortController | null>(null);
   const mutationInFlight = useRef(false);
   const knownMessageIds = useRef<Record<string, Set<string>>>({});
+  const knownConversationIds = useRef<Set<string> | undefined>(undefined);
   const selectedId = selected?.id;
   const selectedOwnerUserId = selected?.currentOwnerUserId;
   const ownershipLost = useLiveSupportStore(state => selectedId ? state.ownershipLost[selectedId] ?? false : false);
@@ -64,9 +65,25 @@ export default function AssistantLiveSupportPageClient() {
     const incoming = nextMessages.filter((message) => !known.has(message.id) && ['Student', 'Guest'].includes(message.senderType));
     nextMessages.forEach((message) => known.add(message.id));
     if (incoming.length === 0) return;
-    if (preferences.soundEnabled) playLiveSupportSound(preferences.sound);
+    if (preferences.soundEnabled) playLiveSupportSound(preferences.sound, preferences.soundVolume);
     if (preferences.notificationsEnabled && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       new Notification('رسالة جديدة في الدعم المباشر', { body: incoming.at(-1)?.content ?? 'وصلت رسالة جديدة من الطالب.' });
+    }
+  }, [preferences]);
+
+  const alertForIncomingConversation = useCallback((conversations: LiveSupportConversation[]) => {
+    const known = knownConversationIds.current;
+    if (!known) {
+      knownConversationIds.current = new Set(conversations.map((conversation) => conversation.id));
+      return;
+    }
+    const incoming = conversations.filter((conversation) => !known.has(conversation.id));
+    knownConversationIds.current = new Set(conversations.map((conversation) => conversation.id));
+    if (incoming.length === 0) return;
+    if (preferences.soundEnabled) playLiveSupportSound(preferences.sound, preferences.soundVolume);
+    if (preferences.notificationsEnabled && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      const conversation = incoming.at(-1);
+      new Notification('محادثة دعم جديدة', { body: conversation?.subject || 'وصلت محادثة جديدة من طالب.' });
     }
   }, [preferences]);
 
@@ -83,6 +100,12 @@ export default function AssistantLiveSupportPageClient() {
       if (generation === selectionGeneration.current) {
         alertForIncomingMessages(conversationId, nextMessages);
         setMessages(nextMessages);
+        setBootstrap((current) => current ? {
+          ...current,
+          conversations: current.conversations.map((conversation) => conversation.id === conversationId
+            ? { ...conversation, unreadParticipantMessageCount: 0 }
+            : conversation),
+        } : current);
       }
     } catch (cause) {
       if (isAbortError(cause)) return;
@@ -100,13 +123,19 @@ export default function AssistantLiveSupportPageClient() {
     try {
       const next = await liveSupportService.getStaffBootstrap(controller.signal);
       if (generation !== refreshGeneration.current) return;
+      alertForIncomingConversation(next.conversations);
       setBootstrap(next);
       setError('');
       setNeedsStaffActivation(false);
       const refreshedSelection = next.conversations.find((item) => item.id === selectedId);
       if (selectedId && (!refreshedSelection || refreshedSelection.currentOwnerUserId !== selectedOwnerUserId)) {
         setOwnershipLost(selectedId, true);
-        return;
+        selectionGeneration.current += 1;
+        messagesAbort.current?.abort();
+        selectConversation(undefined);
+        setSelected(undefined);
+        setMessages([]);
+        setMessagesError('');
       }
       const current = refreshedSelection ?? next.conversations[0];
       setSelected(current);
@@ -126,7 +155,7 @@ export default function AssistantLiveSupportPageClient() {
       setError(message);
       setNeedsStaffActivation(message.includes('يستقبل محادثات') || message.includes('غير مفعّل للدعم'));
     }
-  }, [loadMessages, selectedId, selectedOwnerUserId, setOwnershipLost]);
+  }, [alertForIncomingConversation, loadMessages, selectConversation, selectedId, selectedOwnerUserId, setOwnershipLost]);
   const connected = useLiveSupportHub(selected?.id, () => void refresh());
 
   useEffect(() => {
@@ -187,6 +216,28 @@ export default function AssistantLiveSupportPageClient() {
       setError(getStaffMutationError(cause, 'تعذر إرسال الصورة. استخدم JPG أو PNG أو WebP بحجم لا يتجاوز 10 ميجابايت.'));
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function editMessage(messageId: string, content: string) {
+    if (!selected) return;
+    try {
+      const updated = await liveSupportService.updateStaffMessage(selected.id, messageId, content);
+      setMessages((items) => items.map((message) => message.id === updated.id ? updated : message));
+    } catch (cause) {
+      setError(getStaffMutationError(cause, 'تعذر تعديل الرسالة. أعد المحاولة.'));
+      throw cause;
+    }
+  }
+
+  async function deleteMessage(messageId: string) {
+    if (!selected) return;
+    try {
+      const deleted = await liveSupportService.deleteStaffMessage(selected.id, messageId);
+      setMessages((items) => items.map((message) => message.id === deleted.id ? deleted : message));
+    } catch (cause) {
+      setError(getStaffMutationError(cause, 'تعذر حذف الرسالة. أعد المحاولة.'));
+      throw cause;
     }
   }
 
@@ -291,6 +342,8 @@ export default function AssistantLiveSupportPageClient() {
             onSend={() => void send()}
             uploading={uploading}
             onUpload={(file) => void upload(file)}
+            onEditMessage={editMessage}
+            onDeleteMessage={deleteMessage}
             onTransfer={() => void transfer()}
             onClose={() => void close()}
             cannedReplies={bootstrap.cannedReplies ?? []}

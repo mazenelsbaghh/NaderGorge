@@ -50,7 +50,8 @@ public class RequestPerformanceLoggingMiddleware
         var measurement = Measurement(context, databaseCommands, startedAt);
         RequestPerformanceMetrics.Record(measurement);
 
-        if (measurement.DurationMilliseconds <= ThresholdMs)
+        if (measurement.DurationMilliseconds <= ThresholdMs ||
+            string.Equals(measurement.Route, "api/Health/ready", StringComparison.OrdinalIgnoreCase))
         {
             return;
         }

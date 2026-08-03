@@ -55,6 +55,10 @@ public sealed class LiveSupportService(
     {
         if (!(await _settings.GetAsync(ct)).LiveSupportEnabled)
             return new LiveSupportAvailabilityDto(false, 0, null, LiveSupportErrorCodes.SupportUnavailable, "الدعم المباشر غير مفعّل حاليًا.");
+        var businessHours = await GetCurrentBusinessHoursAsync(ct);
+        var cairo = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+        var localTime = TimeOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairo));
+        var isOutsideBusinessHours = businessHours.Count == 0 || !businessHours.Any(window => IsWithinBusinessHours(localTime, window));
         var staffIds = await EligibleStaffQuery().Select(x => x.UserId).ToListAsync(ct);
         var staff = 0;
         foreach (var id in staffIds) if (_presence is null || await _presence.IsConnectedAsync(id)) staff++;
@@ -68,7 +72,9 @@ public sealed class LiveSupportService(
             isAvailable ? "AVAILABLE" : LiveSupportErrorCodes.SupportUnavailable,
             isAvailable ? "الدعم متاح الآن" : next.HasValue
                 ? $"الدعم غير متاح الآن. الموعد القادم {next.Value:yyyy-MM-dd HH:mm}"
-                : "الدعم غير متاح حاليًا، وسيظهر الموعد هنا عند تحديده من الإدارة.");
+                : "الدعم غير متاح حاليًا، وسيظهر الموعد هنا عند تحديده من الإدارة.",
+            businessHours,
+            isOutsideBusinessHours);
     }
 
 
@@ -87,7 +93,7 @@ public sealed class LiveSupportService(
         await using var tx = await _db.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
         await AcquireRoutingLockAsync(ct);
         var availability = await GetAvailabilityAsync(ct);
-        if (!availability.IsAvailable)
+        if (!availability.IsAvailable && !availability.IsOutsideBusinessHours)
             throw new LiveSupportException(LiveSupportErrorCodes.SupportUnavailable, availability.Message);
         if (await ParticipantQuery(participant).AnyAsync(x => x.Status == LiveSupportConversationStatus.Waiting || x.Status == LiveSupportConversationStatus.Assigned || x.Status == LiveSupportConversationStatus.Active, ct))
             throw new LiveSupportException(LiveSupportErrorCodes.OpenConversationExists, "لديك محادثة مفتوحة بالفعل.");
@@ -140,7 +146,9 @@ public sealed class LiveSupportService(
         {
             var senderType = participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest;
             var clientMessageId = $"init-{Guid.NewGuid():N}";
-            await SendMessageAsync(conversation, senderType, participant.StudentUserId, participant.GuestSessionId, clientMessageId, subject, LiveSupportMessageType.Text, ct);
+            await SendMessageAsync(new PersistMessageRequest(conversation, senderType, participant.StudentUserId, participant.GuestSessionId, clientMessageId, subject, LiveSupportMessageType.Text), ct);
+            if (!availability.IsAvailable && availability.IsOutsideBusinessHours)
+                await SendAfterHoursReplyAsync(conversation, availability.BusinessHours ?? [], ct);
         }
         _logger?.LogInformation("LiveSupport conversation {ConversationId} routed status {Status} owner {OwnerUserId}", conversation.Id, conversation.Status, conversation.CurrentOwnerUserId);
         LiveSupportTelemetry.ConversationsCreated.Add(1, new KeyValuePair<string, object?>("status", conversation.Status.ToString()));
@@ -156,14 +164,17 @@ public sealed class LiveSupportService(
     public async Task<IReadOnlyList<LiveSupportMessageDto>> GetParticipantMessagesAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int pageSize, CancellationToken ct)
     {
         await RequireParticipantConversationAsync(participant, conversationId, ct);
-        return await _db.LiveSupportMessages.Where(x => x.ConversationId == conversationId)
+        await AcknowledgeStaffMessagesAsync(conversationId, ct);
+        var rows = await _db.LiveSupportMessages.AsNoTracking().Where(x => x.ConversationId == conversationId)
             .OrderByDescending(x => x.SentAt).Take(Math.Clamp(pageSize, 1, 100)).OrderBy(x => x.SentAt)
-            .Select(x => ToDto(x)).ToListAsync(ct);
+            .ToListAsync(ct);
+        return await ToParticipantDtosAsync(rows, ct);
     }
 
     public async Task<LiveSupportMessagePageDto> GetParticipantMessagePageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int pageSize, string? cursor, long? afterSequence, CancellationToken ct)
     {
         await RequireParticipantConversationAsync(participant, conversationId, ct);
+        await AcknowledgeStaffMessagesAsync(conversationId, ct);
         var take = Math.Clamp(pageSize, 1, 100);
         var query = _db.LiveSupportMessages.AsNoTracking().Where(x => x.ConversationId == conversationId);
         if (TryDecodeCursor(cursor, out var sentAt, out var id)) query = query.Where(x => x.SentAt < sentAt || x.SentAt == sentAt && x.Id.CompareTo(id) < 0);
@@ -176,7 +187,7 @@ public sealed class LiveSupportService(
         var events = await eventQuery.OrderBy(x => x.Sequence).Take(250).Select(x => new LiveSupportTimelineItemDto(x.OccurredAt, x.Type.ToString(), null, x.Type.ToString(), x.SafeMetadataJson)).ToListAsync(ct);
         var lastSequence = await _db.LiveSupportEvents.Where(x => x.ConversationId == conversationId).MaxAsync(x => (long?)x.Sequence, ct) ?? 0;
         rows.Reverse();
-        return new(rows.Select(ToDto).ToList(), next, lastSequence, events);
+        return new(await ToParticipantDtosAsync(rows, ct), next, lastSequence, events);
     }
 
     public async Task<LiveSupportAttachmentDto> SaveParticipantAttachmentAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Stream content, string fileName, string contentType, long sizeBytes, CancellationToken ct)
@@ -265,8 +276,14 @@ public sealed class LiveSupportService(
     public async Task<LiveSupportSendResultDto> SendParticipantMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, string clientMessageId, string content, LiveSupportMessageType type, CancellationToken ct)
     {
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
-        return await SendMessageAsync(conversation, participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest,
-            participant.StudentUserId, participant.GuestSessionId, clientMessageId, content, type, ct);
+        return await SendMessageAsync(new PersistMessageRequest(
+            conversation,
+            participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest,
+            participant.StudentUserId,
+            participant.GuestSessionId,
+            clientMessageId,
+            content,
+            type), ct);
     }
 
     public async Task<LiveSupportSendResultDto> SendParticipantAttachmentMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, string clientMessageId, Guid attachmentId, string? caption, LiveSupportMessageType type, CancellationToken ct)
@@ -275,11 +292,29 @@ public sealed class LiveSupportService(
         var identity = participant.StudentUserId?.ToString("N") ?? participant.GuestSessionId!.Value.ToString("N");
         var attachment = await _db.LiveSupportAttachments.FirstOrDefaultAsync(x => x.Id == attachmentId && x.UploadedByIdentity == identity && !x.IsBlocked, ct)
             ?? throw new LiveSupportException("NOT_FOUND", "الملف غير موجود.");
-        var result = await SendMessageAsync(conversation, participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest, participant.StudentUserId, participant.GuestSessionId, clientMessageId, string.IsNullOrWhiteSpace(caption) ? attachment.OriginalFileName : caption.Trim(), type, ct);
-        var message = await _db.LiveSupportMessages.FirstAsync(x => x.Id == result.Message.Id, ct);
-        message.AttachmentId = attachment.Id;
-        await _db.SaveChangesAsync(ct);
-        return result with { Message = result.Message with { AttachmentId = attachment.Id } };
+        return await SendMessageAsync(new PersistMessageRequest(
+            conversation,
+            participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest,
+            participant.StudentUserId,
+            participant.GuestSessionId,
+            clientMessageId,
+            string.IsNullOrWhiteSpace(caption) ? attachment.OriginalFileName : caption.Trim(),
+            type,
+            attachment.Id), ct);
+    }
+
+    public async Task<LiveSupportMessageDto> UpdateParticipantMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid messageId, string content, CancellationToken ct)
+    {
+        await RequireParticipantConversationAsync(participant, conversationId, ct);
+        var message = await RequireParticipantOwnedMessageAsync(participant, conversationId, messageId, ct);
+        return await UpdateMessageAsync(message, content, participant.StudentUserId, participant.GuestSessionId, ct);
+    }
+
+    public async Task<LiveSupportMessageDto> DeleteParticipantMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid messageId, CancellationToken ct)
+    {
+        await RequireParticipantConversationAsync(participant, conversationId, ct);
+        var message = await RequireParticipantOwnedMessageAsync(participant, conversationId, messageId, ct);
+        return await DeleteMessageAsync(message, participant.StudentUserId, participant.GuestSessionId, ct);
     }
 
     public async Task<LiveSupportConversationDto> AbandonAsync(LiveSupportParticipantIdentity participant, Guid conversationId, CancellationToken ct)
@@ -293,7 +328,7 @@ public sealed class LiveSupportService(
     public async Task SubmitRatingAsync(LiveSupportParticipantIdentity participant, Guid conversationId, int stars, string? comment, CancellationToken ct)
     {
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
-        if (conversation.Status != LiveSupportConversationStatus.Closed || stars is < 1 or > 5 || await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == conversationId, ct))
+        if (!IsTerminal(conversation.Status) || stars is < 1 or > 5 || await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == conversationId, ct))
             throw new LiveSupportException(LiveSupportErrorCodes.RatingConflict, "التقييم متاح مرة واحدة بعد إغلاق المحادثة.");
         _db.LiveSupportRatings.Add(new LiveSupportRating { ConversationId = conversationId, Stars = stars, Comment = comment?.Trim(), SubmittedByUserId = participant.StudentUserId, SubmittedByGuestSessionId = participant.GuestSessionId, SubmittedAt = DateTime.UtcNow });
         AddEvent(conversationId, LiveSupportEventType.RatingSubmitted, participant.StudentUserId, participant.GuestSessionId);
@@ -317,6 +352,7 @@ public sealed class LiveSupportService(
     public async Task<IReadOnlyList<LiveSupportMessageDto>> GetStaffMessagesAsync(Guid staffUserId, bool isAdmin, Guid conversationId, int pageSize, CancellationToken ct)
     {
         await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
+        await AcknowledgeParticipantMessagesAsync(conversationId, ct);
         return await _db.LiveSupportMessages.Where(x => x.ConversationId == conversationId)
             .OrderByDescending(x => x.SentAt).Take(Math.Clamp(pageSize, 1, 100)).OrderBy(x => x.SentAt)
             .Select(x => ToDto(x)).ToListAsync(ct);
@@ -328,11 +364,27 @@ public sealed class LiveSupportService(
         return await _db.LiveSupportEvents.Where(x => x.ConversationId == conversationId).MaxAsync(x => (long?)x.Sequence, ct) ?? 0;
     }
 
+    public Task AcknowledgeParticipantMessagesAsync(Guid conversationId, CancellationToken ct) =>
+        AcknowledgeMessagesAsync(conversationId, [LiveSupportSenderType.Student, LiveSupportSenderType.Guest], ct);
+
+    public Task AcknowledgeStaffMessagesAsync(Guid conversationId, CancellationToken ct) =>
+        AcknowledgeMessagesAsync(conversationId, [LiveSupportSenderType.Staff, LiveSupportSenderType.Admin, LiveSupportSenderType.AI, LiveSupportSenderType.System], ct);
+
+    private async Task AcknowledgeMessagesAsync(Guid conversationId, LiveSupportSenderType[] incomingTypes, CancellationToken ct)
+    {
+        var acknowledgedAt = DateTime.UtcNow;
+        await _db.LiveSupportMessages
+            .Where(x => x.ConversationId == conversationId && incomingTypes.Contains(x.SenderType) && x.ReadAt == null)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(x => x.DeliveredAt, x => x.DeliveredAt ?? acknowledgedAt)
+                .SetProperty(x => x.ReadAt, acknowledgedAt), ct);
+    }
+
     public async Task<LiveSupportSendResultDto> SendStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string clientMessageId, string content, CancellationToken ct)
     {
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
         if (!isAdmin && !await IsCheckedInAsync(staffUserId, ct)) throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "يجب تسجيل الحضور أولًا.");
-        var result = await SendMessageAsync(conversation, isAdmin ? LiveSupportSenderType.Admin : LiveSupportSenderType.Staff, staffUserId, null, clientMessageId, content, LiveSupportMessageType.Text, ct);
+        var result = await SendMessageAsync(new PersistMessageRequest(conversation, isAdmin ? LiveSupportSenderType.Admin : LiveSupportSenderType.Staff, staffUserId, null, clientMessageId, content, LiveSupportMessageType.Text), ct);
         if (!conversation.FirstStaffResponseAt.HasValue)
         {
             conversation.FirstStaffResponseAt = DateTime.UtcNow;
@@ -351,9 +403,15 @@ public sealed class LiveSupportService(
             ?? throw new LiveSupportException("NOT_FOUND", "الصورة غير موجودة.");
         if (!attachment.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) || type != LiveSupportMessageType.Image)
             throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا.");
-        var result = await SendMessageAsync(conversation, isAdmin ? LiveSupportSenderType.Admin : LiveSupportSenderType.Staff, staffUserId, null, clientMessageId, string.IsNullOrWhiteSpace(caption) ? attachment.OriginalFileName : caption.Trim(), type, ct);
-        var message = await _db.LiveSupportMessages.FirstAsync(x => x.Id == result.Message.Id, ct);
-        message.AttachmentId = attachment.Id;
+        var result = await SendMessageAsync(new PersistMessageRequest(
+            conversation,
+            isAdmin ? LiveSupportSenderType.Admin : LiveSupportSenderType.Staff,
+            staffUserId,
+            null,
+            clientMessageId,
+            string.IsNullOrWhiteSpace(caption) ? attachment.OriginalFileName : caption.Trim(),
+            type,
+            attachment.Id), ct);
         if (!conversation.FirstStaffResponseAt.HasValue)
         {
             conversation.FirstStaffResponseAt = DateTime.UtcNow;
@@ -362,6 +420,20 @@ public sealed class LiveSupportService(
         }
         await _db.SaveChangesAsync(ct);
         return result with { Message = result.Message with { AttachmentId = attachment.Id } };
+    }
+
+    public async Task<LiveSupportMessageDto> UpdateStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid messageId, string content, CancellationToken ct)
+    {
+        await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
+        var message = await RequireStaffOwnedMessageAsync(staffUserId, conversationId, messageId, ct);
+        return await UpdateMessageAsync(message, content, staffUserId, null, ct);
+    }
+
+    public async Task<LiveSupportMessageDto> DeleteStaffMessageAsync(Guid staffUserId, bool isAdmin, Guid conversationId, Guid messageId, CancellationToken ct)
+    {
+        await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
+        var message = await RequireStaffOwnedMessageAsync(staffUserId, conversationId, messageId, ct);
+        return await DeleteMessageAsync(message, staffUserId, null, ct);
     }
 
     public async Task<LiveSupportConversationDto> CloseAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string reason, CancellationToken ct)
@@ -843,18 +915,31 @@ public sealed class LiveSupportService(
         ? _db.LiveSupportConversations.Where(x => x.ParticipantType == p.Type && x.StudentUserId == p.StudentUserId)
         : _db.LiveSupportConversations.Where(x => x.ParticipantType == p.Type && x.GuestSessionId == p.GuestSessionId);
 
-    private IQueryable<LiveSupportStaffConfig> EligibleStaffQuery() =>
-        _db.LiveSupportStaffConfigs.Where(c => c.IsEnabled && _db.EmployeeProfiles.Any(e =>
+    private IQueryable<LiveSupportStaffConfig> EligibleStaffQuery()
+    {
+        var today = CurrentCairoDate();
+        return _db.LiveSupportStaffConfigs.Where(c => c.IsEnabled && _db.EmployeeProfiles.Any(e =>
             e.UserId == c.UserId &&
-            (_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.ClockedOutAt == null && !_db.AttendanceBreaks.Any(breakItem => breakItem.AttendanceSessionId == session.Id && breakItem.EndedAt == null)) ||
-             _db.AttendanceLogs.Any(log => log.EmployeeId == e.Id && log.ClockOut == null))));
+            (_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today && session.State == AttendanceSessionState.Open && session.ClockedOutAt == null && !_db.AttendanceBreaks.Any(breakItem => breakItem.AttendanceSessionId == session.Id && breakItem.EndedAt == null)) ||
+             (!_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today) && _db.AttendanceLogs.Any(log => log.EmployeeId == e.Id && log.ClockOut == null)))));
+    }
 
-    // AttendanceSessions is the current HR attendance model. AttendanceLogs remains here only
-    // while legacy attendance clock-ins are still supported, so both entry points make staff eligible.
-    private IQueryable<EmployeeProfile> CheckedInEmployeeQuery(Guid userId) => _db.EmployeeProfiles.Where(e =>
-        e.UserId == userId &&
-        (_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.ClockedOutAt == null && !_db.AttendanceBreaks.Any(breakItem => breakItem.AttendanceSessionId == session.Id && breakItem.EndedAt == null)) ||
-         _db.AttendanceLogs.Any(log => log.EmployeeId == e.Id && log.ClockOut == null)));
+    // AttendanceSessions is the authoritative current model. A legacy open log is honored only
+    // when no session exists today, so an employee who clocked out cannot remain eligible by accident.
+    private IQueryable<EmployeeProfile> CheckedInEmployeeQuery(Guid userId)
+    {
+        var today = CurrentCairoDate();
+        return _db.EmployeeProfiles.Where(e =>
+            e.UserId == userId &&
+            (_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today && session.State == AttendanceSessionState.Open && session.ClockedOutAt == null && !_db.AttendanceBreaks.Any(breakItem => breakItem.AttendanceSessionId == session.Id && breakItem.EndedAt == null)) ||
+             (!_db.AttendanceSessions.Any(session => session.EmployeeId == e.Id && session.WorkDate == today) && _db.AttendanceLogs.Any(log => log.EmployeeId == e.Id && log.ClockOut == null))));
+    }
+
+    private static DateOnly CurrentCairoDate()
+    {
+        try { return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"))); }
+        catch { return DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"))); }
+    }
 
     private Task<bool> IsCheckedInAsync(Guid userId, CancellationToken ct) => CheckedInEmployeeQuery(userId).AnyAsync(ct);
 
@@ -867,6 +952,38 @@ public sealed class LiveSupportService(
             .Where(x => (int)x.date.DayOfWeek == x.w.DayOfWeek)
             .Select(x => TimeZoneInfo.ConvertTimeToUtc(x.date.ToDateTime(x.w.StartLocalTime), cairo))
             .Where(x => x > DateTime.UtcNow).OrderBy(x => x).Cast<DateTime?>().FirstOrDefault();
+    }
+
+    private async Task<IReadOnlyList<LiveSupportScheduleWindowDto>> GetCurrentBusinessHoursAsync(CancellationToken ct)
+    {
+        var cairo = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+        var dayOfWeek = (int)TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairo).DayOfWeek;
+        var windows = await _db.LiveSupportScheduleWindows.AsNoTracking()
+            .Where(x => x.IsActive && x.DayOfWeek == dayOfWeek && _db.LiveSupportStaffConfigs.Any(c => c.Id == x.StaffConfigId && c.IsEnabled))
+            .Select(x => new LiveSupportScheduleWindowDto(x.DayOfWeek, x.StartLocalTime, x.EndLocalTime))
+            .ToListAsync(ct);
+        return windows
+            .DistinctBy(x => (x.StartLocalTime, x.EndLocalTime))
+            .OrderBy(x => x.StartLocalTime)
+            .ToArray();
+    }
+
+    private static bool IsWithinBusinessHours(TimeOnly localTime, LiveSupportScheduleWindowDto window) =>
+        window.EndLocalTime >= window.StartLocalTime
+            ? localTime >= window.StartLocalTime && localTime < window.EndLocalTime
+            : localTime >= window.StartLocalTime || localTime < window.EndLocalTime;
+
+    private async Task SendAfterHoursReplyAsync(LiveSupportConversation conversation, IReadOnlyList<LiveSupportScheduleWindowDto> businessHours, CancellationToken ct)
+    {
+        var hours = businessHours.Count == 0
+            ? "لم تُحدد مواعيد العمل لهذا اليوم بعد"
+            : string.Join("، ", businessHours.Select(window => $"من {window.StartLocalTime:HH\\:mm} إلى {window.EndLocalTime:HH\\:mm}"));
+        var settings = await _settings.GetAsync(ct);
+        var contact = string.IsNullOrWhiteSpace(settings.GuestSupportWhatsAppNumber)
+            ? settings.SupportPhoneNumber
+            : settings.GuestSupportWhatsAppNumber;
+        var content = $"نحن الآن خارج مواعيد العمل الرسمية. مواعيد العمل اليوم: {hours}. للتواصل العاجل راسلنا على {contact}، وسنرد عليك صباحًا.";
+        await SendMessageAsync(new PersistMessageRequest(conversation, LiveSupportSenderType.System, null, null, $"after-hours-{conversation.Id:N}", content, LiveSupportMessageType.System), ct);
     }
 
     private async Task AssignOldestWaitingAsync(CancellationToken ct, Guid? excludedStaffUserId = null)
@@ -905,18 +1022,19 @@ public sealed class LiveSupportService(
         await _db.SaveChangesAsync(ct);
     }
 
-    private async Task<LiveSupportSendResultDto> SendMessageAsync(LiveSupportConversation conversation, LiveSupportSenderType senderType, Guid? userId, Guid? guestId, string clientMessageId, string content, LiveSupportMessageType type, CancellationToken ct)
+    private async Task<LiveSupportSendResultDto> SendMessageAsync(PersistMessageRequest request, CancellationToken ct)
     {
+        var (conversation, senderType, userId, guestId, clientMessageId, content, type, attachmentId) = request;
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة. ابدأ محادثة جديدة.");
         clientMessageId = clientMessageId.Trim(); content = content.Trim();
         if (clientMessageId.Length is < 8 or > 100 || content.Length is < 1 or > 4000) throw new LiveSupportException("VALIDATION_ERROR", "الرسالة غير صالحة.");
         var existing = await _db.LiveSupportMessages.FirstOrDefaultAsync(x => x.ConversationId == conversation.Id && x.ClientMessageId == clientMessageId, ct);
         if (existing is not null)
         {
-            if (existing.Content != content || existing.SenderType != senderType) throw new LiveSupportException(LiveSupportErrorCodes.MessageConflict, "معرّف الرسالة مستخدم لمحتوى مختلف.");
+            if (existing.Content != content || existing.SenderType != senderType || existing.AttachmentId != attachmentId) throw new LiveSupportException(LiveSupportErrorCodes.MessageConflict, "معرّف الرسالة مستخدم لمحتوى مختلف.");
             return new LiveSupportSendResultDto(ToDto(existing), true);
         }
-        var message = new LiveSupportMessage { ConversationId = conversation.Id, SenderType = senderType, SenderUserId = userId, SenderGuestSessionId = guestId, ClientMessageId = clientMessageId, Type = type, Content = content, SentAt = DateTime.UtcNow };
+        var message = new LiveSupportMessage { ConversationId = conversation.Id, SenderType = senderType, SenderUserId = userId, SenderGuestSessionId = guestId, ClientMessageId = clientMessageId, Type = type, Content = content, SentAt = DateTime.UtcNow, AttachmentId = attachmentId };
         conversation.LastMessageAt = message.SentAt; conversation.Version++;
         _db.LiveSupportMessages.Add(message);
         AddEvent(conversation.Id, LiveSupportEventType.MessageSent, userId, guestId, message.Id, senderType.ToString());
@@ -930,15 +1048,68 @@ public sealed class LiveSupportService(
         return new LiveSupportSendResultDto(ToDto(message), false);
     }
 
+    private async Task<LiveSupportMessageDto> UpdateMessageAsync(LiveSupportMessage message, string content, Guid? actorUserId, Guid? actorGuestId, CancellationToken ct)
+    {
+        content = content.Trim();
+        if (message.DeletedAt.HasValue) throw new LiveSupportException("MESSAGE_DELETED", "لا يمكن تعديل رسالة محذوفة.");
+        if (message.Type != LiveSupportMessageType.Text || message.AttachmentId.HasValue) throw new LiveSupportException("VALIDATION_ERROR", "يمكن تعديل الرسائل النصية فقط.");
+        if (content.Length is < 1 or > 4000) throw new LiveSupportException("VALIDATION_ERROR", "نص الرسالة يجب أن يكون بين 1 و4000 حرف.");
+        message.Content = content;
+        AddEvent(message.ConversationId, LiveSupportEventType.MessageEdited, actorUserId, actorGuestId, message.Id);
+        await _db.SaveChangesAsync(ct);
+        return ToDto(message);
+    }
+
+    private async Task<LiveSupportMessageDto> DeleteMessageAsync(LiveSupportMessage message, Guid? actorUserId, Guid? actorGuestId, CancellationToken ct)
+    {
+        if (message.DeletedAt.HasValue) return ToDto(message);
+        message.Content = string.Empty;
+        message.AttachmentId = null;
+        message.DeletedAt = DateTime.UtcNow;
+        AddEvent(message.ConversationId, LiveSupportEventType.MessageDeleted, actorUserId, actorGuestId, message.Id);
+        await _db.SaveChangesAsync(ct);
+        return ToDto(message);
+    }
+
+    private async Task<LiveSupportMessage> RequireParticipantOwnedMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, Guid messageId, CancellationToken ct)
+    {
+        var message = await _db.LiveSupportMessages.FirstOrDefaultAsync(x => x.Id == messageId && x.ConversationId == conversationId, ct)
+            ?? throw new LiveSupportException("NOT_FOUND", "الرسالة غير موجودة.");
+        var ownedByStudent = participant.StudentUserId.HasValue && message.SenderUserId == participant.StudentUserId;
+        var ownedByGuest = participant.GuestSessionId.HasValue && message.SenderGuestSessionId == participant.GuestSessionId;
+        if (!ownedByStudent && !ownedByGuest) throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "لا يمكنك تغيير رسالة شخص آخر.");
+        return message;
+    }
+
+    private async Task<LiveSupportMessage> RequireStaffOwnedMessageAsync(Guid staffUserId, Guid conversationId, Guid messageId, CancellationToken ct)
+    {
+        var message = await _db.LiveSupportMessages.FirstOrDefaultAsync(x => x.Id == messageId && x.ConversationId == conversationId, ct)
+            ?? throw new LiveSupportException("NOT_FOUND", "الرسالة غير موجودة.");
+        if (message.SenderUserId != staffUserId || message.SenderType is not (LiveSupportSenderType.Staff or LiveSupportSenderType.Admin))
+            throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "لا يمكنك تغيير رسالة شخص آخر.");
+        return message;
+    }
+
+    private sealed record PersistMessageRequest(
+        LiveSupportConversation Conversation,
+        LiveSupportSenderType SenderType,
+        Guid? UserId,
+        Guid? GuestId,
+        string ClientMessageId,
+        string Content,
+        LiveSupportMessageType Type,
+        Guid? AttachmentId = null);
+
     private async Task FinishConversationAsync(LiveSupportConversation c, Guid? actor, LiveSupportConversationStatus status, string reason, LiveSupportAssignmentEndReason endReason, CancellationToken ct)
     {
         if (IsTerminal(c.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة بالفعل.");
+        var formerOwnerUserId = c.CurrentOwnerUserId;
         var now = DateTime.UtcNow; c.Status = status; c.ClosedAt = now; c.ClosedByUserId = actor; c.CloseReason = reason.Trim()[..Math.Min(reason.Trim().Length, 500)]; c.CurrentOwnerUserId = null; c.Version++;
         var assignment = await _db.LiveSupportAssignments.FirstOrDefaultAsync(x => x.ConversationId == c.Id && x.EndedAt == null, ct);
         if (assignment is not null) { assignment.EndedAt = now; assignment.EndReason = endReason; }
         var queue = await _db.LiveSupportQueueEntries.FirstOrDefaultAsync(x => x.ConversationId == c.Id && x.DequeuedAt == null, ct);
         if (queue is not null) { queue.DequeuedAt = now; queue.DequeueReason = status.ToString(); }
-        AddEvent(c.Id, status == LiveSupportConversationStatus.Closed ? LiveSupportEventType.Closed : LiveSupportEventType.Abandoned, actor, null);
+        AddEvent(c.Id, status == LiveSupportConversationStatus.Closed ? LiveSupportEventType.Closed : LiveSupportEventType.Abandoned, actor, null, staffUserId: formerOwnerUserId);
         await _db.SaveChangesAsync(ct); await AssignOldestWaitingAsync(ct);
     }
 
@@ -988,6 +1159,13 @@ public sealed class LiveSupportService(
             .Distinct()
             .ToListAsync(ct);
         var ratedSet = ratedConversationIds.ToHashSet();
+        var unreadParticipantMessageCounts = await _db.LiveSupportMessages.AsNoTracking()
+            .Where(x => conversationIds.Contains(x.ConversationId) &&
+                        (x.SenderType == LiveSupportSenderType.Student || x.SenderType == LiveSupportSenderType.Guest) &&
+                        x.ReadAt == null && x.DeletedAt == null)
+            .GroupBy(x => x.ConversationId)
+            .Select(group => new { ConversationId = group.Key, Count = group.Count() })
+            .ToDictionaryAsync(x => x.ConversationId, x => x.Count, ct);
         var verificationRows = await _db.LiveSupportAIVerificationSessions.AsNoTracking()
             .Where(x => conversationIds.Contains(x.ConversationId))
             .OrderByDescending(x => x.CreatedAt)
@@ -1050,10 +1228,11 @@ public sealed class LiveSupportService(
                     : null,
                 c.Version,
                 !IsTerminal(c.Status),
-                c.Status == LiveSupportConversationStatus.Closed && !ratedSet.Contains(c.Id),
+                IsTerminal(c.Status) && !ratedSet.Contains(c.Id),
                 isAiActive,
                 isAiActive && typingSet.Contains(c.Id),
-                aiSummary);
+                aiSummary,
+                unreadParticipantMessageCounts.GetValueOrDefault(c.Id));
         }).ToList();
     }
 
@@ -1102,7 +1281,11 @@ public sealed class LiveSupportService(
             );
         }
 
-        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), c.Status == LiveSupportConversationStatus.Closed && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping, aiSummary);
+        var unreadParticipantMessageCount = await _db.LiveSupportMessages.AsNoTracking()
+            .CountAsync(x => x.ConversationId == c.Id &&
+                             (x.SenderType == LiveSupportSenderType.Student || x.SenderType == LiveSupportSenderType.Guest) &&
+                             x.ReadAt == null && x.DeletedAt == null, ct);
+        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), IsTerminal(c.Status) && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping, aiSummary, unreadParticipantMessageCount);
     }
 
     public async Task<LiveSupportAITurnContextDto?> ClaimAITurnAsync(Guid turnId, CancellationToken ct)
@@ -1660,7 +1843,7 @@ public sealed class LiveSupportService(
         }
     }
 
-    private void AddEvent(Guid conversationId, LiveSupportEventType type, Guid? actor, Guid? guest, Guid? relatedId = null, string? senderType = null)
+    private void AddEvent(Guid conversationId, LiveSupportEventType type, Guid? actor, Guid? guest, Guid? relatedId = null, string? senderType = null, Guid? staffUserId = null)
     {
         var eventId = Guid.NewGuid();
         var occurredAt = DateTime.UtcNow;
@@ -1675,11 +1858,35 @@ public sealed class LiveSupportService(
         var payload = System.Text.Json.JsonSerializer.Serialize(new { eventId, conversationId, sequence, occurredAt, type = type.ToString(), payload = new { relatedId, senderType } });
         _db.OutboxEvents.Add(new OutboxEvent { Type = "LiveSupportEvent", TargetGroup = $"LiveSupport:Conversation:{conversationId:N}", PayloadJson = payload });
         _db.OutboxEvents.Add(new OutboxEvent { Type = "LiveSupportEvent", TargetGroup = "LiveSupport:Admins", PayloadJson = payload });
-        var ownerUserId = _db.LiveSupportConversations.Local.FirstOrDefault(item => item.Id == conversationId)?.CurrentOwnerUserId;
+        var ownerUserId = staffUserId ?? _db.LiveSupportConversations.Local.FirstOrDefault(item => item.Id == conversationId)?.CurrentOwnerUserId;
         if (ownerUserId.HasValue)
             _db.OutboxEvents.Add(new OutboxEvent { Type = "LiveSupportEvent", TargetGroup = $"LiveSupport:Staff:{ownerUserId.Value:N}", PayloadJson = payload });
     }
-    private static LiveSupportMessageDto ToDto(LiveSupportMessage x) => new(x.Id, x.ConversationId, x.SenderType, x.ClientMessageId, x.Type, x.Content, x.SentAt, x.AttachmentId);
+    private static LiveSupportMessageDto ToDto(LiveSupportMessage x) => new(x.Id, x.ConversationId, x.SenderType, x.ClientMessageId, x.Type, x.Content, x.SentAt, x.AttachmentId, x.DeliveredAt, x.ReadAt, x.UpdatedAt, x.DeletedAt);
+
+    private async Task<IReadOnlyList<LiveSupportMessageDto>> ToParticipantDtosAsync(
+        IReadOnlyList<LiveSupportMessage> messages,
+        CancellationToken ct)
+    {
+        var staffIds = messages
+            .Where(x => x.SenderUserId.HasValue && x.SenderType is LiveSupportSenderType.Staff or LiveSupportSenderType.Admin)
+            .Select(x => x.SenderUserId!.Value)
+            .Distinct()
+            .ToArray();
+        var names = staffIds.Length == 0
+            ? new Dictionary<Guid, string>()
+            : await _db.Users.AsNoTracking()
+                .Where(x => staffIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.FullName, ct);
+
+        return messages.Select(message =>
+        {
+            var dto = ToDto(message);
+            return message.SenderUserId.HasValue && names.TryGetValue(message.SenderUserId.Value, out var name)
+                ? dto with { SenderDisplayName = name }
+                : dto;
+        }).ToList();
+    }
     private static bool IsTerminal(LiveSupportConversationStatus s) => s is LiveSupportConversationStatus.Closed or LiveSupportConversationStatus.Abandoned;
     private static string MaskPhone(string phone) => phone.Length <= 4 ? "****" : $"{phone[..2]}******{phone[^2..]}";
     private static string EncodeCursor(DateTime sentAt, Guid id) => Convert.ToBase64String(Encoding.UTF8.GetBytes($"{sentAt.Ticks}|{id:N}"));
@@ -1941,9 +2148,10 @@ public sealed class LiveSupportService(
                 (x.Status == LiveSupportAIVerificationStatus.AwaitingLookup || x.Status == LiveSupportAIVerificationStatus.Challenging) &&
                 x.ExpiresAt > DateTime.UtcNow)
             .OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).FirstOrDefaultAsync(ct);
-        var messages = await _db.LiveSupportMessages.AsNoTracking().Where(x => x.ConversationId == conversationId)
-            .OrderByDescending(x => x.SentAt).ThenByDescending(x => x.Id).Take(50).Select(x => ToDto(x)).ToListAsync(ct);
-        messages.Reverse();
+        var messageRows = await _db.LiveSupportMessages.AsNoTracking().Where(x => x.ConversationId == conversationId)
+            .OrderByDescending(x => x.SentAt).ThenByDescending(x => x.Id).Take(50).ToListAsync(ct);
+        messageRows.Reverse();
+        var messages = (await ToParticipantDtosAsync(messageRows, ct)).ToList();
         var lastSequence = await _db.LiveSupportEvents.AsNoTracking().Where(x => x.ConversationId == conversationId)
             .Select(x => (long?)x.Sequence).MaxAsync(ct) ?? 0;
         int? queuePosition = null;

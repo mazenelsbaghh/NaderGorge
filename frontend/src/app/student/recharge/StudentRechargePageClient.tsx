@@ -28,6 +28,8 @@ const normalizePhoneInput = (value: string) => value.replace(/\D/g, '').slice(0,
 
 const isValidEgyptianMobile = (value: string) => /^01[0125]\d{8}$/.test(value);
 
+const RECHARGE_REVIEW_WINDOW_SECONDS = 60 * 60;
+
 const getRechargeStatusLabel = (status: StudentRechargeRequestDto['status']) => {
   if (status === 0 || status === 'Pending') return 'قيد المراجعة';
   if (status === 1 || status === 'Matched') return 'تمت المطابقة';
@@ -72,7 +74,7 @@ export default function StudentRechargePageClient() {
   const [outcomeMessage, setOutcomeMessage] = useState('');
   const [reviewCode, setReviewCode] = useState('');
   const [reviewState, setReviewState] = useState<'checking' | 'approved' | 'manual' | 'rejected'>('manual');
-  const [reviewTimeLeft, setReviewTimeLeft] = useState(60);
+  const [reviewTimeLeft, setReviewTimeLeft] = useState(RECHARGE_REVIEW_WINDOW_SECONDS);
 
   const fetchRequests = async () => {
     try {
@@ -122,7 +124,7 @@ export default function StudentRechargePageClient() {
 
     const checkRequestStatus = async () => {
       const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
-      const remainingSeconds = Math.max(0, 60 - elapsedSeconds);
+      const remainingSeconds = Math.max(0, RECHARGE_REVIEW_WINDOW_SECONDS - elapsedSeconds);
       setReviewTimeLeft(remainingSeconds);
 
       try {
@@ -272,7 +274,7 @@ export default function StudentRechargePageClient() {
           toast.success('تم شحن رصيدك وتفعيله تلقائياً بنجاح! 🎉');
         } else {
           setReviewState('checking');
-          setReviewTimeLeft(60);
+          setReviewTimeLeft(RECHARGE_REVIEW_WINDOW_SECONDS);
           setOutcomeMessage('جاري التأكد من وصول رسالة الشحن. انتظر لحظات قبل تحويل الطلب للمراجعة.');
           toast.success('تم استلام الإثبات وجاري التأكد من الشحن.');
         }
@@ -610,7 +612,7 @@ export default function StudentRechargePageClient() {
               {reviewState === 'checking' && (
                 <div className="mx-auto flex max-w-sm flex-col gap-2 rounded-2xl border border-sky-500/20 bg-sky-500/10 p-3 text-sm font-bold text-sky-700 dark:text-sky-300">
                   <span>ننتظر وصول رسالة المحفظة ومطابقتها تلقائياً.</span>
-                  <span className="font-mono text-lg font-black">{reviewTimeLeft} ثانية</span>
+                  <span className="font-mono text-lg font-black" dir="ltr">{formatTimer(reviewTimeLeft)}</span>
                 </div>
               )}
               {reviewCode && (
@@ -636,7 +638,7 @@ export default function StudentRechargePageClient() {
                   setScreenshot(null);
                   setScreenshotPreview(null);
                   setReviewState('manual');
-                  setReviewTimeLeft(60);
+                  setReviewTimeLeft(RECHARGE_REVIEW_WINDOW_SECONDS);
                 }}
                 className="w-full py-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-all"
               >

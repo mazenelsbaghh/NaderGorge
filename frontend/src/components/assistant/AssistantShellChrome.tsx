@@ -32,6 +32,7 @@ import {
 } from '@/components/navigation/NavigationFocusManager';
 import { useShellNavigationState } from '@/hooks/useShellNavigationState';
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
 export type AssistantShellRoute =
   | '/assistant/dashboard' | '/assistant/tasks' | '/assistant/crm' | '/assistant/chat'
@@ -295,6 +296,14 @@ function AssistantShellFrame({
         <nav className={`min-h-0 flex-1 space-y-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}><IntentLink href="/assistant/dashboard" aria-current={isDashboardActive ? 'page' : undefined} className={`flex h-11 items-center gap-3 rounded-xl transition-colors ${isSidebarCollapsed ? 'justify-center px-3' : 'px-3'} ${isDashboardActive ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]'}`}><Home className="h-5 w-5 shrink-0" />{!isSidebarCollapsed && <span className="text-sm font-bold">الرئيسية</span>}</IntentLink>{renderGroups()}</nav>
       </div>
       <div className={`mt-4 space-y-2 ${isSidebarCollapsed ? 'px-3' : 'px-4'}`}>
+        <div
+          className={`flex min-h-12 items-center gap-3 rounded-xl bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-2' : 'px-3'}`}
+          title={user?.fullName || 'الحساب الحالي'}
+          aria-label={`الحساب الحالي: ${user?.fullName || 'موظف'}`}
+        >
+          <UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'موظف'} size="sm" />
+          {!isSidebarCollapsed && <div className="min-w-0"><p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'موظف'}</p><p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p></div>}
+        </div>
         <div className={`flex items-center px-1 ${isSidebarCollapsed ? 'justify-center' : 'justify-start'}`}><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} aria-label={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} title={isDark ? 'التحويل إلى الوضع الفاتح' : 'التحويل إلى الوضع الداكن'} className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[var(--admin-muted)] hover:bg-[var(--admin-hover)]" />{!isSidebarCollapsed && <span className="mr-3 text-sm font-bold text-[var(--admin-muted)]">{isDark ? 'الوضع الفاتح' : 'الوضع الداكن'}</span>}</div>
         <button type="button" onClick={handleLogout} className={`flex h-11 w-full items-center gap-3 rounded-xl text-[var(--admin-danger)] transition-colors hover:bg-[var(--admin-hover)] ${isSidebarCollapsed ? 'justify-center px-3' : 'px-3'}`}><LogOut className="h-5 w-5 shrink-0" />{!isSidebarCollapsed && <span className="text-sm font-bold">تسجيل الخروج</span>}</button>
       </div>
@@ -331,6 +340,7 @@ function AssistantShellFrame({
       testId="assistant-mobile-drawer"
     >
       <div className="mb-5 flex items-center justify-between"><span className="text-sm font-bold">مساحة الموظفين</span><button type="button" onClick={() => setIsMobileMenuOpen(false)} className="rounded-lg p-2 hover:bg-[var(--admin-hover)]" aria-label="إغلاق القائمة"><X className="h-5 w-5" /></button></div>
+      <div className="mb-4 flex items-center gap-3 rounded-xl bg-[var(--admin-hover)] p-3"><UserAvatar avatarSlug={user?.avatarSlug} fullName={user?.fullName || 'موظف'} size="sm" /><div className="min-w-0"><p className="truncate text-sm font-black text-[var(--admin-text)]">{user?.fullName || 'موظف'}</p><p className="text-xs font-medium text-[var(--admin-muted)]">الحساب الحالي</p></div></div>
       <nav className="min-h-0 flex-1 overflow-y-auto"><Link href="/assistant/dashboard" onClick={() => setIsMobileMenuOpen(false)} className={`mb-2 flex h-11 items-center gap-3 rounded-xl px-3 text-sm font-bold ${isDashboardActive ? 'bg-[var(--admin-primary)] text-[var(--admin-primary-contrast)]' : 'text-[var(--admin-muted)]'}`}><Home className="h-5 w-5" />الرئيسية</Link>{renderGroups(true)}</nav>
       <div className="mt-4 flex items-center justify-between border-t border-[var(--admin-border)] pt-4"><AnimatedThemeToggler checked={isDark} onToggle={toggleTheme} /><button type="button" onClick={handleLogout} className="flex h-10 items-center gap-2 rounded-lg px-2 text-sm font-bold text-[var(--admin-danger)]"><LogOut className="h-5 w-5" />تسجيل الخروج</button></div>
     </AccessibleOverlay>

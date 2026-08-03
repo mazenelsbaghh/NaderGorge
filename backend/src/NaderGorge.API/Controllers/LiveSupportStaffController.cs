@@ -47,6 +47,20 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
         catch (LiveSupportException ex) { return Error(ex); }
     }
 
+    [HttpPatch("conversations/{conversationId:guid}/messages/{messageId:guid}")]
+    public async Task<IActionResult> UpdateMessage(Guid conversationId, Guid messageId, UpdateLiveSupportMessageDto request, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<LiveSupportMessageDto>.Ok(await _service.UpdateStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, messageId, request.Content, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [HttpDelete("conversations/{conversationId:guid}/messages/{messageId:guid}")]
+    public async Task<IActionResult> DeleteMessage(Guid conversationId, Guid messageId, CancellationToken ct)
+    {
+        try { return Ok(ApiResponse<LiveSupportMessageDto>.Ok(await _service.DeleteStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, messageId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
     [HttpPost("conversations/{conversationId:guid}/attachments")]
     [RequestSizeLimit(10 * 1024 * 1024)]
     public async Task<IActionResult> Upload(Guid conversationId, [FromForm] IFormFile file, CancellationToken ct)

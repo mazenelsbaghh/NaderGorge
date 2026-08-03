@@ -58,3 +58,52 @@ export function logError(scope: string, message: string, details: Record<string,
   );
   console.error(`[${scope}] ${message}`, safeDetails);
 }
+
+export function installSystemLogCapture(redis: Redis) {
+  const originalWarn = console.warn.bind(console);
+  const originalError = console.error.bind(console);
+
+  console.warn = (...args: unknown[]) => {
+    originalWarn(...args);
+    storeSystemLog(redis, 'warning', args);
+  };
+  console.error = (...args: unknown[]) => {
+    originalError(...args);
+    storeSystemLog(redis, 'error', args);
+  };
+}
+
+function storeSystemLog(redis: Redis, level: 'warning' | 'error', args: unknown[]) {
+  const message = args.map(formatLogArgument).join(' ').slice(0, 12_000);
+  const categoryMatch = message.match(/^\[([^\]]+)]/);
+  const entry = JSON.stringify({
+    id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    source: 'worker',
+    level,
+    category: categoryMatch?.[1] || 'Worker',
+    message,
+    exception: null,
+  });
+
+  void redis.multi().rpush(SYSTEM_LOG_KEY, entry).ltrim(SYSTEM_LOG_KEY, -SYSTEM_LOG_CAPACITY, -1).exec()
+    .catch(() => undefined);
+}
+
+function formatLogArgument(value: unknown): string {
+  if (value instanceof Error) return redactText(value.stack || value.message);
+  if (typeof value === 'string') return redactText(value);
+  try { return redactText(JSON.stringify(value)); }
+  catch { return '[unserializable]'; }
+}
+
+function redactText(value: string) {
+  return value
+    .replace(/\bhttps?:\/\/[^\s]+/gi, '[redacted-url]')
+    .replace(/(token|secret|password|authorization|cookie)\s*[:=]\s*[^\s,;]+/gi, '$1=[redacted]');
+}
+import type { Redis } from 'ioredis';
+import crypto from 'node:crypto';
+
+const SYSTEM_LOG_KEY = 'system:logs:v1';
+const SYSTEM_LOG_CAPACITY = 2_000;

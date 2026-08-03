@@ -22,6 +22,7 @@ import {
   Tags,
   Settings,
   MessageSquarePlus,
+  ScrollText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -55,6 +56,7 @@ export const adminMenuItems = [
   { label: 'الدعم المباشر', href: '/admin/live-support', icon: <Headphones className="h-4 w-4" />, permission: 'live_support.manage' },
   { label: 'مساعد الدعم الذكي', href: '/admin/live-support/ai', icon: <Sparkles className="h-4 w-4" />, permission: 'live_support.manage' },
   { label: 'مركز التقارير', href: '/admin/reports', icon: <BarChart3 className="h-4 w-4" />, permission: 'reports.manage' },
+  { label: 'سجل النظام', href: '/admin/system-logs', icon: <ScrollText className="h-4 w-4" />, adminOnly: true },
   { label: 'الإعدادات', href: '/admin/settings', icon: <Settings className="h-4 w-4" />, permission: 'settings.manage' },
   { label: 'Popup المنصة', href: '/admin/popup', icon: <MessageSquarePlus className="h-4 w-4" />, permission: 'settings.manage' },
 ];

@@ -112,6 +112,26 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
     }
 
     [AllowAnonymous]
+    [HttpPatch("participant/conversations/{conversationId:guid}/messages/{messageId:guid}")]
+    public async Task<IActionResult> UpdateMessage(Guid conversationId, Guid messageId, UpdateLiveSupportMessageDto request, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try { return Ok(ApiResponse<LiveSupportMessageDto>.Ok(await _service.UpdateParticipantMessageAsync(participant, conversationId, messageId, request.Content, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
+    [HttpDelete("participant/conversations/{conversationId:guid}/messages/{messageId:guid}")]
+    public async Task<IActionResult> DeleteMessage(Guid conversationId, Guid messageId, CancellationToken ct)
+    {
+        var participant = await ResolveParticipantAsync(ct);
+        if (participant is null) return Unauthorized();
+        try { return Ok(ApiResponse<LiveSupportMessageDto>.Ok(await _service.DeleteParticipantMessageAsync(participant, conversationId, messageId, ct))); }
+        catch (LiveSupportException ex) { return Error(ex); }
+    }
+
+    [AllowAnonymous]
     [HttpPost("participant/conversations/{conversationId:guid}/abandon")]
     public async Task<IActionResult> Abandon(Guid conversationId, CancellationToken ct)
     {

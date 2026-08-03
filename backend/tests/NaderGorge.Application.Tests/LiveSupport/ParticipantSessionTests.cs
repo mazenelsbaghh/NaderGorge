@@ -69,6 +69,24 @@ public sealed class ParticipantSessionTests
     }
 
     [Fact]
+    public async Task ParticipantEndedConversation_OffersAndAcceptsRating()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        await SeedEligibleStaffAsync(db);
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01077777777");
+        var service = CreateService(db);
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, "إنهاء من الطالب", null, CancellationToken.None);
+
+        var ended = await service.AbandonAsync(participant, conversation.Id, CancellationToken.None);
+
+        Assert.Equal(LiveSupportConversationStatus.Abandoned, ended.Status);
+        Assert.True(ended.CanRate);
+        await service.SubmitRatingAsync(participant, conversation.Id, 4, null, CancellationToken.None);
+        Assert.Equal(1, await db.LiveSupportRatings.CountAsync());
+    }
+
+    [Fact]
     public async Task MessageRetry_WithSameClientId_IsIdempotent()
     {
         await using var db = TestAppDbContextFactory.Create();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Check,
   X,
@@ -12,7 +12,10 @@ import {
   Clock,
   HelpCircle,
   Link as LinkIcon,
-  Maximize2
+  Maximize2,
+  ChevronDown,
+  MessageSquareText,
+  WalletCards
 } from 'lucide-react';
 import {
   AdminPage,
@@ -28,6 +31,8 @@ import toast from 'react-hot-toast';
 
 type RechargeStatusValue = AdminRechargeRequestDto['status'];
 type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 'all';
+type UnmatchedSmsAmountGroup = { key: string; amount?: number; items: AdminIncomingSmsLogDto[] };
+type UnmatchedSmsWalletGroup = { id: string; label: string; phoneNumber: string; amountGroups: UnmatchedSmsAmountGroup[] };
 
 const ASSET_BASE_URL = (
   process.env.NEXT_PUBLIC_ASSETS_URL ||
@@ -83,6 +88,8 @@ export function RechargeVerificationWorkspace() {
   const [rejectModalRequest, setRejectModalRequest] = useState<AdminRechargeRequestDto | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [expandedWalletId, setExpandedWalletId] = useState<string | null>(null);
+  const [expandedAmountKey, setExpandedAmountKey] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -215,6 +222,33 @@ export function RechargeVerificationWorkspace() {
   const pendingCount = requests.filter(r => isRechargeStatus(r.status, 0)).length;
   const totalPendingAmount = requests.filter(r => isRechargeStatus(r.status, 0)).reduce((acc, r) => acc + r.amount, 0);
   const unmatchedSmsCount = unmatchedSms.length;
+  const unmatchedSmsByWallet = useMemo<UnmatchedSmsWalletGroup[]>(() => {
+    const wallets = new Map<string, { id: string; label: string; phoneNumber: string; amounts: Map<string, UnmatchedSmsAmountGroup> }>();
+
+    for (const sms of unmatchedSms) {
+      const wallet = wallets.get(sms.walletId) ?? {
+        id: sms.walletId,
+        label: sms.walletLabel,
+        phoneNumber: sms.walletPhoneNumber,
+        amounts: new Map<string, UnmatchedSmsAmountGroup>(),
+      };
+      const amountKey = sms.parsedAmount === undefined ? 'unknown' : String(sms.parsedAmount);
+      const amount = wallet.amounts.get(amountKey) ?? { key: amountKey, amount: sms.parsedAmount, items: [] };
+      amount.items.push(sms);
+      wallet.amounts.set(amountKey, amount);
+      wallets.set(sms.walletId, wallet);
+    }
+
+    return [...wallets.values()]
+      .map((wallet) => ({
+        id: wallet.id,
+        label: wallet.label,
+        phoneNumber: wallet.phoneNumber,
+        amountGroups: [...wallet.amounts.values()]
+          .sort((left, right) => (right.amount ?? -1) - (left.amount ?? -1)),
+      }))
+      .sort((left, right) => left.label.localeCompare(right.label, 'ar'));
+  }, [unmatchedSms]);
 
   // Filtered requests
   const filteredRequests = requests.filter(r => {
@@ -507,7 +541,7 @@ export function RechargeVerificationWorkspace() {
               رسائل تأكيد الإيداع المستلمة من Vodafone Cash ولم يتم ربطها بأي طلب للطالب تلقائياً.
             </p>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-1">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
               {loading ? (
                 [1, 2, 3].map(i => (
                   <div key={i} className="h-20 animate-pulse bg-[var(--admin-card-strong)] rounded-xl border border-[var(--admin-border)]" />
@@ -518,47 +552,47 @@ export function RechargeVerificationWorkspace() {
                   <span className="text-xs font-bold text-[var(--admin-text)]">كل الرسائل مطابقة!</span>
                   <span className="text-[10px] text-[var(--admin-muted)] mt-1">لا توجد رسائل معلقة في النظام.</span>
                 </div>
-              ) : (
-                unmatchedSms.map((sms) => (
-                  <div
-                    key={sms.id}
-                    className="p-3.5 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] hover:border-[var(--admin-primary-15)] transition-all flex flex-col gap-1.5"
+              ) : unmatchedSmsByWallet.map((wallet) => {
+                const isWalletOpen = expandedWalletId === wallet.id;
+                return <div key={wallet.id} className="overflow-hidden rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)]">
+                  <button
+                    type="button"
+                    aria-expanded={isWalletOpen}
+                    onClick={() => {
+                      setExpandedWalletId(isWalletOpen ? null : wallet.id);
+                      setExpandedAmountKey(null);
+                    }}
+                    className="flex min-h-12 w-full items-center justify-between gap-3 px-3.5 text-right hover:bg-[var(--admin-hover)] focus-visible:outline-2 focus-visible:outline-[var(--admin-primary)]"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-[var(--admin-text)] font-mono">
-                        {sms.parsedAmount ? `${sms.parsedAmount} ج.م` : 'غير معروف'}
-                      </span>
-                      <span className="text-[10px] text-[var(--admin-muted)] font-mono">
-                        {formatRelativeDate(sms.receivedAt)}
-                      </span>
-                    </div>
-
-                    {sms.parsedSenderPhone && (
-                      <div className="text-[11px] text-[var(--admin-text)] font-semibold">
-                        من: <span className="font-mono">{sms.parsedSenderPhone}</span>
-                      </div>
-                    )}
-
-                    <div className="text-[10px] bg-[var(--admin-card)] text-[var(--admin-text)] p-2 rounded border border-[var(--admin-border)] font-mono whitespace-pre-wrap leading-relaxed max-h-16 overflow-y-auto">
-                      {sms.body}
-                    </div>
-
-                    <div className="text-[9px] text-[var(--admin-muted)] flex items-center justify-between mt-1">
-                      <span>محفظة: {sms.walletLabel}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(sms.body);
-                          toast.success('تم نسخ الرسالة');
-                        }}
-                        className="text-[var(--admin-primary)] hover:underline"
-                      >
-                        نسخ الرسالة
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+                    <span className="flex min-w-0 items-center gap-2"><WalletCards className="h-4 w-4 shrink-0 text-[var(--admin-primary)]" /><span className="min-w-0"><span className="block truncate text-sm font-black text-[var(--admin-text)]">{wallet.label}</span><span className="block font-mono text-[10px] text-[var(--admin-muted)]" dir="ltr">{wallet.phoneNumber}</span></span></span>
+                    <span className="flex shrink-0 items-center gap-2"><span className="rounded-full bg-[var(--admin-primary-15)] px-2 py-1 text-xs font-black text-[var(--admin-primary)]">{wallet.amountGroups.reduce((sum, group) => sum + group.items.length, 0)}</span><ChevronDown className={`h-4 w-4 text-[var(--admin-muted)] transition-transform ${isWalletOpen ? 'rotate-180' : ''}`} /></span>
+                  </button>
+                  {isWalletOpen && <div className="border-t border-[var(--admin-border)] p-2">
+                    {wallet.amountGroups.map((group) => {
+                      const amountKey = `${wallet.id}:${group.key}`;
+                      const isAmountOpen = expandedAmountKey === amountKey;
+                      return <div key={amountKey} className="mb-2 last:mb-0 overflow-hidden rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)]">
+                        <button
+                          type="button"
+                          aria-expanded={isAmountOpen}
+                          onClick={() => setExpandedAmountKey(isAmountOpen ? null : amountKey)}
+                          className="flex min-h-11 w-full items-center justify-between gap-3 px-3 text-right hover:bg-[var(--admin-hover)] focus-visible:outline-2 focus-visible:outline-[var(--admin-primary)]"
+                        >
+                          <span className="font-mono text-sm font-black text-[var(--admin-text)]">{group.amount === undefined ? 'مبلغ غير معروف' : `${group.amount} ج.م`}</span>
+                          <span className="flex items-center gap-2"><span className="text-xs font-bold text-[var(--admin-muted)]">{group.items.length} رسالة</span><ChevronDown className={`h-4 w-4 text-[var(--admin-muted)] transition-transform ${isAmountOpen ? 'rotate-180' : ''}`} /></span>
+                        </button>
+                        {isAmountOpen && <div className="space-y-2 border-t border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2">
+                          {group.items.map((sms) => <article key={sms.id} className="rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] p-3">
+                            <div className="flex items-center justify-between gap-3"><span className="text-[11px] font-semibold text-[var(--admin-text)]">من: <span className="font-mono">{sms.parsedSenderPhone || sms.sender}</span></span><span className="shrink-0 font-mono text-[10px] text-[var(--admin-muted)]">{formatRelativeDate(sms.receivedAt)}</span></div>
+                            <p className="mt-2 whitespace-pre-wrap break-words rounded-md border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-2 font-mono text-[11px] leading-relaxed text-[var(--admin-text)]">{sms.body}</p>
+                            <button type="button" onClick={() => { navigator.clipboard.writeText(sms.body); toast.success('تم نسخ الرسالة'); }} className="mt-2 inline-flex min-h-8 items-center gap-1 text-xs font-bold text-[var(--admin-primary)] hover:underline"><MessageSquareText className="h-3.5 w-3.5" />نسخ الرسالة</button>
+                          </article>)}
+                        </div>}
+                      </div>;
+                    })}
+                  </div>}
+                </div>;
+              })}
             </div>
           </div>
         </div>

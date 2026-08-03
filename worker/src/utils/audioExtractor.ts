@@ -171,9 +171,14 @@ async function extractAudioViaTelegram(
         throw err;
     } finally {
         try {
-            await client.disconnect();
-            console.log('[Telegram-DL] Disconnected client.');
-        } catch (e) {}
+            // destroy() stops GramJS' background update loop. disconnect()
+            // only closes the transport and leaves the loop emitting TIMEOUT
+            // errors indefinitely after a successful download.
+            await client.destroy();
+            console.log('[Telegram-DL] Destroyed client and stopped update loop.');
+        } catch (destroyError) {
+            console.warn(`[Telegram-DL] Client cleanup failed: ${sanitizeProcessOutput(destroyError)}`);
+        }
     }
 }
 
