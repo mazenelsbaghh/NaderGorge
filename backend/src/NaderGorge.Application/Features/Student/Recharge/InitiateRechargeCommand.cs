@@ -34,7 +34,7 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
 
     public async Task<ApiResponse<InitiateRechargeDto>> Handle(InitiateRechargeCommand request, CancellationToken ct)
     {
-        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(_db, ct);
 
         if (request.Amount <= 0)
             return ApiResponse<InitiateRechargeDto>.Fail("قيمة الشحن يجب أن تكون أكبر من صفر");
@@ -56,6 +56,22 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         if (!activeWallets.Any())
             return ApiResponse<InitiateRechargeDto>.Fail("عذراً، لا توجد محافظ شحن نشطة حالياً. يرجى المحاولة لاحقاً.");
 
+        var now = DateTime.UtcNow;
+        var pendingCutoff = now.AddHours(-RechargeRequestExpiryService.PendingLifetimeHours);
+        var existingPending = await _db.RechargeRequests
+            .Include(recharge => recharge.Wallet)
+            .Where(recharge => recharge.UserId == request.UserId
+                && recharge.Status == RechargeRequestStatus.Pending
+                && recharge.CreatedAt > pendingCutoff)
+            .OrderByDescending(recharge => recharge.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+
+        if (existingPending != null && !string.IsNullOrWhiteSpace(existingPending.ScreenshotUrl))
+        {
+            return ApiResponse<InitiateRechargeDto>.Fail(
+                $"لديك تحويلة قيد المراجعة بالفعل على محفظة {existingPending.Wallet.Label}. انتظر انتهاء مراجعتها قبل بدء تحويلة جديدة.");
+        }
+
         // Calculate capacities and choose best wallet
         var (dayStartUtc, dayEndUtc) = CairoTime.GetCurrentDayRangeUtc();
         var (monthStartUtc, monthEndUtc) = CairoTime.GetCurrentMonthRangeUtc();
@@ -65,12 +81,15 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         DigitalWallet? selectedWallet = null;
         decimal maxRemainingCapacity = -1m;
 
-        foreach (var wallet in activeWallets)
+        async Task<bool> HasCapacityAsync(DigitalWallet wallet, Guid? excludedRequestId = null)
         {
-            // Get all requests resolved or pending (not expired) in this month
             var walletRequests = await _db.RechargeRequests
-                .Where(r => r.WalletId == wallet.Id && 
-                    (activeStatus.Contains(r.Status) || (r.Status == RechargeRequestStatus.Pending && r.ReservationExpiresAt > DateTime.UtcNow)) &&
+                .Where(r => r.WalletId == wallet.Id
+                    && (!excludedRequestId.HasValue || r.Id != excludedRequestId.Value)
+                    && (activeStatus.Contains(r.Status)
+                        || (r.Status == RechargeRequestStatus.Pending
+                            && r.CreatedAt > pendingCutoff
+                            && (r.ReservationExpiresAt > now || (r.ScreenshotUrl != null && r.ScreenshotUrl != "")))) &&
                     r.CreatedAt >= monthStartUtc && r.CreatedAt < monthEndUtc)
                 .ToListAsync(ct);
 
@@ -83,11 +102,32 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
             var monthlyUsed = walletRequests
                 .Sum(r => r.Amount);
 
-            var remainingDaily = wallet.DailyLimit - dailyUsed;
-            var remainingMonthly = wallet.MonthlyLimit - monthlyUsed;
+            return dailyUsed + request.Amount <= wallet.DailyLimit
+                && monthlyUsed + request.Amount <= wallet.MonthlyLimit;
+        }
+
+        if (existingPending?.Wallet.IsActive == true
+            && await HasCapacityAsync(existingPending.Wallet, existingPending.Id))
+        {
+            existingPending.Amount = request.Amount;
+            existingPending.TeacherId = request.TeacherId;
+            existingPending.ReservationExpiresAt = now.AddHours(1);
+            await _db.SaveChangesAsync(ct);
+            return ApiResponse<InitiateRechargeDto>.Ok(ToDto(existingPending),
+                "تم تثبيت نفس رقم المحفظة لك. أكمل التحويل وارفع الإثبات خلال ساعة واحدة.");
+        }
+
+        foreach (var wallet in activeWallets)
+        {
+            var walletRequests = await _db.RechargeRequests
+                .Where(r => r.WalletId == wallet.Id
+                    && activeStatus.Contains(r.Status)
+                    && r.CreatedAt >= dayStartUtc && r.CreatedAt < dayEndUtc)
+                .ToListAsync(ct);
+            var remainingDaily = wallet.DailyLimit - walletRequests.Sum(r => r.Amount);
 
             // Check if this wallet has capacity for this amount
-            if (dailyUsed + request.Amount <= wallet.DailyLimit && monthlyUsed + request.Amount <= wallet.MonthlyLimit)
+            if (await HasCapacityAsync(wallet, existingPending?.Id))
             {
                 if (remainingDaily > maxRemainingCapacity)
                 {
@@ -100,12 +140,25 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         if (selectedWallet == null)
             return ApiResponse<InitiateRechargeDto>.Fail("عذراً، تم الوصول للحد الأقصى لجميع محافظ الاستقبال اليوم. يرجى المحاولة لاحقاً.");
 
-        var expiration = DateTime.UtcNow.AddHours(1);
+        var expiration = now.AddHours(1);
+
+        if (existingPending != null)
+        {
+            existingPending.WalletId = selectedWallet.Id;
+            existingPending.Wallet = selectedWallet;
+            existingPending.Amount = request.Amount;
+            existingPending.TeacherId = request.TeacherId;
+            existingPending.ReservationExpiresAt = expiration;
+            await _db.SaveChangesAsync(ct);
+            return ApiResponse<InitiateRechargeDto>.Ok(ToDto(existingPending),
+                "تم تغيير المحفظة لأن الرقم السابق غير متاح أو وصل إلى الحد المسموح. أكمل التحويل خلال ساعة واحدة.");
+        }
 
         var rechargeRequest = new RechargeRequest
         {
             UserId = request.UserId,
             WalletId = selectedWallet.Id,
+            Wallet = selectedWallet,
             Amount = request.Amount,
             TeacherId = request.TeacherId,
             Status = RechargeRequestStatus.Pending,
@@ -115,15 +168,15 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
         _db.RechargeRequests.Add(rechargeRequest);
         await _db.SaveChangesAsync(ct);
 
-        var dto = new InitiateRechargeDto
-        {
-            RechargeRequestId = rechargeRequest.Id,
-            ReviewCode = rechargeRequest.Id.ToString("N")[..8].ToUpperInvariant(),
-            WalletPhoneNumber = selectedWallet.PhoneNumber,
-            WalletLabel = selectedWallet.Label,
-            ExpirationTime = expiration
-        };
-
-        return ApiResponse<InitiateRechargeDto>.Ok(dto, "تم حجز المحفظة بنجاح، يرجى إتمام التحويل ورفع الإثبات خلال ساعة واحدة.");
+        return ApiResponse<InitiateRechargeDto>.Ok(ToDto(rechargeRequest), "تم حجز المحفظة بنجاح، يرجى إتمام التحويل ورفع الإثبات خلال ساعة واحدة.");
     }
+
+    private static InitiateRechargeDto ToDto(RechargeRequest rechargeRequest) => new()
+    {
+        RechargeRequestId = rechargeRequest.Id,
+        ReviewCode = rechargeRequest.Id.ToString("N")[..8].ToUpperInvariant(),
+        WalletPhoneNumber = rechargeRequest.Wallet.PhoneNumber,
+        WalletLabel = rechargeRequest.Wallet.Label,
+        ExpirationTime = rechargeRequest.ReservationExpiresAt ?? DateTime.UtcNow
+    };
 }

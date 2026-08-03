@@ -26,7 +26,7 @@ import {
 } from '@/components/admin';
 import { formatRelativeDate, formatDate } from '@/components/admin/admin-utils';
 import NeumorphButton from '@/components/ui/neumorph-button';
-import { walletService, type AdminRechargeRequestDto, type AdminIncomingSmsLogDto } from '@/services/wallet-service';
+import { walletService, type AdminRechargeRequestDto, type AdminIncomingSmsLogDto, type WalletDto } from '@/services/wallet-service';
 import toast from 'react-hot-toast';
 
 type RechargeStatusValue = AdminRechargeRequestDto['status'];
@@ -74,6 +74,7 @@ const resolveAssetUrl = (url?: string | null) => {
 export function RechargeVerificationWorkspace() {
   const [requests, setRequests] = useState<AdminRechargeRequestDto[]>([]);
   const [unmatchedSms, setUnmatchedSms] = useState<AdminIncomingSmsLogDto[]>([]);
+  const [wallets, setWallets] = useState<WalletDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -85,6 +86,7 @@ export function RechargeVerificationWorkspace() {
   const [viewScreenshotUrl, setViewScreenshotUrl] = useState<string | null>(null);
   const [approveModalRequest, setApproveModalRequest] = useState<AdminRechargeRequestDto | null>(null);
   const [selectedSmsId, setSelectedSmsId] = useState<string>('');
+  const [selectedWalletId, setSelectedWalletId] = useState<string>('');
   const [rejectModalRequest, setRejectModalRequest] = useState<AdminRechargeRequestDto | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -101,13 +103,15 @@ export function RechargeVerificationWorkspace() {
       setError('');
 
       // Fetch requests and unmatched SMS logs in parallel
-      const [reqData, smsData] = await Promise.all([
+      const [reqData, smsData, walletData] = await Promise.all([
         walletService.getRechargeRequests(),
-        walletService.getUnmatchedSms()
+        walletService.getUnmatchedSms(),
+        walletService.getWallets()
       ]);
 
       setRequests(reqData || []);
       setUnmatchedSms(smsData || []);
+      setWallets(walletData || []);
     } catch (err: any) {
       console.error(err);
       setError('فشل في تحميل بيانات طلبات الشحن والتحويلات.');
@@ -126,13 +130,15 @@ export function RechargeVerificationWorkspace() {
         approveModalRequest.id,
         true,
         undefined,
-        selectedSmsId || undefined
+        selectedSmsId || undefined,
+        selectedWalletId || undefined
       );
 
       if (response.success) {
         toast.success('تمت الموافقة على طلب الشحن وتعبئة الرصيد للطالب.');
         setApproveModalRequest(null);
         setSelectedSmsId('');
+        setSelectedWalletId('');
         fetchData();
       } else {
         toast.error(response.message || 'فشل في قبول الطلب.');
@@ -143,6 +149,15 @@ export function RechargeVerificationWorkspace() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const openApproveModal = (rechargeRequest: AdminRechargeRequestDto) => {
+    setApproveModalRequest(rechargeRequest);
+    setSelectedWalletId(rechargeRequest.walletId);
+    const match = unmatchedSms.find(log =>
+      log.parsedAmount === rechargeRequest.amount
+      && log.walletId === rechargeRequest.walletId);
+    setSelectedSmsId(match?.id ?? '');
   };
 
   const handleReject = async (e: React.FormEvent) => {
@@ -352,7 +367,10 @@ export function RechargeVerificationWorkspace() {
       label: 'الإجراءات',
       align: 'left',
       render: (r) => {
-        if (!isRechargeStatus(r.status, 0)) {
+        const isPending = isRechargeStatus(r.status, 0);
+        const isRejected = isRechargeStatus(r.status, 3);
+        const isManualApproval = isRechargeStatus(r.status, 2) && !r.matchedSmsLogId;
+        if (!isPending && !isRejected && !isManualApproval) {
           if (r.resolvedAt) {
             return (
               <div className="text-right text-[10px] text-[var(--admin-muted)]">
@@ -363,28 +381,31 @@ export function RechargeVerificationWorkspace() {
           }
           return null;
         }
+        if (isManualApproval) {
+          return <NeumorphButton type="button" onClick={() => openApproveModal(r)} intent="ghost" size="sm">
+            <WalletCards className="h-3.5 w-3.5" /> تعديل المحفظة
+          </NeumorphButton>;
+        }
         return (
           <div className="flex items-center gap-2">
             <NeumorphButton
               type="button"
-              onClick={() => {
-                setApproveModalRequest(r);
-                // Look for an unmatched SMS log that has exactly the same amount to auto-select
-                const match = unmatchedSms.find(log => log.parsedAmount === r.amount);
-                if (match) setSelectedSmsId(match.id);
-              }}
+              onClick={() => openApproveModal(r)}
               intent="primary"
               size="sm"
             >
-              <Check className="h-3.5 w-3.5" /> قبول
+              <Check className="h-3.5 w-3.5" /> {isRejected ? 'تعديل وقبول' : 'قبول'}
             </NeumorphButton>
             <NeumorphButton
               type="button"
-              onClick={() => setRejectModalRequest(r)}
+              onClick={() => {
+                setRejectModalRequest(r);
+                setRejectionReason(r.rejectionReason ?? '');
+              }}
               intent="danger"
               size="sm"
             >
-              <X className="h-3.5 w-3.5" /> رفض
+              <X className="h-3.5 w-3.5" /> {isRejected ? 'تعديل سبب الرفض' : 'رفض'}
             </NeumorphButton>
           </div>
         );
@@ -532,7 +553,7 @@ export function RechargeVerificationWorkspace() {
           </div>
 
           {/* Unmatched SMS Panel */}
-          <div className="admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)] flex flex-col max-h-[700px]">
+          <div className="admin-panel flex h-[65dvh] min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-[0_4px_20px_var(--admin-shadow)] sm:p-6 lg:h-auto lg:max-h-[700px]">
             <h2 className="text-lg font-black text-[var(--admin-text)] mb-2 flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-[var(--admin-primary)]" />
               الرسائل غير المطابقة ({unmatchedSmsCount})
@@ -541,7 +562,7 @@ export function RechargeVerificationWorkspace() {
               رسائل تأكيد الإيداع المستلمة من Vodafone Cash ولم يتم ربطها بأي طلب للطالب تلقائياً.
             </p>
 
-            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+            <div className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
               {loading ? (
                 [1, 2, 3].map(i => (
                   <div key={i} className="h-20 animate-pulse bg-[var(--admin-card-strong)] rounded-xl border border-[var(--admin-border)]" />
@@ -628,9 +649,10 @@ export function RechargeVerificationWorkspace() {
         onClose={() => {
           setApproveModalRequest(null);
           setSelectedSmsId('');
+          setSelectedWalletId('');
         }}
-        title="قبول طلب الشحن يدوياً"
-        subtitle="تأكيد تحويل المبلغ وتعبئة رصيد الطالب مع إمكانية ربطه برسالة تأكيد المعاملة."
+        title={approveModalRequest && isRechargeStatus(approveModalRequest.status, 2) ? 'تصحيح محفظة التحويل' : 'قبول طلب الشحن يدوياً'}
+        subtitle="اختر المحفظة التي استقبلت التحويل فعلياً، ويمكن ربط رسالة التأكيد إن وجدت."
       >
         {approveModalRequest && (
           <form onSubmit={handleApprove} className="mt-4 flex flex-col gap-4">
@@ -678,8 +700,30 @@ export function RechargeVerificationWorkspace() {
               </div>
             )}
 
-            {/* Match with SMS selector */}
             <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-1">
+                <WalletCards className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
+                المحفظة التي استقبلت التحويل
+              </label>
+              <select
+                required
+                value={selectedWalletId}
+                disabled={Boolean(selectedSmsId)}
+                onChange={(event) => setSelectedWalletId(event.target.value)}
+                className="admin-input text-xs disabled:opacity-70"
+              >
+                <option value="">-- اختر المحفظة --</option>
+                {wallets.filter(wallet => wallet.isActive).map(wallet => (
+                  <option key={wallet.id} value={wallet.id}>
+                    {wallet.label} — {wallet.phoneNumber}
+                  </option>
+                ))}
+              </select>
+              {selectedSmsId ? <span className="text-[10px] text-[var(--admin-muted)]">تم تحديد المحفظة تلقائياً من رسالة SMS المختارة.</span> : null}
+            </div>
+
+            {/* Match with SMS selector */}
+            {!isRechargeStatus(approveModalRequest.status, 2) && <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-[var(--admin-text)] flex items-center gap-1">
                 <LinkIcon className="h-3.5 w-3.5 text-[var(--admin-primary)]" />
                 ربط رسالة SMS تأكيدية (اختياري)
@@ -687,7 +731,12 @@ export function RechargeVerificationWorkspace() {
 
               <select
                 value={selectedSmsId}
-                onChange={(e) => setSelectedSmsId(e.target.value)}
+                onChange={(event) => {
+                  const smsId = event.target.value;
+                  setSelectedSmsId(smsId);
+                  const sms = unmatchedSms.find(item => item.id === smsId);
+                  if (sms) setSelectedWalletId(sms.walletId);
+                }}
                 className="admin-input text-xs"
               >
                 <option value="">-- موافقة مباشرة بدون ربط رسالة SMS --</option>
@@ -710,7 +759,7 @@ export function RechargeVerificationWorkspace() {
               <span className="text-[10px] text-[var(--admin-muted)]">
                 سيؤدي اختيار رسالة إلى تمييزها كرسالة مطابقة ولن تظهر في قائمة الرسائل غير المطابقة.
               </span>
-            </div>
+            </div>}
 
             <div className="mt-4 flex items-center justify-end gap-3">
               <NeumorphButton
@@ -719,6 +768,7 @@ export function RechargeVerificationWorkspace() {
                 onClick={() => {
                   setApproveModalRequest(null);
                   setSelectedSmsId('');
+                  setSelectedWalletId('');
                 }}
                 disabled={actionLoading}
               >
@@ -729,7 +779,7 @@ export function RechargeVerificationWorkspace() {
                 intent="primary"
                 loading={actionLoading}
               >
-                تأكيد الموافقة وتعبئة الرصيد
+                {isRechargeStatus(approveModalRequest.status, 2) ? 'حفظ تصحيح المحفظة' : 'تأكيد الموافقة وتعبئة الرصيد'}
               </NeumorphButton>
             </div>
           </form>

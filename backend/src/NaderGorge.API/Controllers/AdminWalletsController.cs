@@ -93,7 +93,8 @@ public class AdminWalletsController : ControllerBase
             dto.Approve,
             adminId,
             dto.RejectionReason,
-            dto.SmsLogId), ct);
+            dto.SmsLogId,
+            dto.WalletId), ct);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 }
@@ -116,4 +117,5 @@ public record UpdateWalletLimitsRequestDto(
 public record ResolveRechargeRequestDto(
     bool Approve,
     string? RejectionReason,
-    Guid? SmsLogId);
+    Guid? SmsLogId,
+    Guid? WalletId);

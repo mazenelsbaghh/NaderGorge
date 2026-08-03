@@ -24,7 +24,7 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
 
     public async Task<ApiResponse<List<AdminRechargeRequestDto>>> Handle(GetAdminRechargeRequestsQuery request, CancellationToken ct)
     {
-        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(_db, ct);
 
         var query = _db.RechargeRequests
             .Include(r => r.User)

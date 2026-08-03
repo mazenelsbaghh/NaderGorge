@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Services;
 using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Admin.Recharge;
@@ -22,10 +23,15 @@ public class GetUnmatchedSmsLogsQueryHandler : IRequestHandler<GetUnmatchedSmsLo
 
     public async Task<ApiResponse<List<AdminIncomingSmsLogDto>>> Handle(GetUnmatchedSmsLogsQuery request, CancellationToken ct)
     {
-        var logs = await _db.IncomingSmsLogs
+        var unmatchedLogs = await _db.IncomingSmsLogs
+            .AsNoTracking()
             .Include(l => l.Wallet)
-            .Where(l => !l.IsMatched)
+            .Where(l => !l.IsMatched && l.ParsedAmount.HasValue)
             .OrderByDescending(l => l.ReceivedAt)
+            .ToListAsync(ct);
+
+        var logs = unmatchedLogs
+            .Where(log => SmsParser.IsIncomingTransfer(log.Body))
             .Select(l => new AdminIncomingSmsLogDto
             {
                 Id = l.Id,
@@ -41,7 +47,7 @@ public class GetUnmatchedSmsLogsQueryHandler : IRequestHandler<GetUnmatchedSmsLo
                 MatchedRechargeRequestId = l.MatchedRechargeRequestId,
                 DeduplicationHash = l.DeduplicationHash
             })
-            .ToListAsync(ct);
+            .ToList();
 
         return ApiResponse<List<AdminIncomingSmsLogDto>>.Ok(logs);
     }

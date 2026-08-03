@@ -38,7 +38,7 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
 
     public async Task<ApiResponse<AndroidSmsUploadDto>> Handle(AndroidUploadSmsCommand request, CancellationToken ct)
     {
-        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(_db, ct);
+        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(_db, ct);
 
         if (string.IsNullOrWhiteSpace(request.PairingToken))
             return ApiResponse<AndroidSmsUploadDto>.Fail("pairing token invalid");

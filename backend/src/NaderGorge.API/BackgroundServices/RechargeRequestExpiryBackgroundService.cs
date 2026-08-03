@@ -27,7 +27,7 @@ public sealed class RechargeRequestExpiryBackgroundService(
                     static async (services, token) =>
                     {
                         var database = services.GetRequiredService<IAppDbContext>();
-                        await RechargeRequestExpiryService.RejectPendingOlderThan24Hours(database, token);
+                        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(database, token);
                     },
                     stoppingToken);
             }

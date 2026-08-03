@@ -114,11 +114,12 @@ export const walletService = {
     id: string,
     approve: boolean,
     rejectionReason?: string,
-    smsLogId?: string
+    smsLogId?: string,
+    walletId?: string
   ) => {
     const { data } = await apiClient.post<{ success: boolean; message: string }>(
       `/admin/wallets/recharge-requests/${id}/resolve`,
-      { approve, rejectionReason, smsLogId }
+      { approve, rejectionReason, smsLogId, walletId }
     );
     return data;
   },

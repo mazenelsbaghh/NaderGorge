@@ -14,6 +14,13 @@ public class SmsParserResult
 public static class SmsParser
 {
     private static readonly Regex PhoneRegex = new(@"\b01[0125]\d{8}\b", RegexOptions.Compiled);
+    private static readonly Regex IncomingTransferMarker = new(
+        @"(?:تم\s+(?:استلام|استقبال)|استلمت|تحويل\s+(?:إلى|الي)\s+محفظتك|received|transfer\s+received|cash\s+in)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+    private static readonly Regex OutgoingTransferMarker = new(
+        @"(?:قمت\s+بتحويل|تم\s+خصم|تم\s+إرسال|you\s+(?:sent|transferred)|cash\s+out)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
     // Patterns to match transfer amounts
     private static readonly Regex[] AmountRegexes = new[]
@@ -81,5 +88,13 @@ public static class SmsParser
         }
 
         return result;
+    }
+
+    public static bool IsIncomingTransfer(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body) || OutgoingTransferMarker.IsMatch(body))
+            return false;
+
+        return IncomingTransferMarker.IsMatch(body) && Parse(body).Amount.HasValue;
     }
 }

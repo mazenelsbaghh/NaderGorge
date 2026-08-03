@@ -6,11 +6,12 @@ namespace NaderGorge.Application.Services;
 
 public static class RechargeRequestExpiryService
 {
-    public const string AutoRejectionReason = "تم رفض الطلب تلقائياً لانتهاء مهلة المراجعة بعد 24 ساعة.";
+    public const int PendingLifetimeHours = 48;
+    public const string AutoRejectionReason = "تم رفض الطلب تلقائياً لانتهاء مهلة المراجعة بعد 48 ساعة.";
 
-    public static async Task RejectPendingOlderThan24Hours(IAppDbContext db, CancellationToken ct)
+    public static async Task RejectPendingOlderThan48Hours(IAppDbContext db, CancellationToken ct)
     {
-        var cutoff = DateTime.UtcNow.AddHours(-24);
+        var cutoff = DateTime.UtcNow.AddHours(-PendingLifetimeHours);
         var expiredRequests = await db.RechargeRequests
             .Where(r => r.Status == RechargeRequestStatus.Pending && r.CreatedAt <= cutoff)
             .ToListAsync(ct);
