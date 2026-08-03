@@ -229,9 +229,10 @@ export function StudentActionsPanel({
             role="dialog"
             aria-modal="true"
             onClick={(event) => event.stopPropagation()}
-            className="max-h-[90dvh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white p-5"
+            className="flex max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white"
             dir="rtl"
           >
+            <div className="shrink-0 border-b border-slate-200 px-5 py-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-bold">{selected.labelAr}</h3>
@@ -245,6 +246,8 @@ export function StudentActionsPanel({
                 <X size={18} />
               </button>
             </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">
             {draftLoading ? (
               <div className="mt-8 grid place-items-center gap-3 py-8 text-sm text-slate-600"><LoaderCircle className="animate-spin" /> جارٍ تحميل البيانات الحالية…</div>
             ) : !confirming ? (
@@ -255,7 +258,7 @@ export function StudentActionsPanel({
                     setConfirming(true);
                   }
                 }}
-                className="mt-5 space-y-3"
+                className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2"
               >
                 {studentContextError && (
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -266,7 +269,7 @@ export function StudentActionsPanel({
                   </div>
                 )}
                 {(studentActionFields[selected.key] ?? []).map((field) => (
-                  <div key={field.key} className="space-y-1">
+                  <div key={field.key} className={`min-w-0 space-y-1 ${field.key === 'address' || field.key === 'videoId' || field.key === 'lessonVideoId' ? 'md:col-span-2' : ''}`}>
                     <label
                       className={
                         field.type === 'checkbox'
@@ -322,7 +325,7 @@ export function StudentActionsPanel({
                             >
                               <option value="">اختر</option>
                               {field.options?.map((option) => (
-                                <option key={option} value={option}>{option}</option>
+                                <option key={option.value} value={option.value}>{option.label}</option>
                               ))}
                             </select>
                           ) : (
@@ -352,6 +355,7 @@ export function StudentActionsPanel({
                     )}
                   </div>
                 ))}
+                <div className="sticky bottom-0 z-10 -mx-5 mt-2 border-t border-slate-200 bg-white px-5 pt-3 md:col-span-2">
                 <button
                   type="submit"
                   disabled={busy}
@@ -359,6 +363,7 @@ export function StudentActionsPanel({
                 >
                   مراجعة وتأكيد
                 </button>
+                </div>
               </form>
             ) : (
               <div className="mt-5">
@@ -405,6 +410,7 @@ export function StudentActionsPanel({
                 {result}
               </p>
             )}
+            </div>
           </div>
         </div>
       )}

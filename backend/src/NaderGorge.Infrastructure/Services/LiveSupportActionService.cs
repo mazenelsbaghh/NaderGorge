@@ -136,8 +136,56 @@ public sealed class LiveSupportActionService(IAppDbContext db, IMediator mediato
 
     private async Task<Dictionary<string, object?>> BuildProfileDraftAsync(Guid studentId, CancellationToken ct)
     {
-        var profile = await _db.Users.AsNoTracking().Where(x => x.Id == studentId).Select(x => new { x.FullName, x.PhoneNumber, Governorate = x.StudentProfile!.Governorate, SchoolName = x.StudentProfile!.SchoolName }).SingleAsync(ct);
-        return new() { ["fullName"] = profile.FullName, ["phone"] = profile.PhoneNumber, ["governorate"] = profile.Governorate, ["schoolName"] = profile.SchoolName ?? string.Empty };
+        var profile = await _db.Users.AsNoTracking().Where(x => x.Id == studentId).Select(x => new
+        {
+            x.FullName,
+            x.PhoneNumber,
+            x.StudentProfile!.SecondaryPhone,
+            x.StudentProfile.StudentCode,
+            x.StudentProfile.Nationality,
+            x.StudentProfile.DateOfBirth,
+            x.StudentProfile.Gender,
+            x.StudentProfile.ParentPhone,
+            x.StudentProfile.SecondaryParentPhone,
+            x.StudentProfile.MotherPhone,
+            x.StudentProfile.FatherDateOfBirth,
+            x.StudentProfile.MotherDateOfBirth,
+            x.StudentProfile.IsFatherAlive,
+            x.StudentProfile.IsMotherAlive,
+            x.StudentProfile.EducationStage,
+            x.StudentProfile.GradeLevel,
+            x.StudentProfile.StudyTrack,
+            x.StudentProfile.SchoolType,
+            x.StudentProfile.SchoolName,
+            x.StudentProfile.Governorate,
+            x.StudentProfile.District,
+            x.StudentProfile.Address
+        }).SingleAsync(ct);
+        return new()
+        {
+            ["fullName"] = profile.FullName,
+            ["phone"] = profile.PhoneNumber,
+            ["secondaryPhone"] = profile.SecondaryPhone ?? string.Empty,
+            ["studentCode"] = profile.StudentCode ?? string.Empty,
+            ["nationality"] = profile.Nationality ?? string.Empty,
+            ["dateOfBirth"] = profile.DateOfBirth.ToString("yyyy-MM-dd"),
+            ["gender"] = profile.Gender.ToString(),
+            ["parentPhone"] = profile.ParentPhone ?? string.Empty,
+            ["secondaryParentPhone"] = profile.SecondaryParentPhone ?? string.Empty,
+            ["motherPhone"] = profile.MotherPhone ?? string.Empty,
+            ["fatherDateOfBirth"] = profile.FatherDateOfBirth?.ToString("yyyy-MM-dd") ?? string.Empty,
+            ["motherDateOfBirth"] = profile.MotherDateOfBirth?.ToString("yyyy-MM-dd") ?? string.Empty,
+            ["isFatherAlive"] = profile.IsFatherAlive,
+            ["isMotherAlive"] = profile.IsMotherAlive,
+            ["educationStage"] = profile.EducationStage.ToString(),
+            ["gradeLevel"] = profile.GradeLevel.ToString(),
+            ["studyTrack"] = profile.StudyTrack?.ToString() ?? string.Empty,
+            ["schoolType"] = profile.SchoolType?.ToString() ?? string.Empty,
+            ["schoolName"] = profile.SchoolName ?? string.Empty,
+            ["governorate"] = profile.Governorate,
+            ["district"] = profile.District ?? string.Empty,
+            ["address"] = profile.Address
+        };
     }
 
     private async Task<Dictionary<string, object?>> BuildAccountStatusDraftAsync(Guid studentId, CancellationToken ct) => new() { ["isActive"] = await _db.Users.AsNoTracking().Where(x => x.Id == studentId).Select(x => x.IsActive).SingleAsync(ct) };
