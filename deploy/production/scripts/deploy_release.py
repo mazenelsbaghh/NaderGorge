@@ -290,6 +290,43 @@ def assert_rollout_quorum(
     return states
 
 
+def reconcile_inconsistent_ingress_traffic(
+    *,
+    root: Path,
+    inventory_path: Path,
+    known_hosts: Path,
+    identity: Path,
+    inventory: object,
+    traffic_reader: Callable[..., dict[str, str] | None] = traffic,
+    traffic_writer: Callable[..., dict[str, str] | None] = traffic,
+) -> tuple[str, ...]:
+    """Repair only split HAProxy runtime state left by an interrupted rollout.
+
+    A deliberate maintenance drain is reported as DRAIN by every ingress and
+    must remain untouched.  A mix of UP and DRAIN for the same backend is not
+    a valid steady state and otherwise prevents the next rollout from reaching
+    its own recovery path before it has drained a node.
+    """
+    repaired: list[str] = []
+    for node in getattr(inventory, "nodes"):
+        states = traffic_reader(
+            root, inventory_path, known_hosts, identity, node.id, "status"
+        )
+        if states is None:
+            raise DeployError(f"missing ingress state for {node.id}")
+        normalized = {
+            "DRAIN" if status.startswith("DRAIN") else "UP"
+            if status.startswith("UP") else status
+            for status in states.values()
+        }
+        if normalized == {"UP", "DRAIN"}:
+            traffic_writer(
+                root, inventory_path, known_hosts, identity, node.id, "undrain"
+            )
+            repaired.append(node.id)
+    return tuple(repaired)
+
+
 class RolloutLock:
     """Fail closed when another operator owns the global release rollout."""
 
@@ -921,6 +958,13 @@ def main() -> int:
         rollback_gate if rollback_gate is not None else migration_gate
     )
     lock.acquire()
+    reconcile_inconsistent_ingress_traffic(
+        root=root,
+        inventory_path=args.inventory,
+        known_hosts=args.known_hosts,
+        identity=args.identity,
+        inventory=inventory,
+    )
     rollout_error: Exception | None = None
     rollback_attempted = False
     rollout_complete = False

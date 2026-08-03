@@ -117,6 +117,37 @@ def test_post_drain_requires_exact_target_maint_on_every_ingress() -> None:
         )
 
 
+def test_reconcile_repairs_only_split_ingress_drain_state() -> None:
+    states = {
+        "node-1": {"node-1": "DRAIN", "node-2": "UP", "node-3": "UP"},
+        "node-2": {"node-1": "DRAIN", "node-2": "DRAIN", "node-3": "DRAIN"},
+        "node-3": {"node-1": "UP", "node-2": "UP", "node-3": "UP"},
+    }
+    repaired: list[str] = []
+
+    def reader(root, inventory_path, known_hosts, identity, node_id, action):
+        assert action == "status"
+        return states[node_id]
+
+    def writer(root, inventory_path, known_hosts, identity, node_id, action):
+        assert action == "undrain"
+        repaired.append(node_id)
+        return None
+
+    result = deploy.reconcile_inconsistent_ingress_traffic(
+        root=ROOT,
+        inventory_path=ROOT / "deploy/production/inventory/production.yml",
+        known_hosts=Path("/private/known-hosts"),
+        identity=Path("/private/identity"),
+        inventory=inventory(),
+        traffic_reader=reader,
+        traffic_writer=writer,
+    )
+
+    assert result == ("node-1",)
+    assert repaired == ["node-1"]
+
+
 def test_rollout_lock_blocks_conflict_and_releases_only_owned_lock() -> None:
     conflict = FakeTransport([Result(returncode=75)])
     lock = deploy.RolloutLock(
