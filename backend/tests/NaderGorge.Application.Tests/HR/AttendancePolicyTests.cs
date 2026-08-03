@@ -123,6 +123,28 @@ public sealed class AttendancePolicyTests
     }
 
     [Fact]
+    public async Task ClockOut_LoadsShiftGraphFromDatabaseBeforeCalculatingAttendance()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var seeded = await SeedAsync(db, AttendancePolicyKind.Unrestricted);
+        var clockedInAt = DateTime.UtcNow;
+        var clockIn = await new ClockInAttendanceCommandHandler(db, new AttendancePolicyEvaluator(db)).Handle(
+            new ClockInAttendanceCommand(seeded.User.Id, "clock-out-shift-graph", clockedInAt, null, null, null, null, "ip", "ua"),
+            default);
+        Assert.True(clockIn.Success);
+
+        db.ChangeTracker.Clear();
+        var clockOut = await new ClockOutAttendanceCommandHandler(db).Handle(
+            new ClockOutAttendanceCommand(seeded.User.Id, "clock-out-shift-graph", clockedInAt.AddMinutes(30)),
+            default);
+
+        Assert.True(clockOut.Success);
+        var session = await db.AttendanceSessions.SingleAsync(item => item.Id == clockIn.Data!.SessionId);
+        Assert.Equal(AttendanceSessionState.Completed, session.State);
+        Assert.Equal(30, session.WorkedMinutes);
+    }
+
+    [Fact]
     public async Task AttendanceToday_AfterMidnight_DoesNotReturnYesterdaysCompletedSession()
     {
         await using var db = TestAppDbContextFactory.Create();

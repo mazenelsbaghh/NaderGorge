@@ -173,15 +173,22 @@ public sealed class ClockOutAttendanceCommandHandler : IRequestHandler<ClockOutA
             var prior = await _db.AttendanceSessions.AsNoTracking().SingleAsync(item => item.Id == replaySessionId, ct);
             return ApiResponse<AttendanceMutationResult>.Ok(new(prior.Id, replay.Id, replay.DecisionCode, prior.WorkDate));
         }
-        var session = await _db.AttendanceSessions.Include(item => item.Breaks).SingleOrDefaultAsync(item => item.EmployeeId == employeeId && item.State == AttendanceSessionState.Open, ct);
+        var session = await _db.AttendanceSessions
+            .Include(item => item.Breaks)
+            .Include(item => item.ShiftAssignment)
+                .ThenInclude(assignment => assignment!.ShiftTemplate)
+                    .ThenInclude(template => template!.Segments)
+            .SingleOrDefaultAsync(item => item.EmployeeId == employeeId && item.State == AttendanceSessionState.Open, ct);
         if (session is null) return ApiResponse<AttendanceMutationResult>.Fail("لا توجد جلسة مفتوحة", ["NO_OPEN_SESSION"]);
         if (session.Breaks.Any(item => !item.EndedAt.HasValue)) return ApiResponse<AttendanceMutationResult>.Fail("أنهِ الاستراحة أولًا", ["BREAK_ALREADY_OPEN"]);
         var occurredAt = request.OccurredAt.Kind == DateTimeKind.Utc ? request.OccurredAt : request.OccurredAt.ToUniversalTime();
         if (occurredAt <= session.ClockedInAt) return ApiResponse<AttendanceMutationResult>.Fail("وقت الانصراف غير صالح", ["ATTENDANCE_TIME_INVALID"]);
+        var shiftTemplate = session.ShiftAssignment?.ShiftTemplate;
+        if (shiftTemplate is null) return ApiResponse<AttendanceMutationResult>.Fail("بيانات وردية الحضور غير مكتملة. تواصل مع الموارد البشرية.", ["ATTENDANCE_SHIFT_MISSING"]);
+        var segment = ShiftScheduleRules.SegmentForWorkDate(shiftTemplate.Segments, session.WorkDate);
+        if (segment is null) return ApiResponse<AttendanceMutationResult>.Fail("لا يوجد موعد عمل لهذه الوردية. تواصل مع الموارد البشرية.", ["ATTENDANCE_SHIFT_SEGMENT_MISSING"]);
         session.ClockedOutAt = occurredAt; session.State = AttendanceSessionState.Completed; session.Version++;
         var breakMinutes = session.Breaks.Where(item => item.EndedAt.HasValue).Sum(item => (int)(item.EndedAt!.Value - item.StartedAt).TotalMinutes);
-        var segment = ShiftScheduleRules.SegmentForWorkDate(session.ShiftAssignment!.ShiftTemplate!.Segments, session.WorkDate)
-            ?? throw new InvalidOperationException("Attendance shift segment is missing.");
         var (scheduledStart, scheduledEnd) = ShiftScheduleRules.ScheduledRangeUtc(session.WorkDate, segment, ResolveCairo());
         var calculation = AttendanceCalculator.Calculate(new(
             session.ClockedInAt,
@@ -189,8 +196,8 @@ public sealed class ClockOutAttendanceCommandHandler : IRequestHandler<ClockOutA
             scheduledStart,
             scheduledEnd,
             breakMinutes,
-            session.ShiftAssignment.ShiftTemplate.GraceMinutes,
-            session.ShiftAssignment.ShiftTemplate.OvertimeAfterMinutes));
+            shiftTemplate.GraceMinutes,
+            shiftTemplate.OvertimeAfterMinutes));
         session.WorkedMinutes = calculation.WorkedMinutes;
         session.LateMinutes = calculation.LateMinutes;
         session.EarlyLeaveMinutes = calculation.EarlyLeaveMinutes;
