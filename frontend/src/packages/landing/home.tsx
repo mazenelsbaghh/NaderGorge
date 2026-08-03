@@ -8,8 +8,10 @@ const FALLBACK_REGISTERED_STUDENTS_COUNT = 0;
 const LANDING_STUDENTS_BASELINE = 100_000;
 
 const API_BASE_URL =
-  process.env.INTERNAL_API_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
+  // The backend redirects direct HTTP container traffic to HTTPS. The public
+  // origin terminates TLS correctly, so it is the reliable server-render path.
+  process.env.INTERNAL_API_URL ||
   'http://localhost:5245/api';
 
 type PlatformStatsResponse = {
