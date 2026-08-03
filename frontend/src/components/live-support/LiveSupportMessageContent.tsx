@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
-import { Check, CheckCheck, ImageIcon, LoaderCircle } from 'lucide-react';
+import { AudioLines, Check, CheckCheck, ImageIcon, LoaderCircle } from 'lucide-react';
 import { liveSupportService, type LiveSupportMessage } from '@/services/live-support-service';
 import { formatCairoDateTime } from '@/lib/cairo-time';
 
@@ -24,22 +24,26 @@ export function LiveSupportMessageMeta({ message, audience }: LiveSupportMessage
 }
 
 export function LiveSupportMessageContent({ message, audience }: LiveSupportMessageContentProps) {
-  const [imageUrl, setImageUrl] = useState<string>();
-  const [imageFailed, setImageFailed] = useState(false);
+  const [attachmentUrl, setAttachmentUrl] = useState<string>();
+  const [attachmentFailed, setAttachmentFailed] = useState(false);
 
   useEffect(() => {
-    if (message.type !== 'Image' || !message.attachmentId) return;
+    if (!['Image', 'Audio'].includes(message.type) || !message.attachmentId) {
+      setAttachmentUrl(undefined);
+      return;
+    }
     let active = true;
     let objectUrl: string | undefined;
-    setImageFailed(false);
+    setAttachmentUrl(undefined);
+    setAttachmentFailed(false);
     void liveSupportService.getAttachmentBlob(audience, message.conversationId, message.attachmentId)
       .then((blob) => {
         if (!active) return;
         objectUrl = URL.createObjectURL(blob);
-        setImageUrl(objectUrl);
+        setAttachmentUrl(objectUrl);
       })
       .catch(() => {
-        if (active) setImageFailed(true);
+        if (active) setAttachmentFailed(true);
       });
     return () => {
       active = false;
@@ -49,17 +53,23 @@ export function LiveSupportMessageContent({ message, audience }: LiveSupportMess
 
   if (message.deletedAt) return <span className="italic opacity-75">تم حذف الرسالة</span>;
 
-  if (message.type === 'Image' && message.attachmentId) {
-    if (imageFailed) {
-      return <span className="inline-flex items-center gap-2"><ImageIcon size={17}/>تعذر عرض الصورة</span>;
+  if (['Image', 'Audio'].includes(message.type) && message.attachmentId) {
+    if (attachmentFailed) {
+      return <span className="inline-flex items-center gap-2">{message.type === 'Audio' ? <AudioLines size={17}/> : <ImageIcon size={17}/>}تعذر تحميل المرفق</span>;
     }
-    if (!imageUrl) {
-      return <span role="status" className="inline-flex items-center gap-2"><LoaderCircle className="animate-spin" size={17}/>جارٍ تحميل الصورة…</span>;
+    if (!attachmentUrl) {
+      return <span role="status" className="inline-flex items-center gap-2"><LoaderCircle className="animate-spin" size={17}/>جارٍ تحميل المرفق…</span>;
+    }
+    if (message.type === 'Audio') {
+      return <div className="flex min-w-0 max-w-full flex-col gap-1.5" dir="rtl">
+        <audio controls preload="metadata" src={attachmentUrl} className="h-10 max-w-full" aria-label="تشغيل التسجيل الصوتي" />
+        <span className="max-w-full truncate text-xs opacity-80">{message.content || 'تسجيل صوتي'}</span>
+      </div>;
     }
     return (
-      <a href={imageUrl} target="_blank" rel="noreferrer noopener" className="block" aria-label="فتح الصورة بالحجم الكامل">
+      <a href={attachmentUrl} target="_blank" rel="noreferrer noopener" className="block" aria-label="فتح الصورة بالحجم الكامل">
         <Image
-          src={imageUrl}
+          src={attachmentUrl}
           alt={message.content || 'صورة مرفقة'}
           width={640}
           height={480}

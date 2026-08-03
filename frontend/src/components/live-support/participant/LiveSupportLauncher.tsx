@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Headphones, LoaderCircle, MessageCircle, Paperclip, Send, X } from 'lucide-react';
-import { liveSupportService, type LiveSupportAIPendingDecision, type LiveSupportAITurnState, type LiveSupportAIVerificationSession, type LiveSupportAvailability, type LiveSupportConversation, type LiveSupportMessage, type LiveSupportMessageType } from '@/services/live-support-service';
+import { liveSupportService, type LiveSupportAIPendingDecision, type LiveSupportAITurnState, type LiveSupportAIVerificationSession, type LiveSupportAvailability, type LiveSupportConversation, type LiveSupportMessage } from '@/services/live-support-service';
 import { LiveSupportWidget } from './LiveSupportWidget';
 import { QueueStatus } from './QueueStatus';
 import { ParticipantConversation } from './ParticipantConversation';
@@ -14,10 +14,11 @@ import { useLiveSupportStore } from '@/stores/live-support-store';
 import { useAuthStore } from '@/stores/auth-store';
 import apiClient from '@/services/api-client';
 import { createClientId } from '@/lib/client-id';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 function formatNext(value?: string | null) {
   if (!value) return null;
-  return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'full', timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
+  return formatCairoDateTime(value, { dateStyle: 'full', timeStyle: 'short' });
 }
 
 function formatSupportTime(value: string) {
@@ -240,10 +241,16 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
 
   async function upload(file?: File) {
     if (!conversation || !file || pendingAction) return;
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) {
+      setError('يمكن للطلاب إرسال صور وملفات PDF فقط. التسجيل الصوتي متاح لفريق الدعم.');
+      return;
+    }
     setUploading(true); setError('');
     try {
       const attachment = await liveSupportService.uploadAttachment(conversation.id, file);
-      const type: LiveSupportMessageType = file.type.startsWith('image/') ? 'Image' : file.type === 'application/pdf' ? 'Pdf' : 'Audio';
+      const type = isImage ? 'Image' : 'Pdf';
       const message = await liveSupportService.sendParticipantMessage(conversation.id, { clientMessageId: createClientId(), type, content: file.name, attachmentId: attachment.id });
       setMessages((items) => mergeMessages(items, [message], conversation.id));
       if (conversation.isAiActive) {
@@ -365,7 +372,7 @@ export function LiveSupportLauncher({ avoidMobileBottomNav = false }: LiveSuppor
             onRegistrationSuccess={handleRegistrationSuccess}
             onEditMessage={editMessage}
             onDeleteMessage={deleteMessage}
-          />{conversation.canSend && !activeAction && !activeVerification ? <div className="flex gap-2 border-t border-slate-100 pt-3"><label aria-label="إرفاق ملف" className={`grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 focus-within:outline-2 ${pendingAction ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}><Paperclip size={18}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf,audio/mpeg,audio/mp4,audio/ogg" disabled={uploading || Boolean(pendingAction)} onChange={(event) => void upload(event.target.files?.[0])} className="sr-only"/></label><input aria-label="رسالة الدعم" disabled={Boolean(pendingAction)} value={draft} onChange={(event) => { setDraft(event.target.value); setStoredDraft(conversation.id, event.target.value); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }} placeholder="اكتب رسالتك" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 outline-none focus-visible:border-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-700/20 disabled:bg-slate-100"/><button type="button" disabled={!draft.trim() || Boolean(pendingAction)} onClick={() => void send()} aria-label="إرسال" className="grid size-11 place-items-center rounded-xl bg-cyan-700 text-white disabled:opacity-50"><Send size={18}/></button></div> : conversation.canSend ? <p role="status" className="border-t border-slate-100 pt-3 text-center text-xs font-medium text-slate-600">أكمل خطوة التأكيد الظاهرة قبل إرسال رسالة جديدة.</p> : <ClosedActions conversation={conversation} onNew={() => { startingNew.current = true; setConversation(undefined); setMessages([]); }}/>}</>}
+          />{conversation.canSend && !activeAction && !activeVerification ? <div className="flex gap-2 border-t border-slate-100 pt-3"><label aria-label="إرفاق صورة أو PDF" className={`grid size-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-600 focus-within:outline-2 ${pendingAction ? 'pointer-events-none opacity-50' : 'cursor-pointer'}`}><Paperclip size={18}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={uploading || Boolean(pendingAction)} onChange={(event) => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }} className="sr-only"/></label><input aria-label="رسالة الدعم" disabled={Boolean(pendingAction)} value={draft} onChange={(event) => { setDraft(event.target.value); setStoredDraft(conversation.id, event.target.value); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void send(); } }} placeholder="اكتب رسالتك" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 outline-none focus-visible:border-cyan-700 focus-visible:ring-2 focus-visible:ring-cyan-700/20 disabled:bg-slate-100"/><button type="button" disabled={!draft.trim() || Boolean(pendingAction)} onClick={() => void send()} aria-label="إرسال" className="grid size-11 place-items-center rounded-xl bg-cyan-700 text-white disabled:opacity-50"><Send size={18}/></button></div> : conversation.canSend ? <p role="status" className="border-t border-slate-100 pt-3 text-center text-xs font-medium text-slate-600">أكمل خطوة التأكيد الظاهرة قبل إرسال رسالة جديدة.</p> : <ClosedActions conversation={conversation} onNew={() => { startingNew.current = true; setConversation(undefined); setMessages([]); }}/>}</>}
         {error && <div role="alert" className="mt-3 text-center text-sm text-red-600"><p>{error}</p><button type="button" disabled={retrying} onClick={() => { setRetrying(true); void refresh().finally(() => setRetrying(false)); }} className="mt-1 font-semibold underline">{retrying ? 'جارٍ التحديث…' : 'إعادة المحاولة'}</button></div>}
       </LiveSupportWidget></div>
     </section>}

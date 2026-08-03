@@ -30,7 +30,9 @@ public class GetLatestPassedExamResultQueryTests
     {
         await using AppDbContext db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "502");
-        var (exam, _, _, _, _) = await TestAppDbContextFactory.SeedFindTheMistakeExamAsync(db);
+        var (exam, _, question, _, _) = await TestAppDbContextFactory.SeedFindTheMistakeExamAsync(db);
+        question.AudioUrl = "/uploads/audio/exam-correction.mp3";
+        question.WrittenCorrection = "التصحيح المسجل للسؤال";
         var failedAttempt = await TestAppDbContextFactory.SeedAttemptAsync(db, exam.Id, student.Id);
         failedAttempt.Evaluation = "ضعيف";
         failedAttempt.IsPassed = false;
@@ -47,6 +49,9 @@ public class GetLatestPassedExamResultQueryTests
         Assert.True(result.Success);
         Assert.Equal(passedAttempt.Id, result.Data!.AttemptId);
         Assert.True(result.Data.IsPassed);
+        var questionReview = Assert.Single(result.Data.Questions);
+        Assert.Equal("/uploads/audio/exam-correction.mp3", questionReview.AudioUrl);
+        Assert.Equal("التصحيح المسجل للسؤال", questionReview.WrittenCorrection);
     }
 
     [Fact]

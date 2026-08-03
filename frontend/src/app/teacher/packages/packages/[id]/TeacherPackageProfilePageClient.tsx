@@ -7,7 +7,7 @@ import {
   AdminStatCard, AdminTabBar, AdminTab,
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
-  PackageCodeProfileSummary, ContentImageUpload
+  PackageCodeProfileSummary, ContentImageUpload, PackageDirectContentPanel
 } from "@/components/admin";
 import { TeacherPage } from "@/components/teacher/TeacherShellChrome";
 import { HierarchyItem } from "@/components/admin/ContentHierarchyPanel";
@@ -16,11 +16,12 @@ import { contentService, TermDto } from "@/services/content-service";
 import toast from "react-hot-toast";
 import NeumorphButton from "@/components/ui/neumorph-button";
 
-type ActiveTab = "overview" | "terms" | "codeProfile";
+type ActiveTab = "overview" | "terms" | "direct" | "codeProfile";
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: "overview", label: "نظرة عامة", icon: BookOpenText },
   { key: "terms", label: "الأترام", icon: Calendar },
+  { key: "direct", label: "المحتوى المباشر", icon: BookOpenText },
   { key: "codeProfile", label: "صفحة الأكواد", icon: KeyRound },
 ];
 
@@ -173,6 +174,27 @@ export default function TeacherPackageProfilePageClient(props: { params: { id: s
             }}
             deleteConfirmText={(item) => `سيتم حذف الترم "${item.title}" وجميع أقسامه ودروسه وفيديوهاته بشكل دائم.`}
             onRetry={loadTerms}
+          />
+        </div>
+      )}
+
+      {activeTab === "direct" && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="mb-6">
+            <h3 className="text-xl font-black text-[var(--admin-text)]">محتوى الكورس المباشر</h3>
+            <p className="mt-2 text-sm text-[var(--admin-muted)]">
+              أضف الأقسام أو الحصص مباشرة حسب شكل الكورس.
+            </p>
+          </div>
+          <PackageDirectContentPanel
+            packageId={params.id}
+            mode={pkg.contentMode ?? "TermWithSections"}
+            rootTermId={pkg.rootTermId}
+            rootSectionId={pkg.rootSectionId}
+            sections={pkg.directSections}
+            lessons={pkg.directLessons}
+            basePath="/teacher/packages"
+            onChanged={loadPkg}
           />
         </div>
       )}

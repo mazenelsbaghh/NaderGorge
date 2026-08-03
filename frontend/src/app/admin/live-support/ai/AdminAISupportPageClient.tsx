@@ -25,6 +25,7 @@ import { AIVerificationPolicyEditor } from '@/components/live-support/ai-admin/A
 import { AIPreview } from '@/components/live-support/ai-admin/AIPreview';
 import { AIActivityEvidence } from '@/components/live-support/ai-admin/AIActivityEvidence';
 import { registerCacheStore } from '@/lib/cache-invalidation';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 export const DEFAULT_SYSTEM_INSTRUCTIONS = `أنت مساعد الدعم الذكي لمنصة مسار، وهي منصة تعليمية عربية تساعد الطلاب على مشاهدة الدروس، حل الامتحانات والواجبات، متابعة التقدم، وإدارة الباقات وطلبات المشاهدة.
 
@@ -320,7 +321,7 @@ export default function AdminAISupportPageClient() {
                         </td>
                         <td className="p-3 text-slate-700 max-w-xs truncate">{item.subject || '—'}</td>
                         <td className="p-3">{renderAiStatus(item.aiTurnStatus, item.aiTurnFailureCode)}</td>
-                        <td className="p-3 text-slate-600">{new Date(item.createdAt).toLocaleString('ar-EG')}</td>
+                        <td className="p-3 text-slate-600">{formatCairoDateTime(item.createdAt)}</td>
                         <td className="p-3">
                           <button
                             type="button"

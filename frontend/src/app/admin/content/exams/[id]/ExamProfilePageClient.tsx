@@ -32,6 +32,7 @@ import {
 import type { AdminShellRoute } from '@/components/admin/AdminShellChrome';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
+import { OcrQuestionImport } from '@/components/admin/OcrQuestionImport';
 import { adminService, type ExamDashboardDto } from '@/services/admin-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
 import toast from 'react-hot-toast';
@@ -294,6 +295,27 @@ export default function ExamProfilePageClient({
     }
   };
 
+  const handleOcrImport = async (questions: InlineExamQuestionDto[]) => {
+    if (!data) return;
+    try {
+      setSavingAdd(true);
+      await adminService.addQuestionsToExam(id, {
+        questions: questions.map((question, index) => ({
+          ...question,
+          order: data.questionCount + index + 1,
+        })),
+      });
+      const refreshed = await adminService.getExamDashboard(id);
+      setData(refreshed || null);
+      toast.success(`تمت إضافة ${questions.length} سؤال للامتحان.`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'تعذر إضافة أسئلة OCR للامتحان.');
+      throw err;
+    } finally {
+      setSavingAdd(false);
+    }
+  };
+
   if (loading) {
     return renderChrome(<AdminPageSkeleton />, 'بروفايل الامتحان التفصيلي', 'جاري تحميل البيانات...');
   }
@@ -380,6 +402,10 @@ export default function ExamProfilePageClient({
                   </button>
                 </div>
                 <div className="p-6">
+                  <OcrQuestionImport
+                    nextOrder={data.questionCount + 1}
+                    onImport={handleOcrImport}
+                  />
                   <QuestionEditor
                     question={addingQuestionData}
                     index={data.questionCount}

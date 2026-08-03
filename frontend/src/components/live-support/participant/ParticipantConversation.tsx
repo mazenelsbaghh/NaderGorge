@@ -1,5 +1,6 @@
 'use client';
 
+import { formatCairoDateTime } from '@/lib/cairo-time';
 import type { LiveSupportAIPendingDecision, LiveSupportAIVerificationSession, LiveSupportMessage } from '@/services/live-support-service';
 import { AIPendingActionCard } from './AIPendingActionCard';
 import { AIHandoffConfirmation } from './AIHandoffConfirmation';
@@ -45,7 +46,7 @@ export function ParticipantConversation({
         <article
           dir="auto"
           key={message.id}
-          aria-label={`${message.senderType}، ${new Date(message.sentAt).toLocaleTimeString('ar-EG')}`}
+          aria-label={`${message.senderType}، ${formatCairoDateTime(message.sentAt, { hour: '2-digit', minute: '2-digit' })}`}
           className={`max-w-[85%] break-words [overflow-wrap:anywhere] rounded-2xl px-3 py-2 text-sm ${
             ['Student', 'Guest'].includes(message.senderType)
               ? 'mr-auto bg-cyan-700 text-white'

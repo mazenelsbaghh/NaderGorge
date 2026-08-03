@@ -297,9 +297,9 @@ export const TEACHER_GRADE_GROUPS = [
   {
     label: 'التعليم الأزهري',
     grades: [
-      { value: 'AzhariPrimary1', label: GRADE_LEVEL_LABELS.AzhariPrimary1 },
-      { value: 'AzhariPrep1', label: GRADE_LEVEL_LABELS.AzhariPrep1 },
       { value: 'AzhariSecondary1', label: GRADE_LEVEL_LABELS.AzhariSecondary1 },
+      { value: 'AzhariSecondary2', label: GRADE_LEVEL_LABELS.AzhariSecondary2 },
+      { value: 'AzhariSecondary3', label: GRADE_LEVEL_LABELS.AzhariSecondary3 },
     ],
   },
   {

@@ -97,6 +97,7 @@ public static class UploadFileSafety
             return (".mp3", "audio/mpeg");
         }
         if (StartsWith(prefix, [0x4F, 0x67, 0x67, 0x53])) return (".ogg", "audio/ogg");
+        if (StartsWith(prefix, [0x1A, 0x45, 0xDF, 0xA3])) return (".webm", "audio/webm");
         if (content.Length >= 12 &&
             content[4] == 0x66 && content[5] == 0x74 && content[6] == 0x79 && content[7] == 0x70)
         {
@@ -111,7 +112,7 @@ public static class UploadFileSafety
         {
             SafeUploadKind.PublicImage => IsImage(detectedExtension) && IsEquivalentImageExtension(requestedExtension, detectedExtension),
             SafeUploadKind.ProtectedResource => IsProtectedResourceExtension(requestedExtension, detectedExtension),
-            SafeUploadKind.PrivateAttachment => IsImage(detectedExtension) || detectedExtension is ".pdf" or ".mp3" or ".mp4" or ".ogg",
+            SafeUploadKind.PrivateAttachment => IsImage(detectedExtension) || detectedExtension is ".pdf" or ".mp3" or ".mp4" or ".ogg" or ".webm",
             _ => false
         };
     }

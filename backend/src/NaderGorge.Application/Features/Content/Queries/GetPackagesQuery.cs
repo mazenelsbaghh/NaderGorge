@@ -25,7 +25,12 @@ public record PackageDto(
     string? TeacherBio,
     string? TeacherSpecialization,
     string TargetGrade,
-    string? ImageUrl
+    string? ImageUrl,
+    PackageContentMode ContentMode,
+    Guid? RootTermId,
+    Guid? RootSectionId,
+    IReadOnlyList<PackageDirectSectionDto> DirectSections,
+    IReadOnlyList<PackageDirectLessonDto> DirectLessons
 );
 
 public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResponse<List<PackageDto>>>
@@ -141,6 +146,48 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
             .Select(l => new { l.Id, PackageId = l.ContentSection.Term.PackageId })
             .ToListAsync(ct);
 
+        var rootTerms = await _db.Terms
+            .Where(term => packageIds.Contains(term.PackageId) && term.IsSystemContainer)
+            .Select(term => new { term.Id, term.PackageId })
+            .ToListAsync(ct);
+
+        var rootTermIds = rootTerms.Select(term => term.Id).ToList();
+        var rootSections = await _db.ContentSections
+            .Where(section => rootTermIds.Contains(section.TermId) && section.IsSystemContainer)
+            .Select(section => new { section.Id, section.TermId })
+            .ToListAsync(ct);
+
+        var directSections = await _db.ContentSections
+            .Where(section => rootTermIds.Contains(section.TermId) && !section.IsSystemContainer)
+            .OrderBy(section => section.Order)
+            .Select(section => new
+            {
+                section.Id,
+                section.Title,
+                section.Order,
+                section.Price,
+                section.ImageUrl,
+                section.TermId,
+                PackageId = section.Term.PackageId
+            })
+            .ToListAsync(ct);
+
+        var rootSectionIds = rootSections.Select(section => section.Id).ToList();
+        var directLessons = await _db.Lessons
+            .Where(lesson => rootSectionIds.Contains(lesson.ContentSectionId))
+            .OrderBy(lesson => lesson.Order)
+            .Select(lesson => new
+            {
+                lesson.Id,
+                lesson.Title,
+                lesson.Summary,
+                lesson.Order,
+                lesson.Price,
+                lesson.ContentSectionId,
+                PackageId = lesson.ContentSection.Term.PackageId
+            })
+            .ToListAsync(ct);
+
         var dtos = new List<PackageDto>();
         foreach (var pk in packages)
         {
@@ -174,6 +221,37 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
 
             bool hasDirectPackageAccess = hasGlobalAccess || activeGrants.Any(g => g.GrantType == CodeType.Package && g.PackageId == pk.Id);
 
+            var packageRootTerm = rootTerms.FirstOrDefault(term => term.PackageId == pk.Id);
+            var packageRootSection = packageRootTerm == null
+                ? null
+                : rootSections.FirstOrDefault(section => section.TermId == packageRootTerm.Id);
+
+            var directSectionDtos = directSections
+                .Where(section => section.PackageId == pk.Id)
+                .Select(section => new PackageDirectSectionDto(
+                    section.Id,
+                    section.Title,
+                    section.Order,
+                    section.Price,
+                    section.ImageUrl,
+                    hasDirectPackageAccess || activeGrants.Any(grant =>
+                        grant.GrantType == CodeType.Month && grant.ContentSectionId == section.Id)))
+                .ToList();
+
+            var directLessonDtos = directLessons
+                .Where(lesson => lesson.PackageId == pk.Id)
+                .Select(lesson => new PackageDirectLessonDto(
+                    lesson.Id,
+                    lesson.Title,
+                    lesson.Summary,
+                    lesson.Order,
+                    lesson.Price,
+                    hasDirectPackageAccess || activeGrants.Any(grant =>
+                        (grant.GrantType == CodeType.Lesson && grant.LessonId == lesson.Id) ||
+                        (grant.GrantType == CodeType.Month && grant.ContentSectionId == lesson.ContentSectionId) ||
+                        (grant.GrantType == CodeType.Term && grant.TermId == packageRootTerm?.Id))))
+                .ToList();
+
             dtos.Add(new PackageDto(
                 pk.Id, 
                 pk.Name, 
@@ -190,7 +268,12 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
                 pk.Teacher?.Bio,
                 pk.Teacher?.Specialization,
                 pk.TargetGrade,
-                pk.ImageUrl
+                pk.ImageUrl,
+                pk.ContentMode,
+                packageRootTerm?.Id,
+                packageRootSection?.Id,
+                directSectionDtos,
+                directLessonDtos
             ));
         }
 

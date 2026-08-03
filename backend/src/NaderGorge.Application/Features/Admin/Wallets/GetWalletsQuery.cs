@@ -35,6 +35,11 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
         var rechargeRequests = await _db.RechargeRequests
             .Where(r => activeStatus.Contains(r.Status) && r.ResolvedAt >= monthStartUtc && r.ResolvedAt < monthEndUtc)
             .ToListAsync(ct);
+        var totalReceivedByWallet = await _db.RechargeRequests
+            .Where(r => activeStatus.Contains(r.Status))
+            .GroupBy(r => r.WalletId)
+            .Select(group => new { WalletId = group.Key, TotalReceived = group.Sum(item => item.Amount) })
+            .ToDictionaryAsync(item => item.WalletId, item => item.TotalReceived, ct);
 
         var walletDtos = new List<WalletDto>();
 
@@ -86,6 +91,7 @@ public class GetWalletsQueryHandler : IRequestHandler<GetWalletsQuery, ApiRespon
                 SmsSenderFilters = filters,
                 DailyReceived = dailyReceived,
                 MonthlyReceived = monthlyReceived,
+                TotalReceived = totalReceivedByWallet.GetValueOrDefault(w.Id),
                 CreatedAt = w.CreatedAt
             });
         }

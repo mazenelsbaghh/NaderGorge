@@ -191,8 +191,8 @@ export default function TermProfilePageClient(props: { params: { id: string } })
             addPlaceholder="اسم القسم، مثال: شهر أكتوبر..."
             onCreate={async ({ title, order, price, imageFile }) => {
               const sectionId = await adminService.createSection({ termId: params.id, title, order, price });
-              if (imageFile && sectionId?.id) {
-                await adminService.uploadContentImage('section', sectionId.id, imageFile);
+              if (imageFile && sectionId) {
+                await adminService.uploadContentImage('section', sectionId, imageFile);
               }
               toast.success('تمت إضافة القسم.');
               await loadSections();

@@ -192,6 +192,10 @@ builder.Services.AddSingleton<ILiveSupportPresenceStore, LiveSupportPresenceStor
 builder.Services.AddHttpClient<WhatsAppVerificationService>();
 builder.Services.AddHttpClient<WhatsAppCloudService>();
 builder.Services.AddHttpClient<ThanaweyaResultsService>();
+builder.Services.AddHttpClient<NaderGorge.Application.Features.Admin.Ocr.IAssessmentOcrService, NaderGorge.Infrastructure.Services.GoogleVisionAssessmentOcrService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(90);
+});
 builder.Services.AddHostedService<ThanaweyaResultsImportHostedService>();
 builder.Services.AddScoped<WhatsAppExamNotificationService>();
 builder.Services.AddSignalR()

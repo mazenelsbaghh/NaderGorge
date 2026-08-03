@@ -14,6 +14,7 @@ public class Package : BaseEntity
     public string? ImageUrl { get; set; }
     public decimal Price { get; set; }
     public bool IsActive { get; set; } = true;
+    public PackageContentMode ContentMode { get; set; } = PackageContentMode.TermWithSections;
 
     public Guid SubjectId { get; set; }
     public Subject Subject { get; set; } = null!;
@@ -32,6 +33,7 @@ public class ContentSection : BaseEntity
     public string? ImageUrl { get; set; }
     public int Order { get; set; }
     public decimal Price { get; set; }
+    public bool IsSystemContainer { get; set; }
 
     public Guid TermId { get; set; }
     public Term Term { get; set; } = null!;

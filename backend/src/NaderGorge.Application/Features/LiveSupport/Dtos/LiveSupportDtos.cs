@@ -130,6 +130,7 @@ public static class LiveSupportErrorCodes
     public const string Forbidden = "LIVE_SUPPORT_FORBIDDEN";
     public const string MessageConflict = "LIVE_SUPPORT_MESSAGE_CONFLICT";
     public const string RatingConflict = "LIVE_SUPPORT_RATING_CONFLICT";
+    public const string AudioStaffOnly = "LIVE_SUPPORT_AUDIO_STAFF_ONLY";
 }
 
 public sealed record LiveSupportAITurnContextDto(

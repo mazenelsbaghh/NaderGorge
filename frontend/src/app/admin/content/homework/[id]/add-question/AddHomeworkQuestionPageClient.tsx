@@ -7,6 +7,7 @@ import { AdminPage } from '@/components/admin/AdminShellChrome';
 import { AdminBackButton } from '@/components/admin/AdminBackButton';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
+import { OcrQuestionImport } from '@/components/admin/OcrQuestionImport';
 import { Plus, Save, AlertCircle, Trash2, ArrowRight } from 'lucide-react';
 import { adminService, HomeworkDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
@@ -110,6 +111,17 @@ export default function AddHomeworkQuestionPageClient(props: { params: { id: str
     setQuestions(questions.filter((_, i) => i !== index));
   };
 
+  const handleOcrImport = (importedQuestions: InlineExamQuestionDto[]) => {
+    setQuestions((current) => [
+      ...current,
+      ...importedQuestions.map((question, index) => ({
+        ...question,
+        order: current.length + index + 1,
+      })),
+    ]);
+    toast.success(`تمت إضافة ${importedQuestions.length} سؤال للقائمة.`);
+  };
+
   const handleSubmit = async () => {
      if (!homeworkData) return;
      if (questions.length === 0) {
@@ -208,6 +220,11 @@ export default function AddHomeworkQuestionPageClient(props: { params: { id: str
                </div>
              </div>
              )}
+
+             <OcrQuestionImport
+               nextOrder={questions.length + 1}
+               onImport={handleOcrImport}
+             />
 
              {/* Add New Question Section */}
              <div className="rounded-2xl border border-[var(--admin-primary)] bg-[var(--admin-card)] shadow-sm overflow-hidden mt-2">

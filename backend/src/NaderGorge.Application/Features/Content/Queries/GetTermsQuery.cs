@@ -6,7 +6,7 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Application.Features.Content.Queries;
 
-public record GetTermsQuery(Guid PackageId, Guid? UserId = null) : IRequest<ApiResponse<List<TermDto>>>;
+public record GetTermsQuery(Guid PackageId, Guid? UserId = null, bool IncludeSystemContainers = false) : IRequest<ApiResponse<List<TermDto>>>;
 
 public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<List<TermDto>>>
 {
@@ -22,7 +22,7 @@ public class GetTermsQueryHandler : IRequestHandler<GetTermsQuery, ApiResponse<L
     public async Task<ApiResponse<List<TermDto>>> Handle(GetTermsQuery request, CancellationToken ct)
     {
         var terms = await _db.Terms
-            .Where(t => t.PackageId == request.PackageId)
+            .Where(t => t.PackageId == request.PackageId && (request.IncludeSystemContainers || !t.IsSystemContainer))
             .OrderBy(t => t.Order)
             .Select(t => new { t.Id, t.Title, t.Order, t.Price, t.ImageUrl })
             .ToListAsync(ct);

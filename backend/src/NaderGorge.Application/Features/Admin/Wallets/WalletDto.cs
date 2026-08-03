@@ -19,5 +19,6 @@ public record WalletDto
     
     public decimal DailyReceived { get; set; }
     public decimal MonthlyReceived { get; set; }
+    public decimal TotalReceived { get; set; }
     public DateTime CreatedAt { get; set; }
 }

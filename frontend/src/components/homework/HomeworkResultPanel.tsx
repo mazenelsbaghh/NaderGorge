@@ -15,6 +15,7 @@ import type { HomeworkResultDto } from '@/services/homework-service';
 import { normalizeQuestionRichText } from '@/lib/question-text';
 import { resolveMediaUrl } from '@/utils/resolve-media-url';
 import { QuestionImage } from '@/components/assessment/QuestionImage';
+import { QuestionCorrection } from '@/components/assessment/QuestionCorrection';
 
 export function HomeworkResultPanel({
   result,
@@ -195,6 +196,7 @@ export function HomeworkResultPanel({
                     الصحيح: <span dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctAnswer) }} />
                   </p>
                 )}
+                <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
               </article>
             ))}
           </div>
@@ -269,50 +271,19 @@ export function HomeworkResultPanel({
                         الإجابة الصحيحة
                       </p>
                       <p className="mt-1.5 text-sm font-bold leading-6 text-emerald-600 dark:text-emerald-400" dir="auto" dangerouslySetInnerHTML={{ __html: normalizeQuestionRichText(q.correctAnswer) }} />
-                      {q.writtenCorrection && (
-                        <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                            التصحيح
-                          </p>
-                          <p className="mt-1.5 whitespace-pre-wrap text-sm font-bold leading-6 text-foreground">
-                            {q.writtenCorrection}
-                          </p>
-                        </div>
-                      )}
-                      {q.audioUrl && (
-                        <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="mb-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
-                            تصحيح صوتي
-                          </p>
-                          <audio controls className="h-9 w-full" preload="none">
-                            <source src={resolveMediaUrl(q.audioUrl)} />
-                          </audio>
-                        </div>
-                      )}
+                      <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
                     </div>
                   ) : (
                     <div className="rounded-xl bg-muted/30 border border-border/30 p-4">
                       <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
                         ملاحظات
                       </p>
-                      {q.writtenCorrection ? (
-                        <p className="mt-1.5 whitespace-pre-wrap text-sm font-bold leading-6 text-foreground">
-                          {q.writtenCorrection}
-                        </p>
+                      {q.writtenCorrection || q.audioUrl ? (
+                        <QuestionCorrection writtenCorrection={q.writtenCorrection} audioUrl={q.audioUrl} />
                       ) : (
                         <p className="mt-1.5 text-sm font-bold leading-6 text-muted-foreground">
                           لا توجد ملاحظات.
                         </p>
-                      )}
-                      {q.audioUrl && (
-                        <div className="mt-3 border-t border-border/30 pt-3">
-                          <p className="mb-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
-                            تصحيح صوتي
-                          </p>
-                          <audio controls className="h-9 w-full" preload="none">
-                            <source src={resolveMediaUrl(q.audioUrl)} />
-                          </audio>
-                        </div>
                       )}
                     </div>
                   )}

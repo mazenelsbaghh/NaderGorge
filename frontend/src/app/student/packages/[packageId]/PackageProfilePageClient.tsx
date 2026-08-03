@@ -138,6 +138,9 @@ export default function PackageProfilePageClient() {
 
   const isEnrolled = pkg?.isEnrolled ?? false;
   const hasDirectPackageAccess = pkg?.hasDirectPackageAccess ?? false;
+  const contentMode = pkg?.contentMode ?? "TermWithSections";
+  const directSections = pkg?.directSections ?? [];
+  const directLessons = pkg?.directLessons ?? [];
 
   return (
     <motion.div
@@ -193,7 +196,11 @@ export default function PackageProfilePageClient() {
             {hasDirectPackageAccess ? "باقة مفعّلة" : isEnrolled ? "تفعيل جزئي" : "تحتاج تفعيل"}
           </span>
           <span className="rounded-full bg-slate-500/10 text-slate-600 dark:text-slate-400 px-3 py-1 text-xs font-black">
-            {terms.length} ترم
+            {contentMode === "LessonsOnly"
+              ? `${directLessons.length} حصة`
+              : contentMode === "SectionWithLessons"
+                ? `${directSections.length} قسم`
+                : `${terms.length} ترم`}
           </span>
         </div>
 
@@ -217,7 +224,68 @@ export default function PackageProfilePageClient() {
             </p>
           </div>
 
-          {/* Terms Section */}
+          {contentMode === "SectionWithLessons" ? (
+            <div className="space-y-4">
+              <div className="text-right">
+                <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر القسم</h2>
+                <p className="mt-1 text-sm text-[var(--admin-muted)]">الأقسام متاحة مباشرة داخل هذا الكورس.</p>
+              </div>
+              {directSections.length === 0 ? (
+                <div className="rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+                  <p className="font-bold text-[var(--admin-muted)]">لا توجد أقسام في هذا الكورس بعد.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  {directSections.map((section, idx) => (
+                    <Link
+                      key={section.id}
+                      href={pkg?.rootTermId ? `/student/packages/${packageId}/terms/${pkg.rootTermId}/sections/${section.id}` : '#'}
+                      prefetch={false}
+                      className="group flex items-center justify-between rounded-[1.75rem] border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
+                    >
+                      <div>
+                        <span className="text-xs font-black text-[var(--admin-primary)]">قسم {idx + 1}</span>
+                        <h3 className="mt-2 text-lg font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)]">{section.title}</h3>
+                        <p className="mt-2 text-xs font-bold text-[var(--admin-muted)]">{section.isPurchased || hasDirectPackageAccess ? '✦ مفتوح' : 'مقفل'}</p>
+                      </div>
+                      <ChevronLeft className="h-5 w-5 text-[var(--admin-muted)] group-hover:text-[var(--admin-primary)]" />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : contentMode === "LessonsOnly" ? (
+            <div className="space-y-4">
+              <div className="text-right">
+                <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر الحصة</h2>
+                <p className="mt-1 text-sm text-[var(--admin-muted)]">الحصص متاحة مباشرة داخل هذا الكورس.</p>
+              </div>
+              {directLessons.length === 0 ? (
+                <div className="rounded-[2rem] border border-dashed border-[var(--admin-border)] py-16 text-center">
+                  <p className="font-bold text-[var(--admin-muted)]">لا توجد حصص في هذا الكورس بعد.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {directLessons.map((lesson, idx) => (
+                    <Link
+                      key={lesson.id}
+                      href={`/student/packages/${packageId}/lessons/${lesson.id}`}
+                      prefetch={false}
+                      className="group flex items-center justify-between rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-5 text-right shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                    >
+                      <div>
+                        <span className="text-xs font-black text-[var(--admin-primary)]">حصة {idx + 1}</span>
+                        <h3 className="mt-1 text-base font-black text-[var(--admin-text)] group-hover:text-[var(--admin-primary)]">{lesson.title}</h3>
+                        {lesson.summary && <p className="mt-1 text-xs text-[var(--admin-muted)] line-clamp-2">{lesson.summary}</p>}
+                      </div>
+                      <ChevronLeft className="h-5 w-5 text-[var(--admin-muted)] group-hover:text-[var(--admin-primary)]" />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+          /* Terms Section */
           <div className="space-y-4">
             <div className="text-right">
               <h2 className="text-xl font-black text-[var(--admin-text)] sm:text-2xl">اختر الترم</h2>
@@ -342,6 +410,7 @@ export default function PackageProfilePageClient() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Left Column: Sidebar (Actions + Teacher Info) */}
@@ -355,7 +424,7 @@ export default function PackageProfilePageClient() {
 
             {hasDirectPackageAccess ? (
               <div className="rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 p-4 text-center font-black text-sm">
-                <CheckCircle2 className="inline h-4 w-4 mr-1" /> هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة الأترام مباشرة.
+                <CheckCircle2 className="inline h-4 w-4 mr-1" /> هذه الباقة مفعّلة في حسابك بالفعل. يمكنك البدء في دراسة المحتوى مباشرة.
               </div>
             ) : (
               <div className="flex flex-col gap-3">

@@ -853,6 +853,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(p => p.Subject).WithMany(s => s.Packages).HasForeignKey(p => p.SubjectId);
             e.HasOne(p => p.Teacher).WithMany(t => t.Packages).HasForeignKey(p => p.TeacherId);
             e.Property(p => p.TargetGrade).HasMaxLength(100).IsRequired().HasDefaultValue("All");
+            e.Property(p => p.ContentMode).HasConversion<string>().HasMaxLength(40).HasDefaultValue(PackageContentMode.TermWithSections);
         });
 
         modelBuilder.Entity<PackageCodePageProfile>(e =>
@@ -888,6 +889,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(c => c.Id);
             e.Property(c => c.Title).HasMaxLength(200).IsRequired();
             e.Property(c => c.ImageUrl).HasMaxLength(500);
+            e.Property(c => c.IsSystemContainer).HasDefaultValue(false);
             e.HasOne(c => c.Term).WithMany(t => t.Sections).HasForeignKey(c => c.TermId);
         });
 
@@ -1394,6 +1396,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasKey(t => t.Id);
             e.Property(t => t.Title).HasMaxLength(200).IsRequired();
             e.Property(t => t.ImageUrl).HasMaxLength(500);
+            e.Property(t => t.IsSystemContainer).HasDefaultValue(false);
             e.HasOne(t => t.Package).WithMany(p => p.Terms).HasForeignKey(t => t.PackageId);
         });
 

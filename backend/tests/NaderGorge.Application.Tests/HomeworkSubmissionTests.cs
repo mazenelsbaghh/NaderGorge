@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Features.Homework.Commands;
+using NaderGorge.Application.Features.Homework.Queries;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Entities.Homework;
@@ -38,7 +39,9 @@ public sealed class HomeworkSubmissionTests
             QuestionType = NaderGorge.Domain.Entities.Homework.QuestionType.MCQ,
             BodyText = "First",
             CorrectAnswerKey = "A",
-            PointsActive = 1
+            PointsActive = 1,
+            AudioUrl = "/uploads/audio/homework-correction.mp3",
+            WrittenCorrection = "التصحيح المسجل للسؤال"
         };
         var secondQuestion = new HomeworkQuestion
         {
@@ -82,6 +85,16 @@ public sealed class HomeworkSubmissionTests
         Assert.All(persistedAnswers, answer => Assert.Equal(1, answer.ScoreReceived));
         Assert.Contains(persistedAnswers, answer => answer.QuestionId == firstQuestion.Id && answer.ProvidedAnswer == "A");
         Assert.Contains(persistedAnswers, answer => answer.QuestionId == secondQuestion.Id && answer.ProvidedAnswer == "B");
+
+        var resultHandler = new GetHomeworkResultQueryHandler(db, new HomeworkAllowAccessService());
+        var result = await resultHandler.Handle(
+            new GetHomeworkResultQuery(homework.Id, student.Id),
+            CancellationToken.None);
+
+        Assert.True(result.Success);
+        var questionReview = result.Data!.QuestionReviews.Single(q => q.QuestionId == firstQuestion.Id);
+        Assert.Equal("/uploads/audio/homework-correction.mp3", questionReview.AudioUrl);
+        Assert.Equal("التصحيح المسجل للسؤال", questionReview.WrittenCorrection);
     }
 
     private sealed class HomeworkAllowAccessService : IAccessCheckService

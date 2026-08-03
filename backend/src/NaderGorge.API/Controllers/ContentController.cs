@@ -43,9 +43,9 @@ public class ContentController : ControllerBase
     }
 
     [HttpGet("packages/{packageId:guid}/terms")]
-    public async Task<IActionResult> GetTerms(Guid packageId)
+    public async Task<IActionResult> GetTerms(Guid packageId, [FromQuery] bool includeSystemContainers = false)
     {
-        var response = await _mediator.Send(new GetTermsQuery(packageId, GetUserId()));
+        var response = await _mediator.Send(new GetTermsQuery(packageId, GetUserId(), includeSystemContainers));
         return Ok(response);
     }
 

@@ -34,6 +34,24 @@ public sealed class LiveSupportSecurityTests
     }
 
     [Fact]
+    public async Task ParticipantCannotSendAudioMessages()
+    {
+        await using var fixture = await LiveSupportTestDb.CreateSeededAsync();
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, LiveSupportTestData.StudentId, null);
+        var service = new LiveSupportService(fixture.Db, new LiveSupportEnabledSettings(), new LiveSupportConnectedPresence());
+
+        var error = await Assert.ThrowsAsync<LiveSupportException>(() => service.SendParticipantMessageAsync(
+            participant,
+            LiveSupportTestData.Conversation().Id,
+            Guid.NewGuid().ToString(),
+            "voice.webm",
+            LiveSupportMessageType.Audio,
+            CancellationToken.None));
+
+        Assert.Equal(LiveSupportErrorCodes.AudioStaffOnly, error.Code);
+    }
+
+    [Fact]
     public async Task CurrentAttendanceSession_MarksConfiguredStaffAsCheckedIn()
     {
         await using var fixture = await LiveSupportTestDb.CreateSeededAsync();

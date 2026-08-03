@@ -6,6 +6,17 @@ export const CONTENT_CACHE_KEYS = {
   lessons: 'content:lessons',
 } as const;
 
+export type PackageContentMode =
+  | 'TermWithSections'
+  | 'SectionWithLessons'
+  | 'LessonsOnly';
+
+export const PACKAGE_CONTENT_MODE_OPTIONS: Array<{ value: PackageContentMode; label: string; description: string }> = [
+  { value: 'TermWithSections', label: 'ترم ← أقسام ← حصص', description: 'ترم بداخله أقسام، وكل قسم بداخله حصص وفيديوهات.' },
+  { value: 'SectionWithLessons', label: 'قسم ← حصص', description: 'القسم يظهر مباشرة داخل الكورس، وكل حصة بداخله لها فيديوهات.' },
+  { value: 'LessonsOnly', label: 'حصص ← فيديوهات', description: 'الحصص تظهر مباشرة داخل الكورس، وكل حصة لها فيديوهات.' },
+];
+
 export interface PackageDto {
   id: string;
   name: string;
@@ -23,6 +34,11 @@ export interface PackageDto {
   teacherBio?: string;
   teacherSpecialization?: string;
   targetGrade?: string;
+  contentMode?: PackageContentMode;
+  rootTermId?: string;
+  rootSectionId?: string;
+  directSections?: PackageDirectSectionDto[];
+  directLessons?: PackageDirectLessonDto[];
 }
 
 export interface TermDto {
@@ -41,6 +57,24 @@ export interface ContentSectionDto {
   price?: number;
   imageUrl?: string;
   isPurchased?: boolean;
+}
+
+export interface PackageDirectSectionDto {
+  id: string;
+  title: string;
+  order: number;
+  price?: number;
+  imageUrl?: string;
+  isPurchased?: boolean;
+}
+
+export interface PackageDirectLessonDto {
+  id: string;
+  title: string;
+  summary: string;
+  order: number;
+  price?: number;
+  hasAccess?: boolean;
 }
 
 export interface LessonSummaryDto {
@@ -220,7 +254,10 @@ export const contentService = {
   getPackages: (options?: { force?: boolean; signal?: AbortSignal }): Promise<PackagesResponse> => {
     return apiClient.get('/content/packages', { signal: options?.signal });
   },
-  getTerms: (packageId: string) => apiClient.get(`/content/packages/${packageId}/terms`),
+  getTerms: (packageId: string, includeSystemContainers = false) =>
+    apiClient.get(`/content/packages/${packageId}/terms`, {
+      params: includeSystemContainers ? { includeSystemContainers: true } : undefined,
+    }),
   getPackageCodePage: (packageId: string) => apiClient.get<ContentApiResponse<PackageCodePageDto>>(`/content/packages/${packageId}/code-page`),
   getSections: (termId: string) => apiClient.get(`/content/terms/${termId}/sections`),
   getLessons: (sectionId: string) => apiClient.get(`/content/sections/${sectionId}/lessons`),

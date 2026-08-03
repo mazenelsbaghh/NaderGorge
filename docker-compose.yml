@@ -115,6 +115,7 @@ services:
       WhatsAppCloudApi__ApiVersion: ${WHATSAPP_CLOUD_API_VERSION:-v20.0}
       WhatsAppCloudApi__DefaultTemplateName: ${WHATSAPP_CLOUD_DEFAULT_TEMPLATE_NAME:-student_result_2}
       WhatsAppCloudApi__DefaultTemplateLanguage: ${WHATSAPP_CLOUD_DEFAULT_TEMPLATE_LANGUAGE:-ar_EG}
+      GoogleCloud__VisionApiKey: ${GOOGLE_CLOUD_VISION_API_KEY:-}
       Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://app.localhost:3000,http://admin.localhost:3000,http://staff.localhost:3000,http://assistant.localhost:3000,http://teacher.localhost:3000,http://app.lvh.me:3000,http://admin.lvh.me:3000,http://staff.lvh.me:3000,http://assistant.lvh.me:3000,http://teacher.lvh.me:3000,http://localhost:8738,http://localhost:8739,http://localhost:8740,http://localhost:8741,http://localhost:8742,https://massar-academy.net,https://www.massar-academy.net,https://app.massar-academy.net,https://student.massar-academy.net,https://staff.massar-academy.net,https://super.massar-academy.net,https://teacher.massar-academy.net,https://admin.massar-academy.net}
       CookieSettings__Domain: ${COOKIE_DOMAIN:-}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}

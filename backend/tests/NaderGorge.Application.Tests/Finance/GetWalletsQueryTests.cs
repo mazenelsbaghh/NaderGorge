@@ -65,8 +65,10 @@ public sealed class GetWalletsQueryTests
         var secondWalletResult = Assert.Single(result.Data!, wallet => wallet.Id == secondWallet.Id);
         Assert.Equal(100m, firstWalletResult.DailyReceived);
         Assert.Equal(100m, firstWalletResult.MonthlyReceived);
+        Assert.Equal(100m, firstWalletResult.TotalReceived);
         Assert.Equal(250m, secondWalletResult.DailyReceived);
         Assert.Equal(250m, secondWalletResult.MonthlyReceived);
+        Assert.Equal(250m, secondWalletResult.TotalReceived);
         Assert.Equal(9_500m, firstWalletResult.CurrentBalance);
     }
 }

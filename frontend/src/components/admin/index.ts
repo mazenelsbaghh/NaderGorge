@@ -47,6 +47,7 @@ export * from './AddLessonForm';
 export * from '../ui/confirm-dialog';
 export * from './AdminTeacherPhotoUpload';
 export * from './ContentHierarchyPanel';
+export * from './PackageDirectContentPanel';
 export * from './ContentBasicDetailsForm';
 export * from './ContentImageUpload';
 export * from './ContentInternalCode';

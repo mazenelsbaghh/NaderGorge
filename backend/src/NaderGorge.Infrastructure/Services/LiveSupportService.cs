@@ -205,6 +205,11 @@ public sealed class LiveSupportService(
         {
             throw new LiveSupportException("VALIDATION_ERROR", "نوع الملف غير مدعوم أو لا يطابق محتواه.");
         }
+        if (IsAudioAttachment(stored.ContentType))
+        {
+            await _attachmentStorage.DeleteAsync(stored.StoragePath, ct);
+            throw new LiveSupportException(LiveSupportErrorCodes.AudioStaffOnly, "التسجيلات الصوتية متاحة لفريق الدعم فقط.");
+        }
         var entity = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = participant.StudentUserId?.ToString("N") ?? participant.GuestSessionId!.Value.ToString("N") };
         _db.LiveSupportAttachments.Add(entity);
         await _db.SaveChangesAsync(ct);
@@ -228,14 +233,14 @@ public sealed class LiveSupportService(
     {
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
         if (IsTerminal(conversation.Status)) throw new LiveSupportException(LiveSupportErrorCodes.ConversationTerminal, "المحادثة مغلقة.");
-        if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "رفع الصور غير متاح مؤقتًا.");
+        if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "رفع المرفقات غير متاح مؤقتًا.");
         LiveSupportStoredAttachment stored;
         try { stored = await _attachmentStorage.SaveAsync(content, fileName, contentType, sizeBytes, ct); }
-        catch (InvalidUploadContentException) { throw new LiveSupportException("VALIDATION_ERROR", "الصورة غير مدعومة أو لا تطابق محتواها."); }
-        if (!stored.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+        catch (InvalidUploadContentException) { throw new LiveSupportException("VALIDATION_ERROR", "المرفق غير مدعوم أو لا يطابق محتواه."); }
+        if (!IsImageAttachment(stored.ContentType) && !IsAudioAttachment(stored.ContentType))
         {
             await _attachmentStorage.DeleteAsync(stored.StoragePath, ct);
-            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا.");
+            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا أو تسجيلات صوتية.");
         }
         var entity = new LiveSupportAttachment { StoragePath = stored.StoragePath, OriginalFileName = stored.OriginalFileName, ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByIdentity = staffUserId.ToString("N") };
         _db.LiveSupportAttachments.Add(entity);
@@ -248,8 +253,8 @@ public sealed class LiveSupportService(
         await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
         var attachment = await _db.LiveSupportAttachments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == attachmentId && !x.IsBlocked, ct);
         var linked = await _db.LiveSupportMessages.AnyAsync(x => x.ConversationId == conversationId && x.AttachmentId == attachmentId, ct);
-        if (attachment is null || !linked) throw new LiveSupportException("NOT_FOUND", "الصورة غير موجودة.");
-        if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "الصورة غير متاحة مؤقتًا.");
+        if (attachment is null || !linked) throw new LiveSupportException("NOT_FOUND", "المرفق غير موجود.");
+        if (_attachmentStorage is null) throw new LiveSupportException("ATTACHMENT_STORAGE_UNAVAILABLE", "المرفق غير متاح مؤقتًا.");
         return new(await _attachmentStorage.OpenReadAsync(attachment.StoragePath, ct), attachment.OriginalFileName, attachment.ContentType, attachment.SizeBytes);
     }
 
@@ -275,6 +280,7 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportSendResultDto> SendParticipantMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, string clientMessageId, string content, LiveSupportMessageType type, CancellationToken ct)
     {
+        ValidateParticipantMessageType(type);
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
         return await SendMessageAsync(new PersistMessageRequest(
             conversation,
@@ -288,10 +294,22 @@ public sealed class LiveSupportService(
 
     public async Task<LiveSupportSendResultDto> SendParticipantAttachmentMessageAsync(LiveSupportParticipantIdentity participant, Guid conversationId, string clientMessageId, Guid attachmentId, string? caption, LiveSupportMessageType type, CancellationToken ct)
     {
+        if (type == LiveSupportMessageType.Audio)
+            throw new LiveSupportException(LiveSupportErrorCodes.AudioStaffOnly, "التسجيلات الصوتية متاحة لفريق الدعم فقط.");
+        if (type is not (LiveSupportMessageType.Image or LiveSupportMessageType.Pdf))
+            throw new LiveSupportException("VALIDATION_ERROR", "نوع المرفق غير مدعوم.");
         var conversation = await RequireParticipantConversationAsync(participant, conversationId, ct);
         var identity = participant.StudentUserId?.ToString("N") ?? participant.GuestSessionId!.Value.ToString("N");
         var attachment = await _db.LiveSupportAttachments.FirstOrDefaultAsync(x => x.Id == attachmentId && x.UploadedByIdentity == identity && !x.IsBlocked, ct)
             ?? throw new LiveSupportException("NOT_FOUND", "الملف غير موجود.");
+        var contentMatchesType = type switch
+        {
+            LiveSupportMessageType.Image => IsImageAttachment(attachment.ContentType),
+            LiveSupportMessageType.Pdf => string.Equals(attachment.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+        if (!contentMatchesType)
+            throw new LiveSupportException("VALIDATION_ERROR", "نوع المرفق لا يطابق الرسالة.");
         return await SendMessageAsync(new PersistMessageRequest(
             conversation,
             participant.Type == LiveSupportParticipantType.Student ? LiveSupportSenderType.Student : LiveSupportSenderType.Guest,
@@ -400,9 +418,11 @@ public sealed class LiveSupportService(
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
         if (!isAdmin && !await IsCheckedInAsync(staffUserId, ct)) throw new LiveSupportException(LiveSupportErrorCodes.Forbidden, "يجب تسجيل الحضور أولًا.");
         var attachment = await _db.LiveSupportAttachments.FirstOrDefaultAsync(x => x.Id == attachmentId && x.UploadedByIdentity == staffUserId.ToString("N") && !x.IsBlocked, ct)
-            ?? throw new LiveSupportException("NOT_FOUND", "الصورة غير موجودة.");
-        if (!attachment.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) || type != LiveSupportMessageType.Image)
-            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا.");
+            ?? throw new LiveSupportException("NOT_FOUND", "المرفق غير موجود.");
+        var validImage = type == LiveSupportMessageType.Image && IsImageAttachment(attachment.ContentType);
+        var validAudio = type == LiveSupportMessageType.Audio && IsAudioAttachment(attachment.ContentType);
+        if (!validImage && !validAudio)
+            throw new LiveSupportException("VALIDATION_ERROR", "مرفقات الموظف يجب أن تكون صورًا أو تسجيلات صوتية.");
         var result = await SendMessageAsync(new PersistMessageRequest(
             conversation,
             isAdmin ? LiveSupportSenderType.Admin : LiveSupportSenderType.Staff,
@@ -1047,6 +1067,18 @@ public sealed class LiveSupportService(
 
         return new LiveSupportSendResultDto(ToDto(message), false);
     }
+
+    private static void ValidateParticipantMessageType(LiveSupportMessageType type)
+    {
+        if (type == LiveSupportMessageType.Audio)
+            throw new LiveSupportException(LiveSupportErrorCodes.AudioStaffOnly, "التسجيلات الصوتية متاحة لفريق الدعم فقط.");
+        if (type != LiveSupportMessageType.Text)
+            throw new LiveSupportException("VALIDATION_ERROR", "نوع الرسالة غير مدعوم بدون مرفق.");
+    }
+
+    private static bool IsImageAttachment(string contentType) => contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAudioAttachment(string contentType) => contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase);
 
     private async Task<LiveSupportMessageDto> UpdateMessageAsync(LiveSupportMessage message, string content, Guid? actorUserId, Guid? actorGuestId, CancellationToken ct)
     {

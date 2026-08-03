@@ -8,6 +8,7 @@ import { AdminBackButton } from '@/components/admin/AdminBackButton';
 import { AdminConfirmationDialog } from '@/components/admin/AdminConfirmationDialog';
 import { TeacherShellChrome } from '@/components/teacher/TeacherShellChrome';
 import { QuestionEditor, InlineExamQuestionDto } from '@/components/admin/QuestionEditor';
+import { OcrQuestionImport } from '@/components/admin/OcrQuestionImport';
 import { Plus, AlertCircle, Trash2, ArrowRight } from 'lucide-react';
 import { adminService, ExamDashboardDto } from '@/services/admin-service';
 import toast from 'react-hot-toast';
@@ -113,6 +114,24 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
     }
   };
 
+  const handleOcrImport = async (questions: InlineExamQuestionDto[]) => {
+    try {
+      await adminService.addQuestionsToExam(params.id, {
+        questions: questions.map((question, index) => ({
+          ...question,
+          order: (examData?.questionCount ?? 0) + index + 1,
+        })),
+      });
+      toast.success(`تمت إضافة ${questions.length} سؤال للامتحان.`);
+      const updatedData = await adminService.getExamDashboard(params.id);
+      setExamData(updatedData);
+      setCurrentQuestion(getDefaultQuestion(updatedData.questionCount + 1));
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'تعذر إضافة أسئلة OCR للامتحان.');
+      throw err;
+    }
+  };
+
   const content = (
     <>
       <div className="flex flex-col gap-6">
@@ -167,6 +186,11 @@ export default function AddExamQuestionPageClient(props: { params: { id: string 
               </div>
             </div>
             )}
+
+            <OcrQuestionImport
+              nextOrder={examData.questionCount + 1}
+              onImport={handleOcrImport}
+            />
 
             {/* Add New Question Section */}
             <div className="rounded-2xl border border-[var(--admin-primary)] bg-[var(--admin-card)] shadow-sm overflow-hidden mt-2">

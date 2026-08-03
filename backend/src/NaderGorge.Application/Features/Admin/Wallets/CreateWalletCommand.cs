@@ -91,6 +91,7 @@ public class CreateWalletCommandHandler : IRequestHandler<CreateWalletCommand, A
             SmsSenderFilters = filters,
             DailyReceived = 0m,
             MonthlyReceived = 0m,
+            TotalReceived = 0m,
             CreatedAt = wallet.CreatedAt
         };
 

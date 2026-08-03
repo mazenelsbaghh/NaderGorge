@@ -579,6 +579,15 @@ export interface HomeworkDashboardDto {
   questions: HomeworkQuestionSummaryDto[];
 }
 
+export interface AssessmentOcrQuestionDto {
+  text: string;
+  type: 'MCQ' | 'Essay' | 'FindTheMistake';
+  points: number;
+  order: number;
+  options: { text: string; isCorrect: boolean }[];
+  confidence: number;
+}
+
 export interface ModerationLessonCommentDto {
   id: string;
   lessonId: string;
@@ -1079,6 +1088,7 @@ export const adminService = {
     targetGrade: string;
     teacherId?: string;
     academicScopes?: AcademicScopePayload[];
+    contentMode?: 'TermWithSections' | 'SectionWithLessons' | 'LessonsOnly';
   }) => {
     const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/packages', payload);
     return res.data?.data;
@@ -1147,7 +1157,7 @@ export const adminService = {
     return res.data?.data;
   },
   createSection: async (payload: any) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/sections', payload);
+    const res = await apiClient.post<ApiResponse<string>>('/admin/sections', payload);
     return res.data?.data;
   },
   updateSection: async (id: string, payload: { title: string; order: number; price: number }) => {
@@ -1155,7 +1165,7 @@ export const adminService = {
     return res.data;
   },
   createLesson: async (payload: any) => {
-    const res = await apiClient.post<ApiResponse<{ id: string }>>('/admin/lessons', payload);
+    const res = await apiClient.post<ApiResponse<string>>('/admin/lessons', payload);
     return res.data?.data;
   },
   updateLesson: async (id: string, payload: { title: string; summary: string; order: number; price: number }) => {
@@ -1402,6 +1412,14 @@ export const adminService = {
   getHomeworkDashboard: async (homeworkId: string) => {
     const res = await apiClient.get<ApiResponse<HomeworkDashboardDto>>(`/admin/homework/${homeworkId}/dashboard`);
     return res.data?.data;
+  },
+  extractAssessmentQuestionsFromImages: async (files: File[]) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    const res = await apiClient.post<ApiResponse<AssessmentOcrQuestionDto[]>>('/admin/assessments/ocr/questions', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data?.data ?? [];
   },
 
   deleteExamQuestion: async (examId: string, examQuestionId: string) => {

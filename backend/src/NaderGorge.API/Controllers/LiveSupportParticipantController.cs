@@ -396,7 +396,7 @@ public sealed class LiveSupportParticipantController(ILiveSupportService service
         var status = ex.Code switch
         {
             LiveSupportErrorCodes.SupportUnavailable => StatusCodes.Status423Locked,
-            LiveSupportErrorCodes.Forbidden => StatusCodes.Status403Forbidden,
+            LiveSupportErrorCodes.Forbidden or LiveSupportErrorCodes.AudioStaffOnly => StatusCodes.Status403Forbidden,
             "VALIDATION_ERROR" => StatusCodes.Status422UnprocessableEntity,
             "NOT_FOUND" => StatusCodes.Status404NotFound,
             _ => StatusCodes.Status409Conflict

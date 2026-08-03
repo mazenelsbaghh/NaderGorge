@@ -5,6 +5,7 @@ import { Send, X } from 'lucide-react';
 
 import { AccessibleOverlay } from '@/components/ui/AccessibleOverlay';
 import { useLiveSupportHub } from '@/hooks/useLiveSupportHub';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 import { createClientId } from '@/lib/client-id';
 import {
   liveSupportService,
@@ -105,7 +106,7 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
                   <p className="whitespace-pre-wrap break-words text-sm">{message.content}</p>
                   <div className={`mt-2 flex items-center justify-between gap-4 text-[11px] ${fromTeam ? 'text-[color-mix(in_srgb,var(--admin-primary-contrast)_76%,transparent)]' : 'text-[var(--admin-muted)]'}`}>
                     <span>{senderLabel(message.senderType)}</span>
-                    <time>{new Date(message.sentAt).toLocaleString('ar-EG')}</time>
+                    <time>{formatCairoDateTime(message.sentAt)}</time>
                   </div>
                 </article>;
               })}
@@ -122,7 +123,7 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
 
           <aside className="min-h-0 overflow-y-auto p-4">
             <div className="mb-3 flex items-center justify-between gap-2"><h3 className="font-bold text-[var(--admin-text)]">السجل التشغيلي</h3><label className="text-xs text-[var(--admin-muted)]">النوع<select value={eventFilter} onChange={event => setEventFilter(event.target.value)} className="mr-2 h-9 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-card)] px-2 text-[var(--admin-text)]"><option value="all">الكل</option><option value="AI">AI / Worker</option><option value="Assignment">الإسناد</option><option value="StudentAction">الإجراءات</option><option value="Message">الرسائل</option></select></label></div>
-            <ol className="space-y-3">{timeline.items.filter(item => eventFilter === 'all' || (eventFilter === 'AI' ? item.type.startsWith('AI') : item.type === eventFilter)).map((item, index) => <li key={`${item.at}-${index}`} className="rounded-xl bg-[var(--admin-card-soft)] p-3 text-sm"><strong className="text-[var(--admin-text)]">{item.summary}</strong><time className="mt-1 block text-xs text-[var(--admin-muted)]">{new Date(item.at).toLocaleString('ar-EG')}</time><p className="mt-1 text-xs text-[var(--admin-muted)]">الفاعل: {item.actorName || 'النظام الآلي'}</p>{item.safeDetails && <pre className="mt-2 whitespace-pre-wrap break-all rounded-lg bg-[var(--admin-card)] p-2 text-xs text-[var(--admin-text)]" dir="auto">{item.safeDetails}</pre>}</li>)}</ol>
+            <ol className="space-y-3">{timeline.items.filter(item => eventFilter === 'all' || (eventFilter === 'AI' ? item.type.startsWith('AI') : item.type === eventFilter)).map((item, index) => <li key={`${item.at}-${index}`} className="rounded-xl bg-[var(--admin-card-soft)] p-3 text-sm"><strong className="text-[var(--admin-text)]">{item.summary}</strong><time className="mt-1 block text-xs text-[var(--admin-muted)]">{formatCairoDateTime(item.at)}</time><p className="mt-1 text-xs text-[var(--admin-muted)]">الفاعل: {item.actorName || 'النظام الآلي'}</p>{item.safeDetails && <pre className="mt-2 whitespace-pre-wrap break-all rounded-lg bg-[var(--admin-card)] p-2 text-xs text-[var(--admin-text)]" dir="auto">{item.safeDetails}</pre>}</li>)}</ol>
           </aside>
         </div>
       </div>

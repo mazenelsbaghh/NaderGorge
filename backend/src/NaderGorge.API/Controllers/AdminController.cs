@@ -12,6 +12,7 @@ using NaderGorge.Domain.Entities;
 using NaderGorge.Application.Interfaces;
 using NaderGorge.Application.Features.Admin.Teachers.Queries;
 using NaderGorge.Application.Features.Admin.Content.Queries;
+using NaderGorge.Application.Features.Admin.Ocr;
 using SixLabors.ImageSharp;
 
 namespace NaderGorge.API.Controllers;
@@ -707,6 +708,69 @@ public class AdminController : ControllerBase
 
         var relativeUrl = $"/protected/resources/{dateFolder}/{safeFileName}";
         return Ok(ApiResponse<object>.Ok(new { Url = relativeUrl, FileName = validation.DisplayFileName, ContentType = validation.ContentType }));
+    }
+
+    [HttpPost("assessments/ocr/questions")]
+    [HasPermission("exams.manage")]
+    [RequestSizeLimit(32 * 1024 * 1024)]
+    public async Task<IActionResult> ExtractAssessmentQuestionsFromImages(
+        [FromForm] List<IFormFile> files,
+        [FromServices] IAssessmentOcrService ocrService,
+        CancellationToken cancellationToken)
+    {
+        if (files is null || files.Count == 0)
+            return BadRequest(ApiResponse.Fail("اختار صورة واحدة على الأقل فيها الأسئلة."));
+
+        if (files.Count > 20 || files.Sum(file => file.Length) > 32 * 1024 * 1024)
+            return BadRequest(ApiResponse.Fail("يمكن رفع 20 صورة بحد أقصى، بإجمالي 32 ميجابايت."));
+        if (files.Any(file => file.Length == 0 || file.Length > 8 * 1024 * 1024))
+            return BadRequest(ApiResponse.Fail("كل صورة يجب ألا تتجاوز 8 ميجابايت."));
+
+        try
+        {
+            var allQuestions = await ExtractQuestionsFromFilesAsync(files, ocrService, cancellationToken);
+            return Ok(ApiResponse<IReadOnlyList<AssessmentOcrQuestionDto>>.Ok(allQuestions));
+        }
+        catch (InvalidUploadContentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+    }
+
+    private static async Task<IReadOnlyList<AssessmentOcrQuestionDto>> ExtractQuestionsFromFilesAsync(
+        IReadOnlyList<IFormFile> files,
+        IAssessmentOcrService ocrService,
+        CancellationToken cancellationToken)
+    {
+        var allQuestions = new List<AssessmentOcrQuestionDto>();
+        foreach (var file in files)
+        {
+            var (bytes, contentType) = await ReadValidatedImageAsync(file, cancellationToken);
+            await using var stream = new MemoryStream(bytes, writable: false);
+            var questions = await ocrService.ExtractQuestionsAsync(stream, contentType, cancellationToken);
+            allQuestions.AddRange(questions.Select((question, index) => question with { Order = allQuestions.Count + index + 1 }));
+        }
+
+        return allQuestions;
+    }
+
+    private static async Task<(byte[] Bytes, string ContentType)> ReadValidatedImageAsync(
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        await using var input = file.OpenReadStream();
+        using var memory = new MemoryStream();
+        await input.CopyToAsync(memory, cancellationToken);
+        var bytes = memory.ToArray();
+        var validation = UploadFileSafety.Validate(bytes, file.FileName, file.ContentType, SafeUploadKind.ProtectedResource);
+        if (!validation.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(validation.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("OCR supports JPG, PNG, WEBP, and PDF files.");
+        return (bytes, validation.ContentType);
     }
 
     [HttpPost("teacher-photos/upload")]

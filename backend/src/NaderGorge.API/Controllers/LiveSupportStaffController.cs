@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using NaderGorge.Application.Common;
 using NaderGorge.Application.Features.LiveSupport.Dtos;
 using NaderGorge.Application.Features.LiveSupport.Interfaces;
+using NaderGorge.Domain.Enums;
 
 namespace NaderGorge.API.Controllers;
 
@@ -39,6 +40,8 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
     {
         try
         {
+            if (!request.AttachmentId.HasValue && request.Type != LiveSupportMessageType.Text)
+                return UnprocessableEntity(ApiResponse<object>.Fail("نوع الرسالة غير مدعوم بدون مرفق.", ["VALIDATION_ERROR"]));
             var result = request.AttachmentId.HasValue
                 ? await _service.SendStaffAttachmentMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.AttachmentId.Value, request.Content, request.Type, ct)
                 : await _service.SendStaffMessageAsync(UserId(), User.IsInRole("Admin"), conversationId, request.ClientMessageId, request.Content ?? string.Empty, ct);
@@ -178,7 +181,7 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
     }
 
     private Guid UserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    private IActionResult Error(LiveSupportException ex) => StatusCode(ex.Code == LiveSupportErrorCodes.Forbidden ? 403 : ex.Code == "NOT_FOUND" ? 404 : 409, ApiResponse<object>.Fail(ex.Message, [ex.Code]));
+    private IActionResult Error(LiveSupportException ex) => StatusCode(ex.Code is LiveSupportErrorCodes.Forbidden or LiveSupportErrorCodes.AudioStaffOnly ? 403 : ex.Code == "NOT_FOUND" ? 404 : ex.Code == "VALIDATION_ERROR" ? 422 : 409, ApiResponse<object>.Fail(ex.Message, [ex.Code]));
 }
 
 public sealed record UpdateStaffCannedRepliesRequest(IReadOnlyList<LiveSupportCannedReplyDto> Replies);

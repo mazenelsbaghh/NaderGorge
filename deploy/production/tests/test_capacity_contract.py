@@ -94,5 +94,6 @@ def test_connection_budgets_leave_database_and_redis_headroom() -> None:
         ROOT / "deploy/production/config/redis/redis.conf.tmpl"
     ).read_text(encoding="utf-8")
     assert "Maximum Pool Size=50" in app_env
+    assert '"GOOGLE_CLOUD_VISION_API_KEY"' in app_env
     assert "maxmemory 4gb" in redis
     assert "maxmemory-policy noeviction" in redis

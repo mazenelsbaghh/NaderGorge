@@ -5,7 +5,7 @@ import { Activity, Clock3, Coffee, RefreshCw, Search, TimerOff, UsersRound } fro
 import toast from 'react-hot-toast';
 import { AdminColumn, AdminDataTable, AdminPage, AdminStatCard } from '@/components/admin';
 import { AdminBreakSessionDto, AdminDailyAttendanceReportDto, hrService } from '@/services/hr-service';
-import { formatCairoDateTime } from '@/lib/cairo-time';
+import { formatCairoDateTime, parseUtcDateTime } from '@/lib/cairo-time';
 
 const cairoToday = () => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -66,9 +66,11 @@ export default function HrAdminPageClient() {
     return dailyReport.filter((item) => item.employee.toLocaleLowerCase('ar').includes(query) || item.employeePhone.includes(query));
   }, [dailyReport, search]);
 
+  const elapsedTodayMinutes = (clockedInAt: string) =>
+    Math.max(0, Math.floor((now - parseUtcDateTime(clockedInAt).getTime()) / 60_000));
   const durationMinutes = (row: AdminBreakSessionDto) => row.clockedOutAt
     ? row.workedMinutes
-    : Math.max(row.workedMinutes, Math.floor((now - new Date(row.clockedInAt).getTime()) / 60_000));
+    : elapsedTodayMinutes(row.clockedInAt);
   const formatDuration = (minutes: number) => `${Math.floor(minutes / 60)} س ${Math.max(0, minutes % 60)} د`;
   const formatTime = (value: string) => formatCairoDateTime(value, { hour: '2-digit', minute: '2-digit' });
 
@@ -90,7 +92,7 @@ export default function HrAdminPageClient() {
     { key: 'workDate', label: 'اليوم', render: (row) => <span className="font-bold" dir="ltr">{row.workDate}</span> },
     { key: 'clockedInAt', label: 'الحضور', render: (row) => <span className="font-black">{formatTime(row.clockedInAt)}</span> },
     { key: 'clockedOutAt', label: 'الانصراف', render: (row) => row.clockedOutAt ? <span className="font-black">{formatTime(row.clockedOutAt)}</span> : <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">ما زال يعمل</span> },
-    { key: 'workedMinutes', label: 'صافي مدة العمل', render: (row) => <span className="font-black text-[var(--admin-primary)]">{formatDuration(row.hasOpenSession ? Math.max(row.workedMinutes, Math.floor((now - new Date(row.clockedInAt).getTime()) / 60_000)) : row.workedMinutes)}</span> },
+    { key: 'workedMinutes', label: 'صافي مدة العمل', render: (row) => <span className="font-black text-[var(--admin-primary)]">{formatDuration(row.hasOpenSession ? elapsedTodayMinutes(row.clockedInAt) : row.workedMinutes)}</span> },
     { key: 'lateMinutes', label: 'التأخير', render: (row) => row.lateMinutes > 0 ? <span className="font-black text-rose-700">{row.lateMinutes} د</span> : '—' },
     { key: 'earlyLeaveMinutes', label: 'خروج مبكر', render: (row) => row.earlyLeaveMinutes > 0 ? <span className="font-black text-amber-700">{row.earlyLeaveMinutes} د</span> : '—' },
     { key: 'overtimeMinutes', label: 'إضافي', render: (row) => row.overtimeMinutes > 0 ? <span className="font-black text-emerald-700">{row.overtimeMinutes} د</span> : '—' },

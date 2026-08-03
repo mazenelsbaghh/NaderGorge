@@ -85,17 +85,21 @@ export default function TeacherSectionProfilePageClient(props: { params: { id: s
     subtitle: l.summary || undefined,
     href: `/teacher/packages/lessons/${l.id}`,
   }));
+  const parentHref = section.isDirect
+    ? `/teacher/packages/packages/${section.packageId}`
+    : `/teacher/packages/terms/${section.termId}`;
+  const parentLabel = section.isDirect ? "الباقة" : "الترم";
 
   return (
     <TeacherPage
       activePath="/teacher/packages"
-      sectionLabel="إدارة المحتوى ▸ الباقات ▸ الأترام ▸ الأقسام"
+      sectionLabel={section.isDirect ? "إدارة المحتوى ▸ الباقات ▸ الأقسام المباشرة" : "إدارة المحتوى ▸ الباقات ▸ الأترام ▸ الأقسام"}
       pageTitle={section.title}
       subtitle={`ترتيب: ${section.order} — ${lessons.length} حصة`}
       action={
-        <NeumorphButton onClick={() => router.push(`/teacher/packages/terms/${section.termId}`)} intent="ghost" size="md" pill>
+        <NeumorphButton onClick={() => router.push(parentHref)} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
-          الترم
+          {parentLabel}
         </NeumorphButton>
       }
     >

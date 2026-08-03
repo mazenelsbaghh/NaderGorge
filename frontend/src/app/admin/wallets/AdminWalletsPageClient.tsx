@@ -221,6 +221,7 @@ export default function AdminWalletsPageClient() {
   const activeWallets = wallets.filter(w => w.isActive).length;
   const connectedDevices = wallets.filter(w => w.deviceStatus === 'Connected').length;
   const totalReceivedToday = wallets.reduce((total, wallet) => total + Number(wallet.dailyReceived), 0);
+  const totalReceived = wallets.reduce((total, wallet) => total + Number(wallet.totalReceived), 0);
 
   const columns: AdminColumn<WalletDto>[] = [
     {
@@ -415,7 +416,7 @@ export default function AdminWalletsPageClient() {
       <div className="flex flex-col gap-6">
         {/* Stats */}
         {loading && wallets.length === 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-28 animate-pulse rounded-2xl bg-[var(--admin-card)] border border-[var(--admin-border)]" />
             ))}
@@ -449,6 +450,13 @@ export default function AdminWalletsPageClient() {
               label="إجمالي المحصل اليوم"
               value={`${totalReceivedToday.toLocaleString('en-US')} ج.م`}
               subtitle="مجموع التحويلات المعتمدة في كل المحافظ"
+            />
+            <AdminStatCard
+              variant="accent"
+              icon={TrendingUp}
+              label="إجمالي المحصل الكلي"
+              value={`${totalReceived.toLocaleString('en-US')} ج.م`}
+              subtitle="كل التحويلات المعتمدة والمطابقة منذ بداية النظام"
             />
           </div>
         )}

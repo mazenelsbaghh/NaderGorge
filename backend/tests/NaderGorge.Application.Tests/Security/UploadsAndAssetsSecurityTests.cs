@@ -53,4 +53,15 @@ public class UploadsAndAssetsSecurityTests
         Assert.DoesNotContain("..", result.DisplayFileName);
         Assert.DoesNotContain("/", result.DisplayFileName);
     }
+
+    [Fact]
+    public void Validate_AcceptsWebmAudioForPrivateAttachments()
+    {
+        var bytes = new byte[] { 0x1A, 0x45, 0xDF, 0xA3, 0x93, 0x42, 0x82, 0x88 };
+
+        var result = UploadFileSafety.Validate(bytes, "voice.webm", "audio/webm;codecs=opus", SafeUploadKind.PrivateAttachment);
+
+        Assert.Equal(".webm", result.Extension);
+        Assert.Equal("audio/webm", result.ContentType);
+    }
 }

@@ -5,6 +5,7 @@ import { Search, UserRound, Wallet, MonitorSmartphone, BookOpenCheck, Trophy, St
 import { liveSupportService, type LiveSupportConversation, type LiveSupportMessage, type LiveSupportStudentContextSectionKey, type LiveSupportStudentContextSections, type LiveSupportStudentSearchResult, type LiveSupportStudentSupportHistory } from '@/services/live-support-service';
 import { StudentActionsPanel } from './StudentActionsPanel';
 import { getEducationStageLabel, getGradeLevelLabel } from '@/lib/academic-labels';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 
 export function StudentContextPanel({ conversation, onConversationChange }: { conversation: LiveSupportConversation; onConversationChange: (value: LiveSupportConversation) => void }) {
   const [sections, setSections] = useState<Partial<LiveSupportStudentContextSections>>({});
@@ -239,7 +240,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
                       <div key={device.id} className="border-b border-slate-100 pb-1 last:border-0 last:pb-0">
                         <p className="font-semibold text-slate-800">{device.name || 'جهاز'}</p>
                         <p className="text-[10px] text-slate-500">
-                          نظام: {device.os || 'غير معروف'} · متصفح: {device.browser || 'غير معروف'} · آخر ظهور: {new Date(device.lastUsedAt).toLocaleDateString('ar-EG')}
+                          نظام: {device.os || 'غير معروف'} · متصفح: {device.browser || 'غير معروف'} · آخر ظهور: {formatCairoDateTime(device.lastUsedAt, { dateStyle: 'short' })}
                         </p>
                       </div>
                     ))}
@@ -269,7 +270,7 @@ export function StudentContextPanel({ conversation, onConversationChange }: { co
                           {note.content}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-1">
-                          {new Date(note.createdAt).toLocaleString('ar-EG')}
+                          {formatCairoDateTime(note.createdAt)}
                         </p>
                       </div>
                     ))}
@@ -365,18 +366,18 @@ function StudentSupportHistory({ conversation }: { conversation: LiveSupportConv
         {!loading && !error && items.length === 0 && <p className="p-3 text-center text-xs text-slate-500">لا توجد محادثات سابقة لهذا الطالب.</p>}
         {items.map((item) => <button key={item.conversationId} type="button" onClick={() => void openHistory(item)} aria-expanded={selectedHistory?.conversationId === item.conversationId} className={`w-full px-3 py-2.5 text-right transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-700/30 ${selectedHistory?.conversationId === item.conversationId ? 'bg-cyan-50/70' : ''}`}>
           <span className="flex items-center justify-between gap-2"><span className="min-w-0 truncate text-xs font-bold text-slate-800">{item.subject || 'محادثة دعم'}</span><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${historyStatusClass(item.status)}`}>{historyStatusLabel(item.status)}</span></span>
-          <span className="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>{new Date(item.lastActivityAt).toLocaleString('ar-EG')}</span><span>{item.messageCount} رسالة{item.lastEventType ? ` · ${historyEventLabel(item.lastEventType)}` : ''}</span></span>
+          <span className="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>{formatCairoDateTime(item.lastActivityAt)}</span><span>{item.messageCount} رسالة{item.lastEventType ? ` · ${historyEventLabel(item.lastEventType)}` : ''}</span></span>
           {item.lastMessagePreview && <span className="mt-1 block truncate text-[11px] text-slate-600">{item.lastMessagePreview}</span>}
         </button>)}
       </div>
       {error && <div role="alert" className="p-3 text-xs text-red-700">{error}</div>}
       {selectedHistory && <div className="border-t border-slate-100 bg-slate-50 p-3">
         <div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-800"><MessageSquareText size={14} />تفاصيل: {selectedHistory.subject || 'محادثة دعم'}</div>
-        {selectedHistory.activities.length > 0 && <ol className="mb-3 space-y-1 border-b border-slate-200 pb-3 text-[11px] text-slate-600">{selectedHistory.activities.map((activity, index) => <li key={`${activity.at}-${index}`} className="flex items-center justify-between gap-2"><span>{historyEventLabel(activity.type)}</span><time>{new Date(activity.at).toLocaleString('ar-EG')}</time></li>)}</ol>}
+        {selectedHistory.activities.length > 0 && <ol className="mb-3 space-y-1 border-b border-slate-200 pb-3 text-[11px] text-slate-600">{selectedHistory.activities.map((activity, index) => <li key={`${activity.at}-${index}`} className="flex items-center justify-between gap-2"><span>{historyEventLabel(activity.type)}</span><time>{formatCairoDateTime(activity.at)}</time></li>)}</ol>}
         <div className="max-h-64 space-y-2 overflow-y-auto" aria-live="polite">
           {messagesLoading && <p className="text-xs text-slate-500">جارٍ تحميل الرسائل…</p>}
           {!messagesLoading && messages.length === 0 && <p className="text-xs text-slate-500">لا توجد رسائل في هذه المحادثة.</p>}
-          {messages.map((message) => <article key={message.id} dir="auto" className={`rounded-lg px-2.5 py-2 text-xs ${['Staff', 'Admin', 'AI', 'System'].includes(message.senderType) ? 'mr-4 bg-slate-200 text-slate-800' : 'ml-4 bg-white text-slate-800'}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className="mt-1 text-[10px] text-slate-500">{historySenderLabel(message.senderType)} · {new Date(message.sentAt).toLocaleString('ar-EG')}</p></article>)}
+          {messages.map((message) => <article key={message.id} dir="auto" className={`rounded-lg px-2.5 py-2 text-xs ${['Staff', 'Admin', 'AI', 'System'].includes(message.senderType) ? 'mr-4 bg-slate-200 text-slate-800' : 'ml-4 bg-white text-slate-800'}`}><p className="whitespace-pre-wrap break-words">{message.content}</p><p className="mt-1 text-[10px] text-slate-500">{historySenderLabel(message.senderType)} · {formatCairoDateTime(message.sentAt)}</p></article>)}
         </div>
       </div>}
     </section>

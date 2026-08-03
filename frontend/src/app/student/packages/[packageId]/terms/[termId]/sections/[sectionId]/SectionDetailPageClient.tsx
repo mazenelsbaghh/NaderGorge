@@ -80,7 +80,7 @@ export default function SectionDetailPageClient() {
     try {
       const [pkgRes, termsRes, sectRes, lessonsRes] = await Promise.all([
         contentService.getPackages(),
-        contentService.getTerms(packageId),
+        contentService.getTerms(packageId, true),
         contentService.getSections(termId),
         contentService.getLessons(sectionId),
       ]);

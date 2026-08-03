@@ -19,8 +19,15 @@ public record PackageDetailDto(
     string? ImageUrl,
     string TargetGrade,
     IReadOnlyList<AcademicScopeSummaryDto> AcademicScopes,
-    List<TermDto> Terms);
+    List<TermDto> Terms,
+    PackageContentMode ContentMode,
+    Guid? RootTermId,
+    Guid? RootSectionId,
+    List<PackageDirectSectionDto> DirectSections,
+    List<PackageDirectLessonDto> DirectLessons);
 public record TermDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false);
+public record PackageDirectSectionDto(Guid Id, string Title, int Order, decimal Price, string? ImageUrl, bool IsPurchased = false);
+public record PackageDirectLessonDto(Guid Id, string Title, string Summary, int Order, decimal Price, bool HasAccess = false);
 
 public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, ApiResponse<PackageDetailDto>>
 {
@@ -75,7 +82,38 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
                 ["ACADEMIC_SCOPE_DENIED"]);
         }
 
-        var dtos = package.Terms.OrderBy(t => t.Order).Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price, t.ImageUrl)).ToList();
+        var visibleTerms = package.Terms
+            .Where(t => !t.IsSystemContainer)
+            .OrderBy(t => t.Order)
+            .ToList();
+
+        var rootTerm = package.Terms.FirstOrDefault(t => t.IsSystemContainer);
+        var directSections = rootTerm == null
+            ? []
+            : await _db.ContentSections
+                .Where(section => section.TermId == rootTerm.Id && !section.IsSystemContainer)
+                .OrderBy(section => section.Order)
+                .Select(section => new PackageDirectSectionDto(section.Id, section.Title, section.Order, section.Price, section.ImageUrl, false))
+                .ToListAsync(ct);
+
+        var rootSection = rootTerm == null
+            ? null
+            : await _db.ContentSections
+                .Where(section => section.TermId == rootTerm.Id && section.IsSystemContainer)
+                .Select(section => new { section.Id })
+                .FirstOrDefaultAsync(ct);
+
+        var directLessons = rootSection == null
+            ? []
+            : await _db.Lessons
+                .Where(lesson => lesson.ContentSectionId == rootSection.Id)
+                .OrderBy(lesson => lesson.Order)
+                .Select(lesson => new PackageDirectLessonDto(lesson.Id, lesson.Title, lesson.Summary, lesson.Order, lesson.Price, false))
+                .ToListAsync(ct);
+
+        var dtos = visibleTerms
+            .Select(t => new TermDto(t.Id, t.Title, t.Order, t.Price, t.ImageUrl))
+            .ToList();
         var scopes = await _db.StudentFacingAcademicScopes
             .AsNoTracking()
             .Where(x => x.OwnerType == StudentFacingScopeOwnerType.Package && x.OwnerId == package.Id)
@@ -91,7 +129,12 @@ public class GetPackageByIdQueryHandler : IRequestHandler<GetPackageByIdQuery, A
             package.ImageUrl,
             package.TargetGrade,
             AcademicScopeService.ToScopeSummaries(scopes),
-            dtos);
+            dtos,
+            package.ContentMode,
+            rootTerm?.Id,
+            rootSection?.Id,
+            directSections,
+            directLessons);
 
         return ApiResponse<PackageDetailDto>.Ok(packageDto);
     }

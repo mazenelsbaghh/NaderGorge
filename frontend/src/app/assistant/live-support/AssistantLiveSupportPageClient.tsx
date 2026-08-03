@@ -191,13 +191,15 @@ export default function AssistantLiveSupportPageClient() {
     } finally { setPendingAction(null); }
   }
 
-  async function upload(file?: File) {
+  async function upload(file?: File): Promise<boolean> {
     const conversationId = selected?.id;
     const generation = selectionGeneration.current;
-    if (!conversationId || !file || ownershipLost || pendingAction || uploading) return;
-    if (!file.type.startsWith('image/')) {
-      setError('اختر صورة بصيغة JPG أو PNG أو WebP.');
-      return;
+    if (!conversationId || !file || ownershipLost || pendingAction || uploading) return false;
+    const isImage = file.type.startsWith('image/');
+    const isAudio = file.type.startsWith('audio/');
+    if (!isImage && !isAudio) {
+      setError('اختر صورة بصيغة JPG أو PNG أو WebP، أو سجّل رسالة صوتية من زر التسجيل.');
+      return false;
     }
     setUploading(true);
     setError('');
@@ -205,15 +207,17 @@ export default function AssistantLiveSupportPageClient() {
       const attachment = await liveSupportService.uploadStaffAttachment(conversationId, file);
       const message = await liveSupportService.sendStaffMessage(conversationId, {
         clientMessageId: createClientId(),
-        type: 'Image',
+        type: isAudio ? 'Audio' : 'Image',
         content: file.name,
         attachmentId: attachment.id,
       });
       if (generation === selectionGeneration.current && selected?.id === conversationId) {
         setMessages((items) => items.some((item) => item.id === message.id) ? items : [...items, message]);
       }
+      return true;
     } catch (cause) {
-      setError(getStaffMutationError(cause, 'تعذر إرسال الصورة. استخدم JPG أو PNG أو WebP بحجم لا يتجاوز 10 ميجابايت.'));
+      setError(getStaffMutationError(cause, 'تعذر إرسال المرفق. استخدم صورة أو تسجيلًا صوتيًا بحجم لا يتجاوز 10 ميجابايت.'));
+      return false;
     } finally {
       setUploading(false);
     }
@@ -341,7 +345,7 @@ export default function AssistantLiveSupportPageClient() {
             }}
             onSend={() => void send()}
             uploading={uploading}
-            onUpload={(file) => void upload(file)}
+            onUpload={(file) => upload(file)}
             onEditMessage={editMessage}
             onDeleteMessage={deleteMessage}
             onTransfer={() => void transfer()}

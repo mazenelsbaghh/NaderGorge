@@ -112,6 +112,10 @@ export default function SectionProfilePageClient(props: { params: { id: string }
     subtitle: l.summary || undefined,
     href: `/admin/content/lessons/${l.id}`,
   }));
+  const parentHref = section.isDirect
+    ? `/admin/content/packages/${section.packageId}`
+    : `/admin/content/terms/${section.termId}`;
+  const parentLabel = section.isDirect ? 'الباقة' : 'الترم';
 
   // Build overview stats from API response
   const overviewStats: OverviewStat[] = [];
@@ -126,13 +130,13 @@ export default function SectionProfilePageClient(props: { params: { id: string }
   return (
     <AdminPage
       activePath="/admin/content"
-      sectionLabel="إدارة المحتوى ▸ الباقات ▸ الأترام ▸ الأقسام"
+      sectionLabel={section.isDirect ? 'إدارة المحتوى ▸ الباقات ▸ الأقسام المباشرة' : 'إدارة المحتوى ▸ الباقات ▸ الأترام ▸ الأقسام'}
       pageTitle={section.title}
       subtitle={`ترتيب: ${section.order} — ${lessons.length} حصة`}
       action={
-        <NeumorphButton onClick={() => router.push(`/admin/content/terms/${section.termId}`)} intent="ghost" size="md" pill>
+        <NeumorphButton onClick={() => router.push(parentHref)} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
-          الترم
+          {parentLabel}
         </NeumorphButton>
       }
     >

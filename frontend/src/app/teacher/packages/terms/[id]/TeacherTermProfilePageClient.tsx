@@ -136,8 +136,8 @@ export default function TeacherTermProfilePageClient(props: { params: { id: stri
             addPlaceholder="اسم القسم، مثال: شهر أكتوبر..."
             onCreate={async ({ title, order, price, imageFile }) => {
               const sectionId = await adminService.createSection({ termId: params.id, title, order, price });
-              if (imageFile && sectionId?.id) {
-                await adminService.uploadContentImage("section", sectionId.id, imageFile);
+              if (imageFile && sectionId) {
+                await adminService.uploadContentImage("section", sectionId, imageFile);
               }
               toast.success("تمت إضافة القسم.");
               await loadSections();

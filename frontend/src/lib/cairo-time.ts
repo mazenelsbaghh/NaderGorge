@@ -26,7 +26,7 @@ export function cairoCurrentDate(date = new Date()) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-function parseUtcDateTime(dateTime: string | Date) {
+export function parseUtcDateTime(dateTime: string | Date) {
   if (dateTime instanceof Date) return dateTime;
   return new Date(/(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}Z`);
 }

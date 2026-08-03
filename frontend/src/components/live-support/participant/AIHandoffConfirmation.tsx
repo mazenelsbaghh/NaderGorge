@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { UserCheck, X, Headphones } from 'lucide-react';
+import { formatCairoDateTime } from '@/lib/cairo-time';
 import { getLiveSupportApiError } from '@/services/live-support-service';
 
 interface AIHandoffConfirmationProps {
@@ -72,7 +73,7 @@ export function AIHandoffConfirmation({ action, onConfirm, onCancel }: AIHandoff
             <br />
             هل توافق على التحويل؟
           </p>
-          <p className="mt-2 text-xs text-slate-500">ينتهي الطلب: <time dateTime={action.expiresAt}>{new Date(action.expiresAt).toLocaleTimeString('ar-EG')}</time></p>
+          <p className="mt-2 text-xs text-slate-500">ينتهي الطلب: <time dateTime={action.expiresAt}>{formatCairoDateTime(action.expiresAt, { hour: '2-digit', minute: '2-digit' })}</time></p>
         </div>
       </div>
 

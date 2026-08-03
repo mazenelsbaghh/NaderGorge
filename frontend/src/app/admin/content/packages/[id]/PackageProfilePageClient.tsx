@@ -8,7 +8,7 @@ import {
   PackageDetailsForm, PackageCodeProfileForm, EntityOverviewDashboard,
   AdminPageSkeleton, ContentHierarchyPanel,
   PackageCodeProfileSummary, ContentImageUpload,
-  ContentSubscribersTab
+  ContentSubscribersTab, PackageDirectContentPanel
 } from '@/components/admin';
 import type { OverviewStat } from '@/components/admin';
 import { HierarchyItem } from '@/components/admin/ContentHierarchyPanel';
@@ -17,11 +17,12 @@ import { contentService, TermDto } from '@/services/content-service';
 import toast from 'react-hot-toast';
 import NeumorphButton from '@/components/ui/neumorph-button';
 
-type ActiveTab = 'overview' | 'terms' | 'subscribers' | 'codeProfile';
+type ActiveTab = 'overview' | 'terms' | 'direct' | 'subscribers' | 'codeProfile';
 
 const TABS: AdminTab<ActiveTab>[] = [
   { key: 'overview', label: 'نظرة عامة', icon: BookOpenText },
   { key: 'terms', label: 'الأترام', icon: Calendar },
+  { key: 'direct', label: 'المحتوى المباشر', icon: Layers },
   { key: 'subscribers', label: 'الطلاب المشتركين', icon: Users },
   { key: 'codeProfile', label: 'صفحة الأكواد', icon: KeyRound },
 ];
@@ -142,6 +143,7 @@ export default function PackageProfilePageClient(props: { params: { id: string }
     imageUrl: t.imageUrl,
     href: `/admin/content/terms/${t.id}`,
   }));
+  const contentMode = pkg.contentMode ?? 'TermWithSections';
 
   // Build overview stats from API response
   const overviewStats: OverviewStat[] = [];
@@ -262,6 +264,27 @@ export default function PackageProfilePageClient(props: { params: { id: string }
             }}
             deleteConfirmText={(item) => `سيتم حذف الترم "${item.title}" وجميع أقسامه ودروسه وفيديوهاته بشكل دائم.`}
             onRetry={loadTerms}
+          />
+        </div>
+      )}
+
+      {activeTab === 'direct' && (
+        <div className="rounded-3xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-6 shadow-sm">
+          <div className="mb-6">
+            <h3 className="text-xl font-black text-[var(--admin-text)]">محتوى الكورس المباشر</h3>
+            <p className="mt-2 text-sm text-[var(--admin-muted)]">
+              أضف الأقسام أو الحصص مباشرة حسب نوع الكورس المختار عند إنشائه.
+            </p>
+          </div>
+          <PackageDirectContentPanel
+            packageId={params.id}
+            mode={contentMode}
+            rootTermId={pkg.rootTermId}
+            rootSectionId={pkg.rootSectionId}
+            sections={pkg.directSections}
+            lessons={pkg.directLessons}
+            basePath="/admin/content"
+            onChanged={loadPkg}
           />
         </div>
       )}

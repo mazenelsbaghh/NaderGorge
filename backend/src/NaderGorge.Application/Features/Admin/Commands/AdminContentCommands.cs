@@ -9,7 +9,18 @@ using NaderGorge.Application.Features.Admin.VideoTypes;
 
 namespace NaderGorge.Application.Features.Admin.Commands;
 
-public record CreatePackageCommand(string Name, string Description, decimal Price, Guid SubjectId, string TargetGrade, Guid? TeacherId = null, Guid? CurrentUserId = null, IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse<Guid>>;
+public record CreatePackageCommand(
+    string Name,
+    string Description,
+    decimal Price,
+    Guid SubjectId,
+    string TargetGrade,
+    Guid? TeacherId = null,
+    Guid? CurrentUserId = null,
+    IReadOnlyList<AcademicScopeDto>? AcademicScopes = null) : IRequest<ApiResponse<Guid>>
+{
+    public PackageContentMode ContentMode { get; init; } = PackageContentMode.TermWithSections;
+}
 
 public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand, ApiResponse<Guid>>
 {
@@ -24,6 +35,11 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
 
     public async Task<ApiResponse<Guid>> Handle(CreatePackageCommand request, CancellationToken ct)
     {
+        if (request.ContentMode is not (PackageContentMode.TermWithSections
+            or PackageContentMode.SectionWithLessons
+            or PackageContentMode.LessonsOnly))
+            return ApiResponse<Guid>.Fail("نوع هيكل الكورس غير صالح.");
+
         if (request.AcademicScopes is { Count: 0 })
             return ApiResponse<Guid>.Fail("يجب تحديد نطاق أكاديمي واحد على الأقل.", new List<string> { "ACADEMIC_SCOPE_REQUIRED" });
 
@@ -123,9 +139,39 @@ public class CreatePackageCommandHandler : IRequestHandler<CreatePackageCommand,
             Price = request.Price,
             SubjectId = request.SubjectId,
             TargetGrade = string.Join(',', requestedGrades),
-            TeacherId = teacherId
+            TeacherId = teacherId,
+            ContentMode = request.ContentMode
         };
         _db.Packages.Add(pkg);
+
+        // Keep the old required Term -> Section -> Lesson relationships intact
+        // while making direct sections/lessons appear at package level. These
+        // containers are never returned as visible course content.
+        if (request.ContentMode is PackageContentMode.SectionWithLessons
+            or PackageContentMode.LessonsOnly)
+        {
+            var rootTerm = new Term
+            {
+                PackageId = pkg.Id,
+                Title = "المحتوى المباشر",
+                Order = -1,
+                Price = 0,
+                IsSystemContainer = true
+            };
+            pkg.Terms.Add(rootTerm);
+
+            if (request.ContentMode == PackageContentMode.LessonsOnly)
+            {
+                rootTerm.Sections.Add(new ContentSection
+                {
+                    TermId = rootTerm.Id,
+                    Title = "الحصص المباشرة",
+                    Order = -1,
+                    Price = 0,
+                    IsSystemContainer = true
+                });
+            }
+        }
 
         var outboxEvent = new OutboxEvent
         {
@@ -372,6 +418,13 @@ public class CreateTermCommandHandler : IRequestHandler<CreateTermCommand, ApiRe
             if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this package.");
         }
 
+        var package = await _db.Packages.FirstOrDefaultAsync(item => item.Id == request.PackageId, ct);
+        if (package == null)
+            return ApiResponse<Guid>.Fail("Package not found");
+
+        if (package.ContentMode != PackageContentMode.TermWithSections)
+            return ApiResponse<Guid>.Fail("هذا الكورس لا يستخدم أترامًا ظاهرة؛ أضف المحتوى من هيكل الكورس المحدد.");
+
         var term = new Term
         {
             Title = request.Title,
@@ -551,6 +604,18 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
             if (!canAccess) return ApiResponse<Guid>.Fail("Unauthorized access to this term.");
         }
 
+        var term = await _db.Terms
+            .Include(item => item.Package)
+            .FirstOrDefaultAsync(item => item.Id == request.TermId, ct);
+        if (term == null)
+            return ApiResponse<Guid>.Fail("Term not found");
+
+        if (term.IsSystemContainer && term.Package.ContentMode != PackageContentMode.SectionWithLessons)
+            return ApiResponse<Guid>.Fail("هذا الكورس لا يسمح بإضافة أقسام في هذا المسار.");
+
+        if (!term.IsSystemContainer && term.Package.ContentMode != PackageContentMode.TermWithSections)
+            return ApiResponse<Guid>.Fail("هذا الكورس لا يسمح بإضافة أقسام خارج الترم.");
+
         var sec = new ContentSection
         {
             Title = request.Title,
@@ -560,37 +625,33 @@ public class CreateSectionCommandHandler : IRequestHandler<CreateSectionCommand,
         };
         _db.ContentSections.Add(sec);
 
-        var term = await _db.Terms.FindAsync(new object[] { request.TermId }, ct);
-        if (term != null)
+        var sectionOutbox = new OutboxEvent
         {
-            var sectionOutbox = new OutboxEvent
+            Type = "SectionCreated",
+            TargetGroup = $"Package_{term.PackageId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
-                Type = "SectionCreated",
-                TargetGroup = $"Package_{term.PackageId}",
-                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    sectionId = sec.Id,
-                    termId = request.TermId,
-                    packageId = term.PackageId,
-                    title = sec.Title
-                })
-            };
-            _db.OutboxEvents.Add(sectionOutbox);
+                sectionId = sec.Id,
+                termId = request.TermId,
+                packageId = term.PackageId,
+                title = sec.Title
+            })
+        };
+        _db.OutboxEvents.Add(sectionOutbox);
 
-            var sectionPublishedOutbox = new OutboxEvent
+        var sectionPublishedOutbox = new OutboxEvent
+        {
+            Type = "SectionPublished",
+            TargetGroup = $"Package_{term.PackageId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
-                Type = "SectionPublished",
-                TargetGroup = $"Package_{term.PackageId}",
-                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    sectionId = sec.Id,
-                    termId = request.TermId,
-                    packageId = term.PackageId,
-                    title = sec.Title
-                })
-            };
-            _db.OutboxEvents.Add(sectionPublishedOutbox);
-        }
+                sectionId = sec.Id,
+                termId = request.TermId,
+                packageId = term.PackageId,
+                title = sec.Title
+            })
+        };
+        _db.OutboxEvents.Add(sectionPublishedOutbox);
 
         await _db.SaveChangesAsync(ct);
         await ContentAcademicScopeValidation.SyncExplicitScopesAsync(
@@ -725,7 +786,23 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
 
         var section = await _db.ContentSections
             .Include(s => s.Term)
+                .ThenInclude(t => t.Package)
             .FirstOrDefaultAsync(s => s.Id == request.SectionId, ct);
+        if (section == null)
+            return ApiResponse<Guid>.Fail("Section not found");
+
+        if (section.IsSystemContainer && section.Term.Package.ContentMode != PackageContentMode.LessonsOnly)
+            return ApiResponse<Guid>.Fail("هذا القسم مخصص للحصص المباشرة فقط.");
+
+        if (!section.IsSystemContainer
+            && section.Term.IsSystemContainer
+            && section.Term.Package.ContentMode != PackageContentMode.SectionWithLessons)
+            return ApiResponse<Guid>.Fail("هذا الكورس لا يسمح بإضافة حصص داخل هذا المسار.");
+
+        if (!section.IsSystemContainer
+            && !section.Term.IsSystemContainer
+            && section.Term.Package.ContentMode != PackageContentMode.TermWithSections)
+            return ApiResponse<Guid>.Fail("هذا الكورس لا يسمح بإضافة حصص خارج الترم والأقسام.");
 
         var lesson = new Lesson
         {
@@ -738,23 +815,20 @@ public class CreateLessonCommandHandler : IRequestHandler<CreateLessonCommand, A
         };
         _db.Lessons.Add(lesson);
 
-        if (section?.Term != null)
+        var outboxEvent = new OutboxEvent
         {
-            var outboxEvent = new OutboxEvent
+            Type = "LessonPublished",
+            TargetGroup = $"Package_{section.Term.PackageId}",
+            PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
             {
-                Type = "LessonPublished",
-                TargetGroup = $"Package_{section.Term.PackageId}",
-                PayloadJson = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    lessonId = lesson.Id,
-                    sectionId = lesson.ContentSectionId,
-                    title = lesson.Title,
-                    packageId = section.Term.PackageId,
-                    order = lesson.Order
-                })
-            };
-            _db.OutboxEvents.Add(outboxEvent);
-        }
+                lessonId = lesson.Id,
+                sectionId = lesson.ContentSectionId,
+                title = lesson.Title,
+                packageId = section.Term.PackageId,
+                order = lesson.Order
+            })
+        };
+        _db.OutboxEvents.Add(outboxEvent);
 
         await _db.SaveChangesAsync(ct);
         await ContentAcademicScopeValidation.SyncExplicitScopesAsync(

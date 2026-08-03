@@ -79,7 +79,7 @@ export default function TermDetailPageClient() {
       const [pkgRes, sectRes, termsRes] = await Promise.all([
         contentService.getPackages(),
         contentService.getSections(termId),
-        contentService.getTerms(packageId),
+        contentService.getTerms(packageId, true),
       ]);
       setPkg(pkgRes.data?.data?.find((p: PackageDto) => p.id.toLowerCase() === packageId.toLowerCase()) ?? null);
       setSections(sectRes.data?.data ?? []);

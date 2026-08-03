@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { AdminPage, AdminPageSkeleton, AdminStatCard } from '@/components/admin';
 import { AssistantShellChrome } from '@/components/assistant/AssistantShellChrome';
-import { contentService, CONTENT_CACHE_KEYS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto } from '@/services/content-service';
+import { contentService, CONTENT_CACHE_KEYS, PACKAGE_CONTENT_MODE_OPTIONS, PackageDto, TermDto, ContentSectionDto, LessonSummaryDto, type PackageContentMode } from '@/services/content-service';
 import { adminService } from '@/services/admin-service';
 import { teacherService, SubjectDto, TeacherDto } from '@/services/teacher-service';
 import NeumorphButton from '@/components/ui/neumorph-button';
@@ -86,6 +86,7 @@ function CreatePackageRow({
   const [selectedTeacherId, setSelectedTeacherId] = useState(activeTeacherId || '');
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [selectedGrades, setSelectedGrades] = useState<GradeLevel[]>([]);
+  const [contentMode, setContentMode] = useState<PackageContentMode>('TermWithSections');
   const [saving, setSaving] = useState(false);
 
   // Image Upload States
@@ -138,6 +139,7 @@ function CreatePackageRow({
           gradeLevel: grade,
           subjectId: selectedSubjectId,
         })),
+        contentMode,
       });
 
       if (newPkg?.id && imageFile) {
@@ -151,7 +153,7 @@ function CreatePackageRow({
       toast.success('تمت إضافة الباقة بنجاح.');
       setName(''); setDescription(''); setPrice('');
       if (!activeTeacherId) setSelectedTeacherId('');
-      setSelectedSubjectId(''); setSelectedGrades([]);
+      setSelectedSubjectId(''); setSelectedGrades([]); setContentMode('TermWithSections');
       setImageFile(null); setImagePreview(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       setOpen(false);
@@ -220,6 +222,20 @@ function CreatePackageRow({
         placeholder="السعر (جنيه مصري)"
         className="admin-input"
       />
+
+      <div className="space-y-2 text-right">
+        <span className="text-xs font-bold text-[var(--admin-muted)]">شكل الكورس</span>
+        <Dropdown
+          value={contentMode}
+          onChange={(value) => setContentMode((Array.isArray(value) ? value[0] : value) as PackageContentMode)}
+          options={PACKAGE_CONTENT_MODE_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
+          placeholder="اختر شكل الكورس..."
+          className="w-full"
+        />
+        <p className="text-xs text-[var(--admin-muted)]">
+          {PACKAGE_CONTENT_MODE_OPTIONS.find((option) => option.value === contentMode)?.description}
+        </p>
+      </div>
 
       {/* صورة الباقة */}
       <div className="space-y-1 text-right">
@@ -328,7 +344,7 @@ function CreatePackageRow({
 }
 
 // ─── Nested Rows ─────────────────────────────────────────────────────────────
-function LessonRow({ lesson }: { lesson: LessonSummaryDto }) {
+function LessonRow({ lesson }: { lesson: Pick<LessonSummaryDto, 'id' | 'title'> }) {
   return (
     <div className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-[var(--admin-card-soft)] transition-colors">
       <div className="flex items-center gap-3 min-w-0">
@@ -478,11 +494,14 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
   const [isOpen, setIsOpen] = useState(false);
   const [terms, setTerms] = useState<TermDto[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const contentMode = pkg.contentMode ?? 'TermWithSections';
+  const directSections = pkg.directSections ?? [];
+  const directLessons = pkg.directLessons ?? [];
 
   const toggleOpen = async () => {
     const nextState = !isOpen;
     setIsOpen(nextState);
-    if (nextState && terms === null) {
+    if (nextState && contentMode === 'TermWithSections' && terms === null) {
       try {
         setLoading(true);
         const res = await contentService.getTerms(pkg.id);
@@ -541,10 +560,20 @@ function PackageCard({ pkg }: { pkg: PackageDto }) {
         <div className="border-t border-[var(--admin-border)] bg-[var(--admin-bg)] p-4 space-y-2">
           {loading ? (
             <div className="text-sm text-[var(--admin-muted)] py-4 text-center">جاري تحميل أترم الباقة...</div>
-          ) : terms && terms.length > 0 ? (
+          ) : contentMode === 'SectionWithLessons' && directSections.length > 0 ? (
+            directSections.map((section) => <SectionRow key={section.id} section={section} />)
+          ) : contentMode === 'LessonsOnly' && directLessons.length > 0 ? (
+            directLessons.map((lesson) => <LessonRow key={lesson.id} lesson={lesson} />)
+          ) : contentMode === 'TermWithSections' && terms && terms.length > 0 ? (
             terms.map((term) => <TermRow key={term.id} term={term} />)
           ) : (
-            <div className="text-sm text-[var(--admin-muted)] py-4 text-center">لا توجد أترم في هذه الباقة.</div>
+            <div className="text-sm text-[var(--admin-muted)] py-4 text-center">
+              {contentMode === 'SectionWithLessons'
+                ? 'لا توجد أقسام في هذه الباقة.'
+                : contentMode === 'LessonsOnly'
+                  ? 'لا توجد حصص في هذه الباقة.'
+                  : 'لا توجد أترم في هذه الباقة.'}
+            </div>
           )}
         </div>
       )}

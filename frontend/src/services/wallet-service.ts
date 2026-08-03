@@ -14,6 +14,7 @@ export interface WalletDto {
   smsSenderFilters: string[];
   dailyReceived: number;
   monthlyReceived: number;
+  totalReceived: number;
   createdAt: string;
 }
 
