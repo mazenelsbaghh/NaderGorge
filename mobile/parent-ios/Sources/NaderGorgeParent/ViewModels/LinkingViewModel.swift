@@ -33,7 +33,7 @@ public class LinkingViewModel: ObservableObject {
         self.keychainService = keychainService
     }
     
-    public func linkStudent(deviceToken: String = "MOCK_DEVICE_TOKEN") async {
+    public func linkStudent(deviceToken: String = "ios-parent-pending-token") async {
         errorMessage = nil
         successMessage = nil
         linkedStudentName = nil
@@ -53,7 +53,7 @@ public class LinkingViewModel: ObservableObject {
         do {
             let response = try await apiService.verifyCode(trackingCode: trimmedCode, deviceToken: deviceToken)
             
-            guard let studentId = JWTDecoder.decodeStudentId(from: response.token) else {
+            guard let studentId = response.studentId ?? JWTDecoder.decodeStudentId(from: response.token) else {
                 let errorMsg = "رمز التوثيق المستلم غير صالح."
                 errorMessage = errorMsg
                 uiState = .error(message: errorMsg)

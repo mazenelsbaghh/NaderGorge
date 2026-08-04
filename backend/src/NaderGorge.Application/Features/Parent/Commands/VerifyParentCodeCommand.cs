@@ -46,19 +46,21 @@ public class VerifyParentCodeCommandHandler : IRequestHandler<VerifyParentCodeCo
             return ApiResponse<VerifyCodeResponse>.Fail("الرمز غير صالح، يرجى التحقق وإعادة المحاولة");
         }
 
-        // Register device token if provided
-        if (!string.IsNullOrWhiteSpace(request.DeviceToken))
+        // A client can finish linking before APNs/FCM returns a token. Do not
+        // persist the temporary sentinel; the real token is registered later.
+        if (!IsPendingDeviceToken(request.DeviceToken))
         {
+            var normalizedDeviceToken = request.DeviceToken!.Trim();
             var alreadyRegistered = await _db.ParentDeviceTokens
-                .AnyAsync(t => t.StudentId == studentProfile.Id && t.DeviceToken == request.DeviceToken, ct);
+                .AnyAsync(t => t.StudentId == studentProfile.Id && t.DeviceToken == normalizedDeviceToken, ct);
 
             if (!alreadyRegistered)
             {
                 var parentDeviceToken = new ParentDeviceToken
                 {
                     StudentId = studentProfile.Id,
-                    DeviceToken = request.DeviceToken,
-                    Platform = request.Platform ?? "unknown"
+                    DeviceToken = normalizedDeviceToken,
+                    Platform = string.IsNullOrWhiteSpace(request.Platform) ? "unknown" : request.Platform.Trim().ToLowerInvariant()
                 };
                 _db.ParentDeviceTokens.Add(parentDeviceToken);
                 await _db.SaveChangesAsync(ct);
@@ -70,5 +72,11 @@ public class VerifyParentCodeCommandHandler : IRequestHandler<VerifyParentCodeCo
             studentProfile.Id);
 
         return ApiResponse<VerifyCodeResponse>.Ok(new VerifyCodeResponse(token, studentProfile.User.FullName));
+    }
+
+    private static bool IsPendingDeviceToken(string? deviceToken)
+    {
+        return string.IsNullOrWhiteSpace(deviceToken)
+            || deviceToken.Trim().EndsWith("-parent-pending-token", StringComparison.OrdinalIgnoreCase);
     }
 }

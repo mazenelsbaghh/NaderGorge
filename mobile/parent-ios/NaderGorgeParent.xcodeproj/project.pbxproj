@@ -1,95 +1,339 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
+	classes = {
+	};
 	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		000000000000000000000101 /* NaderGorgeParentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000201 /* NaderGorgeParentApp.swift */; };
-		000000000000000000000102 /* ParentAppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000202 /* ParentAppContainer.swift */; };
-		000000000000000000000103 /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000203 /* SplashScreenView.swift */; };
-		000000000000000000000104 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000204 /* OnboardingView.swift */; };
-		000000000000000000000105 /* LinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000205 /* LinkingView.swift */; };
-		000000000000000000000106 /* StudentConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000206 /* StudentConfirmationView.swift */; };
-		000000000000000000000107 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000207 /* DashboardView.swift */; };
-		000000000000000000000108 /* BrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000208 /* BrandColors.swift */; };
-		000000000000000000000109 /* CircularProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000209 /* CircularProgressView.swift */; };
-		000000000000000000000110 /* GlassCardModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000210 /* GlassCardModifier.swift */; };
-		000000000000000000000111 /* LiquidBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000211 /* LiquidBackgroundView.swift */; };
-		000000000000000000000112 /* StudentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000212 /* StudentModels.swift */; };
-		000000000000000000000113 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000213 /* APIService.swift */; };
-		000000000000000000000114 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000214 /* KeychainService.swift */; };
-		000000000000000000000115 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000215 /* DashboardViewModel.swift */; };
-		000000000000000000000116 /* LinkingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000216 /* LinkingViewModel.swift */; };
-		000000000000000000000117 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000217 /* Assets.xcassets */; };
-		000000000000000000000118 /* Tajawal-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000218 /* Tajawal-Black.ttf */; };
-		000000000000000000000119 /* Tajawal-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000219 /* Tajawal-Bold.ttf */; };
-		000000000000000000000120 /* Tajawal-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000220 /* Tajawal-Medium.ttf */; };
-		000000000000000000000121 /* Tajawal-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000221 /* Tajawal-Regular.ttf */; };
+		000000000000000000000102 /* Views/ParentAppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000202 /* Views/ParentAppContainer.swift */; };
+		000000000000000000000103 /* Views/SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000203 /* Views/SplashScreenView.swift */; };
+		000000000000000000000104 /* Views/OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000204 /* Views/OnboardingView.swift */; };
+		000000000000000000000105 /* Views/LinkingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000205 /* Views/LinkingView.swift */; };
+		000000000000000000000106 /* Views/StudentConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000206 /* Views/StudentConfirmationView.swift */; };
+		000000000000000000000107 /* Views/DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000207 /* Views/DashboardView.swift */; };
+		000000000000000000000108 /* Views/Components/BrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000208 /* Views/Components/BrandColors.swift */; };
+		000000000000000000000109 /* Views/Components/CircularProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000209 /* Views/Components/CircularProgressView.swift */; };
+		000000000000000000000110 /* Views/Components/GlassCardModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000210 /* Views/Components/GlassCardModifier.swift */; };
+		000000000000000000000111 /* Views/Components/LiquidBackgroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000211 /* Views/Components/LiquidBackgroundView.swift */; };
+		000000000000000000000112 /* Models/StudentModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000212 /* Models/StudentModels.swift */; };
+		000000000000000000000113 /* Services/APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000213 /* Services/APIService.swift */; };
+		000000000000000000000114 /* Services/KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000214 /* Services/KeychainService.swift */; };
+		000000000000000000000115 /* ViewModels/DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000215 /* ViewModels/DashboardViewModel.swift */; };
+		000000000000000000000116 /* ViewModels/LinkingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000216 /* ViewModels/LinkingViewModel.swift */; };
+		000000000000000000000122 /* Services/ParentNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000222 /* Services/ParentNotificationService.swift */; };
+		000000000000000000000117 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000217 /* Resources/Assets.xcassets */; };
+		000000000000000000000118 /* Resources/Fonts/Tajawal-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000218 /* Resources/Fonts/Tajawal-Black.ttf */; };
+		000000000000000000000119 /* Resources/Fonts/Tajawal-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000219 /* Resources/Fonts/Tajawal-Bold.ttf */; };
+		000000000000000000000120 /* Resources/Fonts/Tajawal-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000220 /* Resources/Fonts/Tajawal-Medium.ttf */; };
+		000000000000000000000121 /* Resources/Fonts/Tajawal-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000221 /* Resources/Fonts/Tajawal-Regular.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		000000000000000000000005 /* NaderGorgeParent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NaderGorgeParent.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000223 /* NaderGorgeParent.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NaderGorgeParent.entitlements; sourceTree = "<group>"; };
 		000000000000000000000201 /* NaderGorgeParentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NaderGorgeParentApp.swift; sourceTree = "<group>"; };
-		000000000000000000000202 /* ParentAppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ParentAppContainer.swift; sourceTree = "<group>"; };
-		000000000000000000000203 /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SplashScreenView.swift; sourceTree = "<group>"; };
-		000000000000000000000204 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/OnboardingView.swift; sourceTree = "<group>"; };
-		000000000000000000000205 /* LinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/LinkingView.swift; sourceTree = "<group>"; };
-		000000000000000000000206 /* StudentConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/StudentConfirmationView.swift; sourceTree = "<group>"; };
-		000000000000000000000207 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/DashboardView.swift; sourceTree = "<group>"; };
-		000000000000000000000208 /* BrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/BrandColors.swift; sourceTree = "<group>"; };
-		000000000000000000000209 /* CircularProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/CircularProgressView.swift; sourceTree = "<group>"; };
-		000000000000000000000210 /* GlassCardModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/GlassCardModifier.swift; sourceTree = "<group>"; };
-		000000000000000000000211 /* LiquidBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/LiquidBackgroundView.swift; sourceTree = "<group>"; };
-		000000000000000000000212 /* StudentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/StudentModels.swift; sourceTree = "<group>"; };
-		000000000000000000000213 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/APIService.swift; sourceTree = "<group>"; };
-		000000000000000000000214 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/KeychainService.swift; sourceTree = "<group>"; };
-		000000000000000000000215 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/DashboardViewModel.swift; sourceTree = "<group>"; };
-		000000000000000000000216 /* LinkingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/LinkingViewModel.swift; sourceTree = "<group>"; };
-		000000000000000000000217 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
-		000000000000000000000218 /* Tajawal-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Tajawal-Black.ttf; sourceTree = "<group>"; };
-		000000000000000000000219 /* Tajawal-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Tajawal-Bold.ttf; sourceTree = "<group>"; };
-		000000000000000000000220 /* Tajawal-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Tajawal-Medium.ttf; sourceTree = "<group>"; };
-		000000000000000000000221 /* Tajawal-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Resources/Fonts/Tajawal-Regular.ttf; sourceTree = "<group>"; };
+		000000000000000000000202 /* Views/ParentAppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/ParentAppContainer.swift; sourceTree = "<group>"; };
+		000000000000000000000203 /* Views/SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/SplashScreenView.swift; sourceTree = "<group>"; };
+		000000000000000000000204 /* Views/OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/OnboardingView.swift; sourceTree = "<group>"; };
+		000000000000000000000205 /* Views/LinkingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/LinkingView.swift; sourceTree = "<group>"; };
+		000000000000000000000206 /* Views/StudentConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/StudentConfirmationView.swift; sourceTree = "<group>"; };
+		000000000000000000000207 /* Views/DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/DashboardView.swift; sourceTree = "<group>"; };
+		000000000000000000000208 /* Views/Components/BrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/BrandColors.swift; sourceTree = "<group>"; };
+		000000000000000000000209 /* Views/Components/CircularProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/CircularProgressView.swift; sourceTree = "<group>"; };
+		000000000000000000000210 /* Views/Components/GlassCardModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/GlassCardModifier.swift; sourceTree = "<group>"; };
+		000000000000000000000211 /* Views/Components/LiquidBackgroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/Components/LiquidBackgroundView.swift; sourceTree = "<group>"; };
+		000000000000000000000212 /* Models/StudentModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/StudentModels.swift; sourceTree = "<group>"; };
+		000000000000000000000213 /* Services/APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/APIService.swift; sourceTree = "<group>"; };
+		000000000000000000000214 /* Services/KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/KeychainService.swift; sourceTree = "<group>"; };
+		000000000000000000000215 /* ViewModels/DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/DashboardViewModel.swift; sourceTree = "<group>"; };
+		000000000000000000000216 /* ViewModels/LinkingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/LinkingViewModel.swift; sourceTree = "<group>"; };
+		000000000000000000000222 /* Services/ParentNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ParentNotificationService.swift; sourceTree = "<group>"; };
+		000000000000000000000217 /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
+		000000000000000000000218 /* Resources/Fonts/Tajawal-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Black.ttf"; sourceTree = "<group>"; };
+		000000000000000000000219 /* Resources/Fonts/Tajawal-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Bold.ttf"; sourceTree = "<group>"; };
+		000000000000000000000220 /* Resources/Fonts/Tajawal-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Medium.ttf"; sourceTree = "<group>"; };
+		000000000000000000000221 /* Resources/Fonts/Tajawal-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/Fonts/Tajawal-Regular.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
-		000000000000000000000002 = {isa = PBXGroup; children = (000000000000000000000004 /* Sources */, 000000000000000000000003 /* Products */); sourceTree = "<group>"; };
-		000000000000000000000003 /* Products */ = {isa = PBXGroup; children = (000000000000000000000005 /* NaderGorgeParent.app */); name = Products; sourceTree = "<group>"; };
-		000000000000000000000004 /* Sources */ = {isa = PBXGroup; children = (000000000000000000000201 /* NaderGorgeParentApp.swift */, 000000000000000000000202 /* ParentAppContainer.swift */, 000000000000000000000203 /* SplashScreenView.swift */, 000000000000000000000204 /* OnboardingView.swift */, 000000000000000000000205 /* LinkingView.swift */, 000000000000000000000206 /* StudentConfirmationView.swift */, 000000000000000000000207 /* DashboardView.swift */, 000000000000000000000208 /* BrandColors.swift */, 000000000000000000000209 /* CircularProgressView.swift */, 000000000000000000000210 /* GlassCardModifier.swift */, 000000000000000000000211 /* LiquidBackgroundView.swift */, 000000000000000000000212 /* StudentModels.swift */, 000000000000000000000213 /* APIService.swift */, 000000000000000000000214 /* KeychainService.swift */, 000000000000000000000215 /* DashboardViewModel.swift */, 000000000000000000000216 /* LinkingViewModel.swift */, 000000000000000000000217 /* Assets.xcassets */, 000000000000000000000218 /* Tajawal-Black.ttf */, 000000000000000000000219 /* Tajawal-Bold.ttf */, 000000000000000000000220 /* Tajawal-Medium.ttf */, 000000000000000000000221 /* Tajawal-Regular.ttf */); path = Sources/NaderGorgeParent; sourceTree = "<group>"; };
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000223 /* NaderGorgeParent.entitlements */,
+				000000000000000000000004 /* Sources/NaderGorgeParent */,
+				000000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000005 /* NaderGorgeParent.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Sources/NaderGorgeParent */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000201 /* NaderGorgeParentApp.swift */,
+				000000000000000000000202 /* Views/ParentAppContainer.swift */,
+				000000000000000000000203 /* Views/SplashScreenView.swift */,
+				000000000000000000000204 /* Views/OnboardingView.swift */,
+				000000000000000000000205 /* Views/LinkingView.swift */,
+				000000000000000000000206 /* Views/StudentConfirmationView.swift */,
+				000000000000000000000207 /* Views/DashboardView.swift */,
+				000000000000000000000208 /* Views/Components/BrandColors.swift */,
+				000000000000000000000209 /* Views/Components/CircularProgressView.swift */,
+				000000000000000000000210 /* Views/Components/GlassCardModifier.swift */,
+				000000000000000000000211 /* Views/Components/LiquidBackgroundView.swift */,
+				000000000000000000000212 /* Models/StudentModels.swift */,
+				000000000000000000000213 /* Services/APIService.swift */,
+				000000000000000000000214 /* Services/KeychainService.swift */,
+				000000000000000000000215 /* ViewModels/DashboardViewModel.swift */,
+				000000000000000000000216 /* ViewModels/LinkingViewModel.swift */,
+				000000000000000000000222 /* Services/ParentNotificationService.swift */,
+				000000000000000000000217 /* Resources/Assets.xcassets */,
+				000000000000000000000218 /* Resources/Fonts/Tajawal-Black.ttf */,
+				000000000000000000000219 /* Resources/Fonts/Tajawal-Bold.ttf */,
+				000000000000000000000220 /* Resources/Fonts/Tajawal-Medium.ttf */,
+				000000000000000000000221 /* Resources/Fonts/Tajawal-Regular.ttf */,
+			);
+			path = Sources/NaderGorgeParent;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		000000000000000000000006 /* NaderGorgeParent */ = {isa = PBXNativeTarget; buildConfigurationList = 000000000000000000000015 /* Build configuration list for PBXNativeTarget "NaderGorgeParent" */; buildPhases = (000000000000000000000007 /* Sources */, 000000000000000000000008 /* Frameworks */, 000000000000000000000009 /* Resources */); buildRules = (); dependencies = (); name = NaderGorgeParent; productName = NaderGorgeParent; productReference = 000000000000000000000005 /* NaderGorgeParent.app */; productType = "com.apple.product-type.application"; };
+		000000000000000000000006 /* NaderGorgeParent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000015 /* Build configuration list for PBXNativeTarget "NaderGorgeParent" */;
+			buildPhases = (
+				000000000000000000000007 /* Sources */,
+				000000000000000000000008 /* Frameworks */,
+				000000000000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NaderGorgeParent;
+			productName = NaderGorgeParent;
+			productReference = 000000000000000000000005 /* NaderGorgeParent.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		000000000000000000000001 /* Project object */ = {isa = PBXProject; attributes = { LastSwiftUpdateCheck = 2660; LastUpgradeCheck = 2660; TargetAttributes = { 000000000000000000000006 = { CreatedOnToolsVersion = 26.6; }; }; }; buildConfigurationList = 000000000000000000000014 /* Build configuration list for PBXProject "NaderGorgeParent" */; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = 000000000000000000000002; productRefGroup = 000000000000000000000003 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (000000000000000000000006 /* NaderGorgeParent */); };
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					000000000000000000000006 = {
+						CreatedOnToolsVersion = 26.6;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+						};
+					};
+				};
+			};
+			buildConfigurationList = 000000000000000000000014 /* Build configuration list for PBXProject "NaderGorgeParent" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000006 /* NaderGorgeParent */,
+			);
+		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		000000000000000000000009 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000117 /* Assets.xcassets in Resources */, 000000000000000000000118 /* Tajawal-Black.ttf in Resources */, 000000000000000000000119 /* Tajawal-Bold.ttf in Resources */, 000000000000000000000120 /* Tajawal-Medium.ttf in Resources */, 000000000000000000000121 /* Tajawal-Regular.ttf in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+		000000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000117 /* Resources/Assets.xcassets in Resources */,
+				000000000000000000000118 /* Resources/Fonts/Tajawal-Black.ttf in Resources */,
+				000000000000000000000119 /* Resources/Fonts/Tajawal-Bold.ttf in Resources */,
+				000000000000000000000120 /* Resources/Fonts/Tajawal-Medium.ttf in Resources */,
+				000000000000000000000121 /* Resources/Fonts/Tajawal-Regular.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		000000000000000000000007 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (000000000000000000000101 /* NaderGorgeParentApp.swift in Sources */, 000000000000000000000102 /* ParentAppContainer.swift in Sources */, 000000000000000000000103 /* SplashScreenView.swift in Sources */, 000000000000000000000104 /* OnboardingView.swift in Sources */, 000000000000000000000105 /* LinkingView.swift in Sources */, 000000000000000000000106 /* StudentConfirmationView.swift in Sources */, 000000000000000000000107 /* DashboardView.swift in Sources */, 000000000000000000000108 /* BrandColors.swift in Sources */, 000000000000000000000109 /* CircularProgressView.swift in Sources */, 000000000000000000000110 /* GlassCardModifier.swift in Sources */, 000000000000000000000111 /* LiquidBackgroundView.swift in Sources */, 000000000000000000000112 /* StudentModels.swift in Sources */, 000000000000000000000113 /* APIService.swift in Sources */, 000000000000000000000114 /* KeychainService.swift in Sources */, 000000000000000000000115 /* DashboardViewModel.swift in Sources */, 000000000000000000000116 /* LinkingViewModel.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+		000000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000101 /* NaderGorgeParentApp.swift in Sources */,
+				000000000000000000000102 /* Views/ParentAppContainer.swift in Sources */,
+				000000000000000000000103 /* Views/SplashScreenView.swift in Sources */,
+				000000000000000000000104 /* Views/OnboardingView.swift in Sources */,
+				000000000000000000000105 /* Views/LinkingView.swift in Sources */,
+				000000000000000000000106 /* Views/StudentConfirmationView.swift in Sources */,
+				000000000000000000000107 /* Views/DashboardView.swift in Sources */,
+				000000000000000000000108 /* Views/Components/BrandColors.swift in Sources */,
+				000000000000000000000109 /* Views/Components/CircularProgressView.swift in Sources */,
+				000000000000000000000110 /* Views/Components/GlassCardModifier.swift in Sources */,
+				000000000000000000000111 /* Views/Components/LiquidBackgroundView.swift in Sources */,
+				000000000000000000000112 /* Models/StudentModels.swift in Sources */,
+				000000000000000000000113 /* Services/APIService.swift in Sources */,
+				000000000000000000000114 /* Services/KeychainService.swift in Sources */,
+				000000000000000000000115 /* ViewModels/DashboardViewModel.swift in Sources */,
+				000000000000000000000116 /* ViewModels/LinkingViewModel.swift in Sources */,
+				000000000000000000000122 /* Services/ParentNotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXFrameworksBuildPhase section */
-		000000000000000000000008 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-/* End PBXFrameworksBuildPhase section */
-
 /* Begin XCBuildConfiguration section */
-		000000000000000000000010 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_NO_COMMON_BLOCKS = YES; GCC_WARN_64_TO_32_BIT_CONVERSION = YES; GCC_WARN_UNDECLARED_SELECTOR = YES; GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE; GCC_WARN_UNUSED_FUNCTION = YES; GCC_WARN_UNUSED_VARIABLE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; }; name = Debug; };
-		000000000000000000000011 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; }; name = Release; };
-		000000000000000000000012 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = ""; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_ASSET_PATHS = "\"Sources/NaderGorgeParent/Preview Content\""; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "Nader Gorge Parent"; INFOPLIST_KEY_UILaunchScreen_Generation = YES; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = net.massaracademy.nadergorge.parent; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Debug; };
-		000000000000000000000013 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = ""; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "Nader Gorge Parent"; INFOPLIST_KEY_UILaunchScreen_Generation = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = net.massaracademy.nadergorge.parent; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; }; name = Release; };
+		000000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		000000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		000000000000000000000012 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = NaderGorgeParent.entitlements;
+				CURRENT_PROJECT_VERSION = 13;
+				DEVELOPMENT_TEAM = CDZTQC2B3J;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "متابعة ولي الأمر - مسار";
+				INFOPLIST_KEY_CFBundleName = "متابعة ولي الأمر - مسار";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				APS_ENVIRONMENT = development;
+				PRODUCT_BUNDLE_IDENTIFIER = net.massaracademy.parent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		000000000000000000000013 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_ENTITLEMENTS = NaderGorgeParent.entitlements;
+				CURRENT_PROJECT_VERSION = 13;
+				DEVELOPMENT_TEAM = CDZTQC2B3J;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "متابعة ولي الأمر - مسار";
+				INFOPLIST_KEY_CFBundleName = "متابعة ولي الأمر - مسار";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				APS_ENVIRONMENT = production;
+				PRODUCT_BUNDLE_IDENTIFIER = net.massaracademy.parent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		000000000000000000000014 /* Build configuration list for PBXProject "NaderGorgeParent" */ = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000010 /* Debug */, 000000000000000000000011 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		000000000000000000000015 /* Build configuration list for PBXNativeTarget "NaderGorgeParent" */ = {isa = XCConfigurationList; buildConfigurations = (000000000000000000000012 /* Debug */, 000000000000000000000013 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		000000000000000000000014 /* Build configuration list for PBXProject "NaderGorgeParent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000010 /* Debug */,
+				000000000000000000000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000015 /* Build configuration list for PBXNativeTarget "NaderGorgeParent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000012 /* Debug */,
+				000000000000000000000013 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 	};
 	rootObject = 000000000000000000000001 /* Project object */;

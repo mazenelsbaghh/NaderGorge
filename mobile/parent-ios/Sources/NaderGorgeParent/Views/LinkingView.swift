@@ -11,7 +11,7 @@ public struct MassarLogoView: View {
     
     public var body: some View {
         HStack(spacing: 10) {
-            Image(isDarkBg ? "logo-mark-light" : "logo-mark", bundle: .module)
+            Image(isDarkBg ? "logo-mark-light" : "logo-mark", bundle: NaderGorgeResources.bundle)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 36, height: 36)
@@ -120,7 +120,7 @@ public struct LinkingView: View {
                                     .fill(Color.white.opacity(0.15))
                                     .frame(width: 72, height: 72)
                                 
-                                Image("logo-mark-light", bundle: .module)
+                                Image("logo-mark-light", bundle: NaderGorgeResources.bundle)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 44, height: 44)
@@ -192,7 +192,9 @@ public struct LinkingView: View {
                                         viewModel.cancelLink()
                                     } else {
                                         Task {
-                                            await viewModel.linkStudent()
+                                            await viewModel.linkStudent(
+                                                deviceToken: ParentDeviceTokenStore.token ?? "ios-parent-pending-token"
+                                            )
                                         }
                                     }
                                 }) {

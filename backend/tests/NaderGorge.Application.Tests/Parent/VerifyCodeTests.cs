@@ -179,4 +179,28 @@ public class VerifyCodeTests : IDisposable
         Assert.Equal("mock_fcm_token", registeredTokens[0].DeviceToken);
         Assert.Equal("android", registeredTokens[0].Platform);
     }
+
+    [Fact]
+    public async Task VerifyCode_WithPendingDeviceToken_ShouldNotPersistSentinel()
+    {
+        var user = new User { FullName = "ولي أمر", PhoneNumber = "01000000000", PasswordHash = "hash" };
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        var profile = new StudentProfile
+        {
+            UserId = user.Id,
+            ParentTrackingCode = "321987"
+        };
+        _db.StudentProfiles.Add(profile);
+        await _db.SaveChangesAsync();
+
+        var handler = new VerifyParentCodeCommandHandler(_db, _tokenService);
+        var response = await handler.Handle(
+            new VerifyParentCodeCommand("321987", "ios-parent-pending-token", "ios"),
+            CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Empty(await _db.ParentDeviceTokens.Where(t => t.StudentId == profile.Id).ToListAsync());
+    }
 }

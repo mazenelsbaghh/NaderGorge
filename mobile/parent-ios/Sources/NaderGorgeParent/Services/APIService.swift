@@ -3,6 +3,10 @@ import Foundation
 public protocol APIServiceProtocol {
     func verifyCode(trackingCode: String, deviceToken: String) async throws -> VerifyCodeResponse
     func fetchStudentDetails(token: String) async throws -> StudentDetailsResponse
+    func fetchNotifications(token: String) async throws -> [ParentNotification]
+    func markNotificationAsRead(token: String, notificationId: String) async throws
+    func registerDeviceToken(token: String, deviceToken: String) async throws
+    func fetchAppConfig() async throws -> ParentAppConfig
 }
 
 public class APIService: APIServiceProtocol {
@@ -56,6 +60,44 @@ public class APIService: APIServiceProtocol {
             statusCode: httpResponse.statusCode,
             unauthorizedStatuses: [401, 403]
         )
+    }
+
+    public func fetchNotifications(token: String) async throws -> [ParentNotification] {
+        let url = baseURL.appendingPathComponent("api/parent/notifications")
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        return try decodeApiResponse(ParentNotificationList.self, from: data, statusCode: httpResponse.statusCode).items
+    }
+
+    public func markNotificationAsRead(token: String, notificationId: String) async throws {
+        let url = baseURL.appendingPathComponent("api/parent/notifications/\(notificationId)/read")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        _ = try decodeApiResponse(Bool.self, from: data, statusCode: httpResponse.statusCode)
+    }
+
+    public func registerDeviceToken(token: String, deviceToken: String) async throws {
+        let url = baseURL.appendingPathComponent("api/parent/device-token")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(RegisterDeviceTokenRequest(deviceToken: deviceToken))
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        _ = try decodeApiResponse(Bool.self, from: data, statusCode: httpResponse.statusCode)
+    }
+
+    public func fetchAppConfig() async throws -> ParentAppConfig {
+        let url = baseURL.appendingPathComponent("api/parent/app-config")
+        let (data, response) = try await session.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        return try decodeApiResponse(ParentAppConfig.self, from: data, statusCode: httpResponse.statusCode)
     }
 
     private func decodeApiResponse<T: Decodable>(
@@ -122,8 +164,17 @@ private struct ApiResponse<T: Decodable>: Decodable {
     let errors: [String]?
 }
 
+private struct ParentNotificationList: Decodable {
+    let items: [ParentNotification]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        items = (try? container.decode([ParentNotification].self)) ?? []
+    }
+}
+
 public struct JWTDecoder {
-    public static func decodeStudentId(from token: String) -> UUID? {
+    public static func decodeStudentId(from token: String) -> String? {
         let parts = token.components(separatedBy: ".")
         guard parts.count == 3 else { return nil }
         
@@ -140,8 +191,8 @@ public struct JWTDecoder {
         
         do {
             if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                if let studentIdStr = json["StudentId"] as? String ?? json["studentId"] as? String {
-                    return UUID(uuidString: studentIdStr)
+                if let studentId = json["StudentId"] as? String ?? json["studentId"] as? String ?? json["sub"] as? String {
+                    return studentId
                 }
             }
         } catch {

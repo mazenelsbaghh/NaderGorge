@@ -1,5 +1,15 @@
 import SwiftUI
 
+enum NaderGorgeResources {
+    static var bundle: Bundle {
+        #if SWIFT_PACKAGE
+        return .module
+        #else
+        return .main
+        #endif
+    }
+}
+
 public struct BrandColors {
     // Core brand colors from guide
     public static let deepNavy = Color(red: 10/255, green: 29/255, blue: 61/255)      // #0A1D3D

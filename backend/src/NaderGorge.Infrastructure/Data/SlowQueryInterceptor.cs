@@ -1,5 +1,7 @@
 using System;
 using System.Data.Common;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -22,7 +24,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         DbDataReader result)
     {
-        LogSlowQuery(eventData);
+        LogSlowQuery(command, eventData);
         return base.ReaderExecuted(command, eventData, result);
     }
 
@@ -32,7 +34,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         DbDataReader result,
         CancellationToken cancellationToken = default)
     {
-        LogSlowQuery(eventData);
+        LogSlowQuery(command, eventData);
         return base.ReaderExecutedAsync(command, eventData, result, cancellationToken);
     }
 
@@ -41,7 +43,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         int result)
     {
-        LogSlowQuery(eventData);
+        LogSlowQuery(command, eventData);
         return base.NonQueryExecuted(command, eventData, result);
     }
 
@@ -51,7 +53,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         int result,
         CancellationToken cancellationToken = default)
     {
-        LogSlowQuery(eventData);
+        LogSlowQuery(command, eventData);
         return base.NonQueryExecutedAsync(command, eventData, result, cancellationToken);
     }
 
@@ -60,7 +62,7 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         CommandExecutedEventData eventData,
         object? result)
     {
-        LogSlowQuery(eventData);
+        LogSlowQuery(command, eventData);
         return base.ScalarExecuted(command, eventData, result);
     }
 
@@ -70,20 +72,31 @@ public class SlowQueryInterceptor : DbCommandInterceptor
         object? result,
         CancellationToken cancellationToken = default)
     {
-        LogSlowQuery(eventData);
+        LogSlowQuery(command, eventData);
         return base.ScalarExecutedAsync(command, eventData, result, cancellationToken);
     }
 
-    private void LogSlowQuery(CommandExecutedEventData eventData)
+    private void LogSlowQuery(DbCommand command, CommandExecutedEventData eventData)
     {
         var durationMs = eventData.Duration.TotalMilliseconds;
         if (durationMs > SlowQueryThresholdMs)
         {
             _logger.LogWarning(
-                "Slow database command detected: operation {Operation} took {DurationMs}ms (threshold {ThresholdMs}ms).",
+                "Slow database command detected: operation {Operation} context {Context} fingerprint {Fingerprint} took {DurationMs}ms (threshold {ThresholdMs}ms).",
                 eventData.ExecuteMethod,
+                eventData.Context?.GetType().Name ?? "unknown",
+                QueryFingerprint(command.CommandText),
                 durationMs,
                 SlowQueryThresholdMs);
         }
+    }
+
+    private static string QueryFingerprint(string commandText)
+    {
+        var normalized = string.Join(
+            ' ',
+            commandText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
+        return Convert.ToHexString(hash)[..16];
     }
 }

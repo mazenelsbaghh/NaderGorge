@@ -23,18 +23,22 @@ public class RegisterParentDeviceTokenCommandHandler : IRequestHandler<RegisterP
 
     public async Task<ApiResponse<bool>> Handle(RegisterParentDeviceTokenCommand request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.DeviceToken))
+        if (string.IsNullOrWhiteSpace(request.DeviceToken)
+            || request.DeviceToken.Trim().EndsWith("-parent-pending-token", StringComparison.OrdinalIgnoreCase))
         {
-            return ApiResponse<bool>.Fail("رمز الجهاز غير صالح");
+            // Linking may call this endpoint before the native push SDK has
+            // produced a token. Treat the sentinel as a no-op and wait for the
+            // subsequent APNs/FCM callback.
+            return ApiResponse<bool>.Ok(true);
         }
 
         var normalizedToken = request.DeviceToken.Trim();
-        var platform = string.IsNullOrWhiteSpace(request.Platform) ? "android" : request.Platform.Trim();
+        var platform = string.IsNullOrWhiteSpace(request.Platform) ? "android" : request.Platform.Trim().ToLowerInvariant();
 
-        var exists = await _db.ParentDeviceTokens
-            .AnyAsync(t => t.StudentId == request.StudentProfileId && t.DeviceToken == normalizedToken, ct);
+        var existing = await _db.ParentDeviceTokens
+            .FirstOrDefaultAsync(t => t.StudentId == request.StudentProfileId && t.DeviceToken == normalizedToken, ct);
 
-        if (!exists)
+        if (existing is null)
         {
             _db.ParentDeviceTokens.Add(new ParentDeviceToken
             {
@@ -42,6 +46,11 @@ public class RegisterParentDeviceTokenCommandHandler : IRequestHandler<RegisterP
                 DeviceToken = normalizedToken,
                 Platform = platform
             });
+            await _db.SaveChangesAsync(ct);
+        }
+        else if (!string.Equals(existing.Platform, platform, StringComparison.OrdinalIgnoreCase))
+        {
+            existing.Platform = platform;
             await _db.SaveChangesAsync(ct);
         }
 

@@ -54,7 +54,7 @@ public struct SplashScreenView: View {
                             .frame(width: 128, height: 128)
                             .shadow(color: BrandColors.teal.opacity(0.3), radius: 10, x: 0, y: 5)
                         
-                        Image("logo-mark-light", bundle: .module)
+                        Image("logo-mark-light", bundle: NaderGorgeResources.bundle)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 80, height: 80)

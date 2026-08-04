@@ -137,7 +137,7 @@ public struct StudentConfirmationView: View {
                                         .font(.system(size: 13))
                                         .foregroundColor(BrandColors.teal)
                                     
-                                    Text("رقم المتابعة: \(student.studentId.uuidString.prefix(8))")
+                                    Text("رقم المتابعة: \(student.studentId.prefix(8))")
                                         .font(.custom("Tajawal-Medium", size: 13))
                                         .fontWeight(.medium)
                                         .foregroundColor(BrandColors.teal)

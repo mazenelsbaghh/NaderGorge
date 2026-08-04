@@ -76,6 +76,7 @@ services:
     volumes:
       - /srv/massar-shared:/shared
       - /srv/massar-shared/public:/backend/src/NaderGorge.API/wwwroot
+      - /etc/massar/secrets/apns-auth-key.p8:/run/secrets/apns-auth-key.p8:ro
     depends_on:
       backend:
         condition: service_healthy

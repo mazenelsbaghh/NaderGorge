@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 @MainActor
@@ -6,16 +7,27 @@ public struct DashboardView: View {
     @State private var selectedTab: Tab = .home
     @State private var activeSubScreen: String? = nil // "profile", "attendance", "notes", "fees", "notifications", "settings"
     @State private var showStudentSelector = false
+    @State private var selectedTeacherId: String?
+    @State private var selectedPackageId: String?
+    @State private var selectedTermId: String?
+    @State private var homeworkFilter: HomeworkFilter = .all
+    @State private var notificationsEnabled = false
     @Environment(\.colorScheme) var colorScheme
     
     public var onAddStudent: () -> Void
     
     public enum Tab: String, CaseIterable {
         case home = "الرئيسية"
-        case schedule = "الجدول"
+        case schedule = "المشاهدات"
         case homework = "الواجبات"
-        case grades = "الدرجات"
+        case grades = "امتحانات"
         case more = "المزيد"
+    }
+
+    private enum HomeworkFilter: String, CaseIterable {
+        case all = "الكل"
+        case pending = "متبقي"
+        case submitted = "تم التسليم"
     }
     
     private var isDark: Bool {
@@ -51,6 +63,13 @@ public struct DashboardView: View {
                 await viewModel.fetchDetails()
             }
         }
+        .task(id: viewModel.selectedProfile?.studentId) {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { return }
+                await viewModel.refreshActiveStudent()
+            }
+        }
     }
     
     // --- Main Dashboard Scaffold (Tabs + Content) ---
@@ -76,11 +95,11 @@ public struct DashboardView: View {
                             case .home:
                                 homeTab(details: details)
                             case .schedule:
-                                scheduleTab()
+                                scheduleTab(details: details)
                             case .homework:
-                                homeworkTab(homeworks: details.homeworks)
+                                homeworkTab(details: details)
                             case .grades:
-                                gradesTab(exams: details.exams)
+                                gradesTab(details: details)
                             case .more:
                                 moreTab()
                             }
@@ -159,10 +178,10 @@ public struct DashboardView: View {
     private var bottomTabBar: some View {
         HStack(spacing: 0) {
             tabItem(tab: .home, iconName: "house", activeIconName: "house.fill")
-            tabItem(tab: .schedule, iconName: "calendar", activeIconName: "calendar")
-            tabItem(tab: .homework, iconName: "pencil.and.outline", activeIconName: "pencil.and.outline")
+            tabItem(tab: .schedule, iconName: "play", activeIconName: "play.fill")
+            tabItem(tab: .homework, iconName: "pencil", activeIconName: "pencil")
             tabItem(tab: .grades, iconName: "star", activeIconName: "star.fill")
-            tabItem(tab: .more, iconName: "ellipsis.circle", activeIconName: "ellipsis.circle.fill")
+            tabItem(tab: .more, iconName: "line.3.horizontal", activeIconName: "line.3.horizontal")
         }
         .padding(.vertical, 8)
         .background(
@@ -252,7 +271,7 @@ public struct DashboardView: View {
     @ViewBuilder
     private func subScreenRouter(subScreen: String) -> some View {
         let details = viewModel.studentDetails
-        let name = details?.studentName ?? viewModel.selectedProfile?.name ?? "أحمد محمد"
+        let name = details?.studentName ?? viewModel.selectedProfile?.name ?? "طالب مسار"
         let grade = details?.grade ?? "الصف الدراسي"
         let school = details?.school ?? "مدرسة مسار"
         
@@ -261,10 +280,12 @@ public struct DashboardView: View {
             profileView(name: name, grade: grade, school: school)
         case "attendance":
             attendanceView(
-                watched: details?.attendance.watchedLessons ?? 18,
-                total: details?.attendance.totalLessons ?? 20,
-                rate: details?.attendance.completionRate ?? 90.0
+                watched: details?.attendance.watchedLessons ?? 0,
+                total: details?.attendance.totalLessons ?? 0,
+                rate: details?.attendance.completionRate ?? 0
             )
+        case "courses":
+            coursesView(details?.courses ?? [])
         case "notes":
             teacherNotesView()
         case "fees":
@@ -282,7 +303,8 @@ public struct DashboardView: View {
     
     // Tab 1: Home View (Dashboard metrics grid)
     private func homeTab(details: StudentDetailsResponse) -> some View {
-        VStack(spacing: 16) {
+        let latestWarnings = details.warnings.sorted { $0.createdAt > $1.createdAt }.prefix(2)
+        return VStack(spacing: 16) {
             // Welcome card
             HStack(spacing: 16) {
                 Circle()
@@ -315,10 +337,10 @@ public struct DashboardView: View {
             // Grid Metrics
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
-                    metricWidgetCard(title: "الحضور", value: "\(details.attendance.completionRate.toInt())%", sub: "نسبة الالتزام", icon: "checkmark.circle.fill", color: BrandColors.teal) {
+                    metricWidgetCard(title: "المشاهدات", value: "\(details.attendance.completionRate.toInt())%", sub: "نسبة إكمال الحصص", icon: "checkmark.circle.fill", color: BrandColors.teal) {
                         activeSubScreen = "attendance"
                     }
-                    metricWidgetCard(title: "آخر درجة", value: "88", sub: "ممتاز", icon: "star.fill", color: BrandColors.warmGold) {
+                    metricWidgetCard(title: "امتحانات", value: "\(details.exams.count)", sub: "محاولات مسجلة", icon: "star.fill", color: BrandColors.warmGold) {
                         selectedTab = .grades
                     }
                 }
@@ -326,38 +348,34 @@ public struct DashboardView: View {
                     metricWidgetCard(title: "الواجبات", value: "\(details.homeworks.filter { !$0.isSubmitted }.count)", sub: "واجبات متبقية", icon: "pencil.and.outline", color: BrandColors.deepNavy) {
                         selectedTab = .homework
                     }
-                    metricWidgetCard(title: "الإنذارات", value: "\(details.warnings.count)", sub: "تنبيه إرشادي", icon: "exclamationmark.triangle.fill", color: BrandColors.warningHigh) {
-                        activeSubScreen = "notifications"
+                    metricWidgetCard(title: "الكورسات", value: "\(details.courses.count)", sub: "كورس مشتري", icon: "list.bullet", color: BrandColors.warmGold) {
+                        activeSubScreen = "courses"
                     }
                 }
             }
             
-            // Alert Banner (Titled "تنبيه مهم جداً")
-            HStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(BrandColors.warmGold)
-                    .font(.system(size: 18))
-                    .padding(8)
-                    .background(BrandColors.warmGold.opacity(0.15))
-                    .clipShape(Circle())
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("تنبيه مهم جداً")
-                        .font(.custom("Tajawal-Bold", size: 13))
-                        .foregroundColor(isDark ? .white : BrandColors.deepNavy)
-                    Text("موعد اختبار الرياضيات الشامل يوم الأحد القادم 12 مايو.")
-                        .font(.custom("Tajawal-Regular", size: 12))
-                        .foregroundColor(.gray)
+            if let warning = latestWarnings.first {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(BrandColors.warmGold)
+                        .font(.system(size: 18))
+                        .padding(8)
+                        .background(BrandColors.warmGold.opacity(0.15))
+                        .clipShape(Circle())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("تنبيه مهم")
+                            .font(.custom("Tajawal-Bold", size: 13))
+                            .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+                        Text(warning.reason)
+                            .font(.custom("Tajawal-Regular", size: 12))
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
                 }
-                Spacer()
+                .padding()
+                .background(BrandColors.warmGold.opacity(isDark ? 0.08 : 0.12))
+                .cornerRadius(12)
             }
-            .padding()
-            .background(BrandColors.warmGold.opacity(isDark ? 0.08 : 0.12))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(BrandColors.warmGold.opacity(0.2), lineWidth: 1)
-            )
             
             // Latest Notifications Section ("آخر التنبيهات")
             VStack(spacing: 12) {
@@ -377,57 +395,18 @@ public struct DashboardView: View {
                 }
                 .padding(.top, 8)
                 
-                // List View (Variant A)
-                VStack(spacing: 12) {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(BrandColors.teal.opacity(0.1))
-                                .frame(width: 40, height: 40)
-                            Image(systemName: "star.bubble.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(BrandColors.teal)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("تم رصد درجة اختبار اللغة العربية")
-                                .font(.custom("Tajawal-Medium", size: 13))
-                                .foregroundColor(isDark ? .white : BrandColors.deepNavy)
-                            Text("منذ ساعتين")
-                                .font(.custom("Tajawal-Regular", size: 11))
-                                .foregroundColor(.gray)
-                        }
-                        Spacer()
+                if latestWarnings.isEmpty {
+                    Text("لا توجد تنبيهات مسجلة حتى الآن.")
+                        .font(.custom("Tajawal-Regular", size: 13))
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(isDark ? BrandColors.darkCard : .white)
+                        .cornerRadius(12)
+                } else {
+                    ForEach(Array(latestWarnings), id: \.id) { warning in
+                        warningSummaryRow(warning)
                     }
-                    .padding()
-                    .background(isDark ? BrandColors.darkCard : .white)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(isDark ? 0.2 : 0.03), radius: 4, x: 0, y: 2)
-                    
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(BrandColors.warningHigh.opacity(0.1))
-                                .frame(width: 40, height: 40)
-                            Image(systemName: "person.badge.minus.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(BrandColors.warningHigh)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("تسجيل غياب في الحصة الثالثة")
-                                .font(.custom("Tajawal-Medium", size: 13))
-                                .foregroundColor(isDark ? .white : BrandColors.deepNavy)
-                            Text("أمس")
-                                .font(.custom("Tajawal-Regular", size: 11))
-                                .foregroundColor(.gray)
-                        }
-                        Spacer()
-                    }
-                    .padding()
-                    .background(isDark ? BrandColors.darkCard : .white)
-                    .cornerRadius(12)
-                    .shadow(color: Color.black.opacity(isDark ? 0.2 : 0.03), radius: 4, x: 0, y: 2)
                 }
             }
             
@@ -437,7 +416,7 @@ public struct DashboardView: View {
                     .font(.custom("Tajawal-Medium", size: 12))
                     .foregroundColor(.white.opacity(0.8))
                 
-                Text("أداء متميز هذا الفصل")
+                Text("مستوى إكمال الحصص")
                     .font(.custom("Tajawal-Bold", size: 18))
                     .fontWeight(.black)
                     .foregroundColor(.white)
@@ -452,12 +431,12 @@ public struct DashboardView: View {
                             
                             Capsule()
                                 .fill(Color.white)
-                                .frame(width: geometry.size.width * 0.75, height: 8)
+                                .frame(width: geometry.size.width * min(max(details.attendance.completionRate / 100, 0), 1), height: 8)
                         }
                     }
                     .frame(height: 8)
                     
-                    Text("75% مكتمل")
+                    Text("\(details.attendance.completionRate.toInt())% مكتمل")
                         .font(.custom("Tajawal-Regular", size: 11))
                         .foregroundColor(.white.opacity(0.8))
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -474,6 +453,28 @@ public struct DashboardView: View {
             .cornerRadius(16)
             .shadow(color: BrandColors.teal.opacity(0.3), radius: 10, x: 0, y: 5)
         }
+    }
+
+    private func warningSummaryRow(_ warning: WarningDetails) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(BrandColors.warningHigh)
+                .frame(width: 40, height: 40)
+                .background(BrandColors.warningHigh.opacity(0.1))
+                .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(warning.reason)
+                    .font(.custom("Tajawal-Medium", size: 13))
+                    .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+                Text(warning.severity)
+                    .font(.custom("Tajawal-Regular", size: 11))
+                    .foregroundColor(.gray)
+            }
+            Spacer()
+        }
+        .padding()
+        .background(isDark ? BrandColors.darkCard : .white)
+        .cornerRadius(12)
     }
     
     private func metricWidgetCard(title: String, value: String, sub: String, icon: String, color: Color, onClick: @escaping () -> Void) -> some View {
@@ -502,27 +503,237 @@ public struct DashboardView: View {
     }
     
     // Tab 2: Schedule View (Screen 8)
-    private func scheduleTab() -> some View {
-        VStack(spacing: 16) {
-            scheduleItem(time: "08:00 ص", subject: "اللغة العربية", teacher: "أ. أحمد سعيد")
-            scheduleItem(time: "09:00 ص", subject: "الرياضيات التطبيقية", teacher: "أ. محمد خالد")
-            scheduleItem(time: "10:00 ص", subject: "العلوم الفيزيائية", teacher: "أ. سارة جمال")
-            
-            // Break item
-            HStack {
-                Spacer()
-                Text("استراحة غداء ونشاط حر")
-                    .font(.custom("Tajawal-Bold", size: 12))
-                    .foregroundColor(isDark ? .white : BrandColors.deepNavy)
-                Spacer()
+    private func scheduleTab(details: StudentDetailsResponse) -> some View {
+        let lessons = filteredWatchLessons(details)
+        let hasDetailedLessons = !lessons.isEmpty
+        let completedCount = hasDetailedLessons ? lessons.filter { $0.isCompleted }.count : details.attendance.watchedLessons
+        let totalCount = hasDetailedLessons ? lessons.count : details.attendance.totalLessons
+        let completionRate = hasDetailedLessons && totalCount > 0
+            ? Double(completedCount) * 100 / Double(totalCount)
+            : details.attendance.completionRate
+
+        return VStack(spacing: 16) {
+            academicFilterBar(details: details)
+
+            watchSummaryCard(completed: completedCount, total: totalCount, rate: completionRate)
+            if lessons.isEmpty {
+                emptyDataCard(totalCount > 0
+                    ? "تفاصيل الحصص غير متاحة حالياً. الملخص العام: \(completedCount) من \(totalCount) حصة."
+                    : "لا توجد مشاهدات مسجلة حتى الآن.")
+            } else {
+                ForEach(lessons) { lesson in
+                    scheduleItem(
+                        time: lesson.isCompleted ? "مكتمل" : "قيد المشاهدة",
+                        subject: lesson.lessonTitle,
+                        teacher: "\(lesson.teacherName) • \(lesson.packageName) • \(lesson.termTitle)"
+                    )
+                }
             }
-            .padding(12)
-            .background(isDark ? BrandColors.darkCard : BrandColors.softGray)
-            .cornerRadius(12)
-            
-            scheduleItem(time: "11:30 ص", subject: "اللغة الإنجليزية", teacher: "أ. ندى محمود")
-            scheduleItem(time: "12:30 م", subject: "الدراسات الاجتماعية", teacher: "أ. عمرو عبد الله")
         }
+    }
+
+    private func watchSummaryCard(completed: Int, total: Int, rate: Double) -> some View {
+        HStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .stroke(BrandColors.softGray.opacity(0.5), lineWidth: 8)
+                Circle()
+                    .trim(from: 0, to: CGFloat(min(max(rate / 100, 0), 1)))
+                    .stroke(BrandColors.teal, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text("\(rate.toInt())%")
+                    .font(.custom("Tajawal-Bold", size: 16))
+                    .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+            }
+            .frame(width: 80, height: 80)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("ملخص مشاهدة الحصص المختارة")
+                    .font(.custom("Tajawal-Bold", size: 14))
+                    .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+                countStatusRow(label: "حصص مكتملة", count: completed, color: BrandColors.passGreen)
+                countStatusRow(label: "تحتاج مشاهدة", count: max(total - completed, 0), color: BrandColors.warningHigh)
+                countStatusRow(label: "إجمالي الحصص", count: total, color: BrandColors.teal)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(isDark ? BrandColors.darkCard : .white)
+        .cornerRadius(16)
+    }
+
+    /// Android opens these screens with the first available teacher/course/term
+    /// selected. The computed fallbacks preserve that behaviour while allowing
+    /// the user to change any picker without mutating view-model data.
+    private func effectiveTeacherId(for details: StudentDetailsResponse) -> String? {
+        guard !details.teachers.isEmpty else { return nil }
+        if let selectedTeacherId,
+           details.teachers.contains(where: { $0.teacherId == selectedTeacherId }) {
+            return selectedTeacherId
+        }
+        return details.teachers.first?.teacherId
+    }
+
+    private func availableCourses(for details: StudentDetailsResponse) -> [CourseSummary] {
+        guard let teacherId = effectiveTeacherId(for: details) else { return [] }
+        return details.courses.filter { $0.teacherId == teacherId }
+    }
+
+    private func effectivePackageId(for details: StudentDetailsResponse) -> String? {
+        let courses = availableCourses(for: details)
+        guard !courses.isEmpty else { return nil }
+        if let selectedPackageId,
+           courses.contains(where: { $0.packageId == selectedPackageId }) {
+            return selectedPackageId
+        }
+        return courses.first?.packageId
+    }
+
+    private func effectiveTermId(for details: StudentDetailsResponse) -> String? {
+        guard let packageId = effectivePackageId(for: details),
+              let course = availableCourses(for: details).first(where: { $0.packageId == packageId }),
+              !course.terms.isEmpty else { return nil }
+        if let selectedTermId,
+           course.terms.contains(where: { $0.termId == selectedTermId }) {
+            return selectedTermId
+        }
+        return course.terms.first?.termId
+    }
+
+    private func filteredWatchLessons(_ details: StudentDetailsResponse) -> [WatchLessonDetails] {
+        let teacherId = effectiveTeacherId(for: details)
+        let packageId = effectivePackageId(for: details)
+        let termId = effectiveTermId(for: details)
+        return details.watchLessons.filter { lesson in
+            (teacherId == nil || lesson.teacherId == teacherId) &&
+            (packageId == nil || lesson.packageId == packageId) &&
+            (termId == nil || lesson.termId == termId)
+        }
+    }
+
+    private func filteredExams(_ details: StudentDetailsResponse) -> [ExamDetails] {
+        let teacherId = effectiveTeacherId(for: details)
+        let packageId = effectivePackageId(for: details)
+        let termId = effectiveTermId(for: details)
+        return details.exams.filter { exam in
+            (teacherId == nil || exam.teacherId == teacherId) &&
+            (packageId == nil || exam.packageId == packageId) &&
+            (termId == nil || exam.termId == termId)
+        }
+    }
+
+    private func filteredHomeworks(_ details: StudentDetailsResponse) -> [HomeworkDetails] {
+        let teacherId = effectiveTeacherId(for: details)
+        let packageId = effectivePackageId(for: details)
+        let termId = effectiveTermId(for: details)
+        return details.homeworks.filter { homework in
+            (teacherId == nil || homework.teacherId == teacherId) &&
+            (packageId == nil || homework.packageId == packageId) &&
+            (termId == nil || homework.termId == termId)
+        }
+    }
+
+    private struct FilterOption: Identifiable {
+        let id: String
+        let title: String
+    }
+
+    private func academicFilterBar(details: StudentDetailsResponse) -> some View {
+        let courses = availableCourses(for: details)
+        let selectedCourseId = effectivePackageId(for: details)
+        let selectedCourse = courses.first { $0.packageId == selectedCourseId }
+        let terms = selectedCourse?.terms ?? []
+
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                if !details.teachers.isEmpty {
+                    filterMenu(
+                        title: "المدرس",
+                        selectedTitle: details.teachers.first(where: { $0.teacherId == effectiveTeacherId(for: details) })?.teacherName ?? "الكل",
+                        options: details.teachers.map { FilterOption(id: $0.teacherId, title: $0.teacherName) },
+                        onSelect: { selectedTeacherId = $0 }
+                    )
+                }
+
+                if !courses.isEmpty {
+                    filterMenu(
+                        title: "الكورس",
+                        selectedTitle: selectedCourse?.packageName ?? "الكل",
+                        options: courses.map { FilterOption(id: $0.packageId, title: $0.packageName) },
+                        onSelect: { selectedPackageId = $0 }
+                    )
+                }
+
+                if !terms.isEmpty {
+                    filterMenu(
+                        title: "الترم",
+                        selectedTitle: terms.first(where: { $0.termId == effectiveTermId(for: details) })?.termTitle ?? "الكل",
+                        options: terms.map { FilterOption(id: $0.termId, title: $0.termTitle) },
+                        onSelect: { selectedTermId = $0 }
+                    )
+                }
+            }
+            .padding(.vertical, 2)
+        }
+        .environment(\.layoutDirection, .rightToLeft)
+    }
+
+    private func teacherFilterBar(details: StudentDetailsResponse) -> some View {
+        Group {
+            if !details.teachers.isEmpty {
+                filterMenu(
+                    title: "المدرس",
+                    selectedTitle: details.teachers.first(where: { $0.teacherId == effectiveTeacherId(for: details) })?.teacherName ?? "الكل",
+                    options: details.teachers.map { FilterOption(id: $0.teacherId, title: $0.teacherName) },
+                    onSelect: { selectedTeacherId = $0 }
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func filterMenu(
+        title: String,
+        selectedTitle: String,
+        options: [FilterOption],
+        onSelect: @escaping (String) -> Void
+    ) -> some View {
+        Menu {
+            ForEach(options) { option in
+                Button {
+                    onSelect(option.id)
+                } label: {
+                    Text(option.title)
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Text("\(title): \(selectedTitle)")
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .font(.custom("Tajawal-Medium", size: 11))
+            .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(isDark ? BrandColors.darkCard : Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(BrandColors.softGray, lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private func emptyDataCard(_ message: String) -> some View {
+        Text(message)
+            .font(.custom("Tajawal-Regular", size: 13))
+            .foregroundColor(.gray)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+            .background(isDark ? BrandColors.darkCard : .white)
+            .cornerRadius(12)
     }
     
     private func scheduleItem(time: String, subject: String, teacher: String) -> some View {
@@ -548,89 +759,228 @@ public struct DashboardView: View {
     }
     
     // Tab 3: Homework View (Screen 7)
-    private func homeworkTab(homeworks: [HomeworkDetails]) -> some View {
-        VStack(spacing: 12) {
-            ForEach(homeworks, id: \.title) { hw in
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(hw.title)
-                            .font(.custom("Tajawal-Bold", size: 14))
-                            .foregroundColor(isDark ? .white : BrandColors.deepNavy)
-                        if hw.isSubmitted {
-                            Text("التقييم: \(hw.grade ?? "A")")
-                                .font(.custom("Tajawal-Regular", size: 11))
-                                .foregroundColor(BrandColors.teal)
-                        } else {
-                            Text("متأخر عن التسليم")
-                                .font(.custom("Tajawal-Regular", size: 11))
-                                .foregroundColor(.red)
-                        }
-                    }
-                    Spacer()
-                    Text(hw.isSubmitted ? "مسلم" : "متبقي")
-                        .font(.custom("Tajawal-Bold", size: 12))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(hw.isSubmitted ? BrandColors.teal.opacity(0.1) : Color.red.opacity(0.1))
-                        .foregroundColor(hw.isSubmitted ? BrandColors.teal : .red)
-                        .cornerRadius(8)
+    private func homeworkTab(details: StudentDetailsResponse) -> some View {
+        let filtered = filteredHomeworks(details).filter { homework in
+            switch homeworkFilter {
+            case .all: return true
+            case .pending: return !homework.isSubmitted
+            case .submitted: return homework.isSubmitted
+            }
+        }
+
+        return VStack(spacing: 12) {
+            academicFilterBar(details: details)
+
+            Picker("حالة الواجب", selection: $homeworkFilter) {
+                ForEach(HomeworkFilter.allCases, id: \.self) { filter in
+                    Text(filter.rawValue).tag(filter)
                 }
-                .padding()
-                .background(isDark ? BrandColors.darkCard : .white)
-                .cornerRadius(12)
+            }
+            .pickerStyle(.segmented)
+            .environment(\.layoutDirection, .rightToLeft)
+
+            if filtered.isEmpty {
+                emptyDataCard("لا توجد واجبات في هذا التصنيف.")
+            } else {
+                ForEach(filtered) { hw in
+                    homeworkCard(hw)
+                }
+            }
+        }
+    }
+
+    private func homeworkCard(_ homework: HomeworkDetails) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(homework.title)
+                        .font(.custom("Tajawal-Bold", size: 14))
+                        .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+                    Text([homework.teacherName, homework.packageName, homework.termTitle]
+                        .compactMap { $0 }
+                        .joined(separator: " • "))
+                        .font(.custom("Tajawal-Regular", size: 11))
+                        .foregroundColor(.gray)
+                    Text(homework.isSubmitted ? "التقييم: \(homework.grade ?? "غير مرصود")" : "متبقي للتسليم")
+                        .font(.custom("Tajawal-Regular", size: 11))
+                        .foregroundColor(homework.isSubmitted ? BrandColors.teal : BrandColors.warningHigh)
+                }
+                Spacer()
+                Text(homework.isSubmitted ? "تم التسليم" : "متبقي")
+                    .font(.custom("Tajawal-Bold", size: 12))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(homework.isSubmitted ? BrandColors.teal.opacity(0.1) : BrandColors.warningHigh.opacity(0.1))
+                    .foregroundColor(homework.isSubmitted ? BrandColors.teal : BrandColors.warningHigh)
+                    .cornerRadius(8)
+            }
+            if let mistakes = homework.mistakes, !mistakes.isEmpty {
+                homeworkMistakesView(mistakes)
+            }
+        }
+        .padding()
+        .background(isDark ? BrandColors.darkCard : .white)
+        .cornerRadius(12)
+    }
+
+    private func homeworkMistakesView(_ mistakes: [HomeworkAnswerReview]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("مراجعة الأخطاء (\(mistakes.count))")
+                .font(.custom("Tajawal-Bold", size: 12))
+                .foregroundColor(BrandColors.warningHigh)
+            ForEach(Array(mistakes.enumerated()), id: \.offset) { _, mistake in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(mistake.questionText)
+                        .font(.custom("Tajawal-Medium", size: 12))
+                    Text("إجابتك: \(mistake.studentAnswer)")
+                        .font(.custom("Tajawal-Regular", size: 11))
+                        .foregroundColor(.red)
+                    if let correctAnswer = mistake.correctAnswer {
+                        Text("الإجابة الصحيحة: \(correctAnswer)")
+                            .font(.custom("Tajawal-Regular", size: 11))
+                            .foregroundColor(BrandColors.passGreen)
+                    }
+                    if let correction = mistake.writtenCorrection, !correction.isEmpty {
+                        Text("تصحيح المدرس: \(correction)")
+                            .font(.custom("Tajawal-Regular", size: 11))
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(BrandColors.softGray.opacity(isDark ? 0.12 : 0.45))
+                .cornerRadius(8)
             }
         }
     }
     
     // Tab 4: Grades View (Screen 6)
-    private func gradesTab(exams: [ExamDetails]) -> some View {
-        VStack(spacing: 12) {
-            // Line Chart Visual representation
-            VStack(alignment: .leading) {
-                Text("متوسط درجات الطالب")
-                    .font(.custom("Tajawal-Bold", size: 13))
-                    .foregroundColor(.gray)
-                Text("88% (ممتاز)")
-                    .font(.custom("Tajawal-Bold", size: 20))
-                    .foregroundColor(BrandColors.teal)
-                
-                // Chart path
-                GeometryReader { geometry in
-                    Path { path in
-                        let w = geometry.size.width
-                        let h = geometry.size.height
-                        path.move(to: CGPoint(x: 0, y: h * 0.7))
-                        path.addLine(to: CGPoint(x: w * 0.3, y: h * 0.7))
-                        path.addLine(to: CGPoint(x: w * 0.6, y: h * 0.5))
-                        path.addLine(to: CGPoint(x: w, y: h * 0.3))
-                    }
-                    .stroke(BrandColors.teal, lineWidth: 3)
+    private func gradesTab(details: StudentDetailsResponse) -> some View {
+        let exams = filteredExams(details)
+        return VStack(spacing: 12) {
+            academicFilterBar(details: details)
+
+            gradeSummaryCard(exams: exams)
+
+            if exams.isEmpty {
+                emptyDataCard("لا توجد امتحانات في هذا الاختيار.")
+            } else {
+                ForEach(exams) { exam in
+                    examCard(exam)
                 }
-                .frame(height: 80)
             }
-            .padding()
-            .background(isDark ? BrandColors.darkCard : .white)
-            .cornerRadius(16)
-            
-            // List of tests
-            ForEach(exams, id: \.examTitle) { exam in
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(exam.examTitle)
-                            .font(.custom("Tajawal-Bold", size: 13))
-                            .foregroundColor(isDark ? .white : BrandColors.deepNavy)
-                        Text("الدرجة: \(exam.score) / \(exam.totalScore) (\(exam.percentage.toInt())%)")
-                            .font(.custom("Tajawal-Regular", size: 12))
+        }
+    }
+
+    private func gradeSummaryCard(exams: [ExamDetails]) -> some View {
+        VStack(alignment: .leading) {
+            Text("متوسط درجات الطالب")
+                .font(.custom("Tajawal-Bold", size: 13))
+                .foregroundColor(.gray)
+            Text(exams.isEmpty ? "لا توجد محاولات مسجلة" : "\(Int(exams.map(\.percentage).reduce(0, +) / Double(exams.count)))% متوسط الدرجات")
+                .font(.custom("Tajawal-Bold", size: 20))
+                .foregroundColor(BrandColors.teal)
+            if !exams.isEmpty { gradeChart(exams: exams) }
+        }
+        .padding()
+        .background(isDark ? BrandColors.darkCard : .white)
+        .cornerRadius(16)
+    }
+
+    private func gradeChart(exams: [ExamDetails]) -> some View {
+        GeometryReader { geometry in
+            Path { path in
+                let width = geometry.size.width
+                let height = geometry.size.height
+                let maxIndex = max(exams.count - 1, 1)
+                for (index, exam) in exams.enumerated() {
+                    let x = width * CGFloat(index) / CGFloat(maxIndex)
+                    let y = height * (1 - CGFloat(min(max(exam.percentage, 0), 100)) / 100)
+                    if index == 0 { path.move(to: CGPoint(x: x, y: y)) }
+                    else { path.addLine(to: CGPoint(x: x, y: y)) }
+                }
+            }
+            .stroke(BrandColors.teal, lineWidth: 3)
+        }
+        .frame(height: 80)
+    }
+
+    private func examCard(_ exam: ExamDetails) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(exam.examTitle)
+                        .font(.custom("Tajawal-Bold", size: 13))
+                        .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+                    Text([exam.teacherName, exam.packageName, exam.termTitle]
+                        .compactMap { $0 }
+                        .joined(separator: " • "))
+                        .font(.custom("Tajawal-Regular", size: 11))
+                        .foregroundColor(.gray)
+                    Text("الدرجة: \(exam.score) / \(exam.totalScore) (\(exam.percentage.toInt())%)")
+                        .font(.custom("Tajawal-Regular", size: 12))
+                        .foregroundColor(.gray)
+                }
+                Spacer()
+                Text(examStatusTitle(exam.status))
+                    .font(.custom("Tajawal-Bold", size: 12))
+                    .foregroundColor(examStatusColor(exam.status))
+            }
+            if let mistakes = exam.mistakes, !mistakes.isEmpty {
+                examMistakesView(mistakes)
+            }
+        }
+        .padding()
+        .background(isDark ? BrandColors.darkCard : .white)
+        .cornerRadius(12)
+    }
+
+    private func examStatusTitle(_ status: String) -> String {
+        switch status.lowercased() {
+        case "passed", "pass", "ناجح": return "ناجح"
+        case "failed", "fail", "راسب": return "راسب"
+        default: return "لم يبدأ"
+        }
+    }
+
+    private func examStatusColor(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "passed", "pass", "ناجح": return BrandColors.passGreen
+        case "failed", "fail", "راسب": return BrandColors.warningHigh
+        default: return .gray
+        }
+    }
+
+    private func examMistakesView(_ mistakes: [QuestionReview]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("مراجعة الأخطاء (\(mistakes.count))")
+                .font(.custom("Tajawal-Bold", size: 12))
+                .foregroundColor(BrandColors.warningHigh)
+            ForEach(Array(mistakes.enumerated()), id: \.offset) { item in
+                let mistake = item.element
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(mistake.questionText)
+                        .font(.custom("Tajawal-Medium", size: 12))
+                    if let answer = mistake.studentAnswer {
+                        Text("إجابتك: \(answer)")
+                            .font(.custom("Tajawal-Regular", size: 11))
+                            .foregroundColor(.red)
+                    }
+                    if let correctAnswer = mistake.correctAnswer {
+                        Text("الإجابة الصحيحة: \(correctAnswer)")
+                            .font(.custom("Tajawal-Regular", size: 11))
+                            .foregroundColor(BrandColors.passGreen)
+                    }
+                    if let correction = mistake.writtenCorrection, !correction.isEmpty {
+                        Text("تصحيح المدرس: \(correction)")
+                            .font(.custom("Tajawal-Regular", size: 11))
                             .foregroundColor(.gray)
                     }
-                    Spacer()
-                    Text(exam.status == "Passed" ? "ناجح" : "راسب")
-                        .font(.custom("Tajawal-Bold", size: 12))
-                        .foregroundColor(exam.status == "Passed" ? BrandColors.passGreen : .red)
                 }
-                .padding()
-                .background(isDark ? BrandColors.darkCard : .white)
-                .cornerRadius(12)
+                .padding(8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(BrandColors.softGray.opacity(isDark ? 0.12 : 0.45))
+                .cornerRadius(8)
             }
         }
     }
@@ -638,10 +988,12 @@ public struct DashboardView: View {
     // Tab 5: More Menu View
     private func moreTab() -> some View {
         VStack(spacing: 12) {
+            moreMenuRow(title: "ربط طالب جديد", iconName: "plus.circle.fill") { onAddStudent() }
             moreMenuRow(title: "الملف الشخصي للطالب", iconName: "person.fill") { activeSubScreen = "profile" }
-            moreMenuRow(title: "سجل الغياب والحضور", iconName: "checkmark.circle.fill") { activeSubScreen = "attendance" }
+            moreMenuRow(title: "الكورسات والترمات", iconName: "list.bullet") { activeSubScreen = "courses" }
+            moreMenuRow(title: "سجل المشاهدات", iconName: "play.fill") { activeSubScreen = "attendance" }
             moreMenuRow(title: "ملاحظات المدرسين", iconName: "info.circle.fill") { activeSubScreen = "notes" }
-            moreMenuRow(title: "المصاريف والمدفوعات", iconName: "cart.fill") { activeSubScreen = "fees" }
+            moreMenuRow(title: "الرصيد وتفاصيل الرصيد", iconName: "cart.fill") { activeSubScreen = "fees" }
             moreMenuRow(title: "إعدادات التطبيق", iconName: "gearshape.fill") { activeSubScreen = "settings" }
         }
     }
@@ -710,7 +1062,7 @@ public struct DashboardView: View {
                     Text(name)
                         .font(.custom("Tajawal-Bold", size: 20))
                         .foregroundColor(isDark ? .white : BrandColors.deepNavy)
-                    Text("رقم المتابعة: MSR-2026-00125")
+                    Text("رقم المتابعة: \(viewModel.selectedProfile?.studentId.prefix(8) ?? "-")")
                         .font(.custom("Tajawal-Bold", size: 13))
                         .foregroundColor(BrandColors.teal)
                 }
@@ -722,9 +1074,8 @@ public struct DashboardView: View {
                 // Info rows
                 VStack(spacing: 12) {
                     infoRow(label: "الصف الدراسي", value: grade, iconName: "house.fill")
-                    infoRow(label: "المجموعة الدراسية", value: "مجموعة A", iconName: "star.fill")
-                    infoRow(label: "تاريخ الميلاد", value: "15/05/2009", iconName: "calendar")
-                    infoRow(label: "عدد المدرسين", value: "6 مدرسين", iconName: "person.fill")
+                    infoRow(label: "المدرسة", value: school, iconName: "building.2.fill")
+                    infoRow(label: "عدد المدرسين", value: "\(viewModel.studentDetails?.teachers.count ?? 0) مدرس", iconName: "person.fill")
                 }
                 
                 Spacer()
@@ -755,29 +1106,10 @@ public struct DashboardView: View {
     // Screen 5: Attendance Calendar & Gauge View
     private func attendanceView(watched: Int, total: Int, rate: Double) -> some View {
         VStack(spacing: 0) {
-            subViewTopBar(title: "الحضور والغياب")
+            subViewTopBar(title: "سجل المشاهدات")
             
             ScrollView {
                 VStack(spacing: 16) {
-                    // Calendar card
-                    VStack {
-                        HStack {
-                            Image(systemName: "chevron.right")
-                            Spacer()
-                            Text("مايو 2026")
-                                .font(.custom("Tajawal-Bold", size: 15))
-                            Spacer()
-                            Image(systemName: "chevron.left")
-                        }
-                        .padding(.bottom, 8)
-                        
-                        // Simple grid drawing
-                        simpleCalendarGrid
-                    }
-                    .padding()
-                    .background(isDark ? BrandColors.darkCard : .white)
-                    .cornerRadius(16)
-                    
                     // Gauge card
                     VStack(alignment: .leading) {
                         Text("نسبة الالتزام الإجمالية")
@@ -790,7 +1122,9 @@ public struct DashboardView: View {
                                 Circle()
                                     .stroke(Color.gray.opacity(0.1), lineWidth: 8)
                                 Circle()
-                                    .stroke(BrandColors.teal, lineWidth: 8)
+                                    .trim(from: 0, to: CGFloat(min(max(rate / 100, 0), 1)))
+                                    .stroke(BrandColors.teal, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                                    .rotationEffect(.degrees(-90))
                                 Text("\(rate.toInt())%")
                                     .font(.custom("Tajawal-Bold", size: 16))
                             }
@@ -798,8 +1132,7 @@ public struct DashboardView: View {
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 countStatusRow(label: "حاضر ومكتمل", count: watched, color: BrandColors.passGreen)
-                                countStatusRow(label: "غائب ومتأخر", count: total - watched, color: BrandColors.warningHigh)
-                                countStatusRow(label: "إجازة رسمية", count: 2, color: .gray)
+                                countStatusRow(label: "حصص تحتاج مشاهدة", count: max(total - watched, 0), color: BrandColors.warningHigh)
                             }
                         }
                     }
@@ -808,36 +1141,6 @@ public struct DashboardView: View {
                     .cornerRadius(16)
                 }
                 .padding()
-            }
-        }
-    }
-    
-    private var simpleCalendarGrid: some View {
-        VStack(spacing: 8) {
-            HStack {
-                ForEach(["س", "ح", "ن", "ث", "ر", "خ", "ج"], id: \.self) { day in
-                    Text(day)
-                        .font(.custom("Tajawal-Bold", size: 11))
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            Divider()
-            ForEach(0..<4) { row in
-                HStack {
-                    ForEach(1...7, id: \.self) { col in
-                        let dateNum = row * 7 + col
-                        let isPresent = [5, 6, 7, 12, 13, 14, 19, 20].contains(dateNum)
-                        let isAbsent = [11, 21].contains(dateNum)
-                        
-                        Text("\(dateNum)")
-                            .font(.custom("Tajawal-Bold", size: 12))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .aspectRatio(1, contentMode: .fit)
-                            .background(isPresent ? BrandColors.passGreen.opacity(0.15) : (isAbsent ? BrandColors.warningHigh.opacity(0.15) : Color.clear))
-                            .foregroundColor(isPresent ? BrandColors.passGreen : (isAbsent ? BrandColors.warningHigh : (isDark ? .white : .black)))
-                            .clipShape(Circle())
-                    }
-                }
             }
         }
     }
@@ -855,6 +1158,58 @@ public struct DashboardView: View {
                 .foregroundColor(isDark ? .white : BrandColors.deepNavy)
         }
     }
+
+    private func coursesView(_ courses: [CourseSummary]) -> some View {
+        let details = viewModel.studentDetails
+        let filteredCourses: [CourseSummary]
+        if let details, let teacherId = effectiveTeacherId(for: details) {
+            filteredCourses = courses.filter { $0.teacherId == teacherId }
+        } else {
+            filteredCourses = []
+        }
+
+        return VStack(spacing: 12) {
+            if let details {
+                teacherFilterBar(details: details)
+            }
+
+            if filteredCourses.isEmpty {
+                emptyDataCard("لا توجد كورسات مرتبطة بهذا الطالب حتى الآن.")
+            } else {
+                ForEach(filteredCourses) { course in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Image(systemName: "books.vertical.fill")
+                                .foregroundColor(BrandColors.teal)
+                            Text(course.packageName)
+                                .font(.custom("Tajawal-Bold", size: 15))
+                                .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+                            Spacer()
+                        }
+                        Text("المدرس: \(course.teacherName)")
+                            .font(.custom("Tajawal-Regular", size: 12))
+                            .foregroundColor(.gray)
+                        ForEach(course.terms) { term in
+                            HStack {
+                                Text(term.termTitle)
+                                    .font(.custom("Tajawal-Medium", size: 12))
+                                Spacer()
+                                Text("\(term.lessonCount) درس")
+                                Text("\(term.examCount) اختبار")
+                            }
+                            .font(.custom("Tajawal-Regular", size: 11))
+                            .foregroundColor(BrandColors.teal)
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(isDark ? BrandColors.darkCard : .white)
+                    .cornerRadius(12)
+                }
+            }
+        }
+    }
     
     // Screen 9: Teacher Notes View
     private func teacherNotesView() -> some View {
@@ -863,9 +1218,13 @@ public struct DashboardView: View {
             
             ScrollView {
                 VStack(spacing: 12) {
-                    noteCard(teacher: "أ. أحمد سعيد (اللغة العربية)", note: "أحمد طالب ممتاز ومنتبه في الحصة، يحتاج فقط للتركيز على تنظيم الخط.")
-                    noteCard(teacher: "أ. محمد خالد (الرياضيات)", note: "مستوى رائع في الفهم والاستيعاب الرياضي وسرعة حل التمارين.")
-                    noteCard(teacher: "أ. سارة جمال (العلوم)", note: "يظهر اهتماماً متزايداً بالجانب العملي في مادة الفيزياء والكيمياء.")
+                    if let teachers = viewModel.studentDetails?.teachers, !teachers.isEmpty {
+                        ForEach(teachers) { teacher in
+                            noteCard(teacher: teacher.teacherName, note: teacher.specialization ?? "لا توجد ملاحظات مسجلة من هذا المدرس.")
+                        }
+                    } else {
+                        emptyDataCard("لا توجد ملاحظات أو بيانات مدرسين حتى الآن.")
+                    }
                 }
                 .padding()
             }
@@ -893,15 +1252,16 @@ public struct DashboardView: View {
     
     // Screen 10: Fees / Payment View
     private func feesView() -> some View {
-        VStack(spacing: 0) {
-            subViewTopBar(title: "المصاريف والمدفوعات")
+        let balance = viewModel.studentDetails?.balance
+        return VStack(spacing: 0) {
+            subViewTopBar(title: "الرصيد وتفاصيل الرصيد")
             
             VStack(spacing: 16) {
                 VStack(spacing: 8) {
-                    Text("إجمالي المصاريف الدراسية")
+                    Text("الرصيد الحالي")
                         .font(.custom("Tajawal-Regular", size: 13))
                         .foregroundColor(.gray)
-                    Text("12,000 ج.م")
+                    Text("\(String(format: "%.2f", balance?.currentBalance ?? 0)) ج.م")
                         .font(.custom("Tajawal-Bold", size: 28))
                         .fontWeight(.black)
                         .foregroundColor(isDark ? .white : BrandColors.deepNavy)
@@ -911,24 +1271,12 @@ public struct DashboardView: View {
                 .background(isDark ? BrandColors.darkCard : .white)
                 .cornerRadius(16)
                 
-                VStack(spacing: 12) {
-                    feeDetailRow(label: "المدفوع", value: "8,000 ج.م", isCompleted: true)
-                    feeDetailRow(label: "المتبقي", value: "4,000 ج.م", isCompleted: false)
-                }
-                
-                Spacer()
-                
-                Button(action: {}) {
-                    HStack {
-                        Image(systemName: "square.and.arrow.down.fill")
-                        Text("عرض وتحميل إيصال الدفع")
+                if let transactions = balance?.transactions, !transactions.isEmpty {
+                    ForEach(transactions) { transaction in
+                        feeDetailRow(label: transaction.description, value: "\(String(format: "%.2f", transaction.amount)) ج.م", isCompleted: transaction.amount >= 0)
                     }
-                    .font(.custom("Tajawal-Bold", size: 15))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(BrandColors.teal)
-                    .cornerRadius(12)
+                } else {
+                    emptyDataCard("لا توجد حركات رصيد مسجلة حتى الآن.")
                 }
             }
             .padding()
@@ -959,9 +1307,24 @@ public struct DashboardView: View {
             
             ScrollView {
                 VStack(spacing: 12) {
-                    notificationRow(title: "تنبيه غياب", desc: "غياب الطالب يوم الأحد 5 مايو في مادة الرياضيات الشاملة.", date: "منذ ساعة", color: BrandColors.warningHigh)
-                    notificationRow(title: "تنبيه امتحان", desc: "تم جدولة اختبار مادة العلوم العامة يوم الثلاثاء 14 مايو.", date: "منذ ساعتين", color: BrandColors.teal)
-                    notificationRow(title: "رسالة من الإدارة الأكاديمية", desc: "يرجى سداد القسط المتبقي من المصاريف الدراسية قبل نهاية الأسبوع.", date: "أمس", color: BrandColors.warmGold)
+                    if viewModel.notifications.isEmpty {
+                        if viewModel.studentDetails?.warnings.isEmpty ?? true {
+                            emptyDataCard("لا توجد تنبيهات مسجلة حتى الآن.")
+                        }
+                    }
+                    if !viewModel.notifications.isEmpty {
+                        ForEach(viewModel.notifications) { notification in
+                            Button {
+                                Task { await viewModel.markNotificationAsRead(notification) }
+                            } label: {
+                                notificationRow(title: notification.title, desc: notification.body, date: notification.createdAt, color: notification.isRead ? .gray : BrandColors.teal)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    ForEach((viewModel.studentDetails?.warnings ?? []).sorted { $0.createdAt > $1.createdAt }) { warning in
+                        notificationRow(title: "تنبيه \(warning.severity)", desc: warning.reason, date: warning.createdAt, color: BrandColors.warningHigh)
+                    }
                 }
                 .padding()
             }
@@ -986,7 +1349,7 @@ public struct DashboardView: View {
                 Text(desc)
                     .font(.custom("Tajawal-Regular", size: 12))
                     .foregroundColor(.gray)
-                Text(date)
+                Text(displayDate(date))
                     .font(.custom("Tajawal-Regular", size: 10))
                     .foregroundColor(.gray.opacity(0.6))
             }
@@ -996,6 +1359,17 @@ public struct DashboardView: View {
         .background(isDark ? BrandColors.darkCard : .white)
         .cornerRadius(12)
     }
+
+    private func displayDate(_ rawDate: String) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let parsedDate = isoFormatter.date(from: rawDate)
+                ?? ISO8601DateFormatter().date(from: rawDate) else { return rawDate }
+        let displayFormatter = DateFormatter()
+        displayFormatter.locale = Locale(identifier: "ar_EG")
+        displayFormatter.dateFormat = "dd/MM/yyyy HH:mm"
+        return displayFormatter.string(from: parsedDate)
+    }
     
     // Screen 12: App Settings View
     private func settingsView() -> some View {
@@ -1003,18 +1377,51 @@ public struct DashboardView: View {
             subViewTopBar(title: "الإعدادات")
             
             VStack(spacing: 12) {
-                settingsRow(title: "تغيير رقم الموبايل", iconName: "phone.fill")
+                HStack {
+                    Image(systemName: "bell.fill")
+                        .foregroundColor(BrandColors.teal)
+                    Text(notificationsEnabled ? "الإشعارات مفعلة" : "الإشعارات غير مفعلة")
+                        .font(.custom("Tajawal-Bold", size: 13))
+                        .foregroundColor(isDark ? .white : BrandColors.deepNavy)
+                    Spacer()
+                    Toggle("", isOn: $notificationsEnabled)
+                        .labelsHidden()
+                        .tint(BrandColors.teal)
+                        .onChange(of: notificationsEnabled) { _, enabled in
+                            guard enabled else { return }
+                            Task {
+                                notificationsEnabled = await ParentNotificationService.requestAuthorization()
+                            }
+                        }
+                }
+                .padding()
+                .background(isDark ? BrandColors.darkCard : .white)
+                .cornerRadius(12)
+
+                Button {
+                    Task { _ = await ParentNotificationService.showTestNotification() }
+                } label: {
+                    settingsRow(title: "اختبار إشعار داخل التطبيق", iconName: "checkmark.message.fill")
+                }
+                .buttonStyle(.plain)
+                settingsRow(title: "تغيير رقم موبايل ولي الأمر", iconName: "phone.fill")
                 settingsRow(title: "الدعم الفني والشكاوى", iconName: "wrench.and.screwdriver.fill")
                 settingsRow(title: "الأسئلة الشائعة FAQ", iconName: "questionmark.circle.fill")
-                settingsRow(title: "عن التطبيق", iconName: "info.circle.fill")
+                settingsRow(title: "عن منصة مسار", iconName: "info.circle.fill")
                 
                 Spacer()
                     .frame(height: 24)
                 
                 // Logout
                 Button(action: {
-                    activeSubScreen = nil
-                    viewModel.switchProfile(nil) // clear active student
+                    guard let profile = viewModel.selectedProfile else { return }
+                    Task {
+                        await viewModel.removeProfile(profile)
+                        activeSubScreen = nil
+                        if viewModel.selectedProfile == nil {
+                            onAddStudent()
+                        }
+                    }
                 }) {
                     HStack {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -1029,6 +1436,9 @@ public struct DashboardView: View {
                 }
             }
             .padding()
+        }
+        .task {
+            notificationsEnabled = await ParentNotificationService.authorizationStatus()
         }
     }
     

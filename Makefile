@@ -10,6 +10,7 @@
         prod-status prod-audit prod-logs prod-plan prod-db-inventory \
         prod-db-fast-preview prod-db-fast \
         prod-small-preview prod-small prod-release-id \
+        prod-sync-ocr-key-preview prod-sync-ocr-key \
         prod-build-preview prod-build prod-gate-preview prod-gate \
         prod-release-preview prod-release prod-fast-release \
         dev frontend backend stop \
@@ -380,6 +381,13 @@ prod-plan: ## Show affected areas and immutable Production image plan
 
 prod-release-id: ## Print the exact immutable release ID; never type a short SHA
 	bash $(SSH_SKILL_SCRIPTS)/deploy.sh release-id
+
+prod-sync-ocr-key-preview: ## Validate secure OCR-key synchronization to all nodes
+	$(PYTHON) deploy/production/scripts/sync_ocr_vision_key.py
+
+prod-sync-ocr-key: ## Sync the OCR key from .env.prod; requires CONFIRM=OCR-KEY
+	@[ "$(CONFIRM)" = "OCR-KEY" ] || (echo "Refusing: use CONFIRM=OCR-KEY after preview" && exit 2)
+	$(PYTHON) deploy/production/scripts/sync_ocr_vision_key.py --yes
 
 prod-small-preview: ## Preview one-command safe release (COMPONENT/REASON)
 	@[ "$(REASON)" ] || (echo "REASON is required for prod-small-preview" && exit 2)

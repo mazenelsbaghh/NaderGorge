@@ -65,6 +65,10 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
   const [expandedPackages, setExpandedPackages] = useState<Record<string, boolean>>({});
   const [expandedTerms, setExpandedTerms] = useState<Record<string, boolean>>({});
   const [expandedLessons, setExpandedLessons] = useState<Record<string, boolean>>({});
+  const activePackageCount = (studentData?.packages ?? []).filter((studentPackage) =>
+    studentPackage.isActive &&
+    (!studentPackage.expiresAt || new Date(studentPackage.expiresAt).getTime() > Date.now())
+  ).length;
 
   const formatDuration = (seconds: number) => {
     if (!seconds) return '0 دقيقة';
@@ -517,7 +521,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
                   <AdminStatCard variant="accent" icon={Users} label="إجمالي النقاط" value={studentData?.gamification?.totalPoints || 0} />
                   <AdminStatCard variant="light" icon={MonitorUp} label="أجهزة مسجلة" value={studentData?.devices?.length || 0} />
-                  <AdminStatCard variant="muted" icon={FileText} label="باقات نشطة" value={studentData?.packages?.length || 0} />
+                  <AdminStatCard variant="muted" icon={FileText} label="باقات نشطة" value={activePackageCount} />
                   <AdminStatCard variant="accent" icon={MonitorPlay} label="تجاوزات نشطة" value={studentData?.overrides?.length || 0} />
                </div>
 
@@ -697,7 +701,7 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                        variant="accent"
                        icon={Package}
                        label="باقات نشطة"
-                       value={studentData?.packages?.length || 0}
+                       value={activePackageCount}
                      />
                      <AdminStatCard
                        variant="light"

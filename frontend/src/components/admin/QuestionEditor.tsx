@@ -215,13 +215,21 @@ export function QuestionEditor({ question, index, onChange, onRemove }: Question
             placeholder="تلميح للمساعدة (يظهر للطالب بدون خصم درجات)"
             className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
           />
-          <textarea
-            rows={2}
-            value={question.writtenCorrection || ''}
-            onChange={(e) => handlePropChange('writtenCorrection', e.target.value)}
-            placeholder="تصحيح نصي (يظهر بعد الإجابة)"
-            className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
-          />
+          <div className="space-y-2">
+            <label className="block text-xs font-black text-[var(--admin-muted)]">
+              {question.type === 'Essay' ? 'نموذج الإجابة ومعيار التصحيح للـ AI' : 'تصحيح نصي يظهر بعد الإجابة'}
+              {question.type === 'Essay' && <span className="mr-1 text-red-500">(مطلوب للمقالي)</span>}
+            </label>
+            <textarea
+              rows={2}
+              required={question.type === 'Essay'}
+              value={question.writtenCorrection || ''}
+              onChange={(e) => handlePropChange('writtenCorrection', e.target.value)}
+              placeholder={question.type === 'Essay' ? 'اكتب عناصر الإجابة الصحيحة، الكلمات الأساسية، وأي استثناءات في التصحيح...' : 'تصحيح نصي (يظهر بعد الإجابة)'}
+              className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-background)] px-4 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-primary)] transition-all resize-none"
+            />
+            {question.type === 'Essay' && <p className="text-xs font-bold text-[var(--admin-muted)]">يُرسل للذكاء الاصطناعي: نص السؤال + إجابة الطالب + هذا النموذج. لا تُرسل بيانات الطالب الأخرى.</p>}
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 relative overflow-hidden">

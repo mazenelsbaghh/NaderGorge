@@ -855,7 +855,13 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasOne(p => p.Subject).WithMany(s => s.Packages).HasForeignKey(p => p.SubjectId);
             e.HasOne(p => p.Teacher).WithMany(t => t.Packages).HasForeignKey(p => p.TeacherId);
             e.Property(p => p.TargetGrade).HasMaxLength(100).IsRequired().HasDefaultValue("All");
-            e.Property(p => p.ContentMode).HasConversion<string>().HasMaxLength(40).HasDefaultValue(PackageContentMode.TermWithSections);
+            e.Property(p => p.ContentMode)
+                .HasConversion<string>()
+                .HasMaxLength(40)
+                .HasDefaultValue(PackageContentMode.TermWithSections)
+                // TermOnly is the CLR enum default and must be persisted explicitly.
+                // An out-of-range sentinel leaves the database default for an intentionally unset value only.
+                .HasSentinel((PackageContentMode)(-1));
         });
 
         modelBuilder.Entity<PackageCodePageProfile>(e =>

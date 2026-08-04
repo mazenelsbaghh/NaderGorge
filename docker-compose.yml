@@ -158,6 +158,15 @@ services:
       AI_IMAGE_MODEL: ${AI_IMAGE_MODEL:-gemini-3-pro-image}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       FIREBASE_APPLICATION_CREDENTIALS: /run/secrets/firebase-adminsdk.json
+      # Optional APNs token-auth credentials for iOS parent push delivery.
+      # Keep the private key outside the repository and provide it through the
+      # deployment environment (or set APNS_PRIVATE_KEY_PATH to a mounted file).
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_BUNDLE_ID: ${APNS_BUNDLE_ID:-net.massaracademy.parent}
+      APNS_ENVIRONMENT: ${APNS_ENVIRONMENT:-production}
+      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
+      APNS_PRIVATE_KEY_PATH: ${APNS_PRIVATE_KEY_PATH:-}
       API_CALLBACK_SECRET: ${API_CALLBACK_SECRET:?API_CALLBACK_SECRET is required}
       AI_CALLBACK_SECRET: ${AI_CALLBACK_SECRET:?AI_CALLBACK_SECRET is required}
       WORKER_ADMIN_TOKEN: ${WORKER_ADMIN_TOKEN:?WORKER_ADMIN_TOKEN is required}

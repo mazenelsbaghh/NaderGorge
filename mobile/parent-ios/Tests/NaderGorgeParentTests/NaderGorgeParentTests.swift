@@ -25,7 +25,7 @@ class NaderGorgeParentTests: XCTestCase {
     
     func testKeychainAddAndLoad() throws {
         let profile = StudentProfile(
-            studentId: UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!,
+            studentId: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
             name: "أحمد محمد",
             token: "mock.token.here"
         )
@@ -39,9 +39,9 @@ class NaderGorgeParentTests: XCTestCase {
     }
     
     func testKeychainRemove() throws {
-        let studentId = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+        let studentId = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
         let profile1 = StudentProfile(studentId: studentId, name: "أحمد محمد", token: "token1")
-        let profile2 = StudentProfile(studentId: UUID(), name: "سعيد علي", token: "token2")
+        let profile2 = StudentProfile(studentId: "student-2", name: "سعيد علي", token: "token2")
         
         try keychain.addProfile(profile1)
         try keychain.addProfile(profile2)
@@ -107,7 +107,7 @@ class NaderGorgeParentTests: XCTestCase {
             let loaded = keychain.loadProfiles()
             XCTAssertEqual(loaded.count, 1)
             XCTAssertEqual(loaded.first?.name, "أحمد محمد")
-            XCTAssertEqual(loaded.first?.studentId, UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"))
+            XCTAssertEqual(loaded.first?.studentId, "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")
         } else {
             XCTAssertTrue(false, "Expected .review state, but got \(viewModel.uiState)")
         }
@@ -130,7 +130,7 @@ class NaderGorgeParentTests: XCTestCase {
     
     @MainActor
     func testDashboardLoadProfilesAndFetchDetails() async throws {
-        let studentId = UUID(uuidString: "E621E1F8-C36C-495A-93FC-0C247A3E6E5F")!
+        let studentId = "E621E1F8-C36C-495A-93FC-0C247A3E6E5F"
         let profile = StudentProfile(studentId: studentId, name: "أحمد محمد", token: "token1")
         try keychain.addProfile(profile)
         
@@ -162,8 +162,8 @@ class NaderGorgeParentTests: XCTestCase {
     
     @MainActor
     func testDashboardRemoveProfile() async throws {
-        let profile1 = StudentProfile(studentId: UUID(), name: "طالب 1", token: "token1")
-        let profile2 = StudentProfile(studentId: UUID(), name: "طالب 2", token: "token2")
+        let profile1 = StudentProfile(studentId: "student-1", name: "طالب 1", token: "token1")
+        let profile2 = StudentProfile(studentId: "student-2", name: "طالب 2", token: "token2")
         try keychain.addProfile(profile1)
         try keychain.addProfile(profile2)
         
@@ -209,4 +209,12 @@ class MockAPIService: APIServiceProtocol {
             throw error
         }
     }
+
+    func fetchNotifications(token: String) async throws -> [ParentNotification] { [] }
+
+    func markNotificationAsRead(token: String, notificationId: String) async throws {}
+
+    func registerDeviceToken(token: String, deviceToken: String) async throws {}
+
+    func fetchAppConfig() async throws -> ParentAppConfig { ParentAppConfig() }
 }

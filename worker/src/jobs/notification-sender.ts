@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import { fetchWithTimeout } from '../services/workerFetch.js';
 import { randomUUID } from 'node:crypto';
 import { databaseUrl } from '../config/database.js';
+import { apnsProvider } from '../services/apns.js';
 
 dotenv.config();
 
@@ -111,16 +112,30 @@ async function persistParentPushNotification(studentId: string, title: string, b
 }
 
 export async function processParentPushNotification(studentId: string, title: string, body: string, category: string, persistInApp = true) {
-  // Load FCM tokens from ParentDeviceTokens linked to StudentId.
+  // DeviceToken is an FCM registration token on Android and an APNs token on iOS.
+  // Keep the platform column in the query so an APNs token is never sent to FCM.
   const res = await pool.query(
-    `SELECT DISTINCT pdt."DeviceToken"
+    `SELECT DISTINCT pdt."DeviceToken", pdt."Platform"
      FROM "ParentDeviceTokens" pdt
      LEFT JOIN student_profiles sp ON sp."Id" = pdt."StudentId"
-     WHERE pdt."StudentId" = $1 OR sp."UserId" = $1`,
+     WHERE (pdt."StudentId" = $1 OR sp."UserId" = $1)
+       AND LOWER(pdt."DeviceToken") NOT LIKE '%-parent-pending-token'`,
     [studentId]
   );
-  
-  const tokens = res.rows.map((row: any) => row.DeviceToken).filter(Boolean);
+
+  const deviceTokens = res.rows
+    .map((row: any) => ({
+      token: typeof row.DeviceToken === 'string' ? row.DeviceToken.trim() : '',
+      platform: typeof row.Platform === 'string' ? row.Platform.trim().toLowerCase() : 'android'
+    }))
+    .filter((device: { token: string }) => device.token.length > 0);
+  const tokens = deviceTokens.map((device: { token: string }) => device.token);
+  const fcmTokens = deviceTokens
+    .filter((device: { platform: string }) => device.platform !== 'ios')
+    .map((device: { token: string }) => device.token);
+  const apnsTokens = deviceTokens
+    .filter((device: { platform: string }) => device.platform === 'ios')
+    .map((device: { token: string }) => device.token);
   
   if (tokens.length === 0) {
     console.log(`[NotificationSender] No parent device tokens found for studentId ${studentId}`);
@@ -131,29 +146,64 @@ export async function processParentPushNotification(studentId: string, title: st
     await persistParentPushNotification(studentId, title, body);
   }
 
-  const message = {
-    notification: {
-      title,
-      body
-    },
-    data: {
-      studentId,
-      category
-    },
-    tokens
-  };
-
   try {
-    const response = await firebaseMessaging.sendEachForMulticast(message);
-    console.log(`[NotificationSender] Sent push notifications. Success: ${response.successCount}, Failure: ${response.failureCount}`);
+    let successCount = 0;
+    let failureCount = 0;
+    let fcmSuccessCount = 0;
+    let fcmFailureCount = 0;
+    let apnsSuccessCount = 0;
+    let apnsFailureCount = 0;
+    let apnsNotConfiguredCount = 0;
+
+    if (fcmTokens.length > 0) {
+      const message = {
+        notification: {
+          title,
+          body
+        },
+        data: {
+          studentId,
+          category
+        },
+        tokens: fcmTokens
+      };
+      const response = await firebaseMessaging.sendEachForMulticast(message);
+      fcmSuccessCount = response.successCount;
+      fcmFailureCount = response.failureCount;
+      successCount += fcmSuccessCount;
+      failureCount += fcmFailureCount;
+    }
+
+    if (apnsTokens.length > 0) {
+      if (!apnsProvider.isConfigured()) {
+        apnsNotConfiguredCount = apnsTokens.length;
+        failureCount += apnsNotConfiguredCount;
+        console.warn(`[NotificationSender] ${apnsNotConfiguredCount} iOS token(s) found, but APNs credentials are not configured.`);
+      } else {
+        const response = await apnsProvider.sendMany(apnsTokens, { title, body, studentId, category });
+        apnsSuccessCount = response.successCount;
+        apnsFailureCount = response.failureCount;
+        successCount += apnsSuccessCount;
+        failureCount += apnsFailureCount;
+      }
+    }
+
+    console.log(`[NotificationSender] Sent push notifications. Success: ${successCount}, Failure: ${failureCount}`);
     return {
       success: true,
       tokensCount: tokens.length,
-      successCount: response.successCount,
-      failureCount: response.failureCount
+      successCount,
+      failureCount,
+      fcmTokensCount: fcmTokens.length,
+      fcmSuccessCount,
+      fcmFailureCount,
+      apnsTokensCount: apnsTokens.length,
+      apnsSuccessCount,
+      apnsFailureCount,
+      apnsNotConfiguredCount
     };
   } catch (error: any) {
-    console.error('[NotificationSender] Error sending multicast message:', error);
+    console.error('[NotificationSender] Error sending push notifications:', error);
     throw error;
   }
 }

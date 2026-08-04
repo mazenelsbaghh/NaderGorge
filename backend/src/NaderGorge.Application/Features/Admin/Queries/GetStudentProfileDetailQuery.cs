@@ -50,6 +50,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
 
         // Load ALL grants (Package, Term, Month, Lesson) with proper names
         var allGrants = await _context.StudentAccessGrants
+            .AsNoTracking()
             .Where(g => g.UserId == request.UserId)
             .Include(g => g.CancelledByUser)
             .Include(g => g.AccessCode)
@@ -58,6 +59,48 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                         .ThenInclude(t => t!.User)
             .OrderByDescending(g => g.CreatedAt)
             .ToListAsync(cancellationToken);
+
+        var packageGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Package && grant.PackageId.HasValue)
+            .Select(grant => grant.PackageId!.Value)
+            .Distinct()
+            .ToList();
+        var termGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Term && grant.TermId.HasValue)
+            .Select(grant => grant.TermId!.Value)
+            .Distinct()
+            .ToList();
+        var sectionGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Month && grant.ContentSectionId.HasValue)
+            .Select(grant => grant.ContentSectionId!.Value)
+            .Distinct()
+            .ToList();
+        var lessonGrantIds = allGrants
+            .Where(grant => grant.GrantType == NaderGorge.Domain.Enums.CodeType.Lesson && grant.LessonId.HasValue)
+            .Select(grant => grant.LessonId!.Value)
+            .Distinct()
+            .ToList();
+
+        var grantedPackages = await _context.Packages
+            .AsNoTracking()
+            .Where(package => packageGrantIds.Contains(package.Id))
+            .Select(package => new { package.Id, package.Name, package.Price })
+            .ToDictionaryAsync(package => package.Id, cancellationToken);
+        var grantedTerms = await _context.Terms
+            .AsNoTracking()
+            .Where(term => termGrantIds.Contains(term.Id))
+            .Select(term => new { term.Id, PackageName = term.Package.Name, term.Title, term.Price })
+            .ToDictionaryAsync(term => term.Id, cancellationToken);
+        var grantedSections = await _context.ContentSections
+            .AsNoTracking()
+            .Where(section => sectionGrantIds.Contains(section.Id))
+            .Select(section => new { section.Id, PackageName = section.Term.Package.Name, section.Title, section.Price })
+            .ToDictionaryAsync(section => section.Id, cancellationToken);
+        var grantedLessons = await _context.Lessons
+            .AsNoTracking()
+            .Where(lesson => lessonGrantIds.Contains(lesson.Id))
+            .Select(lesson => new { lesson.Id, PackageName = lesson.ContentSection.Term.Package.Name, lesson.Title, lesson.Price })
+            .ToDictionaryAsync(lesson => lesson.Id, cancellationToken);
 
         var packages = new List<StudentPackageDto>();
         foreach (var grant in allGrants)
@@ -69,10 +112,11 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             switch (grant.GrantType)
             {
                 case NaderGorge.Domain.Enums.CodeType.Package:
-                    if (grant.PackageId.HasValue)
+                    if (grant.PackageId.HasValue && grantedPackages.TryGetValue(grant.PackageId.Value, out var package))
                     {
-                        var pkg = await _context.Packages.FindAsync(new object[] { grant.PackageId.Value }, cancellationToken);
-                        if (pkg != null) { name = pkg.Name; price = pkg.Price; contentId = pkg.Id; }
+                        name = package.Name;
+                        price = package.Price;
+                        contentId = package.Id;
                     }
                     else
                     {
@@ -83,24 +127,27 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Term:
-                    if (grant.TermId.HasValue)
+                    if (grant.TermId.HasValue && grantedTerms.TryGetValue(grant.TermId.Value, out var term))
                     {
-                        var term = await _context.Terms.Include(t => t.Package).FirstOrDefaultAsync(t => t.Id == grant.TermId.Value, cancellationToken);
-                        if (term != null) { name = $"{term.Package?.Name} — {term.Title}"; price = term.Price; contentId = term.Id; }
+                        name = $"{term.PackageName} — {term.Title}";
+                        price = term.Price;
+                        contentId = term.Id;
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Month:
-                    if (grant.ContentSectionId.HasValue)
+                    if (grant.ContentSectionId.HasValue && grantedSections.TryGetValue(grant.ContentSectionId.Value, out var section))
                     {
-                        var section = await _context.ContentSections.Include(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(s => s.Id == grant.ContentSectionId.Value, cancellationToken);
-                        if (section != null) { name = $"{section.Term?.Package?.Name} — {section.Title}"; price = section.Price; contentId = section.Id; }
+                        name = $"{section.PackageName} — {section.Title}";
+                        price = section.Price;
+                        contentId = section.Id;
                     }
                     break;
                 case NaderGorge.Domain.Enums.CodeType.Lesson:
-                    if (grant.LessonId.HasValue)
+                    if (grant.LessonId.HasValue && grantedLessons.TryGetValue(grant.LessonId.Value, out var lesson))
                     {
-                        var lesson = await _context.Lessons.Include(l => l.ContentSection).ThenInclude(s => s.Term).ThenInclude(t => t.Package).FirstOrDefaultAsync(l => l.Id == grant.LessonId.Value, cancellationToken);
-                        if (lesson != null) { name = $"{lesson.ContentSection?.Term?.Package?.Name} — {lesson.Title}"; price = lesson.Price; contentId = lesson.Id; }
+                        name = $"{lesson.PackageName} — {lesson.Title}";
+                        price = lesson.Price;
+                        contentId = lesson.Id;
                     }
                     break;
             }
