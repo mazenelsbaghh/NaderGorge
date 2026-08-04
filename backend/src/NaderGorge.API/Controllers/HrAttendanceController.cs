@@ -29,8 +29,10 @@ public sealed class HrAttendanceController : ControllerBase
         if (await IsGeneralAdminAsync(userId, ct)) return AdminAttendanceNotApplicable();
         var today = CairoTime.GetCurrentDate();
         var session = await _db.AttendanceSessions.AsNoTracking().Where(item =>
-                item.Employee!.UserId == userId && item.WorkDate == today)
-            .OrderByDescending(item => item.ClockedInAt).Select(item => new
+                item.Employee!.UserId == userId &&
+                (item.State == AttendanceSessionState.Open || item.WorkDate == today))
+            .OrderByDescending(item => item.State == AttendanceSessionState.Open)
+            .ThenByDescending(item => item.ClockedInAt).Select(item => new
             {
                 item.Id, item.WorkDate, item.ClockedInAt, item.ClockedOutAt, state = item.State.ToString(),
                 item.WorkedMinutes, item.LateMinutes, item.EarlyLeaveMinutes, item.OvertimeMinutes,

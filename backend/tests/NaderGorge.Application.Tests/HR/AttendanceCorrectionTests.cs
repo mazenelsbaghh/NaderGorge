@@ -66,4 +66,22 @@ public sealed class AttendanceCorrectionTests
         var result = await new DecideAttendanceCorrectionCommandHandler(db).Handle(new DecideAttendanceCorrectionCommand(correction.Id, false, false, "invalid evidence", reviewer.Id, 1), default);
         Assert.True(result.Success, string.Join(",", result.Errors ?? [])); Assert.Null(session.ClockedOutAt); Assert.Equal(AttendanceSessionState.Open, session.State);
     }
+
+    [Fact]
+    public async Task Correction_WithoutChangedTimes_IsRejected()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Employee", "01066666666");
+        var employee = new EmployeeProfile { UserId = user.Id, User = user };
+        employee.EmployeeNumber = EmployeeProfile.GenerateEmployeeNumber(employee.Id);
+        var session = new AttendanceSession { EmployeeId = employee.Id, ShiftAssignmentId = Guid.NewGuid(), WorkDate = new DateOnly(2026, 8, 4), ClockedInAt = DateTime.UtcNow, State = AttendanceSessionState.Open };
+        db.EmployeeProfiles.Add(employee); db.AttendanceSessions.Add(session); await db.SaveChangesAsync();
+
+        var result = await new SubmitAttendanceCorrectionCommandHandler(db).Handle(
+            new SubmitAttendanceCorrectionCommand(user.Id, session.Id, null, null, "missing time", null), default);
+
+        Assert.False(result.Success);
+        Assert.Contains("ATTENDANCE_CORRECTION_NO_CHANGES", result.Errors ?? []);
+        Assert.Empty(await db.AttendanceCorrections.ToListAsync());
+    }
 }

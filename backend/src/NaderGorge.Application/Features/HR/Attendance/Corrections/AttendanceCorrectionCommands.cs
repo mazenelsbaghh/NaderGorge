@@ -25,6 +25,12 @@ public sealed class SubmitAttendanceCorrectionCommandHandler : IRequestHandler<S
         if (employee is null) return ApiResponse<Guid>.Fail("ملف الموظف غير موجود", ["EMPLOYEE_NOT_FOUND"]);
         var session = await _db.AttendanceSessions.AsNoTracking().SingleOrDefaultAsync(item => item.Id == request.AttendanceSessionId && item.EmployeeId == employee.Id, ct);
         if (session is null) return ApiResponse<Guid>.Fail("جلسة الحضور غير موجودة", ["ATTENDANCE_SESSION_NOT_FOUND"]);
+        if (!request.ProposedClockedInAt.HasValue && !request.ProposedClockedOutAt.HasValue)
+            return ApiResponse<Guid>.Fail("حدد وقت الحضور أو الانصراف المطلوب تصحيحه", ["ATTENDANCE_CORRECTION_NO_CHANGES"]);
+        var clockInUnchanged = !request.ProposedClockedInAt.HasValue || request.ProposedClockedInAt == session.ClockedInAt;
+        var clockOutUnchanged = !request.ProposedClockedOutAt.HasValue || request.ProposedClockedOutAt == session.ClockedOutAt;
+        if (clockInUnchanged && clockOutUnchanged)
+            return ApiResponse<Guid>.Fail("الأوقات المقترحة مطابقة للسجل الحالي", ["ATTENDANCE_CORRECTION_NO_CHANGES"]);
         if (await _db.AttendanceCorrections.AnyAsync(item => item.AttendanceSessionId == session.Id &&
             (item.State == AttendanceCorrectionState.PendingManager || item.State == AttendanceCorrectionState.PendingHr), ct))
             return ApiResponse<Guid>.Fail("يوجد تصحيح قيد المراجعة", ["ATTENDANCE_CORRECTION_PENDING"]);
