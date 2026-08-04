@@ -5,7 +5,7 @@ import { AlertTriangle, Clipboard, Download, RefreshCw, Search, Server, Trash2, 
 import toast from 'react-hot-toast';
 
 import { AdminPage } from '@/components/admin';
-import { deleteSystemLogs, getSystemLogs, type SystemLogEntry } from '@/services/system-logs-service';
+import { clearAllSystemLogs, deleteSystemLogs, exportSystemLogs, getSystemLogs, type SystemLogEntry } from '@/services/system-logs-service';
 
 export default function AdminSystemLogsPageClient() {
   const [logs, setLogs] = useState<SystemLogEntry[]>([]);
@@ -16,11 +16,12 @@ export default function AdminSystemLogsPageClient() {
   const [from, setFrom] = useState(() => startOfTodayInput());
   const [to, setTo] = useState(() => endOfTodayInput());
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const loadLogs = useCallback(async () => {
     setLoading(true);
     try {
-      setLogs(await getSystemLogs({ ...filterParams({ source, level, search, from, to }), limit: 200 }));
+      setLogs(await getSystemLogs({ ...filterParams({ source, level, search, from, to }), limit: 2_000 }));
     } catch {
       toast.error('تعذر تحميل سجل النظام');
     } finally {
@@ -45,13 +46,56 @@ export default function AdminSystemLogsPageClient() {
     setPeriod(nextPeriod);
     if (nextPeriod === 'today') { setFrom(startOfTodayInput()); setTo(endOfTodayInput()); }
     if (nextPeriod === '7days') { setFrom(daysAgoInput(7)); setTo(endOfTodayInput()); }
+    if (nextPeriod === 'all') { setFrom(''); setTo(''); }
   };
 
   const clearVisibleLogs = async () => {
     if (!logs.length || !window.confirm(`سيتم مسح ${logs.length} سجل مطابق للفترة والفلاتر الحالية. هل أنت متأكد؟`)) return;
-    const deletedCount = await deleteSystemLogs(logs.map((log) => log.id));
-    toast.success(`تم مسح ${deletedCount} سجل`);
-    await loadLogs();
+    setActionLoading(true);
+    try {
+      const deletedCount = await deleteSystemLogs(logs.map((log) => log.id));
+      toast.success(`تم مسح ${deletedCount} سجل`);
+      await loadLogs();
+    } catch {
+      toast.error('تعذر مسح السجلات الظاهرة');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const clearAllLogs = async () => {
+    if (!window.confirm('سيتم مسح كل سجلات النظام من جميع الفترات، وليس الفترة الحالية فقط. هل أنت متأكد؟')) return;
+    setActionLoading(true);
+    try {
+      const deletedCount = await clearAllSystemLogs();
+      setLogs([]);
+      toast.success(`تم مسح ${deletedCount} سجل من كل الفترات`);
+    } catch {
+      toast.error('تعذر مسح كل سجلات النظام');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const downloadAllErrors = async () => {
+    setActionLoading(true);
+    try {
+      const blob = await exportSystemLogs({
+        source: source || undefined,
+        search: search.trim() || undefined,
+        errorsOnly: true,
+      });
+      if (blob.size === 0) {
+        toast('لا توجد أخطاء محفوظة للتنزيل');
+        return;
+      }
+      downloadBlob(blob, `system-errors-all-periods-${new Date().toISOString().slice(0, 10)}.txt`);
+      toast.success('تم تنزيل كل الأخطاء المحفوظة من جميع الفترات');
+    } catch {
+      toast.error('تعذر تنزيل كل الأخطاء');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   return (
@@ -92,13 +136,15 @@ export default function AdminSystemLogsPageClient() {
         </div>
 
         <div className="admin-panel flex flex-wrap items-end gap-3 p-4">
-          <label className="min-w-40 text-sm"><span className="mb-1 block text-[var(--admin-text-muted)]">الفترة</span><select className="admin-input w-full" value={period} onChange={(event) => changePeriod(event.target.value)}><option value="today">اليوم</option><option value="7days">آخر 7 أيام</option><option value="custom">فترة مخصصة</option></select></label>
+          <label className="min-w-40 text-sm"><span className="mb-1 block text-[var(--admin-text-muted)]">الفترة</span><select className="admin-input w-full" value={period} onChange={(event) => changePeriod(event.target.value)}><option value="today">اليوم</option><option value="7days">آخر 7 أيام</option><option value="all">كل الفترات</option><option value="custom">فترة مخصصة</option></select></label>
           <label className="text-sm"><span className="mb-1 block text-[var(--admin-text-muted)]">من</span><input type="datetime-local" className="admin-input" value={from} onChange={(event) => { setPeriod('custom'); setFrom(event.target.value); }} /></label>
           <label className="text-sm"><span className="mb-1 block text-[var(--admin-text-muted)]">إلى</span><input type="datetime-local" className="admin-input" value={to} onChange={(event) => { setPeriod('custom'); setTo(event.target.value); }} /></label>
           <div className="mr-auto flex flex-wrap gap-2">
-            <button className="admin-btn-ghost flex items-center gap-2" disabled={!logs.length} onClick={async () => { await navigator.clipboard.writeText(exportText); toast.success('تم نسخ السجلات'); }}><Clipboard className="h-4 w-4" />نسخ الكل</button>
-            <button className="admin-btn-ghost flex items-center gap-2" disabled={!logs.length} onClick={() => downloadLogs(exportText)}><Download className="h-4 w-4" />تنزيل TXT</button>
-            <button className="admin-btn-ghost flex items-center gap-2 text-red-500" disabled={!logs.length} onClick={() => void clearVisibleLogs()}><Trash2 className="h-4 w-4" />مسح الظاهر</button>
+            <button className="admin-btn-ghost flex items-center gap-2" disabled={!logs.length || actionLoading} onClick={async () => { await navigator.clipboard.writeText(exportText); toast.success('تم نسخ السجلات'); }}><Clipboard className="h-4 w-4" />نسخ الظاهر</button>
+            <button className="admin-btn-ghost flex items-center gap-2" disabled={!logs.length || actionLoading} onClick={() => downloadBlob(new Blob([exportText], { type: 'text/plain;charset=utf-8' }), `system-logs-${new Date().toISOString().slice(0, 10)}.txt`)}><Download className="h-4 w-4" />تنزيل الظاهر</button>
+            <button className="admin-btn-ghost flex items-center gap-2" disabled={actionLoading} onClick={() => void downloadAllErrors()}><Download className="h-4 w-4" />تنزيل كل الأخطاء</button>
+            <button className="admin-btn-ghost flex items-center gap-2 text-red-500" disabled={!logs.length || actionLoading} onClick={() => void clearVisibleLogs()}><Trash2 className="h-4 w-4" />مسح الظاهر</button>
+            <button className="admin-btn-ghost flex items-center gap-2 text-red-700" disabled={actionLoading} onClick={() => void clearAllLogs()}><Trash2 className="h-4 w-4" />مسح الكل</button>
           </div>
         </div>
 
@@ -119,10 +165,13 @@ function formatLog(log: SystemLogEntry) {
   return `[${log.timestamp}] [${log.source}] [${log.level}] ${log.category}\n${log.message}${log.exception ? `\n\n${log.exception}` : ''}`;
 }
 
-function downloadLogs(content: string) {
-  const url = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
-  const link = document.createElement('a'); link.href = url; link.download = `system-logs-${new Date().toISOString().slice(0, 10)}.txt`; link.click();
-  URL.revokeObjectURL(url);
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function localDateTimeInput(date: Date) {

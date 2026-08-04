@@ -95,33 +95,20 @@ public class GetPackagesQueryHandler : IRequestHandler<GetPackagesQuery, ApiResp
             query = query.Where(p => p.IsActive && p.Teacher.IsContentVisibleToStudents);
         }
 
-        var packages = await query.ToListAsync(ct);
+        var packages = await query
+            .AsNoTracking()
+            .ToListAsync(ct);
 
         if (!isAdminOrStaff && !isTeacher)
         {
-            var eligiblePackages = new List<Package>();
-            foreach (var package in packages)
-            {
-                if (await _academicScope.IsOwnerEligibleForStudentAsync(
-                        StudentFacingScopeOwnerType.Package,
-                        package.Id,
-                        request.UserId,
-                        ct))
-                {
-                    eligiblePackages.Add(package);
-                }
-            }
-
-            packages = eligiblePackages;
+            var eligiblePackageIds = await _academicScope.GetEligiblePackageIdsForStudentAsync(
+                packages.Select(package => package.Id).ToList(),
+                request.UserId,
+                ct);
+            packages = packages.Where(package => eligiblePackageIds.Contains(package.Id)).ToList();
         }
 
-        var userRoles = await _db.UserRoles
-            .Include(ur => ur.Role)
-            .Where(ur => ur.UserId == request.UserId)
-            .Select(ur => ur.Role.Name)
-            .ToListAsync(ct);
-
-        bool hasGlobalAccess = userRoles.Contains("Admin") || userRoles.Contains("Teacher");
+        bool hasGlobalAccess = user?.UserRoles.Any(role => role.Role.Name is "Admin" or "Teacher") == true;
 
         var activeGrants = hasGlobalAccess 
             ? new List<StudentAccessGrant>()

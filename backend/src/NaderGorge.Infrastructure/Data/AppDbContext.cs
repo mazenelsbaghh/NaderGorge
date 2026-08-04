@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using NaderGorge.Domain.Common;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
 using NaderGorge.Domain.Entities.Assistant;
@@ -16,6 +17,7 @@ namespace NaderGorge.Infrastructure.Data;
 
 public class AppDbContext : DbContext, IAppDbContext
 {
+    private const long UserAndStudentIdentityAdvisoryLock = 7_167_202_026L;
     private readonly IUserSecurityStateCache? _userSecurityStateCache;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -3129,17 +3131,155 @@ public class AppDbContext : DbContext, IAppDbContext
             }
         }
 
-        var savedEntityCount = await base.SaveChangesAsync(cancellationToken);
-
-        if (_userSecurityStateCache is not null)
+        var identityProtection = await BeginIdentityConflictProtectionAsync(cancellationToken);
+        try
         {
-            foreach (var userId in securityStateUserIds)
+            if (identityProtection is not null)
             {
-                await _userSecurityStateCache.RemoveAsync(userId, cancellationToken);
+                await NormalizePendingPhonesAndRejectDuplicatesAsync(cancellationToken);
+                await EnsurePendingParentTrackingCodesAreUniqueAsync(cancellationToken);
             }
+
+            var savedEntityCount = await base.SaveChangesAsync(cancellationToken);
+            if (identityProtection is not null)
+                await identityProtection.CommitAsync(cancellationToken);
+
+            if (_userSecurityStateCache is not null)
+            {
+                foreach (var userId in securityStateUserIds)
+                {
+                    await _userSecurityStateCache.RemoveAsync(userId, cancellationToken);
+                }
+            }
+
+            return savedEntityCount;
+        }
+        catch
+        {
+            if (identityProtection is not null)
+                await identityProtection.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        finally
+        {
+            if (identityProtection is not null)
+                await identityProtection.DisposeAsync();
+        }
+    }
+
+    private async Task<IdentityConflictProtectionScope?> BeginIdentityConflictProtectionAsync(CancellationToken cancellationToken)
+    {
+        if (Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) != true ||
+            !NeedsIdentityConflictProtection())
+            return null;
+
+        var existingTransaction = Database.CurrentTransaction;
+        var ownsTransaction = existingTransaction is null;
+        var transaction = existingTransaction ?? await Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+        try
+        {
+            await Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({UserAndStudentIdentityAdvisoryLock});",
+                cancellationToken);
+            return new IdentityConflictProtectionScope(transaction, ownsTransaction);
+        }
+        catch
+        {
+            if (ownsTransaction)
+                await transaction.DisposeAsync();
+            throw;
+        }
+    }
+
+    private sealed class IdentityConflictProtectionScope(IDbContextTransaction transaction, bool ownsTransaction) : IAsyncDisposable
+    {
+        public async Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (ownsTransaction)
+                await transaction.CommitAsync(cancellationToken);
         }
 
-        return savedEntityCount;
+        public async Task RollbackAsync(CancellationToken cancellationToken)
+        {
+            if (ownsTransaction)
+                await transaction.RollbackAsync(cancellationToken);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (ownsTransaction)
+                await transaction.DisposeAsync();
+        }
+    }
+
+    private bool NeedsIdentityConflictProtection()
+    {
+        var phoneChanges = ChangeTracker.Entries<User>().Any(entry =>
+            entry.State == EntityState.Added ||
+            (entry.State == EntityState.Modified && entry.Property(item => item.PhoneNumber).IsModified));
+        var newProfiles = ChangeTracker.Entries<StudentProfile>().Any(entry => entry.State == EntityState.Added);
+        return phoneChanges || newProfiles;
+    }
+
+    private async Task NormalizePendingPhonesAndRejectDuplicatesAsync(CancellationToken cancellationToken)
+    {
+        var pendingUsers = ChangeTracker.Entries<User>()
+            .Where(entry => entry.State == EntityState.Added ||
+                (entry.State == EntityState.Modified && entry.Property(item => item.PhoneNumber).IsModified))
+            .Select(entry => entry.Entity)
+            .ToArray();
+
+        foreach (var user in pendingUsers)
+            user.PhoneNumber = user.PhoneNumber.Trim();
+
+        if (pendingUsers.GroupBy(user => user.PhoneNumber, StringComparer.Ordinal).Any(group => group.Count() > 1))
+            throw new DuplicatePhoneNumberException();
+        if (pendingUsers.Length == 0)
+            return;
+
+        var pendingIds = pendingUsers.Select(user => user.Id).ToArray();
+        var phones = pendingUsers.Select(user => user.PhoneNumber).ToArray();
+        var alreadyUsed = await Users.AsNoTracking()
+            .AnyAsync(user => phones.Contains(user.PhoneNumber) && !pendingIds.Contains(user.Id), cancellationToken);
+        if (alreadyUsed)
+            throw new DuplicatePhoneNumberException();
+    }
+
+    private async Task EnsurePendingParentTrackingCodesAreUniqueAsync(CancellationToken cancellationToken)
+    {
+        var pendingProfiles = ChangeTracker.Entries<StudentProfile>()
+            .Where(entry => entry.State == EntityState.Added)
+            .Select(entry => entry.Entity)
+            .ToArray();
+        if (pendingProfiles.Length == 0)
+            return;
+
+        var candidateCodes = pendingProfiles
+            .Select(profile => profile.ParentTrackingCode)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(code => code!)
+            .ToHashSet(StringComparer.Ordinal);
+        var reservedCodes = (await StudentProfiles.AsNoTracking()
+                .Where(profile => profile.ParentTrackingCode != null && candidateCodes.Contains(profile.ParentTrackingCode))
+                .Select(profile => profile.ParentTrackingCode!)
+                .ToListAsync(cancellationToken))
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var profile in pendingProfiles)
+        {
+            var code = profile.ParentTrackingCode;
+            if (!string.IsNullOrWhiteSpace(code) && reservedCodes.Add(code))
+                continue;
+
+            do
+            {
+                code = StudentProfile.GenerateParentTrackingCode();
+            } while (reservedCodes.Contains(code) || await StudentProfiles.AsNoTracking()
+                .AnyAsync(profile => profile.ParentTrackingCode == code, cancellationToken));
+
+            profile.ParentTrackingCode = code;
+            reservedCodes.Add(code);
+        }
     }
 
     private Guid[] SecurityStateUserIds()

@@ -51,7 +51,17 @@ public class UpdateStudentProfileCommandHandler : IRequestHandler<UpdateStudentP
 
         // Update User-level fields
         if (!string.IsNullOrWhiteSpace(r.FullName)) user.FullName = r.FullName;
-        if (!string.IsNullOrWhiteSpace(r.Phone)) user.PhoneNumber = r.Phone;
+        if (!string.IsNullOrWhiteSpace(r.Phone) && !string.Equals(user.PhoneNumber, r.Phone, StringComparison.Ordinal))
+        {
+            var phoneAlreadyAssigned = await _db.Users
+                .AsNoTracking()
+                .AnyAsync(existingUser => existingUser.Id != r.StudentId && existingUser.PhoneNumber == r.Phone, ct);
+
+            if (phoneAlreadyAssigned)
+                return ApiResponse.Fail("رقم هاتف الطالب مسجل بالفعل في حساب آخر.");
+
+            user.PhoneNumber = r.Phone;
+        }
 
         // Update StudentProfile fields
         var profile = user.StudentProfile;

@@ -62,7 +62,8 @@ def render(source: dict[str, str], secrets: Path) -> list[str]:
             "Host=host.docker.internal;Port=6432;Database=massar_platform;"
             f"Username=massar_app;Password={postgres_password};"
             "Pooling=true;Minimum Pool Size=0;Maximum Pool Size=50;"
-            "Connection Idle Lifetime=300;Timeout=15;Command Timeout=60"
+            "Connection Idle Lifetime=300;Keepalive=30;Tcp Keepalive=true;"
+            "Timeout=15;Command Timeout=60"
         ),
         "Redis__Sentinels": "10.77.0.11:26379,10.77.0.12:26379,10.77.0.13:26379",
         "Redis__SentinelServiceName": "massar-redis",

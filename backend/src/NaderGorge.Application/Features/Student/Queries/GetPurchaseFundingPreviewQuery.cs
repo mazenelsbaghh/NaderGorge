@@ -27,20 +27,16 @@ public sealed class GetPurchaseFundingPreviewQueryHandler
     private readonly IPromotionalBalanceService _promotional;
     private readonly ISalesTargetResolver _targetResolver;
     private readonly IDiscountEngine _discountEngine;
-    private readonly IAcademicScopeService? _academicScope;
-
     public GetPurchaseFundingPreviewQueryHandler(
         IAppDbContext db,
         IPromotionalBalanceService promotional,
         ISalesTargetResolver targetResolver,
-        IDiscountEngine discountEngine,
-        IAcademicScopeService? academicScope = null)
+        IDiscountEngine discountEngine)
     {
         _db = db;
         _promotional = promotional;
         _targetResolver = targetResolver;
         _discountEngine = discountEngine;
-        _academicScope = academicScope;
     }
 
     public async Task<ApiResponse<PurchaseFundingPreviewDto>> Handle(GetPurchaseFundingPreviewQuery request, CancellationToken ct)
@@ -48,25 +44,6 @@ public sealed class GetPurchaseFundingPreviewQueryHandler
         var target = await _targetResolver.ResolveFromCodeTypeAsync(request.ContentType, request.ContentId, ct);
         if (target == null)
             return ApiResponse<PurchaseFundingPreviewDto>.Fail("المحتوى غير موجود أو غير مدعوم للشراء.");
-
-        if (_academicScope != null)
-        {
-            var (ownerType, ownerId) = ResolveAcademicOwner(request.ContentType, request.ContentId);
-            if (ownerType.HasValue)
-            {
-                var academicResult = await _academicScope.ValidateStudentCanUseTargetAsync(
-                    ownerType.Value,
-                    ownerId,
-                    request.StudentId,
-                    ct);
-                if (!academicResult.IsEligible)
-                {
-                    return ApiResponse<PurchaseFundingPreviewDto>.Fail(
-                        academicResult.Message ?? "هذا المحتوى غير متاح لنطاقك الدراسي الحالي.",
-                        new List<string> { academicResult.ErrorCode ?? "ACADEMIC_SCOPE_DENIED" });
-                }
-            }
-        }
 
         var price = target.Price;
         var discount = await _discountEngine.PreviewAsync(
@@ -79,8 +56,7 @@ public sealed class GetPurchaseFundingPreviewQueryHandler
             return ApiResponse<PurchaseFundingPreviewDto>.Fail(discount.Error ?? "تعذر حساب الخصم.");
 
         var discountedPrice = Math.Max(0, price - discount.TotalDiscountAmount);
-        var teacherId = await _promotional.ResolveTeacherIdAsync(request.ContentType, request.ContentId, ct);
-        var promotionalAvailable = await _promotional.GetEligibleAmountAsync(request.StudentId, teacherId, ct);
+        var promotionalAvailable = await _promotional.GetEligibleAmountAsync(request.StudentId, target.TeacherId, ct);
         var paidBalance = await _db.StudentBalances
             .Where(x => x.UserId == request.StudentId)
             .Select(x => x.CurrentBalance)
@@ -100,16 +76,4 @@ public sealed class GetPurchaseFundingPreviewQueryHandler
             paidBalance >= paidToUse));
     }
 
-    private static (StudentFacingScopeOwnerType? OwnerType, Guid OwnerId) ResolveAcademicOwner(CodeType contentType, Guid contentId)
-    {
-        return contentType switch
-        {
-            CodeType.Package => (StudentFacingScopeOwnerType.Package, contentId),
-            CodeType.Term => (StudentFacingScopeOwnerType.Term, contentId),
-            CodeType.Month => (StudentFacingScopeOwnerType.ContentSection, contentId),
-            CodeType.Lesson => (StudentFacingScopeOwnerType.Lesson, contentId),
-            CodeType.Exam => (StudentFacingScopeOwnerType.PublicExamProduct, contentId),
-            _ => (null, contentId)
-        };
-    }
 }

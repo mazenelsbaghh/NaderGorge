@@ -3,6 +3,7 @@ using System.Text.Json;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Domain.Common;
 
 namespace NaderGorge.API.Middleware;
 
@@ -49,6 +50,15 @@ public class ExceptionHandlingMiddleware
             context.Response.ContentType = "application/json";
 
             var response = ApiResponse.Fail(ex.Message);
+            await context.Response.WriteAsJsonAsync(response);
+        }
+        catch (DuplicatePhoneNumberException ex)
+        {
+            _logger.LogWarning("Duplicate phone rejected at {Method} {Path}", context.Request.Method, context.Request.Path);
+            context.Response.StatusCode = (int)HttpStatusCode.Conflict;
+            context.Response.ContentType = "application/json";
+
+            var response = ApiResponse.Fail(ex.Message, ["PHONE_ALREADY_EXISTS"]);
             await context.Response.WriteAsJsonAsync(response);
         }
         catch (KeyNotFoundException ex)
@@ -125,6 +135,7 @@ public class ExceptionHandlingMiddleware
     private static string GetConflictMessage(string? constraintName) => constraintName switch
     {
         "IX_student_access_grants_UserId_GrantType_TermId" => "لديك صلاحية مفعلة بالفعل لنفس الترم. لا يمكن تفعيل الكود مرتين لنفس المحتوى.",
+        "IX_users_PhoneNumber" => "رقم الهاتف مسجل بالفعل في حساب آخر.",
         _ => "تعذر تنفيذ العملية لأن البيانات تغيّرت. حدّث الصفحة ثم حاول مرة أخرى."
     };
 }

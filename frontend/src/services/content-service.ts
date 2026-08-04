@@ -12,9 +12,9 @@ export type PackageContentMode =
   | 'LessonsOnly';
 
 export const PACKAGE_CONTENT_MODE_OPTIONS: Array<{ value: PackageContentMode; label: string; description: string }> = [
-  { value: 'TermWithSections', label: 'ترم ← أقسام ← حصص', description: 'ترم بداخله أقسام، وكل قسم بداخله حصص وفيديوهات.' },
-  { value: 'SectionWithLessons', label: 'قسم ← حصص', description: 'القسم يظهر مباشرة داخل الكورس، وكل حصة بداخله لها فيديوهات.' },
-  { value: 'LessonsOnly', label: 'حصص ← فيديوهات', description: 'الحصص تظهر مباشرة داخل الكورس، وكل حصة لها فيديوهات.' },
+  { value: 'TermWithSections', label: 'باقة ← ترم ← قسم ← حصة', description: 'الباقة تحتوي على ترمات، وكل ترم يحتوي على أقسام، وكل قسم يحتوي على حصص.' },
+  { value: 'SectionWithLessons', label: 'باقة ← قسم ← حصة', description: 'الأقسام تظهر مباشرة داخل الباقة، وكل قسم يحتوي على حصص.' },
+  { value: 'LessonsOnly', label: 'باقة ← حصة ← فيديو', description: 'الحصص تظهر مباشرة داخل الباقة، وكل حصة تحتوي على فيديوهات.' },
 ];
 
 export interface PackageDto {

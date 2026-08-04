@@ -38,6 +38,28 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
 
     public async Task<ApiResponse<AndroidSmsUploadDto>> Handle(AndroidUploadSmsCommand request, CancellationToken ct)
     {
+        const int maxAttempts = 3;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                return await HandleCoreAsync(request, ct);
+            }
+            catch (DbUpdateException ex) when (attempt < maxAttempts && IsRetryableDatabaseConflict(ex))
+            {
+                await PrepareTransientRetryAsync(attempt, ct);
+            }
+            catch (InvalidOperationException ex) when (attempt < maxAttempts && IsRetryableDatabaseConflict(ex))
+            {
+                await PrepareTransientRetryAsync(attempt, ct);
+            }
+        }
+
+        throw new InvalidOperationException("تعذر معالجة رسالة المحفظة بعد عدة محاولات.");
+    }
+
+    private async Task<ApiResponse<AndroidSmsUploadDto>> HandleCoreAsync(AndroidUploadSmsCommand request, CancellationToken ct)
+    {
         await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(_db, ct);
 
         if (string.IsNullOrWhiteSpace(request.PairingToken))
@@ -192,6 +214,30 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
             sb.Append(b.ToString("x2"));
         }
         return sb.ToString();
+    }
+
+    private static bool IsRetryableDatabaseConflict(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            var sqlState = current.GetType().GetProperty("SqlState")?.GetValue(current)?.ToString();
+            if (sqlState is "40001" or "40P01")
+                return true;
+
+            if (current.Message.Contains("could not serialize access", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("deadlock detected", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private async Task PrepareTransientRetryAsync(int attempt, CancellationToken ct)
+    {
+        if (_db is DbContext context)
+            context.ChangeTracker.Clear();
+
+        await Task.Delay(TimeSpan.FromMilliseconds(100 * attempt), ct);
     }
 
 }

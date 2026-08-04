@@ -13,6 +13,7 @@ public interface IAcademicScopeService
 {
     Task<StudentProfile?> GetStudentProfileAsync(Guid studentId, CancellationToken ct = default);
     Task<IReadOnlySet<Guid>> GetAllowedSubjectIdsAsync(EducationStage stage, GradeLevel grade, CancellationToken ct = default);
+    Task<IReadOnlySet<Guid>> GetEligiblePackageIdsForStudentAsync(IReadOnlyCollection<Guid> packageIds, Guid studentId, CancellationToken ct = default);
     Task<bool> IsOwnerEligibleForStudentAsync(StudentFacingScopeOwnerType ownerType, Guid ownerId, Guid studentId, CancellationToken ct = default);
     Task<AcademicScopeCheckResult> ValidateTargetHasScopeAsync(StudentFacingScopeOwnerType ownerType, Guid ownerId, CancellationToken ct = default);
     Task<AcademicScopeCheckResult> ValidateStudentCanUseTargetAsync(StudentFacingScopeOwnerType ownerType, Guid ownerId, Guid studentId, CancellationToken ct = default);

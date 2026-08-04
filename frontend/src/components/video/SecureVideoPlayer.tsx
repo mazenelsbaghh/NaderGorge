@@ -150,6 +150,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
   const [shadowSolid, setShadowSolid] = useState({ top: 10, bottom: 12 });
   const [enabledShadowProviders, setEnabledShadowProviders] = useState<string[]>(['youtube', 'bunny', 'vk', 'telegram', 'telegram-direct', 'rutube', 'google-drive']);
   const loadingSessionRef = useRef(false);
+  const reloadSessionRef = useRef<(() => void) | null>(null);
+  const embedSessionRefreshCountRef = useRef(0);
   const loadingExtraWatchStatusRef = useRef(false);
   const requestingExtraRef = useRef(false);
   const approvedLoadAttemptedRef = useRef(false);
@@ -328,6 +330,7 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
 
       switch (msg.type) {
         case 'ready':
+          embedSessionRefreshCountRef.current = 0;
           if (embedReadyTimeoutRef.current) {
             clearTimeout(embedReadyTimeoutRef.current);
             embedReadyTimeoutRef.current = null;
@@ -416,6 +419,11 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
           if (embedReadyTimeoutRef.current) {
             clearTimeout(embedReadyTimeoutRef.current);
             embedReadyTimeoutRef.current = null;
+          }
+          if (msg.data?.message === 'Session expired or invalid' && embedSessionRefreshCountRef.current < 1) {
+            embedSessionRefreshCountRef.current += 1;
+            reloadSessionRef.current?.();
+            break;
           }
           setStatus('error');
           setErrorMessage(msg.data?.message || 'حدث خطأ أثناء تشغيل الفيديو');
@@ -739,6 +747,8 @@ const SecureVideoPlayerComponent = React.forwardRef<SecureVideoPlayerRef, Secure
       loadingSessionRef.current = false;
     }
   };
+
+  reloadSessionRef.current = () => { void loadVideo(); };
 
   // ── Player controls (send commands to iframe via postMessage) ──
   const togglePlay = () => {

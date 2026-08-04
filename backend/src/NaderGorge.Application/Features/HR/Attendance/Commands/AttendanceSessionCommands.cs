@@ -180,7 +180,8 @@ public sealed class ClockOutAttendanceCommandHandler : IRequestHandler<ClockOutA
                     .ThenInclude(template => template!.Segments)
             .SingleOrDefaultAsync(item => item.EmployeeId == employeeId && item.State == AttendanceSessionState.Open, ct);
         if (session is null) return ApiResponse<AttendanceMutationResult>.Fail("لا توجد جلسة مفتوحة", ["NO_OPEN_SESSION"]);
-        if (session.Breaks.Any(item => !item.EndedAt.HasValue)) return ApiResponse<AttendanceMutationResult>.Fail("أنهِ الاستراحة أولًا", ["BREAK_ALREADY_OPEN"]);
+        var breaks = session.Breaks ?? Array.Empty<AttendanceBreak>();
+        if (breaks.Any(item => !item.EndedAt.HasValue)) return ApiResponse<AttendanceMutationResult>.Fail("أنهِ الاستراحة أولًا", ["BREAK_ALREADY_OPEN"]);
         var occurredAt = request.OccurredAt.Kind == DateTimeKind.Utc ? request.OccurredAt : request.OccurredAt.ToUniversalTime();
         if (occurredAt <= session.ClockedInAt) return ApiResponse<AttendanceMutationResult>.Fail("وقت الانصراف غير صالح", ["ATTENDANCE_TIME_INVALID"]);
         var shiftTemplate = session.ShiftAssignment?.ShiftTemplate;
@@ -188,7 +189,7 @@ public sealed class ClockOutAttendanceCommandHandler : IRequestHandler<ClockOutA
         var segment = ShiftScheduleRules.SegmentForWorkDate(shiftTemplate.Segments, session.WorkDate);
         if (segment is null) return ApiResponse<AttendanceMutationResult>.Fail("لا يوجد موعد عمل لهذه الوردية. تواصل مع الموارد البشرية.", ["ATTENDANCE_SHIFT_SEGMENT_MISSING"]);
         session.ClockedOutAt = occurredAt; session.State = AttendanceSessionState.Completed; session.Version++;
-        var breakMinutes = session.Breaks.Where(item => item.EndedAt.HasValue).Sum(item => (int)(item.EndedAt!.Value - item.StartedAt).TotalMinutes);
+        var breakMinutes = breaks.Where(item => item.EndedAt.HasValue).Sum(item => (int)(item.EndedAt!.Value - item.StartedAt).TotalMinutes);
         var (scheduledStart, scheduledEnd) = ShiftScheduleRules.ScheduledRangeUtc(session.WorkDate, segment, ResolveCairo());
         var calculation = AttendanceCalculator.Calculate(new(
             session.ClockedInAt,

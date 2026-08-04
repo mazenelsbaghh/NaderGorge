@@ -360,8 +360,8 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
       toast.success('تم تحديث البيانات');
       setModalOpen('none');
       fetchStudent();
-    } catch {
-      toast.error('فشل التحديث');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'فشل تحديث بيانات الطالب');
     } finally {
       setSubmitting(false);
     }

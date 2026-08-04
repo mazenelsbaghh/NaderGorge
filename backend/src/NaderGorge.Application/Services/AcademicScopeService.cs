@@ -34,6 +34,30 @@ public sealed class AcademicScopeService : IAcademicScopeService
         return ids.ToHashSet();
     }
 
+    public async Task<IReadOnlySet<Guid>> GetEligiblePackageIdsForStudentAsync(
+        IReadOnlyCollection<Guid> packageIds,
+        Guid studentId,
+        CancellationToken ct = default)
+    {
+        if (packageIds.Count == 0)
+            return new HashSet<Guid>();
+
+        var profile = await GetStudentProfileAsync(studentId, ct);
+        if (profile is null || !AcademicValidationService.IsGradeValidForStage(profile.EducationStage, profile.GradeLevel))
+            return new HashSet<Guid>();
+
+        var allowedSubjects = await GetAllowedSubjectIdsAsync(profile.EducationStage, profile.GradeLevel, ct);
+        var scopes = await _db.StudentFacingAcademicScopes
+            .AsNoTracking()
+            .Where(x => x.OwnerType == StudentFacingScopeOwnerType.Package && packageIds.Contains(x.OwnerId))
+            .ToListAsync(ct);
+
+        return scopes
+            .Where(scope => Matches(scope, profile, allowedSubjects))
+            .Select(scope => scope.OwnerId)
+            .ToHashSet();
+    }
+
     public async Task<bool> IsOwnerEligibleForStudentAsync(StudentFacingScopeOwnerType ownerType, Guid ownerId, Guid studentId, CancellationToken ct = default)
     {
         var result = await ValidateStudentCanUseTargetAsync(ownerType, ownerId, studentId, ct);

@@ -224,12 +224,12 @@ function CreatePackageRow({
       />
 
       <div className="space-y-2 text-right">
-        <span className="text-xs font-bold text-[var(--admin-muted)]">شكل الكورس</span>
+        <span className="text-xs font-bold text-[var(--admin-muted)]">هيكل الباقة</span>
         <Dropdown
           value={contentMode}
           onChange={(value) => setContentMode((Array.isArray(value) ? value[0] : value) as PackageContentMode)}
           options={PACKAGE_CONTENT_MODE_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
-          placeholder="اختر شكل الكورس..."
+          placeholder="اختر هيكل الباقة..."
           className="w-full"
         />
         <p className="text-xs text-[var(--admin-muted)]">
