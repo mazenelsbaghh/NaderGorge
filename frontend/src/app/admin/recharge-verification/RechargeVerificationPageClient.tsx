@@ -30,7 +30,7 @@ import { walletService, type AdminRechargeRequestDto, type AdminIncomingSmsLogDt
 import toast from 'react-hot-toast';
 
 type RechargeStatusValue = AdminRechargeRequestDto['status'];
-type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 'all';
+type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 5 | 'all';
 type UnmatchedSmsAmountGroup = { key: string; amount?: number; items: AdminIncomingSmsLogDto[] };
 type UnmatchedSmsWalletGroup = { id: string; label: string; phoneNumber: string; amountGroups: UnmatchedSmsAmountGroup[] };
 
@@ -55,6 +55,8 @@ const normalizeRechargeStatus = (status: RechargeStatusValue): number | null => 
       return 3;
     case 'expired':
       return 4;
+    case 'cancelled':
+      return 5;
     default:
       return null;
   }
@@ -224,6 +226,12 @@ export function RechargeVerificationWorkspace() {
             <AlertCircle className="h-3.5 w-3.5" /> منتهي الصلاحية
           </span>
         );
+      case 5:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-bold text-slate-600">
+            <X className="h-3.5 w-3.5" /> ملغي من الطالب
+          </span>
+        );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-500/10 text-gray-500">
@@ -371,6 +379,9 @@ export function RechargeVerificationWorkspace() {
         const isRejected = isRechargeStatus(r.status, 3);
         const isManualApproval = isRechargeStatus(r.status, 2) && !r.matchedSmsLogId;
         if (!isPending && !isRejected && !isManualApproval) {
+          if (isRechargeStatus(r.status, 5)) {
+            return <div className="max-w-48 text-right text-xs font-bold text-rose-600">سبب الإلغاء: {r.rejectionReason || 'غير مسجل'}</div>;
+          }
           if (r.resolvedAt) {
             return (
               <div className="text-right text-[10px] text-[var(--admin-muted)]">
@@ -502,6 +513,16 @@ export function RechargeVerificationWorkspace() {
               }`}
             >
               المنتهية الصلاحية
+            </button>
+            <button
+              onClick={() => setStatusFilter(5)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                statusFilter === 5
+                  ? 'bg-[var(--admin-primary)] text-white shadow'
+                  : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]'
+              }`}
+            >
+              الملغاة
             </button>
             <button
               onClick={() => setStatusFilter('all')}

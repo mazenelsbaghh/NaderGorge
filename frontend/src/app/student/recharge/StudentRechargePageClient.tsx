@@ -24,6 +24,9 @@ const isApprovedRechargeStatus = (status: StudentRechargeRequestDto['status']) =
 const isRejectedRechargeStatus = (status: StudentRechargeRequestDto['status']) =>
   status === 3 || status === 'Rejected';
 
+const isPendingRechargeStatus = (status: StudentRechargeRequestDto['status']) =>
+  status === 0 || status === 'Pending';
+
 const normalizePhoneInput = (value: string) => value.replace(/\D/g, '').slice(0, 11);
 
 const isValidEgyptianMobile = (value: string) => /^01[0125]\d{8}$/.test(value);
@@ -35,12 +38,14 @@ const getRechargeStatusLabel = (status: StudentRechargeRequestDto['status']) => 
   if (status === 1 || status === 'Matched') return 'تمت المطابقة';
   if (status === 2 || status === 'Approved') return 'مقبول';
   if (status === 3 || status === 'Rejected') return 'مرفوض';
+  if (status === 5 || status === 'Cancelled') return 'ملغي';
   return 'منتهي';
 };
 
 const getRechargeStatusClass = (status: StudentRechargeRequestDto['status']) => {
   if (isRejectedRechargeStatus(status)) return 'bg-rose-500/10 text-rose-600';
-  if (status === 0 || status === 'Pending') return 'bg-amber-500/10 text-amber-600';
+  if (status === 5 || status === 'Cancelled') return 'bg-slate-500/10 text-slate-600';
+  if (isPendingRechargeStatus(status)) return 'bg-amber-500/10 text-amber-600';
   return 'bg-emerald-500/10 text-emerald-600';
 };
 
@@ -57,6 +62,9 @@ export default function StudentRechargePageClient() {
   ));
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<StudentRechargeRequestDto[]>([]);
+  const [cancelRequestId, setCancelRequestId] = useState<string | null>(null);
+  const [cancellationReason, setCancellationReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
   const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
   const [balanceScope, setBalanceScope] = useState<'general' | 'teacher'>('general');
   const [teacherId, setTeacherId] = useState('');
@@ -82,6 +90,24 @@ export default function StudentRechargePageClient() {
     } catch {
       setRequests([]);
     }
+  };
+
+  const cancelRechargeRequest = async () => {
+    if (!cancelRequestId || cancellationReason.trim().length < 3) {
+      toast.error('اكتب سبب الإلغاء.');
+      return;
+    }
+    setCancelling(true);
+    try {
+      const response = await rechargeService.cancel(cancelRequestId, cancellationReason.trim());
+      toast.success(response.message || 'تم إلغاء طلب الشحن.');
+      setCancelRequestId(null);
+      setCancellationReason('');
+      await fetchRequests();
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      toast.error(message ?? 'تعذر إلغاء الطلب.');
+    } finally { setCancelling(false); }
   };
 
   useEffect(() => {
@@ -672,7 +698,9 @@ export default function StudentRechargePageClient() {
                     <span>من: <span className="font-mono">{request.senderPhoneNumber || 'لم يرسل بعد'}</span></span>
                     <span>إلى: {request.walletLabel} <span className="font-mono">{request.walletPhoneNumber}</span></span>
                     <span>نوع الرصيد: {request.teacherName ? `للأستاذ ${request.teacherName}` : 'عام'}</span>
-                    {request.rejectionReason ? <span className="text-rose-600">سبب الرفض: {request.rejectionReason}</span> : null}
+                    {request.rejectionReason ? <span className="text-rose-600">{request.status === 5 || request.status === 'Cancelled' ? 'سبب الإلغاء' : 'سبب الرفض'}: {request.rejectionReason}</span> : null}
+                    {isPendingRechargeStatus(request.status) && cancelRequestId !== request.id ? <button type="button" onClick={() => { setCancelRequestId(request.id); setCancellationReason(''); }} className="mt-2 w-fit text-xs font-black text-rose-600 underline">إلغاء الطلب</button> : null}
+                    {cancelRequestId === request.id ? <div className="mt-2 space-y-2 rounded-xl border border-rose-200 bg-rose-50 p-3"><label className="block font-black text-rose-700">سبب الإلغاء<textarea value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} className="admin-input mt-1 min-h-20 w-full" maxLength={500} autoFocus /></label><div className="flex gap-2"><button type="button" disabled={cancelling} onClick={() => void cancelRechargeRequest()} className="rounded-lg bg-rose-600 px-3 py-2 font-black text-white">تأكيد الإلغاء</button><button type="button" disabled={cancelling} onClick={() => { setCancelRequestId(null); setCancellationReason(''); }} className="rounded-lg border px-3 py-2 font-black">رجوع</button></div></div> : null}
                   </div>
                 </div>
               );

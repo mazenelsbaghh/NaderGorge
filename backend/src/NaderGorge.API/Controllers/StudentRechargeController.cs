@@ -43,6 +43,13 @@ public class StudentRechargeController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("requests/{id:guid}/cancel")]
+    public async Task<IActionResult> CancelRequest(Guid id, CancelRechargeRequestDto dto, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new CancelRechargeRequestCommand(GetUserId(), id, dto.Reason), ct);
+        return result.Success ? Ok(result) : Conflict(result);
+    }
+
     [HttpPost("submit")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> SubmitRecharge(
@@ -89,3 +96,4 @@ public class StudentRechargeController : ControllerBase
 }
 
 public record InitiateRechargeRequestDto(decimal Amount, Guid? TeacherId = null);
+public record CancelRechargeRequestDto(string Reason);

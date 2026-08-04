@@ -11,6 +11,27 @@ namespace NaderGorge.Application.Tests;
 public sealed class RechargeDecisionAndWalletAssignmentTests
 {
     [Fact]
+    public async Task Student_cancels_pending_request_and_admin_can_see_the_reason()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000021");
+        var wallet = Wallet("01010000021");
+        var pending = PendingRequest(user, wallet, 100m);
+        db.AddRange(wallet, pending);
+        await db.SaveChangesAsync();
+
+        var cancelled = await new CancelRechargeRequestCommandHandler(db).Handle(
+            new CancelRechargeRequestCommand(user.Id, pending.Id, "أنشأت الطلب بالخطأ"), CancellationToken.None);
+        var adminRequests = await new GetAdminRechargeRequestsQueryHandler(db).Handle(
+            new GetAdminRechargeRequestsQuery(RechargeRequestStatus.Cancelled), CancellationToken.None);
+
+        Assert.True(cancelled.Success);
+        Assert.Equal(RechargeRequestStatus.Cancelled, pending.Status);
+        Assert.Null(pending.ReservationExpiresAt);
+        Assert.Equal("أنشأت الطلب بالخطأ", Assert.Single(adminRequests.Data!).RejectionReason);
+    }
+
+    [Fact]
     public async Task Pending_request_stays_open_for_two_days_then_expires()
     {
         await using var db = TestAppDbContextFactory.Create();

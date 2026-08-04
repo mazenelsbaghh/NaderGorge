@@ -54,4 +54,12 @@ export const rechargeService = {
     const { data } = await apiClient.get<{ success: boolean; data: StudentRechargeRequestDto[] }>('/student/recharge/requests');
     return data.data || [];
   },
+
+  cancel: async (rechargeRequestId: string, reason: string) => {
+    const { data } = await apiClient.post<{ success: boolean; message: string }>(
+      `/student/recharge/requests/${rechargeRequestId}/cancel`,
+      { reason },
+    );
+    return data;
+  },
 };
