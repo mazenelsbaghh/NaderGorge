@@ -112,6 +112,7 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
             existingPending.Amount = request.Amount;
             existingPending.TeacherId = request.TeacherId;
             existingPending.ReservationExpiresAt = now.AddHours(1);
+            existingPending.UpdatedAt = now;
             await _db.SaveChangesAsync(ct);
             return ApiResponse<InitiateRechargeDto>.Ok(ToDto(existingPending),
                 "تم تثبيت نفس رقم المحفظة لك. أكمل التحويل وارفع الإثبات خلال ساعة واحدة.");
@@ -149,6 +150,7 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
             existingPending.Amount = request.Amount;
             existingPending.TeacherId = request.TeacherId;
             existingPending.ReservationExpiresAt = expiration;
+            existingPending.UpdatedAt = now;
             await _db.SaveChangesAsync(ct);
             return ApiResponse<InitiateRechargeDto>.Ok(ToDto(existingPending),
                 "تم تغيير المحفظة لأن الرقم السابق غير متاح أو وصل إلى الحد المسموح. أكمل التحويل خلال ساعة واحدة.");

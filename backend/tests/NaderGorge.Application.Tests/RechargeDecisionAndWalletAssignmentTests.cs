@@ -51,6 +51,82 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Reusing_a_pending_request_refreshes_its_matching_anchor()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000011");
+        var wallet = Wallet("01010000011");
+        var pending = PendingRequest(user, wallet, 100m);
+        pending.CreatedAt = DateTime.UtcNow.AddHours(-20);
+        db.AddRange(wallet, pending);
+        await db.SaveChangesAsync();
+        var beforeReuse = DateTime.UtcNow.AddSeconds(-1);
+
+        var result = await new InitiateRechargeCommandHandler(db)
+            .Handle(new InitiateRechargeCommand(user.Id, 150m), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.NotNull(pending.UpdatedAt);
+        Assert.True(pending.UpdatedAt >= beforeReuse);
+    }
+
+    [Fact]
+    public async Task Student_history_hides_an_inactive_wallet_phone_number()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000012");
+        var wallet = Wallet("01010000012");
+        wallet.IsActive = false;
+        db.AddRange(wallet, PendingRequest(user, wallet, 100m));
+        await db.SaveChangesAsync();
+
+        var result = await new GetMyRechargeRequestsQueryHandler(db)
+            .Handle(new GetMyRechargeRequestsQuery(user.Id), CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(string.Empty, Assert.Single(result.Data!).WalletPhoneNumber);
+    }
+
+    [Fact]
+    public async Task Reconciliation_matches_one_exact_sms_using_the_latest_request_update()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000013");
+        var wallet = Wallet("01010000013");
+        var pending = PendingRequest(user, wallet, 200m);
+        pending.CreatedAt = DateTime.UtcNow.AddHours(-20);
+        pending.SenderPhoneNumber = "01099999991";
+        pending.ScreenshotUrl = "/proof.webp";
+        db.AddRange(wallet, pending);
+        await db.SaveChangesAsync();
+        pending.UpdatedAt = DateTime.UtcNow;
+        var sms = new IncomingSmsLog
+        {
+            WalletId = wallet.Id,
+            Wallet = wallet,
+            Sender = "VodafoneCash",
+            Body = "تم استلام مبلغ 200 ج.م من 01099999991",
+            ReceivedAt = pending.UpdatedAt.Value.AddMinutes(5),
+            ParsedAmount = 200m,
+            ParsedSenderPhone = "01099999991",
+            DeduplicationHash = Guid.NewGuid().ToString("N")
+        };
+        db.IncomingSmsLogs.Add(sms);
+        await db.SaveChangesAsync();
+
+        var matcher = new RechargeAutoMatchingService(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance),
+            NullLogger<RechargeAutoMatchingService>.Instance);
+        var matched = await matcher.ReconcilePendingAsync(CancellationToken.None);
+
+        Assert.Equal(1, matched);
+        Assert.Equal(RechargeRequestStatus.Matched, pending.Status);
+        Assert.True(sms.IsMatched);
+        Assert.Equal(200m, (await db.StudentBalances.SingleAsync()).CurrentBalance);
+    }
+
+    [Fact]
     public async Task Initiate_changes_wallet_only_when_the_sticky_wallet_has_reached_its_limit()
     {
         await using var db = TestAppDbContextFactory.Create();

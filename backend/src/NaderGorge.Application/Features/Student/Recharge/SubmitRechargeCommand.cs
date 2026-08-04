@@ -106,8 +106,11 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         rechargeRequest.ReservationExpiresAt = null; // Clear expiration since it is now submitted
 
         // 5. Try to find a matching, unmatched SMS that was already received
-        var startTime = rechargeRequest.CreatedAt.AddHours(-2);
-        var endTime = rechargeRequest.CreatedAt.AddHours(2);
+        // A pending row may be reused for a later reservation. Match against the
+        // latest reservation time instead of the row's original creation time.
+        var matchingAnchor = rechargeRequest.UpdatedAt ?? rechargeRequest.CreatedAt;
+        var startTime = matchingAnchor.AddHours(-2);
+        var endTime = matchingAnchor.AddHours(2);
 
         var matchedSms = await _db.IncomingSmsLogs
             .FirstOrDefaultAsync(l => 

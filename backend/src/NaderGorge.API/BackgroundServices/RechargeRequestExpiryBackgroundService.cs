@@ -28,6 +28,8 @@ public sealed class RechargeRequestExpiryBackgroundService(
                     {
                         var database = services.GetRequiredService<IAppDbContext>();
                         await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(database, token);
+                        var matcher = services.GetRequiredService<RechargeAutoMatchingService>();
+                        await matcher.ReconcilePendingAsync(token);
                     },
                     stoppingToken);
             }
@@ -37,7 +39,7 @@ public sealed class RechargeRequestExpiryBackgroundService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Failed to auto-reject expired recharge requests.");
+                logger.LogError(ex, "Failed to maintain pending recharge requests.");
             }
 
             await Task.Delay(SweepInterval, stoppingToken);

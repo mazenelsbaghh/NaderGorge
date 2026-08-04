@@ -149,6 +149,7 @@ builder.Services.AddSingleton<IJobEnqueuer, RedisJobEnqueuer>();
 builder.Services.AddSingleton<IAiJobCancellationStore, RedisAiJobCancellationStore>();
 builder.Services.AddScoped<ICachedPlatformSettingsReader, CachedPlatformSettingsReader>();
 builder.Services.AddScoped<BalanceService>();
+builder.Services.AddScoped<RechargeAutoMatchingService>();
 builder.Services.AddScoped<AcademicValidationService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
 builder.Services.AddScoped<TeacherAccountingService>();

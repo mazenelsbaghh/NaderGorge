@@ -106,8 +106,8 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
                     r.SenderPhoneNumber == senderPhone &&
                     r.ScreenshotUrl != null && r.ScreenshotUrl != "" &&
                     r.Status == RechargeRequestStatus.Pending &&
-                    r.CreatedAt >= startTime &&
-                    r.CreatedAt <= endTime, ct);
+                    (r.UpdatedAt ?? r.CreatedAt) >= startTime &&
+                    (r.UpdatedAt ?? r.CreatedAt) <= endTime, ct);
 
             if (matchedRequest != null)
             {

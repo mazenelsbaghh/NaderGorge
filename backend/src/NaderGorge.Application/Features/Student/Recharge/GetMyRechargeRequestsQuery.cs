@@ -60,7 +60,8 @@ public class GetMyRechargeRequestsQueryHandler : IRequestHandler<GetMyRechargeRe
                 TeacherName = r.Teacher != null && r.Teacher.User != null ? r.Teacher.User.FullName : null,
                 SenderPhoneNumber = r.SenderPhoneNumber,
                 WalletLabel = r.Wallet.Label,
-                WalletPhoneNumber = r.Wallet.PhoneNumber,
+                // Never keep advertising a wallet after an operator disables it.
+                WalletPhoneNumber = r.Wallet.IsActive ? r.Wallet.PhoneNumber : string.Empty,
                 Status = r.Status,
                 ScreenshotUrl = r.ScreenshotUrl,
                 RejectionReason = r.RejectionReason,
