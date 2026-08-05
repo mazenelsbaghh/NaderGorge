@@ -2,6 +2,7 @@ using System.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -21,6 +22,7 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
     private readonly TeacherAccountingService _teacherAccounting;
     private readonly TeacherAgreementResolver _agreementResolver;
     private readonly IAcademicScopeService? _academicScope;
+    private readonly IFinancialPostingService? _financialPosting;
 
     public PurchaseContentCommandHandler(
         IAppDbContext db,
@@ -30,7 +32,8 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
         IDiscountEngine discountEngine,
         TeacherAccountingService? teacherAccounting = null,
         TeacherAgreementResolver? agreementResolver = null,
-        IAcademicScopeService? academicScope = null)
+        IAcademicScopeService? academicScope = null,
+        IFinancialPostingService? financialPosting = null)
     {
         _db = db;
         _balanceService = balanceService;
@@ -40,6 +43,7 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
         _teacherAccounting = teacherAccounting ?? new TeacherAccountingService(db);
         _agreementResolver = agreementResolver ?? new TeacherAgreementResolver(db);
         _academicScope = academicScope;
+        _financialPosting = financialPosting;
     }
 
     public async Task<ApiResponse<bool>> Handle(PurchaseContentCommand request, CancellationToken ct)
@@ -519,6 +523,26 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
                 })
             });
 
+            if (_financialPosting is not null && (funding.PaidAmount > 0m || (target.TeacherId.HasValue && funding.PromotionalAmount > 0m)))
+            {
+                var lines = new List<FinancialPostingLine>();
+                if (funding.PaidAmount > 0m)
+                {
+                    lines.Add(new FinancialPostingLine("1100", funding.PaidAmount, 0m, StudentId: request.StudentId));
+                    AddSignedCreditLine(lines, "4000", platformShareImpact, request.StudentId, null, "حصة المنصة من عملية الشراء");
+                    if (teacherShareImpact != 0m)
+                        AddSignedCreditLine(lines, "2000", teacherShareImpact, request.StudentId, target.TeacherId, "مستحق المدرس من عملية الشراء");
+                }
+                if (target.TeacherId.HasValue && funding.PromotionalAmount > 0m)
+                {
+                    lines.Add(new FinancialPostingLine("1110", funding.PromotionalAmount, 0m, StudentId: request.StudentId, TeacherId: target.TeacherId));
+                    lines.Add(new FinancialPostingLine("2000", 0m, funding.PromotionalAmount, StudentId: request.StudentId, TeacherId: target.TeacherId, Memo: "تسوية رصيد مدرس مخصص"));
+                }
+                await _financialPosting.PostAsync(new FinancialPostingRequest(
+                    "Purchase", purchaseOperationId, "PurchaseRecognized", $"purchase:{purchaseOperationId:N}",
+                    $"شراء {contentName}", DateTime.UtcNow, request.StudentId, lines), ct);
+            }
+
             if (request.ContentType == CodeType.Package)
             {
                 var packageAccessGrantedEvent = new OutboxEvent
@@ -616,6 +640,14 @@ public class PurchaseContentCommandHandler : IRequestHandler<PurchaseContentComm
             || ex.Message.Contains("transaction is aborted", StringComparison.OrdinalIgnoreCase)
             || ex.Message.Contains("25P02", StringComparison.OrdinalIgnoreCase)
             || (ex.InnerException != null && IsConcurrencyFailure(ex.InnerException));
+    }
+
+    private static void AddSignedCreditLine(List<FinancialPostingLine> lines, string accountCode, decimal amount, Guid? studentId, Guid? teacherId, string memo)
+    {
+        if (amount > 0m)
+            lines.Add(new FinancialPostingLine(accountCode, 0m, amount, StudentId: studentId, TeacherId: teacherId, Memo: memo));
+        else if (amount < 0m)
+            lines.Add(new FinancialPostingLine(accountCode, -amount, 0m, StudentId: studentId, TeacherId: teacherId, Memo: memo));
     }
 
     private static (StudentFacingScopeOwnerType? OwnerType, Guid OwnerId) ResolveAcademicOwner(

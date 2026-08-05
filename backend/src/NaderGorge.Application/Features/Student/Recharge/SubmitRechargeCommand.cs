@@ -82,9 +82,6 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         if (rechargeRequest.Status != RechargeRequestStatus.Pending)
             return ApiResponse<SubmitRechargeDto>.Fail("تم معالجة هذا الطلب بالفعل مسبقاً");
 
-        if (!rechargeRequest.TeacherId.HasValue)
-            return ApiResponse<SubmitRechargeDto>.Fail("لا يمكن رفع إثبات التحويل لطلب غير مرتبط برصيد مدرس.");
-
         if (rechargeRequest.ReservationExpiresAt.HasValue && rechargeRequest.ReservationExpiresAt.Value < DateTime.UtcNow)
         {
             return ApiResponse<SubmitRechargeDto>.Fail("انتهت صلاحية حجز المعاملة (ساعة واحدة)، يرجى البدء بطلب جديد.");

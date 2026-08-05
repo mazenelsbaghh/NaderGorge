@@ -58,6 +58,7 @@ import {
   UserRoundCheck,
   UserRoundPlus,
   Wallet,
+  WalletCards,
   Gift,
   Tags,
   PanelRightClose,
@@ -128,6 +129,7 @@ export type AdminShellRoute =
   | '/admin/hr/reports'
   | '/admin/operations'
   | '/admin/finance'
+  | '/admin/platform-finance'
   | '/admin/teacher-finance'
   | '/admin/shared-packages'
   | '/admin/wallets'
@@ -411,6 +413,12 @@ const navItems: AdminNavItem[] = [
     label: 'المالية والرواتب',
     icon: Coins,
     permission: 'finance.manage',
+  },
+  {
+    href: '/admin/platform-finance',
+    label: 'المركز المالي العام',
+    icon: WalletCards,
+    permission: 'finance.dashboard.view',
   },
   {
     href: '/admin/teacher-finance',

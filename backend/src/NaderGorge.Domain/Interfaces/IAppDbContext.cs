@@ -249,6 +249,22 @@ public interface IAppDbContext
     DbSet<RechargeRequest> RechargeRequests { get; }
     DbSet<IncomingSmsLog> IncomingSmsLogs { get; }
 
+    DbSet<FinancialAccount> FinancialAccounts { get; }
+    DbSet<JournalEntry> JournalEntries { get; }
+    DbSet<JournalLine> JournalLines { get; }
+    DbSet<TreasuryAccount> TreasuryAccounts { get; }
+    DbSet<AccountingPeriod> AccountingPeriods { get; }
+    DbSet<ExpenseCategory> ExpenseCategories { get; }
+    DbSet<FinanceCostCenter> FinanceCostCenters { get; }
+    DbSet<FinanceVendor> FinanceVendors { get; }
+    DbSet<PlatformExpense> PlatformExpenses { get; }
+    DbSet<ExpensePayment> ExpensePayments { get; }
+    DbSet<PlatformRefund> PlatformRefunds { get; }
+    DbSet<FinanceBudgetPlan> FinanceBudgetPlans { get; }
+    DbSet<FinanceBudgetLine> FinanceBudgetLines { get; }
+    DbSet<TreasuryTransfer> TreasuryTransfers { get; }
+    DbSet<TreasuryReconciliation> TreasuryReconciliations { get; }
+
     Task<StudentAnswer?> FindStudentAnswerAsync(Guid studentExamAttemptId, Guid examQuestionId, CancellationToken cancellationToken = default);
     Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;
     Task<IDbContextTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default);

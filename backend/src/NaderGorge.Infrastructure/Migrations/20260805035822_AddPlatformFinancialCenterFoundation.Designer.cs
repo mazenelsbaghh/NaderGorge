@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NaderGorge.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace NaderGorge.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260805035822_AddPlatformFinancialCenterFoundation")]
+    partial class AddPlatformFinancialCenterFoundation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3147,88 +3150,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("exam_questions", (string)null);
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.ExpenseCategory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AccountCode")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("finance_expense_categories", (string)null);
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.ExpensePayment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("JournalEntryId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("PaidAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("PaidByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PaymentReference")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<Guid>("PlatformExpenseId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TreasuryAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JournalEntryId");
-
-                    b.HasIndex("PlatformExpenseId");
-
-                    b.HasIndex("TreasuryAccountId");
-
-                    b.ToTable("platform_expense_payments", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_platform_expense_payments_amount", "\"Amount\" > 0");
-                        });
-                });
-
             modelBuilder.Entity("NaderGorge.Domain.Entities.ExtraWatchRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3269,150 +3190,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ExtraWatchRequests", (string)null);
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.FinanceBudgetLine", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("CostCenterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("FinanceBudgetPlanId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("FinancialAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("PlannedAmount")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid?>("TeacherId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FinancialAccountId");
-
-                    b.HasIndex("FinanceBudgetPlanId", "FinancialAccountId");
-
-                    b.ToTable("finance_budget_lines", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_finance_budget_lines_amount", "\"PlannedAmount\" >= 0");
-                        });
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.FinanceBudgetPlan", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<int>("PeriodKind")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("Version")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StartDate", "EndDate", "Status");
-
-                    b.ToTable("finance_budget_plans", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_finance_budget_plan_dates", "\"StartDate\" <= \"EndDate\"");
-                        });
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.FinanceCostCenter", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("finance_cost_centers", (string)null);
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.FinanceVendor", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<string>("Phone")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("finance_vendors", (string)null);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialAccount", b =>
@@ -7501,159 +7278,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformExpense", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("AttachmentUrl")
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("CategoryId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("CostCenterId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("DocumentNumber")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<Guid?>("JournalEntryId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("TreasuryAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid?>("VendorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<byte[]>("Version")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("bytea");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("CostCenterId");
-
-                    b.HasIndex("DocumentNumber")
-                        .IsUnique();
-
-                    b.HasIndex("JournalEntryId");
-
-                    b.HasIndex("TreasuryAccountId");
-
-                    b.HasIndex("VendorId");
-
-                    b.HasIndex("OccurredAt", "Status");
-
-                    b.ToTable("platform_expenses", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_platform_expenses_amount", "\"Amount\" > 0");
-                        });
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformRefund", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("JournalEntryId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Method")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("OriginalSourceId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("OriginalSourceType")
-                        .IsRequired()
-                        .HasMaxLength(80)
-                        .HasColumnType("character varying(80)");
-
-                    b.Property<string>("PaymentReference")
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<decimal>("PlatformAmount")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("StudentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("TeacherAmount")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid?>("TeacherId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("TreasuryAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("JournalEntryId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("TreasuryAccountId");
-
-                    b.HasIndex("OriginalSourceType", "OriginalSourceId");
-
-                    b.ToTable("platform_refunds", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_platform_refunds_amounts", "\"PlatformAmount\" >= 0 AND \"TeacherAmount\" >= 0 AND (\"PlatformAmount\" + \"TeacherAmount\") > 0");
-                        });
-                });
-
             modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformSetting", b =>
                 {
                     b.Property<Guid>("Id")
@@ -10677,100 +10301,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("treasury_accounts", (string)null);
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.TreasuryReconciliation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("AdjustmentJournalEntryId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("AsOfDate")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<decimal>("CountedOrStatementBalance")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("EvidenceNote")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<decimal>("SystemBalance")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("TreasuryAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AdjustmentJournalEntryId");
-
-                    b.HasIndex("TreasuryAccountId", "AsOfDate");
-
-                    b.ToTable("treasury_reconciliations", (string)null);
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.TreasuryTransfer", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("DestinationTreasuryAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("JournalEntryId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.Property<string>("Reference")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("character varying(160)");
-
-                    b.Property<Guid>("SourceTreasuryAccountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp without time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DestinationTreasuryAccountId");
-
-                    b.HasIndex("JournalEntryId")
-                        .IsUnique();
-
-                    b.HasIndex("SourceTreasuryAccountId");
-
-                    b.ToTable("treasury_transfers", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_treasury_transfers_amount", "\"Amount\" > 0");
-                        });
-                });
-
             modelBuilder.Entity("NaderGorge.Domain.Entities.TrustedAttendanceDevice", b =>
                 {
                     b.Property<Guid>("Id")
@@ -12376,27 +11906,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.ExpensePayment", b =>
-                {
-                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
-                        .WithMany()
-                        .HasForeignKey("JournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NaderGorge.Domain.Entities.PlatformExpense", null)
-                        .WithMany("Payments")
-                        .HasForeignKey("PlatformExpenseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NaderGorge.Domain.Entities.TreasuryAccount", null)
-                        .WithMany()
-                        .HasForeignKey("TreasuryAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("NaderGorge.Domain.Entities.ExtraWatchRequest", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.LessonVideo", "LessonVideo")
@@ -12414,21 +11923,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("LessonVideo");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.FinanceBudgetLine", b =>
-                {
-                    b.HasOne("NaderGorge.Domain.Entities.FinanceBudgetPlan", null)
-                        .WithMany("Lines")
-                        .HasForeignKey("FinanceBudgetPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("NaderGorge.Domain.Entities.FinancialAccount", null)
-                        .WithMany()
-                        .HasForeignKey("FinancialAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.FormSubmission", b =>
@@ -12711,21 +12205,17 @@ namespace NaderGorge.Infrastructure.Migrations
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.JournalLine", b =>
                 {
-                    b.HasOne("NaderGorge.Domain.Entities.FinancialAccount", "FinancialAccount")
+                    b.HasOne("NaderGorge.Domain.Entities.FinancialAccount", null)
                         .WithMany()
                         .HasForeignKey("FinancialAccountId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", "JournalEntry")
+                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
                         .WithMany("Lines")
                         .HasForeignKey("JournalEntryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("FinancialAccount");
-
-                    b.Navigation("JournalEntry");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.LeaveBalance", b =>
@@ -13473,48 +12963,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("PerformanceCycle");
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformExpense", b =>
-                {
-                    b.HasOne("NaderGorge.Domain.Entities.ExpenseCategory", null)
-                        .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NaderGorge.Domain.Entities.FinanceCostCenter", null)
-                        .WithMany()
-                        .HasForeignKey("CostCenterId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
-                        .WithMany()
-                        .HasForeignKey("JournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("NaderGorge.Domain.Entities.TreasuryAccount", null)
-                        .WithMany()
-                        .HasForeignKey("TreasuryAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("NaderGorge.Domain.Entities.FinanceVendor", null)
-                        .WithMany()
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformRefund", b =>
-                {
-                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
-                        .WithMany()
-                        .HasForeignKey("JournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("NaderGorge.Domain.Entities.TreasuryAccount", null)
-                        .WithMany()
-                        .HasForeignKey("TreasuryAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeBatch", b =>
@@ -14523,41 +13971,6 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.TreasuryReconciliation", b =>
-                {
-                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
-                        .WithMany()
-                        .HasForeignKey("AdjustmentJournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("NaderGorge.Domain.Entities.TreasuryAccount", null)
-                        .WithMany()
-                        .HasForeignKey("TreasuryAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.TreasuryTransfer", b =>
-                {
-                    b.HasOne("NaderGorge.Domain.Entities.TreasuryAccount", null)
-                        .WithMany()
-                        .HasForeignKey("DestinationTreasuryAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
-                        .WithMany()
-                        .HasForeignKey("JournalEntryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NaderGorge.Domain.Entities.TreasuryAccount", null)
-                        .WithMany()
-                        .HasForeignKey("SourceTreasuryAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("NaderGorge.Domain.Entities.TrustedAttendanceDevice", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.User", null)
@@ -14783,11 +14196,6 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.Navigation("PublicExamProduct");
                 });
 
-            modelBuilder.Entity("NaderGorge.Domain.Entities.FinanceBudgetPlan", b =>
-                {
-                    b.Navigation("Lines");
-                });
-
             modelBuilder.Entity("NaderGorge.Domain.Entities.GiftIssuance", b =>
                 {
                     b.Navigation("Recipients");
@@ -14880,11 +14288,6 @@ namespace NaderGorge.Infrastructure.Migrations
             modelBuilder.Entity("NaderGorge.Domain.Entities.PerformanceCycle", b =>
                 {
                     b.Navigation("Goals");
-                });
-
-            modelBuilder.Entity("NaderGorge.Domain.Entities.PlatformExpense", b =>
-                {
-                    b.Navigation("Payments");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.PrintableCodeBatch", b =>

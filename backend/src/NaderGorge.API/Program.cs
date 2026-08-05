@@ -33,6 +33,7 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
 SecurityConfigurationValidator.Validate(builder);
+builder.Services.AddPlatformFinanceConfiguration(builder.Configuration);
 
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
@@ -153,6 +154,12 @@ builder.Services.AddScoped<RechargeAutoMatchingService>();
 builder.Services.AddScoped<AcademicValidationService>();
 builder.Services.AddScoped<NaderGorge.Application.Services.TeacherAuthorizationService>();
 builder.Services.AddScoped<TeacherAccountingService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IFinancialPostingService, NaderGorge.Infrastructure.Services.Finance.FinancialPostingService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.PlatformFinanceDashboardService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceOperationsService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceOperationsService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinancePlanningService, NaderGorge.Infrastructure.Services.Finance.PlatformFinancePlanningService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceExportService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceExportService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceMigrationService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceMigrationService>();
 builder.Services.AddScoped<TeacherAgreementResolver>();
 builder.Services.AddScoped<CodeGroupFinancialAccountingService>();
 builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();
@@ -380,6 +387,7 @@ if (app.Environment.EnvironmentName != "E2e")
     var db = scope.ServiceProvider.GetRequiredService<NaderGorge.Infrastructure.Data.AppDbContext>();
     var canSeedDefaults = app.Configuration.GetValue<bool>("SeedDefaults:Enabled") && app.Environment.IsDevelopment();
     await NaderGorge.Infrastructure.Data.Seeder.SeedAsync(db, canSeedDefaults);
+    await NaderGorge.Infrastructure.Data.PlatformFinanceSeeder.SeedAsync(db);
     if (app.Configuration.GetValue<bool>("SeedDemoCatalog:Enabled"))
         await NaderGorge.Infrastructure.Data.DemoCatalogSeeder.SeedAsync(db);
 }

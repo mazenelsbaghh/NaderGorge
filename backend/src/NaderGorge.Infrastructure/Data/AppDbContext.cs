@@ -264,6 +264,23 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<RechargeRequest> RechargeRequests => Set<RechargeRequest>();
     public DbSet<IncomingSmsLog> IncomingSmsLogs => Set<IncomingSmsLog>();
 
+    // Platform finance general ledger
+    public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();
+    public DbSet<JournalEntry> JournalEntries => Set<JournalEntry>();
+    public DbSet<JournalLine> JournalLines => Set<JournalLine>();
+    public DbSet<TreasuryAccount> TreasuryAccounts => Set<TreasuryAccount>();
+    public DbSet<AccountingPeriod> AccountingPeriods => Set<AccountingPeriod>();
+    public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
+    public DbSet<FinanceCostCenter> FinanceCostCenters => Set<FinanceCostCenter>();
+    public DbSet<FinanceVendor> FinanceVendors => Set<FinanceVendor>();
+    public DbSet<PlatformExpense> PlatformExpenses => Set<PlatformExpense>();
+    public DbSet<ExpensePayment> ExpensePayments => Set<ExpensePayment>();
+    public DbSet<PlatformRefund> PlatformRefunds => Set<PlatformRefund>();
+    public DbSet<FinanceBudgetPlan> FinanceBudgetPlans => Set<FinanceBudgetPlan>();
+    public DbSet<FinanceBudgetLine> FinanceBudgetLines => Set<FinanceBudgetLine>();
+    public DbSet<TreasuryTransfer> TreasuryTransfers => Set<TreasuryTransfer>();
+    public DbSet<TreasuryReconciliation> TreasuryReconciliations => Set<TreasuryReconciliation>();
+
     public Task<StudentAnswer?> FindStudentAnswerAsync(
         Guid studentExamAttemptId,
         Guid examQuestionId,
@@ -284,6 +301,7 @@ public class AppDbContext : DbContext, IAppDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        ConfigurePlatformFinance(modelBuilder);
 
         // User
         modelBuilder.Entity<User>(e =>
@@ -3286,6 +3304,195 @@ public class AppDbContext : DbContext, IAppDbContext
             profile.ParentTrackingCode = code;
             reservedCodes.Add(code);
         }
+    }
+
+    private static void ConfigurePlatformFinance(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<FinancialAccount>(e =>
+        {
+            e.ToTable("financial_accounts");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Code).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.Type).HasConversion<int>();
+            e.Property(x => x.NormalSide).HasConversion<int>();
+            e.Property(x => x.Role).HasConversion<int>();
+            e.HasIndex(x => new { x.Type, x.IsActive });
+        });
+
+        modelBuilder.Entity<JournalEntry>(e =>
+        {
+            e.ToTable("financial_journal_entries");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.SequenceNumber).IsUnique();
+            e.HasIndex(x => x.IdempotencyKey).IsUnique();
+            e.HasIndex(x => new { x.OccurredAt, x.Status });
+            e.HasIndex(x => new { x.SourceType, x.SourceId, x.PostingKind }).IsUnique();
+            e.Property(x => x.SourceType).HasMaxLength(80).IsRequired();
+            e.Property(x => x.PostingKind).HasMaxLength(80).IsRequired();
+            e.Property(x => x.IdempotencyKey).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            e.Property(x => x.CorrelationId).HasMaxLength(100);
+            e.Property(x => x.Status).HasConversion<int>();
+            e.HasMany(x => x.Lines).WithOne(x => x.JournalEntry).HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<JournalLine>(e =>
+        {
+            e.ToTable("financial_journal_lines", table =>
+            {
+                table.HasCheckConstraint("CK_financial_journal_lines_amount", "\"Debit\" >= 0 AND \"Credit\" >= 0 AND ((\"Debit\" > 0 AND \"Credit\" = 0) OR (\"Credit\" > 0 AND \"Debit\" = 0))");
+            });
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Debit).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Credit).HasColumnType("numeric(18,2)");
+            e.Property(x => x.DimensionKey).HasMaxLength(120);
+            e.Property(x => x.Memo).HasMaxLength(500);
+            e.HasIndex(x => new { x.FinancialAccountId, x.JournalEntryId });
+            e.HasIndex(x => new { x.TeacherId, x.StudentId });
+            e.HasIndex(x => x.TreasuryAccountId);
+            e.HasOne(x => x.FinancialAccount).WithMany().HasForeignKey(x => x.FinancialAccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TreasuryAccount>(e =>
+        {
+            e.ToTable("treasury_accounts");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.Type).HasConversion<int>();
+            e.Property(x => x.MaskedIdentifier).HasMaxLength(80);
+            e.HasIndex(x => x.FinancialAccountId).IsUnique();
+            e.HasIndex(x => x.DigitalWalletId).IsUnique().HasFilter("\"DigitalWalletId\" IS NOT NULL");
+            e.HasOne<FinancialAccount>().WithMany().HasForeignKey(x => x.FinancialAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<DigitalWallet>().WithMany().HasForeignKey(x => x.DigitalWalletId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AccountingPeriod>(e =>
+        {
+            e.ToTable("accounting_periods", table => table.HasCheckConstraint("CK_accounting_period_dates", "\"StartDate\" <= \"EndDate\""));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.StartDate, x.EndDate }).IsUnique();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.CloseReason).HasMaxLength(500);
+        });
+
+        modelBuilder.Entity<ExpenseCategory>(e =>
+        {
+            e.ToTable("finance_expense_categories");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.AccountCode).HasMaxLength(32).IsRequired();
+            e.HasIndex(x => x.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<FinanceCostCenter>(e =>
+        {
+            e.ToTable("finance_cost_centers");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.HasIndex(x => x.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<FinanceVendor>(e =>
+        {
+            e.ToTable("finance_vendors");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.Phone).HasMaxLength(32);
+            e.HasIndex(x => x.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<PlatformExpense>(e =>
+        {
+            e.ToTable("platform_expenses", table => table.HasCheckConstraint("CK_platform_expenses_amount", "\"Amount\" > 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DocumentNumber).HasMaxLength(80).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.Description).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.Version).IsRowVersion();
+            e.HasIndex(x => new { x.OccurredAt, x.Status });
+            e.HasIndex(x => x.DocumentNumber).IsUnique();
+            e.HasOne<ExpenseCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<FinanceCostCenter>().WithMany().HasForeignKey(x => x.CostCenterId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<FinanceVendor>().WithMany().HasForeignKey(x => x.VendorId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExpensePayment>(e =>
+        {
+            e.ToTable("platform_expense_payments", table => table.HasCheckConstraint("CK_platform_expense_payments_amount", "\"Amount\" > 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.PaymentReference).HasMaxLength(120).IsRequired();
+            e.HasIndex(x => x.PlatformExpenseId);
+            e.HasOne<PlatformExpense>().WithMany(x => x.Payments).HasForeignKey(x => x.PlatformExpenseId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PlatformRefund>(e =>
+        {
+            e.ToTable("platform_refunds", table => table.HasCheckConstraint("CK_platform_refunds_amounts", "\"PlatformAmount\" >= 0 AND \"TeacherAmount\" >= 0 AND (\"PlatformAmount\" + \"TeacherAmount\") > 0"));
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.OriginalSourceType, x.OriginalSourceId });
+            e.HasIndex(x => x.Status);
+            e.Property(x => x.OriginalSourceType).HasMaxLength(80).IsRequired();
+            e.Property(x => x.PlatformAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.TeacherAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Method).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.PaymentReference).HasMaxLength(120);
+            e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FinanceBudgetPlan>(e =>
+        {
+            e.ToTable("finance_budget_plans", table => table.HasCheckConstraint("CK_finance_budget_plan_dates", "\"StartDate\" <= \"EndDate\""));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            e.Property(x => x.PeriodKind).HasConversion<int>();
+            e.Property(x => x.Status).HasConversion<int>();
+            e.HasIndex(x => new { x.StartDate, x.EndDate, x.Status });
+            e.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.FinanceBudgetPlanId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FinanceBudgetLine>(e =>
+        {
+            e.ToTable("finance_budget_lines", table => table.HasCheckConstraint("CK_finance_budget_lines_amount", "\"PlannedAmount\" >= 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.PlannedAmount).HasColumnType("numeric(18,2)");
+            e.HasIndex(x => new { x.FinanceBudgetPlanId, x.FinancialAccountId });
+            e.HasOne<FinancialAccount>().WithMany().HasForeignKey(x => x.FinancialAccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TreasuryTransfer>(e =>
+        {
+            e.ToTable("treasury_transfers", table => table.HasCheckConstraint("CK_treasury_transfers_amount", "\"Amount\" > 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Reference).HasMaxLength(160).IsRequired();
+            e.HasIndex(x => x.JournalEntryId).IsUnique();
+            e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.SourceTreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.DestinationTreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TreasuryReconciliation>(e =>
+        {
+            e.ToTable("treasury_reconciliations");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SystemBalance).HasColumnType("numeric(18,2)");
+            e.Property(x => x.CountedOrStatementBalance).HasColumnType("numeric(18,2)");
+            e.Property(x => x.EvidenceNote).HasMaxLength(1000).IsRequired();
+            e.HasIndex(x => new { x.TreasuryAccountId, x.AsOfDate });
+            e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.AdjustmentJournalEntryId).OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     private Guid[] SecurityStateUserIds()

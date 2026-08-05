@@ -259,16 +259,19 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     };
 
     [Fact]
-    public async Task Initiate_rejects_a_recharge_without_a_teacher()
+    public async Task Initiate_allows_a_general_recharge_without_a_teacher()
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000014");
+        db.DigitalWallets.Add(Wallet("01010000014"));
+        await db.SaveChangesAsync();
 
         var result = await new InitiateRechargeCommandHandler(db)
             .Handle(new InitiateRechargeCommand(user.Id, 100m), CancellationToken.None);
 
-        Assert.False(result.Success);
-        Assert.Contains("اختر المدرس", result.Message);
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+        Assert.Null((await db.RechargeRequests.SingleAsync()).TeacherId);
     }
 
     private static async Task<TeacherProfile> SeedRechargeTeacherAsync(NaderGorge.Infrastructure.Data.AppDbContext db, string phoneNumber)

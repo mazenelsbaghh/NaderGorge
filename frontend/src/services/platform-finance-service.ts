@@ -1,0 +1,121 @@
+import apiClient from '@/services/api-client';
+
+export type FinanceAccountBalance = {
+  accountId: string;
+  code: string;
+  name: string;
+  type: number;
+  debit: number;
+  credit: number;
+  balance: number;
+};
+
+export type PlatformFinanceDashboard = {
+  from: string;
+  to: string;
+  cash: number;
+  generalStudentLiability: number;
+  teacherStudentLiability: number;
+  teacherPayable: number;
+  supplierPayable: number;
+  revenue: number;
+  refunds: number;
+  expenses: number;
+  netProfit: number;
+  accounts: FinanceAccountBalance[];
+};
+
+export type FinanceJournalLine = {
+  id: string;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  studentId?: string | null;
+  teacherId?: string | null;
+  treasuryAccountId?: string | null;
+  memo?: string | null;
+};
+
+export type FinanceJournal = {
+  id: string;
+  sequenceNumber: number;
+  occurredAt: string;
+  postedAt: string;
+  sourceType: string;
+  sourceId?: string | null;
+  postingKind: string;
+  description: string;
+  lines: FinanceJournalLine[];
+};
+
+export type FinanceBootstrap = {
+  accounts: Array<{ id: string; code: string; name: string; type: number }>;
+  treasuryAccounts: Array<{ id: string; name: string; type: number; maskedIdentifier?: string | null }>;
+  categories: Array<{ id: string; name: string; accountCode: string }>;
+  costCenters: Array<{ id: string; name: string }>;
+  vendors: Array<{ id: string; name: string }>;
+};
+
+export type FinanceTeacherSummary = {
+  teacherId: string;
+  teacherName: string;
+  grossSales: number;
+  platformShare: number;
+  teacherShare: number;
+  refunds: number;
+  paid: number;
+  outstanding: number;
+};
+
+const platformFinanceService = {
+  async getDashboard(from?: string, to?: string) {
+    const response = await apiClient.get<PlatformFinanceDashboard>('/admin/platform-finance/dashboard', { params: { from, to } });
+    return response.data;
+  },
+  async getLedger(from?: string, to?: string, page = 1, pageSize = 50) {
+    const response = await apiClient.get<FinanceJournal[]>('/admin/platform-finance/ledger', { params: { from, to, page, pageSize } });
+    return response.data;
+  },
+  async getTeacherSummary(from?: string, to?: string) {
+    const response = await apiClient.get<FinanceTeacherSummary[]>('/admin/platform-finance/teachers/summary', { params: { from, to } });
+    return response.data;
+  },
+  async bootstrap() {
+    const response = await apiClient.get<FinanceBootstrap>('/admin/platform-finance/bootstrap');
+    return response.data;
+  },
+  async createExpense(payload: { amount: number; occurredAt: string; categoryId: string; description: string; documentNumber?: string }) {
+    return (await apiClient.post('/admin/platform-finance/expenses', payload)).data;
+  },
+  async postExpense(expenseId: string, payload: { treasuryAccountId?: string; idempotencyKey: string }) {
+    return (await apiClient.post(`/admin/platform-finance/expenses/${expenseId}/post`, payload)).data;
+  },
+  async createRefund(payload: { originalSourceId: string; originalSourceType: string; studentId: string; teacherId?: string; platformAmount: number; teacherAmount: number; method: number; treasuryAccountId?: string; reason: string; paymentReference?: string }) {
+    return (await apiClient.post('/admin/platform-finance/refunds', payload)).data;
+  },
+  async postRefund(refundId: string, idempotencyKey: string) {
+    return (await apiClient.post(`/admin/platform-finance/refunds/${refundId}/post`, { idempotencyKey })).data;
+  },
+  async createBudget(payload: { name: string; periodKind: number; startDate: string; endDate: string; lines: Array<{ financialAccountId: string; plannedAmount: number }> }) {
+    return (await apiClient.post('/admin/platform-finance/budgets', payload)).data;
+  },
+  async getBudgetActuals(from: string, to: string) {
+    return (await apiClient.get('/admin/platform-finance/budgets/actuals', { params: { from, to } })).data as Array<{ financialAccountId: string; code: string; name: string; actual: number }>;
+  },
+  async transfer(payload: { sourceTreasuryAccountId: string; destinationTreasuryAccountId: string; amount: number; reference: string; idempotencyKey: string }) {
+    return (await apiClient.post('/admin/platform-finance/treasury/transfers', payload)).data;
+  },
+  async reconcile(payload: { treasuryAccountId: string; asOfDate: string; countedOrStatementBalance: number; evidenceNote: string }) {
+    return (await apiClient.post('/admin/platform-finance/treasury/reconciliations', payload)).data;
+  },
+  async migrationPreview(from: string, to: string) {
+    return (await apiClient.get('/admin/platform-finance/migration/preview', { params: { from, to } })).data as { from: string; to: string; rechargeCandidates: number; rechargeAmount: number; saleCandidates: number; saleAmount: number; ambiguousCandidates: number; ambiguities: string[] };
+  },
+  async postMigration(from: string, to: string) {
+    return (await apiClient.post('/admin/platform-finance/migration/post', null, { params: { from, to } })).data as { batchId: string; posted: number; alreadyPosted: number; failed: number; errors: string[] };
+  },
+};
+
+export default platformFinanceService;

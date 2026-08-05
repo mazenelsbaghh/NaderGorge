@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Common;
+using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Services;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -23,11 +24,13 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
 {
     private readonly IAppDbContext _db;
     private readonly BalanceService _balanceService;
+    private readonly IFinancialPostingService? _financialPosting;
 
-    public ResolveRechargeRequestCommandHandler(IAppDbContext db, BalanceService balanceService)
+    public ResolveRechargeRequestCommandHandler(IAppDbContext db, BalanceService balanceService, IFinancialPostingService? financialPosting = null)
     {
         _db = db;
         _balanceService = balanceService;
+        _financialPosting = financialPosting;
     }
 
     public async Task<ApiResponse<bool>> Handle(ResolveRechargeRequestCommand request, CancellationToken ct)
@@ -61,9 +64,6 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
 
         if (string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl) || string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber))
             return ApiResponse<bool>.Fail("لا يمكن معالجة طلب الشحن قبل رفع صورة إثبات التحويل وكتابة رقم المحول منه.");
-
-        if (request.Approve && !rechargeRequest.TeacherId.HasValue)
-            return ApiResponse<bool>.Fail("لا يمكن قبول طلب شحن غير مرتبط برصيد مدرس.");
 
         var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
         await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
@@ -121,9 +121,32 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
 
                 await _db.SaveChangesAsync(ct);
 
-                await _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId!.Value,
-                    rechargeRequest.Amount, $"شحن رصيد للمدرس - موافقة الإدارة (محفظة {targetWallet.Label})",
-                    request.AdminId, ct);
+                if (rechargeRequest.TeacherId.HasValue)
+                {
+                    await _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value,
+                        rechargeRequest.Amount, $"شحن رصيد للمدرس - موافقة الإدارة (محفظة {targetWallet.Label})",
+                        request.AdminId, ct);
+                }
+                else
+                {
+                    await _balanceService.AddCredit(rechargeRequest.UserId, rechargeRequest.Amount,
+                        $"شحن رصيد عام - موافقة الإدارة (محفظة {targetWallet.Label})",
+                        rechargeRequest.Id, "RechargeCredit", ct);
+                }
+
+                if (_financialPosting is not null)
+                {
+                    var treasuryCode = await (from treasury in _db.TreasuryAccounts
+                                              join account in _db.FinancialAccounts on treasury.FinancialAccountId equals account.Id
+                                              where treasury.DigitalWalletId == targetWallet.Id
+                                              select account.Code).SingleOrDefaultAsync(ct) ?? "1000";
+                    await _financialPosting.PostAsync(new FinancialPostingRequest(
+                        "RechargeRequest", rechargeRequest.Id, "RechargeReceived", $"recharge:{rechargeRequest.Id:N}:approved",
+                        rechargeRequest.TeacherId.HasValue ? "شحن رصيد مدرس" : "شحن رصيد عام",
+                        resolvedAt, request.AdminId,
+                        [new FinancialPostingLine(treasuryCode, rechargeRequest.Amount, 0m, StudentId: rechargeRequest.UserId),
+                         new FinancialPostingLine(rechargeRequest.TeacherId.HasValue ? "1110" : "1100", 0m, rechargeRequest.Amount, StudentId: rechargeRequest.UserId, TeacherId: rechargeRequest.TeacherId)]), ct);
+                }
             }
             else
             {
