@@ -337,17 +337,7 @@ unaffected_counts_hash() {{
   while IFS= read -r table_name; do
     count="$(psql_restore -c "select count(*) from $table_name;")"
     printf '%s\t%s\n' "$table_name" "$count"
-  done < <(
-    psql_restore -c "
-      select format('%I',tablename)
-      from pg_tables
-      where schemaname='public'
-        and tablename not in (
-          '__EFMigrationsHistory','cluster_leases','roles','users','user_roles',
-          'teacher_profiles','teacher_subjects','subjects','thanaweya_results'
-        )
-      order by tablename;"
-  ) | sha256sum | awk '{{print $1}}'
+  done < "$pre_unaffected_tables" | sha256sum | awk '{{print $1}}'
 }}
 protected_rows_hash() {{
   {{
@@ -377,6 +367,16 @@ protected_rows_hash() {{
 
 pre_migration_hash="$(migration_hash)"
 source_table_counts_hash="$(table_counts_hash)"
+pre_unaffected_tables="$restore_root/pre-unaffected-tables.txt"
+psql_restore -c "
+  select format('%I',tablename)
+  from pg_tables
+  where schemaname='public'
+    and tablename not in (
+      '__EFMigrationsHistory','cluster_leases','roles','users','user_roles',
+      'teacher_profiles','teacher_subjects','subjects','thanaweya_results'
+    )
+  order by tablename;" > "$pre_unaffected_tables"
 pre_unaffected_hash="$(unaffected_counts_hash)"
 pre_protected_rows_hash="$(protected_rows_hash)"
 pre_migration_count="$(
