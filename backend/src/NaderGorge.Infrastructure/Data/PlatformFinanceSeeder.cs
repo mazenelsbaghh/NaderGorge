@@ -58,7 +58,10 @@ public static class PlatformFinanceSeeder
         var wallets = await db.DigitalWallets.Where(x => x.IsActive).ToListAsync(cancellationToken);
         foreach (var wallet in wallets)
         {
-            var code = $"W{wallet.Id:N}";
+            // PostgreSQL stores account codes as varchar(32); the compact GUID
+            // already gives every wallet a deterministic, collision-resistant
+            // 32-character code without an extra prefix.
+            var code = wallet.Id.ToString("N");
             var walletAccount = await db.FinancialAccounts.SingleOrDefaultAsync(x => x.Code == code, cancellationToken);
             if (walletAccount is null)
             {
