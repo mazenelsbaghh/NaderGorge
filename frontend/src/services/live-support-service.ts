@@ -39,6 +39,7 @@ export interface LiveSupportConversation {
   currentOwnerName?: string;
   currentOwnerUserId?: string;
   linkedStudentUserId?: string;
+  participantName?: string | null;
   createdAt: string;
   queuedAt?: string;
   assignedAt?: string;

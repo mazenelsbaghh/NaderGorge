@@ -72,9 +72,15 @@ export function StaffConversationWorkspace({ conversation, messages, draft, owne
   };
 
   if (!conversation) return <main className="grid min-h-[420px] flex-1 place-items-center p-8 text-center text-[var(--admin-muted)]"><div><Headphones className="mx-auto mb-3" size={36}/><p>لا توجد محادثة مسندة إليك حاليًا.</p></div></main>;
+  const participantName = conversation.participantName?.trim() || (conversation.participantType === 'Guest' ? 'زائر' : 'طالب مسجل');
+  const participantDetail = conversation.participantType === 'Guest'
+    ? 'زائر، يحتاج ربطًا يدويًا فقط'
+    : conversation.subject
+      ? `طالب مسجل · ${conversation.subject}`
+      : 'طالب مسجل';
   return <main className="flex h-full min-h-0 min-w-0 flex-col">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--admin-border)] p-4">
-      <div><h2 className="font-bold text-[var(--admin-text)]">{conversation.subject || 'محادثة دعم'}</h2><p className="text-xs text-[var(--admin-muted)]">{conversation.participantType === 'Guest' ? 'زائر، يحتاج ربطًا يدويًا فقط' : 'طالب مسجل'}</p></div>
+      <div><h2 className="font-bold text-[var(--admin-text)]">{participantName}</h2><p className="truncate text-xs text-[var(--admin-muted)]" title={conversation.subject}>{participantDetail}</p></div>
       <div className="flex gap-2"><button type="button" disabled={ownershipLost || Boolean(pendingAction)} onClick={onTransfer} className="min-h-11 rounded-xl border border-[var(--admin-warning-20)] px-3 text-sm font-semibold text-[var(--admin-warning)] hover:bg-[var(--admin-warning-10)] disabled:opacity-50">{pendingAction === 'transfer' ? 'جارٍ التحويل…' : 'تحويل'}</button><button type="button" disabled={ownershipLost || Boolean(pendingAction)} onClick={onClose} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[var(--admin-danger-20)] px-3 text-sm font-semibold text-[var(--admin-danger)] hover:bg-[var(--admin-danger-10)] disabled:opacity-50"><XCircle size={17}/>{pendingAction === 'close' ? 'جارٍ الإغلاق…' : 'إغلاق'}</button></div>
     </header>
     {ownershipLost && <p role="alert" className="border-b border-[var(--admin-warning-20)] bg-[var(--admin-warning-10)] px-4 py-3 text-sm font-medium text-[var(--admin-warning)]">تم نقل ملكية المحادثة. تم إيقاف الرد والإجراءات فورًا.</p>}

@@ -56,13 +56,14 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000001");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000001");
         var wallet = Wallet("01010000001");
-        var pending = PendingRequest(user, wallet, 100m);
+        var pending = PendingRequest(user, wallet, 100m, teacher.Id);
         db.AddRange(wallet, pending);
         await db.SaveChangesAsync();
 
         var result = await new InitiateRechargeCommandHandler(db)
-            .Handle(new InitiateRechargeCommand(user.Id, 150m), CancellationToken.None);
+            .Handle(new InitiateRechargeCommand(user.Id, 150m, teacher.Id), CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal(pending.Id, result.Data!.RechargeRequestId);
@@ -76,15 +77,16 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000011");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000011");
         var wallet = Wallet("01010000011");
-        var pending = PendingRequest(user, wallet, 100m);
+        var pending = PendingRequest(user, wallet, 100m, teacher.Id);
         pending.CreatedAt = DateTime.UtcNow.AddHours(-20);
         db.AddRange(wallet, pending);
         await db.SaveChangesAsync();
         var beforeReuse = DateTime.UtcNow.AddSeconds(-1);
 
         var result = await new InitiateRechargeCommandHandler(db)
-            .Handle(new InitiateRechargeCommand(user.Id, 150m), CancellationToken.None);
+            .Handle(new InitiateRechargeCommand(user.Id, 150m, teacher.Id), CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.NotNull(pending.UpdatedAt);
@@ -113,8 +115,9 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000013");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000013");
         var wallet = Wallet("01010000013");
-        var pending = PendingRequest(user, wallet, 200m);
+        var pending = PendingRequest(user, wallet, 200m, teacher.Id);
         pending.CreatedAt = DateTime.UtcNow.AddHours(-20);
         pending.SenderPhoneNumber = "01099999991";
         pending.ScreenshotUrl = "/proof.webp";
@@ -144,7 +147,9 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         Assert.Equal(1, matched);
         Assert.Equal(RechargeRequestStatus.Matched, pending.Status);
         Assert.True(sms.IsMatched);
-        Assert.Equal(200m, (await db.StudentBalances.SingleAsync()).CurrentBalance);
+        var allocation = await db.PromotionalBalanceAllocations.SingleAsync();
+        Assert.Equal(teacher.Id, allocation.TeacherId);
+        Assert.Equal(200m, allocation.AvailableAmount);
     }
 
     [Fact]
@@ -152,9 +157,10 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000002");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000002");
         var firstWallet = Wallet("01010000002", dailyLimit: 100m);
         var secondWallet = Wallet("01010000003", dailyLimit: 1_000m);
-        var pending = PendingRequest(user, firstWallet, 50m);
+        var pending = PendingRequest(user, firstWallet, 50m, teacher.Id);
         var consumed = new RechargeRequest
         {
             UserId = user.Id,
@@ -162,6 +168,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
             WalletId = firstWallet.Id,
             Wallet = firstWallet,
             Amount = 80m,
+            TeacherId = teacher.Id,
             Status = RechargeRequestStatus.Approved,
             SenderPhoneNumber = "01099999999",
             ScreenshotUrl = "/proof.webp"
@@ -170,7 +177,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         await db.SaveChangesAsync();
 
         var result = await new InitiateRechargeCommandHandler(db)
-            .Handle(new InitiateRechargeCommand(user.Id, 50m), CancellationToken.None);
+            .Handle(new InitiateRechargeCommand(user.Id, 50m, teacher.Id), CancellationToken.None);
 
         Assert.True(result.Success);
         Assert.Equal(secondWallet.Id, pending.WalletId);
@@ -184,9 +191,10 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         await using var db = TestAppDbContextFactory.Create();
         var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000003");
         var admin = await TestAppDbContextFactory.SeedUserAsync(db, "Admin", "01000000004");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000003");
         var originalWallet = Wallet("01010000004");
         var receivingWallet = Wallet("01010000005");
-        var recharge = PendingRequest(student, originalWallet, 200m);
+        var recharge = PendingRequest(student, originalWallet, 200m, teacher.Id);
         recharge.Status = RechargeRequestStatus.Rejected;
         recharge.SenderPhoneNumber = "01088888888";
         recharge.ScreenshotUrl = "/proof.webp";
@@ -205,7 +213,9 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         Assert.Equal(RechargeRequestStatus.Approved, recharge.Status);
         Assert.Equal(receivingWallet.Id, recharge.WalletId);
         Assert.Null(recharge.RejectionReason);
-        Assert.Equal(200m, (await db.StudentBalances.SingleAsync()).CurrentBalance);
+        var allocation = await db.PromotionalBalanceAllocations.SingleAsync();
+        Assert.Equal(teacher.Id, allocation.TeacherId);
+        Assert.Equal(200m, allocation.AvailableAmount);
     }
 
     [Fact]
@@ -248,13 +258,36 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         IsActive = true
     };
 
-    private static RechargeRequest PendingRequest(User user, DigitalWallet wallet, decimal amount) => new()
+    [Fact]
+    public async Task Initiate_rejects_a_recharge_without_a_teacher()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000014");
+
+        var result = await new InitiateRechargeCommandHandler(db)
+            .Handle(new InitiateRechargeCommand(user.Id, 100m), CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains("اختر المدرس", result.Message);
+    }
+
+    private static async Task<TeacherProfile> SeedRechargeTeacherAsync(NaderGorge.Infrastructure.Data.AppDbContext db, string phoneNumber)
+    {
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Recharge Teacher", phoneNumber);
+        var teacher = new TeacherProfile { UserId = user.Id, User = user, Bio = "Bio", Specialization = "Math", ContactInfo = phoneNumber };
+        db.TeacherProfiles.Add(teacher);
+        await db.SaveChangesAsync();
+        return teacher;
+    }
+
+    private static RechargeRequest PendingRequest(User user, DigitalWallet wallet, decimal amount, Guid? teacherId = null) => new()
     {
         UserId = user.Id,
         User = user,
         WalletId = wallet.Id,
         Wallet = wallet,
         Amount = amount,
+        TeacherId = teacherId,
         Status = RechargeRequestStatus.Pending,
         ReservationExpiresAt = DateTime.UtcNow.AddMinutes(30)
     };

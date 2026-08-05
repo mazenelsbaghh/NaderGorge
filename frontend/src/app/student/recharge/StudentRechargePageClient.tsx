@@ -66,7 +66,6 @@ export default function StudentRechargePageClient() {
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
-  const [balanceScope, setBalanceScope] = useState<'general' | 'teacher'>('general');
   const [teacherId, setTeacherId] = useState('');
 
   // Step 2 state
@@ -203,14 +202,14 @@ export default function StudentRechargePageClient() {
       toast.error('قيمة الشحن يجب أن تكون أكبر من صفر.');
       return;
     }
-    if (balanceScope === 'teacher' && !teacherId) {
+    if (!teacherId) {
       toast.error('اختر المدرس الذي تريد شحن رصيده.');
       return;
     }
 
     try {
       setLoading(true);
-      const response = await rechargeService.initiate(amount, balanceScope === 'teacher' ? teacherId : undefined);
+      const response = await rechargeService.initiate(amount, teacherId);
       if (response.success && response.data) {
         setRechargeData(response.data);
         setReviewCode(response.data.reviewCode);
@@ -385,7 +384,7 @@ export default function StudentRechargePageClient() {
           <form onSubmit={handleInitiate} className="space-y-6">
             <div className="space-y-2">
               <h2 className="text-xl font-black text-[var(--admin-text)]">حدد قيمة الشحن المطلوبة</h2>
-              <p className="text-sm font-semibold text-[var(--admin-muted)]">أدخل القيمة التي ترغب في تحويلها لمحفظة المنصة بالجنيه المصري.</p>
+              <p className="text-sm font-semibold text-[var(--admin-muted)]">اختر المدرس أولًا، ثم أدخل القيمة التي تريد إضافتها إلى رصيدك لديه بالجنيه المصري.</p>
             </div>
 
             <div className="space-y-4">
@@ -426,23 +425,14 @@ export default function StudentRechargePageClient() {
               <p className="text-[11px] font-semibold text-[var(--admin-muted)]">
                 الأزرار اختصارات فقط. يمكنك كتابة أي رقم في خانة المبلغ.
               </p>
-              <fieldset className="space-y-3 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
-                <legend className="px-1 text-sm font-black text-[var(--admin-text)]">نوع الرصيد</legend>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setBalanceScope('general')} className={`rounded-xl border p-3 text-right transition-all ${balanceScope === 'general' ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary-strong)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'}`}>
-                    <span className="block text-sm font-black">رصيد عام</span><span className="mt-1 block text-[11px] font-semibold">يُستخدم مع أي مدرس</span>
-                  </button>
-                  <button type="button" onClick={() => setBalanceScope('teacher')} className={`rounded-xl border p-3 text-right transition-all ${balanceScope === 'teacher' ? 'border-[var(--admin-primary)] bg-[var(--admin-primary-10)] text-[var(--admin-primary-strong)]' : 'border-[var(--admin-border)] bg-[var(--admin-card)] text-[var(--admin-muted)]'}`}>
-                    <span className="block text-sm font-black">رصيد مدرس</span><span className="mt-1 block text-[11px] font-semibold">لشراء محتوى مدرس واحد</span>
-                  </button>
-                </div>
-                {balanceScope === 'teacher' && (
-                  <select required value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3 text-sm font-bold text-[var(--admin-text)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]">
-                    <option value="">اختر المدرس</option>
-                    {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>)}
-                  </select>
-                )}
-              </fieldset>
+              <div className="space-y-2 rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4">
+                <label htmlFor="recharge-teacher" className="block text-sm font-black text-[var(--admin-text)]">رصيد المدرس *</label>
+                <select id="recharge-teacher" required value={teacherId} onChange={(event) => setTeacherId(event.target.value)} className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-strong)] px-4 py-3 text-sm font-bold text-[var(--admin-text)] focus:outline-none focus:ring-2 focus:ring-[var(--admin-primary)]">
+                  <option value="">اختر المدرس</option>
+                  {teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.fullName}</option>)}
+                </select>
+                <p className="text-[11px] font-semibold text-[var(--admin-muted)]">سيُستخدم الرصيد لشراء محتوى هذا المدرس فقط.</p>
+              </div>
             </div>
 
             <button
@@ -502,6 +492,10 @@ export default function StudentRechargePageClient() {
               <div className="border-t border-[var(--admin-border)] pt-3 text-xs font-bold text-[var(--admin-text)] flex justify-between">
                 <span>المبلغ المطلوب تحويله:</span>
                 <span className="font-mono text-sm text-[var(--admin-primary)]">{amount} ج.م</span>
+              </div>
+              <div className="border-t border-[var(--admin-border)] pt-3 text-xs font-bold text-[var(--admin-text)] flex justify-between gap-3">
+                <span>سيُضاف إلى رصيد:</span>
+                <span className="truncate text-[var(--admin-primary)]">{teachers.find((teacher) => teacher.id === teacherId)?.fullName || 'المدرس المختار'}</span>
               </div>
             </div>
 

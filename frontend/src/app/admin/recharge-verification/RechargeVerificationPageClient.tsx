@@ -552,9 +552,9 @@ export function RechargeVerificationWorkspace() {
         </div>
 
         {/* Main Content Area - Split layout */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid min-h-0 gap-6 lg:grid-cols-3 lg:items-start">
           {/* Requests Table */}
-          <div className="lg:col-span-2 admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)]">
+          <div className="min-w-0 lg:col-span-2 admin-panel rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 sm:p-6 shadow-[0_4px_20px_var(--admin-shadow)]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-black text-[var(--admin-text)]">قائمة طلبات الشحن</h2>
               <NeumorphButton type="button" onClick={fetchData} intent="ghost" size="sm">
@@ -574,16 +574,21 @@ export function RechargeVerificationWorkspace() {
           </div>
 
           {/* Unmatched SMS Panel */}
-          <div className="admin-panel flex h-[65dvh] min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-[0_4px_20px_var(--admin-shadow)] sm:p-6 lg:h-auto lg:max-h-[700px]">
-            <h2 className="text-lg font-black text-[var(--admin-text)] mb-2 flex items-center gap-2">
+          <div className="admin-panel flex h-[65dvh] min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-4 shadow-[0_4px_20px_var(--admin-shadow)] sm:p-6 lg:h-[clamp(28rem,calc(100dvh-18rem),700px)]">
+            <h2 className="mb-2 flex shrink-0 items-center gap-2 text-lg font-black text-[var(--admin-text)]">
               <Smartphone className="h-5 w-5 text-[var(--admin-primary)]" />
               الرسائل غير المطابقة ({unmatchedSmsCount})
             </h2>
-            <p className="text-xs text-[var(--admin-muted)] leading-relaxed mb-4">
+            <p className="mb-4 shrink-0 text-xs leading-relaxed text-[var(--admin-muted)]">
               رسائل تأكيد الإيداع المستلمة من Vodafone Cash ولم يتم ربطها بأي طلب للطالب تلقائياً.
             </p>
 
-            <div className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+            <div
+              role="region"
+              aria-label="الرسائل غير المطابقة"
+              tabIndex={0}
+              className="flex min-h-0 flex-1 touch-pan-y flex-col gap-2 overflow-y-scroll overscroll-contain pr-1 [scrollbar-color:var(--admin-border)_transparent] [scrollbar-gutter:stable] [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-primary)]"
+            >
               {loading ? (
                 [1, 2, 3].map(i => (
                   <div key={i} className="h-20 animate-pulse bg-[var(--admin-card-strong)] rounded-xl border border-[var(--admin-border)]" />

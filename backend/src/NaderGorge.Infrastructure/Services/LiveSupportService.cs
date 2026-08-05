@@ -1160,6 +1160,22 @@ public sealed class LiveSupportService(
         if (items.Count == 0) return [];
 
         var conversationIds = items.Select(x => x.Id).ToArray();
+        var participantUserIds = items
+            .Where(x => x.ParticipantType == LiveSupportParticipantType.Student && x.StudentUserId.HasValue)
+            .Select(x => x.StudentUserId!.Value)
+            .Distinct()
+            .ToArray();
+        var participantGuestIds = items
+            .Where(x => x.ParticipantType == LiveSupportParticipantType.Guest && x.GuestSessionId.HasValue)
+            .Select(x => x.GuestSessionId!.Value)
+            .Distinct()
+            .ToArray();
+        var participantUserNames = await _db.Users.AsNoTracking()
+            .Where(x => participantUserIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.FullName, ct);
+        var participantGuestNames = await _db.LiveSupportGuestSessions.AsNoTracking()
+            .Where(x => participantGuestIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.DisplayName, ct);
         var activeQueue = await _db.LiveSupportQueueEntries.AsNoTracking()
             .Where(x => x.DequeuedAt == null)
             .OrderBy(x => x.EnteredAt)
@@ -1250,6 +1266,11 @@ public sealed class LiveSupportService(
                 c.Status,
                 c.CurrentOwnerUserId,
                 c.LinkedStudentUserId,
+                c.ParticipantType == LiveSupportParticipantType.Student && c.StudentUserId.HasValue
+                    ? participantUserNames.GetValueOrDefault(c.StudentUserId.Value)
+                    : c.GuestSessionId.HasValue
+                        ? participantGuestNames.GetValueOrDefault(c.GuestSessionId.Value)
+                        : null,
                 c.Subject,
                 c.CreatedAt,
                 c.QueuedAt,
@@ -1317,7 +1338,12 @@ public sealed class LiveSupportService(
             .CountAsync(x => x.ConversationId == c.Id &&
                              (x.SenderType == LiveSupportSenderType.Student || x.SenderType == LiveSupportSenderType.Guest) &&
                              x.ReadAt == null && x.DeletedAt == null, ct);
-        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), IsTerminal(c.Status) && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping, aiSummary, unreadParticipantMessageCount);
+        var participantName = c.ParticipantType == LiveSupportParticipantType.Student && c.StudentUserId.HasValue
+            ? await _db.Users.AsNoTracking().Where(x => x.Id == c.StudentUserId.Value).Select(x => x.FullName).FirstOrDefaultAsync(ct)
+            : c.GuestSessionId.HasValue
+                ? await _db.LiveSupportGuestSessions.AsNoTracking().Where(x => x.Id == c.GuestSessionId.Value).Select(x => x.DisplayName).FirstOrDefaultAsync(ct)
+                : null;
+        return new LiveSupportConversationDto(c.Id, c.ParticipantType, c.Status, c.CurrentOwnerUserId, c.LinkedStudentUserId, participantName, c.Subject, c.CreatedAt, c.QueuedAt, c.AssignedAt, c.ClosedAt, position, c.Version, !IsTerminal(c.Status), IsTerminal(c.Status) && !await _db.LiveSupportRatings.AnyAsync(x => x.ConversationId == c.Id, ct), isAiActive, isAiTyping, aiSummary, unreadParticipantMessageCount);
     }
 
     public async Task<LiveSupportAITurnContextDto?> ClaimAITurnAsync(Guid turnId, CancellationToken ct)

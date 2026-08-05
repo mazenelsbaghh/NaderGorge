@@ -17,7 +17,8 @@ public sealed class RechargeAutoMatchingService(
             .AsNoTracking()
             .Where(request => request.Status == RechargeRequestStatus.Pending
                 && request.ScreenshotUrl != null && request.ScreenshotUrl != ""
-                && request.SenderPhoneNumber != "")
+                && request.SenderPhoneNumber != ""
+                && request.TeacherId != null)
             .OrderBy(request => request.CreatedAt)
             .Select(request => request.Id)
             .Take(100)
@@ -78,26 +79,13 @@ public sealed class RechargeAutoMatchingService(
                 ?? request.Wallet.CurrentBalance + request.Amount;
             await db.SaveChangesAsync(ct);
 
-            if (request.TeacherId.HasValue)
-            {
-                await balanceService.AddTeacherCredit(
-                    request.UserId,
-                    request.TeacherId.Value,
-                    request.Amount,
-                    $"شحن رصيد للمدرس - مطابقة تلقائية مؤجلة (محفظة {request.Wallet.Label})",
-                    request.UserId,
-                    ct);
-            }
-            else
-            {
-                await balanceService.AddCredit(
-                    request.UserId,
-                    request.Amount,
-                    $"شحن رصيد عام - مطابقة تلقائية مؤجلة (محفظة {request.Wallet.Label})",
-                    request.Id,
-                    "DigitalRecharge",
-                    ct);
-            }
+            await balanceService.AddTeacherCredit(
+                request.UserId,
+                request.TeacherId!.Value,
+                request.Amount,
+                $"شحن رصيد للمدرس - مطابقة تلقائية مؤجلة (محفظة {request.Wallet.Label})",
+                request.UserId,
+                ct);
 
             if (transaction is not null)
                 await transaction.CommitAsync(ct);

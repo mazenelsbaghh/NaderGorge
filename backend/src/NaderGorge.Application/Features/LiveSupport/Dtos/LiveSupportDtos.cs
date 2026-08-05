@@ -47,6 +47,7 @@ public sealed record LiveSupportConversationDto(
     LiveSupportConversationStatus Status,
     Guid? CurrentOwnerUserId,
     Guid? LinkedStudentUserId,
+    string? ParticipantName,
     string? Subject,
     DateTime CreatedAt,
     DateTime? QueuedAt,

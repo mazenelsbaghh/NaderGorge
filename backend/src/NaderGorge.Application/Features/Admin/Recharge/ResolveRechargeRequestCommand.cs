@@ -62,6 +62,9 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
         if (string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl) || string.IsNullOrWhiteSpace(rechargeRequest.SenderPhoneNumber))
             return ApiResponse<bool>.Fail("لا يمكن معالجة طلب الشحن قبل رفع صورة إثبات التحويل وكتابة رقم المحول منه.");
 
+        if (request.Approve && !rechargeRequest.TeacherId.HasValue)
+            return ApiResponse<bool>.Fail("لا يمكن قبول طلب شحن غير مرتبط برصيد مدرس.");
+
         var hasActiveTransaction = _db is DbContext efDb && efDb.Database.CurrentTransaction != null;
         await using var transaction = hasActiveTransaction ? null : await _db.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
 
@@ -118,18 +121,9 @@ public class ResolveRechargeRequestCommandHandler : IRequestHandler<ResolveRecha
 
                 await _db.SaveChangesAsync(ct);
 
-                if (rechargeRequest.TeacherId.HasValue)
-                {
-                    await _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value,
-                        rechargeRequest.Amount, $"شحن رصيد للمدرس - موافقة الإدارة (محفظة {targetWallet.Label})",
-                        request.AdminId, ct);
-                }
-                else
-                {
-                    await _balanceService.AddCredit(rechargeRequest.UserId, rechargeRequest.Amount,
-                        $"شحن رصيد عام - موافقة الإدارة (محفظة {targetWallet.Label})",
-                        rechargeRequest.Id, "DigitalRecharge", ct);
-                }
+                await _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId!.Value,
+                    rechargeRequest.Amount, $"شحن رصيد للمدرس - موافقة الإدارة (محفظة {targetWallet.Label})",
+                    request.AdminId, ct);
             }
             else
             {

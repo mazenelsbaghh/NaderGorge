@@ -82,6 +82,9 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         if (rechargeRequest.Status != RechargeRequestStatus.Pending)
             return ApiResponse<SubmitRechargeDto>.Fail("تم معالجة هذا الطلب بالفعل مسبقاً");
 
+        if (!rechargeRequest.TeacherId.HasValue)
+            return ApiResponse<SubmitRechargeDto>.Fail("لا يمكن رفع إثبات التحويل لطلب غير مرتبط برصيد مدرس.");
+
         if (rechargeRequest.ReservationExpiresAt.HasValue && rechargeRequest.ReservationExpiresAt.Value < DateTime.UtcNow)
         {
             return ApiResponse<SubmitRechargeDto>.Fail("انتهت صلاحية حجز المعاملة (ساعة واحدة)، يرجى البدء بطلب جديد.");
@@ -184,9 +187,6 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         new((phone ?? string.Empty).Where(char.IsDigit).ToArray());
 
     private Task CreditRechargeAsync(RechargeRequest rechargeRequest, Guid issuedByUserId, string source, CancellationToken ct) =>
-        rechargeRequest.TeacherId.HasValue
-            ? _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value, rechargeRequest.Amount,
-                $"شحن رصيد للمدرس - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", issuedByUserId, ct)
-            : _balanceService.AddCredit(rechargeRequest.UserId, rechargeRequest.Amount,
-                $"شحن رصيد عام - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", rechargeRequest.Id, "DigitalRecharge", ct);
+        _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId!.Value, rechargeRequest.Amount,
+            $"شحن رصيد للمدرس - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", issuedByUserId, ct);
 }
