@@ -166,9 +166,9 @@ export default function PackageProfilePageClient(props: { params: { id: string }
       pageTitle={pkg.name}
       subtitle={pkg.description || 'إدارة محتويات وإعدادات الباقة'}
       action={
-        <NeumorphButton onClick={() => router.push('/admin/content')} intent="ghost" size="md" pill>
+        <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
-          الباقات
+          الرجوع خطوة
         </NeumorphButton>
       }
     >

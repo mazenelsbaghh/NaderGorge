@@ -14,7 +14,7 @@ import { devConsole } from '@/utils/dev-console';
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -56,6 +56,7 @@ const fadeUp = {
 
 export default function PackageProfilePageClient() {
   const params = useParams();
+  const router = useRouter();
   const packageId = params.packageId as string;
 
   const [pkg, setPkg] = useState<PackageDto | null>(null);
@@ -151,14 +152,14 @@ export default function PackageProfilePageClient() {
     >
       {/* ── Back button ── */}
       <motion.div variants={fadeUp}>
-        <Link
-          href="/student/packages"
-          prefetch={false}
+        <button
+          type="button"
+          onClick={() => router.back()}
           className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-bold text-[var(--admin-muted)] transition-colors hover:text-[var(--admin-primary)] focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--admin-bg)]"
         >
           <ArrowRight className="h-4 w-4" />
-          <span>العودة إلى باقاتي</span>
-        </Link>
+          <span>الرجوع خطوة</span>
+        </button>
       </motion.div>
 
       {/* ── Hero Image Banner ── */}

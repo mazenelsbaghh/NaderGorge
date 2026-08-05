@@ -131,9 +131,9 @@ export default function TermProfilePageClient(props: { params: { id: string } })
       pageTitle={term.title}
       subtitle={`ترتيب: ${term.order} — ${sections.length} قسم`}
       action={
-        <NeumorphButton onClick={() => router.push(`/admin/content/packages/${term.packageId}`)} intent="ghost" size="md" pill>
+        <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
-          الباقة
+          الرجوع خطوة
         </NeumorphButton>
       }
     >

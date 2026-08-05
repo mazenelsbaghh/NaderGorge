@@ -112,11 +112,6 @@ export default function SectionProfilePageClient(props: { params: { id: string }
     subtitle: l.summary || undefined,
     href: `/admin/content/lessons/${l.id}`,
   }));
-  const parentHref = section.isDirect
-    ? `/admin/content/packages/${section.packageId}`
-    : `/admin/content/terms/${section.termId}`;
-  const parentLabel = section.isDirect ? 'الباقة' : 'الترم';
-
   // Build overview stats from API response
   const overviewStats: OverviewStat[] = [];
   if (stats) {
@@ -134,9 +129,9 @@ export default function SectionProfilePageClient(props: { params: { id: string }
       pageTitle={section.title}
       subtitle={`ترتيب: ${section.order} — ${lessons.length} حصة`}
       action={
-        <NeumorphButton onClick={() => router.push(parentHref)} intent="ghost" size="md" pill>
+        <NeumorphButton onClick={() => router.back()} intent="ghost" size="md" pill>
           <ChevronRight className="h-4 w-4" />
-          {parentLabel}
+          الرجوع خطوة
         </NeumorphButton>
       }
     >
