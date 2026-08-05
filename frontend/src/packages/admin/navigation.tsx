@@ -67,6 +67,26 @@ export const adminNavigationRoutePermissions = adminMenuItems.map(({ href, permi
   adminOnly,
 }));
 
+// The platform-finance workspace has its own navigation tree, but these routes
+// still belong to the shared admin authorization inventory so permitted staff
+// can open them directly from the shell.
+export const adminFinanceRoutePermissions = [
+  { pattern: '/admin/platform-finance', permission: 'finance.dashboard.view' },
+  { pattern: '/admin/platform-finance/operations', permission: 'finance.dashboard.view' },
+  { pattern: '/admin/platform-finance/planning', permission: 'finance.budgets.manage' },
+  { pattern: '/admin/platform-finance/expenses', permission: 'finance.expenses.view' },
+  { pattern: '/admin/platform-finance/refunds', permission: 'finance.refunds.view' },
+  { pattern: '/admin/platform-finance/reports', permission: 'finance.dashboard.view' },
+  { pattern: '/admin/platform-finance/treasury', permission: 'finance.treasury.manage' },
+  { pattern: '/admin/platform-finance/migration', permission: 'finance.migration.manage' },
+  { pattern: '/admin/platform-finance/teachers', permission: 'finance.teacher-summary.view' },
+];
+
+export const adminAllNavigationRoutePermissions = [
+  ...adminNavigationRoutePermissions,
+  ...adminFinanceRoutePermissions,
+];
+
 export const adminRootLinks: AdminRootLink[] = [
   {
     href: '/admin/subjects',
@@ -139,6 +159,12 @@ export const adminRootLinks: AdminRootLink[] = [
     title: 'المالية والحسابات',
     body: 'إدارة رواتب الموظفين والزيادات والخصومات، ومراجعة أرباح المعلمين وتسوية سحوباتهم.',
     icon: Coins,
+  },
+  {
+    href: '/admin/platform-finance',
+    title: 'المركز المالي العام',
+    body: 'الخزينة، أرصدة الطلاب، مستحقات المدرسين، المصروفات، المرتجعات، الميزانيات والتقارير في دفتر مالي موحد.',
+    icon: Wallet,
   },
   {
     href: '/admin/wallets',

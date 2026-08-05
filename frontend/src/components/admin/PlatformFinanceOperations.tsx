@@ -43,7 +43,7 @@ export default function PlatformFinanceOperations() {
     } catch { setError('تعذر تسجيل الاسترداد. تأكد من المصدر وطريقة الاسترداد.'); }
   }
 
-  return <AdminPage activePath="/admin/platform-finance" sectionLabel="المالية" pageTitle="عمليات المركز المالي" subtitle="إضافة مصروفات المنصة وتسجيل الاستردادات كرصيد أو كاش.">
+  return <AdminPage activePath="/admin/platform-finance/operations" sectionLabel="المالية" pageTitle="عمليات المركز المالي" subtitle="إضافة مصروفات المنصة وتسجيل الاستردادات كرصيد أو كاش.">
     <div className="space-y-6" dir="rtl">
       {message ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-700">{message}</div> : null}
       {error ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 font-bold text-rose-700">{error}</div> : null}

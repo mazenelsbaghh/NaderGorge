@@ -130,6 +130,13 @@ export type AdminShellRoute =
   | '/admin/operations'
   | '/admin/finance'
   | '/admin/platform-finance'
+  | '/admin/platform-finance/operations'
+  | '/admin/platform-finance/planning'
+  | '/admin/platform-finance/expenses'
+  | '/admin/platform-finance/refunds'
+  | '/admin/platform-finance/reports'
+  | '/admin/platform-finance/treasury'
+  | '/admin/platform-finance/migration'
   | '/admin/teacher-finance'
   | '/admin/shared-packages'
   | '/admin/wallets'
@@ -421,6 +428,48 @@ const navItems: AdminNavItem[] = [
     permission: 'finance.dashboard.view',
   },
   {
+    href: '/admin/platform-finance/operations',
+    label: 'العمليات والمصروفات والمرتجعات',
+    icon: Briefcase,
+    permission: 'finance.dashboard.view',
+  },
+  {
+    href: '/admin/platform-finance/planning',
+    label: 'الميزانيات والتحويلات',
+    icon: ChartNoAxesCombined,
+    permission: 'finance.budgets.manage',
+  },
+  {
+    href: '/admin/platform-finance/expenses',
+    label: 'مصروفات المنصة',
+    icon: Coins,
+    permission: 'finance.expenses.view',
+  },
+  {
+    href: '/admin/platform-finance/refunds',
+    label: 'استردادات الطلاب',
+    icon: BadgeDollarSign,
+    permission: 'finance.refunds.view',
+  },
+  {
+    href: '/admin/platform-finance/reports',
+    label: 'التقارير والإقفال',
+    icon: BarChart3,
+    permission: 'finance.dashboard.view',
+  },
+  {
+    href: '/admin/platform-finance/treasury',
+    label: 'الخزائن والمطابقة',
+    icon: Wallet,
+    permission: 'finance.treasury.manage',
+  },
+  {
+    href: '/admin/platform-finance/migration',
+    label: 'ترحيل التاريخ المالي',
+    icon: DatabaseZap,
+    permission: 'finance.migration.manage',
+  },
+  {
     href: '/admin/teacher-finance',
     label: 'مركز مالية المدرسين',
     icon: BadgeDollarSign,
@@ -552,16 +601,24 @@ const GROUP_CONFIG = [
     hrefs: ['/admin/watch-requests', '/admin/overrides', '/admin/codes', '/admin/gifts', '/admin/sales', '/admin/community', '/admin/comments', '/admin/media'],
   },
   {
-    id: 'admin_hr_finance',
-    label: 'الإدارة والمالية',
-    icon: Briefcase,
-    hrefs: ['/admin/operations', '/admin/finance', '/admin/shared-packages', '/admin/wallets', '/admin/recharge-verification'],
-  },
-  {
-    id: 'teacher_finance',
-    label: 'مالية المدرسين',
-    icon: BadgeDollarSign,
-    hrefs: ['/admin/teacher-finance'],
+    id: 'finance',
+    label: 'المالية والحسابات',
+    icon: CircleDollarSign,
+    hrefs: [
+      '/admin/platform-finance',
+      '/admin/platform-finance/operations',
+      '/admin/platform-finance/planning',
+      '/admin/platform-finance/expenses',
+      '/admin/platform-finance/refunds',
+      '/admin/platform-finance/reports',
+      '/admin/platform-finance/treasury',
+      '/admin/platform-finance/migration',
+      '/admin/finance',
+      '/admin/teacher-finance',
+      '/admin/sales',
+      '/admin/wallets',
+      '/admin/recharge-verification',
+    ],
   },
   {
     id: 'crm_chat',
@@ -579,7 +636,7 @@ const GROUP_CONFIG = [
 
 const MOBILE_QUICK_ROUTE_ORDER: AdminShellRoute[] = [
   '/admin/hr',
-  '/admin/finance',
+  '/admin/platform-finance',
   '/admin/content',
   '/admin/students',
   '/admin/live-support',

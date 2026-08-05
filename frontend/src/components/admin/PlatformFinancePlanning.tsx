@@ -39,7 +39,7 @@ export default function PlatformFinancePlanning() {
 
   async function loadActuals() { setError(''); try { setActuals(await platformFinanceService.getBudgetActuals(from, to)); } catch { setError('تعذر تحميل المصروف الفعلي'); } }
 
-  return <AdminPage activePath="/admin/platform-finance" sectionLabel="المالية" pageTitle="الميزانيات والخزائن" subtitle="خطط أسبوعية أو شهرية ومطابقة حركة الخزائن بالجنيه المصري.">
+  return <AdminPage activePath="/admin/platform-finance/planning" sectionLabel="المالية" pageTitle="الميزانيات والخزائن" subtitle="خطط أسبوعية أو شهرية ومطابقة حركة الخزائن بالجنيه المصري.">
     <div className="space-y-6" dir="rtl">
       {message ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 font-bold text-emerald-700">{message}</div> : null}
       {error ? <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 font-bold text-rose-700">{error}</div> : null}

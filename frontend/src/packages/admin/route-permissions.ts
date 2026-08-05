@@ -1,6 +1,6 @@
 import { hrAdminRoutePermissions } from '@/lib/hr-permissions';
 
-import { adminNavigationRoutePermissions } from './navigation';
+import { adminAllNavigationRoutePermissions } from './navigation';
 
 export type AdminPolicyUser = {
   roles?: string[];
@@ -17,12 +17,14 @@ export type AdminRouteRule = {
 };
 
 const navigationRules: AdminRouteRule[] =
-  adminNavigationRoutePermissions.map(({ pattern, permission, adminOnly }) => ({
-    pattern,
-    permissions: permission ? [permission] : [],
-    adminOnly,
-    match: 'prefix',
-  }));
+  adminAllNavigationRoutePermissions
+    .map((item) => ({
+      pattern: item.pattern,
+      permissions: item.permission ? [item.permission] : [],
+      adminOnly: 'adminOnly' in item ? item.adminOnly : undefined,
+      match: 'prefix' as const,
+    }))
+    .sort((left, right) => right.pattern.length - left.pattern.length);
 
 /**
  * One policy inventory owns both menu visibility and route guards. Put more

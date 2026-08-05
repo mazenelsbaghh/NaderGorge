@@ -29,6 +29,7 @@ export default function AdminRootPageClient() {
     if (href.startsWith('/admin/overrides')) return 'users.manage';
     if (href.startsWith('/admin/hr')) return 'hr.manage';
     if (href.startsWith('/admin/finance')) return 'finance.manage';
+    if (href.startsWith('/admin/platform-finance')) return 'finance.dashboard.view';
     if (href.startsWith('/admin/settings')) return 'settings.manage';
     return null;
   };
