@@ -8,6 +8,7 @@ import {
   PackagesGrid,
   PackagesOverview,
 } from "@/components/student-pages/PackagesOverview";
+import { StudentContentCatalog } from "@/components/student-pages/StudentContentCatalog";
 import { type PackageDto, contentService } from "@/services/content-service";
 import { studentService, type QuickAccessItemDto } from "@/services/student-service";
 import { resolveMediaUrl } from "@/utils/resolve-media-url";
@@ -125,6 +126,13 @@ export default function PackagesPageClient() {
         </div>
       )}
       <PackagesOverview packages={overviewPackages} />
+
+      <StudentContentCatalog
+        packages={packages}
+        onPurchaseComplete={async () => {
+          await packagesQuery.refetch();
+        }}
+      />
 
       <section className="space-y-6">
         <div className="flex gap-2 overflow-x-auto rounded-2xl border border-[var(--admin-border)] bg-[var(--admin-card)] p-2">
