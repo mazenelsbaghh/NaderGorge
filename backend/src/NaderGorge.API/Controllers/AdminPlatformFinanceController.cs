@@ -4,7 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Application.Features.Admin.PlatformFinance;
+using NaderGorge.Application.Features.Admin.PlatformFinance.Periods;
+using NaderGorge.Application.Features.Admin.PlatformFinance.Reports;
+using NaderGorge.Application.Features.Admin.PlatformFinance.Teachers;
 using NaderGorge.Domain.Interfaces;
+using NaderGorge.Infrastructure.Services.Finance.Migration;
 
 namespace NaderGorge.API.Controllers;
 
@@ -17,7 +21,12 @@ public sealed class AdminPlatformFinanceController(
     IPlatformFinancePlanningService planning,
     IPlatformFinanceExportService export,
     IPlatformFinanceMigrationService migration,
-    IAppDbContext db)
+    IAppDbContext db,
+    IFinancialPostingService posting,
+    PlatformFinancialReportQueries reports,
+    FinancialReconciliationService reconciliation,
+    AccountingPeriodCommands periods,
+    GetTeacherFinancialSummaryQuery teacherSummary)
     : ControllerBase
 {
     [HttpGet("dashboard")]
@@ -48,6 +57,11 @@ public sealed class AdminPlatformFinanceController(
         [FromQuery] DateTime? to,
         CancellationToken ct) => finance.GetTeacherSummaryAsync(from, to, ct);
 
+    [HttpGet("teachers/{teacherId:guid}/summary")]
+    [HasPermission("finance.teacher-summary.view")]
+    public async Task<ActionResult<TeacherFinancialSummaryDto>> TeacherDetail(Guid teacherId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+        => await teacherSummary.GetAsync(teacherId, from, to, ct) is { } result ? Ok(result) : NotFound();
+
     [HttpPost("expenses")]
     [HasPermission("finance.expenses.create")]
     public async Task<ActionResult<object>> CreateExpense([FromBody] CreateExpenseBody body, CancellationToken ct)
@@ -66,6 +80,28 @@ public sealed class AdminPlatformFinanceController(
         var expense = await operations.PostExpenseAsync(expenseId, new PostPlatformExpenseRequest(
             body.TreasuryAccountId, CurrentUserId(), body.IdempotencyKey, body.Reason), ct);
         return Ok(new { expense.Id, expense.Status, expense.JournalEntryId });
+    }
+
+    [HttpGet("expenses")]
+    [HasPermission("finance.expenses.view")]
+    public async Task<ActionResult<object>> Expenses([FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+    {
+        var query = db.PlatformExpenses.AsNoTracking().Include(x => x.Payments).AsQueryable();
+        if (from.HasValue) query = query.Where(x => x.OccurredAt >= from.Value.Date);
+        if (to.HasValue) query = query.Where(x => x.OccurredAt < to.Value.Date.AddDays(1));
+        return Ok(await query.OrderByDescending(x => x.OccurredAt).Take(200).Select(x => new { x.Id, x.DocumentNumber, x.Amount, x.OccurredAt, x.Status, x.Description, paid = x.Payments.Sum(payment => (decimal?)payment.Amount) ?? 0m }).ToListAsync(ct));
+    }
+
+    [HttpPost("expenses/{expenseId:guid}/reverse")]
+    [HasPermission("finance.expenses.post")]
+    public async Task<ActionResult<object>> ReverseExpense(Guid expenseId, [FromBody] PeriodReasonBody body, CancellationToken ct)
+    {
+        var expense = await db.PlatformExpenses.SingleOrDefaultAsync(x => x.Id == expenseId, ct) ?? throw new InvalidOperationException("FINANCE_EXPENSE_NOT_FOUND");
+        if (!expense.JournalEntryId.HasValue) throw new InvalidOperationException("FINANCE_EXPENSE_NOT_POSTED");
+        var reversal = await posting.ReverseAsync(expense.JournalEntryId.Value, CurrentUserId(), body.Reason, ct);
+        expense.Status = NaderGorge.Domain.Entities.PlatformExpenseStatus.Reversed;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { expense.Id, expense.Status, reversalId = reversal.Id });
     }
 
     [HttpPost("expenses/{expenseId:guid}/payments")]
@@ -94,6 +130,28 @@ public sealed class AdminPlatformFinanceController(
     {
         var refund = await operations.PostRefundAsync(refundId, body.IdempotencyKey, CurrentUserId(), ct);
         return Ok(new { refund.Id, refund.TotalAmount, refund.Status, refund.JournalEntryId });
+    }
+
+    [HttpGet("refunds")]
+    [HasPermission("finance.refunds.view")]
+    public async Task<ActionResult<object>> Refunds([FromQuery] DateTime? from, [FromQuery] DateTime? to, CancellationToken ct)
+    {
+        var query = db.PlatformRefunds.AsNoTracking().AsQueryable();
+        if (from.HasValue) query = query.Where(x => x.CreatedAt >= from.Value.Date);
+        if (to.HasValue) query = query.Where(x => x.CreatedAt < to.Value.Date.AddDays(1));
+        return Ok(await query.OrderByDescending(x => x.CreatedAt).Take(200).Select(x => new { x.Id, x.OriginalSourceId, x.OriginalSourceType, x.StudentId, x.TeacherId, x.PlatformAmount, x.TeacherAmount, totalAmount = x.PlatformAmount + x.TeacherAmount, x.Method, x.Status, x.Reason, x.JournalEntryId }).ToListAsync(ct));
+    }
+
+    [HttpPost("refunds/{refundId:guid}/reverse")]
+    [HasPermission("finance.refunds.post")]
+    public async Task<ActionResult<object>> ReverseRefund(Guid refundId, [FromBody] PeriodReasonBody body, CancellationToken ct)
+    {
+        var refund = await db.PlatformRefunds.SingleOrDefaultAsync(x => x.Id == refundId, ct) ?? throw new InvalidOperationException("FINANCE_REFUND_NOT_FOUND");
+        if (!refund.JournalEntryId.HasValue) throw new InvalidOperationException("FINANCE_REFUND_NOT_POSTED");
+        var reversal = await posting.ReverseAsync(refund.JournalEntryId.Value, CurrentUserId(), body.Reason, ct);
+        refund.Status = NaderGorge.Domain.Entities.PlatformRefundStatus.Reversed;
+        await db.SaveChangesAsync(ct);
+        return Ok(new { refund.Id, refund.Status, reversalId = reversal.Id });
     }
 
     [HttpGet("bootstrap")]
@@ -151,6 +209,16 @@ public sealed class AdminPlatformFinanceController(
         return File(result.Content, result.ContentType, result.FileName);
     }
 
+    [HttpGet("reports/{kind}")]
+    [HasPermission("finance.dashboard.view")]
+    public Task<PlatformFinancialReportDto> Report(string kind, [FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
+        => reports.GetAsync(kind, from, to, ct);
+
+    [HttpGet("reconciliation")]
+    [HasPermission("finance.ledger.view")]
+    public Task<FinancialReconciliationReport> Reconciliation([FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
+        => reconciliation.GetAsync(from, to, ct);
+
     [HttpGet("migration/preview")]
     [HasPermission("finance.migration.manage")]
     public Task<FinanceHistoricalMigrationPreview> MigrationPreview([FromQuery] DateTime from, [FromQuery] DateTime to, CancellationToken ct)
@@ -169,32 +237,12 @@ public sealed class AdminPlatformFinanceController(
     [HttpPost("periods/{periodId:guid}/close")]
     [HasPermission("finance.periods.close")]
     public async Task<ActionResult<object>> ClosePeriod(Guid periodId, [FromBody] PeriodReasonBody body, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(body.Reason)) throw new InvalidOperationException("FINANCE_REASON_REQUIRED");
-        var period = await db.AccountingPeriods.SingleOrDefaultAsync(x => x.Id == periodId, ct)
-            ?? throw new InvalidOperationException("FINANCE_PERIOD_NOT_FOUND");
-        if (period.Status == NaderGorge.Domain.Enums.AccountingPeriodStatus.Closed)
-            throw new InvalidOperationException("FINANCE_PERIOD_ALREADY_CLOSED");
-        period.Status = NaderGorge.Domain.Enums.AccountingPeriodStatus.Closed;
-        period.ClosedAt = DateTime.UtcNow;
-        period.ClosedByUserId = CurrentUserId();
-        period.CloseReason = body.Reason.Trim();
-        await db.SaveChangesAsync(ct);
-        return Ok(new { period.Id, period.Status });
-    }
+        => Ok(await periods.CloseAsync(periodId, CurrentUserId(), body.Reason, ct));
 
     [HttpPost("periods/{periodId:guid}/reopen")]
     [HasPermission("finance.periods.reopen")]
     public async Task<ActionResult<object>> ReopenPeriod(Guid periodId, [FromBody] PeriodReasonBody body, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(body.Reason)) throw new InvalidOperationException("FINANCE_REASON_REQUIRED");
-        var period = await db.AccountingPeriods.SingleOrDefaultAsync(x => x.Id == periodId, ct)
-            ?? throw new InvalidOperationException("FINANCE_PERIOD_NOT_FOUND");
-        period.Status = NaderGorge.Domain.Enums.AccountingPeriodStatus.Reopened;
-        period.CloseReason = body.Reason.Trim();
-        await db.SaveChangesAsync(ct);
-        return Ok(new { period.Id, period.Status });
-    }
+        => Ok(await periods.ReopenAsync(periodId, CurrentUserId(), body.Reason, ct));
 
     private Guid CurrentUserId()
     {

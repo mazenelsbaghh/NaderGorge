@@ -160,6 +160,17 @@ builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFi
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinancePlanningService, NaderGorge.Infrastructure.Services.Finance.PlatformFinancePlanningService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceExportService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceExportService>();
 builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IPlatformFinanceMigrationService, NaderGorge.Infrastructure.Services.Finance.PlatformFinanceMigrationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.Reports.PlatformFinancialReportQueries>();
+builder.Services.AddScoped<NaderGorge.Infrastructure.Services.Finance.Migration.FinancialReconciliationService>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.Periods.AccountingPeriodCommands>();
+builder.Services.AddScoped<NaderGorge.Application.Features.Admin.PlatformFinance.Teachers.GetTeacherFinancialSummaryQuery>();
+builder.Services.AddScoped<NaderGorge.Infrastructure.Services.Finance.RefundPostingService>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IFinancialSourceAdapter, NaderGorge.Infrastructure.Services.Finance.Adapters.RechargeFinancialAdapter>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IFinancialSourceAdapter, NaderGorge.Infrastructure.Services.Finance.Adapters.SalesFinancialAdapter>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IFinancialSourceAdapter, NaderGorge.Infrastructure.Services.Finance.Adapters.TeacherFinancialAdapter>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.IFinancialSourceAdapter, NaderGorge.Infrastructure.Services.Finance.Adapters.PayrollFinancialAdapter>();
+builder.Services.AddScoped<NaderGorge.Application.Interfaces.Finance.ILiveFinancialProjectionCoordinator, NaderGorge.Application.Services.Finance.LiveFinancialProjectionCoordinator>();
+builder.Services.AddSingleton<NaderGorge.Infrastructure.Observability.PlatformFinanceMetrics>();
 builder.Services.AddScoped<TeacherAgreementResolver>();
 builder.Services.AddScoped<CodeGroupFinancialAccountingService>();
 builder.Services.AddScoped<IIdempotencyService, RedisIdempotencyService>();

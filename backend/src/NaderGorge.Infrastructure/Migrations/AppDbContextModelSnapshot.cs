@@ -3525,6 +3525,208 @@ namespace NaderGorge.Infrastructure.Migrations
                     b.ToTable("financial_invoices", (string)null);
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialMigrationBatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AlreadyPostedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("CandidateCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("From")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("PostedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceChecksum")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("To")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("From", "To");
+
+                    b.ToTable("financial_migration_batches", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialMigrationException", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("FinancialMigrationBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FinancialMigrationBatchId", "IsResolved");
+
+                    b.ToTable("financial_migration_exceptions", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialMigrationItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("FinancialMigrationBatchId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("JournalEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceChecksum")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FinancialMigrationBatchId");
+
+                    b.HasIndex("JournalEntryId");
+
+                    b.HasIndex("SourceType", "SourceId")
+                        .IsUnique();
+
+                    b.ToTable("financial_migration_items", (string)null);
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialProjectionCheckpoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("LastOccurredAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("LastReconciledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid?>("LastSourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal>("PostedAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("SourceAmount")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<long>("SourceCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("Variance")
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SourceType")
+                        .IsUnique();
+
+                    b.ToTable("financial_projection_checkpoints", (string)null);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.FormSubmission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -12431,6 +12633,29 @@ namespace NaderGorge.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialMigrationException", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.FinancialMigrationBatch", null)
+                        .WithMany("Exceptions")
+                        .HasForeignKey("FinancialMigrationBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialMigrationItem", b =>
+                {
+                    b.HasOne("NaderGorge.Domain.Entities.FinancialMigrationBatch", null)
+                        .WithMany("Items")
+                        .HasForeignKey("FinancialMigrationBatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NaderGorge.Domain.Entities.JournalEntry", null)
+                        .WithMany()
+                        .HasForeignKey("JournalEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("NaderGorge.Domain.Entities.FormSubmission", b =>
                 {
                     b.HasOne("NaderGorge.Domain.Entities.CustomForm", "CustomForm")
@@ -14786,6 +15011,13 @@ namespace NaderGorge.Infrastructure.Migrations
             modelBuilder.Entity("NaderGorge.Domain.Entities.FinanceBudgetPlan", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("NaderGorge.Domain.Entities.FinancialMigrationBatch", b =>
+                {
+                    b.Navigation("Exceptions");
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("NaderGorge.Domain.Entities.GiftIssuance", b =>

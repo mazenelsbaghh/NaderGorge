@@ -264,6 +264,10 @@ public interface IAppDbContext
     DbSet<FinanceBudgetLine> FinanceBudgetLines { get; }
     DbSet<TreasuryTransfer> TreasuryTransfers { get; }
     DbSet<TreasuryReconciliation> TreasuryReconciliations { get; }
+    DbSet<FinancialProjectionCheckpoint> FinancialProjectionCheckpoints { get; }
+    DbSet<FinancialMigrationBatch> FinancialMigrationBatches { get; }
+    DbSet<FinancialMigrationItem> FinancialMigrationItems { get; }
+    DbSet<FinancialMigrationException> FinancialMigrationExceptions { get; }
 
     Task<StudentAnswer?> FindStudentAnswerAsync(Guid studentExamAttemptId, Guid examQuestionId, CancellationToken cancellationToken = default);
     Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry<T> Entry<T>(T entity) where T : class;

@@ -70,7 +70,7 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
         var end = (to ?? DateTime.UtcNow.Date).Date.AddDays(1).AddTicks(-1);
         if (end < start) throw new ArgumentException("The report end date must be after the start date.");
 
-        var rows = await _db.JournalLines.AsNoTracking()
+        var groupedAccounts = await _db.JournalLines.AsNoTracking()
             .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted
                 && line.JournalEntry.OccurredAt >= start
                 && line.JournalEntry.OccurredAt <= end)
@@ -82,31 +82,29 @@ public sealed class PlatformFinanceDashboardService(IAppDbContext db)
                 line.FinancialAccount.Type,
                 line.FinancialAccount.Role
             })
-            .Select(group => new PlatformFinanceAccountBalanceDto(
-                group.Key.FinancialAccountId,
-                group.Key.Code,
-                group.Key.Name,
-                group.Key.Type,
-                group.Sum(line => line.Debit),
-                group.Sum(line => line.Credit),
-                (group.Key.Type == FinancialAccountType.Asset || group.Key.Type == FinancialAccountType.Expense || group.Key.Type == FinancialAccountType.ContraRevenue)
-                    ? group.Sum(line => line.Debit - line.Credit)
-                    : group.Sum(line => line.Credit - line.Debit)))
-            .OrderBy(row => row.Code)
+            .Select(group => new { group.Key.FinancialAccountId, group.Key.Code, group.Key.Name, group.Key.Type, Debit = group.Sum(line => line.Debit), Credit = group.Sum(line => line.Credit) })
             .ToListAsync(ct);
+        var rows = groupedAccounts
+            .Select(row => new PlatformFinanceAccountBalanceDto(row.FinancialAccountId, row.Code, row.Name, row.Type, row.Debit, row.Credit,
+                row.Type is FinancialAccountType.Asset or FinancialAccountType.Expense or FinancialAccountType.ContraRevenue ? row.Debit - row.Credit : row.Credit - row.Debit))
+            .OrderBy(row => row.Code)
+            .ToArray();
 
         // Resolve roles in the same query shape so dashboard calculations never
         // depend on translated string account names.
-        var roleBalances = await _db.JournalLines.AsNoTracking()
+        var groupedRoles = await _db.JournalLines.AsNoTracking()
             .Where(line => line.JournalEntry.Status == JournalEntryStatus.Posted
                 && line.JournalEntry.OccurredAt >= start
                 && line.JournalEntry.OccurredAt <= end)
             .GroupBy(line => line.FinancialAccount.Role)
-            .Select(group => new { Role = group.Key, Amount = group.Sum(line =>
-                (line.FinancialAccount.Type == FinancialAccountType.Asset || line.FinancialAccount.Type == FinancialAccountType.Expense || line.FinancialAccount.Type == FinancialAccountType.ContraRevenue)
-                    ? line.Debit - line.Credit
-                    : line.Credit - line.Debit) })
-            .ToDictionaryAsync(item => item.Role, item => item.Amount, ct);
+            .Select(group => new { Role = group.Key, Debit = group.Sum(line => line.Debit), Credit = group.Sum(line => line.Credit) })
+            .ToListAsync(ct);
+        var roleTypes = await _db.FinancialAccounts.AsNoTracking().Select(account => new { account.Role, account.Type }).ToListAsync(ct);
+        var roleBalances = groupedRoles.ToDictionary(item => item.Role, item =>
+        {
+            var type = roleTypes.FirstOrDefault(candidate => candidate.Role == item.Role)?.Type;
+            return type is FinancialAccountType.Asset or FinancialAccountType.Expense or FinancialAccountType.ContraRevenue ? item.Debit - item.Credit : item.Credit - item.Debit;
+        });
 
         decimal GetRole(FinancialAccountRole role) => roleBalances.GetValueOrDefault(role);
         var revenue = GetRole(FinancialAccountRole.PlatformRevenue);

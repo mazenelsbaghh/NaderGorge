@@ -6,8 +6,10 @@ public static class PlatformFinancePermissions
     public const string LedgerView = "finance.ledger.view";
     public const string TeacherSummaryView = "finance.teacher-summary.view";
     public const string ExpensesCreate = "finance.expenses.create";
+    public const string ExpensesView = "finance.expenses.view";
     public const string ExpensesPost = "finance.expenses.post";
     public const string RefundsCreate = "finance.refunds.create";
+    public const string RefundsView = "finance.refunds.view";
     public const string RefundsPost = "finance.refunds.post";
     public const string TreasuryManage = "finance.treasury.manage";
     public const string TreasuryReconcile = "finance.treasury.reconcile";
@@ -20,7 +22,7 @@ public static class PlatformFinancePermissions
     public static IReadOnlyList<string> All { get; } =
     [
         DashboardView, LedgerView, TeacherSummaryView,
-        ExpensesCreate, ExpensesPost, RefundsCreate, RefundsPost,
+        ExpensesCreate, ExpensesView, ExpensesPost, RefundsCreate, RefundsView, RefundsPost,
         TreasuryManage, TreasuryReconcile, BudgetsManage, Export,
         PeriodClose, PeriodReopen, HistoricalMigration
     ];

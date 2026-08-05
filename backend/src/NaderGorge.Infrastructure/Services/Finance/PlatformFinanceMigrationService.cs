@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Enums;
@@ -55,6 +57,17 @@ public sealed class PlatformFinanceMigrationService(
     {
         var range = Normalize(from, to);
         var batchId = Guid.NewGuid();
+        var batch = new FinancialMigrationBatch
+        {
+            Id = batchId,
+            From = range.From,
+            To = range.To.AddTicks(-1),
+            Status = FinanceMigrationBatchStatus.Running,
+            CreatedByUserId = actorUserId,
+            SourceChecksum = string.Empty
+        };
+        _db.FinancialMigrationBatches.Add(batch);
+        await _db.SaveChangesAsync(ct);
         var errors = new List<string>();
         var posted = 0;
         var alreadyPosted = 0;
@@ -70,6 +83,7 @@ public sealed class PlatformFinanceMigrationService(
             if (await _db.JournalEntries.AnyAsync(item => item.IdempotencyKey == key, ct))
             {
                 alreadyPosted++;
+                await AddItemAsync(batch, "RechargeRequest", recharge.Id, recharge.Amount, FinanceMigrationItemStatus.AlreadyPosted, null, ct);
                 continue;
             }
 
@@ -79,18 +93,20 @@ public sealed class PlatformFinanceMigrationService(
                                           join account in _db.FinancialAccounts on treasury.FinancialAccountId equals account.Id
                                           where treasury.DigitalWalletId == recharge.WalletId && treasury.IsActive && account.IsActive
                                           select account.Code).SingleOrDefaultAsync(ct) ?? "1000";
-                await _posting.PostAsync(new FinancialPostingRequest(
+                var journal = await _posting.PostAsync(new FinancialPostingRequest(
                     "RechargeRequest", recharge.Id, "HistoricalRecharge", key,
                     recharge.TeacherId.HasValue ? "إعادة بناء شحن رصيد مدرس" : "إعادة بناء شحن رصيد عام",
                     recharge.ResolvedAt ?? recharge.CreatedAt,
                     actorUserId,
                     [new FinancialPostingLine(treasuryCode, recharge.Amount, 0m, StudentId: recharge.UserId),
                      new FinancialPostingLine(recharge.TeacherId.HasValue ? "1110" : "1100", 0m, recharge.Amount, StudentId: recharge.UserId, TeacherId: recharge.TeacherId)]), ct);
+                await AddItemAsync(batch, "RechargeRequest", recharge.Id, recharge.Amount, FinanceMigrationItemStatus.Posted, journal.Id, ct);
                 posted++;
             }
             catch (Exception exception)
             {
                 failed++;
+                await AddItemAsync(batch, "RechargeRequest", recharge.Id, recharge.Amount, FinanceMigrationItemStatus.Failed, null, ct, exception.Message);
                 errors.Add($"RechargeRequest/{recharge.Id}: {exception.Message}");
             }
         }
@@ -105,6 +121,7 @@ public sealed class PlatformFinanceMigrationService(
             if (await _db.JournalEntries.AnyAsync(item => item.IdempotencyKey == key, ct))
             {
                 alreadyPosted++;
+                await AddItemAsync(batch, "Purchase", sale.PurchaseOperationId, sale.PaidAmount, FinanceMigrationItemStatus.AlreadyPosted, null, ct);
                 continue;
             }
 
@@ -117,20 +134,39 @@ public sealed class PlatformFinanceMigrationService(
                 AddSignedLine(lines, "4000", sale.PlatformShareImpact, sale.StudentId, null);
                 if (sale.TeacherShareImpact != 0m)
                     AddSignedLine(lines, "2000", sale.TeacherShareImpact, sale.StudentId, sale.TeacherId);
-                await _posting.PostAsync(new FinancialPostingRequest(
+                var journal = await _posting.PostAsync(new FinancialPostingRequest(
                     "Purchase", sale.PurchaseOperationId, "HistoricalPurchase", key,
                     "إعادة بناء عملية بيع", sale.CreatedAt, actorUserId, lines), ct);
+                await AddItemAsync(batch, "Purchase", sale.PurchaseOperationId, sale.PaidAmount, FinanceMigrationItemStatus.Posted, journal.Id, ct);
                 posted++;
             }
             catch (Exception exception)
             {
                 failed++;
+                await AddItemAsync(batch, "Purchase", sale.PurchaseOperationId, sale.PaidAmount, FinanceMigrationItemStatus.Failed, null, ct, exception.Message);
                 errors.Add($"Purchase/{sale.PurchaseOperationId}: {exception.Message}");
             }
         }
 
+        batch.CandidateCount = posted + alreadyPosted + failed;
+        batch.PostedCount = posted;
+        batch.AlreadyPostedCount = alreadyPosted;
+        batch.FailedCount = failed;
+        batch.Status = failed == 0 ? FinanceMigrationBatchStatus.Completed : FinanceMigrationBatchStatus.CompletedWithErrors;
+        batch.CompletedAt = DateTime.UtcNow;
+        batch.SourceChecksum = ComputeChecksum(batch.Items);
+        await _db.SaveChangesAsync(ct);
         return new FinanceHistoricalMigrationResult(batchId, posted, alreadyPosted, failed, errors);
     }
+
+    private async Task AddItemAsync(FinancialMigrationBatch batch, string sourceType, Guid sourceId, decimal amount, FinanceMigrationItemStatus status, Guid? journalId, CancellationToken ct, string? error = null)
+    {
+        if (await _db.FinancialMigrationItems.AnyAsync(item => item.SourceType == sourceType && item.SourceId == sourceId, ct)) return;
+        batch.Items.Add(new FinancialMigrationItem { SourceType = sourceType, SourceId = sourceId, Amount = decimal.Round(amount, 2), Status = status, JournalEntryId = journalId, ErrorMessage = error, SourceChecksum = ComputeChecksum(sourceType, sourceId, amount) });
+    }
+
+    private static string ComputeChecksum(IEnumerable<FinancialMigrationItem> items) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('|', items.OrderBy(item => item.SourceType).ThenBy(item => item.SourceId).Select(item => $"{item.SourceType}:{item.SourceId:N}:{item.Amount:N2}:{item.Status}")))));
+    private static string ComputeChecksum(string sourceType, Guid sourceId, decimal amount) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{sourceType}:{sourceId:N}:{amount:N2}")));
 
     private async Task<HashSet<Guid>> CountMissingAsync(string sourceType, IEnumerable<Guid> sourceIds, CancellationToken ct)
     {

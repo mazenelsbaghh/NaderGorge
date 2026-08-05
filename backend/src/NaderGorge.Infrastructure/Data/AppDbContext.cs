@@ -280,6 +280,10 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<FinanceBudgetLine> FinanceBudgetLines => Set<FinanceBudgetLine>();
     public DbSet<TreasuryTransfer> TreasuryTransfers => Set<TreasuryTransfer>();
     public DbSet<TreasuryReconciliation> TreasuryReconciliations => Set<TreasuryReconciliation>();
+    public DbSet<FinancialProjectionCheckpoint> FinancialProjectionCheckpoints => Set<FinancialProjectionCheckpoint>();
+    public DbSet<FinancialMigrationBatch> FinancialMigrationBatches => Set<FinancialMigrationBatch>();
+    public DbSet<FinancialMigrationItem> FinancialMigrationItems => Set<FinancialMigrationItem>();
+    public DbSet<FinancialMigrationException> FinancialMigrationExceptions => Set<FinancialMigrationException>();
 
     public Task<StudentAnswer?> FindStudentAnswerAsync(
         Guid studentExamAttemptId,
@@ -3492,6 +3496,52 @@ public class AppDbContext : DbContext, IAppDbContext
             e.HasIndex(x => new { x.TreasuryAccountId, x.AsOfDate });
             e.HasOne<TreasuryAccount>().WithMany().HasForeignKey(x => x.TreasuryAccountId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.AdjustmentJournalEntryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FinancialProjectionCheckpoint>(e =>
+        {
+            e.ToTable("financial_projection_checkpoints");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.SourceType).IsUnique();
+            e.Property(x => x.SourceType).HasMaxLength(80).IsRequired();
+            e.Property(x => x.SourceAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.PostedAmount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Variance).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Notes).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<FinancialMigrationBatch>(e =>
+        {
+            e.ToTable("financial_migration_batches");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.SourceChecksum).HasMaxLength(128).IsRequired();
+            e.HasIndex(x => new { x.From, x.To });
+            e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.FinancialMigrationBatchId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Exceptions).WithOne().HasForeignKey(x => x.FinancialMigrationBatchId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FinancialMigrationItem>(e =>
+        {
+            e.ToTable("financial_migration_items");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SourceType).HasMaxLength(80).IsRequired();
+            e.Property(x => x.SourceChecksum).HasMaxLength(128).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.Status).HasConversion<int>();
+            e.Property(x => x.ErrorMessage).HasMaxLength(1000);
+            e.HasIndex(x => new { x.SourceType, x.SourceId }).IsUnique();
+            e.HasOne<JournalEntry>().WithMany().HasForeignKey(x => x.JournalEntryId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<FinancialMigrationException>(e =>
+        {
+            e.ToTable("financial_migration_exceptions");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SourceType).HasMaxLength(80).IsRequired();
+            e.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            e.Property(x => x.ResolutionNote).HasMaxLength(1000);
+            e.HasIndex(x => new { x.FinancialMigrationBatchId, x.IsResolved });
         });
     }
 

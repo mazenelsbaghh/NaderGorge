@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NaderGorge.Application.Interfaces.Finance;
 using NaderGorge.Domain.Entities;
@@ -7,19 +8,24 @@ using NaderGorge.Domain.Interfaces;
 
 namespace NaderGorge.Infrastructure.Services.Finance;
 
-public sealed class FinancialPostingService(IAppDbContext db) : IFinancialPostingService
+public sealed class FinancialPostingService(IAppDbContext db, NaderGorge.Infrastructure.Observability.PlatformFinanceMetrics? metrics = null) : IFinancialPostingService
 {
     private readonly IAppDbContext _db = db;
+    private readonly NaderGorge.Infrastructure.Observability.PlatformFinanceMetrics? _metrics = metrics;
 
     public async Task<JournalEntry> PostAsync(FinancialPostingRequest request, CancellationToken cancellationToken = default)
     {
+        var stopwatch = Stopwatch.StartNew();
         ValidateRequest(request);
 
         var existing = await _db.JournalEntries
             .Include(x => x.Lines)
             .SingleOrDefaultAsync(x => x.IdempotencyKey == request.IdempotencyKey, cancellationToken);
         if (existing is not null)
+        {
+            _metrics?.RecordPosting(stopwatch.Elapsed.TotalMilliseconds, duplicate: true);
             return existing;
+        }
 
         var period = await _db.AccountingPeriods
             .Where(x => x.StartDate <= request.OccurredAt.Date && x.EndDate >= request.OccurredAt.Date)
@@ -69,6 +75,7 @@ public sealed class FinancialPostingService(IAppDbContext db) : IFinancialPostin
 
         _db.JournalEntries.Add(entry);
         await SaveInTransactionAsync(cancellationToken);
+        _metrics?.RecordPosting(stopwatch.Elapsed.TotalMilliseconds);
         return entry;
     }
 

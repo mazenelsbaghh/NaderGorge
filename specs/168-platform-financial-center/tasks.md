@@ -15,7 +15,7 @@
 - [X] T005 Define feature flags for shadow posting, read-only cockpit, and finance mutations in `backend/src/NaderGorge.Application/Common/Configuration/PlatformFinanceOptions.cs`
 - [X] T006 Bind and validate platform-finance feature flags in `backend/src/NaderGorge.API/Configuration/PlatformFinanceConfiguration.cs`
 - [X] T007 Add the admin platform-finance navigation shell behind view permission and feature flag in `frontend/src/app/admin/platform-finance/layout.tsx`
-- [ ] T008 Publish Phase 1 source totals, known ambiguities, command results, and go/no-go in `specs/168-platform-financial-center/reports/phase-1-baseline.md`
+- [X] T008 Publish Phase 1 source totals, known ambiguities, command results, and go/no-go in `specs/168-platform-financial-center/reports/phase-1-baseline.md`
 
 **Checkpoint**: No schema work starts until all selected historical sources are classified as postable, ignored with reason, or ambiguous.
 
@@ -27,7 +27,7 @@
 
 - [X] T009 [P] Add financial account, journal, period, treasury, and shared finance enums in `backend/src/NaderGorge.Domain/Enums/PlatformFinanceEnums.cs`
 - [X] T010 [P] Add `FinancialAccount`, `JournalEntry`, and `JournalLine` entities with reversal and source identity rules in `backend/src/NaderGorge.Domain/Entities/Finance/LedgerEntities.cs`
-- [ ] T011 [P] Add `AccountingPeriod`, `TreasuryAccount`, and `FinancialProjectionCheckpoint` entities in `backend/src/NaderGorge.Domain/Entities/Finance/ControlEntities.cs`
+- [X] T011 [P] Add `AccountingPeriod`, `TreasuryAccount`, and `FinancialProjectionCheckpoint` entities in `backend/src/NaderGorge.Domain/Entities/Finance/ControlEntities.cs`
 - [X] T012 Define posting commands, line dimensions, and canonical posting result in `backend/src/NaderGorge.Application/Interfaces/Finance/IFinancialPostingService.cs`
 - [X] T013 [P] Add EF configurations, numeric precision, immutable-source indexes, and check constraints in `backend/src/NaderGorge.Infrastructure/Data/Configurations/PlatformFinanceConfiguration.cs`
 - [X] T014 Register finance DbSets and configurations in `backend/src/NaderGorge.Infrastructure/Data/AppDbContext.cs`
@@ -38,8 +38,8 @@
 - [X] T019 Register finance services and option validation in `backend/src/NaderGorge.Infrastructure/DependencyInjection.cs`
 - [X] T020 Generate the additive `AddPlatformFinancialCenterFoundation` EF migration in `backend/src/NaderGorge.Infrastructure/Migrations/`
 - [X] T021 [P] Add posting-engine unit tests for equality, precision, malformed lines, and reversal construction in `backend/tests/NaderGorge.Application.Tests/Finance/FinancialPostingServiceTests.cs`
-- [ ] T022 [P] Add integration tests for idempotent retries, concurrent duplicate posting, closed periods, and database constraints in `backend/tests/NaderGorge.Integration.Tests/Finance/FinancialLedgerFoundationTests.cs`
-- [ ] T023 [P] Add permission-boundary tests for admin and explicitly permitted/denied staff in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinanceAuthorizationTests.cs`
+- [X] T022 [P] Add integration tests for idempotent retries, concurrent duplicate posting, closed periods, and database constraints in `backend/tests/NaderGorge.Integration.Tests/Finance/FinancialLedgerFoundationTests.cs`
+- [X] T023 [P] Add permission-boundary tests for admin and explicitly permitted/denied staff in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinanceAuthorizationTests.cs`
 - [ ] T024 Run foundation tests and migration on disposable PostgreSQL and record zero unbalanced/duplicate entries in `specs/168-platform-financial-center/reports/phase-2-foundation.md`
 
 **Checkpoint**: Foundation is blocking. No story implementation starts until migration, balance, idempotency, period, and permission tests pass.
@@ -54,9 +54,9 @@
 
 ### Tests for User Story 1
 
-- [ ] T025 [P] [US1] Add dashboard and ledger API contract tests including pagination and filters in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinanceDashboardContractTests.cs`
+- [X] T025 [P] [US1] Add dashboard and ledger API contract tests including pagination and filters in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinanceDashboardContractTests.cs`
 - [ ] T026 [P] [US1] Add projection reconciliation and production-like p95 query tests in `backend/tests/NaderGorge.Integration.Tests/Performance/PlatformFinanceDashboardPerformanceTests.cs`
-- [ ] T027 [P] [US1] Add admin cockpit drill-down Playwright journey in `frontend/tests/e2e/admin-platform-finance-dashboard.spec.ts`
+- [X] T027 [P] [US1] Add admin cockpit drill-down Playwright journey in `frontend/tests/e2e/admin-platform-finance-dashboard.spec.ts`
 
 ### Implementation for User Story 1
 
@@ -68,7 +68,7 @@
 - [X] T033 [P] [US1] Build RTL metric cards, liability separation, date filters, and loading/error states in `frontend/src/components/admin/platform-finance/FinanceCockpit.tsx`
 - [X] T034 [P] [US1] Build bounded ledger table and source drill-down drawer in `frontend/src/components/admin/platform-finance/FinancialLedgerTable.tsx`
 - [X] T035 [US1] Compose the financial cockpit and drill-down flow in `frontend/src/app/admin/platform-finance/page.tsx`
-- [ ] T036 [US1] Record reconciliation totals, p95 evidence, frontend checks, and MVP go/no-go in `specs/168-platform-financial-center/reports/phase-3-us1.md`
+- [X] T036 [US1] Record reconciliation totals, p95 evidence, frontend checks, and MVP go/no-go in `specs/168-platform-financial-center/reports/phase-3-us1.md`
 
 **Checkpoint**: Owner can independently prove every displayed amount through the journal and original source.
 
@@ -82,21 +82,21 @@
 
 ### Tests for User Story 2
 
-- [ ] T037 [P] [US2] Add expense draft/post/payment/reversal and overpayment integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformExpenseWorkflowTests.cs`
-- [ ] T038 [P] [US2] Add expense permission and immutable-posted-document contract tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformExpenseContractTests.cs`
-- [ ] T039 [P] [US2] Add paid/unpaid expense admin Playwright journey in `frontend/tests/e2e/admin-platform-expenses.spec.ts`
+- [X] T037 [P] [US2] Add expense draft/post/payment/reversal and overpayment integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformExpenseWorkflowTests.cs`
+- [X] T038 [P] [US2] Add expense permission and immutable-posted-document contract tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformExpenseContractTests.cs`
+- [X] T039 [P] [US2] Add paid/unpaid expense admin Playwright journey in `frontend/tests/e2e/admin-platform-expenses.spec.ts`
 
 ### Implementation for User Story 2
 
 - [X] T040 [P] [US2] Add expense category, cost center, vendor, expense, and payment entities in `backend/src/NaderGorge.Domain/Entities/Finance/ExpenseEntities.cs`
 - [X] T041 [P] [US2] Add expense EF mappings, constraints, indexes, and concurrency token in `backend/src/NaderGorge.Infrastructure/Data/Configurations/PlatformExpenseConfiguration.cs`
 - [X] T042 [US2] Add expense tables through the `AddPlatformFinancialCenterExpenses` EF migration in `backend/src/NaderGorge.Infrastructure/Migrations/`
-- [ ] T043 [US2] Implement expense draft/edit/post/pay/reverse commands and validators in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Expenses/PlatformExpenseCommands.cs`
+- [X] T043 [US2] Implement expense draft/edit/post/pay/reverse commands and validators in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Expenses/PlatformExpenseCommands.cs`
 - [X] T044 [US2] Implement paid-expense and supplier-payable posting templates in `backend/src/NaderGorge.Infrastructure/Services/Finance/ExpensePostingService.cs`
-- [ ] T045 [US2] Add expense/category/cost-center/vendor endpoints to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
-- [ ] T046 [P] [US2] Build expense list/editor/payment/reversal UI in `frontend/src/components/admin/platform-finance/ExpenseManager.tsx`
-- [ ] T047 [US2] Add expenses route with receipt uploads and permission-aware actions in `frontend/src/app/admin/platform-finance/expenses/page.tsx`
-- [ ] T048 [US2] Record expense/AP reconciliation and permission evidence in `specs/168-platform-financial-center/reports/phase-4-us2.md`
+- [X] T045 [US2] Add expense/category/cost-center/vendor endpoints to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
+- [X] T046 [P] [US2] Build expense list/editor/payment/reversal UI in `frontend/src/components/admin/platform-finance/ExpenseManager.tsx`
+- [X] T047 [US2] Add expenses route with receipt uploads and permission-aware actions in `frontend/src/app/admin/platform-finance/expenses/page.tsx`
+- [X] T048 [US2] Record expense/AP reconciliation and permission evidence in `specs/168-platform-financial-center/reports/phase-4-us2.md`
 
 **Checkpoint**: Posted expenses are immutable, corrections reverse, AP clears exactly on payment, and teacher dues remain unchanged.
 
@@ -110,22 +110,22 @@
 
 ### Tests for User Story 3
 
-- [ ] T049 [P] [US3] Add cash/balance, partial/full, duplicate, and over-refund integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformRefundWorkflowTests.cs`
-- [ ] T050 [P] [US3] Add paid/unpaid teacher allocation reversal and debt tests in `backend/tests/NaderGorge.Application.Tests/Finance/RefundTeacherAccountingTests.cs`
-- [ ] T051 [P] [US3] Add refund permission and required evidence contract tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformRefundContractTests.cs`
-- [ ] T052 [P] [US3] Add cash and balance refund Playwright journey in `frontend/tests/e2e/admin-platform-refunds.spec.ts`
+- [X] T049 [P] [US3] Add cash/balance, partial/full, duplicate, and over-refund integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformRefundWorkflowTests.cs`
+- [X] T050 [P] [US3] Add paid/unpaid teacher allocation reversal and debt tests in `backend/tests/NaderGorge.Application.Tests/Finance/RefundTeacherAccountingTests.cs`
+- [X] T051 [P] [US3] Add refund permission and required evidence contract tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformRefundContractTests.cs`
+- [X] T052 [P] [US3] Add cash and balance refund Playwright journey in `frontend/tests/e2e/admin-platform-refunds.spec.ts`
 
 ### Implementation for User Story 3
 
 - [X] T053 [P] [US3] Add refund request/payment entities and remaining-refundable invariants in `backend/src/NaderGorge.Domain/Entities/Finance/RefundEntities.cs`
 - [X] T054 [P] [US3] Add refund EF mapping, source uniqueness, and query indexes in `backend/src/NaderGorge.Infrastructure/Data/Configurations/PlatformRefundConfiguration.cs`
 - [X] T055 [US3] Add refund tables through the `AddPlatformFinancialCenterRefunds` EF migration in `backend/src/NaderGorge.Infrastructure/Migrations/`
-- [ ] T056 [US3] Implement transactional refund eligibility, access cancellation, and idempotent commands in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Refunds/PlatformRefundCommands.cs`
-- [ ] T057 [US3] Implement cash/balance posting and paid-teacher debt integration in `backend/src/NaderGorge.Infrastructure/Services/Finance/RefundPostingService.cs`
+- [X] T056 [US3] Implement transactional refund eligibility, access cancellation, and idempotent commands in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Refunds/PlatformRefundCommands.cs`
+- [X] T057 [US3] Implement cash/balance posting and paid-teacher debt integration in `backend/src/NaderGorge.Infrastructure/Services/Finance/RefundPostingService.cs`
 - [X] T058 [US3] Add refund list/create/post/reverse endpoints to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
-- [ ] T059 [P] [US3] Build refund source lookup, method-specific form, history, and totals in `frontend/src/components/admin/platform-finance/RefundManager.tsx`
-- [ ] T060 [US3] Add the permission-aware refunds route in `frontend/src/app/admin/platform-finance/refunds/page.tsx`
-- [ ] T061 [US3] Record entitlement, treasury/liability, revenue, and teacher reconciliation in `specs/168-platform-financial-center/reports/phase-5-us3.md`
+- [X] T059 [P] [US3] Build refund source lookup, method-specific form, history, and totals in `frontend/src/components/admin/platform-finance/RefundManager.tsx`
+- [X] T060 [US3] Add the permission-aware refunds route in `frontend/src/app/admin/platform-finance/refunds/page.tsx`
+- [X] T061 [US3] Record entitlement, treasury/liability, revenue, and teacher reconciliation in `specs/168-platform-financial-center/reports/phase-5-us3.md`
 
 **Checkpoint**: Every refund has one source, cannot exceed the refundable remainder, and reconciles across student, teacher, platform, and treasury.
 
@@ -139,24 +139,24 @@
 
 ### Tests for User Story 4
 
-- [ ] T062 [P] [US4] Add posting adapter tests for recharge, direct sale, code, public exam, shared package, payroll, cancellation, and teacher payment in `backend/tests/NaderGorge.Integration.Tests/Finance/LiveFinancialSourceAdapterTests.cs`
-- [ ] T063 [P] [US4] Add general-versus-teacher recharge scope and immutability tests in `backend/tests/NaderGorge.Integration.Tests/Finance/RechargeFinancialScopeTests.cs`
-- [ ] T064 [P] [US4] Add teacher control-account reconciliation tests in `backend/tests/NaderGorge.Integration.Tests/Finance/TeacherPayableReconciliationTests.cs`
-- [ ] T065 [P] [US4] Add teacher summary drill-down Playwright journey in `frontend/tests/e2e/admin-platform-teacher-finance-summary.spec.ts`
+- [X] T062 [P] [US4] Add posting adapter tests for recharge, direct sale, code, public exam, shared package, payroll, cancellation, and teacher payment in `backend/tests/NaderGorge.Integration.Tests/Finance/LiveFinancialSourceAdapterTests.cs`
+- [X] T063 [P] [US4] Add general-versus-teacher recharge scope and immutability tests in `backend/tests/NaderGorge.Integration.Tests/Finance/RechargeFinancialScopeTests.cs`
+- [X] T064 [P] [US4] Add teacher control-account reconciliation tests in `backend/tests/NaderGorge.Integration.Tests/Finance/TeacherPayableReconciliationTests.cs`
+- [X] T065 [P] [US4] Add teacher summary drill-down Playwright journey in `frontend/tests/e2e/admin-platform-teacher-finance-summary.spec.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T066 [US4] Restore explicit `General|Teacher` recharge selection and immutable scope validation in `backend/src/NaderGorge.Application/Features/Admin/RechargeRequests/`
-- [ ] T067 [P] [US4] Implement recharge and student-liability posting adapters in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/RechargeFinancialAdapter.cs`
-- [ ] T068 [P] [US4] Implement direct, code, public-exam, and shared-package sale adapters in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/SalesFinancialAdapter.cs`
-- [ ] T069 [P] [US4] Implement teacher allocation, reversal, settlement, and payout adapters in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/TeacherFinancialAdapter.cs`
-- [ ] T070 [P] [US4] Implement payroll-payment posting adapter without changing payroll authority in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/PayrollFinancialAdapter.cs`
-- [ ] T071 [US4] Attach adapters transactionally to existing source handlers and shadow-posting comparisons in `backend/src/NaderGorge.Application/Services/Finance/LiveFinancialProjectionCoordinator.cs`
-- [ ] T072 [US4] Implement teacher gross sales/share/refund/debt/paid/outstanding query in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Teachers/GetTeacherFinancialSummaryQuery.cs`
-- [ ] T073 [US4] Add teacher summary endpoint to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
-- [ ] T074 [P] [US4] Build teacher summary and source drill-down UI in `frontend/src/components/admin/platform-finance/TeacherFinancialSummary.tsx`
-- [ ] T075 [US4] Add teacher finance detail route in `frontend/src/app/admin/platform-finance/teachers/[teacherId]/page.tsx`
-- [ ] T076 [US4] Record source-by-source and teacher-control reconciliation evidence in `specs/168-platform-financial-center/reports/phase-6-us4.md`
+- [X] T066 [US4] Restore explicit `General|Teacher` recharge selection and immutable scope validation in `backend/src/NaderGorge.Application/Features/Admin/RechargeRequests/`
+- [X] T067 [P] [US4] Implement recharge and student-liability posting adapters in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/RechargeFinancialAdapter.cs`
+- [X] T068 [P] [US4] Implement direct, code, public-exam, and shared-package sale adapters in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/SalesFinancialAdapter.cs`
+- [X] T069 [P] [US4] Implement teacher allocation, reversal, settlement, and payout adapters in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/TeacherFinancialAdapter.cs`
+- [X] T070 [P] [US4] Implement payroll-payment posting adapter without changing payroll authority in `backend/src/NaderGorge.Infrastructure/Services/Finance/Adapters/PayrollFinancialAdapter.cs`
+- [X] T071 [US4] Attach adapters transactionally to existing source handlers and shadow-posting comparisons in `backend/src/NaderGorge.Application/Services/Finance/LiveFinancialProjectionCoordinator.cs`
+- [X] T072 [US4] Implement teacher gross sales/share/refund/debt/paid/outstanding query in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Teachers/GetTeacherFinancialSummaryQuery.cs`
+- [X] T073 [US4] Add teacher summary endpoint to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
+- [X] T074 [P] [US4] Build teacher summary and source drill-down UI in `frontend/src/components/admin/platform-finance/TeacherFinancialSummary.tsx`
+- [X] T075 [US4] Add teacher finance detail route in `frontend/src/app/admin/platform-finance/teachers/[teacherId]/page.tsx`
+- [X] T076 [US4] Record source-by-source and teacher-control reconciliation evidence in `specs/168-platform-financial-center/reports/phase-6-us4.md`
 
 **Checkpoint**: Teacher subledger outstanding equals the GL teacher-payable control account to EGP 0.01.
 
@@ -170,24 +170,24 @@
 
 ### Tests for User Story 6
 
-- [ ] T077 [P] [US6] Add migration dry-run, exception, checksum, atomic post, and replay tests in `backend/tests/NaderGorge.Integration.Tests/Migrations/PlatformFinanceHistoricalMigrationTests.cs`
-- [ ] T078 [P] [US6] Add treasury transfer and reconciliation adjustment tests in `backend/tests/NaderGorge.Integration.Tests/Finance/TreasuryReconciliationTests.cs`
-- [ ] T079 [P] [US6] Add migration/treasury permission contract tests in `backend/tests/NaderGorge.Integration.Tests/Finance/FinanceMigrationAuthorizationTests.cs`
-- [ ] T080 [P] [US6] Add dry-run exception resolution and cashbox reconciliation Playwright journey in `frontend/tests/e2e/admin-platform-finance-migration.spec.ts`
+- [X] T077 [P] [US6] Add migration dry-run, exception, checksum, atomic post, and replay tests in `backend/tests/NaderGorge.Integration.Tests/Migrations/PlatformFinanceHistoricalMigrationTests.cs`
+- [X] T078 [P] [US6] Add treasury transfer and reconciliation adjustment tests in `backend/tests/NaderGorge.Integration.Tests/Finance/TreasuryReconciliationTests.cs`
+- [X] T079 [P] [US6] Add migration/treasury permission contract tests in `backend/tests/NaderGorge.Integration.Tests/Migrations/FinanceMigrationAuthorizationTests.cs`
+- [X] T080 [P] [US6] Add dry-run exception resolution and cashbox reconciliation Playwright journey in `frontend/tests/e2e/admin-platform-finance-migration.spec.ts`
 
 ### Implementation for User Story 6
 
 - [X] T081 [P] [US6] Add treasury transfer/reconciliation entities in `backend/src/NaderGorge.Domain/Entities/Finance/TreasuryEntities.cs`
-- [ ] T082 [P] [US6] Add migration batch/item/exception entities in `backend/src/NaderGorge.Domain/Entities/Finance/MigrationEntities.cs`
+- [X] T082 [P] [US6] Add migration batch/item/exception entities in `backend/src/NaderGorge.Domain/Entities/Finance/MigrationEntities.cs`
 - [X] T083 [US6] Add treasury and migration schema through the `AddPlatformFinanceMigrationAndReconciliation` EF migration in `backend/src/NaderGorge.Infrastructure/Migrations/`
 - [X] T084 [US6] Implement asset-to-asset transfer and statement/count reconciliation commands in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Treasury/TreasuryCommands.cs`
 - [X] T085 [US6] Implement source inventory adapters, deterministic checksums, dry-run, exception resolution, and atomic posting in `backend/src/NaderGorge.Infrastructure/Services/Finance/Migration/HistoricalFinanceMigrationService.cs`
-- [ ] T086 [US6] Implement source/month/control-account reconciliation reports in `backend/src/NaderGorge.Infrastructure/Services/Finance/Migration/FinancialReconciliationService.cs`
+- [X] T086 [US6] Implement source/month/control-account reconciliation reports in `backend/src/NaderGorge.Infrastructure/Services/Finance/Migration/FinancialReconciliationService.cs`
 - [X] T087 [US6] Add treasury, reconciliation, and migration endpoints to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
-- [ ] T088 [P] [US6] Build treasury account, transfer, and reconciliation UI in `frontend/src/components/admin/platform-finance/TreasuryManager.tsx`
-- [ ] T089 [P] [US6] Build migration dry-run totals and exception-resolution UI in `frontend/src/components/admin/platform-finance/HistoricalMigrationManager.tsx`
-- [ ] T090 [US6] Add treasury and migration routes in `frontend/src/app/admin/platform-finance/treasury/page.tsx`
-- [ ] T091 [US6] Export final historical counts, checksums, exceptions, and zero-duplicate replay evidence in `specs/168-platform-financial-center/reports/phase-7-us6.md`
+- [X] T088 [P] [US6] Build treasury account, transfer, and reconciliation UI in `frontend/src/components/admin/platform-finance/TreasuryManager.tsx`
+- [X] T089 [P] [US6] Build migration dry-run totals and exception-resolution UI in `frontend/src/components/admin/platform-finance/HistoricalMigrationManager.tsx`
+- [X] T090 [US6] Add treasury and migration routes in `frontend/src/app/admin/platform-finance/treasury/page.tsx`
+- [X] T091 [US6] Export final historical counts, checksums, exceptions, and zero-duplicate replay evidence in `specs/168-platform-financial-center/reports/phase-7-us6.md`
 
 **Checkpoint**: Every selected source row is posted, ignored with reason, or an explicit exception; replay adds zero entries.
 
@@ -201,9 +201,9 @@
 
 ### Tests for User Story 5
 
-- [ ] T092 [P] [US5] Add budget period/version/actual/variance integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformBudgetTests.cs`
-- [ ] T093 [P] [US5] Add budget permission and API contract tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformBudgetContractTests.cs`
-- [ ] T094 [P] [US5] Add overlapping budget comparison Playwright journey in `frontend/tests/e2e/admin-platform-finance-budgets.spec.ts`
+- [X] T092 [P] [US5] Add budget period/version/actual/variance integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformBudgetTests.cs`
+- [X] T093 [P] [US5] Add budget permission and API contract tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformBudgetContractTests.cs`
+- [X] T094 [P] [US5] Add overlapping budget comparison Playwright journey in `frontend/tests/e2e/admin-platform-finance-budgets.spec.ts`
 
 ### Implementation for User Story 5
 
@@ -213,7 +213,7 @@
 - [X] T098 [US5] Add budget endpoints to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
 - [X] T099 [P] [US5] Build budget editor and variance/forecast table in `frontend/src/components/admin/platform-finance/BudgetManager.tsx`
 - [X] T100 [US5] Add budget route in `frontend/src/app/admin/platform-finance/budgets/page.tsx`
-- [ ] T101 [US5] Record journal-to-budget actual reconciliation in `specs/168-platform-financial-center/reports/phase-8-us5.md`
+- [X] T101 [US5] Record journal-to-budget actual reconciliation in `specs/168-platform-financial-center/reports/phase-8-us5.md`
 
 **Checkpoint**: Budget edits never alter journal history and actuals equal filtered posted lines.
 
@@ -227,21 +227,21 @@
 
 ### Tests for User Story 7
 
-- [ ] T102 [P] [US7] Add profit/loss, cash-flow, financial-position, refund, expense, and teacher report query tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinancialReportTests.cs`
-- [ ] T103 [P] [US7] Add XLSX/PDF parity and privacy-redaction tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinanceExportTests.cs`
-- [ ] T104 [P] [US7] Add close/reopen/backdated-post and audit integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/AccountingPeriodCloseTests.cs`
-- [ ] T105 [P] [US7] Add reports/export/period-close Playwright journey in `frontend/tests/e2e/admin-platform-finance-reports.spec.ts`
+- [X] T102 [P] [US7] Add profit/loss, cash-flow, financial-position, refund, expense, and teacher report query tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinancialReportTests.cs`
+- [X] T103 [P] [US7] Add XLSX/PDF parity and privacy-redaction tests in `backend/tests/NaderGorge.Integration.Tests/Finance/PlatformFinanceExportTests.cs`
+- [X] T104 [P] [US7] Add close/reopen/backdated-post and audit integration tests in `backend/tests/NaderGorge.Integration.Tests/Finance/AccountingPeriodCloseTests.cs`
+- [X] T105 [P] [US7] Add reports/export/period-close Playwright journey in `frontend/tests/e2e/admin-platform-finance-reports.spec.ts`
 
 ### Implementation for User Story 7
 
-- [ ] T106 [P] [US7] Implement shared filtered report datasets in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Reports/PlatformFinancialReportQueries.cs`
+- [X] T106 [P] [US7] Implement shared filtered report datasets in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Reports/PlatformFinancialReportQueries.cs`
 - [X] T107 [P] [US7] Implement XLSX and PDF renderers using the same dataset in `backend/src/NaderGorge.Infrastructure/Services/Finance/PlatformFinanceExportService.cs`
 - [X] T108 [US7] Implement close/reopen commands, reason/audit capture, and backdated guard in `backend/src/NaderGorge.Application/Features/Admin/PlatformFinance/Periods/AccountingPeriodCommands.cs`
 - [X] T109 [US7] Add report/export and period endpoints to `backend/src/NaderGorge.API/Controllers/Admin/PlatformFinanceController.cs`
-- [ ] T110 [P] [US7] Build report filters, totals, export actions, and privacy states in `frontend/src/components/admin/platform-finance/FinancialReports.tsx`
-- [ ] T111 [P] [US7] Build period close/reopen history UI in `frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx`
-- [ ] T112 [US7] Add reports and periods routes in `frontend/src/app/admin/platform-finance/reports/page.tsx`
-- [ ] T113 [US7] Record XLSX/PDF parity, close enforcement, and audit evidence in `specs/168-platform-financial-center/reports/phase-9-us7.md`
+- [X] T110 [P] [US7] Build report filters, totals, export actions, and privacy states in `frontend/src/components/admin/platform-finance/FinancialReports.tsx`
+- [X] T111 [P] [US7] Build period close/reopen history UI in `frontend/src/components/admin/platform-finance/AccountingPeriodManager.tsx`
+- [X] T112 [US7] Add reports and periods routes in `frontend/src/app/admin/platform-finance/reports/page.tsx`
+- [X] T113 [US7] Record XLSX/PDF parity, close enforcement, and audit evidence in `specs/168-platform-financial-center/reports/phase-9-us7.md`
 
 **Checkpoint**: Both export formats equal on-screen filtered totals and closed periods reject financial mutations.
 
@@ -251,19 +251,19 @@
 
 **Purpose**: Seal performance, accessibility, observability, migration safety, and rolling deployment.
 
-- [ ] T114 [P] Add privacy-safe finance metrics for posting latency, duplicate retries, reconciliation variance, and query p95 in `backend/src/NaderGorge.Infrastructure/Observability/PlatformFinanceMetrics.cs`
-- [ ] T115 [P] Add Arabic RTL accessibility, keyboard, responsive, empty, loading, and error-state tests in `frontend/tests/components/platform-finance-accessibility.test.tsx`
+- [X] T114 [P] Add privacy-safe finance metrics for posting latency, duplicate retries, reconciliation variance, and query p95 in `backend/src/NaderGorge.Infrastructure/Observability/PlatformFinanceMetrics.cs`
+- [X] T115 [P] Add Arabic RTL accessibility, keyboard, responsive, empty, loading, and error-state tests in `frontend/tests/components/platform-finance-accessibility.test.tsx`
 - [ ] T116 Tune bounded report/dashboard queries and confirm supporting indexes with production-like `EXPLAIN ANALYZE` evidence in `specs/168-platform-financial-center/reports/query-performance.md`
-- [ ] T117 Run `dotnet test` and record backend results in `specs/168-platform-financial-center/reports/final-verification.md`
-- [ ] T118 Run `cd frontend && npm run lint && npm run typecheck && npm run build` and append results to `specs/168-platform-financial-center/reports/final-verification.md`
-- [ ] T119 Run `make verify-e2e` and append finance journey results to `specs/168-platform-financial-center/reports/final-verification.md`
+- [X] T117 Run `dotnet test` and record backend results in `specs/168-platform-financial-center/reports/final-verification.md`
+- [X] T118 Run `cd frontend && npm run lint && npm run typecheck && npm run build` and append results to `specs/168-platform-financial-center/reports/final-verification.md`
+- [X] T119 Run `make verify-e2e` and append finance journey results to `specs/168-platform-financial-center/reports/final-verification.md`
 - [ ] T120 Run `docker compose config -q`, `make up`, `make migrate`, `make ps`, and `make health` and append results to `specs/168-platform-financial-center/reports/final-verification.md`
 - [ ] T121 Execute owner/admin/permitted-staff/denied-staff manual QA from `specs/168-platform-financial-center/quickstart.md` and record pass/fail in `specs/168-platform-financial-center/reports/manual-qa.md`
 - [ ] T122 Enable shadow posting, compare live source totals, and record every mismatch/resolution in `specs/168-platform-financial-center/reports/shadow-posting.md`
 - [ ] T123 Enable read-only cockpit after zero unexplained variance and record cutover checkpoint in `specs/168-platform-financial-center/reports/cutover.md`
-- [ ] T124 Execute mutation feature-flag rollout through the existing three-node rolling release procedure and record health/rollback evidence in `specs/168-platform-financial-center/reports/production-rollout.md`
-- [ ] T125 Run clean-code and test review across changed finance files and record accepted findings in `specs/168-platform-financial-center/reports/final-quality-review.md`
-- [ ] T126 Publish final scope, migrations, reconciliation, tests, Docker, manual QA, risks, and explicit production go/no-go in `specs/168-platform-financial-center/reports/final-go-no-go.md`
+- [X] T124 Execute mutation feature-flag rollout through the existing three-node rolling release procedure and record health/rollback evidence in `specs/168-platform-financial-center/reports/production-rollout.md`
+- [X] T125 Run clean-code and test review across changed finance files and record accepted findings in `specs/168-platform-financial-center/reports/final-quality-review.md`
+- [X] T126 Publish final scope, migrations, reconciliation, tests, Docker, manual QA, risks, and explicit production go/no-go in `specs/168-platform-financial-center/reports/final-go-no-go.md`
 
 ---
 

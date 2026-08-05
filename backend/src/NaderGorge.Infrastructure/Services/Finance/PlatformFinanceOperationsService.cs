@@ -10,11 +10,13 @@ namespace NaderGorge.Infrastructure.Services.Finance;
 public sealed class PlatformFinanceOperationsService(
     IAppDbContext db,
     IFinancialPostingService posting,
-    BalanceService balanceService) : IPlatformFinanceOperationsService
+    BalanceService balanceService,
+    RefundPostingService? refundPosting = null) : IPlatformFinanceOperationsService
 {
     private readonly IAppDbContext _db = db;
     private readonly IFinancialPostingService _posting = posting;
     private readonly BalanceService _balanceService = balanceService;
+    private readonly RefundPostingService? _refundPosting = refundPosting;
 
     public async Task<PlatformExpense> CreateExpenseAsync(CreatePlatformExpenseRequest request, CancellationToken ct)
     {
@@ -141,6 +143,9 @@ public sealed class PlatformFinanceOperationsService(
             ?? throw new InvalidOperationException("FINANCE_REFUND_NOT_FOUND");
         if (refund.Status != PlatformRefundStatus.Draft)
             throw new InvalidOperationException("FINANCE_ALREADY_POSTED");
+
+        if (_refundPosting is not null)
+            return await _refundPosting.PostAsync(refund, idempotencyKey, actorUserId, ct);
 
         var creditAccount = refund.Method == PlatformRefundMethod.Cash
             ? await GetTreasuryAccountCodeAsync(refund.TreasuryAccountId!.Value, ct)
