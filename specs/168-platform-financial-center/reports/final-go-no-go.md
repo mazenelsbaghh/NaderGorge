@@ -9,7 +9,7 @@ The additive financial center foundation, operations, budgets, treasury/reconcil
 - Backend API build: passed with 0 warnings and 0 errors.
 - Focused finance integration contracts: passed.
 - Frontend lint and typecheck: passed.
-- Migration gate, migration, deploy, and final cluster status: passed on all three nodes.
+- Migration gate, migration, deploy, and final cluster status for release `src-e6442e3323d8a6d031ea57f51098f2d2e1a2ba62`: passed on all three nodes.
 
 ## Controlled follow-up
 
