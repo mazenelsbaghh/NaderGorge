@@ -285,8 +285,9 @@ public sealed class PlatformFinanceMigrationService(
             : [new("1100", -adjustment.Amount, 0m, StudentId: studentId), new(counterpart, 0m, -adjustment.Amount, StudentId: studentId)];
     }
 
-    private async Task<List<HistoricalPayroll>> ApprovedPayrollAsync((DateTime From, DateTime To) range, CancellationToken ct) =>
-        await _db.PayrollRecords.AsNoTracking()
+    private async Task<List<HistoricalPayroll>> ApprovedPayrollAsync((DateTime From, DateTime To) range, CancellationToken ct)
+    {
+        var payroll = await _db.PayrollRecords.AsNoTracking()
             .Where(item => item.Status == PayrollStatus.Approved && item.CreatedAt >= range.From && item.CreatedAt < range.To)
             .Select(item => new HistoricalPayroll(
                 item.Id,
@@ -294,8 +295,9 @@ public sealed class PlatformFinanceMigrationService(
                     + item.Adjustments.Where(adjustment => adjustment.Type == PayrollAdjustmentType.Addition).Sum(adjustment => adjustment.Amount)
                     - item.Adjustments.Where(adjustment => adjustment.Type == PayrollAdjustmentType.Deduction).Sum(adjustment => adjustment.Amount),
                 item.ApprovedAt ?? item.CreatedAt))
-            .Where(item => item.Amount > 0m)
             .ToListAsync(ct);
+        return payroll.Where(item => item.Amount > 0m).ToList();
+    }
 
     private async Task<bool> PostSimpleAsync(
         HistoricalPostingContext context,
