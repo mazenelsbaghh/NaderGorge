@@ -135,6 +135,7 @@ export type AdminShellRoute =
   | '/admin/platform-finance/expenses'
   | '/admin/platform-finance/refunds'
   | '/admin/platform-finance/reports'
+  | '/admin/platform-finance/wallets'
   | '/admin/platform-finance/treasury'
   | '/admin/platform-finance/migration'
   | '/admin/teacher-finance'
@@ -455,6 +456,12 @@ const navItems: AdminNavItem[] = [
     href: '/admin/platform-finance/reports',
     label: 'التقارير والإقفال',
     icon: BarChart3,
+    permission: 'finance.dashboard.view',
+  },
+  {
+    href: '/admin/platform-finance/wallets',
+    label: 'تقارير المحافظ',
+    icon: WalletCards,
     permission: 'finance.dashboard.view',
   },
   {

@@ -77,6 +77,7 @@ export const adminFinanceRoutePermissions = [
   { pattern: '/admin/platform-finance/expenses', permission: 'finance.expenses.view' },
   { pattern: '/admin/platform-finance/refunds', permission: 'finance.refunds.view' },
   { pattern: '/admin/platform-finance/reports', permission: 'finance.dashboard.view' },
+  { pattern: '/admin/platform-finance/wallets', permission: 'finance.dashboard.view' },
   { pattern: '/admin/platform-finance/treasury', permission: 'finance.treasury.manage' },
   { pattern: '/admin/platform-finance/migration', permission: 'finance.migration.manage' },
   { pattern: '/admin/platform-finance/teachers', permission: 'finance.teacher-summary.view' },
