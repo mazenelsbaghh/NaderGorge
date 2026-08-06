@@ -7,24 +7,34 @@ namespace NaderGorge.Application.Services;
 public static class RechargeRequestExpiryService
 {
     public const int PendingLifetimeHours = 48;
+    public const string ReservationExpiredReason = "انتهت مهلة حجز المحفظة قبل رفع إثبات التحويل.";
     public const string AutoRejectionReason = "تم رفض الطلب تلقائياً لانتهاء مهلة المراجعة بعد 48 ساعة.";
 
-    public static async Task RejectPendingOlderThan48Hours(IAppDbContext db, CancellationToken ct)
+    public static async Task ResolveExpiredPendingRequests(IAppDbContext db, CancellationToken ct)
     {
-        var cutoff = DateTime.UtcNow.AddHours(-PendingLifetimeHours);
+        var now = DateTime.UtcNow;
+        var reviewCutoff = now.AddHours(-PendingLifetimeHours);
         var expiredRequests = await db.RechargeRequests
-            .Where(r => r.Status == RechargeRequestStatus.Pending && r.CreatedAt <= cutoff)
+            .Where(request => request.Status == RechargeRequestStatus.Pending
+                && (request.CreatedAt <= reviewCutoff
+                    || (request.ReservationExpiresAt <= now
+                        && (request.ScreenshotUrl == null || request.ScreenshotUrl == ""))))
             .ToListAsync(ct);
 
         if (expiredRequests.Count == 0)
             return;
 
-        var now = DateTime.UtcNow;
         foreach (var request in expiredRequests)
         {
-            request.Status = RechargeRequestStatus.Rejected;
+            var reservationExpired = request.ReservationExpiresAt <= now
+                && string.IsNullOrWhiteSpace(request.ScreenshotUrl);
+            request.Status = reservationExpired
+                ? RechargeRequestStatus.Expired
+                : RechargeRequestStatus.Rejected;
             request.ResolvedAt = now;
-            request.RejectionReason = AutoRejectionReason;
+            request.RejectionReason = reservationExpired
+                ? ReservationExpiredReason
+                : AutoRejectionReason;
             request.ReservationExpiresAt = null;
         }
 

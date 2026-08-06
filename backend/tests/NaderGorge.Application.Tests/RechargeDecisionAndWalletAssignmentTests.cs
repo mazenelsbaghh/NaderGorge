@@ -44,11 +44,33 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         db.AddRange(wallet, withinWindow, outsideWindow);
         await db.SaveChangesAsync();
 
-        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(db, CancellationToken.None);
+        await RechargeRequestExpiryService.ResolveExpiredPendingRequests(db, CancellationToken.None);
 
         Assert.Equal(RechargeRequestStatus.Pending, withinWindow.Status);
         Assert.Equal(RechargeRequestStatus.Rejected, outsideWindow.Status);
         Assert.Equal(RechargeRequestExpiryService.AutoRejectionReason, outsideWindow.RejectionReason);
+    }
+
+    [Fact]
+    public async Task Expired_wallet_reservation_without_proof_does_not_block_new_request_20260806()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000040");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000040");
+        var wallet = Wallet("01010000040");
+        var expiredReservation = PendingRequest(user, wallet, 75m, teacher.Id);
+        expiredReservation.ReservationExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        db.AddRange(wallet, expiredReservation);
+        await db.SaveChangesAsync();
+
+        var initiated = await new InitiateRechargeCommandHandler(db)
+            .Handle(new InitiateRechargeCommand(user.Id, 150m, teacher.Id), CancellationToken.None);
+
+        Assert.True(initiated.Success);
+        Assert.Equal(RechargeRequestStatus.Expired, expiredReservation.Status);
+        Assert.Equal(RechargeRequestExpiryService.ReservationExpiredReason, expiredReservation.RejectionReason);
+        Assert.Null(expiredReservation.ReservationExpiresAt);
+        Assert.Single(await db.RechargeRequests.Where(item => item.Status == RechargeRequestStatus.Pending).ToListAsync());
     }
 
     [Fact]

@@ -50,7 +50,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
 
     public async Task<ApiResponse<SubmitRechargeDto>> Handle(SubmitRechargeCommand request, CancellationToken ct)
     {
-        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(_db, ct);
+        await RechargeRequestExpiryService.ResolveExpiredPendingRequests(_db, ct);
 
         var senderPhoneNumber = NormalizePhone(request.SenderPhoneNumber);
 

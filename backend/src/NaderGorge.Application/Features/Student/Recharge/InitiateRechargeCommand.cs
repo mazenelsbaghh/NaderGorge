@@ -34,7 +34,7 @@ public class InitiateRechargeCommandHandler : IRequestHandler<InitiateRechargeCo
 
     public async Task<ApiResponse<InitiateRechargeDto>> Handle(InitiateRechargeCommand request, CancellationToken ct)
     {
-        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(_db, ct);
+        await RechargeRequestExpiryService.ResolveExpiredPendingRequests(_db, ct);
 
         if (request.Amount <= 0)
             return ApiResponse<InitiateRechargeDto>.Fail("قيمة الشحن يجب أن تكون أكبر من صفر");

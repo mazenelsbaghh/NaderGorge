@@ -41,7 +41,7 @@ public class GetMyRechargeRequestsQueryHandler : IRequestHandler<GetMyRechargeRe
 
     public async Task<ApiResponse<List<StudentRechargeRequestDto>>> Handle(GetMyRechargeRequestsQuery request, CancellationToken ct)
     {
-        await RechargeRequestExpiryService.RejectPendingOlderThan48Hours(_db, ct);
+        await RechargeRequestExpiryService.ResolveExpiredPendingRequests(_db, ct);
 
         var requests = await _db.RechargeRequests
             .AsNoTracking()

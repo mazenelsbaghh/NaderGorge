@@ -68,6 +68,7 @@ export default function StudentRechargePageClient() {
   const [confirmationPhones, setConfirmationPhones] = useState<Record<string, string>>({});
   const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
   const [teacherId, setTeacherId] = useState('');
+  const [showPendingRequestDialog, setShowPendingRequestDialog] = useState(false);
 
   // Step 2 state
   const [rechargeData, setRechargeData] = useState<InitiateRechargeResponse | null>(null);
@@ -128,6 +129,7 @@ export default function StudentRechargePageClient() {
           toast.error('انتهت صلاحية حجز المحفظة، يرجى البدء من جديد.');
           setStep(1);
           setRechargeData(null);
+          void fetchRequests();
         }
       };
 
@@ -209,6 +211,10 @@ export default function StudentRechargePageClient() {
 
   const handleInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (pendingRequest) {
+      setShowPendingRequestDialog(true);
+      return;
+    }
     if (amount <= 0) {
       toast.error('قيمة الشحن يجب أن تكون أكبر من صفر.');
       return;
@@ -231,6 +237,11 @@ export default function StudentRechargePageClient() {
       }
     } catch (err: any) {
       console.error(err);
+      const errors = err.response?.data?.errors as string[] | undefined;
+      if (errors?.includes('PENDING_RECHARGE_REQUEST_EXISTS')) {
+        await fetchRequests();
+        setShowPendingRequestDialog(true);
+      }
       toast.error(err.response?.data?.message || 'تعذر بدء عملية الشحن. يرجى المحاولة لاحقاً.');
     } finally {
       setLoading(false);
@@ -385,6 +396,22 @@ export default function StudentRechargePageClient() {
     }
   };
 
+  const cancelPendingRecharge = async () => {
+    if (!pendingRequest || cancelling) return;
+    setCancelling(true);
+    try {
+      await rechargeService.cancel(pendingRequest.id, 'ألغاه الطالب لإنشاء طلب شحن جديد');
+      toast.success('تم إلغاء الطلب، ويمكنك إنشاء طلب جديد الآن.');
+      setShowPendingRequestDialog(false);
+      await fetchRequests();
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      toast.error(message ?? 'تعذر إلغاء الطلب.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const handleCopyNumber = (num: string) => {
     navigator.clipboard.writeText(num);
     toast.success('تم نسخ رقم المحفظة.');
@@ -397,7 +424,8 @@ export default function StudentRechargePageClient() {
   };
 
   const canSubmitProof = Boolean(screenshot) && isValidEgyptianMobile(normalizePhoneInput(senderPhone));
-  const hasPendingRequest = requests.some((request) => isPendingRechargeStatus(request.status));
+  const pendingRequest = requests.find((request) => isPendingRechargeStatus(request.status));
+  const hasPendingRequest = Boolean(pendingRequest);
 
   return (
     <div className="space-y-8 pb-10">
@@ -461,8 +489,11 @@ export default function StudentRechargePageClient() {
             </div>
 
             {hasPendingRequest && (
-              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
-                لديك طلب شحن معلق بالفعل. ألغِه من قائمة طلباتك بالأسفل أو انتظر الموافقة أو الرفض قبل إنشاء طلب جديد.
+              <div className="space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+                <p>لديك طلب شحن معلق بالفعل. يجب حسمه أو إلغاؤه قبل إنشاء طلب جديد.</p>
+                <button type="button" onClick={() => setShowPendingRequestDialog(true)} className="min-h-11 rounded-xl bg-amber-700 px-4 py-2 text-sm font-black text-white">
+                  عرض الطلب المعلق
+                </button>
               </div>
             )}
 
@@ -516,7 +547,7 @@ export default function StudentRechargePageClient() {
 
             <button
               type="submit"
-              disabled={loading || hasPendingRequest}
+              disabled={loading}
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3.5 text-base font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
             >
               {loading ? (
@@ -792,6 +823,31 @@ export default function StudentRechargePageClient() {
           </div>
         )}
       </div>
+
+      {showPendingRequestDialog && pendingRequest ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/55 p-3 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="pending-recharge-title">
+          <div className="w-full max-w-md space-y-5 rounded-2xl border border-amber-300 bg-[var(--admin-card)] p-5 shadow-2xl sm:p-6">
+            <div className="space-y-2">
+              <h2 id="pending-recharge-title" className="text-xl font-black text-[var(--admin-text)]">يوجد طلب شحن معلق</h2>
+              <p className="text-sm font-semibold leading-6 text-[var(--admin-muted)]">لا يمكن إرسال طلبين في نفس الوقت. ألغِ هذا الطلب أو انتظر موافقة الإدارة أو رفضها.</p>
+            </div>
+            <dl className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card-soft)] p-4 text-sm">
+              <div><dt className="font-bold text-[var(--admin-muted)]">المبلغ</dt><dd className="mt-1 font-mono font-black text-[var(--admin-text)]">{pendingRequest.amount} ج.م</dd></div>
+              <div><dt className="font-bold text-[var(--admin-muted)]">كود المراجعة</dt><dd className="mt-1 font-mono font-black text-[var(--admin-primary)]">{pendingRequest.reviewCode}</dd></div>
+              <div className="col-span-2"><dt className="font-bold text-[var(--admin-muted)]">المحفظة</dt><dd className="mt-1 font-black text-[var(--admin-text)]">{pendingRequest.walletLabel}</dd></div>
+              <div className="col-span-2"><dt className="font-bold text-[var(--admin-muted)]">نوع الرصيد</dt><dd className="mt-1 font-black text-[var(--admin-text)]">{pendingRequest.teacherName ? `للأستاذ ${pendingRequest.teacherName}` : 'عام'}</dd></div>
+            </dl>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" disabled={cancelling} onClick={() => void cancelPendingRecharge()} className="min-h-11 rounded-xl bg-rose-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+                {cancelling ? 'جارٍ الإلغاء...' : 'إلغاء الطلب'}
+              </button>
+              <button type="button" disabled={cancelling} onClick={() => setShowPendingRequestDialog(false)} className="min-h-11 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] px-4 py-3 text-sm font-black text-[var(--admin-text)] disabled:opacity-50">
+                رجوع
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
