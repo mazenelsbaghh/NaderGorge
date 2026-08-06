@@ -248,6 +248,7 @@ public interface IAppDbContext
     DbSet<DigitalWallet> DigitalWallets { get; }
     DbSet<RechargeRequest> RechargeRequests { get; }
     DbSet<IncomingSmsLog> IncomingSmsLogs { get; }
+    DbSet<WalletTransferReview> WalletTransferReviews { get; }
 
     DbSet<FinancialAccount> FinancialAccounts { get; }
     DbSet<JournalEntry> JournalEntries { get; }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
 import { AdminPage } from '@/components/admin';
-import platformFinanceService, { FinanceJournal, PlatformFinanceDashboard } from '@/services/platform-finance-service';
+import platformFinanceService, { FinanceJournal, PlatformFinanceDashboard, WalletFinanceReport } from '@/services/platform-finance-service';
 
 const money = (value: number) => `${new Intl.NumberFormat('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} ج.م`;
 
@@ -22,6 +22,7 @@ export default function PlatformFinanceCockpit() {
   const [to, setTo] = useState(today.toISOString().slice(0, 10));
   const [dashboard, setDashboard] = useState<PlatformFinanceDashboard | null>(null);
   const [ledger, setLedger] = useState<FinanceJournal[]>([]);
+  const [walletReport, setWalletReport] = useState<WalletFinanceReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -29,12 +30,14 @@ export default function PlatformFinanceCockpit() {
     setLoading(true);
     setError('');
     try {
-      const [nextDashboard, nextLedger] = await Promise.all([
+      const [nextDashboard, nextLedger, nextWalletReport] = await Promise.all([
         platformFinanceService.getDashboard(from, to),
         platformFinanceService.getLedger(from, to),
+        platformFinanceService.getWalletReport(from, to),
       ]);
       setDashboard(nextDashboard);
       setLedger(nextLedger);
+      setWalletReport(nextWalletReport);
     } catch {
       setError('تعذر تحميل بيانات المركز المالي. تأكد من الصلاحية ومن تطبيق migration المالية.');
     } finally {
@@ -72,6 +75,8 @@ export default function PlatformFinanceCockpit() {
           <Metric label="إيرادات الشراء" value={dashboard.revenue} tone="positive" />
           <Metric label="الاستردادات + المصروفات" value={dashboard.refunds + dashboard.expenses} tone="negative" />
         </div>
+        <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">تقارير المحافظ</h2><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{walletReport?.wallets.map(wallet => <div key={wallet.id} className="rounded-xl border border-[var(--admin-border)] p-4"><div className="flex items-center justify-between"><b>{wallet.label}</b><span className="text-xs text-[var(--admin-muted)]">{wallet.phoneNumber}</span></div><p className="mt-2 text-xl font-black">الرصيد: {money(wallet.currentBalance)}</p><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><span>الوارد: <b className="text-emerald-600">{money(wallet.incoming)}</b></span><span>الصادر: <b className="text-rose-600">{money(wallet.outgoing)}</b></span><span>مصروفات: {money(wallet.expenses)}</span><span>تحويل داخلي: {money(wallet.internalTransfers)}</span><span>المعاملات: {wallet.transactions}</span></div></div>)}</div></section>
+        <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">شحن رصيد المدرسين من المحافظ</h2><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{walletReport?.teacherRechargeCards.map(card => <div key={`${card.walletId}-${card.teacherName}`} className="rounded-xl border border-[var(--admin-border)] p-4"><p className="font-black">{card.teacherName}</p><p className="mt-2 text-lg font-black text-emerald-600">{money(card.amount)}</p><p className="text-sm text-[var(--admin-muted)]">{card.count} عملية شحن</p></div>) ?? <p className="text-[var(--admin-muted)]">لا توجد شحنات رصيد مدرس في الفترة.</p>}</div></section>
         <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
           <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">أرصدة الحسابات</h2><div className="space-y-3">{accounts.map((account) => <div key={account.accountId} className="flex items-center justify-between border-b border-[var(--admin-border)] pb-3"><span><b>{account.code}</b> <span className="text-sm text-[var(--admin-muted)]">{account.name}</span></span><b>{money(account.balance)}</b></div>)}</div></section>
           <section className="admin-panel rounded-2xl p-5"><h2 className="mb-4 text-lg font-black">آخر القيود</h2><div className="space-y-3">{ledger.length === 0 ? <p className="text-[var(--admin-muted)]">لا توجد قيود في الفترة.</p> : ledger.map((entry) => <details key={entry.id} className="rounded-xl border border-[var(--admin-border)] p-3"><summary className="cursor-pointer list-none"><div className="flex items-center justify-between gap-3"><span><b>#{entry.sequenceNumber}</b> {entry.description}</span><span className="text-xs text-[var(--admin-muted)]">{new Date(entry.occurredAt).toLocaleDateString('ar-EG')}</span></div></summary><div className="mt-3 space-y-2 text-sm">{entry.lines.map((line) => <div key={line.id} className="flex justify-between"><span>{line.accountCode} - {line.accountName}</span><span className="font-bold">{line.debit ? <><ArrowDownLeft size={14} className="inline text-rose-600" /> {money(line.debit)}</> : <><ArrowUpRight size={14} className="inline text-emerald-600" /> {money(line.credit)}</>}</span></div>)}</div></details>)}</div></section>

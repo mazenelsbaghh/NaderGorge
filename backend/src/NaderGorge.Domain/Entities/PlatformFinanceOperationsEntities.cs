@@ -25,6 +25,31 @@ public enum PlatformRefundStatus
     Reversed = 3
 }
 
+public enum WalletTransferReviewStatus
+{
+    PendingClassification = 1,
+    RecordedAsExpense = 2,
+    RecordedAsInternalTransfer = 3,
+    Ignored = 4
+}
+
+/// <summary>Outgoing wallet SMS waiting for an accountant to decide its financial treatment.</summary>
+public sealed class WalletTransferReview : BaseEntity
+{
+    public Guid IncomingSmsLogId { get; set; }
+    public Guid SourceWalletId { get; set; }
+    public string DestinationPhoneNumber { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public decimal ServiceFee { get; set; }
+    public string? TransferReference { get; set; }
+    public DateTime OccurredAt { get; set; }
+    public WalletTransferReviewStatus Status { get; set; } = WalletTransferReviewStatus.PendingClassification;
+    public Guid? PlatformExpenseId { get; set; }
+    public Guid? TreasuryTransferId { get; set; }
+    public Guid? ClassifiedByUserId { get; set; }
+    public DateTime? ClassifiedAt { get; set; }
+}
+
 public sealed class ExpenseCategory : BaseEntity
 {
     public string Name { get; set; } = string.Empty;

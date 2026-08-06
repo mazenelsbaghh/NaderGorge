@@ -263,6 +263,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<DigitalWallet> DigitalWallets => Set<DigitalWallet>();
     public DbSet<RechargeRequest> RechargeRequests => Set<RechargeRequest>();
     public DbSet<IncomingSmsLog> IncomingSmsLogs => Set<IncomingSmsLog>();
+    public DbSet<WalletTransferReview> WalletTransferReviews => Set<WalletTransferReview>();
 
     // Platform finance general ledger
     public DbSet<FinancialAccount> FinancialAccounts => Set<FinancialAccount>();
@@ -3411,6 +3412,23 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(x => x.Name).HasMaxLength(160).IsRequired();
             e.Property(x => x.Phone).HasMaxLength(32);
             e.HasIndex(x => x.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<WalletTransferReview>(e =>
+        {
+            e.ToTable("wallet_transfer_reviews", table => table.HasCheckConstraint("CK_wallet_transfer_reviews_amount", "\"Amount\" > 0 AND \"ServiceFee\" >= 0"));
+            e.HasKey(x => x.Id);
+            e.Property(x => x.DestinationPhoneNumber).HasMaxLength(32).IsRequired();
+            e.Property(x => x.Amount).HasColumnType("numeric(18,2)");
+            e.Property(x => x.ServiceFee).HasColumnType("numeric(18,2)");
+            e.Property(x => x.TransferReference).HasMaxLength(120);
+            e.Property(x => x.Status).HasConversion<int>();
+            e.HasIndex(x => x.IncomingSmsLogId).IsUnique();
+            e.HasIndex(x => new { x.Status, x.OccurredAt });
+            e.HasOne<IncomingSmsLog>().WithMany().HasForeignKey(x => x.IncomingSmsLogId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<DigitalWallet>().WithMany().HasForeignKey(x => x.SourceWalletId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<PlatformExpense>().WithMany().HasForeignKey(x => x.PlatformExpenseId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<TreasuryTransfer>().WithMany().HasForeignKey(x => x.TreasuryTransferId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PlatformExpense>(e =>

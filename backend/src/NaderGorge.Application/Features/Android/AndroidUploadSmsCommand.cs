@@ -111,7 +111,7 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
         RechargeRequest? matchedRequest = null;
 
         // 4. Try matching with pending requests if successfully parsed
-        if (parserResult.IsParsedSuccessfully)
+        if (!SmsParser.IsOutgoingTransfer(request.Body) && parserResult.IsParsedSuccessfully)
         {
             var amount = parserResult.Amount!.Value;
             var senderPhone = parserResult.SenderPhone!;
@@ -192,6 +192,19 @@ public class AndroidUploadSmsCommandHandler : IRequestHandler<AndroidUploadSmsCo
             }
 
             _db.IncomingSmsLogs.Add(smsLog);
+            if (SmsParser.IsOutgoingTransfer(request.Body))
+            {
+                _db.WalletTransferReviews.Add(new WalletTransferReview
+                {
+                    IncomingSmsLogId = smsLog.Id,
+                    SourceWalletId = wallet.Id,
+                    DestinationPhoneNumber = parserResult.RecipientPhone ?? parserResult.SenderPhone ?? "غير معروف",
+                    Amount = parserResult.Amount!.Value,
+                    ServiceFee = parserResult.ServiceFee,
+                    TransferReference = parserResult.TransferReference,
+                    OccurredAt = request.ReceivedAt
+                });
+            }
             await _db.SaveChangesAsync(ct);
         }
 

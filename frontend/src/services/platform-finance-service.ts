@@ -70,8 +70,10 @@ export type FinanceTeacherSummary = {
 };
 
 export type PlatformExpenseRow = { id: string; documentNumber: string; amount: number; occurredAt: string; status: number; description: string; paid: number };
+export type WalletTransferReview = { id: string; destinationPhoneNumber: string; amount: number; serviceFee: number; transferReference?: string | null; occurredAt: string; sourceWallet: string; sourceWalletNumber?: string | null; sourceTreasuryAccountId?: string | null };
 export type PlatformRefundRow = { id: string; originalSourceId: string; originalSourceType: string; studentId: string; teacherId?: string | null; platformAmount: number; teacherAmount: number; totalAmount: number; method: number; status: number; reason: string; journalEntryId?: string | null };
 export type PlatformFinancialReport = { kind: string; from: string; to: string; totalDebit: number; totalCredit: number; rows: Array<{ code: string; name: string; type: number; debit: number; credit: number; balance: number }> };
+export type WalletFinanceReport = { wallets: Array<{ id: string; label: string; phoneNumber: string; currentBalance: number; incoming: number; outgoing: number; expenses: number; internalTransfers: number; transactions: number }>; teacherRechargeCards: Array<{ walletId: string; teacherName: string; amount: number; count: number }>; transactions: Array<{ id: string; walletId: string; receivedAt: string; amount: number; type: 'incoming' | 'outgoing'; phone?: string | null; body: string }> };
 
 const platformFinanceService = {
   async getDashboard(from?: string, to?: string) {
@@ -102,6 +104,21 @@ const platformFinanceService = {
   },
   async getExpenses(from?: string, to?: string) {
     return (await apiClient.get<PlatformExpenseRow[]>('/admin/platform-finance/expenses', { params: { from, to } })).data;
+  },
+  async getWalletTransferReviews() {
+    return (await apiClient.get<WalletTransferReview[]>('/admin/platform-finance/wallet-transfers/reviews')).data;
+  },
+  async backfillWalletTransferReviews() {
+    return (await apiClient.post<{ added: number }>('/admin/platform-finance/wallet-transfers/reviews/backfill')).data;
+  },
+  async getWalletReport(from?: string, to?: string) {
+    return (await apiClient.get<WalletFinanceReport>('/admin/platform-finance/wallets/report', { params: { from, to } })).data;
+  },
+  async recordWalletTransferExpense(reviewId: string, payload: { categoryId: string; costCenterId?: string; beneficiaryName: string; reason: string }) {
+    return (await apiClient.post(`/admin/platform-finance/wallet-transfers/reviews/${reviewId}/expense`, payload)).data;
+  },
+  async recordWalletInternalTransfer(reviewId: string, destinationTreasuryAccountId: string) {
+    return (await apiClient.post(`/admin/platform-finance/wallet-transfers/reviews/${reviewId}/internal-transfer`, { destinationTreasuryAccountId })).data;
   },
   async reverseExpense(expenseId: string, reason: string) {
     return (await apiClient.post(`/admin/platform-finance/expenses/${expenseId}/reverse`, { reason })).data;
