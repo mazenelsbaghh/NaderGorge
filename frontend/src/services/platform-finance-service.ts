@@ -137,7 +137,7 @@ const platformFinanceService = {
     return (await apiClient.get('/admin/platform-finance/reconciliation', { params: { from, to } })).data as { from: string; to: string; totalDebit: number; totalCredit: number; rows: Array<{ sourceType: string; month: string; journalCount: number; debit: number; credit: number; variance: number }>; exceptions: string[] };
   },
   async migrationPreview(from: string, to: string) {
-    return (await apiClient.get('/admin/platform-finance/migration/preview', { params: { from, to } })).data as { from: string; to: string; rechargeCandidates: number; rechargeAmount: number; saleCandidates: number; saleAmount: number; ambiguousCandidates: number; ambiguities: string[] };
+    return (await apiClient.get('/admin/platform-finance/migration/preview', { params: { from, to } })).data as { from: string; to: string; rechargeCandidates: number; rechargeAmount: number; saleCandidates: number; saleAmount: number; balanceAdjustmentCandidates: number; balanceAdjustmentAmount: number; teacherPayoutCandidates: number; teacherPayoutAmount: number; payrollCandidates: number; payrollAmount: number; ambiguousCandidates: number; ambiguities: string[] };
   },
   async postMigration(from: string, to: string) {
     return (await apiClient.post('/admin/platform-finance/migration/post', null, { params: { from, to } })).data as { batchId: string; posted: number; alreadyPosted: number; failed: number; errors: string[] };

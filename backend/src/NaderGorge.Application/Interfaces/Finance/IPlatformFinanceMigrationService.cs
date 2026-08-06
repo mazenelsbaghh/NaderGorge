@@ -7,6 +7,12 @@ public sealed record FinanceHistoricalMigrationPreview(
     decimal RechargeAmount,
     int SaleCandidates,
     decimal SaleAmount,
+    int BalanceAdjustmentCandidates,
+    decimal BalanceAdjustmentAmount,
+    int TeacherPayoutCandidates,
+    decimal TeacherPayoutAmount,
+    int PayrollCandidates,
+    decimal PayrollAmount,
     int AmbiguousCandidates,
     IReadOnlyList<string> Ambiguities);
 

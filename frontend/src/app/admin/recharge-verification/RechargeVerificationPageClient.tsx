@@ -33,6 +33,9 @@ type RechargeStatusValue = AdminRechargeRequestDto['status'];
 type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 5 | 'all';
 type UnmatchedSmsAmountGroup = { key: string; amount?: number; items: AdminIncomingSmsLogDto[] };
 type UnmatchedSmsWalletGroup = { id: string; label: string; phoneNumber: string; amountGroups: UnmatchedSmsAmountGroup[] };
+type SuspectedSenderPhone = { phoneNumber: string; matchingDigits: number; receivedAt: string };
+
+const SUSPECTED_PHONE_MINIMUM_DIGITS = 8;
 
 const ASSET_BASE_URL = (
   process.env.NEXT_PUBLIC_ASSETS_URL ||
@@ -64,6 +67,37 @@ const normalizeRechargeStatus = (status: RechargeStatusValue): number | null => 
 
 const isRechargeStatus = (status: RechargeStatusValue, expected: number) =>
   normalizeRechargeStatus(status) === expected;
+
+const normalizePhoneDigits = (value?: string | null) => (value ?? '').replace(/\D/g, '');
+
+const getLongestMatchingDigitSequence = (leftValue?: string | null, rightValue?: string | null) => {
+  const left = normalizePhoneDigits(leftValue);
+  const right = normalizePhoneDigits(rightValue);
+  const maximumLength = Math.min(left.length, right.length);
+
+  for (let length = maximumLength; length > 0; length -= 1) {
+    for (let start = 0; start + length <= left.length; start += 1) {
+      if (right.includes(left.slice(start, start + length))) return length;
+    }
+  }
+  return 0;
+};
+
+const findSuspectedSenderPhone = (
+  request: AdminRechargeRequestDto,
+  smsLogs: AdminIncomingSmsLogDto[]
+): SuspectedSenderPhone | undefined => smsLogs
+  .filter((sms) => sms.walletId === request.walletId
+    && sms.parsedAmount === request.amount
+    && sms.parsedSenderPhone)
+  .map((sms) => ({
+    phoneNumber: sms.parsedSenderPhone!,
+    matchingDigits: getLongestMatchingDigitSequence(request.senderPhoneNumber, sms.parsedSenderPhone),
+    receivedAt: sms.receivedAt,
+  }))
+  .filter((candidate) => candidate.matchingDigits >= SUSPECTED_PHONE_MINIMUM_DIGITS)
+  .sort((left, right) => right.matchingDigits - left.matchingDigits
+    || new Date(right.receivedAt).getTime() - new Date(left.receivedAt).getTime())[0];
 
 const resolveAssetUrl = (url?: string | null) => {
   if (!url) return null;
@@ -273,13 +307,27 @@ export function RechargeVerificationWorkspace() {
       .sort((left, right) => left.label.localeCompare(right.label, 'ar'));
   }, [unmatchedSms]);
 
+  const suspectedSenderPhones = useMemo(() => {
+    const matches = new Map<string, SuspectedSenderPhone>();
+
+    for (const request of requests) {
+      if (!isRechargeStatus(request.status, 0) || !request.senderPhoneNumber) continue;
+      const suspectedPhone = findSuspectedSenderPhone(request, unmatchedSms);
+      if (suspectedPhone) matches.set(request.id, suspectedPhone);
+    }
+
+    return matches;
+  }, [requests, unmatchedSms]);
+
   // Filtered requests
   const filteredRequests = requests.filter(r => {
+    const suspectedPhone = suspectedSenderPhones.get(r.id)?.phoneNumber;
     const matchesStatus = statusFilter === 'all' || isRechargeStatus(r.status, statusFilter);
     const matchesSearch =
       r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.studentPhoneNumber.includes(searchQuery) ||
       r.senderPhoneNumber.includes(searchQuery) ||
+      suspectedPhone?.includes(searchQuery) ||
       r.walletLabel.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.walletPhoneNumber.includes(searchQuery) ||
       r.amount.toString().includes(searchQuery);
@@ -311,19 +359,33 @@ export function RechargeVerificationWorkspace() {
     {
       key: 'senderPhoneNumber',
       label: 'رقم المحول منه',
-      render: (r) => (
-        <div className="space-y-1">
-          <span dir="ltr" className="block font-mono text-sm font-bold text-[var(--admin-text)]">
-            {r.senderPhoneNumber || 'غير مسجل'}
-          </span>
-          {r.originalSenderPhoneNumber && r.originalSenderPhoneNumber !== r.senderPhoneNumber ? (
-            <span className="block text-[10px] font-bold text-[var(--admin-muted)]">أول رقم كتبه: <bdi className="font-mono">{r.originalSenderPhoneNumber}</bdi></span>
-          ) : null}
-          {r.requiresSenderPhoneConfirmation ? (
-            <span className="block rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-700">بانتظار تأكيد الرقم من الطالب</span>
-          ) : null}
-        </div>
-      )
+      render: (r) => {
+        const suspectedPhone = suspectedSenderPhones.get(r.id);
+        return (
+          <div className="min-w-36 space-y-1.5">
+            <span dir="ltr" className="block font-mono text-sm font-bold text-[var(--admin-text)]">
+              {r.senderPhoneNumber || 'غير مسجل'}
+            </span>
+            {suspectedPhone ? (
+              <div className="w-fit max-w-44 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-start">
+                <span className="block text-[10px] font-black text-amber-800 dark:text-amber-300">رقم مشتبه فيه</span>
+                <bdi dir="ltr" className="block font-mono text-xs font-black text-[var(--admin-text)]">
+                  {suspectedPhone.phoneNumber}
+                </bdi>
+                <span className="block text-[9px] font-bold text-amber-700 dark:text-amber-400">
+                  {suspectedPhone.matchingDigits} أرقام متطابقة بالترتيب
+                </span>
+              </div>
+            ) : null}
+            {r.originalSenderPhoneNumber && r.originalSenderPhoneNumber !== r.senderPhoneNumber ? (
+              <span className="block text-[10px] font-bold text-[var(--admin-muted)]">أول رقم كتبه: <bdi className="font-mono">{r.originalSenderPhoneNumber}</bdi></span>
+            ) : null}
+            {r.requiresSenderPhoneConfirmation ? (
+              <span className="block max-w-44 rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-700">بانتظار تأكيد الرقم من الطالب</span>
+            ) : null}
+          </div>
+        );
+      }
     },
     {
       key: 'wallet',
