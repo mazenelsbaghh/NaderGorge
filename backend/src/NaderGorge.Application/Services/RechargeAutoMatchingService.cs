@@ -56,8 +56,8 @@ public sealed class RechargeAutoMatchingService(
             var startTime = matchingAnchor.AddHours(-2);
             var endTime = matchingAnchor.AddHours(2);
             var candidates = await db.IncomingSmsLogs
-                .Where(log => log.WalletId == request.WalletId
-                    && log.ParsedAmount == request.Amount
+                .Include(log => log.Wallet)
+                .Where(log => log.ParsedAmount == request.Amount
                     && log.ParsedSenderPhone != null
                     && !log.IsMatched
                     && log.ReceivedAt >= startTime
@@ -88,6 +88,8 @@ public sealed class RechargeAutoMatchingService(
 
             var sms = exactCandidates[0];
             var resolvedAt = DateTime.UtcNow;
+            request.WalletId = sms.WalletId;
+            request.Wallet = sms.Wallet;
             if (!await ReserveMatchAsync(request, sms, resolvedAt, ct))
                 return false;
 
@@ -146,6 +148,7 @@ public sealed class RechargeAutoMatchingService(
                 .SetProperty(row => row.Status, RechargeRequestStatus.Matched)
                 .SetProperty(row => row.ResolvedAt, resolvedAt)
                 .SetProperty(row => row.MatchedSmsLogId, sms.Id)
+                .SetProperty(row => row.WalletId, sms.WalletId)
                 .SetProperty(row => row.RequiresSenderPhoneConfirmation, false), ct);
         return reservedRequest == 1;
     }

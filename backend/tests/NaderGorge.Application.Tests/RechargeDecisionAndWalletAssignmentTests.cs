@@ -178,6 +178,88 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
+    public async Task Reconciliation_uses_the_wallet_that_actually_received_the_unique_transfer_20260806()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000041");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000041");
+        var assignedWallet = Wallet("01010000041");
+        var receivingWallet = Wallet("01010000042");
+        var pending = PendingRequest(user, assignedWallet, 490m, teacher.Id);
+        pending.SenderPhoneNumber = "01007216716";
+        pending.ScreenshotUrl = "/proof.webp";
+        pending.UpdatedAt = DateTime.UtcNow;
+        var sms = new IncomingSmsLog
+        {
+            WalletId = receivingWallet.Id,
+            Wallet = receivingWallet,
+            Sender = "VodafoneCash",
+            Body = "تم استلام مبلغ 490 ج.م من 01007216716",
+            ReceivedAt = pending.UpdatedAt.Value.AddSeconds(-30),
+            ParsedAmount = 490m,
+            ParsedSenderPhone = "01007216716",
+            DeduplicationHash = Guid.NewGuid().ToString("N")
+        };
+        db.AddRange(assignedWallet, receivingWallet, pending, sms);
+        await db.SaveChangesAsync();
+
+        var matcher = new RechargeAutoMatchingService(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance),
+            NullLogger<RechargeAutoMatchingService>.Instance);
+
+        var matched = await matcher.ReconcilePendingAsync(CancellationToken.None);
+
+        Assert.Equal(1, matched);
+        Assert.Equal(RechargeRequestStatus.Matched, pending.Status);
+        Assert.Equal(receivingWallet.Id, pending.WalletId);
+        Assert.True(sms.IsMatched);
+        Assert.Equal(0m, assignedWallet.CurrentBalance);
+        Assert.Equal(490m, receivingWallet.CurrentBalance);
+    }
+
+    [Fact]
+    public async Task Reconciliation_leaves_multiple_cross_wallet_exact_transfers_for_manual_review()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000042");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000042");
+        var assignedWallet = Wallet("01010000043");
+        var otherWallet = Wallet("01010000044");
+        var pending = PendingRequest(user, assignedWallet, 180m, teacher.Id);
+        pending.SenderPhoneNumber = "01110331934";
+        pending.ScreenshotUrl = "/proof.webp";
+        pending.UpdatedAt = DateTime.UtcNow;
+        var messages = new[] { assignedWallet, otherWallet }.Select((wallet, index) => new IncomingSmsLog
+        {
+            WalletId = wallet.Id,
+            Wallet = wallet,
+            Sender = "VodafoneCash",
+            Body = "تم استلام مبلغ 180 ج.م من 01110331934",
+            ReceivedAt = pending.UpdatedAt.Value.AddMinutes(index),
+            ParsedAmount = 180m,
+            ParsedSenderPhone = "01110331934",
+            DeduplicationHash = Guid.NewGuid().ToString("N")
+        }).ToArray();
+        db.AddRange(assignedWallet, otherWallet, pending);
+        db.IncomingSmsLogs.AddRange(messages);
+        await db.SaveChangesAsync();
+
+        var matcher = new RechargeAutoMatchingService(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance),
+            NullLogger<RechargeAutoMatchingService>.Instance);
+
+        var matched = await matcher.ReconcilePendingAsync(CancellationToken.None);
+
+        Assert.Equal(0, matched);
+        Assert.Equal(RechargeRequestStatus.Pending, pending.Status);
+        Assert.Equal(assignedWallet.Id, pending.WalletId);
+        Assert.All(messages, message => Assert.False(message.IsMatched));
+        Assert.Empty(await db.PromotionalBalanceAllocations.ToListAsync());
+    }
+
+    [Fact]
     public async Task Initiate_does_not_move_an_existing_pending_request_to_another_wallet()
     {
         await using var db = TestAppDbContextFactory.Create();

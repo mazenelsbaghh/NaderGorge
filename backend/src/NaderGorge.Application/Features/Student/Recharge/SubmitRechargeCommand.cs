@@ -129,8 +129,8 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         var endTime = matchingAnchor.AddHours(2);
 
         var exactMatches = await _db.IncomingSmsLogs
+            .Include(l => l.Wallet)
             .Where(l =>
-                l.WalletId == rechargeRequest.WalletId &&
                 l.ParsedAmount == rechargeRequest.Amount &&
                 l.ParsedSenderPhone == rechargeRequest.SenderPhoneNumber &&
                 !l.IsMatched &&
@@ -152,6 +152,11 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
             
             try
             {
+                // The transfer may have reached a wallet from an earlier reservation.
+                // The SMS is the authoritative evidence of which platform wallet received the money.
+                rechargeRequest.WalletId = matchedSms.WalletId;
+                rechargeRequest.Wallet = matchedSms.Wallet;
+
                 // Update request
                 rechargeRequest.Status = RechargeRequestStatus.Matched;
                 rechargeRequest.ResolvedAt = DateTime.UtcNow;
@@ -191,7 +196,6 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
             var nearbyPhones = await _db.IncomingSmsLogs
                 .AsNoTracking()
                 .Where(l =>
-                    l.WalletId == rechargeRequest.WalletId &&
                     l.ParsedAmount == rechargeRequest.Amount &&
                     l.ParsedSenderPhone != null &&
                     !l.IsMatched &&
