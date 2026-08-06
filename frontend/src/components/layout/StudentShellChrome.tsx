@@ -227,7 +227,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       data-testid="student-shell"
       data-shell-instance={shellInstanceId}
       style={studentShellTokenAliases}
-      className="student-app-background h-dvh max-h-dvh overflow-x-hidden text-[var(--student-text)] relative"
+      className="student-app-background relative h-screen h-dvh max-h-screen max-h-dvh overflow-x-hidden text-[var(--student-text)]"
     >
       <SkipToContentLink />
       <NavigationFocusManager />
@@ -376,7 +376,7 @@ export function StudentShellChrome({ children }: StudentShellChromeProps) {
       <main
         ref={mainScrollRef}
         id="main-content"
-        className={`app-shell-scroll relative z-10 h-dvh overflow-y-auto overscroll-y-auto ${
+        className={`app-shell-scroll relative z-10 h-screen h-dvh min-h-0 overflow-y-scroll overscroll-y-contain ${
           isFocusMode
             ? 'px-0 py-0 pb-0 lg:mr-0 lg:px-0 lg:py-0 lg:pb-0'
             : 'px-4 py-6 pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:mr-24 lg:px-8 lg:py-10 lg:pb-10'
