@@ -45,6 +45,8 @@ export interface AdminRechargeRequestDto {
   teacherId?: string;
   teacherName?: string;
   senderPhoneNumber: string;
+  originalSenderPhoneNumber?: string;
+  requiresSenderPhoneConfirmation: boolean;
   screenshotUrl?: string;
   status: number | string; // RechargeRequestStatus
   createdAt: string;

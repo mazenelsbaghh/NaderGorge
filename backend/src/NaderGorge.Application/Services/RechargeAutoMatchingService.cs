@@ -58,19 +58,35 @@ public sealed class RechargeAutoMatchingService(
             var candidates = await db.IncomingSmsLogs
                 .Where(log => log.WalletId == request.WalletId
                     && log.ParsedAmount == request.Amount
-                    && log.ParsedSenderPhone == request.SenderPhoneNumber
+                    && log.ParsedSenderPhone != null
                     && !log.IsMatched
                     && log.ReceivedAt >= startTime
                     && log.ReceivedAt <= endTime)
                 .OrderBy(log => log.ReceivedAt)
-                .Take(2)
+                .Take(50)
                 .ToListAsync(ct);
 
-            // Ambiguous evidence must remain for manual review.
-            if (candidates.Count != 1)
-                return false;
+            var exactCandidates = candidates
+                .Where(log => log.ParsedSenderPhone == request.SenderPhoneNumber)
+                .Take(2)
+                .ToList();
 
-            var sms = candidates[0];
+            // Ambiguous evidence must remain for manual review.
+            if (exactCandidates.Count != 1)
+            {
+                var requiresConfirmation = !request.SenderPhoneConfirmedAt.HasValue
+                    && candidates.Any(log => RechargePhoneSimilarity.RequiresConfirmation(
+                        request.SenderPhoneNumber,
+                        log.ParsedSenderPhone));
+                if (request.RequiresSenderPhoneConfirmation != requiresConfirmation)
+                {
+                    request.RequiresSenderPhoneConfirmation = requiresConfirmation;
+                    await db.SaveChangesAsync(ct);
+                }
+                return false;
+            }
+
+            var sms = exactCandidates[0];
             var resolvedAt = DateTime.UtcNow;
             if (!await ReserveMatchAsync(request, sms, resolvedAt, ct))
                 return false;
@@ -110,6 +126,7 @@ public sealed class RechargeAutoMatchingService(
             request.Status = RechargeRequestStatus.Matched;
             request.ResolvedAt = resolvedAt;
             request.MatchedSmsLogId = sms.Id;
+            request.RequiresSenderPhoneConfirmation = false;
             sms.IsMatched = true;
             sms.MatchedRechargeRequestId = request.Id;
             return true;
@@ -128,7 +145,8 @@ public sealed class RechargeAutoMatchingService(
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(row => row.Status, RechargeRequestStatus.Matched)
                 .SetProperty(row => row.ResolvedAt, resolvedAt)
-                .SetProperty(row => row.MatchedSmsLogId, sms.Id), ct);
+                .SetProperty(row => row.MatchedSmsLogId, sms.Id)
+                .SetProperty(row => row.RequiresSenderPhoneConfirmation, false), ct);
         return reservedRequest == 1;
     }
 }

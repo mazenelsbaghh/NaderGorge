@@ -3036,6 +3036,11 @@ public class AppDbContext : DbContext, IAppDbContext
         {
             e.ToTable("recharge_requests");
             e.HasKey(rr => rr.Id);
+            e.HasIndex(rr => rr.UserId);
+            e.HasIndex(rr => rr.UserId, "IX_recharge_requests_UserId_pending")
+                .IsUnique()
+                .HasFilter("\"Status\" = 0")
+                .HasDatabaseName("IX_recharge_requests_UserId_pending");
             e.HasIndex(rr => new { rr.WalletId, rr.Status, rr.Amount, rr.SenderPhoneNumber, rr.CreatedAt })
                 .HasFilter("\"Status\" = 0");
 
@@ -3067,6 +3072,7 @@ public class AppDbContext : DbContext, IAppDbContext
             e.Property(rr => rr.Amount).HasPrecision(18, 2);
             e.HasIndex(rr => rr.TeacherId);
             e.Property(rr => rr.SenderPhoneNumber).HasMaxLength(20).IsRequired();
+            e.Property(rr => rr.OriginalSenderPhoneNumber).HasMaxLength(20);
             e.Property(rr => rr.ScreenshotUrl).HasMaxLength(1000);
             e.Property(rr => rr.RejectionReason).HasMaxLength(500);
         });

@@ -57,6 +57,8 @@ public class GetAdminRechargeRequestsQueryHandler : IRequestHandler<GetAdminRech
                 TeacherId = r.TeacherId,
                 TeacherName = r.Teacher != null && r.Teacher.User != null ? r.Teacher.User.FullName : null,
                 SenderPhoneNumber = r.SenderPhoneNumber,
+                OriginalSenderPhoneNumber = r.OriginalSenderPhoneNumber,
+                RequiresSenderPhoneConfirmation = r.RequiresSenderPhoneConfirmation,
                 ScreenshotUrl = r.ScreenshotUrl,
                 Status = r.Status,
                 CreatedAt = r.CreatedAt,

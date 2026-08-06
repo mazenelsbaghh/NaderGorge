@@ -17,6 +17,9 @@ public class RechargeRequest : BaseEntity
     public Guid? TeacherId { get; set; }
     public virtual TeacherProfile? Teacher { get; set; }
     public string SenderPhoneNumber { get; set; } = string.Empty;
+    public string? OriginalSenderPhoneNumber { get; set; }
+    public bool RequiresSenderPhoneConfirmation { get; set; }
+    public DateTime? SenderPhoneConfirmedAt { get; set; }
     public string? ScreenshotUrl { get; set; }
     
     public RechargeRequestStatus Status { get; set; } = RechargeRequestStatus.Pending;

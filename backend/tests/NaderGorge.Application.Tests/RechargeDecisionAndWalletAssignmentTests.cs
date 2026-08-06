@@ -52,7 +52,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
-    public async Task Initiate_reuses_the_same_wallet_for_an_unfinished_request()
+    public async Task Initiate_rejects_a_second_request_while_one_is_pending()
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000001");
@@ -65,32 +65,35 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         var result = await new InitiateRechargeCommandHandler(db)
             .Handle(new InitiateRechargeCommand(user.Id, 150m, teacher.Id), CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal(pending.Id, result.Data!.RechargeRequestId);
-        Assert.Equal(wallet.PhoneNumber, result.Data.WalletPhoneNumber);
-        Assert.Equal(150m, pending.Amount);
+        Assert.False(result.Success);
+        Assert.Contains("طلب شحن معلق", result.Message);
+        Assert.Equal(100m, pending.Amount);
         Assert.Equal(1, await db.RechargeRequests.CountAsync());
     }
 
     [Fact]
-    public async Task Reusing_a_pending_request_refreshes_its_matching_anchor()
+    public async Task Initiate_allows_a_new_request_after_the_student_cancels_the_pending_one()
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000011");
         var teacher = await SeedRechargeTeacherAsync(db, "01100000011");
         var wallet = Wallet("01010000011");
         var pending = PendingRequest(user, wallet, 100m, teacher.Id);
-        pending.CreatedAt = DateTime.UtcNow.AddHours(-20);
         db.AddRange(wallet, pending);
         await db.SaveChangesAsync();
-        var beforeReuse = DateTime.UtcNow.AddSeconds(-1);
+
+        var cancelled = await new CancelRechargeRequestCommandHandler(db).Handle(
+            new CancelRechargeRequestCommand(user.Id, pending.Id, "ألغاه الطالب لإنشاء طلب جديد"),
+            CancellationToken.None);
 
         var result = await new InitiateRechargeCommandHandler(db)
             .Handle(new InitiateRechargeCommand(user.Id, 150m, teacher.Id), CancellationToken.None);
 
+        Assert.True(cancelled.Success);
         Assert.True(result.Success);
-        Assert.NotNull(pending.UpdatedAt);
-        Assert.True(pending.UpdatedAt >= beforeReuse);
+        Assert.Equal(RechargeRequestStatus.Cancelled, pending.Status);
+        Assert.Equal(2, await db.RechargeRequests.CountAsync());
+        Assert.Single(await db.RechargeRequests.Where(item => item.Status == RechargeRequestStatus.Pending).ToListAsync());
     }
 
     [Fact]
@@ -153,7 +156,7 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
     }
 
     [Fact]
-    public async Task Initiate_changes_wallet_only_when_the_sticky_wallet_has_reached_its_limit()
+    public async Task Initiate_does_not_move_an_existing_pending_request_to_another_wallet()
     {
         await using var db = TestAppDbContextFactory.Create();
         var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000002");
@@ -179,10 +182,60 @@ public sealed class RechargeDecisionAndWalletAssignmentTests
         var result = await new InitiateRechargeCommandHandler(db)
             .Handle(new InitiateRechargeCommand(user.Id, 50m, teacher.Id), CancellationToken.None);
 
-        Assert.True(result.Success);
-        Assert.Equal(secondWallet.Id, pending.WalletId);
-        Assert.Equal(secondWallet.PhoneNumber, result.Data!.WalletPhoneNumber);
+        Assert.False(result.Success);
+        Assert.Equal(firstWallet.Id, pending.WalletId);
         Assert.Equal(1, await db.RechargeRequests.CountAsync(request => request.Status == RechargeRequestStatus.Pending));
+    }
+
+    [Theory]
+    [InlineData("01012345678", "01012345699", 9)]
+    [InlineData("99123456780", "00123456789", 8)]
+    [InlineData("01012345678", "01598765432", 2)]
+    public void Phone_similarity_uses_eight_or_more_contiguous_digits_anywhere(
+        string submitted,
+        string received,
+        int expectedLongestSequence)
+    {
+        Assert.Equal(expectedLongestSequence, RechargePhoneSimilarity.LongestCommonDigitSequence(submitted, received));
+        Assert.Equal(expectedLongestSequence >= 8, RechargePhoneSimilarity.RequiresConfirmation(submitted, received));
+    }
+
+    [Fact]
+    public async Task Reconciliation_requests_student_confirmation_for_a_near_phone_without_crediting_balance()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var user = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01000000031");
+        var teacher = await SeedRechargeTeacherAsync(db, "01100000031");
+        var wallet = Wallet("01010000031");
+        var pending = PendingRequest(user, wallet, 200m, teacher.Id);
+        pending.SenderPhoneNumber = "01012345678";
+        pending.OriginalSenderPhoneNumber = pending.SenderPhoneNumber;
+        pending.ScreenshotUrl = "/proof.webp";
+        var sms = new IncomingSmsLog
+        {
+            WalletId = wallet.Id,
+            Wallet = wallet,
+            Sender = "VodafoneCash",
+            Body = "تم استلام مبلغ 200 ج.م",
+            ReceivedAt = DateTime.UtcNow,
+            ParsedAmount = 200m,
+            ParsedSenderPhone = "01012345699",
+            DeduplicationHash = Guid.NewGuid().ToString("N")
+        };
+        db.AddRange(wallet, pending, sms);
+        await db.SaveChangesAsync();
+
+        var matcher = new RechargeAutoMatchingService(
+            db,
+            new BalanceService(db, NullLogger<BalanceService>.Instance),
+            NullLogger<RechargeAutoMatchingService>.Instance);
+        var matched = await matcher.ReconcilePendingAsync(CancellationToken.None);
+
+        Assert.Equal(0, matched);
+        Assert.Equal(RechargeRequestStatus.Pending, pending.Status);
+        Assert.True(pending.RequiresSenderPhoneConfirmation);
+        Assert.False(sms.IsMatched);
+        Assert.Empty(await db.PromotionalBalanceAllocations.ToListAsync());
     }
 
     [Fact]

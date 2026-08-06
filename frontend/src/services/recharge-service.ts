@@ -10,6 +10,8 @@ export interface InitiateRechargeResponse {
 
 export interface SubmitRechargeResponse {
   isMatched: boolean;
+  requiresSenderPhoneConfirmation: boolean;
+  originalSenderPhoneNumber: string;
   message: string;
   reviewCode: string;
 }
@@ -21,6 +23,8 @@ export interface StudentRechargeRequestDto {
   teacherId?: string;
   teacherName?: string;
   senderPhoneNumber: string;
+  originalSenderPhoneNumber?: string;
+  requiresSenderPhoneConfirmation: boolean;
   walletLabel: string;
   walletPhoneNumber: string;
   status: number | string;
@@ -36,11 +40,17 @@ export const rechargeService = {
     return data;
   },
 
-  submit: async (rechargeRequestId: string, senderPhoneNumber: string, screenshot: File) => {
+  submit: async (
+    rechargeRequestId: string,
+    senderPhoneNumber: string,
+    screenshot?: File | null,
+    confirmSenderPhone = false,
+  ) => {
     const formData = new FormData();
     formData.append('rechargeRequestId', rechargeRequestId);
     formData.append('senderPhoneNumber', senderPhoneNumber);
-    formData.append('screenshot', screenshot);
+    formData.append('confirmSenderPhone', String(confirmSenderPhone));
+    if (screenshot) formData.append('screenshot', screenshot);
 
     const { data } = await apiClient.post<{ success: boolean; data: SubmitRechargeResponse; message: string }>('/student/recharge/submit', formData, {
       headers: {

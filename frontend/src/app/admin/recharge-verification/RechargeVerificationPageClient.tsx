@@ -312,9 +312,17 @@ export function RechargeVerificationWorkspace() {
       key: 'senderPhoneNumber',
       label: 'رقم المحول منه',
       render: (r) => (
-        <span dir="ltr" className="font-mono text-sm font-bold text-[var(--admin-text)]">
-          {r.senderPhoneNumber || 'غير مسجل'}
-        </span>
+        <div className="space-y-1">
+          <span dir="ltr" className="block font-mono text-sm font-bold text-[var(--admin-text)]">
+            {r.senderPhoneNumber || 'غير مسجل'}
+          </span>
+          {r.originalSenderPhoneNumber && r.originalSenderPhoneNumber !== r.senderPhoneNumber ? (
+            <span className="block text-[10px] font-bold text-[var(--admin-muted)]">أول رقم كتبه: <bdi className="font-mono">{r.originalSenderPhoneNumber}</bdi></span>
+          ) : null}
+          {r.requiresSenderPhoneConfirmation ? (
+            <span className="block rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-700">بانتظار تأكيد الرقم من الطالب</span>
+          ) : null}
+        </div>
       )
     },
     {

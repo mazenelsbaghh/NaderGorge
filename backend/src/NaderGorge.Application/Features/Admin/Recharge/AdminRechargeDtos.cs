@@ -16,6 +16,8 @@ public record AdminRechargeRequestDto
     public Guid? TeacherId { get; set; }
     public string? TeacherName { get; set; }
     public string SenderPhoneNumber { get; set; } = string.Empty;
+    public string? OriginalSenderPhoneNumber { get; set; }
+    public bool RequiresSenderPhoneConfirmation { get; set; }
     public string? ScreenshotUrl { get; set; }
     public RechargeRequestStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }

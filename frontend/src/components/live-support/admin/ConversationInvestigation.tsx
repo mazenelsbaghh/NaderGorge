@@ -71,7 +71,9 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
   }
 
   async function intervene(operation: 'close' | 'queue') {
-    const reason = window.prompt(operation === 'close' ? 'اكتب سبب إغلاق المحادثة' : 'اكتب سبب إعادتها للطابور');
+    const reason = operation === 'close'
+      ? 'إغلاق إداري مباشر'
+      : window.prompt('اكتب سبب إعادتها للطابور');
     if (!reason?.trim()) return;
     setIntervening(true); setError('');
     try { await liveSupportService.intervene(timeline.conversation.id, operation, reason.trim()); close(); }

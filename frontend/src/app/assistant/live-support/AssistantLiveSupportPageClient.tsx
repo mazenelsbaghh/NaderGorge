@@ -281,10 +281,8 @@ export default function AssistantLiveSupportPageClient() {
 
   async function close() {
     if (!selected || !acquireMutationLock(mutationInFlight)) return;
-    const reason = window.prompt('اكتب سبب إغلاق المحادثة');
-    if (!reason?.trim()) { releaseMutationLock(mutationInFlight); return; }
     setPendingAction('close');
-    try { await liveSupportService.closeConversation(selected.id, reason.trim()); setSelected(undefined); setMessages([]); await refresh(); }
+    try { await liveSupportService.closeConversation(selected.id); setSelected(undefined); setMessages([]); await refresh(); }
     catch (cause) { setError(getStaffMutationError(cause, 'تعذر إغلاق المحادثة. راجع الملكية وحاول مرة أخرى.')); }
     finally { releaseMutationLock(mutationInFlight); setPendingAction(null); }
   }

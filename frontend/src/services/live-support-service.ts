@@ -335,8 +335,8 @@ export const liveSupportService = {
   getStaffMessages: (conversationId: string, signal?: AbortSignal) =>
     apiClient.get<ApiResponse<LiveSupportMessage[]>>(`/live-support/staff/conversations/${conversationId}/messages`, { params: { pageSize: 100 }, signal }).then((response) => response.data.data),
 
-  closeConversation: async (conversationId: string, reason: string) => {
-    const response = await apiClient.post<ApiResponse<LiveSupportConversation>>(`/live-support/staff/conversations/${conversationId}/close`, { reason });
+  closeConversation: async (conversationId: string, reason?: string) => {
+    const response = await apiClient.post<ApiResponse<LiveSupportConversation>>(`/live-support/staff/conversations/${conversationId}/close`, { reason: reason?.trim() || null });
     invalidateSupport();
     return response.data.data;
   },

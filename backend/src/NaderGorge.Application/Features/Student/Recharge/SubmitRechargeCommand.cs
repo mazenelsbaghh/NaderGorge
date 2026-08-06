@@ -16,15 +16,19 @@ using NaderGorge.Domain.Interfaces;
 namespace NaderGorge.Application.Features.Student.Recharge;
 
 public record SubmitRechargeCommand(
+    Guid UserId,
     Guid RechargeRequestId,
     string SenderPhoneNumber,
     byte[] ScreenshotBytes,
     string ScreenshotFileName,
-    string? ScreenshotContentType) : IRequest<ApiResponse<SubmitRechargeDto>>;
+    string? ScreenshotContentType,
+    bool ConfirmSenderPhone = false) : IRequest<ApiResponse<SubmitRechargeDto>>;
 
 public class SubmitRechargeDto
 {
     public bool IsMatched { get; set; }
+    public bool RequiresSenderPhoneConfirmation { get; set; }
+    public string OriginalSenderPhoneNumber { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string ReviewCode { get; set; } = string.Empty;
 }
@@ -56,25 +60,26 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         if (!EgyptianMobileRegex.IsMatch(senderPhoneNumber))
             return ApiResponse<SubmitRechargeDto>.Fail("رقم الهاتف المحول منه يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015.");
 
-        if (request.ScreenshotBytes == null || request.ScreenshotBytes.Length == 0)
-            return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل مطلوبة");
-
-        try
+        var hasNewScreenshot = request.ScreenshotBytes is { Length: > 0 };
+        if (hasNewScreenshot)
         {
-            UploadFileSafety.Validate(
-                request.ScreenshotBytes,
-                request.ScreenshotFileName,
-                request.ScreenshotContentType,
-                SafeUploadKind.PublicImage);
-        }
-        catch (InvalidUploadContentException)
-        {
-            return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل يجب أن تكون صورة JPG أو PNG أو WEBP صالحة.");
+            try
+            {
+                UploadFileSafety.Validate(
+                    request.ScreenshotBytes,
+                    request.ScreenshotFileName,
+                    request.ScreenshotContentType,
+                    SafeUploadKind.PublicImage);
+            }
+            catch (InvalidUploadContentException)
+            {
+                return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل يجب أن تكون صورة JPG أو PNG أو WEBP صالحة.");
+            }
         }
 
         var rechargeRequest = await _db.RechargeRequests
             .Include(r => r.Wallet)
-            .FirstOrDefaultAsync(r => r.Id == request.RechargeRequestId, ct);
+            .FirstOrDefaultAsync(r => r.Id == request.RechargeRequestId && r.UserId == request.UserId, ct);
 
         if (rechargeRequest == null)
             return ApiResponse<SubmitRechargeDto>.Fail("طلب الشحن هذا غير موجود");
@@ -82,27 +87,38 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         if (rechargeRequest.Status != RechargeRequestStatus.Pending)
             return ApiResponse<SubmitRechargeDto>.Fail("تم معالجة هذا الطلب بالفعل مسبقاً");
 
+        if (!hasNewScreenshot && string.IsNullOrWhiteSpace(rechargeRequest.ScreenshotUrl))
+            return ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل مطلوبة");
+
         if (rechargeRequest.ReservationExpiresAt.HasValue && rechargeRequest.ReservationExpiresAt.Value < DateTime.UtcNow)
         {
             return ApiResponse<SubmitRechargeDto>.Fail("انتهت صلاحية حجز المعاملة (ساعة واحدة)، يرجى البدء بطلب جديد.");
         }
 
-        // Save screenshot as Webp
-        string screenshotUrl;
-        try
+        if (hasNewScreenshot)
         {
-            using var stream = new MemoryStream(request.ScreenshotBytes);
-            screenshotUrl = await _imageStorage.SaveAsWebpAsync(stream, "recharges", ct);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            return ApiResponse<SubmitRechargeDto>.Fail("فشل في حفظ الصورة. يرجى التأكد من أنها صورة صالحة.");
+            try
+            {
+                using var stream = new MemoryStream(request.ScreenshotBytes);
+                rechargeRequest.ScreenshotUrl = await _imageStorage.SaveAsWebpAsync(stream, "recharges", ct);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                return ApiResponse<SubmitRechargeDto>.Fail("فشل في حفظ الصورة. يرجى التأكد من أنها صورة صالحة.");
+            }
         }
 
-        // Update request details
+        rechargeRequest.OriginalSenderPhoneNumber ??= senderPhoneNumber;
+        var senderPhoneChanged = !string.Equals(
+            rechargeRequest.SenderPhoneNumber,
+            senderPhoneNumber,
+            StringComparison.Ordinal);
         rechargeRequest.SenderPhoneNumber = senderPhoneNumber;
-        rechargeRequest.ScreenshotUrl = screenshotUrl;
+        if (request.ConfirmSenderPhone)
+            rechargeRequest.SenderPhoneConfirmedAt = DateTime.UtcNow;
+        else if (senderPhoneChanged)
+            rechargeRequest.SenderPhoneConfirmedAt = null;
         rechargeRequest.ReservationExpiresAt = null; // Clear expiration since it is now submitted
 
         // 5. Try to find a matching, unmatched SMS that was already received
@@ -112,14 +128,19 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         var startTime = matchingAnchor.AddHours(-2);
         var endTime = matchingAnchor.AddHours(2);
 
-        var matchedSms = await _db.IncomingSmsLogs
-            .FirstOrDefaultAsync(l => 
+        var exactMatches = await _db.IncomingSmsLogs
+            .Where(l =>
                 l.WalletId == rechargeRequest.WalletId &&
                 l.ParsedAmount == rechargeRequest.Amount &&
                 l.ParsedSenderPhone == rechargeRequest.SenderPhoneNumber &&
                 !l.IsMatched &&
                 l.ReceivedAt >= startTime &&
-                l.ReceivedAt <= endTime, ct);
+                l.ReceivedAt <= endTime)
+            .OrderBy(l => l.ReceivedAt)
+            .Take(2)
+            .ToListAsync(ct);
+
+        var matchedSms = exactMatches.Count == 1 ? exactMatches[0] : null;
 
         bool isMatched = false;
         string message;
@@ -135,6 +156,7 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
                 rechargeRequest.Status = RechargeRequestStatus.Matched;
                 rechargeRequest.ResolvedAt = DateTime.UtcNow;
                 rechargeRequest.MatchedSmsLogId = matchedSms.Id;
+                rechargeRequest.RequiresSenderPhoneConfirmation = false;
 
                 // Update SMS log
                 matchedSms.IsMatched = true;
@@ -166,13 +188,34 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         }
         else
         {
+            var nearbyPhones = await _db.IncomingSmsLogs
+                .AsNoTracking()
+                .Where(l =>
+                    l.WalletId == rechargeRequest.WalletId &&
+                    l.ParsedAmount == rechargeRequest.Amount &&
+                    l.ParsedSenderPhone != null &&
+                    !l.IsMatched &&
+                    l.ReceivedAt >= startTime &&
+                    l.ReceivedAt <= endTime)
+                .Select(l => l.ParsedSenderPhone!)
+                .Take(50)
+                .ToListAsync(ct);
+
+            rechargeRequest.RequiresSenderPhoneConfirmation =
+                !request.ConfirmSenderPhone
+                && !rechargeRequest.SenderPhoneConfirmedAt.HasValue
+                && nearbyPhones.Any(phone => RechargePhoneSimilarity.RequiresConfirmation(senderPhoneNumber, phone));
             await _db.SaveChangesAsync(ct);
-            message = "تم تسجيل طلب الشحن وإثبات الدفع بنجاح. سيقوم النظام بمطابقتها تلقائياً عند وصول الرسالة، أو مراجعتها يدوياً من قبل الإدارة.";
+            message = rechargeRequest.RequiresSenderPhoneConfirmation
+                ? $"وجدنا تحويلًا قريبًا من الرقم الذي كتبته ({rechargeRequest.OriginalSenderPhoneNumber}). راجع رقم المحفظة المحول منها واكتبه مرة أخرى، أو أكد أن الرقم المكتوب صحيح."
+                : "تم تسجيل طلب الشحن وإثبات الدفع بنجاح. سيقوم النظام بمطابقتها تلقائياً عند وصول الرسالة، أو مراجعتها يدوياً من قبل الإدارة.";
         }
 
         var dto = new SubmitRechargeDto
         {
             IsMatched = isMatched,
+            RequiresSenderPhoneConfirmation = rechargeRequest.RequiresSenderPhoneConfirmation,
+            OriginalSenderPhoneNumber = rechargeRequest.OriginalSenderPhoneNumber ?? senderPhoneNumber,
             Message = message,
             ReviewCode = rechargeRequest.Id.ToString("N")[..8].ToUpperInvariant()
         };
@@ -184,6 +227,10 @@ public class SubmitRechargeCommandHandler : IRequestHandler<SubmitRechargeComman
         new((phone ?? string.Empty).Where(char.IsDigit).ToArray());
 
     private Task CreditRechargeAsync(RechargeRequest rechargeRequest, Guid issuedByUserId, string source, CancellationToken ct) =>
-        _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId!.Value, rechargeRequest.Amount,
-            $"شحن رصيد للمدرس - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", issuedByUserId, ct);
+        rechargeRequest.TeacherId.HasValue
+            ? _balanceService.AddTeacherCredit(rechargeRequest.UserId, rechargeRequest.TeacherId.Value, rechargeRequest.Amount,
+                $"شحن رصيد للمدرس - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})", issuedByUserId, ct)
+            : _balanceService.AddCredit(rechargeRequest.UserId, rechargeRequest.Amount,
+                $"شحن رصيد عام - مطابقة {source} (محفظة {rechargeRequest.Wallet.Label})",
+                rechargeRequest.Id, "RechargeCredit", ct);
 }

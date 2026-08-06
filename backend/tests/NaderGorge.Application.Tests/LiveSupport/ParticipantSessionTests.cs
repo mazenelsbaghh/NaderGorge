@@ -69,6 +69,23 @@ public sealed class ParticipantSessionTests
     }
 
     [Fact]
+    public async Task Staff_can_close_a_conversation_without_typing_a_reason()
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var staffId = await SeedEligibleStaffAsync(db);
+        var student = await TestAppDbContextFactory.SeedUserAsync(db, "Student", "01099999998");
+        var service = CreateService(db);
+        var participant = new LiveSupportParticipantIdentity(LiveSupportParticipantType.Student, student.Id, null);
+        var conversation = await service.CreateConversationAsync(participant, "إغلاق مباشر", null, CancellationToken.None);
+
+        var closed = await service.CloseAsync(staffId, false, conversation.Id, null, CancellationToken.None);
+        var stored = await db.LiveSupportConversations.SingleAsync(item => item.Id == conversation.Id);
+
+        Assert.Equal(LiveSupportConversationStatus.Closed, closed.Status);
+        Assert.Equal("أغلقها موظف الدعم", stored.CloseReason);
+    }
+
+    [Fact]
     public async Task ParticipantEndedConversation_OffersAndAcceptsRating()
     {
         await using var db = TestAppDbContextFactory.Create();

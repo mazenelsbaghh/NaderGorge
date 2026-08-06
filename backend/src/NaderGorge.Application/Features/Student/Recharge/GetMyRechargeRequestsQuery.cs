@@ -22,6 +22,8 @@ public class StudentRechargeRequestDto
     public Guid? TeacherId { get; set; }
     public string? TeacherName { get; set; }
     public string SenderPhoneNumber { get; set; } = string.Empty;
+    public string? OriginalSenderPhoneNumber { get; set; }
+    public bool RequiresSenderPhoneConfirmation { get; set; }
     public string WalletLabel { get; set; } = string.Empty;
     public string WalletPhoneNumber { get; set; } = string.Empty;
     public RechargeRequestStatus Status { get; set; }
@@ -59,6 +61,8 @@ public class GetMyRechargeRequestsQueryHandler : IRequestHandler<GetMyRechargeRe
                 TeacherId = r.TeacherId,
                 TeacherName = r.Teacher != null && r.Teacher.User != null ? r.Teacher.User.FullName : null,
                 SenderPhoneNumber = r.SenderPhoneNumber,
+                OriginalSenderPhoneNumber = r.OriginalSenderPhoneNumber,
+                RequiresSenderPhoneConfirmation = r.RequiresSenderPhoneConfirmation,
                 WalletLabel = r.Wallet.Label,
                 // Never keep advertising a wallet after an operator disables it.
                 WalletPhoneNumber = r.Wallet.IsActive ? r.Wallet.PhoneNumber : string.Empty,

@@ -17,6 +17,7 @@ public class SubmitRechargeProofValidationTests
         var response = await handler.Handle(
             new SubmitRechargeCommand(
                 Guid.NewGuid(),
+                Guid.NewGuid(),
                 "01012345678",
                 CreateWebpHeader(),
                 "proof.webp",
@@ -35,6 +36,7 @@ public class SubmitRechargeProofValidationTests
 
         var response = await handler.Handle(
             new SubmitRechargeCommand(
+                Guid.NewGuid(),
                 Guid.NewGuid(),
                 "01012345678",
                 CreateWebpHeader(),

@@ -55,39 +55,38 @@ public class StudentRechargeController : ControllerBase
     public async Task<IActionResult> SubmitRecharge(
         [FromForm] Guid rechargeRequestId,
         [FromForm] string senderPhoneNumber,
-        [FromForm] IFormFile screenshot,
+        [FromForm] IFormFile? screenshot,
+        [FromForm] bool confirmSenderPhone,
         CancellationToken ct)
     {
-        if (screenshot == null || screenshot.Length == 0)
-        {
-            return BadRequest(ApiResponse<SubmitRechargeDto>.Fail("صورة إثبات التحويل مطلوبة"));
-        }
-
-        if (screenshot.Length > 10 * 1024 * 1024)
+        if (screenshot is { Length: > 10 * 1024 * 1024 })
         {
             return BadRequest(ApiResponse<SubmitRechargeDto>.Fail("حجم الصورة يجب أن لا يتخطى 10 ميجا بايت"));
         }
 
         using var ms = new MemoryStream();
-        await screenshot.CopyToAsync(ms, ct);
+        if (screenshot is not null)
+            await screenshot.CopyToAsync(ms, ct);
         var screenshotBytes = ms.ToArray();
 
         _logger.LogInformation(
             "Recharge proof received: FileName={FileName}, ContentType={ContentType}, Length={Length}",
-            screenshot.FileName,
-            screenshot.ContentType,
+            screenshot?.FileName ?? "existing-proof",
+            screenshot?.ContentType ?? "existing-proof",
             screenshotBytes.Length);
 
         var result = await _mediator.Send(new SubmitRechargeCommand(
+            GetUserId(),
             rechargeRequestId,
             senderPhoneNumber,
             screenshotBytes,
-            screenshot.FileName,
-            screenshot.ContentType), ct);
+            screenshot?.FileName ?? string.Empty,
+            screenshot?.ContentType,
+            confirmSenderPhone), ct);
 
         if (!result.Success)
         {
-            _logger.LogWarning("Recharge proof rejected after validation: FileName={FileName}, ContentType={ContentType}", screenshot.FileName, screenshot.ContentType);
+            _logger.LogWarning("Recharge proof rejected after validation: FileName={FileName}, ContentType={ContentType}", screenshot?.FileName ?? "existing-proof", screenshot?.ContentType ?? "existing-proof");
             return BadRequest(result);
         }
 

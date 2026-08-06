@@ -65,6 +65,7 @@ export default function StudentRechargePageClient() {
   const [cancelRequestId, setCancelRequestId] = useState<string | null>(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [confirmationPhones, setConfirmationPhones] = useState<Record<string, string>>({});
   const [teachers, setTeachers] = useState<PublicTeacherDto[]>([]);
   const [teacherId, setTeacherId] = useState('');
 
@@ -80,7 +81,8 @@ export default function StudentRechargePageClient() {
   const [isMatched, setIsMatched] = useState(false);
   const [outcomeMessage, setOutcomeMessage] = useState('');
   const [reviewCode, setReviewCode] = useState('');
-  const [reviewState, setReviewState] = useState<'checking' | 'approved' | 'manual' | 'rejected'>('manual');
+  const [reviewState, setReviewState] = useState<'checking' | 'phone-confirmation' | 'approved' | 'manual' | 'rejected'>('manual');
+  const [originalSenderPhone, setOriginalSenderPhone] = useState('');
   const [reviewTimeLeft, setReviewTimeLeft] = useState(RECHARGE_REVIEW_WINDOW_SECONDS);
 
   const fetchRequests = async () => {
@@ -158,6 +160,15 @@ export default function StudentRechargePageClient() {
 
         setRequests(latestRequests);
         const currentRequest = latestRequests.find((request) => request.id === requestId);
+
+        if (currentRequest?.requiresSenderPhoneConfirmation) {
+          setIsMatched(false);
+          setReviewState('phone-confirmation');
+          setOriginalSenderPhone(currentRequest.originalSenderPhoneNumber || currentRequest.senderPhoneNumber);
+          setSenderPhone(currentRequest.senderPhoneNumber);
+          setOutcomeMessage('راجع رقم المحفظة المحول منها. يوجد تحويل قريب في 8 أرقام أو أكثر، ولن نضيف الرصيد قبل تأكيدك أو مراجعة الأدمن.');
+          return;
+        }
 
         if (currentRequest && isApprovedRechargeStatus(currentRequest.status)) {
           setIsMatched(true);
@@ -284,7 +295,7 @@ export default function StudentRechargePageClient() {
       const response = await rechargeService.submit(
         rechargeData.rechargeRequestId,
         normalizedSenderPhone,
-        screenshot
+        screenshot,
       );
 
       if (response.success && response.data) {
@@ -292,7 +303,12 @@ export default function StudentRechargePageClient() {
         setReviewCode(response.data.reviewCode);
         setStep(3);
         void fetchRequests();
-        if (response.data.isMatched) {
+        if (response.data.requiresSenderPhoneConfirmation) {
+          setReviewState('phone-confirmation');
+          setOriginalSenderPhone(response.data.originalSenderPhoneNumber || normalizedSenderPhone);
+          setOutcomeMessage(response.data.message);
+          toast('راجع رقم المحفظة المحول منها وأكده مرة أخرى.', { icon: '⚠️' });
+        } else if (response.data.isMatched) {
           setReviewState('approved');
           setOutcomeMessage(response.data.message || 'تمت الموافقة على الشحن وإضافة الرصيد لحسابك بنجاح.');
           refreshStudentBalance();
@@ -313,6 +329,62 @@ export default function StudentRechargePageClient() {
     }
   };
 
+  const confirmSenderPhone = async (requestId: string, value: string) => {
+    const normalizedSenderPhone = normalizePhoneInput(value);
+    if (!isValidEgyptianMobile(normalizedSenderPhone)) {
+      toast.error('رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 010 أو 011 أو 012 أو 015.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await rechargeService.submit(requestId, normalizedSenderPhone, null, true);
+      if (!response.success || !response.data) {
+        toast.error(response.message || 'تعذر تأكيد رقم المحول.');
+        return;
+      }
+
+      setSenderPhone(normalizedSenderPhone);
+      setIsMatched(response.data.isMatched);
+      setReviewCode(response.data.reviewCode);
+      setReviewState(response.data.isMatched ? 'approved' : 'checking');
+      setReviewTimeLeft(RECHARGE_REVIEW_WINDOW_SECONDS);
+      setOutcomeMessage(response.data.message);
+      await fetchRequests();
+      if (response.data.isMatched) {
+        refreshStudentBalance();
+        toast.success('تم تأكيد الرقم ومطابقة التحويل وإضافة الرصيد.');
+      } else {
+        toast.success('تم تأكيد الرقم، والطلب مستمر في المراجعة.');
+      }
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      toast.error(message ?? 'تعذر تأكيد رقم المحول.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelActiveRecharge = async () => {
+    if (!rechargeData || cancelling) return;
+    setCancelling(true);
+    try {
+      await rechargeService.cancel(rechargeData.rechargeRequestId, 'ألغاه الطالب قبل رفع إثبات التحويل');
+      toast.success('تم إلغاء الطلب، ويمكنك إنشاء طلب جديد الآن.');
+      setStep(1);
+      setRechargeData(null);
+      setSenderPhone('');
+      setScreenshot(null);
+      setScreenshotPreview(null);
+      await fetchRequests();
+    } catch (error: unknown) {
+      const message = (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+      toast.error(message ?? 'تعذر إلغاء الطلب.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const handleCopyNumber = (num: string) => {
     navigator.clipboard.writeText(num);
     toast.success('تم نسخ رقم المحفظة.');
@@ -325,6 +397,7 @@ export default function StudentRechargePageClient() {
   };
 
   const canSubmitProof = Boolean(screenshot) && isValidEgyptianMobile(normalizePhoneInput(senderPhone));
+  const hasPendingRequest = requests.some((request) => isPendingRechargeStatus(request.status));
 
   return (
     <div className="space-y-8 pb-10">
@@ -387,6 +460,12 @@ export default function StudentRechargePageClient() {
               <p className="text-sm font-semibold text-[var(--admin-muted)]">اختر المدرس أولًا، ثم أدخل القيمة التي تريد إضافتها إلى رصيدك لديه بالجنيه المصري.</p>
             </div>
 
+            {hasPendingRequest && (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+                لديك طلب شحن معلق بالفعل. ألغِه من قائمة طلباتك بالأسفل أو انتظر الموافقة أو الرفض قبل إنشاء طلب جديد.
+              </div>
+            )}
+
             <div className="space-y-4">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold text-[var(--admin-text)]">المبلغ المطلوب شحنه (ج.م) *</label>
@@ -437,7 +516,7 @@ export default function StudentRechargePageClient() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || hasPendingRequest}
               className="w-full flex items-center justify-center gap-2 rounded-xl bg-[var(--admin-primary)] py-3.5 text-base font-black text-[var(--admin-primary-contrast)] shadow-lg shadow-[var(--admin-primary-15)] hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
             >
               {loading ? (
@@ -562,16 +641,11 @@ export default function StudentRechargePageClient() {
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm('هل أنت متأكد من إلغاء هذه المعاملة والعودة؟')) {
-                    setStep(1);
-                    setRechargeData(null);
-                  }
-                }}
-                disabled={loading}
+                onClick={() => void cancelActiveRecharge()}
+                disabled={loading || cancelling}
                 className="w-full rounded-xl border border-[var(--admin-border)] bg-[var(--admin-card)] py-3 text-sm font-bold text-[var(--admin-muted)] hover:bg-[var(--admin-hover)] active:scale-95 transition-all disabled:opacity-50"
               >
-                إلغاء وتغيير القيمة
+                {cancelling ? 'جارٍ الإلغاء...' : 'إلغاء الطلب والعودة'}
               </button>
               <button
                 type="submit"
@@ -605,7 +679,7 @@ export default function StudentRechargePageClient() {
                 <div className="h-20 w-20 rounded-full bg-sky-500/10 flex items-center justify-center text-sky-500">
                   <Clock className="h-14 w-14 animate-spin" />
                 </div>
-              ) : reviewState === 'rejected' ? (
+              ) : reviewState === 'phone-confirmation' || reviewState === 'rejected' ? (
                 <div className="h-20 w-20 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
                   <Clock className="h-14 w-14" />
                 </div>
@@ -622,6 +696,8 @@ export default function StudentRechargePageClient() {
                   ? 'تمت الموافقة على الشحن!'
                   : reviewState === 'checking'
                     ? 'جاري التأكد من الشحن'
+                    : reviewState === 'phone-confirmation'
+                      ? 'أكد رقم المحفظة المحول منها'
                     : reviewState === 'rejected'
                       ? 'تم رفض طلب الشحن'
                       : 'الطلب تحت المراجعة'}
@@ -633,6 +709,19 @@ export default function StudentRechargePageClient() {
                 <div className="mx-auto flex max-w-sm flex-col gap-2 rounded-2xl border border-sky-500/20 bg-sky-500/10 p-3 text-sm font-bold text-sky-700 dark:text-sky-300">
                   <span>ننتظر وصول رسالة المحفظة ومطابقتها تلقائياً.</span>
                   <span className="font-mono text-lg font-black" dir="ltr">{formatTimer(reviewTimeLeft)}</span>
+                </div>
+              )}
+              {reviewState === 'phone-confirmation' && rechargeData && (
+                <div className="mx-auto max-w-sm space-y-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-right text-amber-950">
+                  <p className="text-sm font-black">الرقم الذي كتبته أول مرة:</p>
+                  <p className="rounded-xl bg-white px-3 py-2 text-center font-mono text-lg font-black" dir="ltr">{originalSenderPhone}</p>
+                  <label className="block text-sm font-bold">
+                    اكتب الرقم الصحيح أو اتركه كما هو لتأكيد أنه صحيح
+                    <input type="tel" inputMode="numeric" value={senderPhone} onChange={(event) => setSenderPhone(normalizePhoneInput(event.target.value))} className="mt-2 w-full rounded-xl border border-amber-300 bg-white px-4 py-3 text-center font-mono font-black" dir="ltr" />
+                  </label>
+                  <button type="button" disabled={loading || !isValidEgyptianMobile(senderPhone)} onClick={() => void confirmSenderPhone(rechargeData.rechargeRequestId, senderPhone)} className="w-full rounded-xl bg-amber-600 px-4 py-3 text-sm font-black text-white disabled:opacity-50">
+                    {loading ? 'جارٍ التأكيد...' : 'تأكيد الرقم وإعادة المطابقة'}
+                  </button>
                 </div>
               )}
               {reviewCode && (
@@ -693,6 +782,7 @@ export default function StudentRechargePageClient() {
                     <span>إلى: {request.walletLabel} <span className="font-mono">{request.walletPhoneNumber}</span></span>
                     <span>نوع الرصيد: {request.teacherName ? `للأستاذ ${request.teacherName}` : 'عام'}</span>
                     {request.rejectionReason ? <span className="text-rose-600">{request.status === 5 || request.status === 'Cancelled' ? 'سبب الإلغاء' : 'سبب الرفض'}: {request.rejectionReason}</span> : null}
+                    {request.requiresSenderPhoneConfirmation ? <div className="mt-2 space-y-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950"><p className="font-black">راجع رقم المحفظة المحول منها. الرقم المكتوب أول مرة: <span className="font-mono" dir="ltr">{request.originalSenderPhoneNumber || request.senderPhoneNumber}</span></p><input type="tel" inputMode="numeric" value={confirmationPhones[request.id] ?? request.senderPhoneNumber} onChange={(event) => setConfirmationPhones((current) => ({ ...current, [request.id]: normalizePhoneInput(event.target.value) }))} className="admin-input w-full text-center font-mono" dir="ltr" /><button type="button" disabled={loading} onClick={() => void confirmSenderPhone(request.id, confirmationPhones[request.id] ?? request.senderPhoneNumber)} className="rounded-lg bg-amber-600 px-3 py-2 font-black text-white disabled:opacity-50">تأكيد الرقم وإعادة المطابقة</button></div> : null}
                     {isPendingRechargeStatus(request.status) && cancelRequestId !== request.id ? <button type="button" onClick={() => { setCancelRequestId(request.id); setCancellationReason(''); }} className="mt-2 w-fit text-xs font-black text-rose-600 underline">إلغاء الطلب</button> : null}
                     {cancelRequestId === request.id ? <div className="mt-2 space-y-2 rounded-xl border border-rose-200 bg-rose-50 p-3"><label className="block font-black text-rose-700">سبب الإلغاء<textarea value={cancellationReason} onChange={(event) => setCancellationReason(event.target.value)} className="admin-input mt-1 min-h-20 w-full" maxLength={500} autoFocus /></label><div className="flex gap-2"><button type="button" disabled={cancelling} onClick={() => void cancelRechargeRequest()} className="rounded-lg bg-rose-600 px-3 py-2 font-black text-white">تأكيد الإلغاء</button><button type="button" disabled={cancelling} onClick={() => { setCancelRequestId(null); setCancellationReason(''); }} className="rounded-lg border px-3 py-2 font-black">رجوع</button></div></div> : null}
                   </div>

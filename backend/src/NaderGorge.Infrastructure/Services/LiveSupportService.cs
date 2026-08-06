@@ -456,10 +456,11 @@ public sealed class LiveSupportService(
         return await DeleteMessageAsync(message, staffUserId, null, ct);
     }
 
-    public async Task<LiveSupportConversationDto> CloseAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string reason, CancellationToken ct)
+    public async Task<LiveSupportConversationDto> CloseAsync(Guid staffUserId, bool isAdmin, Guid conversationId, string? reason, CancellationToken ct)
     {
         var conversation = await RequireStaffConversationAsync(staffUserId, isAdmin, conversationId, ct);
-        await FinishConversationAsync(conversation, staffUserId, LiveSupportConversationStatus.Closed, reason, LiveSupportAssignmentEndReason.Closed, ct);
+        var closeReason = string.IsNullOrWhiteSpace(reason) ? "أغلقها موظف الدعم" : reason.Trim();
+        await FinishConversationAsync(conversation, staffUserId, LiveSupportConversationStatus.Closed, closeReason, LiveSupportAssignmentEndReason.Closed, ct);
         return await MapAsync(conversation, ct);
     }
 

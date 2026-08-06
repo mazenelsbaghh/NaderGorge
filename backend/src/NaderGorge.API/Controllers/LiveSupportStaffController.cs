@@ -186,7 +186,7 @@ public sealed class LiveSupportStaffController(ILiveSupportService service, ILiv
 
 public sealed record UpdateStaffCannedRepliesRequest(IReadOnlyList<LiveSupportCannedReplyDto> Replies);
 
-public sealed record CloseConversationRequest(string Reason);
+public sealed record CloseConversationRequest(string? Reason = null);
 public sealed record TransferConversationRequest(Guid? TargetStaffUserId, string Reason);
 public sealed record ChangeStudentLinkRequest(Guid? StudentUserId, string Reason, long ExpectedVersion);
 public sealed record ExecuteLiveSupportActionRequest(string ConfirmationVersion, System.Text.Json.JsonElement Payload);
