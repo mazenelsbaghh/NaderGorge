@@ -21,7 +21,9 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
   const [error, setError] = useState('');
   const [eventFilter, setEventFilter] = useState('all');
   const [intervening, setIntervening] = useState(false);
+  const [participantDraft, setParticipantDraft] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const typingClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesAbort = useRef<AbortController | null>(null);
   const canSend = timeline.conversation.status !== 'Closed' && timeline.conversation.status !== 'Abandoned';
 
@@ -40,12 +42,18 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
     }
   }, [timeline.conversation.id]);
 
-  useLiveSupportHub(timeline.conversation.id, () => void refreshMessages());
+  const showParticipantDraft = useCallback((preview: string | null) => {
+    setParticipantDraft(preview);
+    if (typingClearTimer.current) clearTimeout(typingClearTimer.current);
+    typingClearTimer.current = setTimeout(() => setParticipantDraft(null), 2_000);
+  }, []);
+
+  useLiveSupportHub(timeline.conversation.id, () => void refreshMessages(), showParticipantDraft);
 
   useEffect(() => {
     setLoading(true);
     void refreshMessages();
-    return () => messagesAbort.current?.abort();
+    return () => { messagesAbort.current?.abort(); if (typingClearTimer.current) clearTimeout(typingClearTimer.current); };
   }, [refreshMessages]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [messages]);
@@ -112,6 +120,7 @@ export function ConversationInvestigation({ timeline, close }: { timeline: LiveS
                   </div>
                 </article>;
               })}
+              {participantDraft !== null ? <article className="ml-auto max-w-[82%] rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-950"><p className="mb-1 text-xs font-bold text-cyan-700">الطالب يكتب الآن…</p><p className="whitespace-pre-wrap break-words">{participantDraft || '…'}</p></article> : null}
               <div ref={endRef} />
             </div>
             <form onSubmit={sendMessage} className="border-t border-[var(--admin-border)] bg-[var(--admin-card)] p-4">

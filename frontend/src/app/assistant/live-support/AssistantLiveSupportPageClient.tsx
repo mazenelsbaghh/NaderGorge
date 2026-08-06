@@ -156,7 +156,7 @@ export default function AssistantLiveSupportPageClient() {
       setNeedsStaffActivation(message.includes('يستقبل محادثات') || message.includes('غير مفعّل للدعم'));
     }
   }, [alertForIncomingConversation, loadMessages, selectConversation, selectedId, selectedOwnerUserId, setOwnershipLost]);
-  const connected = useLiveSupportHub(selected?.id, () => void refresh());
+  const { connected } = useLiveSupportHub(selected?.id, () => void refresh());
 
   useEffect(() => {
     void refresh();

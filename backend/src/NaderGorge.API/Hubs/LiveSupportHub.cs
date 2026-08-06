@@ -67,6 +67,7 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
             {
                 await service.GetStaffMessagesAsync(staffId, Context.User!.IsInRole("Admin"), conversationId, 1, Context.ConnectionAborted);
                 await service.AcknowledgeParticipantMessagesAsync(conversationId, Context.ConnectionAborted);
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"LiveSupport:ConversationStaff:{conversationId:N}", Context.ConnectionAborted);
             }
             else if (await ParticipantAsync() is { } participant)
             {
@@ -86,13 +87,19 @@ public sealed class LiveSupportHub(ILiveSupportService service, ILiveSupportPres
 
     public Task LeaveConversation(Guid conversationId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, $"LiveSupport:Conversation:{conversationId:N}");
 
-    public async Task Typing(Guid conversationId)
+    public async Task Typing(Guid conversationId, string? draft = null)
     {
         var key = $"{Context.ConnectionId}:{conversationId:N}";
         var now = DateTime.UtcNow;
         if (TypingWindows.TryGetValue(key, out var prior) && now - prior < TimeSpan.FromMilliseconds(750)) throw new HubException("RATE_LIMITED");
         TypingWindows[key] = now;
         await JoinConversation(conversationId);
+        if (StaffUserId is null)
+        {
+            var preview = string.IsNullOrWhiteSpace(draft) ? null : draft.Trim()[..Math.Min(draft.Trim().Length, 500)];
+            await Clients.Group($"LiveSupport:ConversationStaff:{conversationId:N}").SendAsync("ParticipantTypingChanged", new { conversationId, isTyping = true, preview }, Context.ConnectionAborted);
+            return;
+        }
         await Clients.OthersInGroup($"LiveSupport:Conversation:{conversationId:N}").SendAsync("TypingChanged", new { conversationId, isTyping = true }, Context.ConnectionAborted);
     }
 

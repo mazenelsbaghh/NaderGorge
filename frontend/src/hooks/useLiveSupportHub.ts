@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as signalR from '@microsoft/signalr';
 import { getBackendHubUrl } from '@/lib/backend-url';
 import { getAccessToken } from '@/lib/auth-memory';
@@ -10,13 +10,16 @@ import { decideLiveSupportSequence, parseLiveSupportEnvelope, type LiveSupportCl
 
 export type LiveSupportEnvelope = LiveSupportClientEnvelope;
 
-export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: () => void) {
+export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: () => void, onParticipantTypingChanged?: (preview: string | null) => void) {
   const [connected, setConnected] = useState(false);
   const markEventProcessed = useLiveSupportStore((state) => state.markEventProcessed);
   const recordSequence = useLiveSupportStore((state) => state.recordSequence);
   const setOwnershipLost = useLiveSupportStore((state) => state.setOwnershipLost);
   const snapshotCallback = useRef(onSnapshotRequired);
+  const participantTypingCallback = useRef(onParticipantTypingChanged);
+  const connectionRef = useRef<signalR.HubConnection | null>(null);
   useEffect(() => { snapshotCallback.current = onSnapshotRequired; }, [onSnapshotRequired]);
+  useEffect(() => { participantTypingCallback.current = onParticipantTypingChanged; }, [onParticipantTypingChanged]);
   useEffect(() => {
     const connection = new signalR.HubConnectionBuilder()
       .configureLogging(signalR.LogLevel.None)
@@ -27,6 +30,7 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .build();
+    connectionRef.current = connection;
     let disposed = false;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
     const join = async () => { if (conversationId && connection.state === signalR.HubConnectionState.Connected) await connection.invoke('JoinConversation', conversationId); };
@@ -57,6 +61,9 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       if (event.conversationId) snapshotCallback.current?.();
     };
     connection.on('LiveSupportEvent', durableEvent);
+    connection.on('ParticipantTypingChanged', (event: { conversationId: string; preview?: string | null }) => {
+      if (event.conversationId === conversationId) participantTypingCallback.current?.(event.preview ?? null);
+    });
     connection.onreconnected(() => {
       setConnected(true);
       recordRealtimeMetric('reconnect');
@@ -92,6 +99,8 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       disposed = true;
       if (heartbeat) clearInterval(heartbeat);
       connection.off('LiveSupportEvent', durableEvent);
+      connection.off('ParticipantTypingChanged');
+      connectionRef.current = null;
       void startPromise.finally(async () => {
         if (connection.state === signalR.HubConnectionState.Connected && conversationId) {
           await connection.invoke('LeaveConversation', conversationId).catch(() => undefined);
@@ -102,7 +111,11 @@ export function useLiveSupportHub(conversationId?: string, onSnapshotRequired?: 
       });
     };
   }, [conversationId, markEventProcessed, recordSequence, setOwnershipLost]);
-  return connected;
+  const sendTyping = useCallback((draft: string) => {
+    if (!conversationId || !draft.trim() || connectionRef.current?.state !== signalR.HubConnectionState.Connected) return;
+    void connectionRef.current.invoke('Typing', conversationId, draft).catch(() => undefined);
+  }, [conversationId]);
+  return { connected, sendTyping };
 }
 
 export function parseLiveSupportEvent(raw: string | LiveSupportEnvelope): LiveSupportEnvelope | undefined {
