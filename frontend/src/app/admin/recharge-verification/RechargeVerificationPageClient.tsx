@@ -367,37 +367,30 @@ export function RechargeVerificationWorkspace() {
     {
       key: 'senderPhoneNumber',
       label: 'رقم المحول منه',
+      render: (r) => (
+        <div className="min-w-36 space-y-1.5">
+          <span dir="ltr" className="block font-mono text-sm font-bold text-[var(--admin-text)]">
+            {r.senderPhoneNumber || 'غير مسجل'}
+          </span>
+          {r.originalSenderPhoneNumber && r.originalSenderPhoneNumber !== r.senderPhoneNumber ? (
+            <span className="block text-[10px] font-bold text-[var(--admin-muted)]">أول رقم كتبه: <bdi className="font-mono">{r.originalSenderPhoneNumber}</bdi></span>
+          ) : null}
+          {r.requiresSenderPhoneConfirmation ? (
+            <span className="block max-w-44 rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-700">بانتظار تأكيد الرقم من الطالب</span>
+          ) : null}
+        </div>
+      )
+    },
+    {
+      key: 'suspectedSenderPhone',
+      label: 'رقم مشتبه فيه',
       render: (r) => {
         const suspectedPhone = suspectedSenderPhones.get(r.id);
+        if (!suspectedPhone) return <span className="block min-w-28 text-center text-lg font-bold text-[var(--admin-muted)]">—</span>;
         return (
-          <div className="min-w-36 space-y-1.5">
-            <span dir="ltr" className="block font-mono text-sm font-bold text-[var(--admin-text)]">
-              {r.senderPhoneNumber || 'غير مسجل'}
-            </span>
-            {suspectedPhone ? (
-              <div className="w-fit max-w-44 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-start">
-                <span className="block text-[10px] font-black text-amber-800 dark:text-amber-300">رقم مشتبه فيه</span>
-                <bdi dir="ltr" className="block font-mono text-xs font-black text-[var(--admin-text)]">
-                  {suspectedPhone.phoneNumber}
-                </bdi>
-                <span className="block text-[9px] font-bold text-amber-700 dark:text-amber-400">
-                  {suspectedPhone.matchingDigits} أرقام متطابقة بالترتيب
-                </span>
-                {suspectedPhone.sameWallet || suspectedPhone.sameAmount ? (
-                  <span className="block text-[9px] font-bold text-amber-700 dark:text-amber-400">
-                    {suspectedPhone.sameWallet && suspectedPhone.sameAmount
-                      ? 'نفس المحفظة والمبلغ'
-                      : suspectedPhone.sameWallet ? 'نفس المحفظة' : 'نفس المبلغ'}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-            {r.originalSenderPhoneNumber && r.originalSenderPhoneNumber !== r.senderPhoneNumber ? (
-              <span className="block text-[10px] font-bold text-[var(--admin-muted)]">أول رقم كتبه: <bdi className="font-mono">{r.originalSenderPhoneNumber}</bdi></span>
-            ) : null}
-            {r.requiresSenderPhoneConfirmation ? (
-              <span className="block max-w-44 rounded-lg bg-amber-500/10 px-2 py-1 text-[10px] font-black text-amber-700">بانتظار تأكيد الرقم من الطالب</span>
-            ) : null}
+          <div className="w-fit min-w-36 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-start">
+            <bdi dir="ltr" className="block font-mono text-sm font-black text-[var(--admin-text)]">{suspectedPhone.phoneNumber}</bdi>
+            <span className="block text-[9px] font-bold text-amber-700 dark:text-amber-400">{suspectedPhone.matchingDigits} أرقام متطابقة بالترتيب</span>
           </div>
         );
       }
