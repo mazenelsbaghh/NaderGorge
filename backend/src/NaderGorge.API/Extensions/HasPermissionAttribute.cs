@@ -8,6 +8,7 @@ using System.Security.Claims;
 using NaderGorge.Domain.Entities;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Application.Common.HR;
+using NaderGorge.Application.Common.Configuration;
 
 namespace NaderGorge.API.Extensions;
 
@@ -58,6 +59,12 @@ public class PermissionFilter : IAsyncAuthorizationFilter
 
         // Check for specific permission claim
         var hasPermission = user.Claims.Any(c => c.Type == "permission" && c.Value.Equals(_permission, StringComparison.OrdinalIgnoreCase));
+        if (!hasPermission &&
+            PlatformFinancePermissions.All.Contains(_permission, StringComparer.OrdinalIgnoreCase) &&
+            user.Claims.Any(c => c.Type == "permission" && c.Value.Equals("finance.manage", StringComparison.OrdinalIgnoreCase)))
+        {
+            hasPermission = true;
+        }
         if (!hasPermission)
         {
             if (_permission.Equals("gifts.manage", StringComparison.OrdinalIgnoreCase))

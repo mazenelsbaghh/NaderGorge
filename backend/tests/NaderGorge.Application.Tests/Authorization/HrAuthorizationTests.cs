@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using NaderGorge.API.Extensions;
 using NaderGorge.Application.Common.HR;
+using NaderGorge.Application.Common.Configuration;
 using NaderGorge.Domain.Entities;
 
 namespace NaderGorge.Application.Tests.Authorization;
@@ -67,6 +68,34 @@ public sealed class HrAuthorizationTests
         };
         var actionContext = new ActionContext(http, new RouteData(), new ActionDescriptor());
         var context = new AuthorizationFilterContext(actionContext, []);
+
+        await new PermissionFilter(requestedPermission, db).OnAuthorizationAsync(context);
+
+        Assert.Equal(allowed, context.Result is null);
+        if (!allowed) Assert.IsType<ForbidResult>(context.Result);
+    }
+
+    [Theory]
+    [InlineData(PlatformFinancePermissions.DashboardView, true)]
+    [InlineData(PlatformFinancePermissions.HistoricalMigration, true)]
+    [InlineData(HrPermissions.PayrollReview, false)]
+    public async Task HttpPermissionFilter_TreatsLegacyFinanceManageAsPlatformFinanceUmbrellaOnly(
+        string requestedPermission,
+        bool allowed)
+    {
+        await using var db = TestAppDbContextFactory.Create();
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+            new Claim("permission", "finance.manage")
+        };
+        var http = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "test"))
+        };
+        var context = new AuthorizationFilterContext(
+            new ActionContext(http, new RouteData(), new ActionDescriptor()),
+            []);
 
         await new PermissionFilter(requestedPermission, db).OnAuthorizationAsync(context);
 
