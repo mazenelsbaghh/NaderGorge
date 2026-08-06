@@ -33,7 +33,13 @@ type RechargeStatusValue = AdminRechargeRequestDto['status'];
 type RechargeStatusFilter = 0 | 1 | 2 | 3 | 4 | 5 | 'all';
 type UnmatchedSmsAmountGroup = { key: string; amount?: number; items: AdminIncomingSmsLogDto[] };
 type UnmatchedSmsWalletGroup = { id: string; label: string; phoneNumber: string; amountGroups: UnmatchedSmsAmountGroup[] };
-type SuspectedSenderPhone = { phoneNumber: string; matchingDigits: number; receivedAt: string };
+type SuspectedSenderPhone = {
+  phoneNumber: string;
+  matchingDigits: number;
+  receivedAt: string;
+  sameWallet: boolean;
+  sameAmount: boolean;
+};
 
 const SUSPECTED_PHONE_MINIMUM_DIGITS = 8;
 
@@ -87,16 +93,18 @@ const findSuspectedSenderPhone = (
   request: AdminRechargeRequestDto,
   smsLogs: AdminIncomingSmsLogDto[]
 ): SuspectedSenderPhone | undefined => smsLogs
-  .filter((sms) => sms.walletId === request.walletId
-    && sms.parsedAmount === request.amount
-    && sms.parsedSenderPhone)
+  .filter((sms) => sms.parsedSenderPhone)
   .map((sms) => ({
     phoneNumber: sms.parsedSenderPhone!,
     matchingDigits: getLongestMatchingDigitSequence(request.senderPhoneNumber, sms.parsedSenderPhone),
     receivedAt: sms.receivedAt,
+    sameWallet: sms.walletId === request.walletId,
+    sameAmount: sms.parsedAmount === request.amount,
   }))
   .filter((candidate) => candidate.matchingDigits >= SUSPECTED_PHONE_MINIMUM_DIGITS)
   .sort((left, right) => right.matchingDigits - left.matchingDigits
+    || Number(right.sameWallet) - Number(left.sameWallet)
+    || Number(right.sameAmount) - Number(left.sameAmount)
     || new Date(right.receivedAt).getTime() - new Date(left.receivedAt).getTime())[0];
 
 const resolveAssetUrl = (url?: string | null) => {
@@ -375,6 +383,13 @@ export function RechargeVerificationWorkspace() {
                 <span className="block text-[9px] font-bold text-amber-700 dark:text-amber-400">
                   {suspectedPhone.matchingDigits} أرقام متطابقة بالترتيب
                 </span>
+                {suspectedPhone.sameWallet || suspectedPhone.sameAmount ? (
+                  <span className="block text-[9px] font-bold text-amber-700 dark:text-amber-400">
+                    {suspectedPhone.sameWallet && suspectedPhone.sameAmount
+                      ? 'نفس المحفظة والمبلغ'
+                      : suspectedPhone.sameWallet ? 'نفس المحفظة' : 'نفس المبلغ'}
+                  </span>
+                ) : null}
               </div>
             ) : null}
             {r.originalSenderPhoneNumber && r.originalSenderPhoneNumber !== r.senderPhoneNumber ? (
