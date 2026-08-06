@@ -19,6 +19,7 @@ from pathlib import Path, PurePosixPath
 
 BASE = Path("/opt/massar/releases")
 INCOMING = Path("/tmp")
+CURRENT = Path("/opt/massar/current")
 CLUSTER_MARKER = Path("/etc/massar/cluster-id")
 LOCK_FILE = Path("/run/massar-install-immutable-release.lock")
 OPERATOR = "massar-ops"
@@ -353,6 +354,26 @@ def publish_final_manifest(
     }
 
 
+def remove_inactive_release(release_id: str) -> dict[str, object]:
+    validate_identity(release_id)
+    release_root = BASE / release_id
+    with lock():
+        if CURRENT.resolve(strict=True) == release_root:
+            raise ReleaseInstallError("active release cannot be removed")
+        info = os.lstat(release_root)
+        if stat.S_ISLNK(info.st_mode) or not stat.S_ISDIR(info.st_mode):
+            raise ReleaseInstallError("release root is not a real directory")
+        if info.st_uid not in (0, operator_uid()) or info.st_mode & 0o022:
+            raise ReleaseInstallError("release root ownership or mode is unsafe")
+        shutil.rmtree(release_root)
+        directory_fd = os.open(BASE, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    return {"schemaVersion": 1, "status": "removed", "releaseId": release_id}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -363,14 +384,18 @@ def main(argv: list[str] | None = None) -> int:
     publish = commands.add_parser("publish-final-manifest")
     publish.add_argument("release")
     publish.add_argument("manifest_sha256")
+    remove = commands.add_parser("remove-inactive-release")
+    remove.add_argument("release")
     args = parser.parse_args(argv)
     try:
         if args.command == "install-release":
             result = install_release(
                 args.release, args.bundle_sha256, args.manifest_sha256
             )
-        else:
+        elif args.command == "publish-final-manifest":
             result = publish_final_manifest(args.release, args.manifest_sha256)
+        else:
+            result = remove_inactive_release(args.release)
         print(json.dumps(result, separators=(",", ":")))
         return 0
     except (ReleaseInstallError, OSError, ValueError, tarfile.TarError) as exc:

@@ -63,8 +63,13 @@ def release_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
     marker.write_text("massar-production\n")
     incoming = tmp_path / "incoming"
     incoming.mkdir()
+    active = base / ("src-" + "b" * 40)
+    active.mkdir()
+    current = tmp_path / "opt/massar/current"
+    current.symlink_to(active)
     monkeypatch.setattr(installer, "BASE", base)
     monkeypatch.setattr(installer, "INCOMING", incoming)
+    monkeypatch.setattr(installer, "CURRENT", current)
     monkeypatch.setattr(installer, "CLUSTER_MARKER", marker)
     monkeypatch.setattr(installer, "LOCK_FILE", tmp_path / "run/install.lock")
     monkeypatch.setattr(installer.os, "geteuid", lambda: 0)
@@ -196,6 +201,20 @@ def test_final_manifest_only_transitions_from_bound_initial_manifest(
     (installer.BASE / RELEASE / "manifest.json").write_bytes(b"tampered")
     with pytest.raises(installer.ReleaseInstallError, match="neither initial"):
         installer.publish_final_manifest(RELEASE, sha256(final))
+
+
+def test_remove_inactive_release_is_bounded_and_refuses_current(
+    release_environment: Path,
+) -> None:
+    release_root = installer.BASE / RELEASE
+    release_root.mkdir()
+
+    assert installer.remove_inactive_release(RELEASE)["status"] == "removed"
+    assert not release_root.exists()
+
+    active_release = installer.CURRENT.resolve(strict=True)
+    with pytest.raises(installer.ReleaseInstallError, match="active release"):
+        installer.remove_inactive_release(active_release.name)
 
 
 def test_release_workflow_uses_narrow_helper_without_broad_root_file_commands() -> None:
