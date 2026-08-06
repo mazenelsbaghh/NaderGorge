@@ -504,7 +504,7 @@ function TermCatalogCard({ term, index, isPackageOwned, onExplore, onPurchase }:
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <span className="font-black text-[var(--admin-primary)]">{term.price && term.price > 0 ? `${term.price} ج.م` : "مجانًا"}</span>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={onExplore} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-[var(--admin-border)] px-3 text-sm font-black text-[var(--admin-text)] transition hover:bg-[var(--admin-card-soft)]">
+          <button type="button" onClick={onExplore} className="relative z-10 inline-flex min-h-10 cursor-pointer touch-manipulation items-center gap-1 rounded-xl border border-sky-500/50 bg-sky-50 px-3 text-sm font-black text-sky-800 shadow-sm transition hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.98] dark:bg-sky-950/40 dark:text-sky-200">
             الأقسام
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -535,7 +535,7 @@ function SectionCatalogCard({ section, index, isParentOwned, onExplore, onPurcha
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <span className="font-black text-[var(--admin-primary)]">{section.price && section.price > 0 ? `${section.price} ج.م` : "مجانًا"}</span>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={onExplore} className="inline-flex min-h-10 items-center gap-1 rounded-xl border border-[var(--admin-border)] px-3 text-sm font-black text-[var(--admin-text)] transition hover:bg-[var(--admin-card-soft)]">
+          <button type="button" onClick={onExplore} className="relative z-10 inline-flex min-h-10 cursor-pointer touch-manipulation items-center gap-1 rounded-xl border border-sky-500/50 bg-sky-50 px-3 text-sm font-black text-sky-800 shadow-sm transition hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 active:scale-[0.98] dark:bg-sky-950/40 dark:text-sky-200">
             الحصص
             <ChevronLeft className="h-4 w-4" />
           </button>
