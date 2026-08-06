@@ -113,7 +113,14 @@ export function StudentActionsPanel({
     setDraftLoading(true);
     if (hasStudent && !studentContext) void loadStudentContext();
     try {
-      const draft = await liveSupportService.getActionDraft(conversationId, action.key);
+      const [freshCatalog, draft] = await Promise.all([
+        liveSupportService.getActionCatalog(conversationId),
+        liveSupportService.getActionDraft(conversationId, action.key),
+      ]);
+      const freshAction = freshCatalog.find((item) => item.key === action.key);
+      if (!freshAction) throw new Error('ACTION_NOT_AVAILABLE');
+      setCatalog(freshCatalog);
+      setSelected(freshAction);
       setValues(Object.fromEntries((studentActionFields[action.key] ?? []).map((field) => [
         field.key,
         draft[field.key] === null || draft[field.key] === undefined
@@ -178,6 +185,22 @@ export function StudentActionsPanel({
       setConfirming(false);
       onCompleted();
     } catch (cause) {
+      const errors = (cause as { response?: { data?: { errors?: string[] } } }).response?.data?.errors;
+      if (errors?.includes('CONFIRMATION_STALE')) {
+        try {
+          const freshCatalog = await liveSupportService.getActionCatalog(conversationId);
+          const freshAction = freshCatalog.find((item) => item.key === selected.key);
+          if (freshAction) {
+            setCatalog(freshCatalog);
+            setSelected(freshAction);
+            setConfirming(false);
+            setResult('تم تحديث بيانات التأكيد. راجع القيم ثم أكد التنفيذ مرة أخرى.');
+            return;
+          }
+        } catch {
+          // The original server error remains more useful than replacing it with a refresh failure.
+        }
+      }
       setResult(
         (cause as { response?: { data?: { message?: string } } }).response?.data
           ?.message ?? 'تعذر تنفيذ الإجراء.'
