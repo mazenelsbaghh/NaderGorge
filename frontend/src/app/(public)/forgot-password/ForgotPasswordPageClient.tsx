@@ -53,6 +53,11 @@ export default function ForgotPasswordPageClient() {
   const selectStyle = { backgroundColor: 'var(--admin-card-soft)', color: 'var(--admin-text)' };
   const optionStyle = { background: 'var(--admin-bg)', color: 'var(--admin-text)' };
 
+  const formattedDateOfBirth = useMemo(() => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth);
+    return match ? `${match[3]} / ${match[2]} / ${match[1]}` : '';
+  }, [dateOfBirth]);
+
   // Load districts dynamically when governorate changes
   const districts = useMemo(() => {
     return governorate ? getDistrictsForGovernorate(governorate) : [];
@@ -233,10 +238,13 @@ export default function ForgotPasswordPageClient() {
                   <input
                     id="reset-dob"
                     type="date"
+                    lang="en-GB"
+                    dir="ltr"
                     required
-                    className="auth-input"
+                    className="auth-input auth-date-input"
                     value={dateOfBirth}
                     onChange={(e) => setDateOfBirth(e.target.value)}
+                    min="1900-01-01"
                     style={{ 
                       paddingRight: '2.75rem',
                       colorScheme: isDark ? 'dark' : 'light'
@@ -246,6 +254,14 @@ export default function ForgotPasswordPageClient() {
                     <Calendar size={15} />
                   </span>
                 </div>
+                {formattedDateOfBirth && (
+                  <p className="mt-2 text-xs font-medium text-[var(--admin-muted)]">
+                    التاريخ المختار:{' '}
+                    <bdi dir="ltr" className="font-bold text-[var(--admin-text)]">
+                      {formattedDateOfBirth}
+                    </bdi>
+                  </p>
+                )}
               </div>
 
               {/* ── Governorate Dropdown ── */}

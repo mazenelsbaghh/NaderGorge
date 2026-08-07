@@ -305,6 +305,19 @@
   opacity: 0.6;
 }
 
+/* Keep native date segments stable inside Arabic/RTL pages on Android Chromium. */
+.auth-date-input {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate;
+}
+
+.auth-date-input::-webkit-datetime-edit,
+.auth-date-input::-webkit-datetime-edit-fields-wrapper {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 .auth-input:focus {
   box-shadow: 0 0 0 2px
     color-mix(in srgb, var(--admin-primary) 40%, transparent);
