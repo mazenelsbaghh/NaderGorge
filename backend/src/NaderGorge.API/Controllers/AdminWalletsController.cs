@@ -84,6 +84,16 @@ public class AdminWalletsController : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpGet("sms-logs")]
+    public async Task<IActionResult> GetSmsLogs(
+        [FromQuery] string? search,
+        [FromQuery] bool? isMatched,
+        [FromQuery] Guid? walletId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
+        => Ok(await _mediator.Send(new GetWalletSmsLogsQuery(search, isMatched, walletId, page, pageSize), ct));
+
     [HttpPost("recharge-requests/{id:guid}/resolve")]
     public async Task<IActionResult> ResolveRechargeRequest([FromRoute] Guid id, [FromBody] ResolveRechargeRequestDto dto, CancellationToken ct)
     {

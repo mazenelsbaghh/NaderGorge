@@ -42,5 +42,9 @@ public record AdminIncomingSmsLogDto
     public string? ParsedSenderPhone { get; set; }
     public bool IsMatched { get; set; }
     public Guid? MatchedRechargeRequestId { get; set; }
+    public string? MatchedStudentName { get; set; }
+    public string? MatchedStudentPhoneNumber { get; set; }
     public string DeduplicationHash { get; set; } = string.Empty;
 }
+
+public record AdminIncomingSmsLogPageDto(IReadOnlyList<AdminIncomingSmsLogDto> Items, int TotalCount, int Page, int PageSize);

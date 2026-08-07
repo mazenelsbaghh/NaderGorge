@@ -70,6 +70,8 @@ export interface AdminIncomingSmsLogDto {
   parsedSenderPhone?: string;
   isMatched: boolean;
   matchedRechargeRequestId?: string;
+  matchedStudentName?: string;
+  matchedStudentPhoneNumber?: string;
   deduplicationHash: string;
 }
 
@@ -110,6 +112,11 @@ export const walletService = {
   getUnmatchedSms: async () => {
     const { data } = await apiClient.get<{ success: boolean; data: AdminIncomingSmsLogDto[] }>('/admin/wallets/unmatched-sms');
     return data.data;
+  },
+
+  getSmsLogs: async (params: { search?: string; isMatched?: boolean; walletId?: string; page?: number; pageSize?: number }) => {
+    const { data } = await apiClient.get<{ items: AdminIncomingSmsLogDto[]; totalCount: number; page: number; pageSize: number }>('/admin/wallets/sms-logs', { params });
+    return data;
   },
 
   resolveRechargeRequest: async (

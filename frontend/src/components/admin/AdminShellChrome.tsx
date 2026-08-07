@@ -142,6 +142,7 @@ export type AdminShellRoute =
   | '/admin/shared-packages'
   | '/admin/wallets'
   | '/admin/recharge-verification'
+  | '/admin/wallet-messages'
   | '/teacher'
   | '/teacher/packages'
   | '/teacher/codes'
@@ -501,6 +502,12 @@ const navItems: AdminNavItem[] = [
     permission: 'payments.manage',
   },
   {
+    href: '/admin/wallet-messages',
+    label: 'رسائل المحافظ',
+    icon: MessageSquareText,
+    permission: 'payments.manage',
+  },
+  {
     href: '/admin/live-support',
     label: 'الدعم المباشر',
     icon: Headphones,
@@ -626,6 +633,7 @@ const GROUP_CONFIG = [
       '/admin/sales',
       '/admin/wallets',
       '/admin/recharge-verification',
+      '/admin/wallet-messages',
     ],
   },
   {
