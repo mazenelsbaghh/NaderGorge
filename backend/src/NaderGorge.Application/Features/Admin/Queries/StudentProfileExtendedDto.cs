@@ -48,6 +48,7 @@ public class StudentProfileExtendedDto
     public decimal CurrentBalance { get; set; }
     public List<StudentPromotionalBalanceDto> PromotionalBalances { get; set; } = new();
     public List<StudentBalanceTransactionDto> BalanceTransactions { get; set; } = new();
+    public List<StudentRechargeRequestDto> RechargeRequests { get; set; } = new();
     public List<AuditLogDto> AuditTrail { get; set; } = new();
     public List<StudentNoteDto> Notes { get; set; } = new();
 }
@@ -67,10 +68,28 @@ public class StudentBalanceTransactionDto
     public Guid Id { get; set; }
     public decimal Amount { get; set; }
     public decimal BalanceAfter { get; set; }
+    public decimal BalanceBefore { get; set; }
+    public string BalanceScope { get; set; } = "الرصيد العام";
+    public string? ContentName { get; set; }
     public string TransactionType { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public string AdminName { get; set; } = string.Empty;
+}
+
+public class StudentRechargeRequestDto
+{
+    public Guid Id { get; set; }
+    public decimal Amount { get; set; }
+    public string BalanceScope { get; set; } = string.Empty;
+    public string WalletLabel { get; set; } = string.Empty;
+    public string WalletPhoneNumber { get; set; } = string.Empty;
+    public string SenderPhoneNumber { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public bool HasMatchedSms { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? ResolvedAt { get; set; }
+    public string? RejectionReason { get; set; }
 }
 
 
@@ -95,6 +114,11 @@ public class StudentPackageDto
     public bool IsActive { get; set; }
     public string PurchaseMethod { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public Guid? PurchaseOperationId { get; set; }
+    public Guid? TeacherId { get; set; }
+    public decimal PaidAmount { get; set; }
+    public decimal PlatformShareAmount { get; set; }
+    public decimal TeacherShareAmount { get; set; }
     public string GrantType { get; set; } = "Package";
     public string? CancelledByName { get; set; }
     public DateTime? CancelledAt { get; set; }

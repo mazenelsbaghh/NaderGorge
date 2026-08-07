@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Check,
   X,
@@ -74,7 +76,55 @@ const normalizeRechargeStatus = (status: RechargeStatusValue): number | null => 
 const isRechargeStatus = (status: RechargeStatusValue, expected: number) =>
   normalizeRechargeStatus(status) === expected;
 
-const normalizePhoneDigits = (value?: string | null) => (value ?? '').replace(/\D/g, '');
+const normalizePhoneDigits = (value?: string | null) => (value ?? '')
+  .replace(/[٠-٩۰-۹]/g, (digit) => {
+    const arabicIndicDigits = '٠١٢٣٤٥٦٧٨٩';
+    const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    const digitIndex = arabicIndicDigits.indexOf(digit);
+    if (digitIndex >= 0) return String(digitIndex);
+    return String(Math.max(0, persianDigits.indexOf(digit)));
+  })
+  .replace(/\D/g, '');
+
+const getPhoneSearchVariants = (value?: string | null) => {
+  const digits = normalizePhoneDigits(value);
+  if (!digits) return [];
+
+  const variants = new Set([digits]);
+  if (digits.startsWith('00')) variants.add(digits.slice(2));
+  if (digits.startsWith('20') && digits.length > 2) variants.add(`0${digits.slice(2)}`);
+  if (digits.startsWith('0') && digits.length > 1) variants.add(`20${digits.slice(1)}`);
+  return [...variants];
+};
+
+const phoneMatchesSearch = (value: string | null | undefined, query: string) => {
+  const queryVariants = getPhoneSearchVariants(query);
+  if (queryVariants.length === 0) return false;
+
+  return getPhoneSearchVariants(value).some((valueVariant) => queryVariants.some((queryVariant) =>
+    valueVariant.includes(queryVariant) || queryVariant.includes(valueVariant)));
+};
+
+const smsMatchesSearch = (sms: AdminIncomingSmsLogDto, rawQuery: string) => {
+  const query = rawQuery.trim().toLowerCase();
+  if (!query) return true;
+
+  const textFields = [
+    sms.walletLabel,
+    sms.sender,
+    sms.body,
+    sms.parsedAmount?.toString(),
+  ];
+  if (textFields.some((field) => field?.toLowerCase().includes(query))) return true;
+
+  const phoneFields = [
+    sms.parsedSenderPhone,
+    sms.sender,
+    sms.walletPhoneNumber,
+    sms.body,
+  ];
+  return phoneFields.some((field) => phoneMatchesSearch(field, rawQuery));
+};
 
 const getLongestMatchingDigitSequence = (leftValue?: string | null, rightValue?: string | null) => {
   const left = normalizePhoneDigits(leftValue);
@@ -116,6 +166,8 @@ const resolveAssetUrl = (url?: string | null) => {
 
 /** Reusable workspace for admins and authorized staff who reconcile recharge requests. */
 export function RechargeVerificationWorkspace() {
+  const pathname = usePathname();
+  const studentProfileBase = pathname.startsWith('/assistant') ? '/assistant/students' : '/admin/users';
   const [requests, setRequests] = useState<AdminRechargeRequestDto[]>([]);
   const [unmatchedSms, setUnmatchedSms] = useState<AdminIncomingSmsLogDto[]>([]);
   const [wallets, setWallets] = useState<WalletDto[]>([]);
@@ -130,6 +182,8 @@ export function RechargeVerificationWorkspace() {
   const [viewScreenshotUrl, setViewScreenshotUrl] = useState<string | null>(null);
   const [approveModalRequest, setApproveModalRequest] = useState<AdminRechargeRequestDto | null>(null);
   const [selectedSmsId, setSelectedSmsId] = useState<string>('');
+  const [smsSearchQuery, setSmsSearchQuery] = useState('');
+  const [unmatchedSmsSearchQuery, setUnmatchedSmsSearchQuery] = useState('');
   const [selectedWalletId, setSelectedWalletId] = useState<string>('');
   const [rejectModalRequest, setRejectModalRequest] = useState<AdminRechargeRequestDto | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
@@ -182,6 +236,7 @@ export function RechargeVerificationWorkspace() {
         toast.success('تمت الموافقة على طلب الشحن وتعبئة الرصيد للطالب.');
         setApproveModalRequest(null);
         setSelectedSmsId('');
+        setSmsSearchQuery('');
         setSelectedWalletId('');
         fetchData();
       } else {
@@ -198,6 +253,7 @@ export function RechargeVerificationWorkspace() {
   const openApproveModal = (rechargeRequest: AdminRechargeRequestDto) => {
     setApproveModalRequest(rechargeRequest);
     setSelectedWalletId(rechargeRequest.walletId);
+    setSmsSearchQuery('');
     const match = unmatchedSms.find(log =>
       log.parsedAmount === rechargeRequest.amount
       && log.walletId === rechargeRequest.walletId);
@@ -287,10 +343,14 @@ export function RechargeVerificationWorkspace() {
   const pendingCount = requests.filter(r => isRechargeStatus(r.status, 0)).length;
   const totalPendingAmount = requests.filter(r => isRechargeStatus(r.status, 0)).reduce((acc, r) => acc + r.amount, 0);
   const unmatchedSmsCount = unmatchedSms.length;
+  const filteredUnmatchedSms = useMemo(
+    () => unmatchedSms.filter((sms) => smsMatchesSearch(sms, unmatchedSmsSearchQuery)),
+    [unmatchedSms, unmatchedSmsSearchQuery]
+  );
   const unmatchedSmsByWallet = useMemo<UnmatchedSmsWalletGroup[]>(() => {
     const wallets = new Map<string, { id: string; label: string; phoneNumber: string; amounts: Map<string, UnmatchedSmsAmountGroup> }>();
 
-    for (const sms of unmatchedSms) {
+    for (const sms of filteredUnmatchedSms) {
       const wallet = wallets.get(sms.walletId) ?? {
         id: sms.walletId,
         label: sms.walletLabel,
@@ -313,7 +373,7 @@ export function RechargeVerificationWorkspace() {
           .sort((left, right) => (right.amount ?? -1) - (left.amount ?? -1)),
       }))
       .sort((left, right) => left.label.localeCompare(right.label, 'ar'));
-  }, [unmatchedSms]);
+  }, [filteredUnmatchedSms]);
 
   const suspectedSenderPhones = useMemo(() => {
     const matches = new Map<string, SuspectedSenderPhone>();
@@ -342,6 +402,10 @@ export function RechargeVerificationWorkspace() {
     return matchesStatus && matchesSearch;
   });
 
+  const filteredApprovalSms = useMemo(() => {
+    return unmatchedSms.filter((sms) => smsMatchesSearch(sms, smsSearchQuery));
+  }, [smsSearchQuery, unmatchedSms]);
+
   // Table columns definition
   const columns: AdminColumn<AdminRechargeRequestDto>[] = [
     {
@@ -349,7 +413,12 @@ export function RechargeVerificationWorkspace() {
       label: 'الطالب',
       render: (r) => (
         <div>
-          <div className="font-bold text-[var(--admin-text)] text-sm">{r.studentName}</div>
+          <Link
+            href={`${studentProfileBase}/${r.userId}`}
+            className="font-bold text-[var(--admin-primary)] text-sm underline-offset-4 hover:underline"
+          >
+            {r.studentName}
+          </Link>
           <div className="text-xs text-[var(--admin-muted)] mt-0.5 font-mono">{r.studentPhoneNumber}</div>
         </div>
       )
@@ -661,6 +730,35 @@ export function RechargeVerificationWorkspace() {
               رسائل تأكيد الإيداع المستلمة من Vodafone Cash ولم يتم ربطها بأي طلب للطالب تلقائياً.
             </p>
 
+            <div className="relative mb-2 shrink-0">
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+              <input
+                type="search"
+                aria-label="البحث في الرسائل غير المطابقة"
+                value={unmatchedSmsSearchQuery}
+                onChange={(event) => setUnmatchedSmsSearchQuery(event.target.value)}
+                placeholder="ابحث برقم الهاتف أو المبلغ..."
+                className="admin-input w-full ps-10 pe-9 text-xs"
+              />
+              {unmatchedSmsSearchQuery && (
+                <button
+                  type="button"
+                  aria-label="مسح البحث في الرسائل"
+                  onClick={() => setUnmatchedSmsSearchQuery('')}
+                  className="absolute end-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--admin-muted)] transition-colors hover:bg-[var(--admin-hover)] hover:text-[var(--admin-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {unmatchedSmsSearchQuery.trim() && (
+              <div className="mb-3 shrink-0 text-[10px] font-bold text-[var(--admin-muted)]" role="status" aria-live="polite">
+                {filteredUnmatchedSms.length > 0
+                  ? `تم العثور على ${filteredUnmatchedSms.length} رسالة من أصل ${unmatchedSmsCount}`
+                  : 'لا توجد رسائل غير مطابقة بالرقم أو البحث المدخل'}
+              </div>
+            )}
+
             <div
               role="region"
               aria-label="الرسائل غير المطابقة"
@@ -676,6 +774,19 @@ export function RechargeVerificationWorkspace() {
                   <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2" />
                   <span className="text-xs font-bold text-[var(--admin-text)]">كل الرسائل مطابقة!</span>
                   <span className="text-[10px] text-[var(--admin-muted)] mt-1">لا توجد رسائل معلقة في النظام.</span>
+                </div>
+              ) : filteredUnmatchedSms.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-[var(--admin-border)] rounded-xl bg-[var(--admin-card-strong)]">
+                  <Search className="h-8 w-8 text-[var(--admin-muted)] mb-2" />
+                  <span className="text-xs font-bold text-[var(--admin-text)]">لا توجد رسائل بهذا الرقم</span>
+                  <span className="mt-1 text-[10px] text-[var(--admin-muted)]">جرّب كتابة رقم الهاتف بصيغة أخرى أو امسح البحث.</span>
+                  <button
+                    type="button"
+                    onClick={() => setUnmatchedSmsSearchQuery('')}
+                    className="mt-3 min-h-9 rounded-lg px-3 text-xs font-bold text-[var(--admin-primary)] transition-colors hover:bg-[var(--admin-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-primary)]"
+                  >
+                    مسح البحث
+                  </button>
                 </div>
               ) : unmatchedSmsByWallet.map((wallet) => {
                 const isWalletOpen = expandedWalletId === wallet.id;
@@ -753,6 +864,7 @@ export function RechargeVerificationWorkspace() {
         onClose={() => {
           setApproveModalRequest(null);
           setSelectedSmsId('');
+          setSmsSearchQuery('');
           setSelectedWalletId('');
         }}
         title={approveModalRequest && isRechargeStatus(approveModalRequest.status, 2) ? 'تصحيح محفظة التحويل' : 'قبول طلب الشحن يدوياً'}
@@ -833,6 +945,25 @@ export function RechargeVerificationWorkspace() {
                 ربط رسالة SMS تأكيدية (اختياري)
               </label>
 
+              <div className="relative">
+                <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--admin-muted)]" />
+                <input
+                  type="search"
+                  value={smsSearchQuery}
+                  onChange={(event) => setSmsSearchQuery(event.target.value)}
+                  placeholder="ابحث برقم الهاتف أو المبلغ أو المحفظة"
+                  className="admin-input ps-10 text-xs"
+                />
+              </div>
+
+              {smsSearchQuery.trim() ? (
+                <span className="text-[10px] font-bold text-[var(--admin-muted)]" role="status" aria-live="polite">
+                  {filteredApprovalSms.length > 0
+                    ? `تم العثور على ${filteredApprovalSms.length} رسالة بهذا البحث`
+                    : 'لا توجد رسائل غير مطابقة بهذا الرقم'}
+                </span>
+              ) : null}
+
               <select
                 value={selectedSmsId}
                 onChange={(event) => {
@@ -844,7 +975,7 @@ export function RechargeVerificationWorkspace() {
                 className="admin-input text-xs"
               >
                 <option value="">-- موافقة مباشرة بدون ربط رسالة SMS --</option>
-                {unmatchedSms.map(sms => {
+                {filteredApprovalSms.map(sms => {
                   const isAmountMatch = sms.parsedAmount === approveModalRequest.amount;
                   const isPhoneMatch = sms.parsedSenderPhone === approveModalRequest.senderPhoneNumber;
 
@@ -861,7 +992,7 @@ export function RechargeVerificationWorkspace() {
                 })}
               </select>
               <span className="text-[10px] text-[var(--admin-muted)]">
-                سيؤدي اختيار رسالة إلى تمييزها كرسالة مطابقة ولن تظهر في قائمة الرسائل غير المطابقة.
+                الرقم المحوّل منه يساعد في البحث فقط وليس شرطاً للموافقة. يمكنك اختيار المحفظة والموافقة مباشرة إذا لم تجد الرسالة.
               </span>
             </div>}
 
@@ -872,6 +1003,7 @@ export function RechargeVerificationWorkspace() {
                 onClick={() => {
                   setApproveModalRequest(null);
                   setSelectedSmsId('');
+                  setSmsSearchQuery('');
                   setSelectedWalletId('');
                 }}
                 disabled={actionLoading}

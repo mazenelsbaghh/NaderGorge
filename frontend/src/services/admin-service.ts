@@ -319,6 +319,11 @@ export interface StudentPackageDto {
   isActive: boolean;
   purchaseMethod: string;
   price: number;
+  purchaseOperationId?: string | null;
+  teacherId?: string | null;
+  paidAmount: number;
+  platformShareAmount: number;
+  teacherShareAmount: number;
   grantType?: string;
   cancelledByName?: string | null;
   cancelledAt?: string | null;
@@ -361,7 +366,10 @@ export interface StudentAuditLogDto {
 export interface BalanceTransactionDto {
   id: string;
   amount: number;
+  balanceBefore: number;
   balanceAfter: number;
+  balanceScope: string;
+  contentName?: string | null;
   transactionType: string;
   description: string;
   createdAt: string;
@@ -472,6 +480,19 @@ export interface StudentProfileExtendedDto {
     nearestExpiresAt?: string | null;
   }>;
   balanceTransactions: BalanceTransactionDto[];
+  rechargeRequests: Array<{
+    id: string;
+    amount: number;
+    balanceScope: string;
+    walletLabel: string;
+    walletPhoneNumber: string;
+    senderPhoneNumber: string;
+    status: string;
+    hasMatchedSms: boolean;
+    createdAt: string;
+    resolvedAt?: string | null;
+    rejectionReason?: string | null;
+  }>;
   auditTrail: StudentAuditLogDto[];
   notes: Array<{
     id: string;

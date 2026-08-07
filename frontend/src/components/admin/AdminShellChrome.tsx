@@ -618,6 +618,7 @@ const GROUP_CONFIG = [
       '/admin/platform-finance/expenses',
       '/admin/platform-finance/refunds',
       '/admin/platform-finance/reports',
+      '/admin/platform-finance/wallets',
       '/admin/platform-finance/treasury',
       '/admin/platform-finance/migration',
       '/admin/finance',

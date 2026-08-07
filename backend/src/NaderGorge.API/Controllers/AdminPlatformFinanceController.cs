@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using NaderGorge.API.Extensions;
@@ -10,6 +11,7 @@ using NaderGorge.Application.Features.Admin.PlatformFinance.Teachers;
 using NaderGorge.Domain.Interfaces;
 using NaderGorge.Infrastructure.Services.Finance.Migration;
 using NaderGorge.Application.Services;
+using NaderGorge.Application.Features.Admin.Commands;
 
 namespace NaderGorge.API.Controllers;
 
@@ -27,7 +29,8 @@ public sealed class AdminPlatformFinanceController(
     PlatformFinancialReportQueries reports,
     FinancialReconciliationService reconciliation,
     AccountingPeriodCommands periods,
-    GetTeacherFinancialSummaryQuery teacherSummary)
+    GetTeacherFinancialSummaryQuery teacherSummary,
+    IMediator mediator)
     : ControllerBase
 {
     [HttpGet("dashboard")]
@@ -258,6 +261,52 @@ public sealed class AdminPlatformFinanceController(
         return Ok(new { refund.Id, refund.TotalAmount, refund.Method, refund.Status });
     }
 
+    [HttpPost("refunds/external-package")]
+    [HasPermission("finance.refunds.create")]
+    public async Task<ActionResult<object>> CreateExternalPackageRefund([FromBody] ExternalPackageRefundBody body, CancellationToken ct)
+    {
+        var transaction = await db.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        try
+        {
+            var cancellation = await mediator.Send(
+                new CancelPackageGrantCommand(body.AccessGrantId, false, CurrentUserId(), body.Reason), ct);
+            if (!cancellation.Success)
+            {
+                await transaction.RollbackAsync(ct);
+                return BadRequest(cancellation);
+            }
+
+            var refund = await operations.CreateRefundAsync(new CreatePlatformRefundRequest(
+                body.PurchaseOperationId,
+                "PurchaseOperation",
+                body.StudentId,
+                body.TeacherId,
+                body.PlatformAmount,
+                body.TeacherAmount,
+                (int)NaderGorge.Domain.Entities.PlatformRefundMethod.Cash,
+                body.TreasuryAccountId,
+                body.Reason,
+                body.PaymentReference,
+                CurrentUserId()), ct);
+            refund = await operations.PostRefundAsync(
+                refund.Id,
+                $"external-refund-{body.AccessGrantId}",
+                CurrentUserId(),
+                ct);
+            await transaction.CommitAsync(ct);
+            return Ok(new { refund.Id, refund.TotalAmount, refund.Status });
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+        finally
+        {
+            await transaction.DisposeAsync();
+        }
+    }
+
     [HttpPost("refunds/{refundId:guid}/post")]
     [HasPermission("finance.refunds.post")]
     public async Task<ActionResult<object>> PostRefund(Guid refundId, [FromBody] PostRefundBody body, CancellationToken ct)
@@ -273,7 +322,57 @@ public sealed class AdminPlatformFinanceController(
         var query = db.PlatformRefunds.AsNoTracking().AsQueryable();
         if (from.HasValue) query = query.Where(x => x.CreatedAt >= from.Value.Date);
         if (to.HasValue) query = query.Where(x => x.CreatedAt < to.Value.Date.AddDays(1));
-        return Ok(await query.OrderByDescending(x => x.CreatedAt).Take(200).Select(x => new { x.Id, x.OriginalSourceId, x.OriginalSourceType, x.StudentId, x.TeacherId, x.PlatformAmount, x.TeacherAmount, totalAmount = x.PlatformAmount + x.TeacherAmount, x.Method, x.Status, x.Reason, x.JournalEntryId }).ToListAsync(ct));
+
+        var recordedRefunds = await query
+            .Select(x => new PlatformRefundListItem(
+                x.Id,
+                x.OriginalSourceId,
+                x.OriginalSourceType,
+                x.StudentId,
+                db.Users.Where(user => user.Id == x.StudentId).Select(user => user.FullName).FirstOrDefault() ?? "طالب غير معروف",
+                db.Users.Where(user => user.Id == x.StudentId).Select(user => user.PhoneNumber).FirstOrDefault() ?? string.Empty,
+                x.TeacherId,
+                x.PlatformAmount,
+                x.TeacherAmount,
+                x.PlatformAmount + x.TeacherAmount,
+                (int)x.Method,
+                (int)x.Status,
+                x.Reason,
+                x.JournalEntryId,
+                x.CreatedAt,
+                false))
+            .ToListAsync(ct);
+
+        var historicalQuery = db.BalanceTransactions
+            .AsNoTracking()
+            .Where(x => x.TransactionType == "Refund");
+        if (from.HasValue) historicalQuery = historicalQuery.Where(x => x.CreatedAt >= from.Value.Date);
+        if (to.HasValue) historicalQuery = historicalQuery.Where(x => x.CreatedAt < to.Value.Date.AddDays(1));
+
+        var historicalRefunds = await historicalQuery
+            .Select(x => new PlatformRefundListItem(
+                x.Id,
+                x.ReferenceId ?? x.Id,
+                "BalanceTransaction",
+                x.StudentBalance.UserId,
+                x.StudentBalance.User.FullName,
+                x.StudentBalance.User.PhoneNumber,
+                null,
+                x.Amount,
+                0m,
+                x.Amount,
+                1,
+                2,
+                x.Description,
+                null,
+                x.CreatedAt,
+                true))
+            .ToListAsync(ct);
+
+        return Ok(recordedRefunds
+            .Concat(historicalRefunds)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(500));
     }
 
     [HttpPost("refunds/{refundId:guid}/reverse")]
@@ -392,9 +491,27 @@ public sealed record WalletTransferExpenseBody(Guid CategoryId, Guid? CostCenter
 public sealed record WalletInternalTransferBody(Guid DestinationTreasuryAccountId);
 public sealed record PayExpenseBody(Guid TreasuryAccountId, decimal Amount, string PaymentReference, string IdempotencyKey);
 public sealed record CreateRefundBody(Guid OriginalSourceId, string OriginalSourceType, Guid StudentId, Guid? TeacherId, decimal PlatformAmount, decimal TeacherAmount, int Method, Guid? TreasuryAccountId, string Reason, string? PaymentReference);
+public sealed record ExternalPackageRefundBody(Guid AccessGrantId, Guid PurchaseOperationId, Guid StudentId, Guid? TeacherId, decimal PlatformAmount, decimal TeacherAmount, Guid TreasuryAccountId, string Reason, string? PaymentReference);
 public sealed record PostRefundBody(string IdempotencyKey);
 public sealed record CreateBudgetLineBody(Guid FinancialAccountId, Guid? CostCenterId, Guid? TeacherId, decimal PlannedAmount);
 public sealed record CreateBudgetBody(string Name, int PeriodKind, DateTime StartDate, DateTime EndDate, IReadOnlyList<CreateBudgetLineBody> Lines);
 public sealed record TreasuryTransferBody(Guid SourceTreasuryAccountId, Guid DestinationTreasuryAccountId, decimal Amount, string Reference, string IdempotencyKey);
 public sealed record TreasuryReconciliationBody(Guid TreasuryAccountId, DateTime AsOfDate, decimal CountedOrStatementBalance, string EvidenceNote);
 public sealed record PeriodReasonBody(string Reason);
+public sealed record PlatformRefundListItem(
+    Guid Id,
+    Guid OriginalSourceId,
+    string OriginalSourceType,
+    Guid StudentId,
+    string StudentName,
+    string StudentPhoneNumber,
+    Guid? TeacherId,
+    decimal PlatformAmount,
+    decimal TeacherAmount,
+    decimal TotalAmount,
+    int Method,
+    int Status,
+    string Reason,
+    Guid? JournalEntryId,
+    DateTime CreatedAt,
+    bool IsHistorical);

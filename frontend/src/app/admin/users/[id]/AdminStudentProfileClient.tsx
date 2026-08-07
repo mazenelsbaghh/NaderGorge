@@ -768,6 +768,30 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
 
                   <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
                      <div className="mb-5">
+                       <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">طلبات الشحن السابقة</h3>
+                       <p className="text-[var(--admin-muted)]">كل طلبات الطالب وحالتها والمحفظة التي تم التحويل إليها.</p>
+                     </div>
+                     <AdminDataTable<any>
+                        columns={[
+                          {key: 'amount', label: 'المبلغ', render: (row) => <span className="font-mono font-bold">{row.amount} ج.م</span>},
+                          {key: 'balanceScope', label: 'نوع الرصيد', render: (row) => row.balanceScope},
+                          {key: 'walletLabel', label: 'المحفظة', render: (row) => <div><p className="font-bold">{row.walletLabel}</p><bdi className="font-mono text-xs text-[var(--admin-muted)]">{row.walletPhoneNumber}</bdi></div>},
+                          {key: 'senderPhoneNumber', label: 'المحوّل منه', render: (row) => <bdi className="font-mono">{row.senderPhoneNumber || '—'}</bdi>},
+                          {key: 'status', label: 'الحالة', render: (row) => {
+                            const statuses: Record<string, string> = { Pending: 'معلق', Matched: 'مطابق آلياً', Approved: 'مقبول يدوياً', Rejected: 'مرفوض', Expired: 'منتهي', Cancelled: 'ملغي من الطالب' };
+                            return <span className="font-bold">{statuses[row.status] || row.status}</span>;
+                          }},
+                          {key: 'matched', label: 'ربط SMS', render: (row) => row.hasMatchedSms ? 'تم الربط' : 'بدون ربط'},
+                          {key: 'createdAt', label: 'تاريخ الطلب', render: (row) => new Date(row.createdAt).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}
+                        ]}
+                        data={studentData?.rechargeRequests || []}
+                        rowKey={(row) => row.id}
+                        emptyMessage="لا توجد طلبات شحن سابقة لهذا الطالب"
+                      />
+                  </div>
+
+                  <div className="bg-[var(--admin-bg)] p-6 rounded-3xl shadow-sm">
+                     <div className="mb-5">
                        <h3 className="text-[length:var(--admin-font-title-md)] font-bold mb-1">الباقات المسجلة</h3>
                        <p className="text-[var(--admin-muted)]">قائمة بالباقات التي اشترك فيها الطالب مع تاريخ الاشتراك والانتهاء.</p>
                      </div>
@@ -872,6 +896,12 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                               </span>
                             );
                           }},
+                          {key: 'balanceScope', label: 'الرصيد المستخدم', render: (row) => (
+                            <span className="font-semibold text-[var(--admin-text)]">{row.balanceScope || 'الرصيد العام'}</span>
+                          )},
+                          {key: 'balanceBefore', label: 'الرصيد قبل', render: (row) => (
+                            <span className="font-mono text-[var(--admin-text)]">{row.balanceBefore} ج.م</span>
+                          )},
                           {key: 'amount', label: 'القيمة', render: (row) => {
                             const isPositive = row.amount >= 0;
                             return (
@@ -882,6 +912,9 @@ export default function AdminStudentProfileClient({ params, staff = false }: { p
                           }},
                           {key: 'balanceAfter', label: 'الرصيد بعد العملية', render: (row) => (
                             <span className="font-mono text-[var(--admin-text)]">{row.balanceAfter} ج.م</span>
+                          )},
+                          {key: 'contentName', label: 'المحتوى المشترى', render: (row) => (
+                            <span className="text-sm font-semibold text-[var(--admin-text)]">{row.contentName || '—'}</span>
                           )},
                           {key: 'description', label: 'البيان / الملاحظات', render: (row) => (
                             <span className="text-sm text-[var(--admin-text)]">{row.description || '—'}</span>

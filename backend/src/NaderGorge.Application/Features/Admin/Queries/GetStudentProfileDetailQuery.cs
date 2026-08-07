@@ -102,6 +102,21 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             .Select(lesson => new { lesson.Id, PackageName = lesson.ContentSection.Term.Package.Name, lesson.Title, lesson.Price })
             .ToDictionaryAsync(lesson => lesson.Id, cancellationToken);
 
+        var purchaseEffects = await _context.SalesFinancialEffects
+            .AsNoTracking()
+            .Where(effect => effect.StudentId == request.UserId)
+            .Select(effect => new
+            {
+                effect.PurchaseOperationId,
+                effect.TargetId,
+                effect.TeacherId,
+                effect.PaidAmount,
+                effect.PlatformShareImpact,
+                effect.TeacherShareImpact,
+                effect.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
         var packages = new List<StudentPackageDto>();
         foreach (var grant in allGrants)
         {
@@ -152,6 +167,11 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                     break;
             }
 
+            var purchaseEffect = purchaseEffects
+                .Where(effect => effect.TargetId == contentId)
+                .OrderBy(effect => Math.Abs((effect.CreatedAt - grant.CreatedAt).Ticks))
+                .FirstOrDefault();
+
             packages.Add(new StudentPackageDto
             {
                 Id = contentId,
@@ -163,6 +183,11 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 IsActive = grant.IsActive,
                 PurchaseMethod = grant.AccessCodeId.HasValue ? "Code" : "Balance",
                 Price = price,
+                PurchaseOperationId = purchaseEffect?.PurchaseOperationId,
+                TeacherId = purchaseEffect?.TeacherId,
+                PaidAmount = purchaseEffect?.PaidAmount ?? 0m,
+                PlatformShareAmount = purchaseEffect?.PlatformShareImpact ?? 0m,
+                TeacherShareAmount = purchaseEffect?.TeacherShareImpact ?? 0m,
                 GrantType = grant.GrantType.ToString(),
                 CancelledByName = grant.CancelledByUser?.FullName,
                 CancelledAt = grant.CancelledAt,
@@ -272,6 +297,9 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                     Id = t.Id,
                     Amount = t.Amount,
                     BalanceAfter = t.BalanceAfter,
+                    BalanceBefore = t.BalanceAfter - t.Amount,
+                    BalanceScope = "الرصيد العام",
+                    ContentName = t.TransactionType == "ContentPurchase" ? t.Description : null,
                     TransactionType = t.TransactionType,
                     Description = t.Description,
                     CreatedAt = t.CreatedAt,
@@ -279,6 +307,77 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
                 })
                 .ToListAsync(cancellationToken);
         }
+
+        var promotionalUsages = await _context.PromotionalBalanceUsages
+            .AsNoTracking()
+            .Where(x => x.Allocation.StudentId == request.UserId)
+            .Select(x => new
+            {
+                x.Id,
+                x.AllocationId,
+                x.Allocation.OriginalAmount,
+                x.Amount,
+                x.ContentType,
+                x.ContentId,
+                x.CreatedAt,
+                TeacherName = x.Allocation.Teacher != null ? x.Allocation.Teacher.User.FullName : "رصيد مخصص عام"
+            })
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var consumedByAllocation = new Dictionary<Guid, decimal>();
+        foreach (var usage in promotionalUsages)
+        {
+            var consumedBefore = consumedByAllocation.GetValueOrDefault(usage.AllocationId);
+            var balanceBefore = Math.Max(0m, usage.OriginalAmount - consumedBefore);
+            var contentName = usage.ContentType switch
+            {
+                NaderGorge.Domain.Enums.CodeType.Package when grantedPackages.TryGetValue(usage.ContentId, out var package) => package.Name,
+                NaderGorge.Domain.Enums.CodeType.Term when grantedTerms.TryGetValue(usage.ContentId, out var term) => $"{term.PackageName} — {term.Title}",
+                NaderGorge.Domain.Enums.CodeType.Month when grantedSections.TryGetValue(usage.ContentId, out var section) => $"{section.PackageName} — {section.Title}",
+                NaderGorge.Domain.Enums.CodeType.Lesson when grantedLessons.TryGetValue(usage.ContentId, out var lesson) => $"{lesson.PackageName} — {lesson.Title}",
+                _ => $"{usage.ContentType} ({usage.ContentId})"
+            };
+
+            balanceTransactions.Add(new StudentBalanceTransactionDto
+            {
+                Id = usage.Id,
+                Amount = -usage.Amount,
+                BalanceBefore = balanceBefore,
+                BalanceAfter = Math.Max(0m, balanceBefore - usage.Amount),
+                BalanceScope = $"رصيد المدرس {usage.TeacherName}",
+                ContentName = contentName,
+                TransactionType = "ContentPurchase",
+                Description = $"شراء {contentName} من رصيد المدرس",
+                CreatedAt = usage.CreatedAt,
+                AdminName = "النظام"
+            });
+            consumedByAllocation[usage.AllocationId] = consumedBefore + usage.Amount;
+        }
+
+        balanceTransactions = balanceTransactions
+            .OrderByDescending(x => x.CreatedAt)
+            .ToList();
+
+        var rechargeRequests = await _context.RechargeRequests
+            .AsNoTracking()
+            .Where(x => x.UserId == request.UserId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new StudentRechargeRequestDto
+            {
+                Id = x.Id,
+                Amount = x.Amount,
+                BalanceScope = x.Teacher != null ? $"رصيد المدرس {x.Teacher.User.FullName}" : "الرصيد العام",
+                WalletLabel = x.Wallet.Label,
+                WalletPhoneNumber = x.Wallet.PhoneNumber,
+                SenderPhoneNumber = x.SenderPhoneNumber,
+                Status = x.Status.ToString(),
+                HasMatchedSms = x.MatchedSmsLogId.HasValue,
+                CreatedAt = x.CreatedAt,
+                ResolvedAt = x.ResolvedAt,
+                RejectionReason = x.RejectionReason
+            })
+            .ToListAsync(cancellationToken);
 
         var now = DateTime.UtcNow;
         var promotionalBalancesRaw = await _context.PromotionalBalanceAllocations
@@ -372,6 +471,7 @@ public class GetStudentProfileDetailQueryHandler : IRequestHandler<GetStudentPro
             CurrentBalance = balance?.CurrentBalance ?? 0m,
             PromotionalBalances = promotionalBalances,
             BalanceTransactions = balanceTransactions,
+            RechargeRequests = rechargeRequests,
             AuditTrail = auditLogs,
             Notes = await _context.StudentNotes
                 .Include(n => n.Admin)
